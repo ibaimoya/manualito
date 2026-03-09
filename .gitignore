@@ -416,3 +416,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Claude Code instructions
+CLAUDE.md
+.claude/
+
+# Ficheros locales auxiliares
+notimportant/

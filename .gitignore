@@ -423,3 +423,6 @@ CLAUDE.md
 
 # Ficheros locales auxiliares
 notimportant/
+
+# Caché de modelos de PaddleOCR
+backend/.paddleocr_cache/

@@ -1,29 +1,11 @@
 from paddleocr import PaddleOCR
 
-_ocr = None
-
-
-def _get_ocr():
-    """
-    Devuelve la instancia singleton de PaddleOCR, inicializándola si aún no existe.
-
-    Utiliza el patrón lazy initialization para diferir la carga del modelo al
-    primer uso, evitando el coste de inicialización si el módulo se importa
-    pero no se llega a usar.
-
-    Returns:
-        PaddleOCR: Instancia configurada para reconocimiento de texto en español,
-                   con detección de orientación de línea activada y ejecución en CPU.
-    """
-    global _ocr
-    if _ocr is None:
-        _ocr = PaddleOCR(
-            use_textline_orientation=True,
-            lang='es',
-            enable_mkldnn=False,
-            device='cpu',
-        )
-    return _ocr
+_ocr = PaddleOCR(
+    use_textline_orientation=True,
+    lang='es',
+    enable_mkldnn=False,
+    device='cpu',
+)
 
 
 def extract_text(image_path: str) -> list[dict]:
@@ -44,8 +26,7 @@ def extract_text(image_path: str) -> list[dict]:
                     - 'confidence' (float): Puntuación de confianza del modelo en el
                       rango [0.0, 1.0], redondeada a cuatro decimales.
     """
-    ocr = _get_ocr()
-    result = ocr.predict(image_path)
+    result = _ocr.predict(image_path)
 
     lines = []
     for res in result:

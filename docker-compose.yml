@@ -4,3 +4,7 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    environment:
+      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+    volumes:
+      - ./backend/.paddleocr_cache:/root/.paddlex

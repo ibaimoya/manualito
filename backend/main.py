@@ -1,10 +1,14 @@
 import tempfile
 import os
+from io import BytesIO
+from PIL import Image
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.responses import JSONResponse, PlainTextResponse
 from ocr.extractor import extract_text
 
 app = FastAPI(title="Manualito API")
+
+MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 
 @app.get("/api/ocr/health")
@@ -32,7 +36,7 @@ async def ocr_endpoint(
     el procesamiento tiene éxito como si falla.
 
     Args:
-        image (UploadFile): Imagen a procesar. Debe tener un Content-Type de tipo 'image/*'.
+        image (UploadFile): Imagen a procesar. Los bytes deben corresponder a una imagen válida.
         format (str): Formato de la respuesta. 'json' (por defecto) devuelve un objeto
                       con la lista de líneas y sus puntuaciones; 'text' devuelve el texto
                       plano sin metadatos.
@@ -43,21 +47,30 @@ async def ocr_endpoint(
         PlainTextResponse: Si format='text', las líneas de texto separadas por saltos de línea.
 
     Raises:
-        HTTPException (400): Si el archivo recibido no es una imagen.
+        HTTPException (415): Si los bytes del archivo no corresponden a una imagen válida.
+        HTTPException (413): Si el archivo supera los 20 MB (evita DoS).
     """
-    if not (image.content_type or "").startswith("image/"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+    # Comprueba que la imagen no sobrepase el tamaño máximo definido.
+    chunk = await image.read(MAX_IMAGE_SIZE + 1)
+    if len(chunk) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=413, detail="La imagen no puede superar 20 MB.")
 
-    suffix = os.path.splitext(image.filename)[-1] or ".jpg"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(await image.read())
+    # Verificar que los bytes son realmente una imagen válida antes de escribir en disco.
+    try:
+        with Image.open(BytesIO(chunk)) as img:
+            img.verify()
+    except Exception:
+        raise HTTPException(status_code=415, detail="El archivo no es una imagen válida.")
+
+    # PaddleOCR necesita un fichero en disco, no acepta bytes directamente.
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+        tmp.write(chunk)
         tmp_path = tmp.name
 
     try:
         lines = extract_text(tmp_path)
     finally:
-        os.remove(tmp_path)
-
+        os.remove(tmp_path)  # Se borra siempre, aunque el OCR falle.
     if format == "text":
         return PlainTextResponse("\n".join(line["text"] for line in lines))
 

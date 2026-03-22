@@ -1,11 +1,20 @@
+import logging
+
 from paddleocr import PaddleOCR
 
-_ocr = PaddleOCR(
-    use_textline_orientation=True,
-    lang='es',
-    enable_mkldnn=False,
-    device='cpu',
-)
+logger = logging.getLogger(__name__)
+
+try:
+    _ocr = PaddleOCR(
+        use_textline_orientation=True,
+        lang='es',
+        enable_mkldnn=False,
+        device='cpu',
+    )
+    logger.info("PaddleOCR inicializado correctamente.")
+except Exception:
+    logger.error("Error al inicializar PaddleOCR.", exc_info=True)
+    raise
 
 
 def extract_text(image_path: str) -> list[dict]:
@@ -25,12 +34,24 @@ def extract_text(image_path: str) -> list[dict]:
                     - 'text' (str): Texto reconocido en la línea.
                     - 'confidence' (float): Puntuación de confianza del modelo en el
                       rango [0.0, 1.0], redondeada a cuatro decimales.
+                    La lista puede estar vacía si el modelo no detecta texto; en ese
+                    caso se emite un WARNING en el log.
+
+    Raises:
+        Exception: Cualquier excepción lanzada por PaddleOCR se propaga al llamador
+                   sin capturar. El caller es responsable de manejarla.
     """
+    logger.info("Iniciando OCR sobre: %s", image_path)
     result = _ocr.predict(image_path)
 
     lines = []
     for res in result:
         for text, score in zip(res['rec_texts'], res['rec_scores']):
             lines.append({'text': text, 'confidence': round(float(score), 4)})
+
+    if not lines:
+        logger.warning("OCR completado sin líneas detectadas: %s", image_path)
+    else:
+        logger.info("OCR completado: %d líneas detectadas.", len(lines))
 
     return lines

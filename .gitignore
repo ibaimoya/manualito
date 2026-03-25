@@ -417,6 +417,9 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# Entorno virtual Python
+.venv/
+
 # Claude Code instructions
 CLAUDE.md
 .claude/

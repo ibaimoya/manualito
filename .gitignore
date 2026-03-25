@@ -429,3 +429,12 @@ notimportant/
 
 # Caché de modelos de PaddleOCR
 backend/.paddleocr_cache/
+
+# Ficheros de configuración de GitLab CI
+.gitlab-ci.yml
+
+# IntelliJ / PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr

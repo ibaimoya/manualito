@@ -428,7 +428,7 @@ CLAUDE.md
 notimportant/
 
 # Caché de modelos de PaddleOCR
-backend/.paddleocr_cache/
+.paddleocr_cache/
 
 # Ficheros de configuración de GitLab CI
 .gitlab-ci.yml

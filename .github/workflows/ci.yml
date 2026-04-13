@@ -21,9 +21,9 @@ jobs:
           python-version: "3.11"
 
       - name: Instalar dependencias de test
-        working-directory: backend
+        working-directory: backend/ocr
         run: pip install -r requirements-test.txt
 
-      - name: Ejecutar tests
-        working-directory: backend
+      - name: Ejecutar tests de OCR
+        working-directory: backend/ocr
         run: python -m pytest -v

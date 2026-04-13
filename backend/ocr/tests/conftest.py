@@ -7,7 +7,7 @@ from PIL import Image
 
 # =====================================================================
 # Aislamiento del modelo antes de cualquier importación del proyecto.
-# PaddleOCR se instancia a nivel de módulo en ocr/extractor.py; sin
+# PaddleOCR se instancia a nivel de módulo en extractor.py; sin
 # este mock, pytest intentaría cargar el modelo real al importar main,
 # lo que haría imposible ejecutar los tests unitarios en CI.
 # =====================================================================

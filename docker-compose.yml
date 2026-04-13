@@ -1,10 +1,52 @@
 services:
 
-  backend:
-    build: ./backend
+  api:
+    build: ./backend/api
     ports:
       - "8000:8000"
     environment:
+      - OCR_URL=http://ocr:8001
+    depends_on:
+      - ocr
+      - rag
+      - llm
+    networks:
+      - manualito-net
+
+  ocr:
+    build: ./backend/ocr
+    environment:
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
     volumes:
-      - ./backend/.paddleocr_cache:/root/.paddlex
+      - ./backend/ocr/.paddleocr_cache:/root/.paddlex
+    networks:
+      - manualito-net
+
+  rag:
+    image: chromadb/chroma
+    volumes:
+      - chromadb-data:/chroma/chroma
+    networks:
+      - manualito-net
+
+  llm:
+    image: ollama/ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - manualito-net
+
+networks:
+  manualito-net:
+    driver: bridge
+
+volumes:
+  chromadb-data:
+  ollama-data:

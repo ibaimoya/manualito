@@ -317,10 +317,6 @@ node_modules/
 *.dsw
 *.dsp
 
-# Visual Studio 6 technical files
-*.ncb
-*.aps
-
 # Visual Studio LightSwitch build output
 **/*.HTMLClient/GeneratedArtifacts
 **/*.DesktopClient/GeneratedArtifacts
@@ -439,3 +435,13 @@ notimportant/
 *.iml
 *.iws
 *.ipr
+
+# Ruff
+.ruff_cache/
+
+# Coverage (pytest-cov)
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/

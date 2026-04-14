@@ -78,7 +78,7 @@ def test_confidence_rounding(raw_score, expected_confidence):
 #            El caller (main.py) es responsable de manejarla.
 # ---------------------------------------------------------------------------
 def test_extract_text_propagates_exception():
-    """Las excepciones de PaddleOCR se propagan sin capturar para que main.py las gestione."""
+    """Las excepciones de PaddleOCR se propagan sin capturar para que ocr_app.py las gestione."""
     with patch("extractor._ocr") as mock_ocr:
         mock_ocr.predict.side_effect = RuntimeError("fallo del modelo")
         with pytest.raises(RuntimeError, match="fallo del modelo"):

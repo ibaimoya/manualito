@@ -50,7 +50,7 @@ def test_health(client):
 def test_valid_image_formats(client, fmt, mime, filename):
     """Una imagen válida en cualquier formato soportado devuelve 200 con las líneas OCR."""
     image_bytes = _make_image_bytes(fmt)
-    with patch("main.extract_text", return_value=FAKE_OCR_RESULT):
+    with patch("ocr_app.extract_text", return_value=FAKE_OCR_RESULT):
         response = _post_image(client, image_bytes, filename, mime)
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -62,7 +62,7 @@ def test_valid_image_formats(client, fmt, mime, filename):
 # ---------------------------------------------------------------------------
 def test_ocr_engine_error(client, valid_jpeg_bytes):
     """Si el motor OCR lanza una excepción, el endpoint la captura y devuelve 500."""
-    with patch("main.extract_text", side_effect=RuntimeError("fallo interno")):
+    with patch("ocr_app.extract_text", side_effect=RuntimeError("fallo interno")):
         response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
     assert response.status_code == 500
 

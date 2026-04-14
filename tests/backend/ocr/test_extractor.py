@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from extractor import extract_text
 
 
@@ -18,7 +17,8 @@ from extractor import extract_text
         [{"text": "Instrucciones", "confidence": 0.9876}],
     ),
     (
-        [{"rec_texts": ["Turno 1", "Turno 2", "Turno 3"], "rec_scores": [0.99, 0.85, 0.72]}],
+        [{"rec_texts": ["Turno 1", "Turno 2", "Turno 3"],
+          "rec_scores": [0.99, 0.85, 0.72]}],
         [
             {"text": "Turno 1", "confidence": 0.99},
             {"text": "Turno 2", "confidence": 0.85},
@@ -41,7 +41,7 @@ from extractor import extract_text
     ),
 ], ids=["una_linea", "multiples_lineas", "multiples_bloques", "sin_texto"])
 def test_extract_text_results(predict_result, expected):
-    """La función transforma correctamente el output de PaddleOCR en la lista normalizada de líneas."""
+    """Transforma el output de PaddleOCR en lista normalizada."""
     with patch("extractor._ocr") as mock_ocr:
         mock_ocr.predict.return_value = predict_result
         result = extract_text("fake/path.jpg")
@@ -62,9 +62,12 @@ def test_extract_text_results(predict_result, expected):
     (0.0,         0.0),
     (0.00004,     0.0),
     (0.00005,     0.0001),
-], ids=["redondeo_normal", "limite_superior", "limite_inferior", "debajo_0001", "en_0001"])
+], ids=[
+    "redondeo_normal", "limite_superior", "limite_inferior",
+    "debajo_0001", "en_0001",
+])
 def test_confidence_rounding(raw_score, expected_confidence):
-    """El score del modelo se convierte a float y se redondea a exactamente 4 decimales."""
+    """El score se redondea a exactamente 4 decimales."""
     predict_result = [{"rec_texts": ["texto"], "rec_scores": [raw_score]}]
     with patch("extractor._ocr") as mock_ocr:
         mock_ocr.predict.return_value = predict_result
@@ -78,7 +81,7 @@ def test_confidence_rounding(raw_score, expected_confidence):
 #            El caller (main.py) es responsable de manejarla.
 # ---------------------------------------------------------------------------
 def test_extract_text_propagates_exception():
-    """Las excepciones de PaddleOCR se propagan sin capturar para que ocr_app.py las gestione."""
+    """Las excepciones de PaddleOCR se propagan sin capturar."""
     with patch("extractor._ocr") as mock_ocr:
         mock_ocr.predict.side_effect = RuntimeError("fallo del modelo")
         with pytest.raises(RuntimeError, match="fallo del modelo"):

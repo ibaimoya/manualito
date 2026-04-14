@@ -1,9 +1,7 @@
-import io
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from PIL import Image
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB — debe coincidir con main.py
@@ -13,16 +11,8 @@ MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB — debe coincidir con main.py
 # Auxiliares.
 # ---------------------------------------------------------------------------
 
-def _make_image_bytes(fmt: str) -> bytes:
-    """Genera bytes de una imagen minima válida (10x10 px) en el formato indicado."""
-    image = Image.new("RGB", (10, 10), color=(100, 150, 200))
-    buffer = io.BytesIO()
-    image.save(buffer, format=fmt)
-    return buffer.getvalue()
-
-
 def _post_image(client, data: bytes, filename: str, mime: str, fmt_param: str = "json"):
-    """Envia una peticion POST a /api/ocr con los datos de imagen proporcionados."""
+    """Envía una petición POST a /api/ocr."""
     return client.post(
         f"/api/ocr?format={fmt_param}",
         files={"image": (filename, data, mime)},
@@ -46,7 +36,7 @@ def _mock_ocr_success(result=None):
 
 
 # ---------------------------------------------------------------------------
-# Comprobacion de estado.
+# Comprobación de estado.
 # ---------------------------------------------------------------------------
 
 def test_health(client):
@@ -57,17 +47,17 @@ def test_health(client):
 
 
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — formatos de imagen validos
+# Partición de Equivalencia (EP) — formatos de imagen válidos
 #   Clase 1: JPEG — formato principal esperado (fotos de manuales).
-#   Clase 2: PNG  — formato alternativo igualmente valido.
+#   Clase 2: PNG  — formato alternativo igualmente válido.
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("fmt,mime,filename", [
-    ("JPEG", "image/jpeg", "manual.jpg"),
-    ("PNG",  "image/png",  "manual.png"),
+@pytest.mark.parametrize("fixture_name,mime,filename", [
+    ("valid_jpeg_bytes", "image/jpeg", "manual.jpg"),
+    ("valid_png_bytes",  "image/png",  "manual.png"),
 ], ids=["jpeg", "png"])
-def test_valid_image_formats(client, fmt, mime, filename):
-    """Una imagen válida en cualquier formato soportado devuelve 200 con las líneas OCR."""
-    image_bytes = _make_image_bytes(fmt)
+def test_valid_image_formats(client, fixture_name, mime, filename, request):
+    """Formato soportado devuelve 200 con las líneas OCR."""
+    image_bytes = request.getfixturevalue(fixture_name)
     with _mock_ocr_success():
         response = _post_image(client, image_bytes, filename, mime)
     assert response.status_code == 200
@@ -75,7 +65,7 @@ def test_valid_image_formats(client, fmt, mime, filename):
 
 
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — archivos que no son imagenes válidas
+# Partición de Equivalencia (EP) — archivos que no son imágenes válidas
 #   Clase 3: PDF disfrazado de imagen  -> 415.
 #   Clase 4: Binario arbitrario        -> 415.
 #   Clase 5: 0 bytes                   -> 415 (PIL no puede abrir un buffer vacio).
@@ -86,19 +76,19 @@ def test_valid_image_formats(client, fmt, mime, filename):
     (b"",                           "empty.jpg",  "image/jpeg"),
 ], ids=["pdf", "binario", "vacio"])
 def test_invalid_image_content(client, data, filename, mime):
-    """Cualquier archivo que no sea una imagen valida es rechazado con 415."""
+    """Archivo que no sea imagen válida es rechazado con 415."""
     response = _post_image(client, data, filename, mime)
     assert response.status_code == 415
 
 
 # ---------------------------------------------------------------------------
-# Analisis de Valores Límite (BVA) — tamano de imagen (límite: 20 MB)
+# Análisis de Valores Límite (BVA) — tamaño de imagen (límite: 20 MB)
 #   19.9 MB -> Válido  (justo por debajo del límite).
 #   20.0 MB -> Válido  (exactamente en el límite).
 #   20.0 MB + 1 byte -> Inválido, 413 (justo por encima del límite).
 #
 # Para los casos que deben pasar el chequeo de tamano se mockea PIL y
-# httpx, aislando asi el test de la logica de tamano pura.
+# httpx, aislando así el test de la lógica de tamaño pura.
 # El caso 413 no llega siquiera a PIL, por lo que no necesita mock.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("size,expected_status", [
@@ -107,7 +97,7 @@ def test_invalid_image_content(client, data, filename, mime):
     (20 * 1024 * 1024 + 1,     413),   # justo por encima -> rechazado.
 ], ids=["19.9mb", "20mb_exacto", "20mb_mas_1_byte"])
 def test_size_boundary(client, size, expected_status):
-    """Imagenes en el límite de 20 MB: por debajo y en el limite pasan, por encima devuelven 413."""
+    """Imágenes en el límite de 20 MB: <=20 MB pasan, >20 MB 413."""
     data = b"\x00" * size
 
     if expected_status == 200:
@@ -135,9 +125,11 @@ def test_size_boundary(client, size, expected_status):
     ("xml",  422, lambda r: True),
 ], ids=["json", "text", "xml_invalido"])
 def test_format_param(client, fmt_param, expected_status, check_fn, valid_jpeg_bytes):
-    """El parámetro ?format controla el tipo de respuesta; un valor inválido devuelve 422."""
+    """?format controla el tipo de respuesta; valor inválido da 422."""
     with _mock_ocr_success():
-        response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg", fmt_param)
+        response = _post_image(
+            client, valid_jpeg_bytes, "img.jpg", "image/jpeg", fmt_param,
+        )
     assert response.status_code == expected_status
     assert check_fn(response)
 
@@ -154,7 +146,7 @@ def test_format_default_is_json(client, valid_jpeg_bytes):
 
 
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — comunicacion con servicio OCR
+# Partición de Equivalencia (EP) — comunicación con servicio OCR
 #   Clase 10: OCR no alcanzable (ConnectError) -> 502.
 #   Clase 11: OCR responde con error HTTP (HTTPStatusError) -> 500.
 # ---------------------------------------------------------------------------
@@ -189,10 +181,10 @@ def test_ocr_http_error(client, valid_jpeg_bytes):
 
 
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — peticion sin archivo adjunto
+# Partición de Equivalencia (EP) — petición sin archivo adjunto
 #   Clase 12: campo "image" ausente en el multipart -> 422.
 # ---------------------------------------------------------------------------
 def test_missing_image_field(client):
-    """Una peticion sin el campo image en el multipart devuelve 422."""
+    """Una petición sin el campo image en el multipart devuelve 422."""
     response = client.post("/api/ocr")
     assert response.status_code == 422

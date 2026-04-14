@@ -15,19 +15,20 @@ sys.path.insert(0, str(_root / "backend" / "api"))
 # Fixtures compartidas por todos los servicios.
 # ---------------------------------------------------------------------------
 
+def _make_image_bytes(fmt: str) -> bytes:
+    """Genera los bytes de una imagen mínima (10x10 px) en el formato dado."""
+    buf = io.BytesIO()
+    Image.new("RGB", (10, 10), color=(100, 150, 200)).save(buf, format=fmt)
+    return buf.getvalue()
+
+
 @pytest.fixture
 def valid_jpeg_bytes():
-    """Bytes de una imagen JPEG minima y válida (10x10 px)."""
-    image = Image.new("RGB", (10, 10), color=(100, 150, 200))
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG")
-    return buffer.getvalue()
+    """Bytes de una imagen JPEG mínima y válida (10x10 px)."""
+    return _make_image_bytes("JPEG")
 
 
 @pytest.fixture
 def valid_png_bytes():
-    """Bytes de una imagen PNG minima y válida (10x10 px)."""
-    image = Image.new("RGB", (10, 10), color=(100, 150, 200))
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
+    """Bytes de una imagen PNG mínima y válida (10x10 px)."""
+    return _make_image_bytes("PNG")

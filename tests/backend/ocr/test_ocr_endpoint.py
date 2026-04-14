@@ -1,8 +1,6 @@
-import io
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
-from PIL import Image
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 
@@ -10,14 +8,6 @@ FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 # ---------------------------------------------------------------------------
 # Auxiliares.
 # ---------------------------------------------------------------------------
-
-def _make_image_bytes(fmt: str) -> bytes:
-    """Genera bytes de una imagen mínima válida (10x10 px) en el formato indicado."""
-    image = Image.new("RGB", (10, 10), color=(100, 150, 200))
-    buffer = io.BytesIO()
-    image.save(buffer, format=fmt)
-    return buffer.getvalue()
-
 
 def _post_image(client, data: bytes, filename: str, mime: str):
     """Envía una petición POST a /extract con los datos de imagen proporcionados."""
@@ -43,13 +33,13 @@ def test_health(client):
 #   Clase 1: JPEG — formato principal esperado (fotos de manuales).
 #   Clase 2: PNG  — formato alternativo igualmente válido.
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("fmt,mime,filename", [
-    ("JPEG", "image/jpeg", "manual.jpg"),
-    ("PNG",  "image/png",  "manual.png"),
+@pytest.mark.parametrize("fixture_name,mime,filename", [
+    ("valid_jpeg_bytes", "image/jpeg", "manual.jpg"),
+    ("valid_png_bytes",  "image/png",  "manual.png"),
 ], ids=["jpeg", "png"])
-def test_valid_image_formats(client, fmt, mime, filename):
-    """Una imagen válida en cualquier formato soportado devuelve 200 con las líneas OCR."""
-    image_bytes = _make_image_bytes(fmt)
+def test_valid_image_formats(client, fixture_name, mime, filename, request):
+    """Formato soportado devuelve 200 con las líneas OCR."""
+    image_bytes = request.getfixturevalue(fixture_name)
     with patch("ocr_app.extract_text", return_value=FAKE_OCR_RESULT):
         response = _post_image(client, image_bytes, filename, mime)
     assert response.status_code == 200

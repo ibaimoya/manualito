@@ -23,6 +23,6 @@ jobs:
       - name: Instalar dependencias de test
         run: pip install -r tests/requirements-test.txt
 
-      - name: Ejecutar tests de OCR
+      - name: Ejecutar tests
         working-directory: tests
         run: python -m pytest -v

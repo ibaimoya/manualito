@@ -46,7 +46,7 @@ def extract_text(image_path: str) -> list[dict]:
 
     lines = []
     for res in result:
-        for text, score in zip(res['rec_texts'], res['rec_scores']):
+        for text, score in zip(res['rec_texts'], res['rec_scores'], strict=True):
             lines.append({'text': text, 'confidence': round(float(score), 4)})
 
     if not lines:

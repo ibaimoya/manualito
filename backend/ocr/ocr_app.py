@@ -1,9 +1,11 @@
 import logging
-import tempfile
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+import tempfile
+from typing import Annotated
+
 from extractor import extract_text
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,7 +22,7 @@ async def health():
 
 
 @app.post("/extract")
-async def extract_endpoint(image: UploadFile = File(...)):
+async def extract_endpoint(image: Annotated[UploadFile, File()]):
     """
     Extrae el texto de una imagen mediante OCR.
 
@@ -42,9 +44,12 @@ async def extract_endpoint(image: UploadFile = File(...)):
 
     try:
         lines = extract_text(tmp_path)
-    except Exception:
+    except Exception as ocr_err:
         logger.error("Error durante el OCR de '%s'.", image.filename, exc_info=True)
-        raise HTTPException(status_code=500, detail="Error interno al procesar la imagen con OCR.")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al procesar la imagen con OCR.",
+        ) from ocr_err
     finally:
         os.remove(tmp_path)
 

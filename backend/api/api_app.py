@@ -1,11 +1,13 @@
 import logging
 import os
 from io import BytesIO
-from PIL import Image
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Query
+from typing import Annotated
+
+import httpx
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
-import httpx
+from PIL import Image
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,8 +28,8 @@ async def health():
 
 @app.post("/api/ocr")
 async def ocr_endpoint(
-    image: UploadFile = File(...),
-    format: str = Query(default="json", pattern="^(json|text)$"),
+    image: Annotated[UploadFile, File()],
+    format: Annotated[str, Query(pattern="^(json|text)$")] = "json",
 ):
     """
     Extrae el texto de una imagen mediante OCR.
@@ -57,7 +59,10 @@ async def ocr_endpoint(
         with Image.open(BytesIO(chunk)) as img:
             img.verify()
     except Exception:
-        raise HTTPException(status_code=415, detail="El archivo no es una imagen válida.")
+        raise HTTPException(
+            status_code=415,
+            detail="El archivo no es una imagen válida.",
+        ) from None
 
     logger.info("Petición OCR recibida: %s (%d bytes)", image.filename, len(chunk))
 
@@ -66,15 +71,24 @@ async def ocr_endpoint(
             response = await client.post(
                 f"{OCR_URL}/extract",
                 files={"image": (image.filename, chunk, image.content_type)},
-                timeout=300.0, # Espera a recibir el JSON hasta 5 minutos, si no lo recibe devuelve un error.
+                timeout=300.0, # Espera a recibir el JSON hasta 5 minutos.
             )
             response.raise_for_status()
     except httpx.ConnectError:
         logger.error("No se pudo conectar con el servicio OCR en %s.", OCR_URL)
-        raise HTTPException(status_code=502, detail="Servicio OCR no disponible.")
-    except httpx.HTTPStatusError as e:
-        logger.error("El servicio OCR respondió con error %d.", e.response.status_code)
-        raise HTTPException(status_code=500, detail="Error interno al procesar la imagen con OCR.")
+        raise HTTPException(
+            status_code=502,
+            detail="Servicio OCR no disponible.",
+        ) from None
+    except httpx.HTTPStatusError as http_err:
+        logger.error(
+            "El servicio OCR respondió con error %d.",
+            http_err.response.status_code,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al procesar la imagen con OCR.",
+        ) from http_err
 
     lines = response.json()["lines"]
 

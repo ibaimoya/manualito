@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
-MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB — debe coincidir con main.py
+MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB — debe coincidir con api_app.py
 
 
 # ---------------------------------------------------------------------------
@@ -19,20 +19,15 @@ def _post_image(client, data: bytes, filename: str, mime: str, fmt_param: str = 
     )
 
 
-def _mock_ocr_success(result=None):
-    """Devuelve un context manager mock de httpx.AsyncClient con respuesta exitosa."""
+def _configure_ocr_success(mock_client: AsyncMock, result=None):
+    """Configura el mock del cliente HTTP para responder con éxito al OCR."""
     if result is None:
         result = FAKE_OCR_RESULT
 
     mock_response = MagicMock()
     mock_response.json.return_value = {"lines": result}
     mock_response.raise_for_status.return_value = None
-
-    mock_client = AsyncMock()
     mock_client.post.return_value = mock_response
-    mock_client.__aenter__.return_value = mock_client
-
-    return patch("httpx.AsyncClient", return_value=mock_client)
 
 
 # ---------------------------------------------------------------------------
@@ -55,11 +50,15 @@ def test_health(client):
     ("valid_jpeg_bytes", "image/jpeg", "manual.jpg"),
     ("valid_png_bytes",  "image/png",  "manual.png"),
 ], ids=["jpeg", "png"])
-def test_valid_image_formats(client, fixture_name, mime, filename, request):
+def test_valid_image_formats(
+    client, fixture_name, mime, filename, request, override_http_client,
+):
     """Formato soportado devuelve 200 con las líneas OCR."""
     image_bytes = request.getfixturevalue(fixture_name)
-    with _mock_ocr_success():
-        response = _post_image(client, image_bytes, filename, mime)
+    _configure_ocr_success(override_http_client)
+
+    response = _post_image(client, image_bytes, filename, mime)
+
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
 
@@ -87,8 +86,8 @@ def test_invalid_image_content(client, data, filename, mime):
 #   20.0 MB -> Válido  (exactamente en el límite).
 #   20.0 MB + 1 byte -> Inválido, 413 (justo por encima del límite).
 #
-# Para los casos que deben pasar el chequeo de tamano se mockea PIL y
-# httpx, aislando así el test de la lógica de tamaño pura.
+# Para los casos que deben pasar el chequeo de tamano se mockea PIL y el
+# cliente HTTP, aislando así el test de la lógica de tamaño pura.
 # El caso 413 no llega siquiera a PIL, por lo que no necesita mock.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("size,expected_status", [
@@ -96,12 +95,13 @@ def test_invalid_image_content(client, data, filename, mime):
     (20 * 1024 * 1024,         200),   # exactamente 20 MB -> aceptado.
     (20 * 1024 * 1024 + 1,     413),   # justo por encima -> rechazado.
 ], ids=["19.9mb", "20mb_exacto", "20mb_mas_1_byte"])
-def test_size_boundary(client, size, expected_status):
+def test_size_boundary(client, size, expected_status, override_http_client):
     """Imágenes en el límite de 20 MB: <=20 MB pasan, >20 MB 413."""
     data = b"\x00" * size
 
     if expected_status == 200:
-        with patch("api_app.Image.open") as mock_open, _mock_ocr_success():
+        _configure_ocr_success(override_http_client)
+        with patch("api_app.Image.open") as mock_open:
             mock_img = MagicMock()
             mock_open.return_value.__enter__ = MagicMock(return_value=mock_img)
             mock_open.return_value.__exit__ = MagicMock(return_value=False)
@@ -124,23 +124,25 @@ def test_size_boundary(client, size, expected_status):
     ("text", 200, lambda r: r.text == "Reglas del juego"),
     ("xml",  422, lambda r: True),
 ], ids=["json", "text", "xml_invalido"])
-def test_format_param(client, fmt_param, expected_status, check_fn, valid_jpeg_bytes):
+def test_format_param(
+    client, fmt_param, expected_status, check_fn, valid_jpeg_bytes, override_http_client,
+):
     """?format controla el tipo de respuesta; valor inválido da 422."""
-    with _mock_ocr_success():
-        response = _post_image(
-            client, valid_jpeg_bytes, "img.jpg", "image/jpeg", fmt_param,
-        )
+    _configure_ocr_success(override_http_client)
+    response = _post_image(
+        client, valid_jpeg_bytes, "img.jpg", "image/jpeg", fmt_param,
+    )
     assert response.status_code == expected_status
     assert check_fn(response)
 
 
-def test_format_default_is_json(client, valid_jpeg_bytes):
+def test_format_default_is_json(client, valid_jpeg_bytes, override_http_client):
     """Sin el parámetro ?format, el endpoint usa json como valor por defecto."""
-    with _mock_ocr_success():
-        response = client.post(
-            "/api/ocr",
-            files={"image": ("img.jpg", valid_jpeg_bytes, "image/jpeg")},
-        )
+    _configure_ocr_success(override_http_client)
+    response = client.post(
+        "/api/ocr",
+        files={"image": ("img.jpg", valid_jpeg_bytes, "image/jpeg")},
+    )
     assert response.status_code == 200
     assert "lines" in response.json()
 
@@ -150,18 +152,16 @@ def test_format_default_is_json(client, valid_jpeg_bytes):
 #   Clase 10: OCR no alcanzable (ConnectError) -> 502.
 #   Clase 11: OCR responde con error HTTP (HTTPStatusError) -> 500.
 # ---------------------------------------------------------------------------
-def test_ocr_unavailable(client, valid_jpeg_bytes):
+def test_ocr_unavailable(client, valid_jpeg_bytes, override_http_client):
     """Si el servicio OCR no es alcanzable, el gateway devuelve 502."""
-    mock_client = AsyncMock()
-    mock_client.post.side_effect = httpx.ConnectError("connection refused")
-    mock_client.__aenter__.return_value = mock_client
+    override_http_client.post.side_effect = httpx.ConnectError("connection refused")
 
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+
     assert response.status_code == 502
 
 
-def test_ocr_http_error(client, valid_jpeg_bytes):
+def test_ocr_http_error(client, valid_jpeg_bytes, override_http_client):
     """Si el servicio OCR responde con un error HTTP, el gateway devuelve 500."""
     mock_response = MagicMock()
     mock_response.status_code = 500
@@ -170,13 +170,10 @@ def test_ocr_http_error(client, valid_jpeg_bytes):
         request=MagicMock(),
         response=mock_response,
     )
+    override_http_client.post.return_value = mock_response
 
-    mock_client = AsyncMock()
-    mock_client.post.return_value = mock_response
-    mock_client.__aenter__.return_value = mock_client
+    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
     assert response.status_code == 500
 
 

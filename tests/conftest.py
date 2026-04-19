@@ -9,6 +9,8 @@ from PIL import Image
 _root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_root / "backend" / "ocr"))
 sys.path.insert(0, str(_root / "backend" / "api"))
+sys.path.insert(0, str(_root / "backend" / "rag"))
+sys.path.insert(0, str(_root / "backend" / "llm"))
 
 
 # ---------------------------------------------------------------------------

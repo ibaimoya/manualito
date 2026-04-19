@@ -427,6 +427,9 @@ notimportant/
 # Caché de modelos de PaddleOCR
 .paddleocr_cache/
 
+# Caché de modelos de HuggingFace (embeddings RAG)
+.hf_cache/
+
 # Ficheros de configuración de GitLab CI
 .gitlab-ci.yml
 

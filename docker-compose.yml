@@ -6,10 +6,15 @@ services:
       - "8000:8000"
     environment:
       - OCR_URL=http://ocr:8001
+      - RAG_URL=http://rag:8002
+      - LLM_URL=http://llm:8003
     depends_on:
-      - ocr
-      - rag
-      - llm
+      ocr:
+        condition: service_healthy
+      rag:
+        condition: service_healthy
+      llm:
+        condition: service_healthy
     networks:
       - manualito-net
 
@@ -23,6 +28,20 @@ services:
       - manualito-net
 
   rag:
+    build: ./backend/rag
+    environment:
+      - CHROMA_URL=http://chroma:8000
+      - CHROMA_COLLECTION=manualito_manuals
+      - EMBEDDING_MODEL=intfloat/multilingual-e5-small
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - ./backend/rag/.hf_cache:/root/.cache/huggingface
+    depends_on:
+      - chroma
+    networks:
+      - manualito-net
+
+  chroma:
     image: chromadb/chroma
     volumes:
       - chromadb-data:/chroma/chroma
@@ -30,6 +49,17 @@ services:
       - manualito-net
 
   llm:
+    build: ./backend/llm
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=phi4:14b
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    networks:
+      - manualito-net
+
+  ollama:
     image: ollama/ollama
     volumes:
       - ollama-data:/root/.ollama
@@ -40,6 +70,30 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - manualito-net
+
+  # Servicio one-shot: espera a que Ollama esté listo y descarga el modelo si
+  # no está ya en el volumen ``ollama-data``. Es idempotente — si el modelo
+  # existe, ``ollama pull`` detecta el hash local y sale al instante. Al
+  # definirse ``llm: depends_on: ollama-init: service_completed_successfully``,
+  # el LLM no arranca hasta que el modelo esté disponible.
+  ollama-init:
+    image: ollama/ollama
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull phi4:14b"]
+    restart: "no"
     networks:
       - manualito-net
 

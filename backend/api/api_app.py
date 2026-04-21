@@ -8,6 +8,7 @@ from uuid import uuid4
 from typing import Annotated
 
 import httpx
+from common.filters.health_log import install_health_log_filter
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -19,6 +20,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
+install_health_log_filter()
 
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
 OCR_URL = os.getenv("OCR_URL", "http://ocr:8001")
@@ -60,9 +64,9 @@ class QuestionRequest(BaseModel):
     question: Annotated[str, Field(min_length=1)]
 
 
-@app.get("/api/ocr/health")
+@app.get("/health")
 async def health():
-    """Comprueba que el gateway público está disponible."""
+    """Comprueba que el gateway está disponible."""
     return {"status": "ok"}
 
 

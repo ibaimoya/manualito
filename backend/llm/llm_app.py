@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 import httpx
+from common.filters.health_log import install_health_log_filter
 from fastapi import Depends, FastAPI, HTTPException
 from prompt_builder import build_prompt
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,6 +18,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
+install_health_log_filter()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4:14b")

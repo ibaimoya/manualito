@@ -3,6 +3,7 @@ import os
 import tempfile
 from typing import Annotated
 
+from common.filters.health_log import install_health_log_filter
 from extractor import extract_text
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -12,6 +13,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
+install_health_log_filter()
 
 app = FastAPI(title="Manualito OCR Service")
 

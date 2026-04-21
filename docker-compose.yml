@@ -1,7 +1,9 @@
 services:
 
   api:
-    build: ./backend/api
+    build:
+      context: ./backend
+      dockerfile: api/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -19,7 +21,9 @@ services:
       - manualito-net
 
   ocr:
-    build: ./backend/ocr
+    build:
+      context: ./backend
+      dockerfile: ocr/Dockerfile
     environment:
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
     volumes:
@@ -28,7 +32,9 @@ services:
       - manualito-net
 
   rag:
-    build: ./backend/rag
+    build:
+      context: ./backend
+      dockerfile: rag/Dockerfile
     environment:
       - CHROMA_URL=http://chroma:8000
       - CHROMA_COLLECTION=manualito_manuals
@@ -49,7 +55,9 @@ services:
       - manualito-net
 
   llm:
-    build: ./backend/llm
+    build:
+      context: ./backend
+      dockerfile: llm/Dockerfile
     environment:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=phi4:14b
@@ -72,7 +80,7 @@ services:
               capabilities: [gpu]
     healthcheck:
       test: ["CMD", "ollama", "list"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 10
       start_period: 20s

@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from chunking import chunk_text
+from common.filters.health_log import install_health_log_filter
 from embeddings import get_embedding_service
 from fastapi import FastAPI, HTTPException
 from normalizer import normalize_ocr_lines, normalize_text
@@ -17,6 +18,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
+install_health_log_filter()
 
 
 @asynccontextmanager

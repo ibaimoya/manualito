@@ -8,7 +8,7 @@ from uuid import uuid4
 from typing import Annotated
 
 import httpx
-from common.filters.health_log import install_health_log_filter
+from common.filters import install_health_log_filter
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse

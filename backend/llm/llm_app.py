@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 import httpx
-from common.filters.health_log import install_health_log_filter
+from common.filters import install_health_log_filter
 from fastapi import Depends, FastAPI, HTTPException
 from prompt_builder import build_prompt
 from pydantic import BaseModel, ConfigDict, Field

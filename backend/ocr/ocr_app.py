@@ -3,7 +3,7 @@ import os
 import tempfile
 from typing import Annotated
 
-from common.filters.health_log import install_health_log_filter
+from common.filters import install_health_log_filter
 from extractor import extract_text
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse

@@ -7,6 +7,9 @@ from PIL import Image
 
 # Añade los servicios al path para que los tests encuentren los módulos.
 _root = Path(__file__).resolve().parent.parent
+# backend/ permite importar el paquete compartido `common` con el mismo
+# nombre que usa el código de producción (from common.filters... import ...).
+sys.path.insert(0, str(_root / "backend"))
 sys.path.insert(0, str(_root / "backend" / "ocr"))
 sys.path.insert(0, str(_root / "backend" / "api"))
 sys.path.insert(0, str(_root / "backend" / "rag"))

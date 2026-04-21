@@ -36,7 +36,7 @@ def _configure_ocr_success(mock_client: AsyncMock, result=None):
 
 def test_health(client):
     """El endpoint de health devuelve 200 y el cuerpo {"status": "ok"}."""
-    response = client.get("/api/ocr/health")
+    response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 

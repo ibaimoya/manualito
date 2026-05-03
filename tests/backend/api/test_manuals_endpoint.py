@@ -12,11 +12,12 @@ def _mock_response(payload: dict):
 
 
 def test_create_manual_orquesta_ocr_e_ingesta(client, valid_jpeg_bytes, override_http_client):
+    unload_response = _mock_response({"status": "idle", "unloaded": True})
     ocr_response = _mock_response({"lines": [{"text": "Regla 1", "confidence": 0.9}]})
     rag_response = _mock_response(
         {"manual_id": "catan-12345678", "chunks_indexed": 1, "status": "indexed"}
     )
-    override_http_client.post.side_effect = [ocr_response, rag_response]
+    override_http_client.post.side_effect = [unload_response, ocr_response, rag_response]
 
     with patch("api_app.uuid4", return_value=SimpleNamespace(hex="12345678abcdef00")):
         response = client.post(

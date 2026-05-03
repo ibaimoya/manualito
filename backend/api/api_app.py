@@ -28,6 +28,12 @@ MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
 OCR_URL = os.getenv("OCR_URL", "http://ocr:8001")
 RAG_URL = os.getenv("RAG_URL", "http://rag:8002")
 LLM_URL = os.getenv("LLM_URL", "http://llm:8003")
+LLM_UNLOAD_BEFORE_OCR = os.getenv("LLM_UNLOAD_BEFORE_OCR", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 # Cliente HTTP compartido por todo el proceso. El lifespan de FastAPI lo
 # instancia al arrancar y lo cierra al parar, habilitando connection pooling
@@ -307,6 +313,8 @@ async def _call_ocr_service(
     Returns:
         list[dict]: Líneas OCR devueltas por el servicio interno.
     """
+    await _request_llm_unload_if_idle(client)
+
     response = await _send_request(
         client=client,
         service_name="OCR",
@@ -319,6 +327,30 @@ async def _call_ocr_service(
         internal_detail="Error interno al procesar la imagen con OCR.",
     )
     return response["lines"]
+
+
+async def _request_llm_unload_if_idle(client: httpx.AsyncClient) -> None:
+    """
+    Pide al servicio LLM liberar VRAM antes de OCR si Ollama esta ocioso.
+
+    Es una optimizacion best-effort: cualquier fallo se registra y el OCR
+    continua, porque descargar el modelo no forma parte del resultado funcional.
+    """
+    if not LLM_UNLOAD_BEFORE_OCR:
+        return
+
+    try:
+        response = await client.post(
+            url=f"{LLM_URL}/unload-if-idle",
+            timeout=5.0,
+        )
+        response.raise_for_status()
+        logger.info("Liberacion LLM antes de OCR solicitada: %s", response.json())
+    except Exception:
+        logger.warning(
+            "No se pudo solicitar la liberacion del LLM antes de OCR.",
+            exc_info=True,
+        )
 
 
 async def _post_json(

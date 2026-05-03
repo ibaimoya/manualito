@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -24,9 +25,12 @@ install_health_log_filter()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4:14b")
+OLLAMA_KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE")
 OLLAMA_TIMEOUT = 120.0
 
 _http_client: httpx.AsyncClient | None = None
+_active_generations = 0
+_active_generations_lock = asyncio.Lock()
 
 
 @asynccontextmanager
@@ -96,10 +100,99 @@ class GenerateRequest(BaseModel):
     manual_id: str | None = None
 
 
+def _ollama_model_matches(model_payload: dict) -> bool:
+    """Indica si una entrada de Ollama corresponde al modelo configurado."""
+    model_names = {model_payload.get("name"), model_payload.get("model")}
+    return OLLAMA_MODEL in model_names
+
+
+async def _mark_generation_started() -> None:
+    """Registra el inicio de una generacion para evitar descargas concurrentes."""
+    global _active_generations
+    async with _active_generations_lock:
+        _active_generations += 1
+
+
+async def _mark_generation_finished() -> None:
+    """Registra el fin de una generacion LLM en curso."""
+    global _active_generations
+    async with _active_generations_lock:
+        _active_generations = max(0, _active_generations - 1)
+
+
+async def _get_active_generations() -> int:
+    """Devuelve el numero de generaciones activas sin retener el lock."""
+    async with _active_generations_lock:
+        return _active_generations
+
+
 @app.get("/health")
 async def health():
     """Comprueba que el servicio LLM está disponible."""
     return {"status": "ok"}
+
+
+@app.post("/unload-if-idle")
+async def unload_if_idle_endpoint(
+    client: httpx.AsyncClient = Depends(get_http_client),
+):
+    """
+    Descarga el modelo de Ollama si no hay generacion activa.
+
+    Lo usa el gateway antes de un OCR potencialmente pesado para liberar VRAM
+    a PaddleOCR GPU. Es deliberadamente best-effort: si Ollama no responde, no
+    debe romper el flujo de OCR.
+    """
+    active_generations = await _get_active_generations()
+    if active_generations > 0:
+        return {
+            "status": "busy",
+            "unloaded": False,
+            "active_generations": active_generations,
+        }
+
+    try:
+        ps_response = await client.get(f"{OLLAMA_URL}/api/ps", timeout=10.0)
+        ps_response.raise_for_status()
+        loaded_models = ps_response.json().get("models", [])
+        model_loaded = any(_ollama_model_matches(model) for model in loaded_models)
+        if not model_loaded:
+            return {
+                "status": "idle",
+                "unloaded": False,
+                "reason": "model_not_loaded",
+                "model": OLLAMA_MODEL,
+            }
+
+        active_generations = await _get_active_generations()
+        if active_generations > 0:
+            return {
+                "status": "busy",
+                "unloaded": False,
+                "active_generations": active_generations,
+            }
+
+        unload_response = await client.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": "",
+                "stream": False,
+                "keep_alive": 0,
+            },
+            timeout=30.0,
+        )
+        unload_response.raise_for_status()
+    except Exception:
+        logger.warning(
+            "No se pudo descargar el modelo '%s' antes del OCR.",
+            OLLAMA_MODEL,
+            exc_info=True,
+        )
+        return {"status": "error", "unloaded": False, "model": OLLAMA_MODEL}
+
+    logger.info("Modelo '%s' descargado de Ollama por inactividad.", OLLAMA_MODEL)
+    return {"status": "idle", "unloaded": True, "model": OLLAMA_MODEL}
 
 
 @app.post("/generate")
@@ -138,15 +231,20 @@ async def generate_endpoint(
         included_chunks,
     )
 
+    ollama_payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"temperature": 0.2, "num_ctx": 8192},
+    }
+    if OLLAMA_KEEP_ALIVE:
+        ollama_payload["keep_alive"] = OLLAMA_KEEP_ALIVE
+
+    await _mark_generation_started()
     try:
         response = await client.post(
             f"{OLLAMA_URL}/api/generate",
-            json={
-                "model": OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0.2, "num_ctx": 8192},
-            },
+            json=ollama_payload,
             timeout=OLLAMA_TIMEOUT,
         )
         response.raise_for_status()
@@ -165,6 +263,8 @@ async def generate_endpoint(
             status_code=500,
             detail="Error interno al generar la respuesta con el LLM.",
         ) from llm_err
+    finally:
+        await _mark_generation_finished()
 
     try:
         body = response.json()

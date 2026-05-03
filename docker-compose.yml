@@ -10,6 +10,7 @@ services:
       - OCR_URL=http://ocr:8001
       - RAG_URL=http://rag:8002
       - LLM_URL=http://llm:8003
+      - LLM_UNLOAD_BEFORE_OCR=true
     depends_on:
       ocr:
         condition: service_healthy
@@ -61,6 +62,7 @@ services:
     environment:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=phi4:14b
+      - OLLAMA_KEEP_ALIVE=5m
     depends_on:
       ollama-init:
         condition: service_completed_successfully

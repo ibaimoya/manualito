@@ -129,6 +129,111 @@ def test_warn_if_model_missing_tolerates_startup_failures():
 #   Clase 12: Ollama devuelve JSON inválido — 502.
 #   Clase 13: Ollama devuelve respuesta vacía — 500.
 # ---------------------------------------------------------------------------
+def test_unload_if_idle_skips_when_generation_is_active(client, override_http_client):
+    """Si el LLM esta generando, la descarga se omite para no cortar la respuesta."""
+    previous_active = llm_app._active_generations
+    llm_app._active_generations = 1
+    try:
+        response = client.post("/unload-if-idle")
+    finally:
+        llm_app._active_generations = previous_active
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "busy",
+        "unloaded": False,
+        "active_generations": 1,
+    }
+    override_http_client.get.assert_not_called()
+    override_http_client.post.assert_not_called()
+
+
+def test_unload_if_idle_unloads_loaded_model(client, override_http_client):
+    """Si el modelo esta residente y no hay generacion activa, se descarga."""
+    ps_response = MagicMock()
+    ps_response.raise_for_status.return_value = None
+    ps_response.json.return_value = {"models": [{"model": llm_app.OLLAMA_MODEL}]}
+    unload_response = MagicMock()
+    unload_response.raise_for_status.return_value = None
+    override_http_client.get.return_value = ps_response
+    override_http_client.post.return_value = unload_response
+
+    response = client.post("/unload-if-idle")
+
+    assert response.status_code == 200
+    assert response.json()["unloaded"] is True
+    unload_payload = override_http_client.post.call_args.kwargs["json"]
+    assert unload_payload["model"] == llm_app.OLLAMA_MODEL
+    assert unload_payload["prompt"] == ""
+    assert unload_payload["keep_alive"] == 0
+
+
+def test_unload_if_idle_does_not_hold_generation_lock_during_ollama_io():
+    """El lock del contador no debe cubrir I/O con Ollama."""
+    mock_client = AsyncMock()
+    ps_response = MagicMock()
+    ps_response.raise_for_status.return_value = None
+    ps_response.json.return_value = {"models": [{"model": llm_app.OLLAMA_MODEL}]}
+    unload_response = MagicMock()
+    unload_response.raise_for_status.return_value = None
+
+    async def get_side_effect(*args, **kwargs):
+        assert not llm_app._active_generations_lock.locked()
+        return ps_response
+
+    async def post_side_effect(*args, **kwargs):
+        assert not llm_app._active_generations_lock.locked()
+        return unload_response
+
+    mock_client.get.side_effect = get_side_effect
+    mock_client.post.side_effect = post_side_effect
+
+    response = asyncio.run(llm_app.unload_if_idle_endpoint(client=mock_client))
+
+    assert response["unloaded"] is True
+
+
+def test_unload_if_idle_rechecks_activity_before_unloading():
+    """Si entra una generacion durante /api/ps, la descarga se cancela."""
+    mock_client = AsyncMock()
+    ps_response = MagicMock()
+    ps_response.raise_for_status.return_value = None
+    ps_response.json.return_value = {"models": [{"model": llm_app.OLLAMA_MODEL}]}
+
+    async def get_side_effect(*args, **kwargs):
+        llm_app._active_generations = 1
+        return ps_response
+
+    previous_active = llm_app._active_generations
+    llm_app._active_generations = 0
+    mock_client.get.side_effect = get_side_effect
+    try:
+        response = asyncio.run(llm_app.unload_if_idle_endpoint(client=mock_client))
+    finally:
+        llm_app._active_generations = previous_active
+
+    assert response == {
+        "status": "busy",
+        "unloaded": False,
+        "active_generations": 1,
+    }
+    mock_client.post.assert_not_called()
+
+
+def test_unload_if_idle_ignores_unloaded_model(client, override_http_client):
+    """Si el modelo no aparece en /api/ps, no se fuerza ninguna descarga."""
+    ps_response = MagicMock()
+    ps_response.raise_for_status.return_value = None
+    ps_response.json.return_value = {"models": [{"model": "otro-modelo"}]}
+    override_http_client.get.return_value = ps_response
+
+    response = client.post("/unload-if-idle")
+
+    assert response.status_code == 200
+    assert response.json()["reason"] == "model_not_loaded"
+    override_http_client.post.assert_not_called()
+
+
 def test_generate_returns_trimmed_answer(client, override_http_client):
     """La respuesta válida del LLM se limpia y se expone en el campo answer."""
     mock_response = MagicMock()
@@ -143,6 +248,52 @@ def test_generate_returns_trimmed_answer(client, override_http_client):
 
     assert response.status_code == 200
     assert response.json() == {"answer": "Respuesta final"}
+
+
+def test_generate_tracks_active_generation_while_ollama_runs(client, override_http_client):
+    """Durante la llamada a Ollama, el servicio marca una generacion activa."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"response": "Respuesta final"}
+
+    async def post_side_effect(*args, **kwargs):
+        assert llm_app._active_generations == 1
+        return mock_response
+
+    previous_active = llm_app._active_generations
+    llm_app._active_generations = 0
+    override_http_client.post.side_effect = post_side_effect
+    try:
+        response = client.post(
+            "/generate",
+            json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
+        )
+    finally:
+        llm_app._active_generations = previous_active
+
+    assert response.status_code == 200
+    assert llm_app._active_generations == previous_active
+
+
+def test_generate_sends_configured_keep_alive(client, override_http_client):
+    """Si se configura OLLAMA_KEEP_ALIVE, se reenvia a Ollama."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"response": "Respuesta final"}
+    override_http_client.post.return_value = mock_response
+
+    previous_keep_alive = llm_app.OLLAMA_KEEP_ALIVE
+    llm_app.OLLAMA_KEEP_ALIVE = "5m"
+    try:
+        response = client.post(
+            "/generate",
+            json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
+        )
+    finally:
+        llm_app.OLLAMA_KEEP_ALIVE = previous_keep_alive
+
+    assert response.status_code == 200
+    assert override_http_client.post.call_args.kwargs["json"]["keep_alive"] == "5m"
 
 
 def test_generate_returns_502_when_ollama_is_unreachable(client, override_http_client):

@@ -19,15 +19,21 @@ def _post_image(client, data: bytes, filename: str, mime: str, fmt_param: str = 
     )
 
 
+def _mock_response(payload: dict):
+    response = MagicMock()
+    response.json.return_value = payload
+    response.raise_for_status.return_value = None
+    return response
+
+
 def _configure_ocr_success(mock_client: AsyncMock, result=None):
     """Configura el mock del cliente HTTP para responder con éxito al OCR."""
     if result is None:
         result = FAKE_OCR_RESULT
 
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"lines": result}
-    mock_response.raise_for_status.return_value = None
-    mock_client.post.return_value = mock_response
+    unload_response = _mock_response({"status": "idle", "unloaded": True})
+    ocr_response = _mock_response({"lines": result})
+    mock_client.post.side_effect = [unload_response, ocr_response]
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +67,21 @@ def test_valid_image_formats(
 
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
+
+
+def test_ocr_requests_llm_unload_before_ocr(client, valid_jpeg_bytes, override_http_client):
+    """Antes de llamar a OCR, el gateway solicita liberar VRAM al servicio LLM."""
+    _configure_ocr_success(override_http_client)
+
+    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+
+    assert response.status_code == 200
+    assert override_http_client.post.call_args_list[0].kwargs["url"].endswith(
+        "/unload-if-idle"
+    )
+    assert override_http_client.post.call_args_list[1].kwargs["url"].endswith(
+        "/extract"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -1,57 +1,35 @@
-import logging
+from functools import cache
 
-from paddleocr import PaddleOCR
-
-logger = logging.getLogger(__name__)
-
-try:
-    _ocr = PaddleOCR(
-        use_textline_orientation=True,
-        lang='es',
-        enable_mkldnn=False,
-        device='cpu',
-    )
-    logger.info("PaddleOCR inicializado correctamente.")
-except Exception:
-    logger.error("Error al inicializar PaddleOCR.", exc_info=True)
-    raise
+from contracts import OcrEngine, OcrLine
+from factory import create_ocr_engine
 
 
-def extract_text(image_path: str) -> list[dict]:
+@cache
+def get_ocr_engine() -> OcrEngine:
+    """
+    Devuelve el motor OCR configurado como singleton lazy.
+
+    El resultado queda cacheado para reutilizar la misma instancia durante la
+    vida del proceso y evitar recargar modelos OCR en cada petición.
+    """
+    return create_ocr_engine()
+
+
+def extract_text(image_path: str) -> list[OcrLine]:
     """
     Extrae las líneas de texto reconocidas en una imagen.
 
-    Procesa la imagen indicada mediante el motor PaddleOCR y transforma la
-    salida interna en una lista normalizada de líneas con su puntuación de
-    confianza redondeada a cuatro decimales.
+    Mantiene la API pública del módulo mientras delega en el motor OCR
+    configurado por la factory.
 
     Args:
         image_path (str): Ruta absoluta o relativa al fichero de imagen a procesar.
-                          Formatos soportados: JPEG, PNG, BMP, entre otros.
 
     Returns:
-        list[dict]: Lista de diccionarios, uno por línea reconocida, con las claves:
-                    - 'text' (str): Texto reconocido en la línea.
-                    - 'confidence' (float): Puntuación de confianza del modelo en el
-                      rango [0.0, 1.0], redondeada a cuatro decimales.
-                    La lista puede estar vacía si el modelo no detecta texto; en ese
-                    caso se emite un WARNING en el log.
+        list[OcrLine]: Lista de líneas OCR normalizadas.
 
     Raises:
-        Exception: Cualquier excepción lanzada por PaddleOCR se propaga al llamador
-                   sin capturar. El caller es responsable de manejarla.
+        Exception: Cualquier excepción lanzada por el motor OCR se propaga al
+            llamador sin capturar.
     """
-    logger.info("Iniciando OCR sobre: %s", image_path)
-    result = _ocr.predict(image_path)
-
-    lines = []
-    for res in result:
-        for text, score in zip(res['rec_texts'], res['rec_scores'], strict=True):
-            lines.append({'text': text, 'confidence': round(float(score), 4)})
-
-    if not lines:
-        logger.warning("OCR completado sin líneas detectadas: %s", image_path)
-    else:
-        logger.info("OCR completado: %d líneas detectadas.", len(lines))
-
-    return lines
+    return get_ocr_engine().extract_text(image_path)

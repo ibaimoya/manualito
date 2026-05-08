@@ -27,6 +27,7 @@ services:
       dockerfile: ocr/Dockerfile
     environment:
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+      - OCR_ENGINE=paddle_cpu
     volumes:
       - ./backend/ocr/.paddleocr_cache:/root/.paddlex
     networks:

@@ -1,0 +1,19 @@
+services:
+  ocr:
+    image: tfg-ocr:gpu
+    build:
+      args:
+        # cu118
+        OCR_RUNTIME_STAGE: paddle-gpu
+    environment:
+      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+      - OCR_ENGINE=paddle_gpu
+    volumes:
+      - ./backend/ocr/.ocr_cache/paddle_gpu:/root/.paddlex
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

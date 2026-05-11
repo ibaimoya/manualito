@@ -1,0 +1,7 @@
+# PaddlePaddle CPU
+--index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/
+--extra-index-url https://pypi.org/simple
+
+-r ../requirements.txt
+
+paddlepaddle==3.3.0

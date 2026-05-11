@@ -424,8 +424,9 @@ CLAUDE.md
 # Ficheros locales auxiliares
 notimportant/
 
-# Caché de modelos de PaddleOCR
+# Caché de modelos de OCR
 .paddleocr_cache/
+.ocr_cache/
 
 # Caché de modelos de HuggingFace (embeddings RAG)
 .hf_cache/

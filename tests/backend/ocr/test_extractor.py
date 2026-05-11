@@ -1,7 +1,7 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
-from engines.paddle_cpu import PaddleCpuOcrEngine
+from engines.paddle.cpu import PaddleCpuOcrEngine
 import extractor
 
 
@@ -98,6 +98,29 @@ def test_paddle_cpu_engine_propagates_exception():
 def test_paddle_cpu_engine_name():
     """El engine expone un nombre estable para logs, metricas y tests."""
     assert PaddleCpuOcrEngine.name == "paddle_cpu"
+
+
+def test_paddle_cpu_initializes_paddleocr_with_cpu():
+    """Inicializa PaddleOCR apuntando explicitamente al dispositivo CPU."""
+    with patch("engines.paddle.cpu.engine.PaddleOCR") as paddleocr:
+        PaddleCpuOcrEngine()
+
+    paddleocr.assert_called_once_with(
+        use_textline_orientation=True,
+        lang="es",
+        enable_mkldnn=False,
+        device="cpu",
+    )
+
+
+def test_paddle_cpu_propagates_initialization_error():
+    """Propaga los fallos de inicializacion de PaddleOCR."""
+    with patch(
+        "engines.paddle.cpu.engine.PaddleOCR",
+        side_effect=RuntimeError("fallo init"),
+    ):
+        with pytest.raises(RuntimeError, match="fallo init"):
+            PaddleCpuOcrEngine()
 
 
 def test_extract_text_delegates_to_configured_engine(monkeypatch):

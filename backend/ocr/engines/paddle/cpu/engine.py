@@ -1,6 +1,7 @@
 import logging
 
 from contracts import OcrLine
+from engines.paddle.common import log_ocr_result, normalize_paddle_result
 from paddleocr import PaddleOCR
 
 logger = logging.getLogger(__name__)
@@ -34,16 +35,6 @@ class PaddleCpuOcrEngine:
         redondeada a cuatro decimales.
         """
         logger.info("Iniciando OCR sobre: %s", image_path)
-        result = self._ocr.predict(image_path)
-
-        lines: list[OcrLine] = []
-        for res in result:
-            for text, score in zip(res["rec_texts"], res["rec_scores"], strict=True):
-                lines.append({"text": text, "confidence": round(float(score), 4)})
-
-        if not lines:
-            logger.warning("OCR completado sin líneas detectadas: %s", image_path)
-        else:
-            logger.info("OCR completado: %d líneas detectadas.", len(lines))
-
+        lines = normalize_paddle_result(self._ocr.predict(image_path))
+        log_ocr_result(logger, image_path, lines)
         return lines

@@ -1,8 +1,4 @@
-# OCR
-paddlepaddle>=2.6.0
-paddleocr>=2.7.0
-
-# Visión por computador
+# Vision por computador
 opencv-python-headless>=4.6.0
 
 # Procesado

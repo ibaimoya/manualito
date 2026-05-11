@@ -22,14 +22,17 @@ services:
       - manualito-net
 
   ocr:
+    image: tfg-ocr:cpu
     build:
       context: ./backend
       dockerfile: ocr/Dockerfile
+      args:
+        OCR_RUNTIME_STAGE: paddle-cpu
     environment:
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
       - OCR_ENGINE=paddle_cpu
     volumes:
-      - ./backend/ocr/.paddleocr_cache:/root/.paddlex
+      - ./backend/ocr/.ocr_cache/paddle_cpu:/root/.paddlex
     networks:
       - manualito-net
 

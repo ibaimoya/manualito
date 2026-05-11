@@ -19,5 +19,7 @@ __pycache__/
 # symlinks/reparse points incompatibles con Docker en Windows.
 ocr/.paddleocr_cache/
 **/.paddleocr_cache/
+ocr/.ocr_cache/
+**/.ocr_cache/
 rag/.hf_cache/
 **/.hf_cache/

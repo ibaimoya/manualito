@@ -16,13 +16,27 @@ def _create_paddle_cpu_engine() -> OcrEngine:
     El import se hace aquí para que la factory no cargue dependencias de
     PaddleOCR cuando en el futuro se seleccione otro motor, como Tesseract.
     """
-    from engines.paddle_cpu import PaddleCpuOcrEngine
+    from engines.paddle.cpu import PaddleCpuOcrEngine
 
     return PaddleCpuOcrEngine()
+
+
+def _create_paddle_gpu_engine() -> OcrEngine:
+    """
+    Crea el motor OCR acelerado por GPU.
+
+    El import se mantiene perezoso para no exigir PaddlePaddle GPU cuando el
+    despliegue está usando el motor CPU o, en el futuro, Tesseract.
+    """
+    from engines.paddle.gpu import PaddleGpuOcrEngine
+
+    return PaddleGpuOcrEngine()
+
 
 # Diccionario de motores OCR disponibles: nombre de configuración -> función creadora.
 SUPPORTED_OCR_ENGINES: dict[str, Callable[[], OcrEngine]] = {
     "paddle_cpu": _create_paddle_cpu_engine,
+    "paddle_gpu": _create_paddle_gpu_engine,
 }
 
 

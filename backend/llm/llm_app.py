@@ -134,7 +134,7 @@ async def health():
 
 @app.post("/unload-if-idle")
 async def unload_if_idle_endpoint(
-    client: httpx.AsyncClient = Depends(get_http_client),
+    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
 ):
     """
     Descarga el modelo de Ollama si no hay generacion activa.
@@ -198,7 +198,7 @@ async def unload_if_idle_endpoint(
 @app.post("/generate")
 async def generate_endpoint(
     payload: GenerateRequest,
-    client: httpx.AsyncClient = Depends(get_http_client),
+    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
 ):
     """
     Genera una respuesta usando Ollama a partir de una pregunta y su contexto.
@@ -250,7 +250,10 @@ async def generate_endpoint(
         response.raise_for_status()
     except httpx.ConnectError:
         logger.error("No se pudo conectar con Ollama en %s.", OLLAMA_URL)
-        raise HTTPException(status_code=502, detail="Servicio LLM no disponible.") from None
+        raise HTTPException(
+            status_code=502,
+            detail="Servicio LLM no disponible.",
+        ) from None
     except httpx.TimeoutException:
         logger.error("Ollama no respondió en %ss.", OLLAMA_TIMEOUT)
         raise HTTPException(

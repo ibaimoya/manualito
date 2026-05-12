@@ -4,12 +4,21 @@ import re
 import unicodedata
 from contextlib import asynccontextmanager
 from io import BytesIO
-from uuid import uuid4
 from typing import Annotated
+from uuid import uuid4
 
 import httpx
 from common.filters import install_health_log_filter
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from PIL import Image
@@ -79,8 +88,8 @@ async def health():
 @app.post("/api/ocr")
 async def ocr_endpoint(
     image: Annotated[UploadFile, File()],
+    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
     format: Annotated[str, Query(pattern="^(json|text)$")] = "json",
-    client: httpx.AsyncClient = Depends(get_http_client),
 ):
     """
     Extrae el texto de una imagen mediante OCR.
@@ -140,7 +149,7 @@ async def ocr_endpoint(
 async def create_manual_handler(
     name: Annotated[str, Form(min_length=1)],
     image: Annotated[UploadFile, File()],
-    client: httpx.AsyncClient = Depends(get_http_client),
+    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
 ):
     """
     Crea un manual persistente a partir de una imagen y lo indexa en RAG.
@@ -197,7 +206,7 @@ async def create_manual_handler(
 async def answer_manual_question_handler(
     manual_id: str,
     payload: QuestionRequest,
-    client: httpx.AsyncClient = Depends(get_http_client),
+    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
 ):
     """
     Responde una pregunta sobre un manual previamente indexado.

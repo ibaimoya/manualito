@@ -47,7 +47,9 @@ def create_ocr_engine(engine_name: str | None = None) -> OcrEngine:
     Si no se pasa `engine_name`, se usa la variable de entorno `OCR_ENGINE`.
     Si tampoco existe o está vacía, se usa el motor por defecto.
     """
-    selected_engine = engine_name if engine_name is not None else os.getenv("OCR_ENGINE")
+    selected_engine = (
+        engine_name if engine_name is not None else os.getenv("OCR_ENGINE")
+    )
     selected_engine = (selected_engine or "").strip().lower() or DEFAULT_OCR_ENGINE
 
     try:

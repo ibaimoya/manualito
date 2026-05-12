@@ -60,7 +60,7 @@ class IngestRequest(BaseModel):
     ocr_lines: list[OCRLine] | None = None
 
     @model_validator(mode="after")
-    def validate_content(self) -> "IngestRequest":
+    def validate_content(self) -> IngestRequest:
         if not self.text and not self.ocr_lines:
             raise ValueError("Se requiere 'text' o 'ocr_lines'.")
         return self
@@ -103,11 +103,17 @@ async def ingest_endpoint(payload: IngestRequest):
     try:
         normalized = _build_document_text(payload)
         if not normalized:
-            raise HTTPException(status_code=422, detail="El documento no contiene texto indexable.")
+            raise HTTPException(
+                status_code=422,
+                detail="El documento no contiene texto indexable.",
+            )
 
         chunks = chunk_text(normalized)
         if not chunks:
-            raise HTTPException(status_code=422, detail="No se pudieron generar chunks del documento.")
+            raise HTTPException(
+                status_code=422,
+                detail="No se pudieron generar chunks del documento.",
+            )
 
         embeddings = await asyncio.to_thread(
             get_embedding_service().embed_passages, chunks
@@ -165,7 +171,11 @@ async def retrieve_endpoint(payload: RetrieveRequest):
     except ManualNotFoundError:
         raise HTTPException(status_code=404, detail="Manual no encontrado.") from None
     except Exception as rag_err:
-        logger.error("Error al recuperar contexto para '%s'.", payload.manual_id, exc_info=True)
+        logger.error(
+            "Error al recuperar contexto para '%s'.",
+            payload.manual_id,
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=500,
             detail="Error interno al recuperar el contexto del manual.",

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 CHROMA_URL = os.getenv("CHROMA_URL", "http://chroma:8000")
 CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "manualito_manuals")
-_repository: "ChromaRepository | None" = None
+_repository: ChromaRepository | None = None
 
 
 class ManualNotFoundError(Exception):

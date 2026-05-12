@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-small")
-_embedder: "EmbeddingService | None" = None
+_embedder: EmbeddingService | None = None
 
 
 class EmbeddingService:
@@ -22,7 +22,7 @@ class EmbeddingService:
             model_id (str): Identificador del modelo a cargar desde caché o Hub.
         """
         self.model_id = model_id
-        self._model: "SentenceTransformer | None" = None
+        self._model: SentenceTransformer | None = None
 
     def embed_passages(self, texts: list[str]) -> list[list[float]]:
         """
@@ -62,7 +62,7 @@ class EmbeddingService:
         vectors = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
         return vectors.tolist()
 
-    def _load_model(self) -> "SentenceTransformer":
+    def _load_model(self) -> SentenceTransformer:
         """
         Carga perezosamente el modelo de embeddings y lo reutiliza.
 

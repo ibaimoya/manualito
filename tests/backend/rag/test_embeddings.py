@@ -1,5 +1,6 @@
 import sys
 from types import SimpleNamespace
+from typing import ClassVar
 
 import embeddings
 import pytest
@@ -14,8 +15,8 @@ class _FakeVectors:
 
 
 class _FakeSentenceTransformer:
-    created_with: list[str] = []
-    encoded_batches: list[list[str]] = []
+    created_with: ClassVar[list[str]] = []
+    encoded_batches: ClassVar[list[list[str]]] = []
 
     def __init__(self, model_id: str):
         self.model_id = model_id

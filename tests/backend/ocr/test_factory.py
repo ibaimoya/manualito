@@ -2,8 +2,8 @@ import logging
 import sys
 from unittest.mock import Mock, patch
 
-import pytest
 import factory
+import pytest
 from factory import create_ocr_engine
 
 

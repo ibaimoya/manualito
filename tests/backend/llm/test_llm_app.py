@@ -2,10 +2,9 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-import pytest
-
 import llm_app
 import prompt_builder
+import pytest
 from llm_app import app, get_http_client
 
 

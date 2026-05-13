@@ -6,12 +6,13 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from chunking import chunk_text
-from common.filters import install_health_log_filter
 from embeddings import get_embedding_service
 from fastapi import FastAPI, HTTPException
 from normalizer import normalize_ocr_lines, normalize_text
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from repository import ManualNotFoundError, get_repository
+
+from common.filters import install_health_log_filter
 
 logging.basicConfig(
     level=logging.INFO,

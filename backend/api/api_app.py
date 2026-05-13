@@ -8,7 +8,6 @@ from typing import Annotated
 from uuid import uuid4
 
 import httpx
-from common.filters import install_health_log_filter
 from fastapi import (
     Depends,
     FastAPI,
@@ -23,6 +22,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
+
+from common.filters import install_health_log_filter
 
 logging.basicConfig(
     level=logging.INFO,

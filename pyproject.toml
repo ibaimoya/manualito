@@ -1,0 +1,32 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["backend", "tests"]
+extend-exclude = [
+    "htmlcov",
+    "backend/ocr/.ocr_cache",
+    "backend/rag/.hf_cache",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "C4", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+log_cli = false
+log_level = "WARNING"
+
+[tool.coverage.run]
+branch = true
+source = ["backend"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

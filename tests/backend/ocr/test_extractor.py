@@ -1,8 +1,8 @@
 from unittest.mock import Mock, patch
 
+import extractor
 import pytest
 from engines.paddle.cpu import PaddleCpuOcrEngine
-import extractor
 
 
 def _paddle_cpu_engine_with_result(predict_result):
@@ -118,9 +118,8 @@ def test_paddle_cpu_propagates_initialization_error():
     with patch(
         "engines.paddle.cpu.engine.PaddleOCR",
         side_effect=RuntimeError("fallo init"),
-    ):
-        with pytest.raises(RuntimeError, match="fallo init"):
-            PaddleCpuOcrEngine()
+    ), pytest.raises(RuntimeError, match="fallo init"):
+        PaddleCpuOcrEngine()
 
 
 def test_extract_text_delegates_to_configured_engine(monkeypatch):

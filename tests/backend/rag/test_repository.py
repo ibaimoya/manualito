@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-
 import repository
 from repository import ChromaRepository, ManualNotFoundError
 

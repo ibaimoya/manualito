@@ -28,7 +28,10 @@ jobs:
         uses: astral-sh/ruff-action@v3
         with:
           version: 0.15.12
-          args: "check backend/ --select=E,F,W,I,B,UP,SIM,N,C4,RUF --output-format=github"
+          args: "check --output-format=github"
+          src: >-
+            ./backend
+            ./tests
 
   tests:
     name: Tests unitarios
@@ -50,5 +53,4 @@ jobs:
         run: pip install -r tests/requirements-test.txt
 
       - name: Ejecutar tests
-        working-directory: tests
         run: python -m pytest -v

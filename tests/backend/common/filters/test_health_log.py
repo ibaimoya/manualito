@@ -9,7 +9,6 @@ from common.filters import (
     make_health_log_filter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Auxiliares.
 # ---------------------------------------------------------------------------
@@ -30,7 +29,7 @@ def _access_line(method: str, path: str, version: str, status: int) -> str:
 #   Clase 2: [200, 200]             → [True, False]             (repetición suprimida).
 #   Clase 3: [200, 200, 200]        → [True, False, False]      (todas suprimidas salvo la primera).
 #   Clase 4: [200, 500]             → [True, True]              (error tras sano loguea).
-#   Clase 5: [500, 500]             → [True, True]              (errores consecutivos todos loguean).
+#   Clase 5: [500, 500]             → [True, True]              (errores consecutivos).
 #   Clase 6: [500, 200]             → [True, True]              (recuperación loguea).
 #   Clase 7: [200, 500, 200, 200]   → [True, True, True, False] (ciclo completo).
 # ---------------------------------------------------------------------------

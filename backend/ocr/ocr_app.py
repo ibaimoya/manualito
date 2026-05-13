@@ -3,10 +3,11 @@ import os
 import tempfile
 from typing import Annotated
 
-from common.filters import install_health_log_filter
 from extractor import extract_text
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+
+from common.filters import install_health_log_filter
 
 logging.basicConfig(
     level=logging.INFO,

@@ -1,5 +1,0 @@
-fastapi==0.135.2
-uvicorn[standard]==0.44.0
-chromadb==1.5.7
-sentence-transformers==5.4.1
-numpy==2.4.4

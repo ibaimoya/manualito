@@ -443,6 +443,10 @@ notimportant/
 # Ruff
 .ruff_cache/
 
+# uv
+.cache/
+.uv-cache/
+
 # Coverage (pytest-cov)
 .coverage
 htmlcov/

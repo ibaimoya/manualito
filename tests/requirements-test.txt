@@ -1,5 +1,0 @@
--r ../backend/ocr/requirements.txt
--r ../backend/api/requirements.txt
-
-pytest>=7.4.0
-pytest-cov>=4.0.0

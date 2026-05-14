@@ -1,17 +1,10 @@
-FROM python:3.11-slim
+FROM python-base
 
-WORKDIR /app
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --locked --no-install-project --no-default-groups --only-group llm
 
-# curl es necesario para que el HEALTHCHECK del contenedor pueda chequear /health.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY llm/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY common/ /app/common/
-COPY llm/ /app/
+COPY backend/common/ /app/common/
+COPY backend/llm/ /app/
 
 EXPOSE 8003
 

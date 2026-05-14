@@ -1,9 +1,18 @@
 services:
 
+  python-base:
+    build:
+      context: .
+      dockerfile: backend/python-base/Dockerfile
+    scale: 0
+    network_mode: none
+
   api:
     build:
-      context: ./backend
-      dockerfile: api/Dockerfile
+      context: .
+      dockerfile: backend/api/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
     ports:
       - "8000:8000"
     environment:
@@ -24,8 +33,10 @@ services:
   ocr:
     image: tfg-ocr:cpu
     build:
-      context: ./backend
-      dockerfile: ocr/Dockerfile
+      context: .
+      dockerfile: backend/ocr/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
       args:
         OCR_RUNTIME_STAGE: paddle-cpu
     environment:
@@ -38,13 +49,17 @@ services:
 
   rag:
     build:
-      context: ./backend
-      dockerfile: rag/Dockerfile
+      context: .
+      dockerfile: backend/rag/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
     environment:
       - CHROMA_URL=http://chroma:8000
       - CHROMA_COLLECTION=manualito_manuals
       - EMBEDDING_MODEL=intfloat/multilingual-e5-small
       - HF_HOME=/root/.cache/huggingface
+      # Workaround: chromadb-client arrastra opentelemetry-proto con _pb2 viejo incompatible con protobuf 7.x.
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
     volumes:
       - ./backend/rag/.hf_cache:/root/.cache/huggingface
     depends_on:
@@ -53,7 +68,7 @@ services:
       - manualito-net
 
   chroma:
-    image: chromadb/chroma
+    image: chromadb/chroma:1.5.7
     volumes:
       - chromadb-data:/chroma/chroma
     networks:
@@ -61,8 +76,10 @@ services:
 
   llm:
     build:
-      context: ./backend
-      dockerfile: llm/Dockerfile
+      context: .
+      dockerfile: backend/llm/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
     environment:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=phi4:14b
@@ -74,7 +91,7 @@ services:
       - manualito-net
 
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:0.23.1
     volumes:
       - ollama-data:/root/.ollama
     deploy:
@@ -99,7 +116,7 @@ services:
   # definirse ``llm: depends_on: ollama-init: service_completed_successfully``,
   # el LLM no arranca hasta que el modelo esté disponible.
   ollama-init:
-    image: ollama/ollama
+    image: ollama/ollama:0.23.1
     depends_on:
       ollama:
         condition: service_healthy

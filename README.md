@@ -1,7 +1,7 @@
 # Manualito
 
 [![CI](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml/badge.svg)](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![HP SCDS](https://img.shields.io/badge/HP%20SCDS-Observatorio%20Tecnol%C3%B3gico-0096D6?logo=hp&logoColor=white)](https://hpscds.com/en/innovation/technological-observatory/)
@@ -99,11 +99,10 @@ La API queda expuesta en `http://localhost:8000`.
 
 ```bash
 # Instalar dependencias de test
-pip install -r tests/requirements-test.txt
+uv sync --locked --no-default-groups --only-group test
 
 # Ejecutar todos los tests
-cd tests
-python -m pytest -v
+uv run --locked --no-default-groups --only-group test pytest -v
 ```
 
 Los tests cubren los servicios API y OCR con técnicas de caja negra (BVA + EP). El servicio OCR se mockea en los tests del gateway para aislar cada capa.

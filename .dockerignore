@@ -1,0 +1,39 @@
+# Metadatos de control de versiones y CI.
+.git/
+.github/
+.gitlab-ci.yml
+
+# Artefactos locales de Python y herramientas de desarrollo.
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+**/.pytest_cache/
+.ruff_cache/
+**/.ruff_cache/
+.cache/
+.uv-cache/
+.mypy_cache/
+**/.mypy_cache/
+.coverage
+htmlcov/
+
+# Datos del proyecto que no hacen falta para construir las imágenes backend.
+dataset/
+frontend/
+notimportant/
+tests/
+
+# Cache de modelos montada como volumenes en ejecución; no debe entrar al contexto de construcción.
+.paddleocr_cache/
+.ocr_cache/
+.hf_cache/
+backend/ocr/.paddleocr_cache/
+backend/ocr/.ocr_cache/
+backend/rag/.hf_cache/
+**/.paddleocr_cache/
+**/.ocr_cache/
+**/.hf_cache/

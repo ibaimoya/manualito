@@ -1,17 +1,27 @@
-FROM python:3.11-slim
+FROM ghcr.io/astral-sh/uv:0.11.13 AS uv
+
+FROM python:3.11.14-slim-bookworm
 
 WORKDIR /app
 
-# curl es necesario para que el HEALTHCHECK del contenedor pueda chequear /health.
+ENV PATH="/app/.venv/bin:${PATH}" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
+
+# curl se necesita para hacer el HEALTHCHECK.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=uv /uv /uvx /usr/local/bin/
 
-COPY common/ /app/common/
-COPY api/ /app/
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --locked --no-install-project --no-default-groups --only-group api
+
+COPY backend/common/ /app/common/
+COPY backend/api/ /app/
 
 EXPOSE 8000
 

@@ -1,3 +1,85 @@
+[project]
+name = "manualito"
+version = "0.1.0"
+requires-python = "==3.11.*"
+dependencies = []
+
+[dependency-groups]
+api = [
+    "fastapi==0.135.2",
+    "httpx==0.28.1",
+    "pillow==12.1.1",
+    "pydantic==2.12.5",
+    "python-multipart==0.0.22",
+    "uvicorn[standard]==0.44.0",
+]
+ocr = [
+    "fastapi==0.135.2",
+    "numpy==2.4.4",
+    "opencv-python-headless==4.13.0.92",
+    "pillow==12.1.1",
+    "python-multipart==0.0.22",
+    "uvicorn[standard]==0.44.0",
+]
+ocr-paddle = [
+    "paddleocr==3.4.0",
+]
+ocr-paddle-cpu = [
+    "paddlepaddle==3.3.0",
+]
+ocr-paddle-gpu = [
+    "paddlepaddle-gpu==3.2.0",
+]
+rag = [
+    "chromadb-client==1.5.7",
+    "fastapi==0.135.2",
+    "numpy==2.4.4",
+    "pydantic==2.12.5",
+    "sentence-transformers==5.4.1",
+    "uvicorn[standard]==0.44.0",
+]
+llm = [
+    "fastapi==0.135.2",
+    "httpx==0.28.1",
+    "pydantic==2.12.5",
+    "uvicorn[standard]==0.44.0",
+]
+test = [
+    "fastapi==0.135.2",
+    "httpx==0.28.1",
+    "numpy==2.4.4",
+    "pillow==12.1.1",
+    "pydantic==2.12.5",
+    "pytest==9.0.2",
+    "pytest-cov==7.1.0",
+    "python-multipart==0.0.22",
+    "ruff==0.15.12",
+    "uvicorn[standard]==0.44.0",
+]
+
+[tool.uv]
+package = false
+conflicts = [
+    [
+        { group = "ocr-paddle-cpu" },
+        { group = "ocr-paddle-gpu" },
+    ],
+]
+
+[tool.uv.sources]
+paddlepaddle = { index = "paddle-cpu" }
+paddlepaddle-gpu = { index = "paddle-cu118" }
+
+[[tool.uv.index]]
+name = "paddle-cpu"
+url = "https://www.paddlepaddle.org.cn/packages/stable/cpu/"
+explicit = true
+
+[[tool.uv.index]]
+name = "paddle-cu118"
+url = "https://www.paddlepaddle.org.cn/packages/stable/cu118/"
+explicit = true
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100

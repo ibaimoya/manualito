@@ -1,6 +1,0 @@
-# PaddlePaddle GPU cu118. Requiere driver NVIDIA compatible con CUDA 11.8.
--r ../requirements.txt
-
-# En Docker, paddlepaddle-gpu se instala en un paso separado desde el indice
-# cu118 para evitar --index-strategy unsafe-best-match con uv:
-# paddlepaddle-gpu==3.2.0

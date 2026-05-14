@@ -1,26 +1,12 @@
 ARG OCR_RUNTIME_STAGE=paddle-cpu
 
-# Instalar uv (https://docs.astral.sh/uv/)
-FROM ghcr.io/astral-sh/uv:0.11.13 AS uv
-
-FROM python:3.11.14-slim-bookworm AS ocr-base
-
-WORKDIR /app
-
-ENV PATH="/app/.venv/bin:${PATH}" \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy \
-    UV_PROJECT_ENVIRONMENT=/app/.venv
+FROM python-base AS ocr-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     libglib2.0-0 \
     libgl1 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
-
-COPY --from=uv /uv /uvx /usr/local/bin/
 
 COPY pyproject.toml uv.lock /app/
 

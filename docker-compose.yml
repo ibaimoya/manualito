@@ -1,9 +1,18 @@
 services:
 
+  python-base:
+    build:
+      context: .
+      dockerfile: backend/python-base/Dockerfile
+    scale: 0
+    network_mode: none
+
   api:
     build:
       context: .
       dockerfile: backend/api/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
     ports:
       - "8000:8000"
     environment:
@@ -26,6 +35,8 @@ services:
     build:
       context: .
       dockerfile: backend/ocr/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
       args:
         OCR_RUNTIME_STAGE: paddle-cpu
     environment:
@@ -40,6 +51,8 @@ services:
     build:
       context: .
       dockerfile: backend/rag/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
     environment:
       - CHROMA_URL=http://chroma:8000
       - CHROMA_COLLECTION=manualito_manuals
@@ -65,6 +78,8 @@ services:
     build:
       context: .
       dockerfile: backend/llm/Dockerfile
+      additional_contexts:
+        python-base: service:python-base
     environment:
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=phi4:14b

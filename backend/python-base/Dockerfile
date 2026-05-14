@@ -1,8 +1,11 @@
+ARG UV_VERSION=0.11.13
+ARG PYTHON_VERSION=3.11.14-slim-bookworm
+
 # Instala uv (https://docs.astral.sh/uv/).
-FROM ghcr.io/astral-sh/uv:0.11.13 AS uv
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 
 # Instala la imagen base de python del backend.
-FROM python:3.11.14-slim-bookworm
+FROM python:${PYTHON_VERSION}
 
 WORKDIR /app
 

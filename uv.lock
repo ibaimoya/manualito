@@ -567,6 +567,9 @@ wheels = [
 name = "manualito"
 version = "0.1.0"
 source = { virtual = "." }
+dependencies = [
+    { name = "pytesseract" },
+]
 
 [package.dev-dependencies]
 api = [
@@ -600,6 +603,9 @@ ocr-paddle-cpu = [
 ocr-paddle-gpu = [
     { name = "paddlepaddle-gpu" },
 ]
+ocr-tesseract = [
+    { name = "pytesseract" },
+]
 rag = [
     { name = "chromadb-client" },
     { name = "fastapi" },
@@ -622,6 +628,7 @@ test = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "pytesseract", specifier = ">=0.3.13" }]
 
 [package.metadata.requires-dev]
 api = [
@@ -649,6 +656,7 @@ ocr = [
 ocr-paddle = [{ name = "paddleocr", specifier = "==3.4.0" }]
 ocr-paddle-cpu = [{ name = "paddlepaddle", specifier = "==3.3.0", index = "https://www.paddlepaddle.org.cn/packages/stable/cpu/" }]
 ocr-paddle-gpu = [{ name = "paddlepaddle-gpu", specifier = "==3.2.0", index = "https://www.paddlepaddle.org.cn/packages/stable/cu118/" }]
+ocr-tesseract = [{ name = "pytesseract", specifier = "==0.3.13" }]
 rag = [
     { name = "chromadb-client", specifier = "==1.5.7" },
     { name = "fastapi", specifier = "==0.135.2" },
@@ -1601,6 +1609,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/11/7b/6ed4782e0d7a5278330598ce8c4b2df7255f4585a0b3d04520fa580d6507/pypdfium2-5.8.0-py3-none-win32.whl", hash = "sha256:3f25fd436920a907291462b41bdc0ab9f8235c3944b4c9c15398da595ffd1fed", size = 3636680, upload-time = "2026-05-04T17:39:38.49Z" },
     { url = "https://files.pythonhosted.org/packages/19/55/da7223d4202b2461f4f889b0baf10dddec3db7f88e6fd8c52db4a516eecd/pypdfium2-5.8.0-py3-none-win_amd64.whl", hash = "sha256:55592af0bddd2d62bed18e0053c546c9b72041430c5115e54870f7f6163125b0", size = 3754962, upload-time = "2026-05-04T17:39:40.13Z" },
     { url = "https://files.pythonhosted.org/packages/fc/7a/f3dcefe6ee7389aad3ca1488c177e8fbf978206de21c7a99ccf487ea38ab/pypdfium2-5.8.0-py3-none-win_arm64.whl", hash = "sha256:3f17ed97ae8a5a1705301ca93af256a5b02f9009dee4e99c5e175831d46ebd7c", size = 3548362, upload-time = "2026-05-04T17:39:42.304Z" },
+]
+
+[[package]]
+name = "pytesseract"
+version = "0.3.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/a6/7d679b83c285974a7cb94d739b461fa7e7a9b17a3abfd7bf6cbc5c2394b0/pytesseract-0.3.13.tar.gz", hash = "sha256:4bf5f880c99406f52a3cfc2633e42d9dc67615e69d8a509d74867d3baddb5db9", size = 17689, upload-time = "2024-08-16T02:33:56.762Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/33/8312d7ce74670c9d39a532b2c246a853861120486be9443eebf048043637/pytesseract-0.3.13-py3-none-any.whl", hash = "sha256:7a99c6c2ac598360693d83a416e36e0b33a67638bb9d77fdcac094a3589d4b34", size = 14705, upload-time = "2024-08-16T02:36:10.09Z" },
 ]
 
 [[package]]

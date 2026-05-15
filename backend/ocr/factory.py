@@ -6,15 +6,31 @@ from contracts import OcrEngine
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_OCR_ENGINE = "paddle_cpu"
+PADDLE_CPU = "paddle_cpu"
+PADDLE_GPU = "paddle_gpu"
+TESSERACT = "tesseract"
+
+DEFAULT_OCR_ENGINE = TESSERACT
+
+
+def _create_tesseract_engine() -> OcrEngine:
+    """
+    Crea el motor OCR basado en Tesseract (motor por defecto).
+
+    El import se hace de forma perezosa para no cargar pytesseract cuando se
+    selecciona un motor Paddle.
+    """
+    from engines.tesseract import TesseractOcrEngine
+
+    return TesseractOcrEngine()
 
 
 def _create_paddle_cpu_engine() -> OcrEngine:
     """
-    Crea el motor OCR actual.
+    Crea el motor OCR basado en PaddleOCR sobre CPU.
 
-    El import se hace aquí para que la factory no cargue dependencias de
-    PaddleOCR cuando en el futuro se seleccione otro motor, como Tesseract.
+    El import se hace de forma perezosa para no cargar dependencias de
+    PaddleOCR cuando se selecciona Tesseract o la variante GPU.
     """
     from engines.paddle.cpu import PaddleCpuOcrEngine
 
@@ -23,10 +39,10 @@ def _create_paddle_cpu_engine() -> OcrEngine:
 
 def _create_paddle_gpu_engine() -> OcrEngine:
     """
-    Crea el motor OCR acelerado por GPU.
+    Crea el motor OCR basado en PaddleOCR acelerado por GPU.
 
-    El import se mantiene perezoso para no exigir PaddlePaddle GPU cuando el
-    despliegue está usando el motor CPU o, en el futuro, Tesseract.
+    El import se mantiene perezoso para no exigir PaddlePaddle GPU cuando se
+    selecciona Tesseract o la variante CPU.
     """
     from engines.paddle.gpu import PaddleGpuOcrEngine
 
@@ -35,8 +51,9 @@ def _create_paddle_gpu_engine() -> OcrEngine:
 
 # Diccionario de motores OCR disponibles: nombre de configuración -> función creadora.
 SUPPORTED_OCR_ENGINES: dict[str, Callable[[], OcrEngine]] = {
-    "paddle_cpu": _create_paddle_cpu_engine,
-    "paddle_gpu": _create_paddle_gpu_engine,
+    TESSERACT: _create_tesseract_engine,
+    PADDLE_CPU: _create_paddle_cpu_engine,
+    PADDLE_GPU: _create_paddle_gpu_engine,
 }
 
 

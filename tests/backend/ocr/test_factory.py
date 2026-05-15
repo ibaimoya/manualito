@@ -14,17 +14,17 @@ def _fake_paddle(*, cuda_enabled: bool, gpu_count: int):
     return paddle
 
 
-def test_create_ocr_engine_uses_paddle_cpu_by_default(monkeypatch):
+def test_create_ocr_engine_uses_tesseract_by_default(monkeypatch):
     fake_engine = Mock()
-    paddle_cpu_factory = Mock(return_value=fake_engine)
+    tesseract_factory = Mock(return_value=fake_engine)
     monkeypatch.delenv("OCR_ENGINE", raising=False)
     monkeypatch.setattr(
         "factory.SUPPORTED_OCR_ENGINES",
-        {"paddle_cpu": paddle_cpu_factory},
+        {"tesseract": tesseract_factory},
     )
 
     assert create_ocr_engine() is fake_engine
-    paddle_cpu_factory.assert_called_once_with()
+    tesseract_factory.assert_called_once_with()
 
 
 def test_create_ocr_engine_reads_environment(monkeypatch):
@@ -54,19 +54,19 @@ def test_create_ocr_engine_selects_paddle_gpu(monkeypatch):
 
 def test_create_ocr_engine_blank_environment_uses_default(monkeypatch):
     fake_engine = Mock()
-    paddle_cpu_factory = Mock(return_value=fake_engine)
+    tesseract_factory = Mock(return_value=fake_engine)
     monkeypatch.setenv("OCR_ENGINE", " ")
     monkeypatch.setattr(
         "factory.SUPPORTED_OCR_ENGINES",
-        {"paddle_cpu": paddle_cpu_factory},
+        {"tesseract": tesseract_factory},
     )
 
     assert create_ocr_engine() is fake_engine
-    paddle_cpu_factory.assert_called_once_with()
+    tesseract_factory.assert_called_once_with()
 
 
 def test_create_ocr_engine_rejects_unknown_engine(monkeypatch):
-    monkeypatch.setattr("factory.SUPPORTED_OCR_ENGINES", {"paddle_cpu": Mock()})
+    monkeypatch.setattr("factory.SUPPORTED_OCR_ENGINES", {"tesseract": Mock()})
 
     with pytest.raises(ValueError, match="Motor OCR no soportado: 'unknown'"):
         create_ocr_engine("unknown")
@@ -84,6 +84,17 @@ def test_create_ocr_engine_logs_selected_engine(monkeypatch, caplog):
         assert create_ocr_engine("paddle_cpu") is fake_engine
 
     assert "Motor OCR seleccionado: paddle_cpu" in caplog.text
+
+
+def test_tesseract_factory_builds_engine():
+    """La factory lazy real instancia el motor Tesseract sin ejecutar OCR real."""
+    with patch("engines.tesseract.engine.pytesseract.get_tesseract_version"), patch(
+        "engines.tesseract.engine.pytesseract.get_languages",
+        return_value=["spa"],
+    ):
+        engine = factory._create_tesseract_engine()
+
+    assert engine.name == "tesseract"
 
 
 def test_paddle_cpu_factory_builds_cpu_engine():

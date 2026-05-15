@@ -1,4 +1,4 @@
-ARG OCR_RUNTIME_STAGE=paddle-cpu
+ARG OCR_RUNTIME_STAGE=tesseract
 
 FROM python-base AS ocr-base
 
@@ -10,8 +10,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml uv.lock /app/
 
+# Tesseract
+FROM ocr-base AS tesseract
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-spa \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN uv sync --locked --no-install-project --no-default-groups \
+    --only-group ocr \
+    --only-group ocr-tesseract
+
 # Paddle CPU
-FROM ocr-base AS paddle-cpu
+FROM ocr-base AS paddle_cpu
 
 RUN uv sync --locked --no-install-project --no-default-groups \
     --only-group ocr \
@@ -19,14 +33,14 @@ RUN uv sync --locked --no-install-project --no-default-groups \
     --only-group ocr-paddle-cpu
 
 # Paddle GPU
-FROM ocr-base AS paddle-gpu
+FROM ocr-base AS paddle_gpu
 
 RUN uv sync --locked --no-install-project --no-default-groups \
     --only-group ocr \
     --only-group ocr-paddle \
     --only-group ocr-paddle-gpu
 
-# Etapa comun de ejecucion
+# Etapa común de ejecución
 FROM ${OCR_RUNTIME_STAGE} AS runtime
 
 COPY backend/common/ /app/common/

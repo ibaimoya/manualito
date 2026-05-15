@@ -4,7 +4,7 @@ services:
     build:
       args:
         # cu118
-        OCR_RUNTIME_STAGE: paddle-gpu
+        OCR_RUNTIME_STAGE: paddle_gpu
     environment:
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
       - OCR_ENGINE=paddle_gpu

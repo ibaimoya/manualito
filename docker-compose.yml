@@ -1,3 +1,5 @@
+x-ocr-engine: &ocr_engine tesseract
+
 services:
 
   python-base:
@@ -38,12 +40,9 @@ services:
       additional_contexts:
         python-base: service:python-base
       args:
-        OCR_RUNTIME_STAGE: paddle-cpu
+        OCR_RUNTIME_STAGE: *ocr_engine
     environment:
-      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
-      - OCR_ENGINE=paddle_cpu
-    volumes:
-      - ./backend/ocr/.ocr_cache/paddle_cpu:/root/.paddlex
+      OCR_ENGINE: *ocr_engine
     networks:
       - manualito-net
 

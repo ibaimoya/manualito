@@ -28,10 +28,9 @@ Proyecto desarrollado como Trabajo de Fin de Grado en el marco del [Observatorio
 1. Recibes el manual de un juego de mesa y no te enteras de nada
 2. Le sacas una foto con el móvil
 3. Manualito extrae el texto (OCR), busca contexto relevante (RAG) y genera una explicación clara (LLM)
-4. Te la lee en voz alta (TTS)
 
 ```
-Foto → Preprocesado → OCR → RAG (ChromaDB) → LLM (Ollama) → TTS → Audio
+Foto → Preprocesado → OCR → RAG (ChromaDB) → LLM (Ollama) → Texto
 ```
 
 ---
@@ -41,7 +40,7 @@ Foto → Preprocesado → OCR → RAG (ChromaDB) → LLM (Ollama) → TTS → Au
 | **Capa**        | **Tecnología**                  |
 |-----------------|-----------------------------|
 | API Gateway     | FastAPI (Python)            |
-| OCR             | PaddleOCR PP-OCRv5, CPU     |
+| OCR             | Tesseract OCR por defecto, PaddleOCR CPU/GPU opcional |
 | Vector DB       | ChromaDB                    |
 | LLM             | Modelos en local vía Ollama |
 | Frontend        | React PWA       |
@@ -63,17 +62,13 @@ Cuatro servicios en contenedores independientes comunicados por red interna:
             v             v           v
       +-----------+ +-----------+ +-----------+
       |    OCR    | |    RAG    | |    LLM    |
-      | PaddleOCR | |  ChromaDB | |   Ollama  |
+      | Tesseract | |  ChromaDB | |   Ollama  |
       +-----------+ +-----------+ +-----+-----+
-                                        |
-                                        v
-                                  +-----------+
-                                  |    TTS    |
-                                  +-----------+
+
 ```
 
 - **api** — Gateway público. Valida la imagen y orquesta las llamadas a los demás servicios.
-- **ocr** — Extrae texto de las imágenes con PaddleOCR (CPU).
+- **ocr** — Extrae texto de las imagenes con Tesseract por defecto; PaddleOCR CPU/GPU sigue disponible por configuracion.
 - **rag** — Recupera fragmentos relevantes del corpus de manuales almacenado en ChromaDB.
 - **llm** — Genera la explicación con un modelo de lenguaje local vía Ollama (GPU).
 
@@ -92,6 +87,9 @@ stop.bat
 ```
 
 La API queda expuesta en `http://localhost:8000`.
+
+Para usar PaddleOCR CPU en lugar de Tesseract, cambia `x-ocr-engine` de
+`tesseract` a `paddle_cpu` en `docker-compose.yml` y reconstruye el servicio OCR.
 
 ---
 

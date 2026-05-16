@@ -51,13 +51,15 @@ jobs:
   tests:
     name: Tests unitarios
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       UV_CACHE_DIR: .cache/uv
 
     steps:
       - name: Clonar repositorio
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -79,4 +81,12 @@ jobs:
         run: uv sync --locked --no-default-groups --only-group test
 
       - name: Ejecutar tests
-        run: uv run --locked --no-default-groups --only-group test pytest -v
+        run: uv run --locked --no-default-groups --only-group test pytest -v --cov=backend --cov-report=xml:coverage.xml --junitxml=pytest-report.xml
+
+      - name: Analizar con SonarQube Cloud
+        uses: SonarSource/sonarqube-scan-action@v7.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true

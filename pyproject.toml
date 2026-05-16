@@ -3,6 +3,7 @@ name = "manualito"
 version = "0.1.0"
 requires-python = "==3.11.*"
 dependencies = [
+    "ipykernel>=7.2.0",
     "pytesseract>=0.3.13",
 ]
 
@@ -105,6 +106,7 @@ log_level = "WARNING"
 
 [tool.coverage.run]
 branch = true
+relative_files = true
 source = ["backend"]
 
 [tool.coverage.report]

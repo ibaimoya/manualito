@@ -449,6 +449,7 @@ notimportant/
 
 # Coverage (pytest-cov)
 .coverage
+pytest-report.xml
 htmlcov/
 
 # mypy

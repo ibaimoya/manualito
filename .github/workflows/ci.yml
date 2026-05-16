@@ -51,15 +51,13 @@ jobs:
   tests:
     name: Tests unitarios
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
       UV_CACHE_DIR: .cache/uv
 
     steps:
       - name: Clonar repositorio
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -83,10 +81,43 @@ jobs:
       - name: Ejecutar tests
         run: uv run --locked --no-default-groups --only-group test pytest -v --cov=backend --cov-report=xml:coverage.xml --junitxml=pytest-report.xml
 
+      - name: Guardar reportes de tests y cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage-reports
+          path: |
+            coverage.xml
+            pytest-report.xml
+          if-no-files-found: error
+
+  sonarqube:
+    name: SonarQube Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: tests
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Descargar reportes de tests y cobertura
+        uses: actions/download-artifact@v4
+        with:
+          name: test-and-coverage-reports
+
+      - name: Comprobar token de SonarQube Cloud
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret SONAR_TOKEN. Create it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - name: Analizar con SonarQube Cloud
         uses: SonarSource/sonarqube-scan-action@v7.1.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
             -Dsonar.qualitygate.wait=true

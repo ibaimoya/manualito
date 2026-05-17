@@ -20,14 +20,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-spa \
     && rm -rf /var/lib/apt/lists/*
 
-RUN uv sync --locked --no-install-project --no-default-groups \
+RUN uv sync --locked --no-install-project --no-default-groups --no-build \
     --only-group ocr \
     --only-group ocr-tesseract
 
 # Paddle CPU
 FROM ocr-base AS paddle_cpu
 
-RUN uv sync --locked --no-install-project --no-default-groups \
+RUN uv sync --locked --no-install-project --no-default-groups --no-build \
     --only-group ocr \
     --only-group ocr-paddle \
     --only-group ocr-paddle-cpu
@@ -35,7 +35,7 @@ RUN uv sync --locked --no-install-project --no-default-groups \
 # Paddle GPU
 FROM ocr-base AS paddle_gpu
 
-RUN uv sync --locked --no-install-project --no-default-groups \
+RUN uv sync --locked --no-install-project --no-default-groups --no-build \
     --only-group ocr \
     --only-group ocr-paddle \
     --only-group ocr-paddle-gpu

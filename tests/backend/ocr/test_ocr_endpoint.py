@@ -1,3 +1,4 @@
+import os
 from unittest.mock import patch
 
 import pytest
@@ -65,3 +66,41 @@ def test_missing_image_field(client):
     """Una petición sin el campo image en el multipart devuelve 422."""
     response = client.post("/extract")
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Limpieza del fichero temporal
+#   El endpoint persiste la imagen en /tmp para que PaddleOCR la lea por
+#   ruta de fichero. El fichero debe borrarse siempre, tanto en éxito como
+#   cuando el motor OCR falla, para no acumular basura en disco.
+# ---------------------------------------------------------------------------
+def test_temp_file_cleaned_on_success(client, valid_jpeg_bytes):
+    """Tras una extracción correcta, el fichero temporal se borra."""
+    captured: list[str] = []
+
+    def _capture(path):
+        captured.append(path)
+        return FAKE_OCR_RESULT
+
+    with patch("ocr_app.extract_text", side_effect=_capture):
+        response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
+
+    assert response.status_code == 200
+    assert len(captured) == 1
+    assert not os.path.exists(captured[0])
+
+
+def test_temp_file_cleaned_on_ocr_error(client, valid_jpeg_bytes):
+    """Si extract_text lanza, el fichero temporal se borra igualmente."""
+    captured: list[str] = []
+
+    def _capture_and_fail(path):
+        captured.append(path)
+        raise RuntimeError("fallo simulado")
+
+    with patch("ocr_app.extract_text", side_effect=_capture_and_fail):
+        response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
+
+    assert response.status_code == 500
+    assert len(captured) == 1
+    assert not os.path.exists(captured[0])

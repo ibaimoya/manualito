@@ -1,8 +1,10 @@
 import logging
 import os
 import tempfile
+import uuid
 from typing import Annotated
 
+import anyio
 from extractor import extract_text
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -26,7 +28,12 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/extract")
+@app.post(
+    "/extract",
+    responses={
+        500: {"description": "Error interno al procesar la imagen con OCR."},
+    },
+)
 async def extract_endpoint(image: Annotated[UploadFile, File()]):
     """
     Extrae el texto de una imagen mediante OCR.
@@ -43,11 +50,13 @@ async def extract_endpoint(image: Annotated[UploadFile, File()]):
     data = await image.read()
     logger.info("Petición OCR recibida: %s (%d bytes)", image.filename, len(data))
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-        tmp.write(data)
-        tmp_path = tmp.name
-
+    tmp_path = os.path.join(
+        tempfile.gettempdir(),
+        f"manualito_ocr_{uuid.uuid4().hex}.jpg",
+    )
     try:
+        async with await anyio.open_file(tmp_path, "wb") as tmp:
+            await tmp.write(data)
         lines = extract_text(tmp_path)
     except Exception as ocr_err:
         logger.error("Error durante el OCR de '%s'.", image.filename, exc_info=True)
@@ -56,6 +65,7 @@ async def extract_endpoint(image: Annotated[UploadFile, File()]):
             detail="Error interno al procesar la imagen con OCR.",
         ) from ocr_err
     finally:
-        os.remove(tmp_path)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
     return JSONResponse(content={"lines": lines})

@@ -1,5 +1,3 @@
-x-ocr-engine: &ocr_engine tesseract
-
 services:
 
   python-base:
@@ -10,18 +8,17 @@ services:
     network_mode: none
 
   api:
+    env_file:
+      - ./config/backend.env
     build:
       context: .
       dockerfile: backend/api/Dockerfile
       additional_contexts:
-        python-base: service:python-base
+        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+      args:
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
     ports:
       - "8000:8000"
-    environment:
-      - OCR_URL=http://ocr:8001
-      - RAG_URL=http://rag:8002
-      - LLM_URL=http://llm:8003
-      - LLM_UNLOAD_BEFORE_OCR=true
     depends_on:
       ocr:
         condition: service_healthy
@@ -33,32 +30,32 @@ services:
       - manualito-net
 
   ocr:
+    env_file:
+      - ./config/backend.env
     image: tfg-ocr:cpu
     build:
       context: .
       dockerfile: backend/ocr/Dockerfile
       additional_contexts:
-        python-base: service:python-base
+        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
       args:
-        OCR_RUNTIME_STAGE: *ocr_engine
+        OCR_RUNTIME_STAGE: ${OCR_RUNTIME_STAGE:-tesseract}
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
     environment:
-      OCR_ENGINE: *ocr_engine
+      OCR_ENGINE: ${OCR_RUNTIME_STAGE:-tesseract}
     networks:
       - manualito-net
 
   rag:
+    env_file:
+      - ./config/backend.env
     build:
       context: .
       dockerfile: backend/rag/Dockerfile
       additional_contexts:
-        python-base: service:python-base
-    environment:
-      - CHROMA_URL=http://chroma:8000
-      - CHROMA_COLLECTION=manualito_manuals
-      - EMBEDDING_MODEL=intfloat/multilingual-e5-small
-      - HF_HOME=/root/.cache/huggingface
-      # Workaround: chromadb-client arrastra opentelemetry-proto con _pb2 viejo incompatible con protobuf 7.x.
-      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+      args:
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
     volumes:
       - ./backend/rag/.hf_cache:/root/.cache/huggingface
     depends_on:
@@ -67,22 +64,22 @@ services:
       - manualito-net
 
   chroma:
-    image: chromadb/chroma:1.5.7
+    image: chromadb/chroma:${CHROMA_VERSION:-1.5.7}
     volumes:
       - chromadb-data:/chroma/chroma
     networks:
       - manualito-net
 
   llm:
+    env_file:
+      - ./config/backend.env
     build:
       context: .
       dockerfile: backend/llm/Dockerfile
       additional_contexts:
-        python-base: service:python-base
-    environment:
-      - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=phi4:14b
-      - OLLAMA_KEEP_ALIVE=5m
+        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+      args:
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
     depends_on:
       ollama-init:
         condition: service_completed_successfully
@@ -90,7 +87,7 @@ services:
       - manualito-net
 
   ollama:
-    image: ollama/ollama:0.23.1
+    image: ollama/ollama:${OLLAMA_VERSION:-0.23.1}
     volumes:
       - ollama-data:/root/.ollama
     deploy:
@@ -109,20 +106,16 @@ services:
     networks:
       - manualito-net
 
-  # Servicio one-shot: espera a que Ollama esté listo y descarga el modelo si
-  # no está ya en el volumen ``ollama-data``. Es idempotente — si el modelo
-  # existe, ``ollama pull`` detecta el hash local y sale al instante. Al
-  # definirse ``llm: depends_on: ollama-init: service_completed_successfully``,
-  # el LLM no arranca hasta que el modelo esté disponible.
+  # Descarga el modelo si falta.
   ollama-init:
-    image: ollama/ollama:0.23.1
+    env_file:
+      - ./config/backend.env
+    image: ollama/ollama:${OLLAMA_VERSION:-0.23.1}
     depends_on:
       ollama:
         condition: service_healthy
-    environment:
-      - OLLAMA_HOST=ollama:11434
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull phi4:14b"]
+    command: ["ollama pull $$OLLAMA_MODEL"]
     restart: "no"
     networks:
       - manualito-net

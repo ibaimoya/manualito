@@ -1,6 +1,7 @@
 ARG OCR_RUNTIME_STAGE=tesseract
+ARG PYTHON_BASE_TAG
 
-FROM python-base AS ocr-base
+FROM python-base:${PYTHON_BASE_TAG} AS ocr-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \

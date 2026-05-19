@@ -26,10 +26,17 @@ jobs:
       - name: Clonar repositorio
         uses: actions/checkout@v6
 
+      - name: Cargar versiones
+        id: versions
+        run: |
+          . ./.env
+          echo "python_ci_version=$PYTHON_CI_VERSION" >> "$GITHUB_OUTPUT"
+          echo "uv_version=$UV_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ steps.versions.outputs.python_ci_version }}
 
       - name: Cache de uv
         uses: actions/cache@v4
@@ -40,7 +47,7 @@ jobs:
             uv-${{ runner.os }}-
 
       - name: Instalar uv
-        run: python -m pip install uv==0.11.13
+        run: python -m pip install uv==${{ steps.versions.outputs.uv_version }}
 
       - name: Instalar dependencias de test
         run: uv sync --locked --no-default-groups --only-group test
@@ -59,10 +66,17 @@ jobs:
       - name: Clonar repositorio
         uses: actions/checkout@v6
 
+      - name: Cargar versiones
+        id: versions
+        run: |
+          . ./.env
+          echo "python_ci_version=$PYTHON_CI_VERSION" >> "$GITHUB_OUTPUT"
+          echo "uv_version=$UV_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ steps.versions.outputs.python_ci_version }}
 
       - name: Cache de uv
         uses: actions/cache@v4
@@ -73,7 +87,7 @@ jobs:
             uv-${{ runner.os }}-
 
       - name: Instalar uv
-        run: python -m pip install uv==0.11.13
+        run: python -m pip install uv==${{ steps.versions.outputs.uv_version }}
 
       - name: Instalar dependencias de test
         run: uv sync --locked --no-default-groups --only-group test

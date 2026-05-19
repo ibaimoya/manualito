@@ -1,5 +1,5 @@
-ARG UV_VERSION=0.11.13
-ARG PYTHON_VERSION=3.11.14-slim-bookworm
+ARG UV_VERSION
+ARG PYTHON_VERSION
 
 # Instala uv (https://docs.astral.sh/uv/).
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv

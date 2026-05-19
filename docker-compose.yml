@@ -6,6 +6,9 @@ services:
     build:
       context: .
       dockerfile: backend/python-base/Dockerfile
+      args:
+        UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
+        PYTHON_VERSION: ${PYTHON_VERSION:?PYTHON_VERSION no definida}
     scale: 0
     network_mode: none
 

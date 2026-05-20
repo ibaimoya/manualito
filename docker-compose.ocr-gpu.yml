@@ -1,6 +1,6 @@
 services:
   ocr:
-    image: tfg-ocr:gpu
+    image: ${PROYECT_NAME:-manualito}-ocr:gpu
     build:
       args:
         # cu118

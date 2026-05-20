@@ -1,7 +1,9 @@
-FROM python-base
+ARG PYTHON_BASE_TAG
+
+FROM python-base:${PYTHON_BASE_TAG}
 
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --locked --no-install-project --no-default-groups --only-group llm
+RUN uv sync --locked --no-install-project --no-default-groups --no-build --only-group llm
 
 COPY backend/common/ /app/common/
 COPY backend/llm/ /app/

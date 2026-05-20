@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from repository import ManualNotFoundError, get_repository
 
 from common.filters import install_health_log_filter
+from common.log_safety import safe_for_log
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,7 +130,10 @@ async def ingest_endpoint(payload: IngestRequest):
     except HTTPException:
         raise
     except Exception as rag_err:
-        logger.error("Error al indexar manual '%s'.", payload.manual_id, exc_info=True)
+        logger.exception(
+            "Error al indexar manual '%s'.",
+            safe_for_log(payload.manual_id),
+        )
         raise HTTPException(
             status_code=500,
             detail="Error interno al indexar el manual.",
@@ -172,10 +176,9 @@ async def retrieve_endpoint(payload: RetrieveRequest):
     except ManualNotFoundError:
         raise HTTPException(status_code=404, detail="Manual no encontrado.") from None
     except Exception as rag_err:
-        logger.error(
+        logger.exception(
             "Error al recuperar contexto para '%s'.",
-            payload.manual_id,
-            exc_info=True,
+            safe_for_log(payload.manual_id),
         )
         raise HTTPException(
             status_code=500,

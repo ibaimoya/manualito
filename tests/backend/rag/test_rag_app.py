@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock, patch
 
 
@@ -234,3 +235,35 @@ def test_retrieve_returns_500_when_query_fails(client):
     assert response.json() == {
         "detail": "Error interno al recuperar el contexto del manual."
     }
+
+
+def test_retrieve_error_log_sanitizes_manual_id(client, caplog):
+    """El manual_id recibido no puede partir el log en varias líneas."""
+    manual_id = "manual\r\n2025-01-01 [ERROR] FALSO"
+    repository = MagicMock()
+    repository.query_manual.side_effect = RuntimeError("fallo en chroma")
+    embedding_service = MagicMock()
+    embedding_service.embed_query.return_value = [0.3, 0.4]
+
+    with (
+        patch("rag_app.get_embedding_service", return_value=embedding_service),
+        patch("rag_app.get_repository", return_value=repository),
+        caplog.at_level(logging.ERROR, logger="rag_app"),
+    ):
+        response = client.post(
+            "/retrieve",
+            json={"manual_id": manual_id, "question": "¿Cómo se gana?"},
+        )
+
+    assert response.status_code == 500
+    messages = [
+        record.getMessage()
+        for record in caplog.records
+        if (
+            record.name == "rag_app"
+            and "Error al recuperar contexto" in record.getMessage()
+        )
+    ]
+    assert messages
+    assert all("\r" not in message and "\n" not in message for message in messages)
+    assert any("manual??2025-01-01 [ERROR] FALSO" in message for message in messages)

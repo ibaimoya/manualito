@@ -130,10 +130,9 @@ async def ingest_endpoint(payload: IngestRequest):
     except HTTPException:
         raise
     except Exception as rag_err:
-        logger.error(
+        logger.exception(
             "Error al indexar manual '%s'.",
             safe_for_log(payload.manual_id),
-            exc_info=True,
         )
         raise HTTPException(
             status_code=500,
@@ -177,10 +176,9 @@ async def retrieve_endpoint(payload: RetrieveRequest):
     except ManualNotFoundError:
         raise HTTPException(status_code=404, detail="Manual no encontrado.") from None
     except Exception as rag_err:
-        logger.error(
+        logger.exception(
             "Error al recuperar contexto para '%s'.",
             safe_for_log(payload.manual_id),
-            exc_info=True,
         )
         raise HTTPException(
             status_code=500,

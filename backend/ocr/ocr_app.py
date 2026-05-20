@@ -64,10 +64,9 @@ async def extract_endpoint(image: Annotated[UploadFile, File()]):
             await tmp.write(data)
         lines = extract_text(tmp_path)
     except Exception as ocr_err:
-        logger.error(
+        logger.exception(
             "Error durante el OCR de '%s'.",
             safe_for_log(image.filename),
-            exc_info=True,
         )
         raise HTTPException(
             status_code=500,

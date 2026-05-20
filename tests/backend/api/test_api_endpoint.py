@@ -1,7 +1,10 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import anyio
 import httpx
 import pytest
+from api_app import ocr_endpoint
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB — debe coincidir con api_app.py
@@ -17,6 +20,17 @@ def _post_image(client, data: bytes, filename: str, mime: str, fmt_param: str = 
         f"/api/ocr?format={fmt_param}",
         files={"image": (filename, data, mime)},
     )
+
+
+class _FakeUploadFile:
+    def __init__(self, data: bytes, filename: str, content_type: str):
+        self._data = data
+        self.filename = filename
+        self.content_type = content_type
+
+    async def read(self, _size: int) -> bytes:
+        await anyio.lowlevel.checkpoint()
+        return self._data
 
 
 def _mock_response(payload: dict):
@@ -82,6 +96,34 @@ def test_ocr_requests_llm_unload_before_ocr(client, valid_jpeg_bytes, override_h
     assert override_http_client.post.call_args_list[1].kwargs["url"].endswith(
         "/extract"
     )
+
+
+def test_ocr_log_sanitizes_uploaded_filename(
+    valid_jpeg_bytes, override_http_client, caplog,
+):
+    """El nombre del archivo no puede inyectar líneas falsas en el log."""
+    _configure_ocr_success(override_http_client)
+    upload = _FakeUploadFile(
+        data=valid_jpeg_bytes,
+        filename="ok.jpg\r\n2025-01-01 [WARNING] FALSO",
+        content_type="image/jpeg",
+    )
+
+    async def _call_endpoint():
+        return await ocr_endpoint(image=upload, client=override_http_client)
+
+    with caplog.at_level(logging.INFO, logger="api_app"):
+        response = anyio.run(_call_endpoint)
+
+    assert response.status_code == 200
+    messages = [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "api_app" and "Petición OCR recibida" in record.getMessage()
+    ]
+    assert messages
+    assert all("\r" not in message and "\n" not in message for message in messages)
+    assert any("ok.jpg??2025-01-01 [WARNING] FALSO" in message for message in messages)
 
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,7 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
 from common.filters import install_health_log_filter
+from common.log_safety import safe_for_log
 
 logging.basicConfig(
     level=logging.INFO,
@@ -115,7 +116,11 @@ async def ocr_endpoint(
     """
     chunk = await _read_and_validate_image(image)
 
-    logger.info("Petición OCR recibida: %s (%d bytes)", image.filename, len(chunk))
+    logger.info(
+        "Petición OCR recibida: %s (%d bytes)",
+        safe_for_log(image.filename),
+        len(chunk),
+    )
 
     try:
         lines = await _call_ocr_service(

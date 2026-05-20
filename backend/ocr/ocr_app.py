@@ -10,6 +10,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from common.filters import install_health_log_filter
+from common.log_safety import safe_for_log
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,7 +49,11 @@ async def extract_endpoint(image: Annotated[UploadFile, File()]):
         HTTPException (500): Si el motor OCR falla.
     """
     data = await image.read()
-    logger.info("Petición OCR recibida: %s (%d bytes)", image.filename, len(data))
+    logger.info(
+        "Petición OCR recibida: %s (%d bytes)",
+        safe_for_log(image.filename),
+        len(data),
+    )
 
     tmp_path = os.path.join(
         tempfile.gettempdir(),
@@ -59,7 +64,11 @@ async def extract_endpoint(image: Annotated[UploadFile, File()]):
             await tmp.write(data)
         lines = extract_text(tmp_path)
     except Exception as ocr_err:
-        logger.error("Error durante el OCR de '%s'.", image.filename, exc_info=True)
+        logger.error(
+            "Error durante el OCR de '%s'.",
+            safe_for_log(image.filename),
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=500,
             detail="Error interno al procesar la imagen con OCR.",

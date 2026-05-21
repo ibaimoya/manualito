@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 install_health_log_filter()
 
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
-OCR_URL = os.getenv("OCR_URL", "http://ocr:8001")
-RAG_URL = os.getenv("RAG_URL", "http://rag:8002")
-LLM_URL = os.getenv("LLM_URL", "http://llm:8003")
+OCR_URL = os.environ["OCR_URL"]
+RAG_URL = os.environ["RAG_URL"]
+LLM_URL = os.environ["LLM_URL"]
 LLM_UNLOAD_BEFORE_OCR = os.getenv("LLM_UNLOAD_BEFORE_OCR", "true").lower() in {
     "1",
     "true",

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
 install_health_log_filter()
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
+OLLAMA_URL = os.environ["OLLAMA_URL"]
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi4:14b")
 OLLAMA_KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE")
 OLLAMA_TIMEOUT = 120.0

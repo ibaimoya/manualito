@@ -4,8 +4,8 @@ ARG PYTHON_BASE_TAG
 FROM python-base:${PYTHON_BASE_TAG} AS ocr-base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
     libgl1 \
+    libglib2.0-0 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,14 +16,14 @@ FROM ocr-base AS tesseract
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    tesseract-ocr-spa \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN uv sync --locked --no-install-project --no-default-groups --no-build \
-    --only-group ocr \
-    --only-group ocr-tesseract
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-spa \
+    && rm -rf /var/lib/apt/lists/* \
+    && uv sync --locked --no-install-project --no-default-groups --no-build \
+        --only-group ocr \
+        --only-group ocr-tesseract
 
 # Paddle CPU
 FROM ocr-base AS paddle_cpu

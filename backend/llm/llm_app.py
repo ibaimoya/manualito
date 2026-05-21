@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import time
@@ -196,7 +195,14 @@ async def unload_if_idle_endpoint(
     return {"status": "idle", "unloaded": True, "model": OLLAMA_MODEL}
 
 
-@app.post("/generate")
+@app.post(
+    "/generate",
+    responses={
+        500: {"description": "Error interno al generar la respuesta con el LLM."},
+        502: {"description": "Servicio LLM no disponible o respuesta inválida."},
+        504: {"description": "El LLM tardó demasiado en responder."},
+    },
+)
 async def generate_endpoint(
     payload: GenerateRequest,
     client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
@@ -262,7 +268,7 @@ async def generate_endpoint(
             detail="El LLM tardó demasiado en responder.",
         ) from None
     except httpx.HTTPStatusError as llm_err:
-        logger.error("Ollama devolvió un error HTTP.", exc_info=True)
+        logger.exception("Ollama devolvió un error HTTP.")
         raise HTTPException(
             status_code=500,
             detail="Error interno al generar la respuesta con el LLM.",
@@ -272,8 +278,8 @@ async def generate_endpoint(
 
     try:
         body = response.json()
-    except (ValueError, json.JSONDecodeError):
-        logger.error("Respuesta JSON inválida de Ollama.", exc_info=True)
+    except ValueError:
+        logger.exception("Respuesta JSON inválida de Ollama.")
         raise HTTPException(
             status_code=502,
             detail="Respuesta no válida del LLM.",

@@ -25,7 +25,7 @@ class TesseractOcrEngine:
             self._ensure_language_available()
             logger.info("Tesseract inicializado correctamente: %s.", version)
         except Exception:
-            logger.error("Error al inicializar Tesseract.", exc_info=True)
+            logger.exception("Error al inicializar Tesseract.")
             raise
 
     def extract_text(self, image_path: str) -> list[OcrLine]:

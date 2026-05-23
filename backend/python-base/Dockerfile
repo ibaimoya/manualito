@@ -33,6 +33,6 @@ RUN groupadd --gid "${APP_GID}" appgroup \
                --shell /usr/sbin/nologin --no-log-init \
                appuser \
     && mkdir -p /home/appuser/.cache /app \
-    && chown -R appuser:appgroup /home/appuser /app
+    && chown -R appuser:appgroup /home/appuser
 
 COPY --from=uv /uv /uvx /usr/local/bin/

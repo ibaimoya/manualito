@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 ARG PYTHON_BASE_TAG
 
 FROM python-base:${PYTHON_BASE_TAG}
@@ -7,16 +9,17 @@ LABEL org.opencontainers.image.title="manualito-rag" \
 
 ENV HF_HOME=/home/appuser/.cache/huggingface
 
-COPY --chown=appuser:appgroup pyproject.toml uv.lock /app/
-USER appuser
-RUN uv sync --locked --no-install-project --no-default-groups --no-build --only-group rag
+COPY --chown=root:root --chmod=0644 pyproject.toml uv.lock /app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-install-project --no-default-groups --no-build --only-group rag
 
-USER root
-COPY --chown=appuser:appgroup backend/common/ /app/common/
-COPY --chown=appuser:appgroup backend/rag/ /app/
+COPY --chown=root:root --chmod=u=rwX,go=rX backend/common/ /app/common/
+COPY --chown=root:root --chmod=u=rwX,go=rX backend/rag/ /app/
 
 RUN mkdir -p /home/appuser/.cache/huggingface \
     && chown -R appuser:appgroup /home/appuser/.cache/huggingface \
+    && find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
+    && find /app -path /app/.venv -prune -o -type f -exec chmod 0644 {} + \
     && rm -f /usr/local/bin/uv /usr/local/bin/uvx \
         /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.* \
         /app/.venv/bin/pip /app/.venv/bin/pip3 /app/.venv/bin/pip3.* \

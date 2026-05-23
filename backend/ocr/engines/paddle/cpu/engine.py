@@ -25,7 +25,7 @@ class PaddleCpuOcrEngine:
             )
             logger.info("PaddleOCR CPU inicializado correctamente.")
         except Exception:
-            logger.error("Error al inicializar PaddleOCR CPU.", exc_info=True)
+            logger.exception("Error al inicializar PaddleOCR CPU.")
             raise
 
     def extract_text(self, image_path: str) -> list[OcrLine]:

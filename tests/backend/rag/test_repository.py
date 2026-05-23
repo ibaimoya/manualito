@@ -1,10 +1,15 @@
+import os
 import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+from urllib.parse import urlunparse
 
 import pytest
 import repository
 from repository import ChromaRepository, ManualNotFoundError
+
+_TEST_CHROMA_URL = os.environ["CHROMA_URL"]
+_CUSTOM_CHROMA_URL = urlunparse(("http", "mi-host:8123", "", "", "", ""))
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +29,7 @@ def test_upsert_manual_deletes_orphan_chunks_from_previous_versions():
     """Tras indexar la versión nueva, borra solo los IDs sobrantes anteriores."""
     collection = MagicMock()
     collection.get.return_value = {"ids": ["manual-1:0", "manual-1:1", "manual-1:2"]}
-    repo = ChromaRepository("http://chroma:8000", "manuales")
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     count = repo.upsert_manual(
@@ -61,7 +66,7 @@ def test_upsert_manual_skips_delete_when_no_orphans_exist():
     """Si la nueva versión ya cubre todos los IDs existentes, no llama a delete."""
     collection = MagicMock()
     collection.get.return_value = {"ids": ["manual-1:0"]}
-    repo = ChromaRepository("http://chroma:8000", "manuales")
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     repo.upsert_manual(
@@ -91,7 +96,7 @@ def test_query_manual_returns_bounded_and_rounded_scores():
         ]],
         "distances": [[0.123456, 1.7]],
     }
-    repo = ChromaRepository("http://chroma:8000", "manuales")
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     chunks = repo.query_manual(
@@ -127,7 +132,7 @@ def test_query_manual_raises_when_manual_has_no_indexed_chunks():
         "metadatas": [[]],
         "distances": [[]],
     }
-    repo = ChromaRepository("http://chroma:8000", "manuales")
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     with pytest.raises(ManualNotFoundError, match="manual-1"):
@@ -155,7 +160,7 @@ def test_manual_exists_consulta_la_coleccion(ids, expected):
     """manual_exists refleja si la colección devuelve al menos un ID."""
     collection = MagicMock()
     collection.get.return_value = {"ids": ids}
-    repo = ChromaRepository("http://chroma:8000", "manuales")
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     assert repo.manual_exists("manual-1") is expected
@@ -170,7 +175,7 @@ def test_get_collection_creates_and_caches_collection():
     """La colección se crea una sola vez con el espacio de similitud esperado."""
     client = MagicMock()
     client.get_or_create_collection.return_value = "coleccion"
-    repo = ChromaRepository("http://chroma:8000", "manuales")
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._client = client
 
     first = repo._get_collection()
@@ -192,7 +197,7 @@ def test_get_client_parses_host_port_and_reuses_client(monkeypatch):
         "chromadb",
         SimpleNamespace(HttpClient=http_client),
     )
-    repo = ChromaRepository("http://mi-host:8123", "manuales")
+    repo = ChromaRepository(_CUSTOM_CHROMA_URL, "manuales")
 
     first = repo._get_client()
     second = repo._get_client()

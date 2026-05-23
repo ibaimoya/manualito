@@ -9,7 +9,7 @@ services:
       - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
       - OCR_ENGINE=paddle_gpu
     volumes:
-      - ./backend/ocr/.ocr_cache/paddle_gpu:/root/.paddlex
+      - ocr-paddlex-gpu-cache:/home/appuser/.paddlex
     deploy:
       resources:
         reservations:

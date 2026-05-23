@@ -82,7 +82,13 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/ingest")
+@app.post(
+    "/ingest",
+    responses={
+        422: {"description": "El documento no contiene texto indexable."},
+        500: {"description": "Error interno al indexar el manual."},
+    },
+)
 async def ingest_endpoint(payload: IngestRequest):
     """
     Indexa un manual en ChromaDB a partir de texto libre u OCR estructurado.
@@ -146,7 +152,13 @@ async def ingest_endpoint(payload: IngestRequest):
     }
 
 
-@app.post("/retrieve")
+@app.post(
+    "/retrieve",
+    responses={
+        404: {"description": "Manual no encontrado."},
+        500: {"description": "Error interno al recuperar el contexto del manual."},
+    },
+)
 async def retrieve_endpoint(payload: RetrieveRequest):
     """
     Recupera los chunks más relevantes de un manual para una pregunta dada.

@@ -1,5 +1,19 @@
 name: ${PROYECT_NAME:-manualito}
 
+x-service-hardening: &service-hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777
+  pids_limit: 256
+
+x-third-party-hardening: &third-party-hardening
+  security_opt:
+    - no-new-privileges:true
+
 services:
 
   python-base:
@@ -9,10 +23,12 @@ services:
       args:
         UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
         PYTHON_VERSION: ${PYTHON_VERSION:?PYTHON_VERSION no definida}
+        VERSION: ${PYTHON_IMAGE_VERSION:-0.0.1}
     scale: 0
     network_mode: none
 
   api:
+    <<: *service-hardening
     container_name: ${PROYECT_NAME:-manualito}-api
     env_file:
       - ./config/backend.env
@@ -36,6 +52,7 @@ services:
       - manualito-net
 
   ocr:
+    <<: *service-hardening
     container_name: ${PROYECT_NAME:-manualito}-ocr
     env_file:
       - ./config/backend.env
@@ -54,6 +71,7 @@ services:
       - manualito-net
 
   rag:
+    <<: *service-hardening
     container_name: ${PROYECT_NAME:-manualito}-rag
     env_file:
       - ./config/backend.env
@@ -65,21 +83,24 @@ services:
       args:
         PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
     volumes:
-      - ./backend/rag/.hf_cache:/root/.cache/huggingface
+      - rag-hf-cache:/home/appuser/.cache/huggingface
     depends_on:
       - chroma
     networks:
       - manualito-net
 
   chroma:
+    <<: *third-party-hardening
     container_name: ${PROYECT_NAME:-manualito}-chroma
     image: chromadb/chroma:${CHROMA_VERSION:-1.5.7}
+    pids_limit: 256
     volumes:
       - chromadb-data:/chroma/chroma
     networks:
       - manualito-net
 
   llm:
+    <<: *service-hardening
     container_name: ${PROYECT_NAME:-manualito}-llm
     env_file:
       - ./config/backend.env
@@ -97,8 +118,10 @@ services:
       - manualito-net
 
   ollama:
+    <<: *third-party-hardening
     container_name: ${PROYECT_NAME:-manualito}-ollama
     image: ollama/ollama:${OLLAMA_VERSION:-0.23.1}
+    pids_limit: 512
     volumes:
       - ollama-data:/root/.ollama
     deploy:
@@ -119,10 +142,12 @@ services:
 
   # Descarga el modelo si falta.
   ollama-init:
+    <<: *third-party-hardening
     container_name: ${PROYECT_NAME:-manualito}-ollama-init
     env_file:
       - ./config/backend.env
     image: ollama/ollama:${OLLAMA_VERSION:-0.23.1}
+    pids_limit: 128
     depends_on:
       ollama:
         condition: service_healthy
@@ -139,3 +164,6 @@ networks:
 volumes:
   chromadb-data:
   ollama-data:
+  rag-hf-cache:
+  ocr-paddlex-cpu-cache:
+  ocr-paddlex-gpu-cache:

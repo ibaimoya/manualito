@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 install_health_log_filter()
 
 MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB
-OCR_URL = os.getenv("OCR_URL", "http://ocr:8001")
-RAG_URL = os.getenv("RAG_URL", "http://rag:8002")
-LLM_URL = os.getenv("LLM_URL", "http://llm:8003")
+OCR_URL = os.environ["OCR_URL"]
+RAG_URL = os.environ["RAG_URL"]
+LLM_URL = os.environ["LLM_URL"]
 LLM_UNLOAD_BEFORE_OCR = os.getenv("LLM_UNLOAD_BEFORE_OCR", "true").lower() in {
     "1",
     "true",
@@ -87,7 +87,16 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/api/ocr")
+@app.post(
+    "/api/ocr",
+    responses={
+        404: {"description": "Recurso no encontrado en el servicio OCR."},
+        413: {"description": "La imagen supera 20 MB."},
+        415: {"description": "El archivo no es una imagen válida."},
+        500: {"description": "Error interno al procesar la imagen con OCR."},
+        502: {"description": "Servicio OCR no disponible."},
+    },
+)
 async def ocr_endpoint(
     image: Annotated[UploadFile, File()],
     client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
@@ -136,7 +145,7 @@ async def ocr_endpoint(
             detail="Servicio OCR no disponible.",
         ) from None
     except httpx.HTTPStatusError as http_err:
-        logger.error(
+        logger.exception(
             "El servicio OCR respondió con error %d.",
             http_err.response.status_code,
         )
@@ -151,7 +160,16 @@ async def ocr_endpoint(
     return JSONResponse(content={"lines": lines})
 
 
-@app.post("/api/manuals")
+@app.post(
+    "/api/manuals",
+    responses={
+        404: {"description": "Recurso no encontrado en un servicio interno."},
+        413: {"description": "La imagen supera 20 MB."},
+        415: {"description": "El archivo no es una imagen válida."},
+        500: {"description": "Error interno al procesar el manual."},
+        502: {"description": "Servicio OCR o RAG no disponible."},
+    },
+)
 async def create_manual_handler(
     name: Annotated[str, Form(min_length=1)],
     image: Annotated[UploadFile, File()],
@@ -178,27 +196,24 @@ async def create_manual_handler(
     chunk = await _read_and_validate_image(image)
     manual_id = _build_manual_id(name)
 
-    try:
-        lines = await _call_ocr_service(
-            client=client,
-            filename=image.filename,
-            content=chunk,
-            content_type=image.content_type,
-        )
-        ingest_response = await _post_json(
-            client=client,
-            service_name="RAG",
-            url=f"{RAG_URL}/ingest",
-            payload={
-                "manual_id": manual_id,
-                "ocr_lines": lines,
-                "source_page": 1,
-            },
-            unavailable_detail="Servicio RAG no disponible.",
-            internal_detail="Error interno al indexar el manual.",
-        )
-    except HTTPException:
-        raise
+    lines = await _call_ocr_service(
+        client=client,
+        filename=image.filename,
+        content=chunk,
+        content_type=image.content_type,
+    )
+    ingest_response = await _post_json(
+        client=client,
+        service_name="RAG",
+        url=f"{RAG_URL}/ingest",
+        payload={
+            "manual_id": manual_id,
+            "ocr_lines": lines,
+            "source_page": 1,
+        },
+        unavailable_detail="Servicio RAG no disponible.",
+        internal_detail="Error interno al indexar el manual.",
+    )
 
     logger.info(
         "Manual indexado correctamente: %s (%d chunks).",
@@ -208,7 +223,14 @@ async def create_manual_handler(
     return JSONResponse(content=ingest_response)
 
 
-@app.post("/api/manuals/{manual_id}/questions")
+@app.post(
+    "/api/manuals/{manual_id}/questions",
+    responses={
+        404: {"description": "Manual no encontrado."},
+        500: {"description": "Error interno al responder la pregunta."},
+        502: {"description": "Servicio RAG o LLM no disponible."},
+    },
+)
 async def answer_manual_question_handler(
     manual_id: str,
     payload: QuestionRequest,
@@ -232,34 +254,31 @@ async def answer_manual_question_handler(
         HTTPException: 404 si el manual no existe; 502/500 si fallan servicios
                        internos.
     """
-    try:
-        retrieval_response = await _post_json(
-            client=client,
-            service_name="RAG",
-            url=f"{RAG_URL}/retrieve",
-            payload={
-                "manual_id": manual_id,
-                "question": payload.question,
-                "top_k": 3,
-            },
-            unavailable_detail="Servicio RAG no disponible.",
-            internal_detail="Error interno al recuperar el contexto del manual.",
-        )
-        context_chunks = [chunk["text"] for chunk in retrieval_response["chunks"]]
-        llm_response = await _post_json(
-            client=client,
-            service_name="LLM",
-            url=f"{LLM_URL}/generate",
-            payload={
-                "manual_id": manual_id,
-                "question": payload.question,
-                "context_chunks": context_chunks,
-            },
-            unavailable_detail="Servicio LLM no disponible.",
-            internal_detail="Error interno al generar la respuesta.",
-        )
-    except HTTPException as exc:
-        raise exc
+    retrieval_response = await _post_json(
+        client=client,
+        service_name="RAG",
+        url=f"{RAG_URL}/retrieve",
+        payload={
+            "manual_id": manual_id,
+            "question": payload.question,
+            "top_k": 3,
+        },
+        unavailable_detail="Servicio RAG no disponible.",
+        internal_detail="Error interno al recuperar el contexto del manual.",
+    )
+    context_chunks = [chunk["text"] for chunk in retrieval_response["chunks"]]
+    llm_response = await _post_json(
+        client=client,
+        service_name="LLM",
+        url=f"{LLM_URL}/generate",
+        payload={
+            "manual_id": manual_id,
+            "question": payload.question,
+            "context_chunks": context_chunks,
+        },
+        unavailable_detail="Servicio LLM no disponible.",
+        internal_detail="Error interno al generar la respuesta.",
+    )
 
     return JSONResponse(content={"answer": llm_response["answer"]})
 

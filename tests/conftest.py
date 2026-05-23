@@ -1,4 +1,5 @@
 import io
+import os
 import sys
 from pathlib import Path
 
@@ -7,6 +8,21 @@ from PIL import Image
 
 # Añade los servicios al path para que los tests encuentren los módulos.
 _root = Path(__file__).resolve().parent.parent
+
+
+def _load_backend_env() -> None:
+    """Carga las variables del backend usadas al importar los servicios."""
+    env_path = _root / "config" / "backend.env"
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+_load_backend_env()
+
 # backend/ permite importar el paquete compartido `common` con el mismo
 # nombre que usa el código de producción (from common.filters... import ...).
 sys.path.insert(0, str(_root / "backend"))

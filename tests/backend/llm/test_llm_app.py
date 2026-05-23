@@ -176,11 +176,11 @@ def test_unload_if_idle_does_not_hold_generation_lock_during_ollama_io():
     unload_response = MagicMock()
     unload_response.raise_for_status.return_value = None
 
-    async def get_side_effect(*args, **kwargs):
+    def get_side_effect(*args, **kwargs):
         assert not llm_app._active_generations_lock.locked()
         return ps_response
 
-    async def post_side_effect(*args, **kwargs):
+    def post_side_effect(*args, **kwargs):
         assert not llm_app._active_generations_lock.locked()
         return unload_response
 
@@ -199,7 +199,7 @@ def test_unload_if_idle_rechecks_activity_before_unloading():
     ps_response.raise_for_status.return_value = None
     ps_response.json.return_value = {"models": [{"model": llm_app.OLLAMA_MODEL}]}
 
-    async def get_side_effect(*args, **kwargs):
+    def get_side_effect(*args, **kwargs):
         llm_app._active_generations = 1
         return ps_response
 
@@ -255,7 +255,7 @@ def test_generate_tracks_active_generation_while_ollama_runs(client, override_ht
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"response": "Respuesta final"}
 
-    async def post_side_effect(*args, **kwargs):
+    def post_side_effect(*args, **kwargs):
         assert llm_app._active_generations == 1
         return mock_response
 
@@ -323,7 +323,7 @@ def test_generate_returns_504_when_ollama_times_out(client, override_http_client
 
 def test_generate_returns_500_when_ollama_returns_http_error(client, override_http_client):
     """Los errores HTTP de Ollama se traducen a un 500 controlado."""
-    request = httpx.Request("POST", "http://ollama.test/api/generate")
+    request = httpx.Request("POST", f"{llm_app.OLLAMA_URL}/api/generate")
     response = httpx.Response(500, request=request)
     override_http_client.post.side_effect = httpx.HTTPStatusError(
         "boom",

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-CHROMA_URL = os.getenv("CHROMA_URL", "http://chroma:8000")
+CHROMA_URL = os.environ["CHROMA_URL"]
 CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "manualito_manuals")
 _repository: ChromaRepository | None = None
 

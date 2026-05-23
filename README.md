@@ -1,8 +1,18 @@
 # Manualito
 
 [![CI](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml/badge.svg)](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=alert_status&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=coverage&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=security_rating&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=reliability_rating&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=sqale_rating&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Ollama](https://img.shields.io/badge/Ollama-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-9A3412?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PGNpcmNsZSBjeD0nOC41JyBjeT0nMTInIHI9JzUnIGZpbGw9J3doaXRlJyBmaWxsLW9wYWNpdHk9JzAuNCcvPjxjaXJjbGUgY3g9JzE1LjUnIGN5PScxMicgcj0nNScgZmlsbD0nd2hpdGUnIGZpbGwtb3BhY2l0eT0nMC43Jy8+PGNpcmNsZSBjeD0nMTInIGN5PScxMicgcj0nNScgZmlsbD0nd2hpdGUnIGZpbGwtb3BhY2l0eT0nMScvPjwvc3ZnPg==&logoColor=white)](https://www.trychroma.com/)
+[![uv](https://img.shields.io/badge/uv-6D28D9?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/badge/Ruff-261230?logo=ruff&logoColor=CA8A04)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![HP SCDS](https://img.shields.io/badge/HP%20SCDS-Observatorio%20Tecnol%C3%B3gico-0096D6?logo=hp&logoColor=white)](https://hpscds.com/en/innovation/technological-observatory/)
 
@@ -80,16 +90,28 @@ Necesitas [Docker Desktop](https://www.docker.com/products/docker-desktop/) con 
 
 ```bash
 # Levantar todos los servicios
-start.bat
+docker compose up --build -d
 
 # Parar todos los servicios
-stop.bat
+docker compose down
 ```
 
 La API queda expuesta en `http://localhost:8000`.
 
-Para usar PaddleOCR CPU en lugar de Tesseract, cambia `x-ocr-engine` de
-`tesseract` a `paddle_cpu` en `docker-compose.yml` y reconstruye el servicio OCR.
+Las variables de runtime del backend se configuran en `config/backend.env`.
+Docker Compose las inyecta en los servicios mediante `env_file`, asi que no
+hace falta pasarlas por consola.
+
+Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
+override dedicado:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ocr-paddle-cpu.yml up --build ocr
+```
+
+Los modelos de PaddleOCR CPU se cachean en el volumen Docker
+`ocr-paddlex-cpu-cache`. La variante GPU usa `docker-compose.ocr-gpu.yml` y
+cachea sus modelos en `ocr-paddlex-gpu-cache`.
 
 ---
 

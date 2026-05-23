@@ -77,8 +77,25 @@ def test_status_code_boundaries(status, first, second):
     assert filter_fn(r2) is second
 
 
+def test_health_request_with_query_string_is_filtered():
+    """El sondeo a /health con query string se trata como healthcheck."""
+    filter_fn = make_health_log_filter()
+    r1 = _make_record(_access_line("GET", "/health?ready=1", "HTTP/1.1", 200))
+    r2 = _make_record(_access_line("GET", "/health?ready=1", "HTTP/1.1", 200))
+    assert filter_fn(r1) is True
+    assert filter_fn(r2) is False
+
+
+@pytest.mark.parametrize("status", ["20", "2000", "2xx"])
+def test_malformed_status_is_not_filtered(status):
+    """Una línea con status mal formado se conserva en el log."""
+    filter_fn = make_health_log_filter()
+    msg = f'127.0.0.1:44566 - "GET /health HTTP/1.1" {status} OK'
+    assert filter_fn(_make_record(msg)) is True
+
+
 # ---------------------------------------------------------------------------
-# Casos trampa — la regex solo acepta /health exacto con GET/HEAD.
+# Casos trampa — el filtro solo acepta /health exacto con GET/HEAD.
 #   /healthz           → prefijo que empieza por /health pero no es él.
 #   /health/detailed   → sub-path bajo /health.
 #   /api/health        → /health como sufijo de otra ruta.
@@ -104,7 +121,7 @@ def test_lookalike_requests_are_not_filtered(method, path):
 # query string no debe confundirse con un sondeo a /health.
 # ---------------------------------------------------------------------------
 def test_url_with_embedded_200_does_not_match():
-    """Una URL con '200' incrustado en la query no engaña a la regex."""
+    """Una URL con '200' incrustado en la query no engaña al filtro."""
     filter_fn = make_health_log_filter()
     msg = '127.0.0.1 - "GET /api/items?q=%22+200+hack HTTP/1.1" 500 Internal Server Error'
     r1 = _make_record(msg)

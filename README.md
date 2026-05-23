@@ -102,8 +102,16 @@ Las variables de runtime del backend se configuran en `config/backend.env`.
 Docker Compose las inyecta en los servicios mediante `env_file`, asi que no
 hace falta pasarlas por consola.
 
-Para usar PaddleOCR CPU en lugar de Tesseract, define `OCR_RUNTIME_STAGE=paddle_cpu`
-en un `.env` local junto a `docker-compose.yml` y reconstruye el servicio OCR.
+Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
+override dedicado:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ocr-paddle-cpu.yml up --build ocr
+```
+
+Los modelos de PaddleOCR CPU se cachean en el volumen Docker
+`ocr-paddlex-cpu-cache`. La variante GPU usa `docker-compose.ocr-gpu.yml` y
+cachea sus modelos en `ocr-paddlex-gpu-cache`.
 
 ---
 

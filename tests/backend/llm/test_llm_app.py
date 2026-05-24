@@ -76,13 +76,10 @@ def test_build_prompt_truncates_chunks_outside_budget():
 # ---------------------------------------------------------------------------
 def test_get_http_client_raises_without_lifespan():
     """Sin lifespan activo, la dependencia del cliente HTTP falla explícitamente."""
-    previous_client = llm_dependencies._http_client
-    llm_dependencies._http_client = None
-    try:
-        with pytest.raises(RuntimeError, match="no se ha inicializado"):
-            get_http_client()
-    finally:
-        llm_dependencies._http_client = previous_client
+    asyncio.run(llm_dependencies.close_http_client())
+
+    with pytest.raises(RuntimeError, match="no se ha inicializado"):
+        get_http_client()
 
 
 def test_warn_if_model_missing_logs_info_when_model_exists():

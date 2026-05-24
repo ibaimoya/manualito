@@ -19,8 +19,8 @@ def override_http_client():
     Inyecta un ``AsyncMock`` como cliente HTTP en todos los tests de la API.
 
     ``TestClient`` (sin bloque ``with``) no arranca el ``lifespan`` de FastAPI,
-    así que ``_http_client`` queda en ``None`` y ``get_http_client`` lanzaría
-    ``RuntimeError`` al resolverse la dependencia —incluso en tests que nunca
+    así que el cliente compartido queda sin inicializar y ``get_http_client``
+    lanzaría ``RuntimeError`` al resolverse la dependencia —incluso en tests que nunca
     llegan a usar el cliente (p. ej. los que validan errores 415/422 antes de
     la lógica del endpoint). Hacemos el override ``autouse`` para aislar cada
     test del ciclo de vida real; los tests que necesiten configurar respuestas

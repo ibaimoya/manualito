@@ -136,9 +136,11 @@ async def generate_answer(
     if config.OLLAMA_KEEP_ALIVE:
         ollama_payload["keep_alive"] = config.OLLAMA_KEEP_ALIVE
 
+    ollama = OllamaClient(client)
+
     await mark_generation_started()
     try:
-        response = await OllamaClient(client).generate(ollama_payload)
+        response = await ollama.generate(ollama_payload)
     except httpx.ConnectError:
         logger.error("No se pudo conectar con Ollama en %s.", config.OLLAMA_URL)
         raise LlmUnavailableError from None

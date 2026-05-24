@@ -24,6 +24,19 @@ def override_http_client():
         app.dependency_overrides.pop(get_http_client, None)
 
 
+async def _reset_active_generations() -> None:
+    """Deja el contador público de generaciones activas en cero."""
+    while await llm_service.get_active_generations() > 0:
+        await llm_service.mark_generation_finished()
+
+
+async def _set_active_generations(count: int) -> None:
+    """Prepara generaciones activas usando la API pública del servicio."""
+    await _reset_active_generations()
+    for _ in range(count):
+        await llm_service.mark_generation_started()
+
+
 # ---------------------------------------------------------------------------
 # Comprobación de estado.
 # ---------------------------------------------------------------------------
@@ -132,12 +145,11 @@ def test_warn_if_model_missing_tolerates_startup_failures():
 # ---------------------------------------------------------------------------
 def test_unload_if_idle_skips_when_generation_is_active(client, override_http_client):
     """Si el LLM esta generando, la descarga se omite para no cortar la respuesta."""
-    previous_active = llm_service._active_generations
-    llm_service._active_generations = 1
+    asyncio.run(_set_active_generations(1))
     try:
         response = client.post("/unload-if-idle")
     finally:
-        llm_service._active_generations = previous_active
+        asyncio.run(_reset_active_generations())
 
     assert response.status_code == 200
     assert response.json() == {
@@ -169,8 +181,8 @@ def test_unload_if_idle_unloads_loaded_model(client, override_http_client):
     assert unload_payload["keep_alive"] == 0
 
 
-def test_unload_if_idle_does_not_hold_generation_lock_during_ollama_io():
-    """El lock del contador no debe cubrir I/O con Ollama."""
+def test_unload_if_idle_does_not_change_generation_counter_when_idle():
+    """La descarga en reposo no altera el contador de generaciones activas."""
     mock_client = AsyncMock()
     ps_response = MagicMock()
     ps_response.raise_for_status.return_value = None
@@ -178,20 +190,14 @@ def test_unload_if_idle_does_not_hold_generation_lock_during_ollama_io():
     unload_response = MagicMock()
     unload_response.raise_for_status.return_value = None
 
-    def get_side_effect(*args, **kwargs):
-        assert not llm_service._active_generations_lock.locked()
-        return ps_response
+    mock_client.get.return_value = ps_response
+    mock_client.post.return_value = unload_response
 
-    def post_side_effect(*args, **kwargs):
-        assert not llm_service._active_generations_lock.locked()
-        return unload_response
-
-    mock_client.get.side_effect = get_side_effect
-    mock_client.post.side_effect = post_side_effect
-
+    asyncio.run(_reset_active_generations())
     response = asyncio.run(llm_service.unload_if_idle(client=mock_client))
 
     assert response["unloaded"] is True
+    assert asyncio.run(llm_service.get_active_generations()) == 0
 
 
 def test_unload_if_idle_rechecks_activity_before_unloading():
@@ -201,17 +207,16 @@ def test_unload_if_idle_rechecks_activity_before_unloading():
     ps_response.raise_for_status.return_value = None
     ps_response.json.return_value = {"models": [{"model": config.OLLAMA_MODEL}]}
 
-    def get_side_effect(*args, **kwargs):
-        llm_service._active_generations = 1
+    async def get_side_effect(*args, **kwargs):
+        await llm_service.mark_generation_started()
         return ps_response
 
-    previous_active = llm_service._active_generations
-    llm_service._active_generations = 0
+    asyncio.run(_reset_active_generations())
     mock_client.get.side_effect = get_side_effect
     try:
         response = asyncio.run(llm_service.unload_if_idle(client=mock_client))
     finally:
-        llm_service._active_generations = previous_active
+        asyncio.run(_reset_active_generations())
 
     assert response == {
         "status": "busy",
@@ -297,12 +302,11 @@ def test_generate_tracks_active_generation_while_ollama_runs(client, override_ht
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"response": "Respuesta final"}
 
-    def post_side_effect(*args, **kwargs):
-        assert llm_service._active_generations == 1
+    async def post_side_effect(*args, **kwargs):
+        assert await llm_service.get_active_generations() == 1
         return mock_response
 
-    previous_active = llm_service._active_generations
-    llm_service._active_generations = 0
+    asyncio.run(_reset_active_generations())
     override_http_client.post.side_effect = post_side_effect
     try:
         response = client.post(
@@ -310,10 +314,10 @@ def test_generate_tracks_active_generation_while_ollama_runs(client, override_ht
             json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
         )
     finally:
-        llm_service._active_generations = previous_active
+        asyncio.run(_reset_active_generations())
 
     assert response.status_code == 200
-    assert llm_service._active_generations == previous_active
+    assert asyncio.run(llm_service.get_active_generations()) == 0
 
 
 def test_generate_sends_configured_keep_alive(client, override_http_client):

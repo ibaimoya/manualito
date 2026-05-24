@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import anyio
 import httpx
 import pytest
-from api_app import ocr_endpoint
+
+from api.router import ocr_endpoint
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
-MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20 MB — debe coincidir con api_app.py
 
 
 # ---------------------------------------------------------------------------
@@ -112,14 +112,14 @@ def test_ocr_log_sanitizes_uploaded_filename(
     async def _call_endpoint():
         return await ocr_endpoint(image=upload, client=override_http_client)
 
-    with caplog.at_level(logging.INFO, logger="api_app"):
+    with caplog.at_level(logging.INFO, logger="api.service"):
         response = anyio.run(_call_endpoint)
 
     assert response.status_code == 200
     messages = [
         record.getMessage()
         for record in caplog.records
-        if record.name == "api_app" and "Petición OCR recibida" in record.getMessage()
+        if record.name == "api.service" and "Petición OCR recibida" in record.getMessage()
     ]
     assert messages
     assert all("\r" not in message and "\n" not in message for message in messages)
@@ -130,7 +130,7 @@ def test_ocr_log_sanitizes_uploaded_filename(
 # Partición de Equivalencia (EP) — archivos que no son imágenes válidas
 #   Clase 3: PDF disfrazado de imagen  -> 415.
 #   Clase 4: Binario arbitrario        -> 415.
-#   Clase 5: 0 bytes                   -> 415 (PIL no puede abrir un buffer vacio).
+#   Clase 5: 0 bytes                   -> 415 (PIL no puede abrir un buffer vacío).
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("data,filename,mime", [
     (b"%PDF-1.4 fake pdf content",  "doc.pdf",    "application/pdf"),
@@ -149,7 +149,7 @@ def test_invalid_image_content(client, data, filename, mime):
 #   20.0 MB -> Válido  (exactamente en el límite).
 #   20.0 MB + 1 byte -> Inválido, 413 (justo por encima del límite).
 #
-# Para los casos que deben pasar el chequeo de tamano se mockea PIL y el
+# Para los casos que deben pasar el chequeo de tamaño se mockea PIL y el
 # cliente HTTP, aislando así el test de la lógica de tamaño pura.
 # El caso 413 no llega siquiera a PIL, por lo que no necesita mock.
 # ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@ def test_size_boundary(client, size, expected_status, override_http_client):
 
     if expected_status == 200:
         _configure_ocr_success(override_http_client)
-        with patch("api_app.Image.open") as mock_open:
+        with patch("api.service.Image.open") as mock_open:
             mock_img = MagicMock()
             mock_open.return_value.__enter__ = MagicMock(return_value=mock_img)
             mock_open.return_value.__exit__ = MagicMock(return_value=False)
@@ -180,7 +180,7 @@ def test_size_boundary(client, size, expected_status, override_http_client):
 #   Clase 6: format=json  -> respuesta JSON con campo "lines".
 #   Clase 7: format=text  -> respuesta PlainText con líneas separadas por \n.
 #   Clase 8: format=xml   -> 422 (valor no permitido por el regex del endpoint).
-#   Clase 9: sin formato  -> usa json por defecto (comportamiento implicito).
+#   Clase 9: sin formato  -> usa json por defecto (comportamiento implícito).
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("fmt_param,expected_status,check_fn", [
     ("json", 200, lambda r: r.json()["lines"] == FAKE_OCR_RESULT),

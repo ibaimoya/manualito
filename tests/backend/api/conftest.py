@@ -1,8 +1,10 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from api_app import app, get_http_client
 from fastapi.testclient import TestClient
+
+from api.dependencies import get_http_client
+from api.main import app
 
 
 @pytest.fixture(scope="session")

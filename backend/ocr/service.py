@@ -2,51 +2,22 @@ import logging
 import os
 import tempfile
 import uuid
-from typing import Annotated
 
 import anyio
-from extractor import extract_text
-from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException, UploadFile
 
-from common.filters import install_health_log_filter
 from common.log_safety import safe_for_log
+from ocr.extractor import extract_text
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-)
 logger = logging.getLogger(__name__)
 
-# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
-install_health_log_filter()
 
-app = FastAPI(title="Manualito OCR Service")
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-
-@app.post(
-    "/extract",
-    responses={
-        500: {"description": "Error interno al procesar la imagen con OCR."},
-    },
-)
-async def extract_endpoint(image: Annotated[UploadFile, File()]):
+async def extract_image_text(image: UploadFile) -> dict:
     """
     Extrae el texto de una imagen mediante OCR.
 
     Recibe los bytes de una imagen, los persiste temporalmente en disco
     (PaddleOCR requiere ruta de fichero) y devuelve las líneas reconocidas.
-
-    Returns:
-        JSONResponse: {"lines": [{"text": str, "confidence": float}, ...]}
-
-    Raises:
-        HTTPException (500): Si el motor OCR falla.
     """
     data = await image.read()
     logger.info(
@@ -76,4 +47,4 @@ async def extract_endpoint(image: Annotated[UploadFile, File()]):
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    return JSONResponse(content={"lines": lines})
+    return {"lines": lines}

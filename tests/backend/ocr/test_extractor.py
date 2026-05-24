@@ -1,8 +1,9 @@
 from unittest.mock import Mock, patch
 
-import extractor
 import pytest
-from engines.paddle.cpu import PaddleCpuOcrEngine
+
+import ocr.extractor as extractor
+from ocr.engines.paddle.cpu import PaddleCpuOcrEngine
 
 
 def _paddle_cpu_engine_with_result(predict_result):
@@ -13,11 +14,11 @@ def _paddle_cpu_engine_with_result(predict_result):
 
 
 # ---------------------------------------------------------------------------
-# Particion de Equivalencia (EP) - resultados del modelo
-#   Clase 1: Una linea detectada con confianza alta.
-#   Clase 2: Multiples lineas en un unico bloque de resultado.
-#   Clase 3: Multiples bloques (e.g., varias regiones de la imagen).
-#   Clase 4: Sin lineas detectadas - lista vacia, se emite WARNING en log.
+# Partición de Equivalencia (EP) - resultados del modelo
+#   Clase 1: Una línea detectada con confianza alta.
+#   Clase 2: Múltiples líneas en un único bloque de resultado.
+#   Clase 3: Múltiples bloques (e.g., varias regiones de la imagen).
+#   Clase 4: Sin líneas detectadas - lista vacía, se emite WARNING en log.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("predict_result,expected", [
     (
@@ -82,7 +83,7 @@ def test_paddle_cpu_engine_confidence_rounding(raw_score, expected_confidence):
 
 
 # ---------------------------------------------------------------------------
-# Particion de Equivalencia (EP) - propagacion de errores del modelo
+# Partición de Equivalencia (EP) - propagación de errores del modelo
 #   Clase 5: predict lanza una excepcion -> se propaga sin capturar.
 # ---------------------------------------------------------------------------
 def test_paddle_cpu_engine_propagates_exception():
@@ -102,7 +103,7 @@ def test_paddle_cpu_engine_name():
 
 def test_paddle_cpu_initializes_paddleocr_with_cpu():
     """Inicializa PaddleOCR apuntando explicitamente al dispositivo CPU."""
-    with patch("engines.paddle.cpu.engine.PaddleOCR") as paddleocr:
+    with patch("ocr.engines.paddle.cpu.engine.PaddleOCR") as paddleocr:
         PaddleCpuOcrEngine()
 
     paddleocr.assert_called_once_with(
@@ -114,9 +115,9 @@ def test_paddle_cpu_initializes_paddleocr_with_cpu():
 
 
 def test_paddle_cpu_propagates_initialization_error():
-    """Propaga los fallos de inicializacion de PaddleOCR."""
+    """Propaga los fallos de inicialización de PaddleOCR."""
     with patch(
-        "engines.paddle.cpu.engine.PaddleOCR",
+        "ocr.engines.paddle.cpu.engine.PaddleOCR",
         side_effect=RuntimeError("fallo init"),
     ), pytest.raises(RuntimeError, match="fallo init"):
         PaddleCpuOcrEngine()

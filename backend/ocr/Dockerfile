@@ -56,7 +56,7 @@ LABEL org.opencontainers.image.title="manualito-ocr" \
       org.opencontainers.image.description="Servicio OCR de Manualito con soporte para Tesseract y PaddleOCR."
 
 COPY --chown=root:root --chmod=u=rwX,go=rX backend/common/ /app/common/
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/ocr/ /app/
+COPY --chown=root:root --chmod=u=rwX,go=rX backend/ocr/ /app/ocr/
 
 RUN mkdir -p /home/appuser/.paddlex \
     && chown -R appuser:appgroup /home/appuser/.paddlex \
@@ -77,4 +77,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=12 \
 
 USER appuser
 
-CMD ["uvicorn", "ocr_app:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "ocr.main:app", "--host", "0.0.0.0", "--port", "8001"]

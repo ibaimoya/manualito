@@ -1,10 +1,9 @@
 import logging
 
-from contracts import OcrLine
 from paddleocr import PaddleOCR
 
-from engines.common import log_ocr_result
-from engines.paddle.common import normalize_paddle_result
+from ocr.engines.common import OcrLine, log_ocr_result
+from ocr.engines.paddle.common import normalize_paddle_result
 
 logger = logging.getLogger(__name__)
 

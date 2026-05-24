@@ -41,7 +41,7 @@ def test_health(client):
 def test_valid_image_formats(client, fixture_name, mime, filename, request):
     """Formato soportado devuelve 200 con las líneas OCR."""
     image_bytes = request.getfixturevalue(fixture_name)
-    with patch("ocr_app.extract_text", return_value=FAKE_OCR_RESULT):
+    with patch("ocr.service.extract_text", return_value=FAKE_OCR_RESULT):
         response = _post_image(client, image_bytes, filename, mime)
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -53,7 +53,7 @@ def test_valid_image_formats(client, fixture_name, mime, filename, request):
 # ---------------------------------------------------------------------------
 def test_ocr_engine_error(client, valid_jpeg_bytes):
     """Si el motor OCR lanza una excepción, el endpoint la captura y devuelve 500."""
-    with patch("ocr_app.extract_text", side_effect=RuntimeError("fallo interno")):
+    with patch("ocr.service.extract_text", side_effect=RuntimeError("fallo interno")):
         response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
     assert response.status_code == 500
 
@@ -82,7 +82,7 @@ def test_temp_file_cleaned_on_success(client, valid_jpeg_bytes):
         captured.append(path)
         return FAKE_OCR_RESULT
 
-    with patch("ocr_app.extract_text", side_effect=_capture):
+    with patch("ocr.service.extract_text", side_effect=_capture):
         response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
 
     assert response.status_code == 200
@@ -98,7 +98,7 @@ def test_temp_file_cleaned_on_ocr_error(client, valid_jpeg_bytes):
         captured.append(path)
         raise RuntimeError("fallo simulado")
 
-    with patch("ocr_app.extract_text", side_effect=_capture_and_fail):
+    with patch("ocr.service.extract_text", side_effect=_capture_and_fail):
         response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
 
     assert response.status_code == 500

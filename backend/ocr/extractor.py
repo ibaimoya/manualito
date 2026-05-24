@@ -1,7 +1,7 @@
 from functools import cache
 
-from contracts import OcrEngine, OcrLine
-from factory import create_ocr_engine
+from ocr.engines.common import OcrEngine, OcrLine
+from ocr.factory import create_ocr_engine
 
 
 @cache

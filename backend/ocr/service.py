@@ -4,9 +4,10 @@ import tempfile
 import uuid
 
 import anyio
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 from common.log_safety import safe_for_log
+from ocr.exceptions import OcrProcessingError
 from ocr.extractor import extract_text
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,7 @@ async def extract_image_text(image: UploadFile) -> dict:
             "Error durante el OCR de '%s'.",
             safe_for_log(image.filename),
         )
-        raise HTTPException(
-            status_code=500,
-            detail="Error interno al procesar la imagen con OCR.",
-        ) from ocr_err
+        raise OcrProcessingError from ocr_err
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)

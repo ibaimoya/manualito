@@ -1,12 +1,16 @@
 import asyncio
 import logging
 
-from fastapi import HTTPException
-
 from common.log_safety import safe_for_log
 from rag.chunking import chunk_text
 from rag.embeddings import get_embedding_service
-from rag.exceptions import ManualNotFoundError
+from rag.exceptions import (
+    ChunkGenerationError,
+    EmptyDocumentError,
+    ManualNotFoundError,
+    RagIndexingError,
+    RagRetrievalError,
+)
 from rag.normalizer import normalize_ocr_lines, normalize_text
 from rag.repository import get_repository
 from rag.schemas import IngestRequest, RetrieveRequest
@@ -23,21 +27,15 @@ async def ingest_manual(payload: IngestRequest) -> dict:
     (encode de embeddings y acceso a ChromaDB) se delegan a un thread del
     pool para no bloquear el event loop de FastAPI.
     """
+    normalized = build_document_text(payload)
+    if not normalized:
+        raise EmptyDocumentError
+
+    chunks = chunk_text(normalized)
+    if not chunks:
+        raise ChunkGenerationError
+
     try:
-        normalized = build_document_text(payload)
-        if not normalized:
-            raise HTTPException(
-                status_code=422,
-                detail="El documento no contiene texto indexable.",
-            )
-
-        chunks = chunk_text(normalized)
-        if not chunks:
-            raise HTTPException(
-                status_code=422,
-                detail="No se pudieron generar chunks del documento.",
-            )
-
         embeddings = await asyncio.to_thread(
             get_embedding_service().embed_passages, chunks
         )
@@ -48,17 +46,12 @@ async def ingest_manual(payload: IngestRequest) -> dict:
             embeddings,
             payload.source_page,
         )
-    except HTTPException:
-        raise
     except Exception as rag_err:
         logger.exception(
             "Error al indexar manual '%s'.",
             safe_for_log(payload.manual_id),
         )
-        raise HTTPException(
-            status_code=500,
-            detail="Error interno al indexar el manual.",
-        ) from rag_err
+        raise RagIndexingError from rag_err
 
     return {
         "manual_id": payload.manual_id,
@@ -85,16 +78,13 @@ async def retrieve_chunks(payload: RetrieveRequest) -> dict:
             payload.top_k,
         )
     except ManualNotFoundError:
-        raise HTTPException(status_code=404, detail="Manual no encontrado.") from None
+        raise
     except Exception as rag_err:
         logger.exception(
             "Error al recuperar contexto para '%s'.",
             safe_for_log(payload.manual_id),
         )
-        raise HTTPException(
-            status_code=500,
-            detail="Error interno al recuperar el contexto del manual.",
-        ) from rag_err
+        raise RagRetrievalError from rag_err
 
     return {"chunks": chunks}
 

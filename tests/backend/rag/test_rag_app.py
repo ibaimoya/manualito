@@ -1,6 +1,13 @@
 import logging
 from unittest.mock import MagicMock, patch
 
+import anyio
+import pytest
+
+from rag.exceptions import ChunkGenerationError, EmptyDocumentError
+from rag.schemas import IngestRequest
+from rag.service import ingest_manual
+
 
 # ---------------------------------------------------------------------------
 # Comprobación de estado.
@@ -127,6 +134,25 @@ def test_ingest_returns_500_when_indexing_fails(client):
 
     assert response.status_code == 500
     assert response.json() == {"detail": "Error interno al indexar el manual."}
+
+
+def test_ingest_manual_raises_domain_error_when_document_is_empty():
+    """La capa interna usa un error de dominio para documentos sin texto útil."""
+    payload = IngestRequest(manual_id="manual-vacio", text="   \n \r\n   ")
+
+    with pytest.raises(EmptyDocumentError):
+        anyio.run(ingest_manual, payload)
+
+
+def test_ingest_manual_raises_domain_error_when_chunking_returns_empty():
+    """La capa interna usa un error de dominio si no se generan chunks."""
+    payload = IngestRequest(manual_id="manual-1", text="Regla uno.")
+
+    with (
+        patch("rag.service.chunk_text", return_value=[]),
+        pytest.raises(ChunkGenerationError),
+    ):
+        anyio.run(ingest_manual, payload)
 
 
 # ---------------------------------------------------------------------------

@@ -5,11 +5,12 @@ from io import BytesIO
 from uuid import uuid4
 
 import httpx
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 from PIL import Image
 
 from api import client as internal_client
 from api import config
+from api.exceptions import ImageTooLargeError, InvalidImageError
 from api.schemas import QuestionRequest
 from common.log_safety import safe_for_log
 
@@ -130,7 +131,7 @@ async def answer_manual_question(
 
 async def validate_image(image: UploadFile) -> bytes:
     """
-    Lee una imagen subida y valida tamaño y formato.
+    Lee una imagen subida y valida el tamaño y formato.
 
     Args:
         image (UploadFile): Fichero subido por el cliente.
@@ -139,20 +140,28 @@ async def validate_image(image: UploadFile) -> bytes:
         bytes: Contenido binario de la imagen validada.
 
     Raises:
-        HTTPException: 413 si supera 20 MB; 415 si no es una imagen válida.
+        ImageTooLargeError: Si supera 20 MB.
+        InvalidImageError: Si no es una imagen válida.
     """
     chunk = await image.read(config.MAX_IMAGE_SIZE + 1)
     if len(chunk) > config.MAX_IMAGE_SIZE:
-        raise HTTPException(status_code=413, detail="La imagen no puede superar 20 MB.")
+        logger.warning(
+            "Imagen rechazada (413) — fichero: %s, tamaño: %d bytes.",
+            safe_for_log(image.filename),
+            len(chunk),
+        )
+        raise ImageTooLargeError
 
     try:
         with Image.open(BytesIO(chunk)) as img:
             img.verify()
-    except Exception:
-        raise HTTPException(
-            status_code=415,
-            detail="El archivo no es una imagen válida.",
-        ) from None
+    except Exception as exc:
+        logger.warning(
+            "Imagen rechazada (415) — fichero: %s, motivo: %s.",
+            safe_for_log(image.filename),
+            exc,
+        )
+        raise InvalidImageError from None
 
     return chunk
 

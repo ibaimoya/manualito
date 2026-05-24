@@ -1,9 +1,13 @@
 import logging
 
 import httpx
-from fastapi import HTTPException
 
 from api import config
+from api.exceptions import (
+    InternalResourceNotFoundError,
+    InternalServiceError,
+    InternalServiceUnavailableError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -125,15 +129,16 @@ async def send_request(
         dict: JSON de la respuesta exitosa.
 
     Raises:
-        HTTPException: 404 si el servicio responde 404; 502 si no conecta;
-                       500 para el resto de errores internos.
+        InternalResourceNotFoundError: Si el servicio responde 404.
+        InternalServiceUnavailableError: Si no se puede conectar.
+        InternalServiceError: Para el resto de errores internos.
     """
     try:
         response = await client.post(**request_kwargs)
         response.raise_for_status()
     except httpx.ConnectError:
         logger.error("No se pudo conectar con el servicio %s.", service_name)
-        raise HTTPException(status_code=502, detail=unavailable_detail) from None
+        raise InternalServiceUnavailableError(unavailable_detail) from None
     except httpx.HTTPStatusError as http_err:
         status_code = http_err.response.status_code
         logger.error(
@@ -143,7 +148,7 @@ async def send_request(
         )
         if status_code == 404:
             detail = http_err.response.json().get("detail", "Recurso no encontrado.")
-            raise HTTPException(status_code=404, detail=detail) from http_err
-        raise HTTPException(status_code=500, detail=internal_detail) from http_err
+            raise InternalResourceNotFoundError(detail) from http_err
+        raise InternalServiceError(internal_detail) from http_err
 
     return response.json()

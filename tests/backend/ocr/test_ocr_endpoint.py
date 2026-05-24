@@ -1,7 +1,11 @@
 import os
 from unittest.mock import patch
 
+import anyio
 import pytest
+
+from ocr.exceptions import OcrProcessingError
+from ocr.service import extract_image_text
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 
@@ -102,5 +106,29 @@ def test_temp_file_cleaned_on_ocr_error(client, valid_jpeg_bytes):
         response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
 
     assert response.status_code == 500
+    assert len(captured) == 1
+    assert not os.path.exists(captured[0])
+
+
+def test_extract_image_text_raises_domain_error_on_ocr_failure(valid_jpeg_bytes):
+    """La capa interna expresa fallos del motor OCR como error de dominio."""
+    captured: list[str] = []
+
+    class _Upload:
+        filename = "manual.jpg"
+
+        async def read(self):
+            return valid_jpeg_bytes
+
+    def _capture_and_fail(path):
+        captured.append(path)
+        raise RuntimeError("fallo simulado")
+
+    with (
+        patch("ocr.service.extract_text", side_effect=_capture_and_fail),
+        pytest.raises(OcrProcessingError),
+    ):
+        anyio.run(extract_image_text, _Upload())
+
     assert len(captured) == 1
     assert not os.path.exists(captured[0])

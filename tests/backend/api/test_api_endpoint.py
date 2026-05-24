@@ -5,9 +5,12 @@ import anyio
 import httpx
 import pytest
 
+from api.exceptions import ImageTooLargeError, InvalidImageError
 from api.router import ocr_endpoint
+from api.service import validate_image
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
+MAX_IMAGE_SIZE = 20 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -248,3 +251,27 @@ def test_missing_image_field(client):
     """Una petición sin el campo image en el multipart devuelve 422."""
     response = client.post("/api/ocr")
     assert response.status_code == 422
+
+
+def test_validate_image_raises_domain_error_when_file_is_too_large():
+    """La validación interna expresa el exceso de tamaño como error de dominio."""
+    upload = _FakeUploadFile(
+        data=b"\x00" * (MAX_IMAGE_SIZE + 1),
+        filename="large.jpg",
+        content_type="image/jpeg",
+    )
+
+    with pytest.raises(ImageTooLargeError):
+        anyio.run(validate_image, upload)
+
+
+def test_validate_image_raises_domain_error_when_content_is_not_image():
+    """La validación interna expresa el contenido inválido como error de dominio."""
+    upload = _FakeUploadFile(
+        data=b"not an image",
+        filename="manual.jpg",
+        content_type="image/jpeg",
+    )
+
+    with pytest.raises(InvalidImageError):
+        anyio.run(validate_image, upload)

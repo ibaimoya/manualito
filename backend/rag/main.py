@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from common.filters import install_health_log_filter
 from rag.embeddings import get_embedding_service
+from rag.exceptions import register_exception_handlers
 from rag.repository import get_repository
 from rag.router import router
 
@@ -24,7 +25,7 @@ install_health_log_filter()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Pre-calienta el servicio RAG antes de aceptar tráfico.
+    Prepara el servicio RAG antes de aceptar tráfico.
 
     Carga el modelo de embeddings desde disco (evita que la primera request
     pague el coste de la carga) e inicializa la conexión con ChromaDB. Así
@@ -40,4 +41,5 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Manualito RAG Service", lifespan=lifespan)
+register_exception_handlers(app)
 app.include_router(router)

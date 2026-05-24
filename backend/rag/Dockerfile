@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build --only-group rag
 
 COPY --chown=root:root --chmod=u=rwX,go=rX backend/common/ /app/common/
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/rag/ /app/
+COPY --chown=root:root --chmod=u=rwX,go=rX backend/rag/ /app/rag/
 
 RUN mkdir -p /home/appuser/.cache/huggingface \
     && chown -R appuser:appgroup /home/appuser/.cache/huggingface \
@@ -35,4 +35,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=90s --retries=12 \
 
 USER appuser
 
-CMD ["uvicorn", "rag_app:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uvicorn", "rag.main:app", "--host", "0.0.0.0", "--port", "8002"]

@@ -1,4 +1,4 @@
-from chunking import chunk_text
+from rag.chunking import chunk_text
 
 
 # ---------------------------------------------------------------------------

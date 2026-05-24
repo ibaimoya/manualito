@@ -5,8 +5,10 @@ from unittest.mock import MagicMock
 from urllib.parse import urlunparse
 
 import pytest
-import repository
-from repository import ChromaRepository, ManualNotFoundError
+
+import rag.repository as repository
+from rag.exceptions import ManualNotFoundError
+from rag.repository import ChromaRepository
 
 _TEST_CHROMA_URL = os.environ["CHROMA_URL"]
 _CUSTOM_CHROMA_URL = urlunparse(("http", "mi-host:8123", "", "", "", ""))

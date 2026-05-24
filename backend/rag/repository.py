@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import logging
-import os
 from urllib.parse import urlparse
+
+from rag import config
+from rag.exceptions import ManualNotFoundError
 
 logger = logging.getLogger(__name__)
 
-CHROMA_URL = os.environ["CHROMA_URL"]
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "manualito_manuals")
 _repository: ChromaRepository | None = None
-
-
-class ManualNotFoundError(Exception):
-    pass
 
 
 class ChromaRepository:
@@ -210,5 +206,5 @@ def get_repository() -> ChromaRepository:
     """
     global _repository
     if _repository is None:
-        _repository = ChromaRepository(CHROMA_URL, CHROMA_COLLECTION)
+        _repository = ChromaRepository(config.CHROMA_URL, config.CHROMA_COLLECTION)
     return _repository

@@ -28,9 +28,9 @@ def test_ingest_indexes_chunks(client):
     repository.upsert_manual.return_value = 1
 
     with (
-        patch("rag_app.chunk_text", return_value=["Regla uno. Regla dos."]),
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
+        patch("rag.service.chunk_text", return_value=["Regla uno. Regla dos."]),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
     ):
         response = client.post(
             "/ingest",
@@ -55,9 +55,9 @@ def test_ingest_indexes_ocr_lines(client):
     repository.upsert_manual.return_value = 2
 
     with (
-        patch("rag_app.chunk_text", return_value=["Turno inicial", "Fin de ronda"]),
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
+        patch("rag.service.chunk_text", return_value=["Turno inicial", "Fin de ronda"]),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
     ):
         response = client.post(
             "/ingest",
@@ -101,7 +101,7 @@ def test_ingest_returns_422_when_document_has_no_indexable_text(client):
 
 def test_ingest_returns_422_when_chunking_produces_no_chunks(client):
     """Si el chunking no produce fragmentos, la API rechaza la ingesta."""
-    with patch("rag_app.chunk_text", return_value=[]):
+    with patch("rag.service.chunk_text", return_value=[]):
         response = client.post(
             "/ingest",
             json={"manual_id": "manual-1", "text": "Regla uno."},
@@ -117,8 +117,8 @@ def test_ingest_returns_500_when_indexing_fails(client):
     embedding_service.embed_passages.side_effect = RuntimeError("fallo de embeddings")
 
     with (
-        patch("rag_app.chunk_text", return_value=["Regla uno"]),
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.chunk_text", return_value=["Regla uno"]),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
     ):
         response = client.post(
             "/ingest",
@@ -151,8 +151,8 @@ def test_retrieve_returns_chunks(client):
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
     with (
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
     ):
         response = client.post(
             "/retrieve",
@@ -176,8 +176,8 @@ def test_retrieve_passes_custom_top_k(client):
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
     with (
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
     ):
         response = client.post(
             "/retrieve",
@@ -195,7 +195,7 @@ def test_retrieve_passes_custom_top_k(client):
 
 def test_retrieve_returns_404_for_missing_manual(client):
     """Si el manual no existe en la base vectorial, el endpoint devuelve 404."""
-    from repository import ManualNotFoundError
+    from rag.exceptions import ManualNotFoundError
 
     repository = MagicMock()
     repository.query_manual.side_effect = ManualNotFoundError("manual-missing")
@@ -203,8 +203,8 @@ def test_retrieve_returns_404_for_missing_manual(client):
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
     with (
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
     ):
         response = client.post(
             "/retrieve",
@@ -223,8 +223,8 @@ def test_retrieve_returns_500_when_query_fails(client):
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
     with (
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
     ):
         response = client.post(
             "/retrieve",
@@ -246,9 +246,9 @@ def test_retrieve_error_log_sanitizes_manual_id(client, caplog):
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
     with (
-        patch("rag_app.get_embedding_service", return_value=embedding_service),
-        patch("rag_app.get_repository", return_value=repository),
-        caplog.at_level(logging.ERROR, logger="rag_app"),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
+        caplog.at_level(logging.ERROR, logger="rag.service"),
     ):
         response = client.post(
             "/retrieve",
@@ -260,7 +260,7 @@ def test_retrieve_error_log_sanitizes_manual_id(client, caplog):
         record.getMessage()
         for record in caplog.records
         if (
-            record.name == "rag_app"
+            record.name == "rag.service"
             and "Error al recuperar contexto" in record.getMessage()
         )
     ]

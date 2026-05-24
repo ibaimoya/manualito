@@ -2,8 +2,9 @@ import sys
 from types import SimpleNamespace
 from typing import ClassVar
 
-import embeddings
 import pytest
+
+import rag.embeddings as embeddings
 
 
 class _FakeVectors:

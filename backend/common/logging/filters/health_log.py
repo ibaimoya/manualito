@@ -7,13 +7,13 @@ _HEALTH_METHODS = frozenset({"GET", "HEAD"})
 
 
 def _extract_health_status(message: str) -> str | None:
-    """Extrae el código HTTP de un access log de /health.
+    """Extrae el codigo HTTP de un access log de /health.
 
     Args:
-        message: Línea de access log generada por Uvicorn.
+        message: Linea de access log generada por Uvicorn.
 
     Returns:
-        Código HTTP de tres dígitos si la línea corresponde a un sondeo
+        Codigo HTTP de tres digitos si la linea corresponde a un sondeo
         GET/HEAD de /health; ``None`` en caso contrario.
     """
     request_start = message.find('"')
@@ -50,13 +50,13 @@ def make_health_log_filter() -> Callable[[logging.LogRecord], bool]:
     """Construye un filtro de logging que suprime los sondeos sanos repetidos a /health.
 
     El filtro mantiene estado entre llamadas: deja pasar la primera respuesta
-    sana (2xx), cualquier respuesta no-2xx con su código, y la recuperación
-    tras un fallo. Los 2xx consecutivos al último se silencian para evitar
-    saturar los logs con el sondeo periódico de Docker.
+    sana (2xx), cualquier respuesta no-2xx con su codigo, y la recuperacion
+    tras un fallo. Los 2xx consecutivos al ultimo se silencian para evitar
+    saturar los logs con el sondeo periodico de Docker.
 
     Returns:
-        Callable[[logging.LogRecord], bool]: Función filtro compatible con
-            el sistema de logging estándar. Devuelve True si el registro
+        Callable[[logging.LogRecord], bool]: Funcion filtro compatible con
+            el sistema de logging estandar. Devuelve True si el registro
             debe emitirse y False si debe suprimirse.
     """
     last_ok = False

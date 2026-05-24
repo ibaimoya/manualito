@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from common.filters import (
+from common.logging import (
     install_health_log_filter,
     make_health_log_filter,
 )

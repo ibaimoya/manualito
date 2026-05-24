@@ -6,19 +6,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from common.filters import install_health_log_filter
+from common.logging import configure_logging, install_health_log_filter
 from rag.embeddings import get_embedding_service
 from rag.exceptions import register_exception_handlers
 from rag.repository import get_repository
 from rag.router import router
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-)
+configure_logging()
 logger = logging.getLogger(__name__)
 
-# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
 install_health_log_filter()
 
 

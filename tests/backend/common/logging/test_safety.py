@@ -1,5 +1,5 @@
-"""Tests de common.log_safety (prevención de log injection)."""
-from common.log_safety import safe_for_log
+"""Tests de common.logging.safety (prevención de log injection)."""
+from common.logging import safe_for_log
 
 
 def test_plain_text_unchanged():

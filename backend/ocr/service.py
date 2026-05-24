@@ -6,7 +6,7 @@ import uuid
 import anyio
 from fastapi import UploadFile
 
-from common.log_safety import safe_for_log
+from common.logging import safe_for_log
 from ocr.exceptions import OcrProcessingError
 from ocr.extractor import extract_text
 

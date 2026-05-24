@@ -12,7 +12,7 @@ from api import client as internal_client
 from api import config
 from api.exceptions import ImageTooLargeError, InvalidImageError
 from api.schemas import QuestionRequest
-from common.log_safety import safe_for_log
+from common.logging import safe_for_log
 
 logger = logging.getLogger(__name__)
 

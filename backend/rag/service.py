@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from common.log_safety import safe_for_log
+from common.logging import safe_for_log
 from rag.chunking import chunk_text
 from rag.embeddings import get_embedding_service
 from rag.exceptions import (

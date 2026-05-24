@@ -1,0 +1,42 @@
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from common.filters import install_health_log_filter
+from llm import dependencies
+from llm.client import warn_if_model_missing
+from llm.exceptions import register_exception_handlers
+from llm.router import router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+)
+
+# Silencia los sondeos sanos repetidos de /health en los logs de uvicorn.
+install_health_log_filter()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Arranca y cierra recursos compartidos del servicio LLM.
+
+    Crea un único ``httpx.AsyncClient`` con timeout por defecto y pooling de
+    conexiones para todas las llamadas a Ollama. Además verifica al arrancar
+    si el modelo configurado (``OLLAMA_MODEL``) está disponible, emitiendo
+    un warning si no, sin detener el servicio, para facilitar el
+    diagnóstico desde ``docker compose logs llm``.
+    """
+    await dependencies.start_http_client()
+    await warn_if_model_missing(dependencies.get_http_client())
+    try:
+        yield
+    finally:
+        await dependencies.close_http_client()
+
+
+app = FastAPI(title="Manualito LLM Service", lifespan=lifespan)
+register_exception_handlers(app)
+app.include_router(router)

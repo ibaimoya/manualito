@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,7 +8,6 @@ from fastapi import UploadFile
 from starlette.datastructures import Headers
 
 from api.exceptions import ImageTooLargeError, InvalidImageError
-from api.router import ocr_endpoint
 from api.service import validate_image
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
@@ -20,10 +18,18 @@ MAX_IMAGE_SIZE = 20 * 1024 * 1024
 # Auxiliares.
 # ---------------------------------------------------------------------------
 
-def _post_image(client, data: bytes, filename: str, mime: str, fmt_param: str = "json"):
-    """Envía una petición POST a /api/ocr."""
+def _post_image_json(client, data: bytes, filename: str, mime: str):
+    """Envía una petición POST al endpoint JSON ``/api/ocr``."""
     return client.post(
-        f"/api/ocr?format={fmt_param}",
+        "/api/ocr",
+        files={"image": (filename, data, mime)},
+    )
+
+
+def _post_image_text(client, data: bytes, filename: str, mime: str):
+    """Envía una petición POST al endpoint text/plain ``/api/ocr/text``."""
+    return client.post(
+        "/api/ocr/text",
         files={"image": (filename, data, mime)},
     )
 
@@ -81,7 +87,7 @@ def test_valid_image_formats(
     image_bytes = request.getfixturevalue(fixture_name)
     _configure_ocr_success(override_http_client)
 
-    response = _post_image(client, image_bytes, filename, mime)
+    response = _post_image_json(client, image_bytes, filename, mime)
 
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -91,7 +97,7 @@ def test_ocr_requests_llm_unload_before_ocr(client, valid_jpeg_bytes, override_h
     """Antes de llamar a OCR, el gateway solicita liberar VRAM al servicio LLM."""
     _configure_ocr_success(override_http_client)
 
-    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 200
     assert override_http_client.post.call_args_list[0].kwargs["url"].endswith(
@@ -113,7 +119,7 @@ def test_ocr_continues_when_llm_unload_response_is_not_json(
     ocr_response = _mock_response({"lines": FAKE_OCR_RESULT})
     override_http_client.post.side_effect = [unload_response, ocr_response]
 
-    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -130,7 +136,7 @@ def test_ocr_skips_llm_unload_when_feature_flag_is_disabled(
     override_http_client.post.return_value = ocr_response
 
     with patch("api.client.config.LLM_UNLOAD_BEFORE_OCR", False):
-        response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+        response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -139,9 +145,21 @@ def test_ocr_skips_llm_unload_when_feature_flag_is_disabled(
 
 
 def test_ocr_log_sanitizes_uploaded_filename(
-    valid_jpeg_bytes, override_http_client, caplog,
+    valid_jpeg_bytes,
+    override_http_client,
+    caplog,
 ):
-    """El nombre del archivo no puede inyectar líneas falsas en el log."""
+    """El nombre del archivo no puede inyectar líneas falsas en el log.
+
+    La capa HTTP de Starlette sanitiza los CRLF en los headers multipart
+    antes de que la request llegue al servidor, así que para reproducir un
+    filename hostil hay que invocar la lógica de servicio directamente con
+    un ``UploadFile`` sintético.
+    """
+    import logging
+
+    from api.service import extract_ocr_lines
+
     _configure_ocr_success(override_http_client)
     upload = _upload_file(
         valid_jpeg_bytes,
@@ -149,13 +167,10 @@ def test_ocr_log_sanitizes_uploaded_filename(
         "image/jpeg",
     )
 
-    async def _call_endpoint():
-        return await ocr_endpoint(image=upload, client=override_http_client)
-
     with caplog.at_level(logging.INFO, logger="api.service"):
-        response = asyncio.run(_call_endpoint())
+        lines = asyncio.run(extract_ocr_lines(image=upload, client=override_http_client))
 
-    assert response.status_code == 200
+    assert lines == FAKE_OCR_RESULT
     messages = [
         record.getMessage()
         for record in caplog.records
@@ -179,7 +194,7 @@ def test_ocr_log_sanitizes_uploaded_filename(
 ], ids=["pdf", "binario", "vacio"])
 def test_invalid_image_content(client, data, filename, mime):
     """Archivo que no sea imagen válida es rechazado con 415."""
-    response = _post_image(client, data, filename, mime)
+    response = _post_image_json(client, data, filename, mime)
     assert response.status_code == 415
 
 
@@ -208,58 +223,66 @@ def test_size_boundary(client, size, expected_status, override_http_client):
             mock_img = MagicMock()
             mock_open.return_value.__enter__ = MagicMock(return_value=mock_img)
             mock_open.return_value.__exit__ = MagicMock(return_value=False)
-            response = _post_image(client, data, "large.jpg", "image/jpeg")
+            response = _post_image_json(client, data, "large.jpg", "image/jpeg")
     else:
-        response = _post_image(client, data, "large.jpg", "image/jpeg")
+        response = _post_image_json(client, data, "large.jpg", "image/jpeg")
 
     assert response.status_code == expected_status
 
 
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — parámetro ?format
-#   Clase 6: format=json  -> respuesta JSON con campo "lines".
-#   Clase 7: format=text  -> respuesta PlainText con líneas separadas por \n.
-#   Clase 8: format=xml   -> 422 (valor no permitido por el regex del endpoint).
-#   Clase 9: sin formato  -> usa json por defecto (comportamiento implícito).
+# Partición de Equivalencia (EP) — endpoints de salida según content-type
+#   Clase 6: /api/ocr        -> JSON estructurado con campo "lines".
+#   Clase 7: /api/ocr/text   -> text/plain con líneas separadas por "\n".
+#   Clase 8: /api/ocr/xml    -> 404 (ruta inexistente; sustituye al antiguo
+#                                    "format inválido" de la query param eliminado).
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("fmt_param,expected_status,check_fn", [
-    ("json", 200, lambda r: r.json()["lines"] == FAKE_OCR_RESULT),
-    ("text", 200, lambda r: r.text == "Reglas del juego"),
-    ("xml",  422, lambda r: True),
-], ids=["json", "text", "xml_invalido"])
-def test_format_param(
-    client, fmt_param, expected_status, check_fn, valid_jpeg_bytes, override_http_client,
+
+def test_ocr_json_endpoint_returns_structured_payload(
+    client, valid_jpeg_bytes, override_http_client,
 ):
-    """?format controla el tipo de respuesta; valor inválido da 422."""
+    """``POST /api/ocr`` devuelve JSON con la lista de líneas OCR."""
     _configure_ocr_success(override_http_client)
-    response = _post_image(
-        client, valid_jpeg_bytes, "img.jpg", "image/jpeg", fmt_param,
-    )
-    assert response.status_code == expected_status
-    assert check_fn(response)
 
+    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
-def test_format_default_is_json(client, valid_jpeg_bytes, override_http_client):
-    """Sin el parámetro ?format, el endpoint usa json como valor por defecto."""
-    _configure_ocr_success(override_http_client)
-    response = client.post(
-        "/api/ocr",
-        files={"image": ("img.jpg", valid_jpeg_bytes, "image/jpeg")},
-    )
     assert response.status_code == 200
-    assert "lines" in response.json()
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["lines"] == FAKE_OCR_RESULT
+
+
+def test_ocr_text_endpoint_returns_plain_text(
+    client, valid_jpeg_bytes, override_http_client,
+):
+    """``POST /api/ocr/text`` devuelve text/plain con las líneas concatenadas."""
+    _configure_ocr_success(override_http_client)
+
+    response = _post_image_text(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert response.text == "Reglas del juego"
+
+
+def test_unknown_ocr_subpath_returns_404(client):
+    """Cualquier subpath distinto de ``text`` bajo ``/api/ocr/`` no existe."""
+    response = client.post(
+        "/api/ocr/xml",
+        files={"image": ("img.jpg", b"\x00", "image/jpeg")},
+    )
+    assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — comunicación con servicio OCR
-#   Clase 10: OCR no alcanzable (ConnectError) -> 502.
-#   Clase 11: OCR responde con error HTTP (HTTPStatusError) -> 500.
+#   Clase 9:  OCR no alcanzable (ConnectError) -> 502.
+#   Clase 10: OCR responde con error HTTP (HTTPStatusError) -> 500.
 # ---------------------------------------------------------------------------
 def test_ocr_unavailable(client, valid_jpeg_bytes, override_http_client):
     """Si el servicio OCR no es alcanzable, el gateway devuelve 502."""
     override_http_client.post.side_effect = httpx.ConnectError("connection refused")
 
-    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 502
 
@@ -275,14 +298,14 @@ def test_ocr_http_error(client, valid_jpeg_bytes, override_http_client):
     )
     override_http_client.post.return_value = mock_response
 
-    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 500
 
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — petición sin archivo adjunto
-#   Clase 12: campo "image" ausente en el multipart -> 422.
+#   Clase 11: campo "image" ausente en el multipart -> 422.
 # ---------------------------------------------------------------------------
 def test_missing_image_field(client):
     """Una petición sin el campo image en el multipart devuelve 422."""

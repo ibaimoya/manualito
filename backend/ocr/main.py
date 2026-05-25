@@ -9,4 +9,4 @@ install_health_log_filter()
 
 app = FastAPI(title="Manualito OCR Service")
 register_exception_handlers(app)
-app.include_router(router)
+app.include_router(router, tags=["OCR"])

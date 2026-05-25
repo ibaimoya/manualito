@@ -7,7 +7,7 @@ from ocr.engines.paddle.cpu import PaddleCpuOcrEngine
 
 
 def _paddle_cpu_engine_with_result(predict_result):
-    engine = PaddleCpuOcrEngine.__new__(PaddleCpuOcrEngine)
+    engine = object.__new__(PaddleCpuOcrEngine)
     engine._ocr = Mock()
     engine._ocr.predict.return_value = predict_result
     return engine
@@ -88,7 +88,7 @@ def test_paddle_cpu_engine_confidence_rounding(raw_score, expected_confidence):
 # ---------------------------------------------------------------------------
 def test_paddle_cpu_engine_propagates_exception():
     """Las excepciones del motor OCR se propagan sin capturar."""
-    engine = PaddleCpuOcrEngine.__new__(PaddleCpuOcrEngine)
+    engine = object.__new__(PaddleCpuOcrEngine)
     engine._ocr = Mock()
     engine._ocr.predict.side_effect = RuntimeError("fallo del modelo")
 

@@ -62,7 +62,7 @@ def test_paddle_gpu_initializes_paddleocr_with_gpu(monkeypatch):
 
 def test_paddle_gpu_engine_extract_text_results():
     """Transforma el output del OCR Paddle GPU en lista normalizada."""
-    engine = PaddleGpuOcrEngine.__new__(PaddleGpuOcrEngine)
+    engine = object.__new__(PaddleGpuOcrEngine)
     engine._ocr = Mock()
     engine._ocr.predict.return_value = [
         {"rec_texts": ["Reglas"], "rec_scores": [0.98765]},

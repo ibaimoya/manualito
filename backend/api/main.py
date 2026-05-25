@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from api import dependencies
 from api.exceptions import register_exception_handlers
-from api.router import router
+from api.routes import health, manuals, ocr
 from common.logging import configure_logging, install_health_log_filter
 
 configure_logging()
@@ -23,4 +23,6 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Manualito API", lifespan=lifespan)
 register_exception_handlers(app)
-app.include_router(router)
+app.include_router(health.router, tags=["Health"])
+app.include_router(ocr.router, tags=["OCR"])
+app.include_router(manuals.router, tags=["Manuals"])

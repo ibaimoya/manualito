@@ -38,4 +38,4 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Manualito RAG Service", lifespan=lifespan)
 register_exception_handlers(app)
-app.include_router(router)
+app.include_router(router, tags=["RAG"])

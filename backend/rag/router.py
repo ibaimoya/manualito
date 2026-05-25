@@ -1,15 +1,21 @@
 from fastapi import APIRouter
 
-from rag.schemas import IngestRequest, RetrieveRequest
+from common.schemas import HealthResponse
+from rag.schemas import (
+    IngestRequest,
+    IngestResponse,
+    RetrieveRequest,
+    RetrieveResponse,
+)
 from rag.service import ingest_manual, retrieve_chunks
 
 router = APIRouter()
 
 
 @router.get("/health")
-async def health():
+async def health() -> HealthResponse:
     """Comprueba que el servicio RAG está disponible."""
-    return {"status": "ok"}
+    return HealthResponse()
 
 
 @router.post(
@@ -19,7 +25,7 @@ async def health():
         500: {"description": "Error interno al indexar el manual."},
     },
 )
-async def ingest_endpoint(payload: IngestRequest):
+async def ingest_endpoint(payload: IngestRequest) -> IngestResponse:
     """
     Indexa un manual en ChromaDB a partir de texto libre u OCR estructurado.
 
@@ -28,9 +34,9 @@ async def ingest_endpoint(payload: IngestRequest):
                                  contenido textual a indexar.
 
     Returns:
-        dict: ``manual_id``, número de chunks indexados y estado final.
+        IngestResponse: ``manual_id``, número de chunks indexados y estado final.
     """
-    return await ingest_manual(payload)
+    return IngestResponse(**await ingest_manual(payload))
 
 
 @router.post(
@@ -40,7 +46,7 @@ async def ingest_endpoint(payload: IngestRequest):
         500: {"description": "Error interno al recuperar el contexto del manual."},
     },
 )
-async def retrieve_endpoint(payload: RetrieveRequest):
+async def retrieve_endpoint(payload: RetrieveRequest) -> RetrieveResponse:
     """
     Recupera los chunks más relevantes de un manual para una pregunta dada.
 
@@ -48,6 +54,6 @@ async def retrieve_endpoint(payload: RetrieveRequest):
         payload (RetrieveRequest): Identificador del manual, pregunta y top-k.
 
     Returns:
-        dict: Lista de chunks relevantes con score y metadatos.
+        RetrieveResponse: Lista de chunks relevantes con score y metadatos.
     """
-    return await retrieve_chunks(payload)
+    return RetrieveResponse(**await retrieve_chunks(payload))

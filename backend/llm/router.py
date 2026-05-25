@@ -1,25 +1,25 @@
-from typing import Annotated
+from fastapi import APIRouter
 
-import httpx
-from fastapi import APIRouter, Depends
-
-from llm.dependencies import get_http_client
-from llm.schemas import GenerateRequest
+from common.schemas import HealthResponse
+from llm.annotations import HttpClient
+from llm.schemas import (
+    GenerateRequest,
+    GenerateResponse,
+    UnloadIfIdleResponse,
+)
 from llm.service import generate_answer, unload_if_idle
 
 router = APIRouter()
 
 
 @router.get("/health")
-async def health():
+async def health() -> HealthResponse:
     """Comprueba que el servicio LLM está disponible."""
-    return {"status": "ok"}
+    return HealthResponse()
 
 
-@router.post("/unload-if-idle")
-async def unload_if_idle_endpoint(
-    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
-):
+@router.post("/unload-if-idle", response_model_exclude_none=True)
+async def unload_if_idle_endpoint(client: HttpClient) -> UnloadIfIdleResponse:
     """
     Descarga el modelo de Ollama si no hay generación activa.
 
@@ -27,7 +27,8 @@ async def unload_if_idle_endpoint(
     a PaddleOCR GPU. Es deliberadamente best-effort: si Ollama no responde, no
     debe romper el flujo de OCR.
     """
-    return await unload_if_idle(client)
+    payload = await unload_if_idle(client)
+    return UnloadIfIdleResponse(**payload)
 
 
 @router.post(
@@ -40,8 +41,8 @@ async def unload_if_idle_endpoint(
 )
 async def generate_endpoint(
     payload: GenerateRequest,
-    client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
-):
+    client: HttpClient,
+) -> GenerateResponse:
     """
     Genera una respuesta usando Ollama a partir de una pregunta y su contexto.
 
@@ -50,6 +51,6 @@ async def generate_endpoint(
         client (httpx.AsyncClient): Cliente HTTP compartido inyectado por FastAPI.
 
     Returns:
-        dict: Respuesta final limpia generada por el LLM.
+        GenerateResponse: Respuesta final limpia generada por el LLM.
     """
-    return await generate_answer(payload=payload, client=client)
+    return GenerateResponse(**await generate_answer(payload=payload, client=client))

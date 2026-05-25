@@ -19,7 +19,7 @@
 
 Manualito es una aplicación web progresiva que permite a los usuarios fotografiar manuales de juegos de mesa y recibir una explicación en voz alta del contenido. El sistema procesa la imagen a través de un pipeline de inteligencia artificial que combina reconocimiento óptico de caracteres (OCR), recuperación aumentada por generación (RAG) y un modelo de lenguaje (LLM) para transformar el texto extraído en una explicación clara y accesible.
 
-Proyecto desarrollado como Trabajo de Fin de Grado en el marco del [Observatorio Tecnológico HP SCDS](https://hpscds.com/en/innovation/technological-observatory/), un programa de colaboración entre HP SCDS y universidades españolas para la realización de TFGs en entorno empresarial.
+Proyecto desarrollado como Trabajo de Fin de Grado en el marco del [Observatorio Tecnológico HP SCDS](https://hpscds.com/en/innovation/technological-observatory/), un programa de colaboración entre HP SCDS y universidades españolas para la realización de TFG en entorno empresarial.
 
 ---
 
@@ -128,7 +128,7 @@ uv sync --locked --no-default-groups --only-group test
 uv run --locked --no-default-groups --only-group test pytest -v
 ```
 
-Los tests cubren los servicios API y OCR con técnicas de caja negra (BVA + EP). El servicio OCR se mockea en los tests del gateway para aislar cada capa.
+Los tests cubren los cuatro servicios (API, OCR, RAG, LLM) y las utilidades comunes con técnicas de caja negra (BVA + EP). Las dependencias externas (Ollama, ChromaDB, PaddleOCR) se mockean en la frontera HTTP/repository para aislar cada capa.
 
 ---
 

@@ -18,7 +18,7 @@ async def lifespan(_app: FastAPI):
     Arranca y cierra recursos compartidos del servicio LLM.
 
     Crea un único ``httpx.AsyncClient`` con timeout por defecto y pooling de
-    conexiones para todas las llamadas a Ollama. Además verifica al arrancar
+    conexiones para todas las llamadas a Ollama. Además, verifica al arrancar
     si el modelo configurado (``OLLAMA_MODEL``) está disponible, emitiendo
     un warning si no, sin detener el servicio, para facilitar el
     diagnóstico desde ``docker compose logs llm``.
@@ -33,4 +33,4 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Manualito LLM Service", lifespan=lifespan)
 register_exception_handlers(app)
-app.include_router(router)
+app.include_router(router, tags=["LLM"])

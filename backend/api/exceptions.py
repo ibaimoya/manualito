@@ -5,29 +5,33 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
-class ImageTooLargeError(Exception):
+class ApiError(Exception):
+    """Clase base abstracta para los errores de dominio del gateway."""
+
+
+class ImageTooLargeError(ApiError):
     """La imagen subida supera el tamaño máximo permitido por el gateway."""
 
 
-class InvalidImageError(Exception):
+class InvalidImageError(ApiError):
     """El fichero subido no contiene una imagen válida."""
 
 
-class InternalServiceUnavailableError(Exception):
+class InternalServiceUnavailableError(ApiError):
     """Un servicio interno no está disponible."""
 
     def __init__(self, detail: str):
         self.detail = detail
 
 
-class InternalResourceNotFoundError(Exception):
+class InternalResourceNotFoundError(ApiError):
     """Un servicio interno indica que el recurso solicitado no existe."""
 
     def __init__(self, detail: str):
         self.detail = detail
 
 
-class InternalServiceError(Exception):
+class InternalServiceError(ApiError):
     """Un servicio interno ha devuelto un error no recuperable."""
 
     def __init__(self, detail: str):

@@ -2,23 +2,27 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
-class ManualNotFoundError(Exception):
+class RagError(Exception):
+    """Clase base abstracta para los errores de dominio del servicio RAG."""
+
+
+class ManualNotFoundError(RagError):
     """Indica que un manual no tiene chunks indexados en la colección."""
 
 
-class EmptyDocumentError(Exception):
+class EmptyDocumentError(RagError):
     """El documento no contiene texto indexable tras normalizar."""
 
 
-class ChunkGenerationError(Exception):
+class ChunkGenerationError(RagError):
     """El documento normalizado no ha producido chunks."""
 
 
-class RagIndexingError(Exception):
+class RagIndexingError(RagError):
     """La ingesta ha fallado al vectorizar o persistir el manual."""
 
 
-class RagRetrievalError(Exception):
+class RagRetrievalError(RagError):
     """La recuperación de contexto ha fallado de forma inesperada."""
 
 

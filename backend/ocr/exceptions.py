@@ -2,7 +2,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
-class OcrProcessingError(Exception):
+class OcrError(Exception):
+    """Clase base abstracta para los errores de dominio del servicio OCR."""
+
+
+class OcrProcessingError(OcrError):
     """El motor OCR ha fallado al procesar la imagen."""
 
 

@@ -2,23 +2,27 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
-class LlmUnavailableError(Exception):
+class LlmError(Exception):
+    """Clase base abstracta para los errores de dominio del servicio LLM."""
+
+
+class LlmUnavailableError(LlmError):
     """Ollama no acepta conexiones."""
 
 
-class LlmTimeoutError(Exception):
+class LlmTimeoutError(LlmError):
     """Ollama ha agotado el tiempo máximo de respuesta."""
 
 
-class LlmGenerationError(Exception):
+class LlmGenerationError(LlmError):
     """Ollama ha devuelto un error HTTP durante la generación."""
 
 
-class InvalidLlmResponseError(Exception):
+class InvalidLlmResponseError(LlmError):
     """Ollama ha devuelto una respuesta no JSON."""
 
 
-class EmptyLlmAnswerError(Exception):
+class EmptyLlmAnswerError(LlmError):
     """Ollama ha devuelto una respuesta vacía."""
 
 

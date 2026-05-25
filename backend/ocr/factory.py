@@ -2,15 +2,10 @@ import logging
 import os
 from collections.abc import Callable
 
-from contracts import OcrEngine
+from ocr import config
+from ocr.engines.common import OcrEngine
 
 logger = logging.getLogger(__name__)
-
-PADDLE_CPU = "paddle_cpu"
-PADDLE_GPU = "paddle_gpu"
-TESSERACT = "tesseract"
-
-DEFAULT_OCR_ENGINE = TESSERACT
 
 
 def _create_tesseract_engine() -> OcrEngine:
@@ -20,7 +15,7 @@ def _create_tesseract_engine() -> OcrEngine:
     El import se hace de forma perezosa para no cargar pytesseract cuando se
     selecciona un motor Paddle.
     """
-    from engines.tesseract import TesseractOcrEngine
+    from ocr.engines.tesseract import TesseractOcrEngine
 
     return TesseractOcrEngine()
 
@@ -32,7 +27,7 @@ def _create_paddle_cpu_engine() -> OcrEngine:
     El import se hace de forma perezosa para no cargar dependencias de
     PaddleOCR cuando se selecciona Tesseract o la variante GPU.
     """
-    from engines.paddle.cpu import PaddleCpuOcrEngine
+    from ocr.engines.paddle.cpu import PaddleCpuOcrEngine
 
     return PaddleCpuOcrEngine()
 
@@ -44,16 +39,16 @@ def _create_paddle_gpu_engine() -> OcrEngine:
     El import se mantiene perezoso para no exigir PaddlePaddle GPU cuando se
     selecciona Tesseract o la variante CPU.
     """
-    from engines.paddle.gpu import PaddleGpuOcrEngine
+    from ocr.engines.paddle.gpu import PaddleGpuOcrEngine
 
     return PaddleGpuOcrEngine()
 
 
 # Diccionario de motores OCR disponibles: nombre de configuración -> función creadora.
 SUPPORTED_OCR_ENGINES: dict[str, Callable[[], OcrEngine]] = {
-    TESSERACT: _create_tesseract_engine,
-    PADDLE_CPU: _create_paddle_cpu_engine,
-    PADDLE_GPU: _create_paddle_gpu_engine,
+    config.TESSERACT: _create_tesseract_engine,
+    config.PADDLE_CPU: _create_paddle_cpu_engine,
+    config.PADDLE_GPU: _create_paddle_gpu_engine,
 }
 
 
@@ -67,7 +62,9 @@ def create_ocr_engine(engine_name: str | None = None) -> OcrEngine:
     selected_engine = (
         engine_name if engine_name is not None else os.getenv("OCR_ENGINE")
     )
-    selected_engine = (selected_engine or "").strip().lower() or DEFAULT_OCR_ENGINE
+    selected_engine = (
+        selected_engine or ""
+    ).strip().lower() or config.DEFAULT_OCR_ENGINE
 
     try:
         engine_factory = SUPPORTED_OCR_ENGINES[selected_engine]

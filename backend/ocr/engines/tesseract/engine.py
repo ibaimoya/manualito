@@ -1,11 +1,10 @@
 import logging
 
 import pytesseract
-from contracts import OcrLine
 from pytesseract import Output
 
-from engines.common import log_ocr_result
-from engines.tesseract.normalizer import normalize_tesseract_result
+from ocr.engines.common import OcrLine, log_ocr_result
+from ocr.engines.tesseract.normalizer import normalize_tesseract_result
 
 logger = logging.getLogger(__name__)
 

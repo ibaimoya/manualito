@@ -19,7 +19,7 @@ def test_create_manual_orquesta_ocr_e_ingesta(client, valid_jpeg_bytes, override
     )
     override_http_client.post.side_effect = [unload_response, ocr_response, rag_response]
 
-    with patch("api_app.uuid4", return_value=SimpleNamespace(hex="12345678abcdef00")):
+    with patch("api.service.uuid4", return_value=SimpleNamespace(hex="12345678abcdef00")):
         response = client.post(
             "/api/manuals",
             data={"name": "Catan"},
@@ -83,3 +83,28 @@ def test_question_manual_devuelve_502_si_llm_no_esta_disponible(client, override
 
     assert response.status_code == 502
     assert response.json() == {"detail": "Servicio LLM no disponible."}
+
+
+def test_question_manual_devuelve_500_si_llm_responde_timeout_http(
+    client, override_http_client,
+):
+    rag_response = _mock_response(
+        {"chunks": [{"text": "Ganas con 10 puntos", "chunk_index": 0, "score": 0.99}]}
+    )
+    timeout_response = MagicMock()
+    timeout_response.status_code = 504
+    timeout_response.json.return_value = {"detail": "El LLM tardó demasiado en responder."}
+    timeout_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "Gateway Timeout",
+        request=MagicMock(),
+        response=timeout_response,
+    )
+    override_http_client.post.side_effect = [rag_response, timeout_response]
+
+    response = client.post(
+        "/api/manuals/catan-12345678/questions",
+        json={"question": "Como se gana?"},
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Error interno al generar la respuesta."}

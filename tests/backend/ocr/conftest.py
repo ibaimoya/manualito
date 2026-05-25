@@ -16,7 +16,7 @@ _pytesseract = MagicMock()
 _pytesseract.Output = SimpleNamespace(DICT="dict")
 sys.modules.setdefault("pytesseract", _pytesseract)
 
-from ocr_app import app  # noqa: E402
+from ocr.main import app  # noqa: E402
 
 
 @pytest.fixture(scope="session")

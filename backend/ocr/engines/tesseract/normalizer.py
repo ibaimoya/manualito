@@ -1,6 +1,6 @@
 from typing import Any
 
-from contracts import OcrLine
+from ocr.engines.common import OcrLine
 
 
 def normalize_tesseract_result(result: dict[str, list[Any]]) -> list[OcrLine]:

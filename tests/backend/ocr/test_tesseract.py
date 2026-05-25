@@ -1,13 +1,14 @@
 from unittest.mock import patch
 
 import pytest
-from engines.tesseract import TesseractOcrEngine
-from engines.tesseract.engine import TESSERACT_TIMEOUT_SECONDS, Output
+
+from ocr.engines.tesseract import TesseractOcrEngine
+from ocr.engines.tesseract.engine import TESSERACT_TIMEOUT_SECONDS, Output
 
 
 def _engine_without_init() -> TesseractOcrEngine:
     """Crea una instancia ligera para probar extract_text sin validar binarios."""
-    engine = TesseractOcrEngine.__new__(TesseractOcrEngine)
+    engine = object.__new__(TesseractOcrEngine)
     engine._lang = "spa"
     return engine
 
@@ -18,7 +19,7 @@ def _tesseract_data(
     conf: list[str],
     line_num: list[int],
 ) -> dict[str, list[int] | list[str]]:
-    """Construye una salida minima compatible con pytesseract.image_to_data."""
+    """Construye una salida mínima compatible con pytesseract.image_to_data."""
     return {
         "text": text,
         "conf": conf,
@@ -35,12 +36,12 @@ def test_tesseract_engine_name():
 
 
 def test_tesseract_initializes_wrapper():
-    """Comprueba pronto que el binario y el idioma estan disponibles."""
+    """Comprueba pronto que el binario y el idioma están disponibles."""
     with patch(
-        "engines.tesseract.engine.pytesseract.get_tesseract_version",
+        "ocr.engines.tesseract.engine.pytesseract.get_tesseract_version",
         return_value="5.3.0",
     ) as get_version, patch(
-        "engines.tesseract.engine.pytesseract.get_languages",
+        "ocr.engines.tesseract.engine.pytesseract.get_languages",
         return_value=["eng", "spa"],
     ) as get_languages:
         engine = TesseractOcrEngine()
@@ -53,26 +54,26 @@ def test_tesseract_initializes_wrapper():
 def test_tesseract_rejects_missing_language():
     """Falla al arrancar si falta el pack de idioma configurado."""
     with patch(
-        "engines.tesseract.engine.pytesseract.get_tesseract_version",
+        "ocr.engines.tesseract.engine.pytesseract.get_tesseract_version",
         return_value="5.3.0",
     ), patch(
-        "engines.tesseract.engine.pytesseract.get_languages",
+        "ocr.engines.tesseract.engine.pytesseract.get_languages",
         return_value=["eng"],
     ), pytest.raises(RuntimeError, match="pack de idioma 'spa'"):
         TesseractOcrEngine()
 
 
 def test_tesseract_propagates_initialization_error():
-    """Propaga los fallos de inicializacion de Tesseract."""
+    """Propaga los fallos de inicialización de Tesseract."""
     with patch(
-        "engines.tesseract.engine.pytesseract.get_tesseract_version",
+        "ocr.engines.tesseract.engine.pytesseract.get_tesseract_version",
         side_effect=RuntimeError("tesseract no disponible"),
     ), pytest.raises(RuntimeError, match="tesseract no disponible"):
         TesseractOcrEngine()
 
 
 def test_tesseract_engine_extract_text_groups_words_by_line():
-    """Agrupa palabras de Tesseract por linea y normaliza la confianza."""
+    """Agrupa palabras de Tesseract por línea y normaliza la confianza."""
     engine = _engine_without_init()
     tesseract_result = _tesseract_data(
         text=["Reglas", "del", "juego", "Turno", "final"],
@@ -81,7 +82,7 @@ def test_tesseract_engine_extract_text_groups_words_by_line():
     )
 
     with patch(
-        "engines.tesseract.engine.pytesseract.image_to_data",
+        "ocr.engines.tesseract.engine.pytesseract.image_to_data",
         return_value=tesseract_result,
     ) as image_to_data:
         result = engine.extract_text("fake/path.jpg")
@@ -99,7 +100,7 @@ def test_tesseract_engine_extract_text_groups_words_by_line():
 
 
 def test_tesseract_engine_filters_empty_and_invalid_entries():
-    """Descarta textos vacios y confianzas no validas."""
+    """Descarta textos vacios y confianzas no válidas."""
     engine = _engine_without_init()
     tesseract_result = _tesseract_data(
         text=["", " Valido ", "Sin confianza", "No numerico", "Negativo"],
@@ -108,7 +109,7 @@ def test_tesseract_engine_filters_empty_and_invalid_entries():
     )
 
     with patch(
-        "engines.tesseract.engine.pytesseract.image_to_data",
+        "ocr.engines.tesseract.engine.pytesseract.image_to_data",
         return_value=tesseract_result,
     ):
         result = engine.extract_text("fake/path.jpg")
@@ -121,7 +122,33 @@ def test_tesseract_engine_propagates_exception():
     engine = _engine_without_init()
 
     with patch(
-        "engines.tesseract.engine.pytesseract.image_to_data",
+        "ocr.engines.tesseract.engine.pytesseract.image_to_data",
         side_effect=RuntimeError("fallo del modelo"),
     ), pytest.raises(RuntimeError, match="fallo del modelo"):
         engine.extract_text("fake/path.jpg")
+
+
+def test_normalize_handles_missing_tsv_columns():
+    """Cuando Tesseract omite columnas, los índices fuera de rango devuelven 0.
+
+    Caso real: en imágenes muy degradadas Tesseract puede devolver listas de
+    distinto largo entre columnas. El normalizer no debe crashear; agrupa con
+    valor 0 las entradas sin coordenada lógica disponible (mismo line_num).
+    """
+    from ocr.engines.tesseract.normalizer import normalize_tesseract_result
+
+    result = normalize_tesseract_result(
+        {
+            "text": ["uno", "dos", "tres", "cuatro"],
+            "conf": ["90", "80", "70", "60"],
+            "page_num": [1, 1, 1, 1],
+            "block_num": [1, 1, 1, 1],
+            "par_num": [1, 1, 1, 1],
+            "line_num": [1, 1],  # columna corta: "tres" y "cuatro" caen en line_num=0.
+        }
+    )
+
+    assert result == [
+        {"text": "uno dos", "confidence": 0.85},
+        {"text": "tres cuatro", "confidence": 0.65},
+    ]

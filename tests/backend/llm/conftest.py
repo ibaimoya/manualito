@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from llm_app import app
+
+from llm.main import app
 
 
 @pytest.fixture(scope="session")

@@ -1,7 +1,14 @@
+import asyncio
 import os
+from io import BytesIO
 from unittest.mock import patch
 
 import pytest
+from fastapi import UploadFile
+from starlette.datastructures import Headers
+
+from ocr.exceptions import OcrProcessingError
+from ocr.service import extract_image_text
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 
@@ -15,6 +22,19 @@ def _post_image(client, data: bytes, filename: str, mime: str):
     return client.post(
         "/extract",
         files={"image": (filename, data, mime)},
+    )
+
+
+def _upload_file(
+    data: bytes,
+    filename: str = "manual.jpg",
+    content_type: str = "image/jpeg",
+) -> UploadFile:
+    """Crea un UploadFile real para probar la capa interna OCR."""
+    return UploadFile(
+        file=BytesIO(data),
+        filename=filename,
+        headers=Headers({"content-type": content_type}),
     )
 
 
@@ -41,7 +61,7 @@ def test_health(client):
 def test_valid_image_formats(client, fixture_name, mime, filename, request):
     """Formato soportado devuelve 200 con las líneas OCR."""
     image_bytes = request.getfixturevalue(fixture_name)
-    with patch("ocr_app.extract_text", return_value=FAKE_OCR_RESULT):
+    with patch("ocr.service.extract_text", return_value=FAKE_OCR_RESULT):
         response = _post_image(client, image_bytes, filename, mime)
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -53,7 +73,7 @@ def test_valid_image_formats(client, fixture_name, mime, filename, request):
 # ---------------------------------------------------------------------------
 def test_ocr_engine_error(client, valid_jpeg_bytes):
     """Si el motor OCR lanza una excepción, el endpoint la captura y devuelve 500."""
-    with patch("ocr_app.extract_text", side_effect=RuntimeError("fallo interno")):
+    with patch("ocr.service.extract_text", side_effect=RuntimeError("fallo interno")):
         response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
     assert response.status_code == 500
 
@@ -82,10 +102,28 @@ def test_temp_file_cleaned_on_success(client, valid_jpeg_bytes):
         captured.append(path)
         return FAKE_OCR_RESULT
 
-    with patch("ocr_app.extract_text", side_effect=_capture):
+    with patch("ocr.service.extract_text", side_effect=_capture):
         response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
 
     assert response.status_code == 200
+    assert len(captured) == 1
+    assert not os.path.exists(captured[0])
+
+
+def test_extract_image_text_succeeds_if_engine_removes_temp_file(valid_jpeg_bytes):
+    """El cleanup no falla si el motor OCR ya ha eliminado el temporal."""
+    captured: list[str] = []
+    upload = _upload_file(valid_jpeg_bytes)
+
+    def _capture_and_remove(path):
+        captured.append(path)
+        os.remove(path)
+        return FAKE_OCR_RESULT
+
+    with patch("ocr.service.extract_text", side_effect=_capture_and_remove):
+        response = asyncio.run(extract_image_text(upload))
+
+    assert response == {"lines": FAKE_OCR_RESULT}
     assert len(captured) == 1
     assert not os.path.exists(captured[0])
 
@@ -98,9 +136,41 @@ def test_temp_file_cleaned_on_ocr_error(client, valid_jpeg_bytes):
         captured.append(path)
         raise RuntimeError("fallo simulado")
 
-    with patch("ocr_app.extract_text", side_effect=_capture_and_fail):
+    with patch("ocr.service.extract_text", side_effect=_capture_and_fail):
         response = _post_image(client, valid_jpeg_bytes, "manual.jpg", "image/jpeg")
 
     assert response.status_code == 500
     assert len(captured) == 1
     assert not os.path.exists(captured[0])
+
+
+def test_extract_image_text_raises_domain_error_on_ocr_failure(valid_jpeg_bytes):
+    """La capa interna expresa fallos del motor OCR como error de dominio."""
+    captured: list[str] = []
+    upload = _upload_file(valid_jpeg_bytes)
+
+    def _capture_and_fail(path):
+        captured.append(path)
+        raise RuntimeError("fallo simulado")
+
+    with (
+        patch("ocr.service.extract_text", side_effect=_capture_and_fail),
+        pytest.raises(OcrProcessingError),
+    ):
+        asyncio.run(extract_image_text(upload))
+
+    assert len(captured) == 1
+    assert not os.path.exists(captured[0])
+
+
+def test_extract_image_text_raises_domain_error_when_temp_file_cannot_be_written(
+    valid_jpeg_bytes,
+):
+    """Si no se puede escribir el temporal, se devuelve un error OCR controlado."""
+    upload = _upload_file(valid_jpeg_bytes)
+
+    with (
+        patch("ocr.service.anyio.open_file", side_effect=OSError("read-only tmp")),
+        pytest.raises(OcrProcessingError),
+    ):
+        asyncio.run(extract_image_text(upload))

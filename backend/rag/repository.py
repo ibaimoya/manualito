@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import logging
-import os
 from urllib.parse import urlparse
+
+from rag import config
+from rag.exceptions import ManualNotFoundError
 
 logger = logging.getLogger(__name__)
 
-CHROMA_URL = os.environ["CHROMA_URL"]
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "manualito_manuals")
 _repository: ChromaRepository | None = None
-
-
-class ManualNotFoundError(Exception):
-    pass
 
 
 class ChromaRepository:
@@ -183,6 +179,10 @@ class ChromaRepository:
             )
         return self._collection
 
+    def warm_up(self) -> None:
+        """Inicializa la colección si todavía no está cargada."""
+        self._get_collection()
+
     def _get_client(self):
         """
         Crea perezosamente el cliente HTTP hacia ChromaDB.
@@ -209,6 +209,8 @@ def get_repository() -> ChromaRepository:
         ChromaRepository: Repositorio reutilizable para ingesta y recuperación.
     """
     global _repository
-    if _repository is None:
-        _repository = ChromaRepository(CHROMA_URL, CHROMA_COLLECTION)
-    return _repository
+    repo = _repository
+    if repo is None:
+        repo = ChromaRepository(config.CHROMA_URL, config.CHROMA_COLLECTION)
+        _repository = repo
+    return repo

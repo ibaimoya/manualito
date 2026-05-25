@@ -24,12 +24,8 @@ def _load_backend_env() -> None:
 _load_backend_env()
 
 # backend/ permite importar el paquete compartido `common` con el mismo
-# nombre que usa el código de producción (from common.filters... import ...).
+# nombre que usa el código de producción (from common.logging import ...).
 sys.path.insert(0, str(_root / "backend"))
-sys.path.insert(0, str(_root / "backend" / "ocr"))
-sys.path.insert(0, str(_root / "backend" / "api"))
-sys.path.insert(0, str(_root / "backend" / "rag"))
-sys.path.insert(0, str(_root / "backend" / "llm"))
 
 
 # ---------------------------------------------------------------------------

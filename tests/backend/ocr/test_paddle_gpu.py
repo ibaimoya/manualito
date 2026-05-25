@@ -2,7 +2,8 @@ import sys
 from unittest.mock import Mock, patch
 
 import pytest
-from engines.paddle.gpu import PaddleGpuOcrEngine
+
+from ocr.engines.paddle.gpu import PaddleGpuOcrEngine
 
 
 def _fake_paddle(*, cuda_enabled: bool, gpu_count: int):
@@ -49,7 +50,7 @@ def test_paddle_gpu_initializes_paddleocr_with_gpu(monkeypatch):
         _fake_paddle(cuda_enabled=True, gpu_count=1),
     )
 
-    with patch("engines.paddle.gpu.engine.PaddleOCR") as paddleocr:
+    with patch("ocr.engines.paddle.gpu.engine.PaddleOCR") as paddleocr:
         PaddleGpuOcrEngine()
 
     paddleocr.assert_called_once_with(
@@ -61,7 +62,7 @@ def test_paddle_gpu_initializes_paddleocr_with_gpu(monkeypatch):
 
 def test_paddle_gpu_engine_extract_text_results():
     """Transforma el output del OCR Paddle GPU en lista normalizada."""
-    engine = PaddleGpuOcrEngine.__new__(PaddleGpuOcrEngine)
+    engine = object.__new__(PaddleGpuOcrEngine)
     engine._ocr = Mock()
     engine._ocr.predict.return_value = [
         {"rec_texts": ["Reglas"], "rec_scores": [0.98765]},

@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from rag_app import app
+
+from rag.main import app
 
 
 @pytest.fixture(scope="session")

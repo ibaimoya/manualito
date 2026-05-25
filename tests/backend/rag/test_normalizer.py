@@ -1,4 +1,4 @@
-from normalizer import normalize_ocr_lines, normalize_text
+from rag.normalizer import normalize_ocr_lines, normalize_text
 
 
 # ---------------------------------------------------------------------------

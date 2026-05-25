@@ -76,6 +76,10 @@ class EmbeddingService:
             self._model = SentenceTransformer(self.model_id)
         return self._model
 
+    def warm_up(self) -> None:
+        """Carga el modelo si todavía no está inicializado."""
+        self._load_model()
+
 
 def get_embedding_service() -> EmbeddingService:
     """
@@ -85,6 +89,8 @@ def get_embedding_service() -> EmbeddingService:
         EmbeddingService: Servicio reutilizable para pasajes y queries.
     """
     global _embedder
-    if _embedder is None:
-        _embedder = EmbeddingService(EMBEDDING_MODEL)
-    return _embedder
+    embedder = _embedder
+    if embedder is None:
+        embedder = EmbeddingService(EMBEDDING_MODEL)
+        _embedder = embedder
+    return embedder

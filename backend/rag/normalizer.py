@@ -37,11 +37,12 @@ def normalize_ocr_lines(lines: list[dict[str, object]]) -> str:
     Returns:
         str: Texto consolidado y normalizado a partir de las líneas OCR.
     """
-    content = "\n".join(
-        _normalize_line(line["text"])
-        for line in lines
-        if isinstance(line.get("text"), str) and line["text"].strip()
-    )
+    normalized_lines = []
+    for line in lines:
+        text = line.get("text")
+        if isinstance(text, str) and text.strip():
+            normalized_lines.append(_normalize_line(text))
+    content = "\n".join(normalized_lines)
     return normalize_text(content)
 
 

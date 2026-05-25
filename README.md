@@ -3,6 +3,7 @@
 [![CI](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml/badge.svg)](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=alert_status&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=coverage&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=code_smells&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=security_rating&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=reliability_rating&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=sqale_rating&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
@@ -18,7 +19,7 @@
 
 Manualito es una aplicación web progresiva que permite a los usuarios fotografiar manuales de juegos de mesa y recibir una explicación en voz alta del contenido. El sistema procesa la imagen a través de un pipeline de inteligencia artificial que combina reconocimiento óptico de caracteres (OCR), recuperación aumentada por generación (RAG) y un modelo de lenguaje (LLM) para transformar el texto extraído en una explicación clara y accesible.
 
-Proyecto desarrollado como Trabajo de Fin de Grado en el marco del [Observatorio Tecnológico HP SCDS](https://hpscds.com/en/innovation/technological-observatory/), un programa de colaboración entre HP SCDS y universidades españolas para la realización de TFGs en entorno empresarial.
+Proyecto desarrollado como Trabajo de Fin de Grado en el marco del [Observatorio Tecnológico HP SCDS](https://hpscds.com/en/innovation/technological-observatory/), un programa de colaboración entre HP SCDS y universidades españolas para la realización de TFG en entorno empresarial.
 
 ---
 
@@ -47,14 +48,16 @@ Foto → Preprocesado → OCR → RAG (ChromaDB) → LLM (Ollama) → Texto
 
 ## Stack Tecnológico
 
-| **Capa**        | **Tecnología**                  |
-|-----------------|-----------------------------|
-| API Gateway     | FastAPI (Python)            |
-| OCR             | Tesseract OCR por defecto, PaddleOCR CPU/GPU opcional |
-| Vector DB       | ChromaDB                    |
-| LLM             | Modelos en local vía Ollama |
-| Frontend        | React PWA       |
-| Infraestructura | Docker Compose              |
+| **Capa**                | **Tecnología**                                        |
+|-------------------------|-------------------------------------------------------|
+| API Gateway             | FastAPI (Python)                                      |
+| OCR                     | Tesseract OCR por defecto, PaddleOCR CPU/GPU opcional |
+| Vector DB               | ChromaDB                                              |
+| RAG                     | Sentence Transformers                                 |
+| LLM                     | Modelos locales vía Ollama                            |
+| Frontend                | React PWA                                             |
+| Gestión de dependencias | uv                                                    |
+| Infraestructura         | Docker Compose                                        |
 
 ---
 
@@ -78,7 +81,7 @@ Cuatro servicios en contenedores independientes comunicados por red interna:
 ```
 
 - **api** — Gateway público. Valida la imagen y orquesta las llamadas a los demás servicios.
-- **ocr** — Extrae texto de las imagenes con Tesseract por defecto; PaddleOCR CPU/GPU sigue disponible por configuracion.
+- **ocr** — Extrae texto de las imágenes con Tesseract por defecto; PaddleOCR CPU/GPU sigue disponible por configuración.
 - **rag** — Recupera fragmentos relevantes del corpus de manuales almacenado en ChromaDB.
 - **llm** — Genera la explicación con un modelo de lenguaje local vía Ollama (GPU).
 
@@ -99,7 +102,7 @@ docker compose down
 La API queda expuesta en `http://localhost:8000`.
 
 Las variables de runtime del backend se configuran en `config/backend.env`.
-Docker Compose las inyecta en los servicios mediante `env_file`, asi que no
+Docker Compose las inyecta en los servicios mediante `env_file`, así que no
 hace falta pasarlas por consola.
 
 Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
@@ -125,7 +128,7 @@ uv sync --locked --no-default-groups --only-group test
 uv run --locked --no-default-groups --only-group test pytest -v
 ```
 
-Los tests cubren los servicios API y OCR con técnicas de caja negra (BVA + EP). El servicio OCR se mockea en los tests del gateway para aislar cada capa.
+Los tests cubren los cuatro servicios (API, OCR, RAG, LLM) y las utilidades comunes con técnicas de caja negra (BVA + EP). Las dependencias externas (Ollama, ChromaDB, PaddleOCR) se mockean en la frontera HTTP/repository para aislar cada capa.
 
 ---
 

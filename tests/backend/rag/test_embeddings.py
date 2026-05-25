@@ -2,8 +2,9 @@ import sys
 from types import SimpleNamespace
 from typing import ClassVar
 
-import embeddings
 import pytest
+
+import rag.embeddings as embeddings
 
 
 class _FakeVectors:
@@ -83,14 +84,13 @@ def test_embed_query_applies_query_prefix(fake_sentence_transformers):
 # Análisis de Valores Límite (BVA) — reutilización del modelo cargado
 #   Dos llamadas consecutivas deben reutilizar la misma instancia.
 # ---------------------------------------------------------------------------
-def test_load_model_reuses_cached_instance(fake_sentence_transformers):
-    """El modelo de SentenceTransformers se carga una sola vez por servicio."""
+def test_warm_up_reuses_cached_model(fake_sentence_transformers):
+    """El warmup carga SentenceTransformers una sola vez por servicio."""
     service = embeddings.EmbeddingService("modelo-prueba")
 
-    first = service._load_model()
-    second = service._load_model()
+    service.warm_up()
+    service.warm_up()
 
-    assert first is second
     assert _FakeSentenceTransformer.created_with == ["modelo-prueba"]
 
 

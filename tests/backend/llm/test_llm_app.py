@@ -144,7 +144,7 @@ def test_warn_if_model_missing_tolerates_startup_failures():
 #   Clase 13: Ollama devuelve respuesta vacía — 500.
 # ---------------------------------------------------------------------------
 def test_unload_if_idle_skips_when_generation_is_active(client, override_http_client):
-    """Si el LLM esta generando, la descarga se omite para no cortar la respuesta."""
+    """Si el LLM está generando, la descarga se omite para no cortar la respuesta."""
     asyncio.run(_set_active_generations(1))
     try:
         response = client.post("/unload-if-idle")
@@ -321,7 +321,7 @@ def test_generate_tracks_active_generation_while_ollama_runs(client, override_ht
 
 
 def test_generate_sends_configured_keep_alive(client, override_http_client):
-    """Si se configura OLLAMA_KEEP_ALIVE, se reenvia a Ollama."""
+    """Si se configura OLLAMA_KEEP_ALIVE, se reenvía a Ollama."""
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"response": "Respuesta final"}
@@ -339,6 +339,27 @@ def test_generate_sends_configured_keep_alive(client, override_http_client):
 
     assert response.status_code == 200
     assert override_http_client.post.call_args.kwargs["json"]["keep_alive"] == "5m"
+
+
+def test_generate_omits_keep_alive_when_not_configured(client, override_http_client):
+    """Sin OLLAMA_KEEP_ALIVE, la petición a Ollama no fuerza retención del modelo."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"response": "Respuesta final"}
+    override_http_client.post.return_value = mock_response
+
+    previous_keep_alive = config.OLLAMA_KEEP_ALIVE
+    config.OLLAMA_KEEP_ALIVE = None
+    try:
+        response = client.post(
+            "/generate",
+            json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
+        )
+    finally:
+        config.OLLAMA_KEEP_ALIVE = previous_keep_alive
+
+    assert response.status_code == 200
+    assert "keep_alive" not in override_http_client.post.call_args.kwargs["json"]
 
 
 def test_generate_returns_502_when_ollama_is_unreachable(client, override_http_client):

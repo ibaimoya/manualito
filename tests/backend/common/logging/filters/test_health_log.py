@@ -46,7 +46,7 @@ def _access_line(method: str, path: str, version: str, status: int) -> str:
     "ok_luego_error", "dos_errores", "recuperacion", "ciclo_completo",
 ])
 def test_state_machine(statuses, expected):
-    """El filtro solo suprime OKs consecutivos; errores y recuperaciones loguean."""
+    """El filtro solo suprime OK consecutivos; errores y recuperaciones loguean."""
     filter_fn = make_health_log_filter()
     results = [
         filter_fn(_make_record(_access_line("GET", "/health", "HTTP/1.1", s)))
@@ -78,7 +78,7 @@ def test_status_code_boundaries(status, first, second):
 
 
 def test_health_request_with_query_string_is_filtered():
-    """El sondeo a /health con query string se trata como healthcheck."""
+    """El sondeo a /health con query string se trata como health check."""
     filter_fn = make_health_log_filter()
     r1 = _make_record(_access_line("GET", "/health?ready=1", "HTTP/1.1", 200))
     r2 = _make_record(_access_line("GET", "/health?ready=1", "HTTP/1.1", 200))
@@ -94,9 +94,29 @@ def test_malformed_status_is_not_filtered(status):
     assert filter_fn(_make_record(msg)) is True
 
 
+@pytest.mark.parametrize("message", [
+    "plain message without quoted request",
+    '127.0.0.1:44566 - "GET /health HTTP/1.1',
+    '127.0.0.1:44566 - "GET /health" 200 OK',
+    '127.0.0.1:44566 - "GET /health FTP/1.0" 200 OK',
+    '127.0.0.1:44566 - "GET /health HTTP/1.1"',
+], ids=[
+    "sin_request",
+    "sin_comilla_cierre",
+    "request_incompleta",
+    "version_no_http",
+    "sin_status",
+])
+def test_malformed_access_lines_are_not_filtered(message):
+    """Los access logs incompletos o corruptos se conservan para diagnóstico."""
+    filter_fn = make_health_log_filter()
+
+    assert filter_fn(_make_record(message)) is True
+
+
 # ---------------------------------------------------------------------------
 # Casos trampa — el filtro solo acepta /health exacto con GET/HEAD.
-#   /healthz           → prefijo que empieza por /health pero no es él.
+#   /healthz           → prefijo que empieza por /health, pero no es él.
 #   /health/detailed   → sub-path bajo /health.
 #   /api/health        → /health como sufijo de otra ruta.
 #   POST /health       → petición no usada por Docker HEALTHCHECK.

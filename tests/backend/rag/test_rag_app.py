@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import anyio
 import pytest
+from pydantic import ValidationError
 
 from rag.exceptions import ChunkGenerationError, EmptyDocumentError
 from rag.schemas import IngestRequest
@@ -142,6 +143,12 @@ def test_ingest_manual_raises_domain_error_when_document_is_empty():
 
     with pytest.raises(EmptyDocumentError):
         anyio.run(ingest_manual, payload)
+
+
+def test_ingest_request_requires_text_or_ocr_lines():
+    """El contrato de entrada obliga a enviar contenido indexable."""
+    with pytest.raises(ValidationError, match="Se requiere 'text' o 'ocr_lines'"):
+        IngestRequest(manual_id="manual-sin-contenido")
 
 
 def test_ingest_manual_raises_domain_error_when_chunking_returns_empty():

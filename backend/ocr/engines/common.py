@@ -21,7 +21,7 @@ class OcrEngine(Protocol):
 
     def extract_text(self, image_path: str) -> list[OcrLine]:
         """Extrae texto de una imagen y devuelve líneas normalizadas."""
-        ...
+        raise NotImplementedError
 
 
 def log_ocr_result(

@@ -1,9 +1,12 @@
+import asyncio
 import logging
+from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import anyio
 import httpx
 import pytest
+from fastapi import UploadFile
+from starlette.datastructures import Headers
 
 from api.exceptions import ImageTooLargeError, InvalidImageError
 from api.router import ocr_endpoint
@@ -25,15 +28,13 @@ def _post_image(client, data: bytes, filename: str, mime: str, fmt_param: str = 
     )
 
 
-class _FakeUploadFile:
-    def __init__(self, data: bytes, filename: str, content_type: str):
-        self._data = data
-        self.filename = filename
-        self.content_type = content_type
-
-    async def read(self, _size: int) -> bytes:
-        await anyio.lowlevel.checkpoint()
-        return self._data
+def _upload_file(data: bytes, filename: str, content_type: str) -> UploadFile:
+    """Crea un UploadFile real para probar validaciones internas."""
+    return UploadFile(
+        file=BytesIO(data),
+        filename=filename,
+        headers=Headers({"content-type": content_type}),
+    )
 
 
 def _mock_response(payload: dict):
@@ -101,22 +102,58 @@ def test_ocr_requests_llm_unload_before_ocr(client, valid_jpeg_bytes, override_h
     )
 
 
+def test_ocr_continues_when_llm_unload_response_is_not_json(
+    client,
+    valid_jpeg_bytes,
+    override_http_client,
+):
+    """La liberación previa del LLM es best-effort y no bloquea el OCR."""
+    unload_response = _mock_response({"status": "idle"})
+    unload_response.json.side_effect = ValueError("invalid json")
+    ocr_response = _mock_response({"lines": FAKE_OCR_RESULT})
+    override_http_client.post.side_effect = [unload_response, ocr_response]
+
+    response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+
+    assert response.status_code == 200
+    assert response.json()["lines"] == FAKE_OCR_RESULT
+    assert override_http_client.post.call_count == 2
+
+
+def test_ocr_skips_llm_unload_when_feature_flag_is_disabled(
+    client,
+    valid_jpeg_bytes,
+    override_http_client,
+):
+    """Si se desactiva la liberación previa, el gateway llama solo al OCR."""
+    ocr_response = _mock_response({"lines": FAKE_OCR_RESULT})
+    override_http_client.post.return_value = ocr_response
+
+    with patch("api.client.config.LLM_UNLOAD_BEFORE_OCR", False):
+        response = _post_image(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+
+    assert response.status_code == 200
+    assert response.json()["lines"] == FAKE_OCR_RESULT
+    override_http_client.post.assert_awaited_once()
+    assert override_http_client.post.call_args.kwargs["url"].endswith("/extract")
+
+
 def test_ocr_log_sanitizes_uploaded_filename(
     valid_jpeg_bytes, override_http_client, caplog,
 ):
     """El nombre del archivo no puede inyectar líneas falsas en el log."""
     _configure_ocr_success(override_http_client)
-    upload = _FakeUploadFile(
-        data=valid_jpeg_bytes,
-        filename="ok.jpg\r\n2025-01-01 [WARNING] FALSO",
-        content_type="image/jpeg",
+    upload = _upload_file(
+        valid_jpeg_bytes,
+        "ok.jpg\r\n2025-01-01 [WARNING] FALSO",
+        "image/jpeg",
     )
 
     async def _call_endpoint():
         return await ocr_endpoint(image=upload, client=override_http_client)
 
     with caplog.at_level(logging.INFO, logger="api.service"):
-        response = anyio.run(_call_endpoint)
+        response = asyncio.run(_call_endpoint())
 
     assert response.status_code == 200
     messages = [
@@ -158,7 +195,7 @@ def test_invalid_image_content(client, data, filename, mime):
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("size,expected_status", [
     (int(19.9 * 1024 * 1024), 200),   # justo por debajo -> aceptado.
-    (20 * 1024 * 1024,         200),   # exactamente 20 MB -> aceptado.
+    (20 * 1024 * 1024,         200),   # exacto 20 MB -> aceptado.
     (20 * 1024 * 1024 + 1,     413),   # justo por encima -> rechazado.
 ], ids=["19.9mb", "20mb_exacto", "20mb_mas_1_byte"])
 def test_size_boundary(client, size, expected_status, override_http_client):
@@ -255,23 +292,15 @@ def test_missing_image_field(client):
 
 def test_validate_image_raises_domain_error_when_file_is_too_large():
     """La validación interna expresa el exceso de tamaño como error de dominio."""
-    upload = _FakeUploadFile(
-        data=b"\x00" * (MAX_IMAGE_SIZE + 1),
-        filename="large.jpg",
-        content_type="image/jpeg",
-    )
+    upload = _upload_file(b"\x00" * (MAX_IMAGE_SIZE + 1), "large.jpg", "image/jpeg")
 
     with pytest.raises(ImageTooLargeError):
-        anyio.run(validate_image, upload)
+        asyncio.run(validate_image(upload))
 
 
 def test_validate_image_raises_domain_error_when_content_is_not_image():
     """La validación interna expresa el contenido inválido como error de dominio."""
-    upload = _FakeUploadFile(
-        data=b"not an image",
-        filename="manual.jpg",
-        content_type="image/jpeg",
-    )
+    upload = _upload_file(b"not an image", "manual.jpg", "image/jpeg")
 
     with pytest.raises(InvalidImageError):
-        anyio.run(validate_image, upload)
+        asyncio.run(validate_image(upload))

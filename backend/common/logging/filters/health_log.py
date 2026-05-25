@@ -10,10 +10,10 @@ def _extract_health_status(message: str) -> str | None:
     """Extrae el codigo HTTP de un access log de /health.
 
     Args:
-        message: Linea de access log generada por Uvicorn.
+        message: Línea de access log generada por Uvicorn.
 
     Returns:
-        Codigo HTTP de tres digitos si la linea corresponde a un sondeo
+        Codigo HTTP de tres digitos si la línea corresponde a un sondeo
         GET/HEAD de /health; ``None`` en caso contrario.
     """
     request_start = message.find('"')
@@ -36,10 +36,10 @@ def _extract_health_status(message: str) -> str | None:
     if not version.startswith("HTTP/"):
         return None
 
-    status_parts = message[request_end + 1 :].lstrip().split(" ", 1)
-    if not status_parts:
+    status_text = message[request_end + 1 :].lstrip()
+    if not status_text:
         return None
-    status = status_parts[0]
+    status = status_text.split(" ", 1)[0]
     if len(status) != 3 or not status.isdigit():
         return None
 
@@ -51,7 +51,7 @@ def make_health_log_filter() -> Callable[[logging.LogRecord], bool]:
 
     El filtro mantiene estado entre llamadas: deja pasar la primera respuesta
     sana (2xx), cualquier respuesta no-2xx con su codigo, y la recuperacion
-    tras un fallo. Los 2xx consecutivos al ultimo se silencian para evitar
+    tras un fallo. Los 2xx consecutivos al último se silencian para evitar
     saturar los logs con el sondeo periodico de Docker.
 
     Returns:

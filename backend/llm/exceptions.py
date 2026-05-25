@@ -22,29 +22,29 @@ class EmptyLlmAnswerError(Exception):
     """Ollama ha devuelto una respuesta vacía."""
 
 
-async def llm_unavailable_handler(request: Request, exc: LlmUnavailableError):
+def llm_unavailable_handler(_request: Request, _exc: Exception):
     return JSONResponse(status_code=502, content={"detail": "Servicio LLM no disponible."})
 
 
-async def llm_timeout_handler(request: Request, exc: LlmTimeoutError):
+def llm_timeout_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=504,
         content={"detail": "El LLM tardó demasiado en responder."},
     )
 
 
-async def llm_generation_handler(request: Request, exc: LlmGenerationError):
+def llm_generation_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno al generar la respuesta con el LLM."},
     )
 
 
-async def invalid_llm_response_handler(request: Request, exc: InvalidLlmResponseError):
+def invalid_llm_response_handler(_request: Request, _exc: Exception):
     return JSONResponse(status_code=502, content={"detail": "Respuesta no válida del LLM."})
 
 
-async def empty_llm_answer_handler(request: Request, exc: EmptyLlmAnswerError):
+def empty_llm_answer_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "El LLM no devolvió una respuesta válida."},

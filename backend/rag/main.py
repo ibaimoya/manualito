@@ -19,7 +19,7 @@ install_health_log_filter()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """
     Prepara el servicio RAG antes de aceptar tráfico.
 
@@ -30,8 +30,8 @@ async def lifespan(app: FastAPI):
     concurrentes que se ejecuten en el thread pool tras un ``asyncio.to_thread``.
     """
     logger.info("Pre-cargando modelo de embeddings y cliente ChromaDB...")
-    await asyncio.to_thread(get_embedding_service()._load_model)
-    await asyncio.to_thread(get_repository()._get_collection)
+    await asyncio.to_thread(get_embedding_service().warm_up)
+    await asyncio.to_thread(get_repository().warm_up)
     logger.info("Servicio RAG listo.")
     yield
 

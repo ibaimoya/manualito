@@ -13,8 +13,8 @@ COPY --chown=root:root --chmod=0644 pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build --only-group rag
 
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/common/ /app/common/
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/rag/ /app/rag/
+COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
+COPY --chown=root:root --chmod=0755 backend/rag/ /app/rag/
 
 RUN mkdir -p /home/appuser/.cache/huggingface \
     && chown -R appuser:appgroup /home/appuser/.cache/huggingface \

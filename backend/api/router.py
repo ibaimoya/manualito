@@ -30,7 +30,10 @@ async def health():
 async def ocr_endpoint(
     image: Annotated[UploadFile, File()],
     client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
-    format: Annotated[str, Query(pattern="^(json|text)$")] = "json",
+    response_format: Annotated[
+        str,
+        Query(alias="format", pattern="^(json|text)$"),
+    ] = "json",
 ):
     """
     Extrae el texto de una imagen mediante OCR.
@@ -39,7 +42,7 @@ async def ocr_endpoint(
     y devuelve el resultado al cliente en el formato solicitado.
     """
     lines = await extract_ocr_lines(image=image, client=client)
-    if format == "text":
+    if response_format == "text":
         return PlainTextResponse("\n".join(line["text"] for line in lines))
 
     return JSONResponse(content={"lines": lines})

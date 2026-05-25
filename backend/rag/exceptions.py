@@ -22,32 +22,32 @@ class RagRetrievalError(Exception):
     """La recuperación de contexto ha fallado de forma inesperada."""
 
 
-async def empty_document_handler(request: Request, exc: EmptyDocumentError):
+def empty_document_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=422,
         content={"detail": "El documento no contiene texto indexable."},
     )
 
 
-async def chunk_generation_handler(request: Request, exc: ChunkGenerationError):
+def chunk_generation_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=422,
         content={"detail": "No se pudieron generar chunks del documento."},
     )
 
 
-async def manual_not_found_handler(request: Request, exc: ManualNotFoundError):
+def manual_not_found_handler(_request: Request, _exc: Exception):
     return JSONResponse(status_code=404, content={"detail": "Manual no encontrado."})
 
 
-async def rag_indexing_handler(request: Request, exc: RagIndexingError):
+def rag_indexing_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno al indexar el manual."},
     )
 
 
-async def rag_retrieval_handler(request: Request, exc: RagRetrievalError):
+def rag_retrieval_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno al recuperar el contexto del manual."},

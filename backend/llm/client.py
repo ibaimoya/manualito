@@ -77,7 +77,7 @@ async def warn_if_model_missing(client: httpx.AsyncClient) -> None:
             )
         else:
             logger.info("Modelo '%s' disponible en Ollama.", config.OLLAMA_MODEL)
-    except Exception:
+    except (httpx.HTTPError, ValueError):
         logger.warning(
             "No se pudo verificar la disponibilidad del modelo en %s al arrancar.",
             config.OLLAMA_URL,

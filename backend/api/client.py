@@ -64,7 +64,7 @@ async def request_llm_unload_if_idle(client: httpx.AsyncClient) -> None:
         )
         response.raise_for_status()
         logger.info("Liberación LLM antes de OCR solicitada: %s", response.json())
-    except Exception:
+    except (httpx.HTTPError, ValueError):
         logger.warning(
             "No se pudo solicitar la liberación del LLM antes de OCR.",
             exc_info=True,

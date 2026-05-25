@@ -207,7 +207,7 @@ def test_unload_if_idle_rechecks_activity_before_unloading():
     ps_response.raise_for_status.return_value = None
     ps_response.json.return_value = {"models": [{"model": config.OLLAMA_MODEL}]}
 
-    async def get_side_effect(*args, **kwargs):
+    async def get_side_effect(*_args, **_kwargs):
         await llm_service.mark_generation_started()
         return ps_response
 
@@ -302,7 +302,7 @@ def test_generate_tracks_active_generation_while_ollama_runs(client, override_ht
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"response": "Respuesta final"}
 
-    async def post_side_effect(*args, **kwargs):
+    async def post_side_effect(*_args, **_kwargs):
         assert await llm_service.get_active_generations() == 1
         return mock_response
 

@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import anyio
 import pytest
@@ -117,8 +117,8 @@ def test_extract_image_text_raises_domain_error_on_ocr_failure(valid_jpeg_bytes)
     class _Upload:
         filename = "manual.jpg"
 
-        async def read(self):
-            return valid_jpeg_bytes
+    upload = _Upload()
+    upload.read = AsyncMock(return_value=valid_jpeg_bytes)
 
     def _capture_and_fail(path):
         captured.append(path)
@@ -128,7 +128,8 @@ def test_extract_image_text_raises_domain_error_on_ocr_failure(valid_jpeg_bytes)
         patch("ocr.service.extract_text", side_effect=_capture_and_fail),
         pytest.raises(OcrProcessingError),
     ):
-        anyio.run(extract_image_text, _Upload())
+        anyio.run(extract_image_text, upload)
 
+    upload.read.assert_awaited_once_with()
     assert len(captured) == 1
     assert not os.path.exists(captured[0])

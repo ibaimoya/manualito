@@ -1,4 +1,5 @@
 import asyncio
+import math
 
 import pytest
 
@@ -49,7 +50,14 @@ def test_client_options_are_forwarded_to_httpx():
     async def scenario():
         await state.start()
         try:
-            assert state.get_client().timeout.connect == 1.5
+            connect_timeout = state.get_client().timeout.connect
+            assert isinstance(connect_timeout, int | float)
+            assert math.isclose(
+                connect_timeout,
+                1.5,
+                rel_tol=0.0,
+                abs_tol=1e-12,
+            )
         finally:
             await state.close()
 

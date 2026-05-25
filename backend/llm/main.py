@@ -13,7 +13,7 @@ install_health_log_filter()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """
     Arranca y cierra recursos compartidos del servicio LLM.
 

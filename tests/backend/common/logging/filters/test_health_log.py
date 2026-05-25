@@ -99,16 +99,16 @@ def test_malformed_status_is_not_filtered(status):
 #   /healthz           → prefijo que empieza por /health pero no es él.
 #   /health/detailed   → sub-path bajo /health.
 #   /api/health        → /health como sufijo de otra ruta.
-#   POST /health       → método no usado por Docker HEALTHCHECK.
+#   POST /health       → petición no usada por Docker HEALTHCHECK.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("method,path", [
     ("GET",  "/healthz"),
     ("GET",  "/health/detailed"),
     ("GET",  "/api/health"),
     ("POST", "/health"),
-], ids=["healthz", "subpath", "prefijo_api", "metodo_post"])
+], ids=["healthz", "subpath", "prefijo_api", "post_request"])
 def test_lookalike_requests_are_not_filtered(method, path):
-    """Rutas o métodos parecidos a los del sondeo no se suprimen nunca."""
+    """Rutas o peticiones parecidas a las del sondeo no se suprimen nunca."""
     filter_fn = make_health_log_filter()
     r1 = _make_record(_access_line(method, path, "HTTP/1.1", 200))
     r2 = _make_record(_access_line(method, path, "HTTP/1.1", 200))

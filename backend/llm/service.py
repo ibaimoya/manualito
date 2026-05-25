@@ -80,7 +80,7 @@ async def unload_if_idle(client: httpx.AsyncClient) -> dict:
             }
 
         await ollama.unload_model()
-    except Exception:
+    except (httpx.HTTPError, ValueError):
         logger.warning(
             "No se pudo descargar el modelo '%s' antes del OCR.",
             config.OLLAMA_MODEL,

@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -32,7 +34,7 @@ class InternalServiceError(Exception):
         self.detail = detail
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+def validation_exception_handler(_request: Request, _exc: Exception):
     """
     Normaliza las respuestas 422 del gateway.
 
@@ -40,8 +42,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     rastro de las peticiones inválidas queda en el access log de Uvicorn.
 
     Args:
-        request (Request): Petición original.
-        exc (RequestValidationError): Error de validación emitido por FastAPI.
+        _request (Request): Petición original.
+        _exc (Exception): Error de validación emitido por FastAPI.
 
     Returns:
         JSONResponse: Mensaje uniforme de parámetros inválidos.
@@ -49,36 +51,39 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content={"detail": "Parámetros inválidos."})
 
 
-async def image_too_large_handler(request: Request, exc: ImageTooLargeError):
+def image_too_large_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=413,
         content={"detail": "La imagen no puede superar 20 MB."},
     )
 
 
-async def invalid_image_handler(request: Request, exc: InvalidImageError):
+def invalid_image_handler(_request: Request, _exc: Exception):
     return JSONResponse(
         status_code=415,
         content={"detail": "El archivo no es una imagen válida."},
     )
 
 
-async def internal_service_unavailable_handler(
-    request: Request,
-    exc: InternalServiceUnavailableError,
+def internal_service_unavailable_handler(
+    _request: Request,
+    exc: Exception,
 ):
-    return JSONResponse(status_code=502, content={"detail": exc.detail})
+    error = cast(InternalServiceUnavailableError, exc)
+    return JSONResponse(status_code=502, content={"detail": error.detail})
 
 
-async def internal_resource_not_found_handler(
-    request: Request,
-    exc: InternalResourceNotFoundError,
+def internal_resource_not_found_handler(
+    _request: Request,
+    exc: Exception,
 ):
-    return JSONResponse(status_code=404, content={"detail": exc.detail})
+    error = cast(InternalResourceNotFoundError, exc)
+    return JSONResponse(status_code=404, content={"detail": error.detail})
 
 
-async def internal_service_error_handler(request: Request, exc: InternalServiceError):
-    return JSONResponse(status_code=500, content={"detail": exc.detail})
+def internal_service_error_handler(_request: Request, exc: Exception):
+    error = cast(InternalServiceError, exc)
+    return JSONResponse(status_code=500, content={"detail": error.detail})
 
 
 def register_exception_handlers(app: FastAPI) -> None:

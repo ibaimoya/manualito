@@ -12,7 +12,7 @@ install_health_log_filter()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Crea el ``httpx.AsyncClient`` compartido y lo cierra al parar el servicio."""
     await dependencies.start_http_client()
     try:

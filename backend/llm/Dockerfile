@@ -11,8 +11,8 @@ COPY --chown=root:root --chmod=0644 pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build --only-group llm
 
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/common/ /app/common/
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/llm/ /app/llm/
+COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
+COPY --chown=root:root --chmod=0755 backend/llm/ /app/llm/
 
 RUN find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
     && find /app -path /app/.venv -prune -o -type f -exec chmod 0644 {} + \

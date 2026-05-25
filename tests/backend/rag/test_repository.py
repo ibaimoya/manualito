@@ -173,18 +173,16 @@ def test_manual_exists_consulta_la_coleccion(ids, expected):
 #   Clase 7: La colección aún no existe — se crea.
 #   Clase 8: El cliente aún no existe — se construye desde la URL.
 # ---------------------------------------------------------------------------
-def test_get_collection_creates_and_caches_collection():
-    """La colección se crea una sola vez con el espacio de similitud esperado."""
+def test_warm_up_creates_and_caches_collection():
+    """El warmup crea la colección una sola vez con el espacio esperado."""
     client = MagicMock()
     client.get_or_create_collection.return_value = "coleccion"
     repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._client = client
 
-    first = repo._get_collection()
-    second = repo._get_collection()
+    repo.warm_up()
+    repo.warm_up()
 
-    assert first == "coleccion"
-    assert second == "coleccion"
     client.get_or_create_collection.assert_called_once_with(
         name="manuales",
         metadata={"hnsw:space": "cosine"},

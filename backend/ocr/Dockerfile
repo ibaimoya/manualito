@@ -55,8 +55,8 @@ USER root
 LABEL org.opencontainers.image.title="manualito-ocr" \
       org.opencontainers.image.description="Servicio OCR de Manualito con soporte para Tesseract y PaddleOCR."
 
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/common/ /app/common/
-COPY --chown=root:root --chmod=u=rwX,go=rX backend/ocr/ /app/ocr/
+COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
+COPY --chown=root:root --chmod=0755 backend/ocr/ /app/ocr/
 
 RUN mkdir -p /home/appuser/.paddlex \
     && chown -R appuser:appgroup /home/appuser/.paddlex \

@@ -54,11 +54,19 @@ def test_health(client):
 #   Clase 2: El presupuesto se agota y los últimos fragmentos se descartan.
 # ---------------------------------------------------------------------------
 def test_build_prompt_includes_context_and_faithfulness_rule():
-    """El prompt final conserva la pregunta y las reglas de respuesta fiel."""
+    """El prompt final conserva la pregunta, los fragmentos y las reglas de
+    respuesta fiel (priorizar contexto, no listar huecos, completar con
+    conocimiento general solo con marca explícita).
+    """
     prompt, included = prompt_builder.build_prompt("¿Cómo se gana?", ["Regla 1", "Regla 2"])
 
     assert included == 2
-    assert "No aparece en el manual." in prompt
+    # Reglas clave que NO deben perderse en futuras ediciones del prompt:
+    assert "CONTEXTO" in prompt
+    assert "NUNCA listes los puntos que el manual NO cubre" in prompt
+    assert "detalle habitual del juego, no especificado en el manual" in prompt
+    assert "prefiero no inventarlo" in prompt
+    # Contenido dinámico.
     assert "[Fragmento 1]" in prompt
     assert "Regla 2" in prompt
     assert "¿Cómo se gana?" in prompt

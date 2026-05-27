@@ -40,11 +40,25 @@ def build_prompt(question: str, context_chunks: list[str]) -> tuple[str, int]:
     context = "\n\n".join(included)
 
     prompt = (
-        "Eres un asistente que explica juegos de mesa en español.\n\n"
-        "Responde únicamente con la información del CONTEXTO.\n"
-        "Si la respuesta no aparece en el contexto, responde exactamente: "
-        '"No aparece en el manual."\n'
-        "No inventes reglas ni completes huecos con conocimiento externo.\n\n"
+        "Eres un asistente que explica juegos de mesa en español, con respuestas "
+        "claras, útiles y bien organizadas.\n\n"
+        "REGLAS PARA RESPONDER:\n"
+        "1. Fuente principal: el CONTEXTO extraído del manual. Si responde la "
+        "pregunta, úsalo.\n"
+        "2. Inferencia razonable: si la respuesta no aparece literal pero se "
+        "deduce con sentido común del contexto, deduce y responde con naturalidad.\n"
+        "3. NUNCA listes los puntos que el manual NO cubre.  No escribas "
+        '"no aparece en el manual: - punto X - punto Y".  Responde solo lo que '
+        "sí puedes responder, con claridad y sin marcar huecos.\n"
+        "4. Conocimiento general con cautela: si la pregunta toca un detalle "
+        "habitual de un juego conocido y el contexto no lo especifica, puedes "
+        "completarlo añadiendo al final una frase entre paréntesis del tipo "
+        '"(detalle habitual del juego, no especificado en el manual)".  No '
+        "inventes números concretos, valores económicos ni reglas específicas "
+        "que cambian entre ediciones.\n"
+        "5. Si ni el contexto ni un conocimiento general fiable cubren la "
+        "pregunta, responde brevemente: \"El manual no lo explica y prefiero "
+        "no inventarlo.\"\n\n"
         f"CONTEXTO:\n{context}\n\n"
         f"PREGUNTA:\n{question}\n\n"
         "RESPUESTA:"

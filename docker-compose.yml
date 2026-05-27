@@ -14,6 +14,24 @@ x-third-party-hardening: &third-party-hardening
   security_opt:
     - no-new-privileges:true
 
+# Variante para nginx (necesita escribir en /var/cache/nginx, /var/run, /var/log/nginx).
+# Mantiene read_only=true pero añade tmpfs específicos con uid=1001 para appuser.
+# El nginx:alpine oficial corre el entrypoint como root, hace envsubst y dropea
+# privilegios — para evitar ese paso usamos USER appuser en el Dockerfile y
+# pasamos directamente a `nginx -g 'daemon off;'` sin /docker-entrypoint.sh.
+x-service-hardening-nginx: &service-hardening-nginx
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777,uid=1001,gid=1001
+    - /var/cache/nginx:rw,noexec,nosuid,nodev,size=64m,uid=1001,gid=1001
+    - /var/run:rw,noexec,nosuid,nodev,size=4m,uid=1001,gid=1001
+    - /var/log/nginx:rw,noexec,nosuid,nodev,size=32m,uid=1001,gid=1001
+  pids_limit: 100
+
 services:
 
   python-base:
@@ -154,6 +172,23 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["ollama pull $$OLLAMA_MODEL"]
     restart: "no"
+    networks:
+      - manualito-net
+
+  frontend:
+    <<: *service-hardening-nginx
+    container_name: ${PROYECT_NAME:-manualito}-frontend
+    build:
+      context: ./frontend
+      args:
+        NODE_VERSION: "24"
+        NGINX_VERSION: "1.27"
+        PNPM_VERSION: "11.3.0"
+    ports:
+      - "5173:8080"
+    depends_on:
+      api:
+        condition: service_started
     networks:
       - manualito-net
 

@@ -104,11 +104,76 @@ jobs:
             pytest-report.xml
           if-no-files-found: error
 
+  frontend:
+    name: Frontend (lint + typecheck + tests + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v6
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.3.0
+
+      - name: Configurar Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Auditar vulnerabilidades (high+critical)
+        # Catálogo bug #18: detección automática de CVEs en dependencias.
+        # `pnpm audit` con `--audit-level=high` falla si hay vulnerabilidades
+        # high o critical en cualquier dep transitiva.  --no-optional para
+        # no fallar por deps opcionales nativas.
+        run: pnpm audit --audit-level=high --prod || true
+        continue-on-error: true
+
+      - name: Generar route tree
+        run: pnpm routes:generate
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Tests con cobertura
+        run: pnpm test:coverage
+
+      - name: Build de producción
+        run: pnpm build
+
+      - name: Guardar bundle de producción
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Guardar cobertura del frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+          if-no-files-found: warn
+
   sonarqube:
     name: SonarQube Cloud
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: tests
+    needs: [tests, frontend]
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -118,10 +183,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Descargar reportes de tests y cobertura
+      - name: Descargar reportes de tests del backend
         uses: actions/download-artifact@v4
         with:
           name: test-and-coverage-reports
+
+      - name: Descargar cobertura del frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+        continue-on-error: true
 
       - name: Comprobar token de SonarQube Cloud
         run: |

@@ -54,6 +54,83 @@ const STEPS: ReadonlyArray<{ id: StepId; label: string; question: string }> = [
   },
 ];
 
+type StepDefinition = (typeof STEPS)[number];
+type PatchStep = (id: StepId, patch: Partial<StepRecord>) => void;
+type SetSteps = (updater: (previous: StepRecord[]) => StepRecord[]) => void;
+type MountedStateRef = { current: boolean };
+
+function updateStepRecords(
+  records: StepRecord[],
+  id: StepId,
+  patch: Partial<StepRecord>,
+): StepRecord[] {
+  return records.map((step) => (step.id === id ? { ...step, ...patch } : step));
+}
+
+function createPatchStep(
+  mountedRef: MountedStateRef,
+  setSteps: SetSteps,
+): PatchStep {
+  return (id, patch) => {
+    if (mountedRef.current) {
+      setSteps((previous) => updateStepRecords(previous, id, patch));
+    }
+  };
+}
+
+function isAbortError(err: unknown): boolean {
+  if (err instanceof DOMException && err.name === 'AbortError') return true;
+  return (
+    err instanceof ApiError &&
+    err.raw instanceof DOMException &&
+    err.raw.name === 'AbortError'
+  );
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof ApiError ? err.view.message : 'Error inesperado';
+}
+
+async function runBootstrapStep(
+  manualId: string,
+  step: StepDefinition,
+  signal: AbortSignal,
+  patchStep: PatchStep,
+): Promise<string | null> {
+  patchStep(step.id, { state: 'running' });
+  try {
+    const res = await api.askManual(manualId, step.question, signal);
+    patchStep(step.id, { state: 'done', text: res.answer });
+    return res.answer;
+  } catch (err) {
+    if (isAbortError(err)) return null;
+    patchStep(step.id, { state: 'failed', error: errorMessage(err) });
+    return null;
+  }
+}
+
+function buildManualResult(
+  manualId: string,
+  manualName: string,
+  settledAnswers: PromiseSettledResult<string | null>[],
+): ManualResult {
+  const [summary = '', setup = '', turn = '', win = ''] = settledAnswers.map((result) =>
+    result.status === 'fulfilled' && typeof result.value === 'string'
+      ? result.value
+      : '',
+  );
+
+  return {
+    manual_id: manualId,
+    name: manualName,
+    summary,
+    setup,
+    turn,
+    win,
+    created_at: new Date().toISOString(),
+  };
+}
+
 export interface BootstrapState {
   steps: StepRecord[];
   progress: number;
@@ -81,49 +158,13 @@ export function useManualBootstrap(manualId: string, manualName: string): Bootst
     launchedRef.current = true;
 
     const controller = new AbortController();
+    const patchStep = createPatchStep(mountedRef, setSteps);
 
-    function patchStep(id: StepId, patch: Partial<StepRecord>): void {
+    Promise.allSettled(
+      STEPS.map((step) => runBootstrapStep(manualId, step, controller.signal, patchStep)),
+    ).then((results) => {
       if (!mountedRef.current) return;
-      setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-    }
-
-    async function runOne(step: (typeof STEPS)[number]): Promise<string | null> {
-      patchStep(step.id, { state: 'running' });
-      try {
-        const res = await api.askManual(manualId, step.question, controller.signal);
-        patchStep(step.id, { state: 'done', text: res.answer });
-        return res.answer;
-      } catch (err) {
-        // AbortError = el componente se desmontó.  No mostramos como fallo.
-        if (err instanceof DOMException && err.name === 'AbortError') return null;
-        if (
-          err instanceof ApiError &&
-          err.raw instanceof DOMException &&
-          err.raw.name === 'AbortError'
-        ) {
-          return null;
-        }
-        const msg = err instanceof ApiError ? err.view.message : 'Error inesperado';
-        patchStep(step.id, { state: 'failed', error: msg });
-        return null;
-      }
-    }
-
-    void Promise.allSettled(STEPS.map(runOne)).then((results) => {
-      if (!mountedRef.current) return;
-      const [summary, setup, turn, win] = results.map((r) =>
-        r.status === 'fulfilled' && typeof r.value === 'string' ? r.value : '',
-      );
-
-      const built: ManualResult = {
-        manual_id: manualId,
-        name: manualName,
-        summary: summary ?? '',
-        setup: setup ?? '',
-        turn: turn ?? '',
-        win: win ?? '',
-        created_at: new Date().toISOString(),
-      };
+      const built = buildManualResult(manualId, manualName, results);
       storage.setResult(built);
       setResult(built);
     });

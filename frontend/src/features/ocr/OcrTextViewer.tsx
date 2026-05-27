@@ -53,6 +53,14 @@ function confidenceTone(c: number): 'success' | 'warning' | 'error' {
   return 'error';
 }
 
+function stableLineKey(line: OcrLine): string {
+  let hash = Math.round(line.confidence * 1000);
+  for (const char of line.text) {
+    hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
 export function OcrTextViewer({
   lines,
   meta,
@@ -63,7 +71,7 @@ export function OcrTextViewer({
   onCreateManual,
   onClose,
   className,
-}: OcrTextViewerProps) {
+}: Readonly<OcrTextViewerProps>) {
   const [view, setView] = useState<OcrTextView>(defaultView);
   const [copied, setCopied] = useState(false);
   // El reset del estado "Copiado" se hace debounced para que clicks
@@ -146,7 +154,9 @@ export function OcrTextViewer({
           type="button"
           variant="primary"
           size="md"
-          onClick={() => void handleCopyAll()}
+          onClick={() => {
+            handleCopyAll().catch(() => undefined);
+          }}
           className="flex-1"
         >
           {copied ? <Check size={18} strokeWidth={2} /> : <Copy size={18} strokeWidth={2} />}
@@ -187,7 +197,7 @@ export function OcrTextViewer({
 
 /* ─── Vistas ─────────────────────────────────────────────────────────── */
 
-function PlainView({ text }: { text: string }) {
+function PlainView({ text }: Readonly<{ text: string }>) {
   // `pre` con `whiteSpace: pre-wrap` + selección habilitada para que el
   // usuario pueda copiar trozos puntuales con el ratón/long-press.
   return (
@@ -204,17 +214,22 @@ function PlainView({ text }: { text: string }) {
   );
 }
 
-function LinesView({ lines }: { lines: OcrLine[] }) {
+function LinesView({ lines }: Readonly<{ lines: OcrLine[] }>) {
   // Pre-cómputo de índices visibles saltando líneas en blanco para que
   // el numerador #001..#NNN refleje solo líneas con contenido.
   let visibleIdx = 0;
+  const seenKeys = new Map<string, number>();
   return (
     <div className="px-2 py-3" data-testid="ocr-lines-view">
-      {lines.map((line, i) => {
+      {lines.map((line) => {
+        const baseKey = stableLineKey(line);
+        const occurrence = seenKeys.get(baseKey) ?? 0;
+        seenKeys.set(baseKey, occurrence + 1);
+        const key = `${baseKey}-${occurrence}`;
         if (!line.text.trim()) {
           return (
             <div
-              key={`blank-${i}`}
+              key={key}
               aria-hidden="true"
               className="h-2"
             />
@@ -226,7 +241,7 @@ function LinesView({ lines }: { lines: OcrLine[] }) {
         const stagger = Math.min(visibleIdx, 16);
         return (
           <OcrLineRow
-            key={i}
+            key={key}
             number={visibleIdx}
             text={line.text}
             pct={pct}
@@ -239,13 +254,13 @@ function LinesView({ lines }: { lines: OcrLine[] }) {
   );
 }
 
-interface OcrLineRowProps {
+type OcrLineRowProps = Readonly<{
   number: number;
   text: string;
   pct: number;
   tone: 'success' | 'warning' | 'error';
   stagger: number;
-}
+}>;
 
 function OcrLineRow({ number, text, pct, tone, stagger }: OcrLineRowProps) {
   const [selected, setSelected] = useState(false);

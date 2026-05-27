@@ -101,6 +101,8 @@ body {
   font-family: var(--m-font-body);
   color: var(--m-text);
   background: var(--m-bg);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'ss01' on, 'cv11' on;
@@ -268,10 +270,4 @@ input[type='radio'] {
     animation: none !important;
     transform: none !important;
   }
-}
-
-/* PWA: el viewport-fit=cover deja safe area; respetala. */
-body {
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
-    env(safe-area-inset-left);
 }

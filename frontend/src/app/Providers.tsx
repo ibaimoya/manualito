@@ -5,7 +5,7 @@ import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from './theme';
 import { onStorageWriteFail } from '@/shared/lib/storage';
 
-type Props = { children: ReactNode };
+type Props = Readonly<{ children: ReactNode }>;
 
 /**
  * Crea un único QueryClient para toda la app.

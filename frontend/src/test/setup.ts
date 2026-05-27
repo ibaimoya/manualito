@@ -14,21 +14,27 @@ afterEach(() => {
 });
 
 // Fallback estándar para runtimes de test sin Web Crypto completa.
-if (typeof globalThis.crypto === 'undefined') {
+const testGlobal = globalThis as unknown as {
+  crypto?: Crypto;
+  window?: Window & typeof globalThis;
+};
+
+if (testGlobal.crypto === undefined) {
   Object.defineProperty(globalThis, 'crypto', {
     configurable: true,
     value: webcrypto,
   });
-} else if (typeof globalThis.crypto.randomUUID !== 'function') {
-  Object.defineProperty(globalThis.crypto, 'randomUUID', {
+} else if (testGlobal.crypto.randomUUID === undefined) {
+  Object.defineProperty(testGlobal.crypto, 'randomUUID', {
     configurable: true,
     value: randomUUID,
   });
 }
 
 // matchMedia → jsdom no la trae.
-if (typeof window !== 'undefined' && !window.matchMedia) {
-  Object.defineProperty(window, 'matchMedia', {
+const testWindow = testGlobal.window;
+if (testWindow !== undefined && testWindow.matchMedia === undefined) {
+  Object.defineProperty(testWindow, 'matchMedia', {
     writable: true,
     configurable: true,
     value: (q: string) => ({
@@ -50,13 +56,13 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 // Sobrescribimos incondicionalmente con no-op: silencia los warnings
 // sin afectar a la lógica de los tests (en un browser real, los métodos
 // sí mueven el scroll).
-if (typeof window !== 'undefined') {
-  Object.defineProperty(window, 'scrollTo', {
+if (testWindow !== undefined) {
+  Object.defineProperty(testWindow, 'scrollTo', {
     writable: true,
     configurable: true,
     value: () => undefined,
   });
-  Object.defineProperty(window, 'scrollBy', {
+  Object.defineProperty(testWindow, 'scrollBy', {
     writable: true,
     configurable: true,
     value: () => undefined,

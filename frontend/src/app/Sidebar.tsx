@@ -13,9 +13,9 @@ import { cn } from '@/shared/lib/cn';
  * — eso provocaría rerenders al redimensionar.  Se monta siempre y
  * Tailwind decide su visibilidad.
  */
-interface Props {
+type Props = Readonly<{
   pathname: string;
-}
+}>;
 
 const NAV_ITEMS: Array<{
   to: '/home' | '/history' | '/settings';

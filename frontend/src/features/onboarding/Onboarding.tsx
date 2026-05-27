@@ -17,17 +17,22 @@ import { cn } from '@/shared/lib/cn';
 import styles from './onboarding.module.css';
 
 const WORD = 'MANUALITO';
+const WORD_LETTERS = Array.from(WORD, (character, index) => ({
+  id: `${character}-${index}`,
+  character,
+  order: index,
+}));
 
 interface Slide {
   kind: 'hero' | 'step';
-  id?: 'foto' | 'procesa' | 'entiende';
+  id: 'hero' | 'foto' | 'procesa' | 'entiende';
   n?: number;
   title?: string;
   sub?: string;
 }
 
 const SLIDES: Slide[] = [
-  { kind: 'hero' },
+  { kind: 'hero', id: 'hero' },
   {
     kind: 'step',
     id: 'foto',
@@ -51,6 +56,40 @@ const SLIDES: Slide[] = [
   },
 ];
 
+const PAGE_LINE_WIDTHS = [
+  { id: 'manual-line-1', width: 88 },
+  { id: 'manual-line-2', width: 95 },
+  { id: 'manual-line-3', width: 70 },
+  { id: 'manual-line-4', width: 90 },
+  { id: 'manual-line-5', width: 60 },
+  { id: 'manual-line-6', width: 92 },
+  { id: 'manual-line-7', width: 80 },
+  { id: 'manual-line-8', width: 56 },
+] as const;
+
+const PAGE_CORNERS = [
+  { id: 'top-left', x: 0, y: 0 },
+  { id: 'top-right', x: 1, y: 0 },
+  { id: 'bottom-left', x: 0, y: 1 },
+  { id: 'bottom-right', x: 1, y: 1 },
+] as const;
+
+const THUMBNAILS = [
+  { id: 'thumb-1', number: 1 },
+  { id: 'thumb-2', number: 2 },
+  { id: 'thumb-3', number: 3 },
+] as const;
+
+const PIPELINE_TOKENS = [
+  { id: 'setup', label: 'Setup' },
+  { id: 'arrow-turn', label: '→' },
+  { id: 'turn', label: 'turno' },
+  { id: 'arrow-win', label: '→' },
+  { id: 'win', label: 'ganar' },
+  { id: 'arrow-points', label: '↦' },
+  { id: 'points', label: '10 PV' },
+] as const;
+
 export function Onboarding() {
   const [index, setIndex] = useState(0);
   const navigate = useNavigate();
@@ -72,9 +111,13 @@ export function Onboarding() {
     enteringRef.current = true;
     storage.markOnboardingSeen();
 
-    const navigateNow = () => void navigate({ to: '/home', replace: true });
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const docAny = document as Document & {
+    const navigateNow = () => {
+      navigate({ to: '/home', replace: true }).catch(() => undefined);
+    };
+    const reduced = globalThis.window
+      .matchMedia('(prefers-reduced-motion: reduce)')
+      .matches;
+    const docAny = globalThis.document as Document & {
       startViewTransition?: (cb: () => void) => {
         finished: Promise<void>;
       };
@@ -113,8 +156,8 @@ export function Onboarding() {
       else if (e.key === 'Enter') next();
       else if (e.key === 'Escape') skip();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    globalThis.window.addEventListener('keydown', onKey);
+    return () => globalThis.window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
@@ -153,7 +196,7 @@ export function Onboarding() {
               onClick={next}
               style={{ '--vt': index === 0 ? 'cta-pill' : 'none' } as CSSProperties}
             >
-              Empezar
+              <span>Empezar</span>
               <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                 →
               </span>
@@ -192,20 +235,14 @@ export function Onboarding() {
                       '--vt': isLast && active ? 'cta-pill' : 'none',
                     } as CSSProperties}
                   >
-                    {isLast ? 'Entrar a la app' : 'Siguiente'}
+                    <span>{isLast ? 'Entrar a la app' : 'Siguiente'}</span>
                     <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                       →
                     </span>
                   </button>
                 </div>
                 <div className={styles.stepArt}>
-                  {s.id === 'foto' ? (
-                    <StepFoto active={active} />
-                  ) : s.id === 'procesa' ? (
-                    <StepProcesa active={active} />
-                  ) : (
-                    <StepEntiende active={active} />
-                  )}
+                  <StepArt id={s.id} active={active} />
                 </div>
               </div>
             </section>
@@ -214,9 +251,9 @@ export function Onboarding() {
       </div>
 
       <div className={styles.pager} role="tablist" aria-label="Pasos del onboarding">
-        {SLIDES.map((_, k) => (
+        {SLIDES.map((slide, k) => (
           <button
-            key={k}
+            key={slide.id}
             type="button"
             role="tab"
             aria-selected={index === k}
@@ -232,16 +269,22 @@ export function Onboarding() {
   );
 }
 
-function HeroWordmark({ playing }: { playing: boolean }) {
+function StepArt({ id, active }: Readonly<{ id: Slide['id']; active: boolean }>) {
+  if (id === 'foto') return <StepFoto active={active} />;
+  if (id === 'procesa') return <StepProcesa active={active} />;
+  return <StepEntiende />;
+}
+
+function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
   return (
     <h1 aria-label="Manualito" className={styles.heroWord}>
-      {WORD.split('').map((ch, i) => (
-        <span key={i} className={styles.letterMask}>
+      {WORD_LETTERS.map(({ id, character, order }) => (
+        <span key={id} className={styles.letterMask}>
           <span
             className={cn(styles.letter, playing && styles.letterIn)}
-            style={{ '--i': i } as CSSProperties}
+            style={{ '--i': order } as CSSProperties}
           >
-            {ch}
+            {character}
           </span>
         </span>
       ))}
@@ -250,7 +293,7 @@ function HeroWordmark({ playing }: { playing: boolean }) {
 }
 
 /* — Slide 1: Foto — viewfinder con página detectada — */
-function StepFoto({ active }: { active: boolean }) {
+function StepFoto({ active }: Readonly<{ active: boolean }>) {
   return (
     <div className={styles.phone} aria-hidden="true">
       <div
@@ -280,26 +323,21 @@ function StepFoto({ active }: { active: boolean }) {
             3 · El turno
           </div>
           <div style={{ height: 6 }} />
-          {[88, 95, 70, 90, 60, 92, 80, 56].map((w, i) => (
+          {PAGE_LINE_WIDTHS.map(({ id, width }) => (
             <div
-              key={i}
+              key={id}
               style={{
                 height: 4,
-                width: `${w}%`,
+                width: `${width}%`,
                 background: 'rgba(31,22,17,0.55)',
                 borderRadius: 1.5,
                 marginBottom: 4,
               }}
             />
           ))}
-          {[
-            [0, 0],
-            [1, 0],
-            [0, 1],
-            [1, 1],
-          ].map(([x, y], i) => (
+          {PAGE_CORNERS.map(({ id, x, y }) => (
             <span
-              key={i}
+              key={id}
               style={{
                 position: 'absolute',
                 width: 12,
@@ -325,19 +363,19 @@ function StepFoto({ active }: { active: boolean }) {
               background: 'var(--m-success)',
             }}
           />
-          Página detectada
+          <span>Página detectada</span>
         </div>
       </div>
 
       <div className={styles.thumbs}>
         {active &&
-          [1, 2, 3].map((n) => (
+          THUMBNAILS.map(({ id, number }) => (
             <div
-              key={n}
+              key={id}
               className={styles.thumb}
-              style={{ '--d': `${n * 200}ms` } as CSSProperties}
+              style={{ '--d': `${number * 200}ms` } as CSSProperties}
             >
-              <span className={styles.thumbNum}>{n}</span>
+              <span className={styles.thumbNum}>{number}</span>
             </div>
           ))}
       </div>
@@ -346,7 +384,7 @@ function StepFoto({ active }: { active: boolean }) {
 }
 
 /* — Slide 2: Procesa — pipeline OCR→RAG→LLM — */
-function StepProcesa({ active }: { active: boolean }) {
+function StepProcesa({ active }: Readonly<{ active: boolean }>) {
   const nodes: Array<{ label: string; hint: string; icon: ReactNode }> = [
     {
       label: 'OCR',
@@ -403,13 +441,13 @@ function StepProcesa({ active }: { active: boolean }) {
       </div>
       <div className={styles.tokens} aria-hidden="true">
         {active &&
-          ['Setup', '→', 'turno', '→', 'ganar', '↦', '10 PV'].map((t, i) => (
+          PIPELINE_TOKENS.map(({ id, label }, i) => (
             <span
-              key={i}
+              key={id}
               className={styles.token}
               style={{ '--d': `${600 + i * 90}ms` } as CSSProperties}
             >
-              {t}
+              {label}
             </span>
           ))}
       </div>
@@ -418,10 +456,7 @@ function StepProcesa({ active }: { active: boolean }) {
 }
 
 /* — Slide 3: Entiende — preview de accordions — */
-function StepEntiende({ active }: { active: boolean }) {
-  // active no se usa visualmente aquí (sin animación específica), pero
-  // lo aceptamos para uniformidad con los otros componentes Step.
-  void active;
+function StepEntiende() {
   return (
     <div className={styles.cardStack}>
       <div className={styles.summary}>

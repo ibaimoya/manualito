@@ -85,7 +85,6 @@ function RootComponent() {
 function RouteLoadingFallback() {
   return (
     <div
-      role="status"
       aria-live="polite"
       aria-label="Cargando contenido"
       className="grid min-h-[50vh] place-items-center"
@@ -121,7 +120,7 @@ function NotFoundComponent() {
   );
 }
 
-function BottomNav({ pathname }: { pathname: string }) {
+function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
   return (
     <nav
       // BottomNav solo se monta cuando NO es desktop (ver RootComponent).
@@ -158,12 +157,12 @@ function NavItem({
   pathname,
   icon,
   children,
-}: {
+}: Readonly<{
   to: '/home' | '/history' | '/settings';
   pathname: string;
   icon: ReactNode;
   children: string;
-}) {
+}>) {
   const active = pathname === to;
   return (
     <li>

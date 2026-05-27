@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -30,13 +31,22 @@ const STORAGE_KEY = 'manualito.settings';
 const PERSIST_DEBOUNCE_MS = 200;
 
 type Persisted = { mode: ThemeMode; density: Density; accent: AccentVariant };
+type BrowserRuntime = {
+  document?: Document;
+  window?: Window;
+};
 
 const DEFAULT_PERSISTED: Persisted = { mode: 'auto', density: 'comfy', accent: 'amber' };
 
+function getBrowserRuntime(): BrowserRuntime {
+  return globalThis as unknown as BrowserRuntime;
+}
+
 function loadFromStorage(): Persisted {
-  if (typeof window === 'undefined') return DEFAULT_PERSISTED;
+  const runtimeWindow = getBrowserRuntime().window;
+  if (runtimeWindow === undefined) return DEFAULT_PERSISTED;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = runtimeWindow.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PERSISTED;
     const parsed = JSON.parse(raw) as Partial<Persisted>;
     return {
@@ -50,9 +60,10 @@ function loadFromStorage(): Persisted {
 }
 
 function rawPersist(state: Persisted): void {
-  if (typeof window === 'undefined') return;
+  const runtimeWindow = getBrowserRuntime().window;
+  if (runtimeWindow === undefined) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    runtimeWindow.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     /* quota / privacidad — el listener global de storage avisa al usuario */
   }
@@ -63,9 +74,10 @@ function rawPersist(state: Persisted): void {
  * `mode: 'auto'` consulta `prefers-color-scheme` cada vez que se llama.
  */
 function applyToHtml(state: Persisted): void {
-  if (typeof document === 'undefined') return;
-  const root = document.documentElement;
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
+  if (runtimeDocument === undefined || runtimeWindow === undefined) return;
+  const root = runtimeDocument.documentElement;
+  const prefersDark = runtimeWindow.matchMedia('(prefers-color-scheme: dark)').matches;
   const dark = state.mode === 'dark' || (state.mode === 'auto' && prefersDark);
 
   root.classList.toggle('theme-dark', dark);
@@ -86,9 +98,10 @@ function applyToHtml(state: Persisted): void {
  * limpiamente y empieza la nueva.  Sin flicker visual.
  */
 function applyWithViewTransition(state: Persisted): void {
-  if (typeof document === 'undefined') return;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const docAny = document as Document & {
+  const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
+  if (runtimeDocument === undefined || runtimeWindow === undefined) return;
+  const reduced = runtimeWindow.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const docAny = runtimeDocument as Document & {
     startViewTransition?: (cb: () => void) => unknown;
   };
   if (reduced || typeof docAny.startViewTransition !== 'function') {
@@ -98,7 +111,7 @@ function applyWithViewTransition(state: Persisted): void {
   docAny.startViewTransition(() => flushSync(() => applyToHtml(state)));
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, setState] = useState<Persisted>(() => loadFromStorage());
 
   // `useTransition` marca los setState como "no urgentes": si llega otro
@@ -110,11 +123,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // queremos View Transition (no hay "from" estado anterior).
   const mountedRef = useRef(false);
   useEffect(() => {
-    if (!mountedRef.current) {
+    if (mountedRef.current) {
+      applyWithViewTransition(state);
+    } else {
       applyToHtml(state);
       mountedRef.current = true;
-    } else {
-      applyWithViewTransition(state);
     }
   }, [state]);
 
@@ -130,8 +143,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // MODO cambia, no cuando cambian density/accent.  Sin esto, cada toggle
   // de density remontaba el listener inútilmente.
   useEffect(() => {
-    if (state.mode !== 'auto') return;
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const runtimeWindow = getBrowserRuntime().window;
+    if (state.mode !== 'auto' || runtimeWindow === undefined) return;
+    const media = runtimeWindow.matchMedia('(prefers-color-scheme: dark)');
     const onChange = () => applyToHtml(state);
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
@@ -164,12 +178,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const value: ThemeState = {
-    ...state,
-    setMode,
-    setDensity,
-    setAccent,
-  };
+  const value: ThemeState = useMemo(
+    () => ({
+      ...state,
+      setMode,
+      setDensity,
+      setAccent,
+    }),
+    [state, setMode, setDensity, setAccent],
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

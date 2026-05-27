@@ -145,8 +145,9 @@ export function mapApiError(error: unknown): ApiErrorView {
     return NETWORK_ERROR_VIEW;
   }
   if (typeof error === 'object' && error !== null) {
-    if ('status' in error && typeof (error as { status: unknown }).status === 'number') {
-      return mapHttpStatus((error as { status: number }).status);
+    const status = 'status' in error ? error.status : undefined;
+    if (typeof status === 'number') {
+      return mapHttpStatus(status);
     }
     if ('response' in error) {
       const res = (error as { response?: { status?: number } }).response;

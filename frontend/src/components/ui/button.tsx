@@ -142,7 +142,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
  * lo toca.  Implementado con clonación rápida sin map para evitar
  * remontar elementos hijos.
  */
-function StripFirstIcon({ children }: { children: ReactNode }) {
+function StripFirstIcon({ children }: Readonly<{ children: ReactNode }>) {
   // En el 99% de los casos `children` es un array de [icono, texto].
   // Si no es array, devolvemos tal cual.
   if (!Array.isArray(children)) {

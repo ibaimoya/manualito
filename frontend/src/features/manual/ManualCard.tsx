@@ -5,14 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { type ManualRecord } from '@/shared/lib/storage';
 import { cn } from '@/shared/lib/cn';
 
-interface Props {
+type Props = Readonly<{
   manual: ManualRecord;
   /** Texto compacto (relativo en Home, fecha completa en History). */
   meta?: string;
   /** Badge a la derecha. */
   badge?: string;
   className?: string;
-}
+}>;
 
 /**
  * Card de manual reutilizable.  Click → navega a su Result.

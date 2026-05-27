@@ -1,5 +1,15 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
+function getRuntimeWindow(): Window | undefined {
+  return (globalThis as unknown as { window?: Window }).window;
+}
+
+function readRuntimeMediaQuery(query: string): boolean {
+  const runtimeWindow = getRuntimeWindow();
+  if (runtimeWindow === undefined) return false;
+  return runtimeWindow.matchMedia(query).matches;
+}
+
 /**
  * Hook para suscribirse a una media query — wraps `window.matchMedia`.
  *
@@ -23,8 +33,9 @@ export function useMediaQuery(query: string): boolean {
   // glitches al hidratar y para que el valor se lea siempre de la fuente
   // canónica (MediaQueryList).  Patrón canónico React 18+.
   const subscribe = (onChange: () => void): (() => void) => {
-    if (typeof window === 'undefined') return () => undefined;
-    const mql = window.matchMedia(query);
+    const runtimeWindow = getRuntimeWindow();
+    if (runtimeWindow === undefined) return () => undefined;
+    const mql = runtimeWindow.matchMedia(query);
     // addEventListener('change', …) es el API moderno; addListener está
     // deprecado pero MDN avisa de que Safari < 14 solo soporta el viejo.
     if (typeof mql.addEventListener === 'function') {
@@ -37,10 +48,7 @@ export function useMediaQuery(query: string): boolean {
     return () => legacy.removeListener(onChange);
   };
 
-  const getSnapshot = (): boolean => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(query).matches;
-  };
+  const getSnapshot = (): boolean => readMediaSnapshot(query);
 
   // En SSR siempre `false`.  En cliente, `getSnapshot()`.
   const getServerSnapshot = (): boolean => false;
@@ -89,8 +97,7 @@ export function useIsStandalonePWA(): boolean {
  * que necesitan saber el snapshot sin hooks (jest-axe, render statiquc).
  */
 export function readMediaSnapshot(query: string): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia(query).matches;
+  return readRuntimeMediaQuery(query);
 }
 
 /**
@@ -101,8 +108,9 @@ export function readMediaSnapshot(query: string): boolean {
 export function useMediaQueryLegacy(query: string): boolean {
   const [matches, setMatches] = useState(() => readMediaSnapshot(query));
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const mql = window.matchMedia(query);
+    const runtimeWindow = getRuntimeWindow();
+    if (runtimeWindow === undefined) return undefined;
+    const mql = runtimeWindow.matchMedia(query);
     const onChange = () => setMatches(mql.matches);
     mql.addEventListener('change', onChange);
     setMatches(mql.matches); // resync por si cambió entre snapshot y mount

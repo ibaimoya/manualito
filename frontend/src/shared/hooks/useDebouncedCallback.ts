@@ -33,14 +33,14 @@ export function useDebouncedCallback<TArgs extends unknown[]>(
   const latestRef = useRef(fn);
   latestRef.current = fn;
 
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
 
   // Limpieza al desmontar: si hay un timer pendiente, se cancela para
   // que no dispare callbacks sobre componentes desmontados.
   useEffect(
     () => () => {
       if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
+        globalThis.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     },
@@ -50,9 +50,9 @@ export function useDebouncedCallback<TArgs extends unknown[]>(
   return useCallback(
     (...args: TArgs) => {
       if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
+        globalThis.clearTimeout(timerRef.current);
       }
-      timerRef.current = window.setTimeout(() => {
+      timerRef.current = globalThis.setTimeout(() => {
         latestRef.current(...args);
         timerRef.current = null;
       }, delayMs);
@@ -76,13 +76,13 @@ export function useDebouncedCallbackWithFlush<TArgs extends unknown[]>(
   const latestRef = useRef(fn);
   latestRef.current = fn;
 
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const pendingArgsRef = useRef<TArgs | null>(null);
 
   useEffect(
     () => () => {
       if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
+        globalThis.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     },
@@ -91,7 +91,7 @@ export function useDebouncedCallbackWithFlush<TArgs extends unknown[]>(
 
   const flush = useCallback(() => {
     if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
+      globalThis.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
     if (pendingArgsRef.current) {
@@ -104,9 +104,9 @@ export function useDebouncedCallbackWithFlush<TArgs extends unknown[]>(
     (...args: TArgs) => {
       pendingArgsRef.current = args;
       if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
+        globalThis.clearTimeout(timerRef.current);
       }
-      timerRef.current = window.setTimeout(() => {
+      timerRef.current = globalThis.setTimeout(() => {
         if (pendingArgsRef.current) {
           latestRef.current(...pendingArgsRef.current);
           pendingArgsRef.current = null;

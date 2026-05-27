@@ -47,7 +47,7 @@ export function SegmentedControl<T extends string>({
   options,
   ariaLabel,
   className,
-}: SegmentedControlProps<T>) {
+}: Readonly<SegmentedControlProps<T>>) {
   return (
     <RadioGroupPrimitive.Root
       value={value}

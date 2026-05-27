@@ -36,5 +36,5 @@
     "types": ["vite/client", "vite-plugin-pwa/client"]
   },
   "include": ["src", "src/**/*.tsx", "src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "node_modules", "dist"]
+  "exclude": ["src/test/**", "src/**/*.test.ts", "src/**/*.test.tsx", "node_modules", "dist"]
 }

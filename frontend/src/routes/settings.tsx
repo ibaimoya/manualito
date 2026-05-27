@@ -21,6 +21,11 @@ function SettingsScreen() {
   // Para indicar al usuario qué tema está REALMENTE viendo cuando el
   // modo es 'auto' (sigue el SO).  Catálogo bug #37.
   const systemPrefersDark = useDarkMode();
+  const currentSystemTheme = systemPrefersDark ? 'oscuro' : 'claro';
+  const modeHint =
+    theme.mode === 'auto'
+      ? `Sigue el sistema (actualmente: ${currentSystemTheme})`
+      : undefined;
 
   function wipeAll(): void {
     storage.wipeAll();
@@ -38,14 +43,7 @@ function SettingsScreen() {
       </header>
 
       <Group title="Apariencia">
-        <Row
-          label="Modo"
-          hint={
-            theme.mode === 'auto'
-              ? `Sigue el sistema (actualmente: ${systemPrefersDark ? 'oscuro' : 'claro'})`
-              : undefined
-          }
-        >
+        <Row label="Modo" hint={modeHint}>
           <SegmentedControl<ThemeMode>
             value={theme.mode}
             onChange={theme.setMode}
@@ -145,7 +143,7 @@ function SettingsScreen() {
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+function Group({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <section aria-label={title}>
       <h2 className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-3">
@@ -160,11 +158,11 @@ function Row({
   label,
   hint,
   children,
-}: {
+}: Readonly<{
   label: string;
   hint?: string;
   children: ReactNode;
-}) {
+}>) {
   return (
     <div className="flex items-center gap-3 p-4">
       <div className="flex-1">
@@ -180,11 +178,11 @@ function Badge({
   children,
   role,
   ariaLabel,
-}: {
+}: Readonly<{
   children: ReactNode;
   role?: string;
   ariaLabel?: string;
-}) {
+}>) {
   return (
     <span
       role={role}

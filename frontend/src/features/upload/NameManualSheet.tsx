@@ -7,12 +7,12 @@ import {
   type UploadSource,
 } from './NameManualForm';
 
-interface Props {
+type Props = Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   file: File | null;
   source: UploadSource;
-}
+}>;
 
 /**
  * Wrapper responsive del formulario "Ponle nombre al manual":
@@ -34,7 +34,7 @@ export function NameManualSheet({ open, onOpenChange, file, source }: Props) {
   const title = 'Ponle nombre al manual';
 
   const form = (
-    <NameManualForm file={file} source={source} onClose={() => onOpenChange(false)} />
+    <NameManualForm file={file} onClose={() => onOpenChange(false)} />
   );
 
   if (isDesktop) {

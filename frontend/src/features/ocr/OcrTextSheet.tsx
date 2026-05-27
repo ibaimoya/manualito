@@ -5,12 +5,12 @@ import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
 import { OcrTextViewer } from './OcrTextViewer';
 import type { OcrLine } from '@/shared/lib/storage';
 
-interface Props {
+type Props = Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lines: OcrLine[];
   meta?: { ocrDurationMs?: number };
-}
+}>;
 
 const TITLE = 'Texto original del manual';
 const SUBTITLE = 'Lo que ha leído el OCR de las páginas que subiste';
@@ -60,7 +60,7 @@ export function OcrTextSheet({ open, onOpenChange, lines, meta }: Props) {
         // Dialog ancho y alto para que la lectura de texto OCR (a veces
         // 100+ líneas) sea cómoda en desktop sin scroll inmediato.
         //   - `w-[92vw]` sobreescribe el `w-[95vw]` default y permite
-        //     que el dialog ocupe casi todo el viewport en pantallas
+        //     que el dialog ocupe casi el viewport completo en pantallas
         //     pequeñas (laptop 13").
         //   - `max-w-4xl` (~896px) en pantallas wide para evitar que
         //     se estire demasiado.

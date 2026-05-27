@@ -1,10 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
-interface Props {
+type Props = Readonly<{
   children: ReactNode;
   fallback?: (err: Error, reset: () => void) => ReactNode;
-}
+}>;
 
 interface State {
   error: Error | null;
@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-function DefaultErrorView({ error, reset }: { error: Error; reset: () => void }) {
+function DefaultErrorView({ error, reset }: Readonly<{ error: Error; reset: () => void }>) {
   return (
     <div
       role="alert"
@@ -70,7 +70,10 @@ function DefaultErrorView({ error, reset }: { error: Error; reset: () => void })
       <button
         onClick={() => {
           reset();
-          if (typeof window !== 'undefined') window.location.reload();
+          const runtimeWindow = (globalThis as unknown as { window?: Window }).window;
+          if (runtimeWindow !== undefined) {
+            runtimeWindow.location.reload();
+          }
         }}
         className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 font-body text-base font-semibold text-fg-inv shadow-sm transition-colors hover:bg-primary-600"
       >

@@ -29,7 +29,7 @@ export function useFilePicker(
   // `pickerOpenRef` evita reentradas síncronas (doble-click rápido).
   const pickerOpenRef = useRef(false);
   // Mantiene el id del timer para limpiarlo en unmount.
-  const resetTimerRef = useRef<number | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
 
   // Cleanup: si el componente se desmonta con un picker "abierto", limpia
   // el flag y el timer para que la próxima sesión empiece fresca.
@@ -37,7 +37,7 @@ export function useFilePicker(
     () => () => {
       pickerOpenRef.current = false;
       if (resetTimerRef.current !== null) {
-        window.clearTimeout(resetTimerRef.current);
+        globalThis.clearTimeout(resetTimerRef.current);
         resetTimerRef.current = null;
       }
     },
@@ -55,7 +55,7 @@ export function useFilePicker(
     // Reset tras 400 ms: tiempo de double-click humano + margen para que
     // el diálogo nativo arranque.  El reset real lo dispara también
     // `change`/`cancel` en el componente padre cuando el usuario interactúa.
-    resetTimerRef.current = window.setTimeout(() => {
+    resetTimerRef.current = globalThis.setTimeout(() => {
       pickerOpenRef.current = false;
       resetTimerRef.current = null;
     }, 400);

@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import { forwardRef, type ElementRef, type ReactNode } from 'react';
+import { forwardRef, type ComponentRef, type ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -18,7 +18,7 @@ export const Dialog = ({
   onOpenChange,
   children,
   contentClassName,
-}: {
+}: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
@@ -27,9 +27,9 @@ export const Dialog = ({
    * grandes (ej. `max-w-2xl` para visores de texto) o controlar altura
    * en pantallas con mucho contenido.  Se aplica después del className
    * por defecto, así sobrescribe.
-   */
+  */
   contentClassName?: string;
-}) => (
+}>) => (
   <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
@@ -53,12 +53,12 @@ export const Dialog = ({
 );
 
 export const DialogHeader = forwardRef<
-  ElementRef<typeof DialogPrimitive.Title>,
-  {
+  ComponentRef<typeof DialogPrimitive.Title>,
+  Readonly<{
     title: string;
     description?: string;
     onClose?: () => void;
-  }
+  }>
 >(function DialogHeader({ title, description, onClose }, ref) {
   return (
     <header className="flex items-start justify-between gap-3 px-5 pb-2 pt-5">
@@ -94,7 +94,7 @@ export const DialogHeader = forwardRef<
 export const DialogBody = ({
   children,
   className,
-}: {
+}: Readonly<{
   children: ReactNode;
   className?: string;
-}) => <div className={cn('px-5 pb-5 pt-2', className)}>{children}</div>;
+}>) => <div className={cn('px-5 pb-5 pt-2', className)}>{children}</div>;

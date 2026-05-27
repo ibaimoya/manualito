@@ -52,12 +52,10 @@ describe('OcrTextViewer', () => {
   });
 
   describe('badges de confidence', () => {
-    it('mapea confidence ≥ 0.85 a tono success, 0.5-0.85 a warning, < 0.5 a error', async () => {
-      const user = userEvent.setup();
+    it('mapea confidence ≥ 0.85 a tono success, 0.5-0.85 a warning, < 0.5 a error', () => {
       render(<OcrTextViewer lines={SAMPLE} defaultView="lines" />);
       // Los badges renderizan el porcentaje como label; localizamos por
       // texto y comprobamos la clase de tone.
-      void user; // no se usa en este test, solo aclara que el render es ya en lines
       const badge98 = screen.getByText('98%');
       const badge72 = screen.getByText('72%');
       const badge31 = screen.getByText('31%');

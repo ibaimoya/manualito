@@ -3,14 +3,14 @@ import { ChevronDown } from 'lucide-react';
 import {
   forwardRef,
   type ComponentPropsWithoutRef,
-  type ElementRef,
+  type ComponentRef,
 } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 export const Accordion = AccordionPrimitive.Root;
 
 export const AccordionItem = forwardRef<
-  ElementRef<typeof AccordionPrimitive.Item>,
+  ComponentRef<typeof AccordionPrimitive.Item>,
   ComponentPropsWithoutRef<typeof AccordionPrimitive.Item>
 >(function AccordionItem({ className, ...props }, ref) {
   return (
@@ -23,7 +23,7 @@ export const AccordionItem = forwardRef<
 });
 
 export const AccordionTrigger = forwardRef<
-  ElementRef<typeof AccordionPrimitive.Trigger>,
+  ComponentRef<typeof AccordionPrimitive.Trigger>,
   ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
 >(function AccordionTrigger({ className, children, ...props }, ref) {
   return (
@@ -51,7 +51,7 @@ export const AccordionTrigger = forwardRef<
 });
 
 export const AccordionContent = forwardRef<
-  ElementRef<typeof AccordionPrimitive.Content>,
+  ComponentRef<typeof AccordionPrimitive.Content>,
   ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>
 >(function AccordionContent({ className, children, ...props }, ref) {
   return (

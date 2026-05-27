@@ -119,12 +119,12 @@ function ChatScreen() {
       initialQueueRef.current = null;
       sendQuestion(q);
       // Limpia el ?q de la URL sin recargar.
-      void navigate({
+      navigate({
         to: '/chat/$manualId',
         params: { manualId },
         search: {},
         replace: true,
-      });
+      }).catch(() => undefined);
     }
     // sendQuestion es estable funcionalmente (cierre sobre manualId), no la
     // metemos como dep para evitar re-disparos.
@@ -204,18 +204,18 @@ function ChatScreen() {
   );
 }
 
-function Bubble({ msg }: { msg: QAMessage }) {
+function Bubble({ msg }: Readonly<{ msg: QAMessage }>) {
   const isUser = msg.role === 'user';
   return (
     <div className={cn('flex gap-2', isUser ? 'justify-end' : 'justify-start')}>
-      {!isUser ? (
+      {isUser ? null : (
         <div
           aria-hidden="true"
           className="grid h-7 w-7 shrink-0 place-items-center self-end rounded-full border border-border bg-surface-2 text-primary-700"
         >
           <Meeple size={16} color="currentColor" />
         </div>
-      ) : null}
+      )}
       <div
         className={cn(
           'max-w-[78%] rounded-2xl px-4 py-3 text-base leading-relaxed',
@@ -224,7 +224,7 @@ function Bubble({ msg }: { msg: QAMessage }) {
             : 'bg-surface text-fg border border-border',
         )}
         style={{
-          borderTopLeftRadius: !isUser ? 6 : undefined,
+          borderTopLeftRadius: isUser ? undefined : 6,
           borderTopRightRadius: isUser ? 6 : undefined,
         }}
       >
@@ -243,10 +243,9 @@ function TypingIndicator() {
       >
         <Meeple size={16} color="currentColor" />
       </div>
-      <div
+      <output
         className="flex items-center gap-1.5 rounded-2xl border border-border bg-surface px-4 py-3"
         style={{ borderTopLeftRadius: 6 }}
-        role="status"
         aria-label="Escribiendo respuesta"
       >
         {[0, 160, 320].map((d) => (
@@ -256,7 +255,7 @@ function TypingIndicator() {
             style={{ animation: `mn-dot 1.2s ${d}ms infinite ease-in-out` }}
           />
         ))}
-      </div>
+      </output>
     </div>
   );
 }

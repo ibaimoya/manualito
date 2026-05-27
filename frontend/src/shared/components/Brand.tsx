@@ -9,11 +9,11 @@ export function Meeple({
   size = 32,
   color = 'currentColor',
   className,
-}: {
+}: Readonly<{
   size?: number;
   color?: string;
   className?: string;
-}) {
+}>) {
   return (
     <svg
       width={size}
@@ -43,14 +43,14 @@ export function Monogram({
   fg = '#FFF8F0',
   className,
   style,
-}: {
+}: Readonly<{
   size?: number;
   radius?: number;
   bg?: string;
   fg?: string;
   className?: string;
   style?: CSSProperties;
-}) {
+}>) {
   const effectiveRadius = radius ?? Math.round(size * 0.25);
   return (
     <div
@@ -79,11 +79,11 @@ export function Wordmark({
   size = 28,
   color = 'var(--m-text)',
   className,
-}: {
+}: Readonly<{
   size?: number;
   color?: string;
   className?: string;
-}) {
+}>) {
   return (
     <span
       className={cn('inline-flex items-baseline gap-px font-display', className)}
@@ -95,7 +95,7 @@ export function Wordmark({
         lineHeight: 1,
       }}
     >
-      Manualito
+      <span>Manualito</span>
       <span
         aria-hidden="true"
         style={{
@@ -120,11 +120,11 @@ export function LockUp({
   scale = 1,
   withTagline = true,
   className,
-}: {
+}: Readonly<{
   scale?: number;
   withTagline?: boolean;
   className?: string;
-}) {
+}>) {
   return (
     <div className={cn('inline-flex items-center', className)} style={{ gap: 12 * scale }}>
       <Monogram size={48 * scale} radius={12 * scale} />

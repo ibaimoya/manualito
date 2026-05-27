@@ -12,7 +12,7 @@ export const Route = createFileRoute('/home')({
 });
 
 function HomeScreen() {
-  // Lista local de manuales — viene de localStorage (gap backend, ver BACKEND_TODO).
+  // Lista local de manuales: viene de localStorage hasta que el backend persista el índice.
   // Lazy initializer evita el flash de "empty state" mientras un useEffect
   // sincronizaba la lista en el primer mount (50 ms visible y feo).
   // Catálogo bug #33.
@@ -106,7 +106,7 @@ function HeroCta() {
   );
 }
 
-function RecentManuals({ manuals }: { manuals: ManualRecord[] }) {
+function RecentManuals({ manuals }: Readonly<{ manuals: ManualRecord[] }>) {
   return (
     <section aria-labelledby="home-recent">
       <div className="mb-3 flex items-baseline justify-between">

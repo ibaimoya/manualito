@@ -72,15 +72,15 @@ function ResultScreen() {
     );
   }
 
-  function submitQuestion(e?: React.FormEvent): void {
+  function submitQuestion(e?: { preventDefault: () => void }): void {
     e?.preventDefault();
     const q = question.trim();
     if (q.length === 0) return;
-    void navigate({
+    navigate({
       to: '/chat/$manualId',
       params: { manualId },
       search: { q },
-    });
+    }).catch(() => undefined);
   }
 
   return (
@@ -214,13 +214,13 @@ function ResultScreen() {
             <button
               key={q}
               type="button"
-              onClick={() =>
-                void navigate({
+              onClick={() => {
+                navigate({
                   to: '/chat/$manualId',
                   params: { manualId },
                   search: { q },
-                })
-              }
+                }).catch(() => undefined);
+              }}
               className="h-9 shrink-0 snap-start whitespace-nowrap rounded-full border border-border bg-surface px-3 text-sm font-semibold text-fg hover:bg-surface-2"
             >
               {q}
@@ -259,7 +259,29 @@ function ResultScreen() {
   );
 }
 
-function BodyText({ text }: { text: string }) {
+function textKey(text: string): string {
+  let hash = 0;
+  for (const char of text) {
+    hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+function paragraphsFrom(text: string): Array<{ id: string; text: string }> {
+  const seen = new Map<string, number>();
+  return text
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((paragraph) => {
+      const baseId = textKey(paragraph);
+      const occurrence = seen.get(baseId) ?? 0;
+      seen.set(baseId, occurrence + 1);
+      return { id: `${baseId}-${occurrence}`, text: paragraph };
+    });
+}
+
+function BodyText({ text }: Readonly<{ text: string }>) {
   if (!text || text.trim().length === 0) {
     return (
       <p className="text-sm text-fg-3">
@@ -270,13 +292,9 @@ function BodyText({ text }: { text: string }) {
   // Preserva saltos de línea simples — el LLM puede devolver listas con \n.
   return (
     <div className="space-y-2 text-base leading-relaxed text-fg">
-      {text
-        .split(/\n+/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((para, i) => (
-          <p key={i}>{para}</p>
-        ))}
+      {paragraphsFrom(text).map((paragraph) => (
+        <p key={paragraph.id}>{paragraph.text}</p>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Plus, Search, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Meeple } from '@/shared/components/Brand';
@@ -37,6 +37,30 @@ function HistoryScreen() {
           m.name.toLowerCase().includes(debouncedQuery.toLowerCase().trim()),
         );
 
+  let content: ReactNode;
+  if (filtered.length > 0) {
+    content = (
+      <ul
+        className="grid gap-3"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
+      >
+        {filtered.map((m) => (
+          <li key={m.manual_id} className="group">
+            <ManualListItem manual={m} onDelete={() => deleteManual(m.manual_id)} />
+          </li>
+        ))}
+      </ul>
+    );
+  } else if (manuals.length === 0) {
+    content = <EmptyState />;
+  } else {
+    content = (
+      <p className="mt-4 text-center text-sm text-fg-3">
+        Ningún manual coincide con «{query}».
+      </p>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 pb-10 pt-4 md:max-w-5xl md:px-8 md:pt-10">
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -64,27 +88,7 @@ function HistoryScreen() {
         </div>
       </header>
 
-      {filtered.length === 0 ? (
-        manuals.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <p className="mt-4 text-center text-sm text-fg-3">
-            Ningún manual coincide con «{query}».
-          </p>
-        )
-      ) : (
-        // Grid auto-fit: cada card mínimo 280px, llena las columnas que quepan.
-        <ul
-          className="grid gap-3"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
-        >
-          {filtered.map((m) => (
-            <li key={m.manual_id} className="group">
-              <ManualListItem manual={m} onDelete={() => deleteManual(m.manual_id)} />
-            </li>
-          ))}
-        </ul>
-      )}
+      {content}
     </div>
   );
 }
@@ -92,10 +96,10 @@ function HistoryScreen() {
 function ManualListItem({
   manual,
   onDelete,
-}: {
+}: Readonly<{
   manual: ManualRecord;
   onDelete: () => void;
-}) {
+}>) {
   const [confirming, setConfirming] = useState(false);
 
   return (

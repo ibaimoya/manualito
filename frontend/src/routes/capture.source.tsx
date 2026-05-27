@@ -154,7 +154,7 @@ function SourcePickerScreen() {
   );
 }
 
-interface TileProps {
+type TileProps = Readonly<{
   icon: ReactNode;
   label: string;
   sub: string;
@@ -163,7 +163,7 @@ interface TileProps {
   /** Doble ancho (`grid-column: 1 / -1`). */
   wide?: boolean;
   onClick: () => void;
-}
+}>;
 
 function SourceTile({ icon, label, sub, primary = false, wide = false, onClick }: TileProps) {
   return (

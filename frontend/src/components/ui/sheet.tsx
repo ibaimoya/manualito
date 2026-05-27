@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { forwardRef, type ElementRef, type ReactNode } from 'react';
+import { forwardRef, type ComponentRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 
@@ -22,14 +22,11 @@ export const Sheet = ({
   open,
   onOpenChange,
   children,
-  className,
   contentClassName,
-}: {
+}: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /** @deprecated alias histórico de `contentClassName`. */
-  className?: string;
   /**
    * Clases extra para el panel del Sheet — útil cuando el caso de uso
    * necesita una anchura mayor que el default o controlar altura/flex.
@@ -37,7 +34,7 @@ export const Sheet = ({
    * conflictivos (max-w, h, flex…).
    */
   contentClassName?: string;
-}) => (
+}>) => (
   <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
@@ -50,7 +47,6 @@ export const Sheet = ({
           'fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-md',
           'rounded-t-3xl border-t border-border bg-bg shadow-lg',
           'focus:outline-none',
-          className,
           contentClassName,
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
@@ -66,12 +62,12 @@ export const Sheet = ({
 );
 
 export const SheetHeader = forwardRef<
-  ElementRef<typeof DialogPrimitive.Title>,
-  {
+  ComponentRef<typeof DialogPrimitive.Title>,
+  Readonly<{
     title: string;
     description?: string;
     onClose?: () => void;
-  }
+  }>
 >(function SheetHeader({ title, description, onClose }, ref) {
   return (
     <header className="flex items-start justify-between gap-3 px-5 pb-2 pt-4">
@@ -107,18 +103,18 @@ export const SheetHeader = forwardRef<
 export const SheetBody = ({
   children,
   className,
-}: {
+}: Readonly<{
   children: ReactNode;
   className?: string;
-}) => <div className={cn('px-5 pb-5 pt-2', className)}>{children}</div>;
+}>) => <div className={cn('px-5 pb-5 pt-2', className)}>{children}</div>;
 
 export const SheetFooter = ({
   children,
   className,
-}: {
+}: Readonly<{
   children: ReactNode;
   className?: string;
-}) => (
+}>) => (
   <footer
     className={cn(
       'flex items-center justify-end gap-2 border-t border-border px-5 py-3',

@@ -7,6 +7,8 @@ import { useManualBootstrap } from '@/features/processing/useManualBootstrap';
 import { storage } from '@/shared/lib/storage';
 import { cn } from '@/shared/lib/cn';
 
+type ProcessingStep = ReturnType<typeof useManualBootstrap>['steps'][number];
+
 const processingSearchSchema = z.object({
   name: z.string().min(1).optional(),
 });
@@ -25,17 +27,17 @@ function ProcessingScreen() {
   // Registrar/touchear el manual en local apenas llega aquí.
   useEffect(() => {
     const existing = storage.listManuals().find((m) => m.manual_id === manualId);
-    if (!existing) {
-      storage.upsertManual({
-        manual_id: manualId,
-        name: safeName,
-        created_at: new Date().toISOString(),
-        last_opened_at: new Date().toISOString(),
-        chunks_indexed: 0,
-      });
-    } else {
+    if (existing) {
       storage.touchManual(manualId);
+      return;
     }
+    storage.upsertManual({
+      manual_id: manualId,
+      name: safeName,
+      created_at: new Date().toISOString(),
+      last_opened_at: new Date().toISOString(),
+      chunks_indexed: 0,
+    });
   }, [manualId, safeName]);
 
   const { steps, progress, done, result } = useManualBootstrap(manualId, safeName);
@@ -44,7 +46,9 @@ function ProcessingScreen() {
   useEffect(() => {
     if (done && result) {
       const timer = setTimeout(() => {
-        void navigate({ to: '/result/$manualId', params: { manualId } });
+        navigate({ to: '/result/$manualId', params: { manualId } }).catch(
+          () => undefined,
+        );
       }, 600); // pequeña pausa para que el usuario vea "completo"
       return () => clearTimeout(timer);
     }
@@ -101,18 +105,7 @@ function ProcessingScreen() {
                 )}
                 aria-hidden="true"
               >
-                {s.state === 'done' ? (
-                  <Check size={16} strokeWidth={2.5} />
-                ) : s.state === 'running' ? (
-                  <span
-                    className="block h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent"
-                    style={{ animation: 'mn-spin 0.9s linear infinite' }}
-                  />
-                ) : s.state === 'failed' ? (
-                  <span className="font-bold">!</span>
-                ) : (
-                  <span className="block h-1.5 w-1.5 rounded-full bg-current" />
-                )}
+                <StepStatusIcon state={s.state} />
               </span>
               <div className="flex-1">
                 <div
@@ -138,4 +131,18 @@ function ProcessingScreen() {
       </div>
     </div>
   );
+}
+
+function StepStatusIcon({ state }: Readonly<{ state: ProcessingStep['state'] }>) {
+  if (state === 'done') return <Check size={16} strokeWidth={2.5} />;
+  if (state === 'running') {
+    return (
+      <span
+        className="block h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent"
+        style={{ animation: 'mn-spin 0.9s linear infinite' }}
+      />
+    );
+  }
+  if (state === 'failed') return <span className="font-bold">!</span>;
+  return <span className="block h-1.5 w-1.5 rounded-full bg-current" />;
 }

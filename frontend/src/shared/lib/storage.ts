@@ -4,7 +4,7 @@ import { z } from 'zod';
  * Wrapper alrededor de `localStorage` con validación Zod.
  *
  * Backend de Manualito todavía no persiste lista de manuales, conversaciones
- * ni preferencias (ver `frontend/BACKEND_TODO.md`).  Mientras tanto, el
+ * ni preferencias.  Mientras tanto, el
  * frontend mantiene el estado en este storage local y revalida cada lectura
  * con Zod para sobrevivir a:
  *   - corrupción manual del usuario en DevTools,
@@ -95,14 +95,21 @@ const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
    Low-level safe accessors
    ============================================================ */
 
+function getLocalStorage(): Storage | null {
+  const runtimeWindow = (globalThis as unknown as { window?: Window }).window;
+  if (runtimeWindow === undefined) return null;
+  return runtimeWindow.localStorage;
+}
+
 function safeRead<S extends z.ZodTypeAny>(
   key: string,
   schema: S,
   fallback: z.output<S>,
 ): z.output<S> {
-  if (typeof window === 'undefined') return fallback;
+  const localStorage = getLocalStorage();
+  if (!localStorage) return fallback;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = localStorage.getItem(key);
     if (raw === null) return fallback;
     const parsed: unknown = JSON.parse(raw);
     const result = schema.safeParse(parsed);
@@ -131,17 +138,23 @@ export function onStorageWriteFail(l: WriteFailListener): () => void {
 }
 
 function classifyWriteError(err: unknown): WriteFailReason {
-  if (err instanceof DOMException) {
-    if (err.name === 'QuotaExceededError' || err.code === 22) return 'quota';
+  const RuntimeDOMException = (globalThis as unknown as {
+    DOMException?: typeof DOMException;
+  }).DOMException;
+  if (RuntimeDOMException !== undefined && err instanceof RuntimeDOMException) {
+    if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      return 'quota';
+    }
     if (err.name === 'SecurityError') return 'denied';
   }
   return 'unknown';
 }
 
 function safeWrite<T>(key: string, value: T): boolean {
-  if (typeof window === 'undefined') return false;
+  const localStorage = getLocalStorage();
+  if (!localStorage) return false;
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (err) {
     const reason = classifyWriteError(err);
@@ -157,9 +170,10 @@ function safeWrite<T>(key: string, value: T): boolean {
 }
 
 function safeRemove(key: string): void {
-  if (typeof window === 'undefined') return;
+  const localStorage = getLocalStorage();
+  if (!localStorage) return;
   try {
-    window.localStorage.removeItem(key);
+    localStorage.removeItem(key);
   } catch {
     /* noop */
   }
@@ -244,17 +258,19 @@ export const storage = {
 
   /* Onboarding seen flag */
   isOnboardingSeen(): boolean {
-    if (typeof window === 'undefined') return false;
+    const localStorage = getLocalStorage();
+    if (!localStorage) return false;
     try {
-      return window.localStorage.getItem(KEY.onboardingSeen) === '1';
+      return localStorage.getItem(KEY.onboardingSeen) === '1';
     } catch {
       return false;
     }
   },
   markOnboardingSeen(): void {
-    if (typeof window === 'undefined') return;
+    const localStorage = getLocalStorage();
+    if (!localStorage) return;
     try {
-      window.localStorage.setItem(KEY.onboardingSeen, '1');
+      localStorage.setItem(KEY.onboardingSeen, '1');
     } catch {
       /* noop */
     }

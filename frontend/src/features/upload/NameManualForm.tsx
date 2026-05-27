@@ -11,12 +11,11 @@ import { storage } from '@/shared/lib/storage';
 
 export type UploadSource = 'gallery' | 'pdf' | 'camera';
 
-interface Props {
+type Props = Readonly<{
   file: File | null;
-  source: UploadSource;
   /** Llamado tras Cancelar o tras Procesar exitoso. */
   onClose: () => void;
-}
+}>;
 
 /**
  * Subtítulo contextual según el origen del fichero — wrapper lo usa
@@ -95,15 +94,15 @@ export function NameManualForm({ file, onClose }: Props) {
       // /processing → /result encuentren el dato.
       storage.setOcrLines(data.manual_id, data.ocr_lines);
       onClose();
-      void navigate({
+      navigate({
         to: '/processing/$manualId',
         params: { manualId: data.manual_id },
         search: { name: vars.name },
-      });
+      }).catch(() => undefined);
     },
   });
 
-  function handleSubmit(e: React.FormEvent): void {
+  function handleSubmit(e: { preventDefault: () => void }): void {
     e.preventDefault();
     if (!file) return;
     const trimmed = name.trim();
@@ -167,14 +166,14 @@ export function NameManualForm({ file, onClose }: Props) {
  *  estado isPending si lo necesita; aquí no exponemos refs.
  */
 
-function FilePreview({ file }: { file: File | null }) {
+function FilePreview({ file }: Readonly<{ file: File | null }>) {
   // Memoiza la URL para evitar recrearla en cada render — cada
   // createObjectURL nueva consume memoria hasta su revoke.  El bug #7
   // del catálogo: si revocábamos en onLoad y el componente rerendereaba
   // (ej. al teclear en el input "nombre"), la URL anterior ya estaba
   // muerta y la imagen quedaba rota.
   const url = useMemo(() => {
-    if (!file || !file.type.startsWith('image/')) return null;
+    if (file?.type.startsWith('image/') !== true) return null;
     return URL.createObjectURL(file);
   }, [file]);
 

@@ -1,9 +1,9 @@
 import * as ProgressPrimitive from '@radix-ui/react-progress';
-import { forwardRef, type ComponentPropsWithoutRef, type ElementRef } from 'react';
+import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 export const Progress = forwardRef<
-  ElementRef<typeof ProgressPrimitive.Root>,
+  ComponentRef<typeof ProgressPrimitive.Root>,
   ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
 >(function Progress({ className, value, ...props }, ref) {
   const clamped = Math.max(0, Math.min(100, value ?? 0));

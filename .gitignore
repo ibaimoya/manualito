@@ -457,3 +457,19 @@ htmlcov/
 
 # mypy
 .mypy_cache/
+
+# Frontend (Node / Vite / pnpm / Vitest / Playwright)
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.vite/
+frontend/.cache/
+frontend/.env.local
+frontend/.env.*.local
+frontend/playwright-report/
+frontend/test-results/
+frontend/.eslintcache
+frontend/src/routeTree.gen.ts
+frontend/src/shared/api/generated/
+frontend/dev-dist/
+frontend/screenshots/

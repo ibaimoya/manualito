@@ -1,0 +1,15 @@
+# pnpm 11+ separa "permitir compilación nativa" (onlyBuiltDependencies) de
+# "permitir ejecución del install script" (allowBuilds).
+# Solo aprobamos lo estrictamente necesario.
+# https://pnpm.io/settings#onlybuiltdependencies
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - msw
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@tailwindcss/oxide': true
+  esbuild: true
+  msw: true

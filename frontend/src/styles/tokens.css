@@ -1,0 +1,155 @@
+/* ============================================================
+   Manualito · Design Tokens
+   Mapped to Tailwind v4 @theme so generated utilities can read them
+   (bg-primary, text-primary-700, etc.).  Source of truth lives here.
+   ============================================================ */
+
+:root {
+  /* — Color: Brand —————————————————————————————— */
+  --m-primary-50:  #FDEBD8;
+  --m-primary-100: #FBD5B0;
+  --m-primary-300: #F0A45D;
+  --m-primary-500: #E07A1F;  /* CTA principal */
+  --m-primary-600: #C46514;
+  --m-primary-700: #A8431F;  /* terracota — secundario */
+  --m-primary-900: #5C2A12;
+
+  --m-accent-500:  #2C6E91;  /* azul meeple */
+  --m-accent-300:  #6FA4C3;
+  --m-accent-100:  #D6E4ED;
+
+  /* — Color: Surfaces (light) ————————————————————— */
+  --m-bg:        #FFF8F0;     /* crema, evita blanco puro */
+  --m-surface:   #F5E9D7;
+  --m-surface-2: #EBDDC4;     /* divisores / cards anidados */
+  --m-border:        rgba(31, 22, 17, 0.10);
+  --m-border-strong: rgba(31, 22, 17, 0.18);
+
+  /* — Color: Text (light) ———————————————————————— */
+  --m-text:     #1F1611;     /* 13.2:1 sobre crema · AAA */
+  --m-text-2:   #5C4A3E;     /* 7.4:1 · AAA */
+  --m-text-3:   #8A7565;     /* 4.6:1 · AA — captions */
+  --m-text-inv: #FFF8F0;
+
+  /* — Color: Status ————————————————————————————— */
+  --m-success:     #3F8F3F;
+  --m-success-bg:  #E4F0E0;
+  --m-error:       #C2362B;
+  --m-error-bg:    #F7DEDB;
+  --m-warning:     #B8860B;
+  --m-warning-bg:  #F6E9C8;
+  --m-info:        var(--m-accent-500);
+  --m-info-bg:     var(--m-accent-100);
+
+  /* — Type —————————————————————————————————————— */
+  --m-font-display: 'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --m-font-body:    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --m-font-mono:    'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type scale (mobile-first; 1rem = 16px) */
+  --m-text-xs:      12px;  --m-lh-xs:      16px;
+  --m-text-sm:      14px;  --m-lh-sm:      20px;
+  --m-text-base:    16px;  --m-lh-base:    24px;
+  --m-text-md:      18px;  --m-lh-md:      26px;
+  --m-text-lg:      20px;  --m-lh-lg:      28px;
+  --m-text-xl:      24px;  --m-lh-xl:      30px;
+  --m-text-2xl:     30px;  --m-lh-2xl:     36px;
+  --m-text-3xl:     36px;  --m-lh-3xl:     42px;
+  --m-text-display: 44px;  --m-lh-display: 48px;
+
+  /* — Radius —————————————————————————————————————— */
+  --m-r-sm:   8px;
+  --m-r-md:   12px;   /* rounded-xl */
+  --m-r-lg:   20px;   /* rounded-2xl */
+  --m-r-xl:   28px;   /* sheets / dialogs */
+  --m-r-full: 9999px;
+
+  /* — Spacing (densidad: regular) ———————————————————— */
+  --m-space-1:  4px;
+  --m-space-2:  8px;
+  --m-space-3:  12px;
+  --m-space-4:  16px;
+  --m-space-5:  20px;
+  --m-space-6:  24px;
+  --m-space-8:  32px;
+  --m-space-10: 40px;
+  --m-space-12: 48px;
+
+  /* — Shadow (cálidas — no neumórficas) ————— */
+  --m-shadow-xs: 0 1px 2px rgba(53, 28, 12, 0.06);
+  --m-shadow-sm: 0 2px 6px rgba(53, 28, 12, 0.08), 0 1px 2px rgba(53, 28, 12, 0.05);
+  --m-shadow-md: 0 8px 24px -8px rgba(53, 28, 12, 0.16), 0 2px 6px rgba(53, 28, 12, 0.06);
+  --m-shadow-lg: 0 24px 48px -16px rgba(53, 28, 12, 0.22), 0 6px 14px rgba(53, 28, 12, 0.08);
+  --m-shadow-ring-primary: 0 0 0 4px rgba(224, 122, 31, 0.20);
+  --m-shadow-ring-accent:  0 0 0 4px rgba(44, 110, 145, 0.22);
+  --m-shadow-ring-error:   0 0 0 4px rgba(194, 54, 43, 0.18);
+
+  /* — Motion —————————————————————————————————————— */
+  --m-easing:  cubic-bezier(.2, .8, .2, 1);
+  --m-dur-fast: 120ms;
+  --m-dur:      200ms;
+  --m-dur-slow: 320ms;
+
+  /* — Touch —————————————————————————————————————— */
+  --m-hit: 44px;
+
+  /* — Color scheme hint para componentes nativos —————————————— */
+  color-scheme: light;
+}
+
+/* — Dark mode (warm — no pitch black) ———————————————— */
+html.theme-dark {
+  --m-bg:        #1A1410;
+  --m-surface:   #2A211A;
+  --m-surface-2: #3A2E23;
+  --m-border:        rgba(245, 233, 215, 0.10);
+  --m-border-strong: rgba(245, 233, 215, 0.18);
+
+  --m-text:     #F5E9D7;
+  --m-text-2:   #C9B8A3;
+  --m-text-3:   #8E7E6B;
+  --m-text-inv: #1F1611;
+
+  --m-primary-500: #F08A2D;
+  --m-primary-300: #F4A766;
+  --m-primary-100: #5C2A12;
+  --m-primary-50:  #3A1F12;
+
+  --m-accent-500: #5BA1C8;
+  --m-accent-100: #1F3744;
+
+  --m-success-bg: #1F3622;
+  --m-error-bg:   #3D1E1A;
+  --m-warning-bg: #3A2C12;
+  --m-info-bg:    #1F3744;
+
+  --m-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --m-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --m-shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.30);
+  --m-shadow-lg: 0 24px 48px -16px rgba(0, 0, 0, 0.65), 0 6px 14px rgba(0, 0, 0, 0.35);
+
+  color-scheme: dark;
+}
+
+/* Density variants */
+html.density-compact { --m-space-3: 8px;  --m-space-4: 12px; --m-space-5: 16px; --m-space-6: 18px; --m-space-8: 24px; }
+html.density-comfy   { --m-space-3: 14px; --m-space-4: 20px; --m-space-5: 24px; --m-space-6: 28px; --m-space-8: 40px; }
+
+/* Accent swap — usa azul-meeple como primario */
+html.accent-blue {
+  --m-primary-500: #2C6E91;
+  --m-primary-600: #235873;
+  --m-primary-700: #1E4A60;
+  --m-primary-300: #6FA4C3;
+  --m-primary-100: #D6E4ED;
+  --m-primary-50:  #EBF1F6;
+  --m-accent-500:  #E07A1F;
+  --m-accent-100:  #FBD5B0;
+}
+
+html.theme-dark.accent-blue {
+  --m-primary-500: #5BA1C8;
+  --m-primary-300: #84BBD8;
+  --m-primary-100: #1F3744;
+  --m-accent-500:  #F08A2D;
+}

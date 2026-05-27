@@ -1,0 +1,183 @@
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
+import { flushSync } from 'react-dom';
+import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
+
+export type ThemeMode = 'light' | 'dark' | 'auto';
+export type Density = 'compact' | 'comfy';
+export type AccentVariant = 'amber' | 'blue';
+
+type ThemeState = {
+  mode: ThemeMode;
+  density: Density;
+  accent: AccentVariant;
+  setMode: (mode: ThemeMode) => void;
+  setDensity: (d: Density) => void;
+  setAccent: (a: AccentVariant) => void;
+};
+
+const ThemeContext = createContext<ThemeState | null>(null);
+
+const STORAGE_KEY = 'manualito.settings';
+const PERSIST_DEBOUNCE_MS = 200;
+
+type Persisted = { mode: ThemeMode; density: Density; accent: AccentVariant };
+
+const DEFAULT_PERSISTED: Persisted = { mode: 'auto', density: 'comfy', accent: 'amber' };
+
+function loadFromStorage(): Persisted {
+  if (typeof window === 'undefined') return DEFAULT_PERSISTED;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_PERSISTED;
+    const parsed = JSON.parse(raw) as Partial<Persisted>;
+    return {
+      mode: parsed.mode ?? 'auto',
+      density: parsed.density ?? 'comfy',
+      accent: parsed.accent ?? 'amber',
+    };
+  } catch {
+    return DEFAULT_PERSISTED;
+  }
+}
+
+function rawPersist(state: Persisted): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* quota / privacidad — el listener global de storage avisa al usuario */
+  }
+}
+
+/**
+ * Aplica los flags al `<html>` (clases) para que tokens.css reaccione.
+ * `mode: 'auto'` consulta `prefers-color-scheme` cada vez que se llama.
+ */
+function applyToHtml(state: Persisted): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = state.mode === 'dark' || (state.mode === 'auto' && prefersDark);
+
+  root.classList.toggle('theme-dark', dark);
+  root.classList.toggle('theme-light', !dark);
+  root.classList.toggle('density-compact', state.density === 'compact');
+  root.classList.toggle('density-comfy', state.density === 'comfy');
+  root.classList.toggle('accent-blue', state.accent === 'blue');
+}
+
+/**
+ * Wrapper sobre `document.startViewTransition` para que el cambio de tema
+ * (que toca decenas de variables CSS) se anime como crossfade nativo en
+ * lugar de saltar bruscamente.  Si el browser no lo soporta o el usuario
+ * pidió reduced-motion, aplicamos inmediato.
+ *
+ * El crossfade del browser ABSORBE el spam-click: si llega una segunda
+ * llamada mientras la primera está en curso, la anterior se cancela
+ * limpiamente y empieza la nueva.  Sin flicker visual.
+ */
+function applyWithViewTransition(state: Persisted): void {
+  if (typeof document === 'undefined') return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const docAny = document as Document & {
+    startViewTransition?: (cb: () => void) => unknown;
+  };
+  if (reduced || typeof docAny.startViewTransition !== 'function') {
+    applyToHtml(state);
+    return;
+  }
+  docAny.startViewTransition(() => flushSync(() => applyToHtml(state)));
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<Persisted>(() => loadFromStorage());
+
+  // `useTransition` marca los setState como "no urgentes": si llega otro
+  // click rápido, React tira el render pendiente y solo procesa el último.
+  // Evita main-thread saturado al spammear toggles.
+  const [, startTransition] = useTransition();
+
+  // Aplicación al DOM: side-effect del state.  En el PRIMER mount NO
+  // queremos View Transition (no hay "from" estado anterior).
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      applyToHtml(state);
+      mountedRef.current = true;
+    } else {
+      applyWithViewTransition(state);
+    }
+  }, [state]);
+
+  // Persistencia con debounce: 20 clicks en 1s = UN solo setItem al final.
+  // Mantiene el UI reactivo (state se actualiza al instante) pero evita
+  // el lag de spam de writes síncronos a localStorage.
+  const persist = useDebouncedCallback(rawPersist, PERSIST_DEBOUNCE_MS);
+  useEffect(() => {
+    persist(state);
+  }, [state, persist]);
+
+  // Listener de matchMedia para modo 'auto' — re-suscribe SOLO cuando el
+  // MODO cambia, no cuando cambian density/accent.  Sin esto, cada toggle
+  // de density remontaba el listener inútilmente.
+  useEffect(() => {
+    if (state.mode !== 'auto') return;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => applyToHtml(state);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+    // Dep intencional: solo nos importa el modo aquí.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.mode]);
+
+  // Setters con guard de equidad: si el valor pedido == valor actual,
+  // no disparamos setState (evita render extra cuando el usuario hace
+  // doble-click sobre el mismo segmento del SegmentedControl).
+  const setMode = useCallback(
+    (mode: ThemeMode) =>
+      startTransition(() => {
+        setState((s) => (s.mode === mode ? s : { ...s, mode }));
+      }),
+    [],
+  );
+  const setDensity = useCallback(
+    (density: Density) =>
+      startTransition(() => {
+        setState((s) => (s.density === density ? s : { ...s, density }));
+      }),
+    [],
+  );
+  const setAccent = useCallback(
+    (accent: AccentVariant) =>
+      startTransition(() => {
+        setState((s) => (s.accent === accent ? s : { ...s, accent }));
+      }),
+    [],
+  );
+
+  const value: ThemeState = {
+    ...state,
+    setMode,
+    setDensity,
+    setAccent,
+  };
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export function useTheme(): ThemeState {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) {
+    throw new Error('useTheme debe usarse dentro de <ThemeProvider>');
+  }
+  return ctx;
+}

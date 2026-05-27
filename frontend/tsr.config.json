@@ -1,0 +1,9 @@
+{
+  "routesDirectory": "./src/routes",
+  "generatedRouteTree": "./src/routeTree.gen.ts",
+  "routeFileIgnorePrefix": "-",
+  "routeFileIgnorePattern": "\\.test\\.(ts|tsx)$",
+  "autoCodeSplitting": true,
+  "quoteStyle": "single",
+  "semicolons": true
+}

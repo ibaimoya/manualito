@@ -12,9 +12,16 @@ api = [
     "fastapi==0.135.2",
     "httpx==0.28.1",
     "pillow==12.1.1",
+    "psycopg[binary]==3.3.4",
     "pydantic==2.12.5",
     "python-multipart==0.0.22",
+    "sqlalchemy==2.0.50",
     "uvicorn[standard]==0.44.0",
+]
+database = [
+    "alembic==1.18.4",
+    "psycopg[binary]==3.3.4",
+    "sqlalchemy==2.0.50",
 ]
 ocr = [
     "fastapi==0.135.2",
@@ -51,15 +58,18 @@ llm = [
     "uvicorn[standard]==0.44.0",
 ]
 test = [
+    "alembic==1.18.4",
     "fastapi==0.135.2",
     "httpx==0.28.1",
     "numpy==2.4.4",
     "pillow==12.1.1",
+    "psycopg[binary]==3.3.4",
     "pydantic==2.12.5",
     "pytest==9.0.2",
     "pytest-cov==7.1.0",
     "python-multipart==0.0.22",
     "ruff==0.15.14",
+    "sqlalchemy==2.0.50",
     "uvicorn[standard]==0.44.0",
 ]
 

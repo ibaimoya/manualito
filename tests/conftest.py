@@ -10,15 +10,21 @@ from PIL import Image
 _root = Path(__file__).resolve().parent.parent
 
 
-def _load_backend_env() -> None:
-    """Carga las variables del backend usadas al importar los servicios."""
-    env_path = _root / "config" / "backend.env"
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+def _load_env_file(path: Path) -> None:
+    """Carga variables KEY=VALUE simples sin pisar el entorno del proceso."""
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip())
+
+
+def _load_backend_env() -> None:
+    """Carga las variables usadas al importar los servicios backend."""
+    config_dir = _root / "config"
+    for env_path in (config_dir / "backend.env", config_dir / "database.env"):
+        _load_env_file(env_path)
 
 
 _load_backend_env()

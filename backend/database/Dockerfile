@@ -4,16 +4,14 @@ ARG PYTHON_BASE_TAG
 
 FROM python-base:${PYTHON_BASE_TAG}
 
-LABEL org.opencontainers.image.title="manualito-api" \
-      org.opencontainers.image.description="Gateway HTTP de Manualito para coordinar OCR, RAG y LLM."
+LABEL org.opencontainers.image.title="manualito-database" \
+      org.opencontainers.image.description="Migraciones y modelos persistentes de Manualito."
 
 COPY --chown=root:root --chmod=0644 pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project --no-default-groups --no-build --only-group api
+    uv sync --locked --no-install-project --no-default-groups --no-build --only-group database
 
-COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
 COPY --chown=root:root --chmod=0755 backend/database/ /app/database/
-COPY --chown=root:root --chmod=0755 backend/api/ /app/api/
 
 RUN find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
     && find /app -path /app/.venv -prune -o -type f -exec chmod 0644 {} + \
@@ -24,11 +22,6 @@ RUN find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
     && rm -rf /root/.cache /var/cache/apt/* /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && usermod --shell /usr/sbin/nologin root
 
-EXPOSE 8000
-
-HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=6 \
-    CMD python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=3).status == 200 else 1)"
-
 USER appuser
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["alembic", "-c", "/app/database/alembic.ini", "upgrade", "head"]

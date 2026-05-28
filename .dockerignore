@@ -25,6 +25,7 @@ htmlcov/
 dataset/
 frontend/
 notimportant/
+secrets/
 tests/
 
 # Cache de modelos montada como volumenes en ejecución; no debe entrar al contexto de construcción.

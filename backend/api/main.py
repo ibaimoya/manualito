@@ -6,6 +6,7 @@ from api import dependencies
 from api.exceptions import register_exception_handlers
 from api.routes import health, manuals, ocr
 from common.logging import configure_logging, install_health_log_filter
+from database.session import dispose_engine
 
 configure_logging()
 install_health_log_filter()
@@ -18,7 +19,10 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
-        await dependencies.close_http_client()
+        try:
+            await dependencies.close_http_client()
+        finally:
+            await dispose_engine()
 
 
 app = FastAPI(title="Manualito API", lifespan=lifespan)

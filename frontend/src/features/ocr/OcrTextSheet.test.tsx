@@ -5,14 +5,13 @@ import { OcrTextSheet } from './OcrTextSheet';
 import type { OcrLine } from '@/shared/lib/storage';
 
 /**
- * `useIsDesktop` lee `matchMedia('(min-width: 768px)')`.  En jsdom el
- * default es false (no desktop), así que por defecto el wrapper monta
- * Sheet.  Para el caso desktop mockeamos el hook globalmente.
+ * `useNamedMediaQuery('desktop')` lee `matchMedia('(min-width: 768px)')`.
+ * En jsdom el default es false (no desktop), así que por defecto el wrapper
+ * monta Sheet. Para el caso desktop mockeamos el hook globalmente.
  */
 const mockIsDesktop = vi.fn<[], boolean>(() => false);
 vi.mock('@/shared/hooks/useMediaQuery', () => ({
-  useIsDesktop: () => mockIsDesktop(),
-  useDarkMode: () => false,
+  useNamedMediaQuery: () => mockIsDesktop(),
 }));
 
 const LINES: OcrLine[] = [

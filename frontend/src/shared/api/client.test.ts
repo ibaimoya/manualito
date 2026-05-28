@@ -1,11 +1,48 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { server } from '@/test/server';
 import { http, HttpResponse } from 'msw';
-import { ApiError, api } from './client';
+import { ApiError, api, apiErrorNotification, isAbortApiError } from './client';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
+
+describe('api error helpers', () => {
+  const apiError = new ApiError(
+    {
+      title: 'Foto demasiado grande',
+      message: 'La foto pesa mas de 20 MB.',
+      retryable: true,
+      severity: 'warning',
+      code: 'http.413',
+    },
+    413,
+    null,
+  );
+
+  it('detectan cancelaciones directas y envueltas en ApiError', () => {
+    const abortError = new DOMException('Aborted', 'AbortError');
+
+    expect(isAbortApiError(abortError)).toBe(true);
+    expect(isAbortApiError(new ApiError(apiError.view, undefined, abortError))).toBe(true);
+    expect(isAbortApiError(new Error('network'))).toBe(false);
+  });
+
+  it('construyen notificaciones estables para ApiError y fallback', () => {
+    const fallback = {
+      title: 'Error inesperado',
+      id: 'mutation-error-unknown',
+      description: 'Vuelve a intentarlo en un momento.',
+    };
+
+    expect(apiErrorNotification(apiError, 'mutation-error', fallback)).toEqual({
+      title: 'Foto demasiado grande',
+      id: 'mutation-error-http.413',
+      description: 'La foto pesa mas de 20 MB.',
+    });
+    expect(apiErrorNotification(new Error('boom'), 'mutation-error', fallback)).toBe(fallback);
+  });
+});
 
 describe('api · health', () => {
   it('devuelve {status:"ok"} cuando la API responde', async () => {

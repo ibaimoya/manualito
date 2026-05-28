@@ -15,8 +15,8 @@ import { Route as ResultRoute } from './result.$manualId';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
 
 /**
- * `useIsDesktop` por defecto en jsdom devuelve false → el OcrTextSheet
- * monta el Sheet.  No necesitamos mockear el hook.
+ * La query semántica desktop por defecto en jsdom devuelve false, así que
+ * OcrTextSheet monta el Sheet. No necesitamos mockear el hook.
  */
 
 const MANUAL_ID = 'catan-test';

@@ -4,7 +4,7 @@ import { ArrowLeft, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { api, ApiError } from '@/shared/api/client';
+import { api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
 import { storage, type QAMessage } from '@/shared/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,26 +61,16 @@ function ChatScreen() {
       return api.askManual(manualId, question, askAbortRef.current.signal);
     },
     onError: (err) => {
-      // AbortError = navegación intencional, no es fallo de usuario.
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      if (
-        err instanceof ApiError &&
-        err.raw instanceof DOMException &&
-        err.raw.name === 'AbortError'
-      ) {
-        return;
-      }
-      if (err instanceof ApiError) {
-        toast.error(err.view.title, {
-          id: `ask-error-${err.view.code}`,
-          description: err.view.message,
-        });
-      } else {
-        toast.error('No hemos podido responder', {
-          id: 'ask-error-unknown',
-          description: 'Inténtalo de nuevo en un momento.',
-        });
-      }
+      if (isAbortApiError(err)) return;
+      const notification = apiErrorNotification(err, 'ask-error', {
+        title: 'No hemos podido responder',
+        id: 'ask-error-unknown',
+        description: 'Inténtalo de nuevo en un momento.',
+      });
+      toast.error(notification.title, {
+        id: notification.id,
+        description: notification.description,
+      });
     },
     onSuccess: (data) => {
       const botMsg: QAMessage = {

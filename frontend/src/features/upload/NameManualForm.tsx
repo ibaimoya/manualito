@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { api, ApiError } from '@/shared/api/client';
+import { api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
 import { storage } from '@/shared/lib/storage';
 
 export type UploadSource = 'gallery' | 'pdf' | 'camera';
@@ -51,9 +51,8 @@ export function NameManualForm({ file, onClose }: Props) {
     }
   }, [file]);
 
-  // AbortController vivo: cancela la petición en curso si el componente
-  // se desmonta (usuario navega fuera mientras isPending) — evita el
-  // state update fantasma post-unmount.  Ver catálogo bug #2.
+  // AbortController vivo: cancela la peticion en curso si el componente
+  // se desmonta o si arranca otra subida, evitando efectos post-unmount.
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -64,28 +63,16 @@ export function NameManualForm({ file, onClose }: Props) {
       return api.createManual(n, image, abortRef.current.signal);
     },
     onError: (err) => {
-      // AbortError = nosotros mismos cancelamos. No es un fallo de usuario.
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      if (
-        err instanceof ApiError &&
-        err.raw instanceof DOMException &&
-        err.raw.name === 'AbortError'
-      ) {
-        return;
-      }
-      if (err instanceof ApiError) {
-        // Id estable por código de error → si la API falla varias veces,
-        // mantenemos UN solo toast actualizado en vez de apilar.  Bug #6.
-        toast.error(err.view.title, {
-          id: `mutation-error-${err.view.code}`,
-          description: err.view.message,
-        });
-      } else {
-        toast.error('Error inesperado', {
-          id: 'mutation-error-unknown',
-          description: 'Vuelve a intentarlo en un momento.',
-        });
-      }
+      if (isAbortApiError(err)) return;
+      const notification = apiErrorNotification(err, 'mutation-error', {
+        title: 'Error inesperado',
+        id: 'mutation-error-unknown',
+        description: 'Vuelve a intentarlo en un momento.',
+      });
+      toast.error(notification.title, {
+        id: notification.id,
+        description: notification.description,
+      });
     },
     onSuccess: (data, vars) => {
       // Persistimos las líneas OCR que devuelve el backend para que la

@@ -9,9 +9,8 @@ import { cn } from '@/shared/lib/cn';
  *
  * En móvil queda oculta (display: none vía `hidden md:flex` del __root).
  *
- * Decisión: la sidebar NO se monta condicionalmente con `useIsDesktop`
- * — eso provocaría rerenders al redimensionar.  Se monta siempre y
- * Tailwind decide su visibilidad.
+ * Decisión: la sidebar no se monta condicionalmente con JS: eso provocaría
+ * rerenders al redimensionar. Se monta siempre y Tailwind decide su visibilidad.
  */
 type Props = Readonly<{
   pathname: string;

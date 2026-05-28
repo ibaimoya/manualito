@@ -5,7 +5,7 @@ import { NameManualSheet } from './NameManualSheet';
 
 /**
  * Mock matchMedia controlable para forzar mobile/desktop sin renderHook.
- * Encaja con la lógica de useIsDesktop = matchMedia('(min-width: 768px)').
+ * Encaja con la query semántica desktop = matchMedia('(min-width: 768px)').
  */
 type Listener = (e: { matches: boolean; media: string }) => void;
 const registry = new Map<string, { matches: boolean; listeners: Set<Listener> }>();

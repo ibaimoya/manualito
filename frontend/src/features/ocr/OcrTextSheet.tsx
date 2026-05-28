@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react';
 import { Dialog, DialogHeader } from '@/components/ui/dialog';
 import { Sheet, SheetHeader } from '@/components/ui/sheet';
-import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
+import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { OcrTextViewer } from './OcrTextViewer';
 import type { OcrLine } from '@/shared/lib/storage';
 
@@ -34,7 +34,7 @@ const SUBTITLE = 'Lo que ha leído el OCR de las páginas que subiste';
  * (Fase L) → cero peticiones OCR duplicadas.
  */
 export function OcrTextSheet({ open, onOpenChange, lines, meta }: Props) {
-  const isDesktop = useIsDesktop();
+  const isDesktop = useNamedMediaQuery('desktop');
 
   // El viewer va sin padding del wrapper para que su propia franja
   // superior (SegmentedControl + meta) y action bar queden sticky a

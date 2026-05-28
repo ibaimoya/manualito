@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, ApiError } from '@/shared/api/client';
+import { api, ApiError, isAbortApiError } from '@/shared/api/client';
 import { storage, type ManualResult } from '@/shared/lib/storage';
 
 /**
@@ -78,15 +78,6 @@ function createPatchStep(
   };
 }
 
-function isAbortError(err: unknown): boolean {
-  if (err instanceof DOMException && err.name === 'AbortError') return true;
-  return (
-    err instanceof ApiError &&
-    err.raw instanceof DOMException &&
-    err.raw.name === 'AbortError'
-  );
-}
-
 function errorMessage(err: unknown): string {
   return err instanceof ApiError ? err.view.message : 'Error inesperado';
 }
@@ -103,7 +94,7 @@ async function runBootstrapStep(
     patchStep(step.id, { state: 'done', text: res.answer });
     return res.answer;
   } catch (err) {
-    if (isAbortError(err)) return null;
+    if (isAbortApiError(err)) return null;
     patchStep(step.id, { state: 'failed', error: errorMessage(err) });
     return null;
   }

@@ -1,15 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import {
+  MEDIA_QUERIES,
   readMediaSnapshot,
-  useDarkMode,
-  useHasHover,
-  useIsCoarsePointer,
-  useIsDesktop,
-  useIsStandalonePWA,
   useMediaQuery,
   useMediaQueryLegacy,
-  useReducedMotion,
+  useNamedMediaQuery,
 } from './useMediaQuery';
 
 /**
@@ -108,43 +104,36 @@ describe('useMediaQuery', () => {
   });
 });
 
-describe('atajos semánticos', () => {
-  it('useIsDesktop usa (min-width: 768px)', () => {
-    installMatchMedia({ '(min-width: 768px)': true });
-    const { result } = renderHook(() => useIsDesktop());
+describe('queries semánticas', () => {
+  it('centraliza los literales de media query', () => {
+    expect(MEDIA_QUERIES).toEqual({
+      desktop: '(min-width: 768px)',
+      darkMode: '(prefers-color-scheme: dark)',
+      reducedMotion: '(prefers-reduced-motion: reduce)',
+      hasHover: '(hover: hover)',
+      coarsePointer: '(pointer: coarse)',
+      standalonePwa: '(display-mode: standalone)',
+    });
+  });
+
+  it('useNamedMediaQuery usa desktop y reacciona a cambios', () => {
+    installMatchMedia({ [MEDIA_QUERIES.desktop]: true });
+    const { result } = renderHook(() => useNamedMediaQuery('desktop'));
     expect(result.current).toBe(true);
-    trigger('(min-width: 768px)', false);
+    trigger(MEDIA_QUERIES.desktop, false);
     expect(result.current).toBe(false);
   });
 
-  it('useDarkMode usa prefers-color-scheme: dark', () => {
-    installMatchMedia({ '(prefers-color-scheme: dark)': true });
-    const { result } = renderHook(() => useDarkMode());
+  it.each([
+    ['darkMode', MEDIA_QUERIES.darkMode],
+    ['reducedMotion', MEDIA_QUERIES.reducedMotion],
+    ['hasHover', MEDIA_QUERIES.hasHover],
+    ['coarsePointer', MEDIA_QUERIES.coarsePointer],
+    ['standalonePwa', MEDIA_QUERIES.standalonePwa],
+  ] as const)('useNamedMediaQuery("%s") lee %s', (name, query) => {
+    installMatchMedia({ [query]: true });
+    const { result } = renderHook(() => useNamedMediaQuery(name));
     expect(result.current).toBe(true);
-  });
-
-  it('useReducedMotion usa prefers-reduced-motion: reduce', () => {
-    installMatchMedia({ '(prefers-reduced-motion: reduce)': true });
-    const { result } = renderHook(() => useReducedMotion());
-    expect(result.current).toBe(true);
-  });
-
-  it('useHasHover usa (hover: hover)', () => {
-    installMatchMedia({ '(hover: hover)': true });
-    const { result } = renderHook(() => useHasHover());
-    expect(result.current).toBe(true);
-  });
-
-  it('useIsCoarsePointer usa (pointer: coarse)', () => {
-    installMatchMedia({ '(pointer: coarse)': true });
-    const { result } = renderHook(() => useIsCoarsePointer());
-    expect(result.current).toBe(true);
-  });
-
-  it('useIsStandalonePWA usa (display-mode: standalone)', () => {
-    installMatchMedia({ '(display-mode: standalone)': false });
-    const { result } = renderHook(() => useIsStandalonePWA());
-    expect(result.current).toBe(false);
   });
 });
 

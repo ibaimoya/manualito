@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type Density, type ThemeMode } from '@/app/theme';
-import { useDarkMode } from '@/shared/hooks/useMediaQuery';
+import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { storage } from '@/shared/lib/storage';
 
 export const Route = createFileRoute('/settings')({
@@ -20,7 +20,7 @@ function SettingsScreen() {
   const [confirmingWipe, setConfirmingWipe] = useState(false);
   // Para indicar al usuario qué tema está REALMENTE viendo cuando el
   // modo es 'auto' (sigue el SO).  Catálogo bug #37.
-  const systemPrefersDark = useDarkMode();
+  const systemPrefersDark = useNamedMediaQuery('darkMode');
   const currentSystemTheme = systemPrefersDark ? 'oscuro' : 'claro';
   const modeHint =
     theme.mode === 'auto'

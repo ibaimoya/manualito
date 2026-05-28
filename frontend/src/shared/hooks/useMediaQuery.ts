@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 function getRuntimeWindow(): Window | undefined {
-  return (globalThis as unknown as { window?: Window }).window;
+  return globalThis.window;
 }
 
 function readRuntimeMediaQuery(query: string): boolean {
@@ -9,6 +9,17 @@ function readRuntimeMediaQuery(query: string): boolean {
   if (runtimeWindow === undefined) return false;
   return runtimeWindow.matchMedia(query).matches;
 }
+
+export const MEDIA_QUERIES = {
+  desktop: '(min-width: 768px)',
+  darkMode: '(prefers-color-scheme: dark)',
+  reducedMotion: '(prefers-reduced-motion: reduce)',
+  hasHover: '(hover: hover)',
+  coarsePointer: '(pointer: coarse)',
+  standalonePwa: '(display-mode: standalone)',
+} as const;
+
+export type MediaQueryName = keyof typeof MEDIA_QUERIES;
 
 /**
  * Hook para suscribirse a una media query — wraps `window.matchMedia`.
@@ -57,39 +68,13 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /* ============================================================
-   Atajos semánticos — wrappers sobre useMediaQuery.
-   Centralizan las queries dispersas por el código para que solo se
-   declaren en UN sitio (este).
+   Queries semánticas.
+   Centralizan los literales para que el código de producto use nombres
+   de dominio sin duplicar hooks con implementaciones idénticas.
    ============================================================ */
 
-/** ≥ 768 px — salto cualitativo a "desktop layout" (sidebar, etc.). */
-export function useIsDesktop(): boolean {
-  return useMediaQuery('(min-width: 768px)');
-}
-
-/** Sistema operativo en modo oscuro. */
-export function useDarkMode(): boolean {
-  return useMediaQuery('(prefers-color-scheme: dark)');
-}
-
-/** Usuario pidió animaciones reducidas (accesibilidad). */
-export function useReducedMotion(): boolean {
-  return useMediaQuery('(prefers-reduced-motion: reduce)');
-}
-
-/** El input principal puede hacer hover (mouse, trackpad).  Touch puro: false. */
-export function useHasHover(): boolean {
-  return useMediaQuery('(hover: hover)');
-}
-
-/** Input principal es coarse (dedo) — útil para targets táctiles grandes. */
-export function useIsCoarsePointer(): boolean {
-  return useMediaQuery('(pointer: coarse)');
-}
-
-/** La PWA está corriendo como app instalada (no en pestaña del navegador). */
-export function useIsStandalonePWA(): boolean {
-  return useMediaQuery('(display-mode: standalone)');
+export function useNamedMediaQuery(name: MediaQueryName): boolean {
+  return useMediaQuery(MEDIA_QUERIES[name]);
 }
 
 /**

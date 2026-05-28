@@ -39,7 +39,10 @@ type BrowserRuntime = {
 const DEFAULT_PERSISTED: Persisted = { mode: 'auto', density: 'comfy', accent: 'amber' };
 
 function getBrowserRuntime(): BrowserRuntime {
-  return globalThis as unknown as BrowserRuntime;
+  return {
+    document: globalThis.document,
+    window: globalThis.window,
+  };
 }
 
 function loadFromStorage(): Persisted {

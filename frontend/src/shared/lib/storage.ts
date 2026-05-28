@@ -96,7 +96,7 @@ const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
    ============================================================ */
 
 function getLocalStorage(): Storage | null {
-  const runtimeWindow = (globalThis as unknown as { window?: Window }).window;
+  const runtimeWindow = globalThis.window;
   if (runtimeWindow === undefined) return null;
   return runtimeWindow.localStorage;
 }
@@ -138,9 +138,7 @@ export function onStorageWriteFail(l: WriteFailListener): () => void {
 }
 
 function classifyWriteError(err: unknown): WriteFailReason {
-  const RuntimeDOMException = (globalThis as unknown as {
-    DOMException?: typeof DOMException;
-  }).DOMException;
+  const RuntimeDOMException = globalThis.DOMException;
   if (RuntimeDOMException !== undefined && err instanceof RuntimeDOMException) {
     if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
       return 'quota';

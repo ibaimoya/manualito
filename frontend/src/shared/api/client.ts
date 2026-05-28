@@ -29,6 +29,36 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiErrorNotification {
+  title: string;
+  id: string;
+  description: string;
+}
+
+export function isAbortApiError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  return (
+    error instanceof ApiError &&
+    error.raw instanceof DOMException &&
+    error.raw.name === 'AbortError'
+  );
+}
+
+export function apiErrorNotification(
+  error: unknown,
+  idPrefix: string,
+  fallback: ApiErrorNotification,
+): ApiErrorNotification {
+  if (error instanceof ApiError) {
+    return {
+      title: error.view.title,
+      id: `${idPrefix}-${error.view.code}`,
+      description: error.view.message,
+    };
+  }
+  return fallback;
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: BodyInit;

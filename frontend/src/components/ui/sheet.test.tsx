@@ -42,6 +42,19 @@ describe('Sheet', () => {
     expect(screen.getByRole('button', { name: 'Aceptar' })).toBeInTheDocument();
   });
 
+  it('conserva la estructura visual de bottom sheet', () => {
+    render(<Demo open />);
+
+    const overlay = document.querySelector('[data-mn-overlay]');
+    const sheet = document.querySelector('[data-mn-sheet]');
+
+    expect(overlay).toBeInTheDocument();
+    expect(sheet).toBeInTheDocument();
+    expect(sheet).toHaveClass('fixed', 'bottom-0', 'rounded-t-3xl');
+    expect(sheet?.className).toContain('pb-[env(safe-area-inset-bottom)]');
+    expect(sheet?.querySelector('.h-1.w-10.rounded-full.bg-border-strong')).toBeInTheDocument();
+  });
+
   it('botón X dispara onOpenChange(false)', async () => {
     const user = userEvent.setup();
     const handler = vi.fn();

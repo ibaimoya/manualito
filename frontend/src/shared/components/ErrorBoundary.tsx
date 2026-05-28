@@ -70,7 +70,7 @@ function DefaultErrorView({ error, reset }: Readonly<{ error: Error; reset: () =
       <button
         onClick={() => {
           reset();
-          const runtimeWindow = (globalThis as unknown as { window?: Window }).window;
+          const runtimeWindow = globalThis.window;
           if (runtimeWindow !== undefined) {
             runtimeWindow.location.reload();
           }

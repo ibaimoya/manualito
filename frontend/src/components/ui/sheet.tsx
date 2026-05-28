@@ -1,7 +1,12 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { forwardRef, type ComponentRef, type ReactNode } from 'react';
-import { X } from 'lucide-react';
-import { cn } from '@/shared/lib/cn';
+import {
+
+  ModalFrame,
+  ModalHeader,
+  type ModalHeaderProps,
+} from './dialog';
+import {cn} from '@/shared/lib/cn';
 
 /**
  * Bottom sheet (modal anclado abajo) construido sobre Radix Dialog.
@@ -19,11 +24,11 @@ import { cn } from '@/shared/lib/cn';
  */
 
 export const Sheet = ({
-  open,
-  onOpenChange,
-  children,
-  contentClassName,
-}: Readonly<{
+                        open,
+                        onOpenChange,
+                        children,
+                        contentClassName,
+                      }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
@@ -35,94 +40,53 @@ export const Sheet = ({
    */
   contentClassName?: string;
 }>) => (
-  <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-    <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay
-        data-mn-overlay
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
-      />
-      <DialogPrimitive.Content
-        data-mn-sheet
-        className={cn(
-          'fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-md',
-          'rounded-t-3xl border-t border-border bg-bg shadow-lg',
-          'focus:outline-none',
-          contentClassName,
-        )}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* "Handle" decorativo arriba para sugerir gesture */}
-        <div className="flex justify-center pt-3" aria-hidden="true">
-          <span className="h-1 w-10 rounded-full bg-border-strong" />
-        </div>
-        {children}
-      </DialogPrimitive.Content>
-    </DialogPrimitive.Portal>
-  </DialogPrimitive.Root>
+    <ModalFrame
+        open={open}
+        onOpenChange={onOpenChange}
+        contentBaseClassName="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-md rounded-t-3xl border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] shadow-lg"
+        contentClassName={contentClassName}
+        dataKind="sheet"
+        handle={
+          <div className="flex justify-center pt-3" aria-hidden="true">
+            <span className="h-1 w-10 rounded-full bg-border-strong"/>
+          </div>
+        }
+    >
+      {children}
+    </ModalFrame>
 );
 
 export const SheetHeader = forwardRef<
-  ComponentRef<typeof DialogPrimitive.Title>,
-  Readonly<{
-    title: string;
-    description?: string;
-    onClose?: () => void;
-  }>
->(function SheetHeader({ title, description, onClose }, ref) {
+    ComponentRef<typeof DialogPrimitive.Title>,
+    Omit<ModalHeaderProps, 'className'>
+>(function SheetHeader(props, ref) {
   return (
-    <header className="flex items-start justify-between gap-3 px-5 pb-2 pt-4">
-      <div className="flex-1">
-        <DialogPrimitive.Title
+      <ModalHeader
+          {...props}
           ref={ref}
-          className="font-display text-xl font-bold tracking-tight text-fg"
-        >
-          {title}
-        </DialogPrimitive.Title>
-        {description ? (
-          <DialogPrimitive.Description className="mt-1 text-sm text-fg-2">
-            {description}
-          </DialogPrimitive.Description>
-        ) : null}
-      </div>
-      {onClose ? (
-        <DialogPrimitive.Close asChild>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-          >
-            <X size={20} strokeWidth={2} />
-          </button>
-        </DialogPrimitive.Close>
-      ) : null}
-    </header>
+          className="flex items-start justify-between gap-3 px-5 pb-2 pt-4"
+      />
   );
 });
 
-export const SheetBody = ({
-  children,
-  className,
-}: Readonly<{
-  children: ReactNode;
-  className?: string;
-}>) => <div className={cn('px-5 pb-5 pt-2', className)}>{children}</div>;
 
 export const SheetFooter = ({
-  children,
-  className,
-}: Readonly<{
+                              children,
+                              className,
+                            }: Readonly<{
   children: ReactNode;
   className?: string;
 }>) => (
-  <footer
-    className={cn(
-      'flex items-center justify-end gap-2 border-t border-border px-5 py-3',
-      className,
-    )}
-  >
-    {children}
-  </footer>
+    <footer
+        className={cn(
+            'flex items-center justify-end gap-2 border-t border-border px-5 py-3',
+            className,
+        )}
+    >
+      {children}
+    </footer>
 );
 
 export const SheetClose = DialogPrimitive.Close;
+
+export {ModalBody as SheetBody} from './dialog';

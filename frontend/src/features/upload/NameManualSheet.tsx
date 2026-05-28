@@ -1,6 +1,6 @@
 import { Sheet, SheetBody, SheetHeader } from '@/components/ui/sheet';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
-import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
+import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import {
   NameManualForm,
   subtitleForSource,
@@ -29,7 +29,7 @@ type Props = Readonly<{
  *    no solo de estilo." — MDN / web.dev guidelines (ver decisión #28).
  */
 export function NameManualSheet({ open, onOpenChange, file, source }: Props) {
-  const isDesktop = useIsDesktop();
+  const isDesktop = useNamedMediaQuery('desktop');
   const subtitle = subtitleForSource(source);
   const title = 'Ponle nombre al manual';
 

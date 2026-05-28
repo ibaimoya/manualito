@@ -3,7 +3,7 @@ import { Home, BookOpen, Settings } from 'lucide-react';
 import { Suspense, type ReactNode } from 'react';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { Sidebar } from '@/app/Sidebar';
-import { useIsDesktop } from '@/shared/hooks/useMediaQuery';
+import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -37,7 +37,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   const location = useLocation();
   const showNav = shouldShowBottomNav(location.pathname);
-  const isDesktop = useIsDesktop();
+  const isDesktop = useNamedMediaQuery('desktop');
 
   return (
     <ErrorBoundary>

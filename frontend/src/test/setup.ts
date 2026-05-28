@@ -14,25 +14,20 @@ afterEach(() => {
 });
 
 // Fallback estándar para runtimes de test sin Web Crypto completa.
-const testGlobal = globalThis as unknown as {
-  crypto?: Crypto;
-  window?: Window & typeof globalThis;
-};
-
-if (testGlobal.crypto === undefined) {
+if (globalThis.crypto === undefined) {
   Object.defineProperty(globalThis, 'crypto', {
     configurable: true,
     value: webcrypto,
   });
-} else if (testGlobal.crypto.randomUUID === undefined) {
-  Object.defineProperty(testGlobal.crypto, 'randomUUID', {
+} else if (globalThis.crypto.randomUUID === undefined) {
+  Object.defineProperty(globalThis.crypto, 'randomUUID', {
     configurable: true,
     value: randomUUID,
   });
 }
 
 // matchMedia → jsdom no la trae.
-const testWindow = testGlobal.window;
+const testWindow = globalThis.window;
 if (testWindow !== undefined && testWindow.matchMedia === undefined) {
   Object.defineProperty(testWindow, 'matchMedia', {
     writable: true,

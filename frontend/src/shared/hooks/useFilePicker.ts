@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef } from 'react';
  * spam de clicks abra el picker múltiples veces.
  *
  * Bug #4 del catálogo `notimportant/errores-tipicos-encontrados-frontend.md`:
- * en algunos navegadores (sobre todo iOS Safari), pulsar 2 veces rápido el
+ * en algunos navegadores (especialmente iOS Safari), pulsar 2 veces rápido el
  * botón que llama `input.click()` abre dos diálogos en cascada — el
  * primero se cierra y el segundo queda flotante.
  *

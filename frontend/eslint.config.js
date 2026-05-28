@@ -1,4 +1,5 @@
 // @ts-check
+import { defineConfig } from 'eslint/config';
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -15,8 +16,8 @@ import prettier from 'eslint-config-prettier';
  *  1. Base JS/TS
  *  2. Plugins de React (JSX runtime + hooks + a11y + refresh)
  *  3. Prettier al final → desactiva reglas de formato que chocarían con prettier
- */
-export default tseslint.config(
+  */
+export default defineConfig([
   {
     ignores: [
       'dist/**',
@@ -33,15 +34,10 @@ export default tseslint.config(
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      // `'latest'` libera de subir el número cada año cuando sale una
-      // nueva edición de ECMAScript — el parser usa lo más reciente
-      // que soporta typescript-eslint en cada release.
+
       ecmaVersion: 'latest',
       sourceType: 'module',
-      // ES2025 es el último estándar finalizado (junio 2025): incluye
-      // Iterator helpers, `Promise.try`, `Set.union/intersection/...`,
-      // `RegExp.escape`.  Mantenemos un step menos que `latest` aquí
-      // para evitar marcar como "undefined" builtins que aún sean stage 3.
+
       globals: { ...globals.browser, ...globals.es2025 },
       parserOptions: {
         ecmaFeatures: { jsx: true },
@@ -62,9 +58,7 @@ export default tseslint.config(
 
       // React + TS
       'react/prop-types': 'off', // TS reemplaza prop-types.
-      // react-refresh warning silenciado para ficheros que co-exportan hooks/variants
-      // (patrón cva + Context).  HMR sigue funcionando en componentes; lo demás
-      // simplemente fuerza full reload, que es aceptable en componentes raíz.
+
       'react-refresh/only-export-components': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -87,7 +81,8 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.{ts,tsx}', '**/test/**/*.{ts,tsx}'],
+    // Suite de tests viviendo en `tests/` (espejando estructura de src).
+    files: ['tests/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
     },
@@ -101,4 +96,4 @@ export default tseslint.config(
     },
   },
   prettier,
-);
+]);

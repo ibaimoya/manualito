@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "pretypecheck": "pnpm routes:generate",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --noEmit",
     "pretest": "pnpm routes:generate",
     "test": "vitest run",
     "test:watch": "vitest",

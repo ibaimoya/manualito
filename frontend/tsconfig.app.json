@@ -29,12 +29,13 @@
     /* Paths */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@tests/*": ["./tests/*"]
     },
 
-    /* Types */
-    "types": ["vite/client", "vite-plugin-pwa/client"]
+    /* Types — `node` requerido para `import 'node:crypto'` y similares en tests. */
+    "types": ["vite/client", "vite-plugin-pwa/client", "vitest/globals", "node"]
   },
-  "include": ["src", "src/**/*.tsx", "src/**/*.ts"],
-  "exclude": ["src/test/**", "src/**/*.test.ts", "src/**/*.test.tsx", "node_modules", "dist"]
+  "include": ["src", "tests"],
+  "exclude": ["node_modules", "dist"]
 }

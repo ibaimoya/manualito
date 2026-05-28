@@ -57,6 +57,13 @@ async def create_manual(
 
     El gateway valida la imagen, llama al servicio OCR y reenvía el texto
     extraído al servicio RAG para su indexación.
+
+    Returns:
+        dict: Combinación de la respuesta de RAG (``manual_id``,
+        ``chunks_indexed``, ``status``) junto con las líneas OCR
+        originales (``ocr_lines``).  El frontend usa ``ocr_lines`` para
+        mostrar la fuente del texto sin tener que invocar
+        ``POST /api/ocr`` de nuevo sobre la misma imagen.
     """
     chunk = await validate_image(image)
     manual_id = build_manual_id(name)
@@ -85,7 +92,9 @@ async def create_manual(
         ingest_response["manual_id"],
         ingest_response["chunks_indexed"],
     )
-    return ingest_response
+    # Adjuntamos las líneas OCR para que el gateway las propague al cliente
+    # junto con la respuesta de RAG; ya están en memoria, así que es coste 0.
+    return {**ingest_response, "ocr_lines": lines}
 
 
 async def answer_manual_question(

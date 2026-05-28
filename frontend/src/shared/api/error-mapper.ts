@@ -1,0 +1,160 @@
+/**
+ * Traductor de errores HTTP del backend → mensaje UI accionable + severidad.
+ *
+ * El backend FastAPI mapea sus excepciones dominio a códigos HTTP en
+ * `backend/api/exceptions.py`.  Aquí espejamos cada uno con la copy y
+ * la sugerencia de acción para el usuario final.
+ *
+ * Si añades un nuevo código en backend, añade su entrada aquí.
+ */
+
+export type ApiErrorSeverity = 'warning' | 'error' | 'info';
+
+export interface ApiErrorView {
+  /** Título corto para toast / heading de error screen. */
+  title: string;
+  /** Mensaje extendido con la causa probable. */
+  message: string;
+  /** Próximo paso sugerido al usuario. */
+  hint?: string;
+  /** Marcas para UI (ej. "se puede reintentar"). */
+  retryable: boolean;
+  severity: ApiErrorSeverity;
+  /** Código original — útil para mostrar en footer de error screen. */
+  code: string;
+}
+
+const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
+  400: {
+    title: 'Petición inválida',
+    message: 'Algo en la petición no era correcto.',
+    hint: 'Revisa los datos y vuelve a intentarlo.',
+    retryable: true,
+    severity: 'warning',
+  },
+  404: {
+    title: 'Manual no encontrado',
+    message: 'Este manual ya no existe en el servidor.',
+    hint: 'Vuelve a la pantalla principal y sube las fotos otra vez.',
+    retryable: false,
+    severity: 'warning',
+  },
+  413: {
+    title: 'Foto demasiado grande',
+    message: 'La foto pesa más de 20 MB.',
+    hint: 'Hazla con menos resolución o usa un editor para reducirla.',
+    retryable: true,
+    severity: 'warning',
+  },
+  415: {
+    title: 'Formato no soportado',
+    message: 'El fichero no es una imagen válida (JPG, PNG) ni PDF.',
+    hint: 'Convierte el fichero y vuelve a intentarlo.',
+    retryable: true,
+    severity: 'warning',
+  },
+  422: {
+    title: 'No conseguimos leer el manual',
+    message: 'No se ha podido extraer texto de las páginas.',
+    hint: 'Comprueba que las fotos estén enfocadas y con buena luz, y vuelve a intentarlo.',
+    retryable: true,
+    severity: 'warning',
+  },
+  500: {
+    title: 'Algo ha fallado',
+    message: 'Ha ocurrido un error interno en el servidor.',
+    hint: 'Inténtalo de nuevo. Si persiste, repórtanos el código de error.',
+    retryable: true,
+    severity: 'error',
+  },
+  502: {
+    title: 'Servicio cargando',
+    message: 'Un servicio interno aún se está iniciando o no está disponible.',
+    hint: 'Espera unos segundos y vuelve a intentarlo.',
+    retryable: true,
+    severity: 'warning',
+  },
+  503: {
+    title: 'Servicio no disponible',
+    message: 'El servidor está temporalmente fuera de servicio.',
+    hint: 'Vuelve a intentarlo en un momento.',
+    retryable: true,
+    severity: 'warning',
+  },
+  504: {
+    title: 'Tiempo de espera agotado',
+    message: 'La respuesta tardó más de lo esperado.',
+    hint: 'Inténtalo de nuevo o prueba con menos páginas.',
+    retryable: true,
+    severity: 'warning',
+  },
+};
+
+export function mapHttpStatus(status: number, fallbackCode?: string): ApiErrorView {
+  const entry = TABLE[status];
+  if (entry) return { ...entry, code: `http.${status}` };
+
+  if (status >= 400 && status < 500) {
+    return {
+      title: 'Petición rechazada',
+      message: 'El servidor ha rechazado la petición.',
+      hint: 'Inténtalo de nuevo.',
+      retryable: true,
+      severity: 'warning',
+      code: fallbackCode ?? `http.${status}`,
+    };
+  }
+
+  return {
+    title: 'Error del servidor',
+    message: 'Ha ocurrido un error inesperado.',
+    hint: 'Inténtalo de nuevo en unos segundos.',
+    retryable: true,
+    severity: 'error',
+    code: fallbackCode ?? `http.${status}`,
+  };
+}
+
+const NETWORK_ERROR_VIEW: ApiErrorView = {
+  title: 'Sin conexión',
+  message: 'No hemos podido contactar con el servidor.',
+  hint: 'Comprueba tu conexión a internet y vuelve a intentarlo.',
+  retryable: true,
+  severity: 'warning',
+  code: 'network',
+};
+
+const UNKNOWN_ERROR_VIEW: ApiErrorView = {
+  title: 'Error inesperado',
+  message: 'Ha ocurrido algo que no esperábamos.',
+  hint: 'Recarga la página o vuelve a intentarlo.',
+  retryable: true,
+  severity: 'error',
+  code: 'unknown',
+};
+
+/**
+ * Punto de entrada genérico — soporta:
+ *  - Response objects (fetch),
+ *  - errores con `status` numérico (axios-like),
+ *  - TypeError de red,
+ *  - cualquier otra cosa.
+ */
+export function mapApiError(error: unknown): ApiErrorView {
+  if (error instanceof TypeError) {
+    return NETWORK_ERROR_VIEW;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const status = 'status' in error ? error.status : undefined;
+    if (typeof status === 'number') {
+      return mapHttpStatus(status);
+    }
+    if ('response' in error) {
+      const res = (error as { response?: { status?: number } }).response;
+      if (res && typeof res.status === 'number') {
+        return mapHttpStatus(res.status);
+      }
+    }
+  }
+  return UNKNOWN_ERROR_VIEW;
+}

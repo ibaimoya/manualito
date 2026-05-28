@@ -31,13 +31,21 @@ class OcrLinesResponse(BaseModel):
 
 
 class ManualCreatedResponse(BaseModel):
-    """Respuesta de ``POST /api/manuals`` tras indexar el manual en RAG."""
+    """Respuesta de ``POST /api/manuals`` tras indexar el manual en RAG.
+
+    El campo ``ocr_lines`` expone al cliente el mismo texto OCR que el
+    gateway ya extrajo internamente para indexar el manual en RAG.
+    Permite que el frontend muestre la fuente original sin tener que
+    llamar de nuevo a ``POST /api/ocr`` (evita un segundo OCR del mismo
+    fichero, costoso en CPU).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualSlug
     chunks_indexed: ChunksIndexed
     status: str
+    ocr_lines: list[OcrLine]
 
 
 class AnswerResponse(BaseModel):

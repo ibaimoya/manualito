@@ -56,6 +56,66 @@ def test_database_url_can_be_built_from_secret_files(monkeypatch, tmp_path):
     assert database_url.database == "manualito"
 
 
+def test_database_url_rejects_blank_value(monkeypatch):
+    """Una DATABASE_URL en blanco es un error de configuración, no una ausencia."""
+    monkeypatch.setenv("DATABASE_URL", "   ")
+
+    with pytest.raises(RuntimeError, match="DATABASE_URL no puede estar vacia"):
+        get_database_url()
+
+
+def test_build_from_parts_uses_plain_env_vars_without_secret_files(monkeypatch):
+    """Sin Docker secrets, las credenciales se leen de POSTGRES_USER/PASSWORD."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("POSTGRES_USER_FILE", raising=False)
+    monkeypatch.delenv("POSTGRES_PASSWORD_FILE", raising=False)
+    monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
+    monkeypatch.setenv("POSTGRES_USER", "manualito")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "p@ss word")
+    monkeypatch.setenv("POSTGRES_HOST", "database")
+    monkeypatch.setenv("POSTGRES_PORT", "5432")
+    monkeypatch.setenv("POSTGRES_DB", "manualito")
+
+    database_url = make_url(get_database_url())
+
+    assert database_url.username == "manualito"
+    assert database_url.password == "p@ss word"
+    assert database_url.host == "database"
+
+
+def test_build_from_parts_requires_user_via_file_or_env(monkeypatch):
+    """Si falta el usuario por fichero y por entorno, el error lo dice claro."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("POSTGRES_USER_FILE", raising=False)
+    monkeypatch.delenv("POSTGRES_USER", raising=False)
+    monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
+
+    with pytest.raises(RuntimeError, match="Se requiere POSTGRES_USER_FILE o POSTGRES_USER"):
+        get_database_url()
+
+
+def test_secret_file_must_point_to_an_existing_file(monkeypatch, tmp_path):
+    """Un Docker secret mal montado falla al construir la URL, no en la 1ª query."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
+    monkeypatch.setenv("POSTGRES_USER_FILE", str(tmp_path / "ausente.txt"))
+
+    with pytest.raises(RuntimeError, match="POSTGRES_USER_FILE no apunta a un fichero valido"):
+        get_database_url()
+
+
+def test_secret_file_must_not_be_empty(monkeypatch, tmp_path):
+    """Un secret vacío se rechaza en vez de generar credenciales vacías."""
+    empty_secret = tmp_path / "postgres_user.txt"
+    empty_secret.write_text("   \n", encoding="utf-8")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
+    monkeypatch.setenv("POSTGRES_USER_FILE", str(empty_secret))
+
+    with pytest.raises(RuntimeError, match="POSTGRES_USER_FILE no puede estar vacio"):
+        get_database_url()
+
+
 def test_base_metadata_has_stable_naming_convention():
     """La metadata define nombres estables para constraints."""
     assert NAMING_CONVENTION["pk"] == "pk_%(table_name)s"

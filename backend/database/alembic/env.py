@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from logging.config import fileConfig
 
 from alembic import context
@@ -11,6 +12,11 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from database.base import Base
 from database.config import get_database_url
 from database.models import import_all_models
+
+# psycopg en async no funciona con el ProactorEventLoop por defecto de Windows;
+# forzamos el SelectorEventLoop. No-op fuera de Windows (CI/Docker corren Linux).
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 config = context.config
 

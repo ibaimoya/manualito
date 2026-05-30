@@ -22,6 +22,7 @@ class AuthSession(UUIDPrimaryKeyMixin, Base):
         nullable=False,
     )
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    csrf_token_hash: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

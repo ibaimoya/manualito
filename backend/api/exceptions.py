@@ -4,6 +4,16 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from api.auth.exceptions import (
+    AdminRequiredError,
+    AuthenticationRequiredError,
+    DuplicateIdentityError,
+    InvalidCredentialsError,
+    InvalidCsrfTokenError,
+)
+from api.auth.passwords import PasswordValidationError
+from api.auth.username import UsernameValidationError
+
 
 class ApiError(Exception):
     """Clase base abstracta para los errores de dominio del gateway."""
@@ -90,6 +100,33 @@ def internal_service_error_handler(_request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": error.detail})
 
 
+def authentication_required_handler(_request: Request, _exc: Exception):
+    return JSONResponse(status_code=401, content={"detail": "Autenticación requerida."})
+
+
+def invalid_credentials_handler(_request: Request, _exc: Exception):
+    return JSONResponse(status_code=401, content={"detail": "Credenciales inválidas."})
+
+
+def duplicate_identity_handler(_request: Request, _exc: Exception):
+    return JSONResponse(status_code=409, content={"detail": "Email o username no disponible."})
+
+
+def invalid_csrf_token_handler(_request: Request, _exc: Exception):
+    return JSONResponse(status_code=403, content={"detail": "Token CSRF inválido."})
+
+
+def auth_validation_handler(_request: Request, _exc: Exception):
+    return JSONResponse(status_code=422, content={"detail": "Parámetros inválidos."})
+
+
+def admin_required_handler(_request: Request, _exc: Exception):
+    return JSONResponse(
+        status_code=403,
+        content={"detail": "Permisos de administrador requeridos."},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Registra los handlers globales del gateway."""
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -104,3 +141,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         internal_resource_not_found_handler,
     )
     app.add_exception_handler(InternalServiceError, internal_service_error_handler)
+    app.add_exception_handler(AuthenticationRequiredError, authentication_required_handler)
+    app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
+    app.add_exception_handler(DuplicateIdentityError, duplicate_identity_handler)
+    app.add_exception_handler(InvalidCsrfTokenError, invalid_csrf_token_handler)
+    app.add_exception_handler(UsernameValidationError, auth_validation_handler)
+    app.add_exception_handler(PasswordValidationError, auth_validation_handler)
+    app.add_exception_handler(AdminRequiredError, admin_required_handler)

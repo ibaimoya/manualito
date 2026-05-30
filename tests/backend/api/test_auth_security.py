@@ -1,0 +1,631 @@
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from typing import cast
+from unittest.mock import AsyncMock
+from uuid import uuid4
+
+import pytest
+from fastapi import Request, Response
+from sqlalchemy import Select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api import config
+from api.auth import service
+from api.auth.audit import record_security_event
+from api.auth.cookies import set_auth_cookies
+from api.auth.dependencies import get_current_auth, require_admin, require_csrf
+from api.auth.exceptions import (
+    AdminRequiredError,
+    AuthenticationRequiredError,
+    InvalidCredentialsError,
+    InvalidCsrfTokenError,
+)
+from api.auth.passwords import (
+    PasswordValidationError,
+    hash_password,
+    validate_password_policy,
+    verify_password,
+    verify_password_against_dummy,
+)
+from api.auth.tokens import generate_opaque_token, hash_token, token_matches
+from api.routes.auth import _client_ip
+from database.models.audit import AuditLog
+from database.models.auth import AuthSession
+from database.models.user import User
+
+_FAKE_HASH = "hash"  # placeholder de hash en fixtures, no es una credencial
+_SENSITIVE = "stripped"  # relleno para claves que el audit_log debe descartar
+
+
+class FakeSession:
+    """Session mínima para probar casos de uso sin Postgres real.
+
+    Los métodos async de ``AsyncSession`` (que el service ``await``ea) se simulan
+    con ``AsyncMock`` para que sean awaitables; la lógica con estado vive en los
+    ``_impl`` síncronos.
+    """
+
+    def __init__(self, scalar_result=None, row_result=None):
+        self.added = []
+        self.commits = 0
+        self.rollbacks = 0
+        self.refreshed = []
+        self.statements = []
+        self.scalar_result = scalar_result
+        self.row_result = row_result
+        self.execute = AsyncMock(side_effect=self._execute)
+        self.flush = AsyncMock(side_effect=self._flush)
+        self.commit = AsyncMock(side_effect=self._commit)
+        self.rollback = AsyncMock(side_effect=self._rollback)
+        self.refresh = AsyncMock(side_effect=self._refresh)
+
+    def add(self, instance):
+        """Captura instancias pendientes como haría AsyncSession.add()."""
+        self.added.append(instance)
+
+    def _execute(self, statement):
+        """Guarda la query y devuelve un resultado controlado."""
+        self.statements.append(statement)
+        if self.row_result is not None:
+            return FakeRowResult(self.row_result)
+        return FakeScalarResult(self.scalar_result)
+
+    def _flush(self):
+        """No hace nada porque no hay base de datos real."""
+
+    def _commit(self):
+        """Cuenta commits para verificar persistencia esperada."""
+        self.commits += 1
+
+    def _rollback(self):
+        """Cuenta rollbacks para escenarios de error."""
+        self.rollbacks += 1
+
+    def _refresh(self, instance):
+        """Marca una instancia como refrescada."""
+        self.refreshed.append(instance)
+
+
+class FakeScalarResult:
+    """Resultado escalar compatible con scalar_one_or_none()."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def scalar_one_or_none(self):
+        """Devuelve el valor preparado por el test."""
+        return self.value
+
+
+class FakeRowResult:
+    """Resultado de tupla compatible con one_or_none()."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def one_or_none(self):
+        """Devuelve la tupla preparada por el test."""
+        return self.value
+
+
+@pytest.mark.parametrize("password", ["x" * 12, "contraseña larga con espacios"])
+def test_validate_password_policy_accepts_minimum_length(password: str):
+    """La política propia permite cualquier carácter y se centra en longitud."""
+    validate_password_policy(password)
+
+
+@pytest.mark.parametrize("password", ["short", "x" * 129])
+def test_validate_password_policy_rejects_out_of_bounds(password: str):
+    """La password debe tener longitud entre 12 y 128 caracteres."""
+    with pytest.raises(PasswordValidationError):
+        validate_password_policy(password)
+
+
+def test_tokens_are_opaque_and_hashed():
+    """Los tokens crudos tienen alta entropía y en DB se guarda SHA-256 hex."""
+    token = generate_opaque_token()
+    token_hash = hash_token(token)
+
+    assert len(token) >= 43
+    assert len(token_hash) == 64
+    assert token not in token_hash
+    assert token_matches(token, token_hash)
+    assert not token_matches("otro-token", token_hash)
+
+
+def test_hash_password_uses_argon2id_with_current_recommended_parameters():
+    """pwdlib recommended usa Argon2id con coste superior al mínimo OWASP."""
+    password_hash = hash_password("valid-password")
+
+    assert password_hash.startswith("$argon2id$")
+    assert "$m=65536,t=3,p=4$" in password_hash
+
+
+def test_set_auth_cookies_pins_security_flags():
+    """La cookie de sesión es HttpOnly y la de CSRF queda legible por el frontend."""
+    response = Response()
+
+    set_auth_cookies(response, session_token="session-token", csrf_token="csrf-token")
+
+    set_cookie_headers = response.headers.getlist("set-cookie")
+    session_cookie = next(
+        header for header in set_cookie_headers if config.AUTH_SESSION_COOKIE_NAME in header
+    )
+    csrf_cookie = next(
+        header for header in set_cookie_headers if config.AUTH_CSRF_COOKIE_NAME in header
+    )
+    assert "HttpOnly" in session_cookie
+    assert "SameSite=lax" in session_cookie
+    assert "Path=/" in session_cookie
+    assert f"Max-Age={config.AUTH_SESSION_MAX_AGE_SECONDS}" in session_cookie
+    assert "HttpOnly" not in csrf_cookie
+    assert "SameSite=lax" in csrf_cookie
+
+
+def test_record_security_event_strips_sensitive_event_data():
+    """audit_log nunca persiste claves sensibles aunque se pasen por error."""
+    fake_session = FakeSession()
+
+    record_security_event(
+        cast(AsyncSession, fake_session),
+        event_type="login_failed",
+        success=False,
+        ip_address="127.0.0.1",
+        event_data={
+            "target_user_id": "user-1",
+            "password": _SENSITIVE,
+            "token": _SENSITIVE,
+            "cookie": _SENSITIVE,
+        },
+    )
+
+    audit_log = fake_session.added[0]
+    assert isinstance(audit_log, AuditLog)
+    assert audit_log.event_data == {"target_user_id": "user-1"}
+
+
+@pytest.mark.anyio
+async def test_login_missing_user_uses_dummy_hash_and_writes_uniform_failure(monkeypatch):
+    """El login sin usuario candidato ejecuta hash dummy para reducir timing oracle."""
+    fake_session = FakeSession(scalar_result=None)
+    dummy_verify = SimpleNamespace(called=False)
+
+    def fake_dummy_verify(_password: str) -> None:
+        dummy_verify.called = True
+
+    monkeypatch.setattr(service, "verify_password_against_dummy", fake_dummy_verify)
+
+    with pytest.raises(InvalidCredentialsError):
+        await service.login_user(
+            cast(AsyncSession, fake_session),
+            identifier="missing@example.com",
+            password="valid-password",
+            ip_address="127.0.0.1",
+        )
+
+    assert dummy_verify.called is True
+    assert fake_session.commits == 1
+    assert [event.event_type for event in fake_session.added] == ["login_failed"]
+    assert all(not isinstance(instance, AuthSession) for instance in fake_session.added)
+
+
+@pytest.mark.anyio
+async def test_login_success_creates_hashed_session_and_csrf(monkeypatch):
+    """Login correcto persiste sesión con hashes, no tokens crudos."""
+    now = datetime(2026, 5, 29, tzinfo=UTC)
+    user = _user()
+    fake_session = FakeSession(scalar_result=user)
+    token_iter = iter(["session-token", "csrf-token"])
+
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+    monkeypatch.setattr(service, "generate_opaque_token", lambda: next(token_iter))
+    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (True, None))
+
+    result = await service.login_user(
+        cast(AsyncSession, fake_session),
+        identifier="user@example.com",
+        password="valid-password",
+        ip_address="127.0.0.1",
+    )
+
+    auth_session = next(
+        instance for instance in fake_session.added if isinstance(instance, AuthSession)
+    )
+    audit_log = next(instance for instance in fake_session.added if isinstance(instance, AuditLog))
+    assert result.session_token == "session-token"
+    assert result.csrf_token == "csrf-token"
+    assert auth_session.token_hash == hash_token("session-token")
+    assert auth_session.csrf_token_hash == hash_token("csrf-token")
+    assert auth_session.expires_at == now + timedelta(days=config.AUTH_SESSION_DAYS)
+    assert "session-token" not in auth_session.token_hash
+    assert "csrf-token" not in auth_session.csrf_token_hash
+    assert audit_log.event_type == "login_ok"
+    assert fake_session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_authenticate_session_filters_active_user_and_renews_sliding_expiry(monkeypatch):
+    """Una sesión válida renueva expires_at a siete días desde la request."""
+    now = datetime(2026, 5, 29, tzinfo=UTC)
+    auth_session = AuthSession(
+        user_id=uuid4(),
+        token_hash=hash_token("session-token"),
+        csrf_token_hash=hash_token("csrf-token"),
+        expires_at=now + timedelta(minutes=10),
+    )
+    fake_session = FakeSession(row_result=(_user(), auth_session))
+
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+
+    auth = await service.authenticate_session(
+        cast(AsyncSession, fake_session),
+        session_token="session-token",
+        csrf_token="csrf-token",
+    )
+
+    assert auth.csrf_token == "csrf-token"
+    assert auth.auth_session.expires_at == now + timedelta(days=config.AUTH_SESSION_DAYS)
+    assert fake_session.commits == 1
+    assert isinstance(fake_session.statements[0], Select)
+    compiled = str(fake_session.statements[0])
+    assert "users.deleted_at IS NULL" in compiled
+    assert "users.status = :status_1" in compiled
+    assert "auth_sessions.revoked_at IS NULL" in compiled
+
+
+def test_to_public_user_never_exposes_sensitive_fields():
+    """El contrato público excluye password_hash, username_key y tokens."""
+    public_user = service.to_public_user(_user())
+    dumped = public_user.model_dump()
+
+    assert "password_hash" not in dumped
+    assert "username_key" not in dumped
+    assert "token" not in dumped
+
+
+@pytest.mark.parametrize(
+    ("provided_token", "expected"),
+    [
+        ("csrf-token", True),
+        ("wrong-token", False),
+        (None, False),
+    ],
+)
+def test_validate_csrf_token_matches_session_hash(
+    provided_token: str | None,
+    expected: bool,
+):
+    """CSRF exige header que corresponda al hash persistido en la sesión."""
+    auth = service.AuthenticatedSession(
+        user=_user(),
+        auth_session=AuthSession(
+            user_id=uuid4(),
+            token_hash=hash_token("session-token"),
+            csrf_token_hash=hash_token("csrf-token"),
+            expires_at=datetime(2026, 5, 29, tzinfo=UTC),
+        ),
+        session_token="session-token",
+        csrf_token="csrf-token",
+    )
+
+    assert service.validate_csrf_token(auth, provided_token) is expected
+
+
+@pytest.mark.anyio
+async def test_register_user_hashes_password_forces_user_role_and_audits(monkeypatch):
+    """Registro feliz: normaliza email, hashea, rol=user y audita register_ok."""
+    monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
+    fake_session = FakeSession()
+
+    user = await service.register_user(
+        cast(AsyncSession, fake_session),
+        email="USER@Example.com ",
+        username="Nora",
+        password="valid-password",
+        ip_address="127.0.0.1",
+    )
+
+    audit_log = next(i for i in fake_session.added if isinstance(i, AuditLog))
+    assert user.email == "user@example.com"
+    assert user.username_key == "nora"
+    assert user.role == "user"
+    assert user.password_hash.startswith("$argon2id$")
+    assert audit_log.event_type == "register_ok"
+    assert fake_session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_register_user_maps_integrity_error_to_duplicate(monkeypatch):
+    """Email/username duplicado se traduce vía IntegrityError, sin check previo."""
+    monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
+
+    class DuplicateSession(FakeSession):
+        def _flush(self):
+            raise IntegrityError("INSERT", {}, ValueError("duplicate key"))
+
+    fake_session = DuplicateSession()
+
+    with pytest.raises(service.DuplicateIdentityError):
+        await service.register_user(
+            cast(AsyncSession, fake_session),
+            email="user@example.com",
+            username="Nora",
+            password="valid-password",
+            ip_address=None,
+        )
+
+    assert fake_session.rollbacks == 1
+
+
+@pytest.mark.anyio
+async def test_login_wrong_password_fails_uniformly_with_audit(monkeypatch):
+    """Password incorrecta: InvalidCredentials y login_failed con user_id."""
+    user = _user()
+    fake_session = FakeSession(scalar_result=user)
+    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (False, None))
+
+    with pytest.raises(InvalidCredentialsError):
+        await service.login_user(
+            cast(AsyncSession, fake_session),
+            identifier="user@example.com",
+            password="bad-password",
+            ip_address="127.0.0.1",
+        )
+
+    audit_log = fake_session.added[0]
+    assert audit_log.event_type == "login_failed"
+    assert audit_log.user_id == user.id
+
+
+@pytest.mark.anyio
+async def test_login_rehashes_password_when_parameters_change(monkeypatch):
+    """Si verify_and_update devuelve hash nuevo, se persiste el actualizado."""
+    user = _user()
+    fake_session = FakeSession(scalar_result=user)
+    monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
+    monkeypatch.setattr(service, "generate_opaque_token", lambda: "token")
+    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (True, "new-hash"))
+
+    await service.login_user(
+        cast(AsyncSession, fake_session),
+        identifier="user@example.com",
+        password="valid-password",
+        ip_address=None,
+    )
+
+    assert user.password_hash == "new-hash"
+
+
+@pytest.mark.anyio
+async def test_login_by_username_searches_by_username_key(monkeypatch):
+    """Un identifier sin @ se busca por username_key, no por email."""
+    user = _user()
+    fake_session = FakeSession(scalar_result=user)
+    monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
+    monkeypatch.setattr(service, "generate_opaque_token", lambda: "token")
+    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (True, None))
+
+    await service.login_user(
+        cast(AsyncSession, fake_session),
+        identifier="Nora",
+        password="valid-password",
+        ip_address=None,
+    )
+
+    assert "users.username_key" in str(fake_session.statements[0])
+
+
+@pytest.mark.anyio
+async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
+    """Un identifier que no es email ni username válido cae como credenciales malas."""
+    fake_session = FakeSession(scalar_result=None)
+    dummy = SimpleNamespace(called=False)
+    monkeypatch.setattr(
+        service,
+        "verify_password_against_dummy",
+        lambda _password: setattr(dummy, "called", True),
+    )
+
+    with pytest.raises(InvalidCredentialsError):
+        await service.login_user(
+            cast(AsyncSession, fake_session),
+            identifier="x" * 200,
+            password="valid-password",
+            ip_address=None,
+        )
+
+    assert dummy.called is True
+
+
+@pytest.mark.anyio
+async def test_authenticate_session_without_token_requires_auth():
+    """Sin token de sesión no se intenta tocar la base de datos."""
+    fake_session = FakeSession()
+
+    with pytest.raises(AuthenticationRequiredError):
+        await service.authenticate_session(
+            cast(AsyncSession, fake_session), session_token=None, csrf_token=None
+        )
+
+    assert fake_session.statements == []
+
+
+@pytest.mark.anyio
+async def test_authenticate_session_without_matching_row_requires_auth():
+    """Una sesión inexistente, revocada o expirada exige reautenticación."""
+    fake_session = FakeSession()
+    fake_session.execute = AsyncMock(return_value=FakeRowResult(None))
+
+    with pytest.raises(AuthenticationRequiredError):
+        await service.authenticate_session(
+            cast(AsyncSession, fake_session), session_token="session-token", csrf_token="csrf-token"
+        )
+
+
+@pytest.mark.anyio
+async def test_authenticate_session_rotates_csrf_when_cookie_absent(monkeypatch):
+    """Sin cookie CSRF válida, la sesión rota a un token nuevo."""
+    now = datetime(2026, 5, 29, tzinfo=UTC)
+    auth_session = AuthSession(
+        user_id=uuid4(),
+        token_hash=hash_token("session-token"),
+        csrf_token_hash=hash_token("old-csrf"),
+        expires_at=now + timedelta(minutes=10),
+    )
+    fake_session = FakeSession(row_result=(_user(), auth_session))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+    monkeypatch.setattr(service, "generate_opaque_token", lambda: "new-csrf")
+
+    auth = await service.authenticate_session(
+        cast(AsyncSession, fake_session), session_token="session-token", csrf_token=None
+    )
+
+    assert auth.csrf_token == "new-csrf"
+    assert auth_session.csrf_token_hash == hash_token("new-csrf")
+
+
+@pytest.mark.anyio
+async def test_logout_session_revokes_and_audits():
+    """Logout marca revoked_at, audita y commitea usando el reloj real."""
+    auth_session = AuthSession(
+        user_id=uuid4(),
+        token_hash=hash_token("session-token"),
+        csrf_token_hash=hash_token("csrf-token"),
+        expires_at=datetime(2026, 5, 29, tzinfo=UTC),
+    )
+    auth = service.AuthenticatedSession(
+        user=_user(),
+        auth_session=auth_session,
+        session_token="session-token",
+        csrf_token="csrf-token",
+    )
+    fake_session = FakeSession()
+
+    await service.logout_session(
+        cast(AsyncSession, fake_session), auth=auth, ip_address="127.0.0.1"
+    )
+
+    assert auth_session.revoked_at is not None
+    assert fake_session.added[0].event_type == "logout"
+    assert fake_session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_get_current_auth_loads_session_and_sets_cookies(monkeypatch):
+    """La dependency resuelve la sesión desde cookies y reescribe las cookies."""
+    now = datetime(2026, 5, 29, tzinfo=UTC)
+    auth_session = AuthSession(
+        user_id=uuid4(),
+        token_hash=hash_token("session-token"),
+        csrf_token_hash=hash_token("csrf-token"),
+        expires_at=now + timedelta(minutes=10),
+    )
+    fake_session = FakeSession(row_result=(_user(), auth_session))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+    request = Request(
+        {
+            "type": "http",
+            "headers": [
+                (
+                    b"cookie",
+                    f"{config.AUTH_SESSION_COOKIE_NAME}=session-token; "
+                    f"{config.AUTH_CSRF_COOKIE_NAME}=csrf-token".encode(),
+                )
+            ],
+        }
+    )
+    response = Response()
+
+    auth = await get_current_auth(request, response, cast(AsyncSession, fake_session))
+
+    assert auth.user.username == "Nora"
+    assert "set-cookie" in response.headers
+
+
+def test_require_csrf_allows_valid_header_and_blocks_mismatch():
+    """require_csrf exige que el header CSRF case con el hash de la sesión."""
+    auth = service.AuthenticatedSession(
+        user=_user(),
+        auth_session=AuthSession(
+            user_id=uuid4(),
+            token_hash=hash_token("session-token"),
+            csrf_token_hash=hash_token("csrf-token"),
+            expires_at=datetime(2026, 5, 29, tzinfo=UTC),
+        ),
+        session_token="session-token",
+        csrf_token="csrf-token",
+    )
+
+    require_csrf(auth, "csrf-token")
+
+    with pytest.raises(InvalidCsrfTokenError):
+        require_csrf(auth, "wrong-token")
+
+
+def test_require_admin_allows_admin_and_blocks_normal_user():
+    """require_admin lee el rol del usuario cargado desde DB."""
+    auth_session = AuthSession(
+        user_id=uuid4(),
+        token_hash=hash_token("session-token"),
+        csrf_token_hash=hash_token("csrf-token"),
+        expires_at=datetime(2026, 5, 29, tzinfo=UTC),
+    )
+    admin_user = _user()
+    admin_user.role = "admin"
+    admin_auth = service.AuthenticatedSession(
+        user=admin_user, auth_session=auth_session, session_token="t", csrf_token="c"
+    )
+    normal_auth = service.AuthenticatedSession(
+        user=_user(), auth_session=auth_session, session_token="t", csrf_token="c"
+    )
+
+    assert require_admin(admin_auth) is admin_auth
+    with pytest.raises(AdminRequiredError):
+        require_admin(normal_auth)
+
+
+def test_verify_password_accepts_correct_and_rejects_wrong():
+    """verify_and_update valida la password correcta y rechaza la incorrecta."""
+    password_hash = hash_password("valid-password")
+
+    is_valid, _ = verify_password("valid-password", password_hash)
+    is_invalid, _ = verify_password("wrong-password", password_hash)
+
+    assert is_valid is True
+    assert is_invalid is False
+
+
+def test_verify_password_against_dummy_runs_without_user():
+    """El verify dummy no lanza; solo consume el coste Argon2 para igualar timing."""
+    verify_password_against_dummy("any-password")
+
+
+def test_client_ip_returns_host_when_request_has_client():
+    """Con cliente en el scope, devuelve su IP (la que usan rate limit y auditoria)."""
+    request = Request({"type": "http", "client": ("203.0.113.7", 54321)})
+
+    assert _client_ip(request) == "203.0.113.7"
+
+
+def test_client_ip_returns_none_when_request_has_no_client():
+    """Sin info de cliente en el scope devuelve None en vez de reventar."""
+    request = Request({"type": "http"})
+
+    assert _client_ip(request) is None
+
+
+def _user(password_hash: str = _FAKE_HASH) -> User:
+    """Crea un usuario ORM mínimo para tests de auth."""
+    return User(
+        id=uuid4(),
+        email="user@example.com",
+        username="Nora",
+        username_key="nora",
+        password_hash=password_hash,
+        role="user",
+        status="active",
+        created_at=datetime(2026, 5, 29, tzinfo=UTC),
+        last_login_at=None,
+        password_changed_at=datetime(2026, 5, 29, tzinfo=UTC),
+    )

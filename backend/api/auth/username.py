@@ -2,8 +2,8 @@
 
 import unicodedata
 
-USERNAME_MAX_LENGTH = 80
-USERNAME_KEY_MAX_LENGTH = 160
+from database.models.constants import USERNAME_KEY_MAX_LENGTH, USERNAME_MAX_LENGTH
+
 USERNAME_ALLOWED_SYMBOLS = frozenset({"_", "-", "."})
 
 
@@ -16,18 +16,18 @@ def normalize_username(username: str) -> str:
     normalized = _normalize_compatibility(username)
 
     if not normalized:
-        raise UsernameValidationError("El username no puede estar vacío.")
+        raise UsernameValidationError("El nombre de usuario no puede estar vacío.")
     if normalized != normalized.strip():
-        raise UsernameValidationError("El username no puede tener espacios alrededor.")
+        raise UsernameValidationError("El nombre de usuario no puede tener espacios alrededor.")
     if len(normalized) > USERNAME_MAX_LENGTH:
-        raise UsernameValidationError("El username es demasiado largo.")
+        raise UsernameValidationError("El nombre de usuario es demasiado largo.")
     if "@" in normalized:
-        raise UsernameValidationError("El username no puede contener @.")
+        raise UsernameValidationError("El nombre de usuario no puede contener @.")
     if any(character.isspace() for character in normalized):
-        raise UsernameValidationError("El username no puede contener espacios.")
+        raise UsernameValidationError("El nombre de usuario no puede contener espacios.")
     if invalid_character := _find_invalid_character(normalized):
         raise UsernameValidationError(
-            f"El username contiene un carácter no permitido: {invalid_character!r}."
+            f"El nombre de usuario contiene un carácter no permitido: {invalid_character!r}."
         )
 
     return normalized
@@ -38,11 +38,13 @@ def build_username_key(username: str) -> str:
     normalized = _normalize_compatibility(username.strip())
 
     if not normalized:
-        raise UsernameValidationError("El username no puede estar vacío.")
+        raise UsernameValidationError("El nombre de usuario no puede estar vacío.")
 
     key = normalized.casefold()
     if len(key) > USERNAME_KEY_MAX_LENGTH:
-        raise UsernameValidationError("La clave normalizada del username es demasiado larga.")
+        raise UsernameValidationError(
+            "La clave normalizada del nombre de usuario es demasiado larga."
+        )
 
     return key
 

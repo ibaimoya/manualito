@@ -62,6 +62,7 @@ def test_auth_sessions_schema_supports_revocation_and_cleanup():
     sessions = Base.metadata.tables["auth_sessions"]
 
     assert sessions.c.token_hash.type.length == 64
+    assert sessions.c.csrf_token_hash.type.length == 64
     assert _index(sessions, "uq_auth_sessions_token_hash").unique is True
     assert _index(sessions, "ix_auth_sessions_user_id") is not None
     assert _index(sessions, "ix_auth_sessions_expires_at") is not None

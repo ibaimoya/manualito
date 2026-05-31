@@ -27,7 +27,7 @@ def test_users_schema_uses_partial_case_insensitive_email_index():
     assert "display_name" not in users.c
     assert not users.c.email.unique
     assert users.c.username.nullable is False
-    assert users.c.username.type.length == 80
+    assert users.c.username.type.length == 20
     assert users.c.username_key.nullable is False
     assert users.c.username_key.type.length == 160
     assert isinstance(users.c.role.type, String)

@@ -27,6 +27,7 @@ from api.auth.username import (
         ("\uff2e\uff4f\uff52\uff41_\uff11", "Nora_1", "nora_1"),
         ("Straße", "Straße", "strasse"),
         ("usuario-01.perfil", "usuario-01.perfil", "usuario-01.perfil"),
+        ("a" * USERNAME_MAX_LENGTH, "a" * USERNAME_MAX_LENGTH, "a" * USERNAME_MAX_LENGTH),
         ("ユーザー", "ユーザー", "ユーザー"),
     ],
 )

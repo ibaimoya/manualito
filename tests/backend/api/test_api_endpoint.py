@@ -60,6 +60,12 @@ def _configure_ocr_success(mock_client: AsyncMock, result=None):
     mock_client.post.side_effect = [unload_response, ocr_response]
 
 
+def _assert_error(response, *, code: str) -> None:
+    """Comprueba codigos de error del envelope publico."""
+    body = response.json()
+    assert any(error["code"] == code for error in body["errors"])
+
+
 # ---------------------------------------------------------------------------
 # Comprobación de estado.
 # ---------------------------------------------------------------------------
@@ -196,6 +202,7 @@ def test_invalid_image_content(client, data, filename, mime):
     """Archivo que no sea imagen válida es rechazado con 415."""
     response = _post_image_json(client, data, filename, mime)
     assert response.status_code == 415
+    _assert_error(response, code="invalid_image")
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +235,8 @@ def test_size_boundary(client, size, expected_status, override_http_client):
         response = _post_image_json(client, data, "large.jpg", "image/jpeg")
 
     assert response.status_code == expected_status
+    if expected_status == 413:
+        _assert_error(response, code="image_too_large")
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +280,7 @@ def test_unknown_ocr_subpath_returns_404(client):
         files={"image": ("img.jpg", b"\x00", "image/jpeg")},
     )
     assert response.status_code == 404
+    _assert_error(response, code="not_found")
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +295,7 @@ def test_ocr_unavailable(client, valid_jpeg_bytes, override_http_client):
     response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 502
+    _assert_error(response, code="service_unavailable")
 
 
 def test_ocr_http_error(client, valid_jpeg_bytes, override_http_client):
@@ -301,6 +312,7 @@ def test_ocr_http_error(client, valid_jpeg_bytes, override_http_client):
     response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 500
+    _assert_error(response, code="internal_service_error")
 
 
 # ---------------------------------------------------------------------------

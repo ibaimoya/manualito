@@ -123,7 +123,16 @@ def test_question_manual_inexistente_devuelve_404(client, override_http_client):
     )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Manual no encontrado."}
+    assert response.json() == {
+        "detail": "Manual no encontrado.",
+        "errors": [
+            {
+                "field": None,
+                "code": "resource_not_found",
+                "message": "Manual no encontrado.",
+            }
+        ],
+    }
 
 
 def test_question_manual_devuelve_502_si_llm_no_esta_disponible(client, override_http_client):
@@ -138,7 +147,16 @@ def test_question_manual_devuelve_502_si_llm_no_esta_disponible(client, override
     )
 
     assert response.status_code == 502
-    assert response.json() == {"detail": "Servicio LLM no disponible."}
+    assert response.json() == {
+        "detail": "Servicio LLM no disponible.",
+        "errors": [
+            {
+                "field": None,
+                "code": "service_unavailable",
+                "message": "Servicio LLM no disponible.",
+            }
+        ],
+    }
 
 
 def test_question_manual_devuelve_500_si_llm_responde_timeout_http(
@@ -163,4 +181,13 @@ def test_question_manual_devuelve_500_si_llm_responde_timeout_http(
     )
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "Error interno al generar la respuesta."}
+    assert response.json() == {
+        "detail": "Error interno al generar la respuesta.",
+        "errors": [
+            {
+                "field": None,
+                "code": "internal_service_error",
+                "message": "Error interno al generar la respuesta.",
+            }
+        ],
+    }

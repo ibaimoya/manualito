@@ -53,25 +53,33 @@ def test_normalize_username_accepts_valid_equivalence_partitions(
 #   Clase 6: Longitud superior al límite.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
-    "raw_username",
+    ("raw_username", "code"),
     [
-        "",
-        "   ",
-        " nora",
-        "nora ",
-        "no ra",
-        "nora@example",
-        "nora!",
-        "nora/name",
-        "😀",
-        "\u200b",
-        "a" * (USERNAME_MAX_LENGTH + 1),
+        ("", "username_empty"),
+        ("   ", "username_empty"),
+        (" nora", "username_surrounding_spaces"),
+        ("nora ", "username_surrounding_spaces"),
+        ("no ra", "username_contains_spaces"),
+        ("nora@example", "username_contains_at"),
+        ("nora!", "username_invalid_character"),
+        ("nora/name", "username_invalid_character"),
+        ("😀", "username_invalid_character"),
+        ("\u200b", "username_invalid_character"),
+        ("a" * (USERNAME_MAX_LENGTH + 1), "username_too_long"),
     ],
 )
-def test_normalize_username_rejects_invalid_equivalence_partitions(raw_username: str):
+def test_normalize_username_rejects_invalid_equivalence_partitions(
+    raw_username: str,
+    code: str,
+):
     """Rechaza usernames ambiguos, invisibles o fuera de formato."""
-    with pytest.raises(UsernameValidationError):
+    with pytest.raises(UsernameValidationError) as exc_info:
         normalize_username(raw_username)
+
+    error = exc_info.value.errors[0]
+    assert error.field == "username"
+    assert error.code == code
+    assert error.message
 
 
 @pytest.mark.parametrize(
@@ -104,11 +112,15 @@ def test_build_username_key_trims_lookup_identifier():
 @pytest.mark.parametrize("raw_username", ["", "   ", "\t\n"])
 def test_build_username_key_rejects_empty_lookup(raw_username: str):
     """No se puede construir una clave de búsqueda desde algo vacío."""
-    with pytest.raises(UsernameValidationError):
+    with pytest.raises(UsernameValidationError) as exc_info:
         build_username_key(raw_username)
+
+    assert exc_info.value.errors[0].code == "username_empty"
 
 
 def test_build_username_key_rejects_key_longer_than_column():
     """La clave respeta el límite de la columna username_key (160)."""
-    with pytest.raises(UsernameValidationError, match="demasiado larga"):
+    with pytest.raises(UsernameValidationError) as exc_info:
         build_username_key("a" * (USERNAME_KEY_MAX_LENGTH + 1))
+
+    assert exc_info.value.errors[0].code == "username_key_too_long"

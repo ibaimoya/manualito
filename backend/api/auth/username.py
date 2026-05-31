@@ -2,31 +2,44 @@
 
 import unicodedata
 
+from api.auth.exceptions import UsernameValidationError
 from database.models.constants import USERNAME_KEY_MAX_LENGTH, USERNAME_MAX_LENGTH
 
 USERNAME_ALLOWED_SYMBOLS = frozenset({"_", "-", "."})
-
-
-class UsernameValidationError(ValueError):
-    """El username no cumple las reglas públicas de registro."""
 
 
 def normalize_username(username: str) -> str:
     """Devuelve el username normalizado que se guardará y mostrará."""
     normalized = _normalize_compatibility(username)
 
-    if not normalized:
-        raise UsernameValidationError("El nombre de usuario no puede estar vacío.")
+    if not normalized.strip():
+        raise UsernameValidationError(
+            "username_empty",
+            "El nombre de usuario no puede estar vacío.",
+        )
     if normalized != normalized.strip():
-        raise UsernameValidationError("El nombre de usuario no puede tener espacios alrededor.")
+        raise UsernameValidationError(
+            "username_surrounding_spaces",
+            "El nombre de usuario no puede tener espacios alrededor.",
+        )
     if len(normalized) > USERNAME_MAX_LENGTH:
-        raise UsernameValidationError("El nombre de usuario es demasiado largo.")
+        raise UsernameValidationError(
+            "username_too_long",
+            f"El nombre de usuario no puede superar {USERNAME_MAX_LENGTH} caracteres.",
+        )
     if "@" in normalized:
-        raise UsernameValidationError("El nombre de usuario no puede contener @.")
+        raise UsernameValidationError(
+            "username_contains_at",
+            "El nombre de usuario no puede contener @.",
+        )
     if any(character.isspace() for character in normalized):
-        raise UsernameValidationError("El nombre de usuario no puede contener espacios.")
+        raise UsernameValidationError(
+            "username_contains_spaces",
+            "El nombre de usuario no puede contener espacios.",
+        )
     if invalid_character := _find_invalid_character(normalized):
         raise UsernameValidationError(
+            "username_invalid_character",
             f"El nombre de usuario contiene un carácter no permitido: {invalid_character!r}."
         )
 
@@ -38,12 +51,16 @@ def build_username_key(username: str) -> str:
     normalized = _normalize_compatibility(username.strip())
 
     if not normalized:
-        raise UsernameValidationError("El nombre de usuario no puede estar vacío.")
+        raise UsernameValidationError(
+            "username_empty",
+            "El nombre de usuario no puede estar vacío.",
+        )
 
     key = normalized.casefold()
     if len(key) > USERNAME_KEY_MAX_LENGTH:
         raise UsernameValidationError(
-            "La clave normalizada del nombre de usuario es demasiado larga."
+            "username_key_too_long",
+            "La clave normalizada del nombre de usuario es demasiado larga.",
         )
 
     return key
@@ -74,4 +91,3 @@ def _is_allowed_username_character(character: str) -> bool:
         or category == "Nd"
         or character in USERNAME_ALLOWED_SYMBOLS
     )
-

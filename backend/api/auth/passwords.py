@@ -4,6 +4,7 @@ import anyio
 from pwdlib import PasswordHash
 
 from api import config
+from api.auth.exceptions import PasswordValidationError
 
 _PASSWORD_HASH = PasswordHash.recommended()
 _DUMMY_PASSWORD_HASH = _PASSWORD_HASH.hash("dummy-password-for-timing-checks")
@@ -12,16 +13,18 @@ _DUMMY_PASSWORD_HASH = _PASSWORD_HASH.hash("dummy-password-for-timing-checks")
 _PASSWORD_HASH_LIMITER = anyio.CapacityLimiter(config.PASSWORD_HASH_CONCURRENCY)
 
 
-class PasswordValidationError(ValueError):
-    """La contraseña no cumple la política de registro."""
-
-
 def validate_password_policy(password: str) -> None:
     """Valida longitud sin imponer reglas de composición arbitrarias."""
     if len(password) < config.PASSWORD_MIN_LENGTH:
-        raise PasswordValidationError("La password es demasiado corta.")
+        raise PasswordValidationError(
+            "password_too_short",
+            f"La contraseña debe tener al menos {config.PASSWORD_MIN_LENGTH} caracteres.",
+        )
     if len(password) > config.PASSWORD_MAX_LENGTH:
-        raise PasswordValidationError("La password es demasiado larga.")
+        raise PasswordValidationError(
+            "password_too_long",
+            f"La contraseña no puede superar {config.PASSWORD_MAX_LENGTH} caracteres.",
+        )
 
 
 def hash_password(password: str) -> str:

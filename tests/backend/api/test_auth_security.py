@@ -115,11 +115,22 @@ def test_validate_password_policy_accepts_minimum_length(password: str):
     validate_password_policy(password)
 
 
-@pytest.mark.parametrize("password", ["short", "x" * 129])
-def test_validate_password_policy_rejects_out_of_bounds(password: str):
+@pytest.mark.parametrize(
+    ("password", "code"),
+    [
+        ("short", "password_too_short"),
+        ("x" * 129, "password_too_long"),
+    ],
+)
+def test_validate_password_policy_rejects_out_of_bounds(password: str, code: str):
     """La contraseña debe tener longitud entre 12 y 128 caracteres."""
-    with pytest.raises(PasswordValidationError):
+    with pytest.raises(PasswordValidationError) as exc_info:
         validate_password_policy(password)
+
+    error = exc_info.value.errors[0]
+    assert error.field == "password"
+    assert error.code == code
+    assert error.message
 
 
 def test_tokens_are_opaque_and_hashed():

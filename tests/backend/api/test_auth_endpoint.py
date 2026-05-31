@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
@@ -19,10 +20,37 @@ from api.exceptions import admin_required_handler
 from api.main import app
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
+from database.models.constants import EMAIL_MAX_LENGTH
 from database.models.user import User
 from database.session import get_db_session
 
 _FAKE_HASH = "hash-value"  # placeholder de hash en fixtures, no es una credencial
+_FAKE_SESSION_HASH = "a" * 64
+_FAKE_CSRF_HASH = "b" * 64
+_VALID_TEST_USERNAME = "Manualito"
+_VALID_TEST_USERNAME_KEY = _VALID_TEST_USERNAME.casefold()
+_VALID_TEST_EMAIL = f"{_VALID_TEST_USERNAME_KEY}@example.com"
+_INVALID_TEST_EMAIL = f"{_VALID_TEST_USERNAME_KEY}-invalid-email"
+_TOO_LONG_TEST_EMAIL = f"{'a' * EMAIL_MAX_LENGTH}@example.com"
+_USERNAME_WITH_AT = f"{_VALID_TEST_USERNAME}@example"
+_USERNAME_WITH_INVALID_SYMBOL = f"{_VALID_TEST_USERNAME}!"
+_USERNAME_WITH_EMOJI = f"{_VALID_TEST_USERNAME}\U0001f600"
+_RATE_LIMIT_TEST_IDENTIFIER = f"rate-{_VALID_TEST_USERNAME_KEY}@example.com"
+_FAKE_SESSION_TOKEN = f"session-{_VALID_TEST_USERNAME_KEY}"
+_FAKE_CSRF_TOKEN = f"csrf-{_VALID_TEST_USERNAME_KEY}"
+_VALID_TEST_PASSWORD = "x" * config.PASSWORD_MIN_LENGTH
+_TOO_SHORT_TEST_PASSWORD = "x" * (config.PASSWORD_MIN_LENGTH - 1)
+_TOO_LONG_TEST_PASSWORD = "x" * (config.PASSWORD_MAX_LENGTH + 1)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Aísla los buckets de SlowAPI entre tests de auth."""
+    limiter.reset()
+    try:
+        yield
+    finally:
+        limiter.reset()
 
 
 @pytest.fixture
@@ -44,29 +72,120 @@ def test_register_rejects_role_escalation(client, override_db_session):
     response = client.post(
         "/api/auth/register",
         json={
-            "email": "user@example.com",
-            "username": "Nora",
-            "password": "valid-password",
+            "email": _VALID_TEST_EMAIL,
+            "username": _VALID_TEST_USERNAME,
+            "password": _VALID_TEST_PASSWORD,
             "role": "admin",
         },
     )
 
     assert response.status_code == 422
+    _assert_error(response.json(), field="role", code="unexpected_field")
 
 
-@pytest.mark.parametrize("username", ["user@example", "emoji😀"])
-def test_register_rejects_invalid_username(client, override_db_session, username: str):
+@pytest.mark.parametrize(
+    ("username", "code"),
+    [
+        (_USERNAME_WITH_AT, "username_contains_at"),
+        (_USERNAME_WITH_INVALID_SYMBOL, "username_invalid_character"),
+        (_USERNAME_WITH_EMOJI, "username_invalid_character"),
+    ],
+)
+def test_register_rejects_invalid_username(
+    client,
+    override_db_session,
+    username: str,
+    code: str,
+):
     """Las reglas avanzadas de username devuelven 422, no error interno."""
     response = client.post(
         "/api/auth/register",
         json={
-            "email": "user@example.com",
+            "email": _VALID_TEST_EMAIL,
             "username": username,
-            "password": "valid-password",
+            "password": _VALID_TEST_PASSWORD,
         },
     )
 
     assert response.status_code == 422
+    _assert_error(response.json(), field="username", code=code)
+
+
+@pytest.mark.parametrize(
+    ("payload", "field", "code"),
+    [
+        (
+            {"username": _VALID_TEST_USERNAME, "password": _VALID_TEST_PASSWORD},
+            "email",
+            "email_required",
+        ),
+        (
+            {
+                "email": _INVALID_TEST_EMAIL,
+                "username": _VALID_TEST_USERNAME,
+                "password": _VALID_TEST_PASSWORD,
+            },
+            "email",
+            "email_invalid",
+        ),
+        (
+            {
+                "email": _TOO_LONG_TEST_EMAIL,
+                "username": _VALID_TEST_USERNAME,
+                "password": _VALID_TEST_PASSWORD,
+            },
+            "email",
+            "email_too_long",
+        ),
+        (
+            {"email": _VALID_TEST_EMAIL, "password": _VALID_TEST_PASSWORD},
+            "username",
+            "username_required",
+        ),
+        (
+            {"email": _VALID_TEST_EMAIL, "username": "", "password": _VALID_TEST_PASSWORD},
+            "username",
+            "username_required",
+        ),
+        (
+            {"email": _VALID_TEST_EMAIL, "username": _VALID_TEST_USERNAME},
+            "password",
+            "password_required",
+        ),
+        (
+            {
+                "email": _VALID_TEST_EMAIL,
+                "username": _VALID_TEST_USERNAME,
+                "password": _TOO_SHORT_TEST_PASSWORD,
+            },
+            "password",
+            "password_too_short",
+        ),
+        (
+            {
+                "email": _VALID_TEST_EMAIL,
+                "username": _VALID_TEST_USERNAME,
+                "password": _TOO_LONG_TEST_PASSWORD,
+            },
+            "password",
+            "password_too_long",
+        ),
+    ],
+)
+def test_register_request_validation_returns_field_error(
+    client,
+    override_db_session,
+    payload: dict[str, str],
+    field: str,
+    code: str,
+):
+    """Los errores de schema llegan con field/code estables para formularios."""
+    response = client.post("/api/auth/register", json=payload)
+
+    assert response.status_code == 422
+    body = response.json()
+    _assert_error(body, field=field, code=code)
+    assert {"input", "type", "url", "password_hash", "username_key"}.isdisjoint(body)
 
 
 def test_login_sets_session_cookie_and_filters_user_response(
@@ -81,22 +200,22 @@ def test_login_sets_session_cookie_and_filters_user_response(
         AsyncMock(
             return_value=LoginResult(
                 user=_user(),
-                session_token="session-token",
-                csrf_token="csrf-token",
+                session_token=_FAKE_SESSION_TOKEN,
+                csrf_token=_FAKE_CSRF_TOKEN,
             )
         ),
     )
 
     response = client.post(
         "/api/auth/login",
-        json={"identifier": "user@example.com", "password": "valid-password"},
+        json={"identifier": _VALID_TEST_EMAIL, "password": _VALID_TEST_PASSWORD},
     )
 
     body = response.json()
     session_cookie = response.headers["set-cookie"]
     assert response.status_code == 200
-    assert body["csrf_token"] == "csrf-token"
-    assert body["user"]["email"] == "user@example.com"
+    assert body["csrf_token"] == _FAKE_CSRF_TOKEN
+    assert body["user"]["email"] == _VALID_TEST_EMAIL
     assert "password_hash" not in body["user"]
     assert "username_key" not in body["user"]
     assert config.AUTH_SESSION_COOKIE_NAME in session_cookie
@@ -116,8 +235,8 @@ def test_me_returns_public_user_and_csrf_token(client):
 
     body = response.json()
     assert response.status_code == 200
-    assert body["csrf_token"] == "csrf-token"
-    assert body["user"]["username"] == "Nora"
+    assert body["csrf_token"] == _FAKE_CSRF_TOKEN
+    assert body["user"]["username"] == _VALID_TEST_USERNAME
     assert "password_hash" not in body["user"]
     assert "username_key" not in body["user"]
 
@@ -148,12 +267,16 @@ def test_register_success_returns_public_user(client, monkeypatch, override_db_s
 
     response = client.post(
         "/api/auth/register",
-        json={"email": "user@example.com", "username": "Nora", "password": "valid-password"},
+        json={
+            "email": _VALID_TEST_EMAIL,
+            "username": _VALID_TEST_USERNAME,
+            "password": _VALID_TEST_PASSWORD,
+        },
     )
 
     body = response.json()
     assert response.status_code == 201
-    assert body["username"] == "Nora"
+    assert body["username"] == _VALID_TEST_USERNAME
     assert "password_hash" not in body
     assert "username_key" not in body
 
@@ -167,10 +290,11 @@ def test_login_invalid_credentials_maps_to_401(client, monkeypatch, override_db_
 
     response = client.post(
         "/api/auth/login",
-        json={"identifier": "user@example.com", "password": "bad-password"},
+        json={"identifier": _VALID_TEST_EMAIL, "password": _TOO_SHORT_TEST_PASSWORD},
     )
 
     assert response.status_code == 401
+    _assert_error(response.json(), field=None, code="invalid_credentials")
 
 
 def test_register_duplicate_identity_maps_to_409(client, monkeypatch, override_db_session):
@@ -182,10 +306,15 @@ def test_register_duplicate_identity_maps_to_409(client, monkeypatch, override_d
 
     response = client.post(
         "/api/auth/register",
-        json={"email": "user@example.com", "username": "Nora", "password": "valid-password"},
+        json={
+            "email": _VALID_TEST_EMAIL,
+            "username": _VALID_TEST_USERNAME,
+            "password": _VALID_TEST_PASSWORD,
+        },
     )
 
     assert response.status_code == 409
+    _assert_error(response.json(), field=None, code="identity_unavailable")
 
 
 def test_me_without_session_maps_to_401(client):
@@ -201,6 +330,7 @@ def test_me_without_session_maps_to_401(client):
         app.dependency_overrides.pop(get_current_auth, None)
 
     assert response.status_code == 401
+    _assert_error(response.json(), field=None, code="authentication_required")
 
 
 def test_logout_invalid_csrf_maps_to_403(client, override_db_session):
@@ -218,6 +348,7 @@ def test_logout_invalid_csrf_maps_to_403(client, override_db_session):
         app.dependency_overrides.pop(require_csrf, None)
 
     assert response.status_code == 403
+    _assert_error(response.json(), field=None, code="invalid_csrf_token")
 
 
 def test_admin_required_handler_maps_to_403():
@@ -225,6 +356,7 @@ def test_admin_required_handler_maps_to_403():
     response = admin_required_handler(None, AdminRequiredError())
 
     assert response.status_code == 403
+    _assert_error(_json_body(response), field=None, code="admin_required")
 
 
 def test_login_rate_limited_after_five_attempts(client, monkeypatch, override_db_session):
@@ -233,20 +365,21 @@ def test_login_rate_limited_after_five_attempts(client, monkeypatch, override_db
     monkeypatch.setattr(
         "api.routes.auth.login_user", AsyncMock(side_effect=InvalidCredentialsError)
     )
-    limiter.reset()  # parte de un cubo limpio: no arrastra llamadas de otros tests
-    try:
-        codes = [
-            client.post(
-                "/api/auth/login",
-                json={"identifier": "nora@example.com", "password": "bad-password"},
-            ).status_code
-            for _ in range(6)
-        ]
-    finally:
-        limiter.reset()  # no deja el cubo agotado para los tests siguientes
+    responses = [
+        client.post(
+            "/api/auth/login",
+            json={
+                "identifier": _RATE_LIMIT_TEST_IDENTIFIER,
+                "password": _TOO_SHORT_TEST_PASSWORD,
+            },
+        )
+        for _ in range(6)
+    ]
+    codes = [response.status_code for response in responses]
 
     assert codes[:5] == [401, 401, 401, 401, 401]
     assert codes[5] == 429
+    _assert_error(responses[5].json(), field=None, code="rate_limited")
 
 
 def _auth_session() -> AuthenticatedSession:
@@ -255,22 +388,36 @@ def _auth_session() -> AuthenticatedSession:
         user=_user(),
         auth_session=AuthSession(
             user_id=uuid4(),
-            token_hash="a" * 64,
-            csrf_token_hash="b" * 64,
+            token_hash=_FAKE_SESSION_HASH,
+            csrf_token_hash=_FAKE_CSRF_HASH,
             expires_at=datetime(2026, 5, 29, tzinfo=UTC) + timedelta(days=7),
         ),
-        session_token="session-token",
-        csrf_token="csrf-token",
+        session_token=_FAKE_SESSION_TOKEN,
+        csrf_token=_FAKE_CSRF_TOKEN,
     )
+
+
+def _assert_error(body: dict, *, field: str | None, code: str) -> None:
+    """Comprueba un error público sin depender del texto visible."""
+    assert "detail" in body
+    assert any(
+        error["field"] == field and error["code"] == code
+        for error in body["errors"]
+    )
+
+
+def _json_body(response) -> dict:
+    """Decodifica respuestas directas de handlers sin TestClient."""
+    return json.loads(response.body)
 
 
 def _user() -> User:
     """Crea un usuario ORM sin campos sensibles en las respuestas esperadas."""
     return User(
         id=uuid4(),
-        email="user@example.com",
-        username="Nora",
-        username_key="nora",
+        email=_VALID_TEST_EMAIL,
+        username=_VALID_TEST_USERNAME,
+        username_key=_VALID_TEST_USERNAME_KEY,
         password_hash=_FAKE_HASH,
         role="user",
         status="active",
@@ -278,3 +425,4 @@ def _user() -> User:
         last_login_at=None,
         password_changed_at=datetime(2026, 5, 29, tzinfo=UTC),
     )
+

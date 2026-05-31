@@ -1,6 +1,6 @@
 """Schemas Pydantic del gateway."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from api.annotations import Answer, ChunksIndexed, ManualSlug, Question
 
@@ -11,6 +11,25 @@ class QuestionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: Question
+
+
+class ApiFieldError(BaseModel):
+    """Error estable que el frontend puede asociar a un campo de formulario."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: str | None
+    code: str
+    message: str
+
+
+class ApiErrorResponse(BaseModel):
+    """Respuesta uniforme para errores que el cliente puede representar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    detail: str
+    errors: list[ApiFieldError] = Field(default_factory=list)
 
 
 class OcrLine(BaseModel):

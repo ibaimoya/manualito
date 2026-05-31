@@ -1,8 +1,6 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from api import dependencies
@@ -31,7 +29,6 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Manualito API", lifespan=lifespan)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 register_exception_handlers(app)
 app.include_router(health.router, tags=["Health"])

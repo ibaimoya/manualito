@@ -7,7 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from database.base import Base
 from database.models.common import SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
-from database.models.constants import USERNAME_KEY_MAX_LENGTH, USERNAME_MAX_LENGTH
+from database.models.constants import (
+    EMAIL_MAX_LENGTH,
+    USERNAME_KEY_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+)
 
 
 class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
@@ -15,7 +19,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
 
     __tablename__ = "users"
 
-    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    email: Mapped[str] = mapped_column(String(EMAIL_MAX_LENGTH), nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     username: Mapped[str] = mapped_column(String(USERNAME_MAX_LENGTH), nullable=False)
     username_key: Mapped[str] = mapped_column(String(USERNAME_KEY_MAX_LENGTH), nullable=False)

@@ -20,7 +20,7 @@ USERNAME_COLUMN = "username"
 
 
 def upgrade() -> None:
-    """Reduce el handle publico para que encaje mejor en la interfaz."""
+    """Reduce el username visible para que encaje mejor en la interfaz."""
     op.alter_column(
         USERS_TABLE,
         USERNAME_COLUMN,

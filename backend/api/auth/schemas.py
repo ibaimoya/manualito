@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from api import config
-from database.models.constants import USERNAME_MAX_LENGTH
+from database.models.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 
 
 class RegisterRequest(BaseModel):
@@ -14,7 +14,7 @@ class RegisterRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    email: EmailStr
+    email: EmailStr = Field(max_length=EMAIL_MAX_LENGTH)
     username: str = Field(min_length=1, max_length=USERNAME_MAX_LENGTH)
     password: str = Field(
         min_length=config.PASSWORD_MIN_LENGTH,

@@ -4,6 +4,7 @@ from sqlalchemy.sql.base import _NoneName
 
 from database.base import Base
 from database.models import import_all_models
+from database.models.constants import EMAIL_MAX_LENGTH
 
 
 def test_model_registry_imports_phase_2_tables():
@@ -26,6 +27,7 @@ def test_users_schema_uses_partial_case_insensitive_email_index():
     assert "avatar_asset_id" not in users.c
     assert "display_name" not in users.c
     assert not users.c.email.unique
+    assert users.c.email.type.length == EMAIL_MAX_LENGTH
     assert users.c.username.nullable is False
     assert users.c.username.type.length == 20
     assert users.c.username_key.nullable is False

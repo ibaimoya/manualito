@@ -15,10 +15,10 @@ from api.auth.exceptions import (
     InvalidCredentialsError,
 )
 from api.auth.passwords import (
-    hash_password,
+    hash_password_async,
     validate_password_policy,
-    verify_password,
-    verify_password_against_dummy,
+    verify_password_against_dummy_async,
+    verify_password_async,
 )
 from api.auth.schemas import UserPublic
 from api.auth.tokens import generate_opaque_token, hash_token, token_matches
@@ -66,12 +66,13 @@ async def register_user(
     username_key = build_username_key(normalized_username)
     validate_password_policy(password)
 
+    password_hash = await hash_password_async(password)
     now = utc_now()
     user = User(
         email=normalized_email,
         username=normalized_username,
         username_key=username_key,
-        password_hash=hash_password(password),
+        password_hash=password_hash,
         password_changed_at=now,
         role="user",
         status=ACTIVE_USER_STATUS,
@@ -106,11 +107,11 @@ async def login_user(
     """Verifica credenciales y crea una sesión opaca persistida."""
     user = await _find_active_user_by_identifier(session, identifier)
     if user is None:
-        verify_password_against_dummy(password)
+        await verify_password_against_dummy_async(password)
         await _record_failed_login(session, ip_address=ip_address)
         raise InvalidCredentialsError
 
-    is_valid, updated_hash = verify_password(password, user.password_hash)
+    is_valid, updated_hash = await verify_password_async(password, user.password_hash)
     if not is_valid:
         await _record_failed_login(session, ip_address=ip_address, user=user)
         raise InvalidCredentialsError

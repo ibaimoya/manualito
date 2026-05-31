@@ -1,7 +1,6 @@
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from typing import cast
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 from uuid import uuid4
 
 import pytest
@@ -11,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import config
+from api.auth import passwords as password_helpers
 from api.auth import service
 from api.auth.audit import record_security_event
 from api.auth.cookies import set_auth_cookies
@@ -117,7 +117,7 @@ def test_validate_password_policy_accepts_minimum_length(password: str):
 
 @pytest.mark.parametrize("password", ["short", "x" * 129])
 def test_validate_password_policy_rejects_out_of_bounds(password: str):
-    """La password debe tener longitud entre 12 y 128 caracteres."""
+    """La contraseña debe tener longitud entre 12 y 128 caracteres."""
     with pytest.raises(PasswordValidationError):
         validate_password_policy(password)
 
@@ -140,6 +140,51 @@ def test_hash_password_uses_argon2id_with_current_recommended_parameters():
 
     assert password_hash.startswith("$argon2id$")
     assert "$m=65536,t=3,p=4$" in password_hash
+
+
+@pytest.mark.anyio
+async def test_password_async_wrappers_use_limited_worker_thread(monkeypatch):
+    """Los wrappers async sacan Argon2 del event loop con el limitador propio."""
+
+    def run_sync_side_effect(function, *args, limiter):
+        """Devuelve resultados controlados al await del AsyncMock."""
+        if function is password_helpers.hash_password:
+            return "hash-value"
+        if function is password_helpers.verify_password:
+            return True, "new-hash"
+        return None
+
+    run_sync_mock = AsyncMock(side_effect=run_sync_side_effect)
+    monkeypatch.setattr(password_helpers.anyio.to_thread, "run_sync", run_sync_mock)
+
+    hashed = await password_helpers.hash_password_async("valid-password")
+    verified = await password_helpers.verify_password_async("valid-password", "old-hash")
+    dummy = await password_helpers.verify_password_against_dummy_async("valid-password")
+
+    assert hashed == "hash-value"
+    assert verified == (True, "new-hash")
+    assert dummy is None
+    assert password_helpers._PASSWORD_HASH_LIMITER.total_tokens == (
+        config.PASSWORD_HASH_CONCURRENCY
+    )
+    assert run_sync_mock.await_args_list == [
+        call(
+            password_helpers.hash_password,
+            "valid-password",
+            limiter=password_helpers._PASSWORD_HASH_LIMITER,
+        ),
+        call(
+            password_helpers.verify_password,
+            "valid-password",
+            "old-hash",
+            limiter=password_helpers._PASSWORD_HASH_LIMITER,
+        ),
+        call(
+            password_helpers.verify_password_against_dummy,
+            "valid-password",
+            limiter=password_helpers._PASSWORD_HASH_LIMITER,
+        ),
+    ]
 
 
 def test_set_auth_cookies_pins_security_flags():
@@ -189,12 +234,9 @@ def test_record_security_event_strips_sensitive_event_data():
 async def test_login_missing_user_uses_dummy_hash_and_writes_uniform_failure(monkeypatch):
     """El login sin usuario candidato ejecuta hash dummy para reducir timing oracle."""
     fake_session = FakeSession(scalar_result=None)
-    dummy_verify = SimpleNamespace(called=False)
+    dummy_verify = AsyncMock()
 
-    def fake_dummy_verify(_password: str) -> None:
-        dummy_verify.called = True
-
-    monkeypatch.setattr(service, "verify_password_against_dummy", fake_dummy_verify)
+    monkeypatch.setattr(service, "verify_password_against_dummy_async", dummy_verify)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
@@ -204,7 +246,7 @@ async def test_login_missing_user_uses_dummy_hash_and_writes_uniform_failure(mon
             ip_address="127.0.0.1",
         )
 
-    assert dummy_verify.called is True
+    dummy_verify.assert_awaited_once_with("valid-password")
     assert fake_session.commits == 1
     assert [event.event_type for event in fake_session.added] == ["login_failed"]
     assert all(not isinstance(instance, AuthSession) for instance in fake_session.added)
@@ -220,7 +262,11 @@ async def test_login_success_creates_hashed_session_and_csrf(monkeypatch):
 
     monkeypatch.setattr(service, "utc_now", lambda: now)
     monkeypatch.setattr(service, "generate_opaque_token", lambda: next(token_iter))
-    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (True, None))
+    monkeypatch.setattr(
+        service,
+        "verify_password_async",
+        AsyncMock(return_value=(True, None)),
+    )
 
     result = await service.login_user(
         cast(AsyncSession, fake_session),
@@ -336,6 +382,25 @@ async def test_register_user_hashes_password_forces_user_role_and_audits(monkeyp
 
 
 @pytest.mark.anyio
+async def test_register_user_awaits_password_hash_wrapper(monkeypatch):
+    """El registro usa el wrapper async para no hashear en el event loop."""
+    fake_session = FakeSession()
+    hash_password_mock = AsyncMock(return_value="argon2-hash")
+    monkeypatch.setattr(service, "hash_password_async", hash_password_mock)
+
+    user = await service.register_user(
+        cast(AsyncSession, fake_session),
+        email="user@example.com",
+        username="Nora",
+        password="valid-password",
+        ip_address=None,
+    )
+
+    hash_password_mock.assert_awaited_once_with("valid-password")
+    assert user.password_hash == "argon2-hash"
+
+
+@pytest.mark.anyio
 async def test_register_user_maps_integrity_error_to_duplicate(monkeypatch):
     """Email/username duplicado se traduce vía IntegrityError, sin check previo."""
     monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
@@ -363,7 +428,11 @@ async def test_login_wrong_password_fails_uniformly_with_audit(monkeypatch):
     """Password incorrecta: InvalidCredentials y login_failed con user_id."""
     user = _user()
     fake_session = FakeSession(scalar_result=user)
-    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (False, None))
+    monkeypatch.setattr(
+        service,
+        "verify_password_async",
+        AsyncMock(return_value=(False, None)),
+    )
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
@@ -385,7 +454,11 @@ async def test_login_rehashes_password_when_parameters_change(monkeypatch):
     fake_session = FakeSession(scalar_result=user)
     monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
     monkeypatch.setattr(service, "generate_opaque_token", lambda: "token")
-    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (True, "new-hash"))
+    monkeypatch.setattr(
+        service,
+        "verify_password_async",
+        AsyncMock(return_value=(True, "new-hash")),
+    )
 
     await service.login_user(
         cast(AsyncSession, fake_session),
@@ -404,7 +477,11 @@ async def test_login_by_username_searches_by_username_key(monkeypatch):
     fake_session = FakeSession(scalar_result=user)
     monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
     monkeypatch.setattr(service, "generate_opaque_token", lambda: "token")
-    monkeypatch.setattr(service, "verify_password", lambda _password, _hash: (True, None))
+    monkeypatch.setattr(
+        service,
+        "verify_password_async",
+        AsyncMock(return_value=(True, None)),
+    )
 
     await service.login_user(
         cast(AsyncSession, fake_session),
@@ -420,12 +497,8 @@ async def test_login_by_username_searches_by_username_key(monkeypatch):
 async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
     """Un identifier que no es email ni username válido cae como credenciales malas."""
     fake_session = FakeSession(scalar_result=None)
-    dummy = SimpleNamespace(called=False)
-    monkeypatch.setattr(
-        service,
-        "verify_password_against_dummy",
-        lambda _password: setattr(dummy, "called", True),
-    )
+    dummy = AsyncMock()
+    monkeypatch.setattr(service, "verify_password_against_dummy_async", dummy)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
@@ -435,7 +508,7 @@ async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
             ip_address=None,
         )
 
-    assert dummy.called is True
+    dummy.assert_awaited_once_with("valid-password")
 
 
 @pytest.mark.anyio

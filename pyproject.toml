@@ -9,6 +9,7 @@ dependencies = [
 
 [dependency-groups]
 api = [
+    "anyio==4.13.0",
     "email-validator==2.3.0",
     "fastapi==0.135.2",
     "httpx==0.28.1",
@@ -62,6 +63,7 @@ llm = [
 ]
 test = [
     "alembic==1.18.4",
+    "anyio==4.13.0",
     "email-validator==2.3.0",
     "fastapi==0.135.2",
     "httpx==0.28.1",

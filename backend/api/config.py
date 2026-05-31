@@ -33,3 +33,6 @@ AUTH_CSRF_COOKIE_NAME = os.getenv(
 AUTH_CSRF_HEADER_NAME = "X-CSRF-Token"
 PASSWORD_MIN_LENGTH = 12
 PASSWORD_MAX_LENGTH = 128
+
+# anyio.CapacityLimiter ya valida en el arranque que sea >= 1 (ValueError si no).
+PASSWORD_HASH_CONCURRENCY = int(os.getenv("PASSWORD_HASH_CONCURRENCY", "4"))

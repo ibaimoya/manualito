@@ -881,6 +881,7 @@ dependencies = [
 
 [package.dev-dependencies]
 api = [
+    { name = "anyio" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -934,6 +935,7 @@ rag = [
 ]
 test = [
     { name = "alembic" },
+    { name = "anyio" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -959,6 +961,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 api = [
+    { name = "anyio", specifier = "==4.13.0" },
     { name = "email-validator", specifier = "==2.3.0" },
     { name = "fastapi", specifier = "==0.135.2" },
     { name = "httpx", specifier = "==0.28.1" },
@@ -1004,6 +1007,7 @@ rag = [
 ]
 test = [
     { name = "alembic", specifier = "==1.18.4" },
+    { name = "anyio", specifier = "==4.13.0" },
     { name = "email-validator", specifier = "==2.3.0" },
     { name = "fastapi", specifier = "==0.135.2" },
     { name = "httpx", specifier = "==0.28.1" },

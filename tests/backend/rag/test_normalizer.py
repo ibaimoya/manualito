@@ -1,4 +1,4 @@
-from rag.normalizer import normalize_ocr_lines, normalize_text
+from common.manual_text.normalizer import _normalize_text, normalize_ocr_lines
 
 
 # ---------------------------------------------------------------------------
@@ -7,7 +7,7 @@ from rag.normalizer import normalize_ocr_lines, normalize_text
 # ---------------------------------------------------------------------------
 def test_normalize_text_unifies_newlines_and_spaces():
     """El texto libre se limpia antes del chunking sin perder su estructura."""
-    normalized = normalize_text("  Regla   uno\r\n\r\n\r\n  Regla\t dos \rFin ")
+    normalized = _normalize_text("  Regla   uno\r\n\r\n\r\n  Regla\t dos \rFin ")
 
     assert normalized == "Regla uno\n\nRegla dos\nFin"
 

@@ -12,7 +12,7 @@ def test_database_url_is_required(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.delenv("DATABASE_DRIVER", raising=False)
 
-    with pytest.raises(RuntimeError, match="DATABASE_DRIVER no esta definida"):
+    with pytest.raises(RuntimeError, match="DATABASE_DRIVER no está definida"):
         get_database_url()
 
 
@@ -60,7 +60,7 @@ def test_database_url_rejects_blank_value(monkeypatch):
     """Una DATABASE_URL en blanco es un error de configuración, no una ausencia."""
     monkeypatch.setenv("DATABASE_URL", "   ")
 
-    with pytest.raises(RuntimeError, match="DATABASE_URL no puede estar vacia"):
+    with pytest.raises(RuntimeError, match="DATABASE_URL no puede estar vacía"):
         get_database_url()
 
 
@@ -100,7 +100,7 @@ def test_secret_file_must_point_to_an_existing_file(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
     monkeypatch.setenv("POSTGRES_USER_FILE", str(tmp_path / "ausente.txt"))
 
-    with pytest.raises(RuntimeError, match="POSTGRES_USER_FILE no apunta a un fichero valido"):
+    with pytest.raises(RuntimeError, match="POSTGRES_USER_FILE no apunta a un fichero válido"):
         get_database_url()
 
 
@@ -112,7 +112,7 @@ def test_secret_file_must_not_be_empty(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
     monkeypatch.setenv("POSTGRES_USER_FILE", str(empty_secret))
 
-    with pytest.raises(RuntimeError, match="POSTGRES_USER_FILE no puede estar vacio"):
+    with pytest.raises(RuntimeError, match="POSTGRES_USER_FILE no puede estar vacío"):
         get_database_url()
 
 

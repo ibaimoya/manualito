@@ -3,7 +3,7 @@ Utilidades para prevenir log injection (regla python:S5145 de SonarCloud).
 
 Los datos controlados por el usuario que se escriben en los logs pueden
 contener caracteres de control (``\r``, ``\n``, etc.) que un atacante
-usaria para forjar lineas falsas y manipular las trazas.
+usaría para forjar líneas falsas y manipular las trazas.
 """
 import re
 
@@ -21,7 +21,7 @@ def safe_for_log(value: str | None, *, fallback: str = "<unknown>") -> str:
 
     Args:
         value: Cadena potencialmente controlada por el usuario.
-        fallback: Texto a devolver cuando ``value`` es ``None`` o vacio.
+        fallback: Texto a devolver cuando ``value`` es ``None`` o vacío.
 
     Returns:
         Cadena saneada apta para interpolar en un mensaje de logging.

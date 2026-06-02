@@ -136,7 +136,7 @@ async def send_request(
     try:
         response = await client.post(**request_kwargs)
         response.raise_for_status()
-    except httpx.ConnectError:
+    except httpx.RequestError:
         logger.error("No se pudo conectar con el servicio %s.", service_name)
         raise InternalServiceUnavailableError(unavailable_detail) from None
     except httpx.HTTPStatusError as http_err:
@@ -147,8 +147,24 @@ async def send_request(
             status_code,
         )
         if status_code == 404:
-            detail = http_err.response.json().get("detail", "Recurso no encontrado.")
+            detail = _response_detail(http_err.response, default="Recurso no encontrado.")
             raise InternalResourceNotFoundError(detail) from http_err
         raise InternalServiceError(internal_detail) from http_err
 
-    return response.json()
+    try:
+        return response.json()
+    except ValueError as json_err:
+        logger.error("El servicio %s devolvió una respuesta JSON inválida.", service_name)
+        raise InternalServiceError(internal_detail) from json_err
+
+
+def _response_detail(response: httpx.Response, *, default: str) -> str:
+    """Extrae un detail JSON opcional sin confiar en el formato del servicio."""
+    try:
+        body = response.json()
+    except ValueError:
+        return default
+    if not isinstance(body, dict):
+        return default
+    detail = body.get("detail")
+    return detail if isinstance(detail, str) and detail else default

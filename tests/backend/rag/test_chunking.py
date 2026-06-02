@@ -1,6 +1,6 @@
 import pytest
 
-from rag.chunking import chunk_text
+from common.manual_text.chunking import chunk_text
 
 
 # ---------------------------------------------------------------------------

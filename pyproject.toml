@@ -3,6 +3,7 @@ name = "manualito"
 version = "0.1.0"
 requires-python = "==3.11.*"
 dependencies = [
+    "chromadb>=1.5.9",
     "ipykernel>=7.2.0",
     "pytesseract>=0.3.13",
 ]
@@ -21,6 +22,7 @@ api = [
     "slowapi==0.1.9",
     "sqlalchemy==2.0.50",
     "uvicorn[standard]==0.44.0",
+    "pydantic-settings==2.14.1",
 ]
 database = [
     "alembic==1.18.4",
@@ -79,6 +81,7 @@ test = [
     "slowapi==0.1.9",
     "sqlalchemy==2.0.50",
     "uvicorn[standard]==0.44.0",
+    "pydantic-settings==2.14.1",
 ]
 
 [tool.uv]

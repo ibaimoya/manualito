@@ -209,7 +209,7 @@ def validate_csrf_token(auth: AuthenticatedSession, csrf_token: str | None) -> b
 
 
 def normalize_email(email: str) -> str:
-    """Normaliza email para busquedas e índices case-insensitive."""
+    """Normaliza email para búsquedas e índices case-insensitive."""
     return email.strip().lower()
 
 

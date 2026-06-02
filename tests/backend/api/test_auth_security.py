@@ -28,8 +28,8 @@ from api.auth.passwords import (
     verify_password,
     verify_password_against_dummy,
 )
+from api.auth.router import _client_ip
 from api.auth.tokens import generate_opaque_token, hash_token, token_matches
-from api.routes.auth import _client_ip
 from database.models.audit import AuditLog
 from database.models.auth import AuthSession
 from database.models.user import User

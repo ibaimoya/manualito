@@ -16,7 +16,7 @@ from api.auth.exceptions import (
     InvalidCsrfTokenError,
 )
 from api.auth.service import AuthenticatedSession, LoginResult
-from api.exceptions import admin_required_handler
+from api.exceptions import domain_exception_handler
 from api.main import app
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
@@ -196,7 +196,7 @@ def test_login_sets_session_cookie_and_filters_user_response(
     """Login devuelve schema seguro y cookies con flags esperados."""
 
     monkeypatch.setattr(
-        "api.routes.auth.login_user",
+        "api.auth.router.login_user",
         AsyncMock(
             return_value=LoginResult(
                 user=_user(),
@@ -247,7 +247,7 @@ def test_logout_requires_csrf_and_clears_cookies(client, monkeypatch, override_d
 
     app.dependency_overrides[get_current_auth] = lambda: _auth_session()
     app.dependency_overrides[require_csrf] = lambda: None
-    monkeypatch.setattr("api.routes.auth.logout_session", logout_mock)
+    monkeypatch.setattr("api.auth.router.logout_session", logout_mock)
     try:
         response = client.post("/api/auth/logout")
     finally:
@@ -263,7 +263,7 @@ def test_logout_requires_csrf_and_clears_cookies(client, monkeypatch, override_d
 def test_register_success_returns_public_user(client, monkeypatch, override_db_session):
     """Registro correcto devuelve 201 con el contrato público, sin campos sensibles."""
 
-    monkeypatch.setattr("api.routes.auth.register_user", AsyncMock(return_value=_user()))
+    monkeypatch.setattr("api.auth.router.register_user", AsyncMock(return_value=_user()))
 
     response = client.post(
         "/api/auth/register",
@@ -285,7 +285,7 @@ def test_login_invalid_credentials_maps_to_401(client, monkeypatch, override_db_
     """Credenciales inválidas se traducen a 401."""
 
     monkeypatch.setattr(
-        "api.routes.auth.login_user", AsyncMock(side_effect=InvalidCredentialsError)
+        "api.auth.router.login_user", AsyncMock(side_effect=InvalidCredentialsError)
     )
 
     response = client.post(
@@ -301,7 +301,7 @@ def test_register_duplicate_identity_maps_to_409(client, monkeypatch, override_d
     """Email o username ya en uso se traduce a 409."""
 
     monkeypatch.setattr(
-        "api.routes.auth.register_user", AsyncMock(side_effect=DuplicateIdentityError)
+        "api.auth.router.register_user", AsyncMock(side_effect=DuplicateIdentityError)
     )
 
     response = client.post(
@@ -353,7 +353,7 @@ def test_logout_invalid_csrf_maps_to_403(client, override_db_session):
 
 def test_admin_required_handler_maps_to_403():
     """El handler de AdminRequiredError responde 403 (aún sin ruta admin)."""
-    response = admin_required_handler(None, AdminRequiredError())
+    response = domain_exception_handler(None, AdminRequiredError())
 
     assert response.status_code == 403
     _assert_error(_json_body(response), field=None, code="admin_required")
@@ -363,7 +363,7 @@ def test_login_rate_limited_after_five_attempts(client, monkeypatch, override_db
     """El 6.o login en la ventana recibe 429 (freno anti fuerza bruta)."""
 
     monkeypatch.setattr(
-        "api.routes.auth.login_user", AsyncMock(side_effect=InvalidCredentialsError)
+        "api.auth.router.login_user", AsyncMock(side_effect=InvalidCredentialsError)
     )
     responses = [
         client.post(

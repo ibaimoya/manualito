@@ -18,16 +18,6 @@ def chunk_text(
     Intenta respetar primero separadores naturales (párrafos, líneas, frases
     y palabras) antes de recurrir al corte por caracteres. Tras el troceado
     aplica un solapamiento prefijando el tail del chunk anterior al siguiente.
-
-    Args:
-        text (str): Texto completo del documento a dividir.
-        chunk_size (int): Tamaño máximo objetivo de cada chunk en caracteres.
-        overlap (int): Número de caracteres que se solapan entre chunks consecutivos.
-        separators (tuple[str, ...]): Jerarquía de separadores a probar.
-
-    Returns:
-        list[str]: Lista ordenada de chunks no vacíos. Puede ser vacía si el
-                   texto de entrada no contiene contenido indexable.
     """
     stripped = text.strip()
     if not stripped:
@@ -47,22 +37,7 @@ def _split_recursively(
     chunk_size: int,
     separators: tuple[str, ...],
 ) -> list[str]:
-    """
-    Divide un texto en chunks intentando respetar primero sus límites naturales.
-
-    Prueba los separadores en orden jerárquico (párrafos, líneas, frases,
-    palabras) y solo recurre al corte bruto por caracteres cuando el fragmento
-    sigue siendo demasiado grande. Si una división aún produce partes que no
-    caben en ``chunk_size``, vuelve a llamarse con separadores más finos.
-
-    Args:
-        text (str): Fragmento de texto a dividir.
-        chunk_size (int): Tamaño máximo por chunk.
-        separators (tuple[str, ...]): Separadores restantes a considerar.
-
-    Returns:
-        list[str]: Chunks generados para el fragmento recibido.
-    """
+    """Divide texto respetando límites naturales antes de cortar por caracteres."""
     if len(text) <= chunk_size:
         return [text]
 
@@ -104,22 +79,7 @@ def _split_recursively(
 
 
 def _apply_overlap(chunks: list[str], *, overlap: int) -> list[str]:
-    """
-    Añade contexto repetido entre chunks consecutivos para no perder información.
-
-    Toma los últimos caracteres de cada chunk y los antepone al siguiente.
-    Esto reduce el riesgo de que una regla quede partida justo en la frontera
-    entre dos chunks y luego se recupere incompleta durante la búsqueda.
-
-    Args:
-        chunks (list[str]): Chunks ya generados y ordenados.
-        overlap (int): Número de caracteres del final del chunk anterior que
-                       se anteponen al chunk actual.
-
-    Returns:
-        list[str]: Chunks con solapamiento aplicado. Si overlap es 0 o la lista
-                   tiene menos de dos elementos, se devuelve sin cambios.
-    """
+    """Añade contexto repetido entre chunks consecutivos."""
     if overlap <= 0 or len(chunks) < 2:
         return chunks
 

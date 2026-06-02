@@ -4,9 +4,13 @@ from fastapi import FastAPI
 from slowapi.middleware import SlowAPIMiddleware
 
 from api import dependencies
+from api.auth.router import router as auth_router
 from api.exceptions import register_exception_handlers
+from api.games.router import router as games_router
+from api.health.router import router as health_router
+from api.manuals.router import router as manuals_router
+from api.ocr.router import router as ocr_router
 from api.rate_limit import limiter
-from api.routes import auth, health, manuals, ocr
 from common.logging import configure_logging, install_health_log_filter
 from database.session import dispose_engine
 
@@ -31,7 +35,8 @@ app = FastAPI(title="Manualito API", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 register_exception_handlers(app)
-app.include_router(health.router, tags=["Health"])
-app.include_router(auth.router, tags=["Auth"])
-app.include_router(ocr.router, tags=["OCR"])
-app.include_router(manuals.router, tags=["Manuals"])
+app.include_router(health_router, tags=["Health"])
+app.include_router(auth_router, tags=["Authentication"])
+app.include_router(ocr_router, tags=["OCR"])
+app.include_router(games_router, tags=["Games"])
+app.include_router(manuals_router, tags=["Manuals"])

@@ -97,7 +97,7 @@ def test_paddle_cpu_engine_propagates_exception():
 
 
 def test_paddle_cpu_engine_name():
-    """El engine expone un nombre estable para logs, metricas y tests."""
+    """El engine expone un nombre estable para logs, métricas y tests."""
     assert PaddleCpuOcrEngine.name == "paddle_cpu"
 
 

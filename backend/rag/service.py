@@ -1,50 +1,37 @@
 import asyncio
 import logging
+from datetime import UTC, datetime
 
 from common.logging import safe_for_log
-from rag.chunking import chunk_text
-from rag.embeddings import get_embedding_service
+from rag.embeddings import EMBEDDING_MODEL, get_embedding_service
 from rag.exceptions import (
-    ChunkGenerationError,
-    EmptyDocumentError,
-    ManualNotFoundError,
+    ContextNotFoundError,
+    RagDeletionError,
     RagIndexingError,
     RagRetrievalError,
 )
-from rag.normalizer import normalize_ocr_lines, normalize_text
 from rag.repository import get_repository
-from rag.schemas import IngestRequest, RetrieveRequest
+from rag.schemas import DeleteRequest, IngestRequest, RetrieveRequest
 
 logger = logging.getLogger(__name__)
 
 
 async def ingest_manual(payload: IngestRequest) -> dict:
     """
-    Indexa un manual en ChromaDB a partir de texto libre u OCR estructurado.
+    Indexa en Chroma chunks ya persistidos por API en Postgres.
 
-    Normaliza el contenido, genera chunks, calcula embeddings y persiste el
-    resultado bajo el ``manual_id`` indicado. Las operaciones pesadas
-    (encode de embeddings y acceso a ChromaDB) se delegan a un thread del
-    pool para no bloquear el event loop de FastAPI.
+    RAG no normaliza, no trocea y no decide IDs. El id de cada vector es el
+    UUID del chunk canónico guardado en Postgres.
     """
-    normalized = build_document_text(payload)
-    if not normalized:
-        raise EmptyDocumentError
-
-    chunks = chunk_text(normalized)
-    if not chunks:
-        raise ChunkGenerationError
-
+    texts = [chunk.text for chunk in payload.chunks]
     try:
         embeddings = await asyncio.to_thread(
-            get_embedding_service().embed_passages, chunks
+            get_embedding_service().embed_passages, texts
         )
         chunks_indexed = await asyncio.to_thread(
             upsert_sync,
-            payload.manual_id,
-            chunks,
+            payload,
             embeddings,
-            payload.source_page,
         )
     except Exception as rag_err:
         logger.exception(
@@ -53,80 +40,88 @@ async def ingest_manual(payload: IngestRequest) -> dict:
         )
         raise RagIndexingError from rag_err
 
+    indexed_at = datetime.now(UTC).isoformat()
     return {
         "manual_id": payload.manual_id,
         "chunks_indexed": chunks_indexed,
         "status": "indexed",
+        "embedding_model": EMBEDDING_MODEL,
+        "indexed_at": indexed_at,
+        "chunk_ids": [chunk.id for chunk in payload.chunks],
     }
 
 
 async def retrieve_chunks(payload: RetrieveRequest) -> dict:
-    """
-    Recupera los chunks más relevantes de un manual para una pregunta dada.
-
-    El encode de la query y la consulta a ChromaDB se ejecutan en un thread
-    del pool para no bloquear el event loop.
-    """
+    """Recupera candidatos de Chroma filtrando por juego."""
     try:
         query_embedding = await asyncio.to_thread(
             get_embedding_service().embed_query, payload.question
         )
         chunks = await asyncio.to_thread(
             query_sync,
-            payload.manual_id,
+            payload.game_id,
             query_embedding,
             payload.top_k,
         )
-    except ManualNotFoundError:
+    except ContextNotFoundError:
         raise
     except Exception as rag_err:
         logger.exception(
-            "Error al recuperar contexto para '%s'.",
-            safe_for_log(payload.manual_id),
+            "Error al recuperar contexto para juego '%s'.",
+            safe_for_log(payload.game_id),
         )
         raise RagRetrievalError from rag_err
 
     return {"chunks": chunks}
 
 
-def upsert_sync(
-    manual_id: str,
-    chunks: list[str],
-    embeddings: list[list[float]],
-    source_page: int | None,
-) -> int:
-    """Wrapper síncrono para invocar ``upsert_manual`` desde ``asyncio.to_thread``."""
+async def delete_manual(payload: DeleteRequest) -> dict:
+    """Limpia de Chroma los chunks derivados de un manual borrado en Postgres."""
+    try:
+        chunks_deleted = await asyncio.to_thread(
+            delete_sync,
+            payload.manual_id,
+            payload.chunk_ids,
+        )
+    except Exception as rag_err:
+        logger.exception(
+            "Error al borrar del índice el manual '%s'.",
+            safe_for_log(payload.manual_id),
+        )
+        raise RagDeletionError from rag_err
+
+    return {
+        "manual_id": payload.manual_id,
+        "chunks_deleted": chunks_deleted,
+        "status": "deleted",
+    }
+
+
+def upsert_sync(payload: IngestRequest, embeddings: list[list[float]]) -> int:
+    """Wrapper síncrono para invocar Chroma desde ``asyncio.to_thread``."""
     return get_repository().upsert_manual(
-        manual_id=manual_id,
-        chunks=chunks,
+        manual_id=payload.manual_id,
+        game_id=payload.game_id,
+        owner_user_id=payload.owner_user_id,
+        language=payload.language,
+        chunks=payload.chunks,
         embeddings=embeddings,
-        source_page=source_page,
     )
 
 
 def query_sync(
-    manual_id: str,
+    game_id: str,
     query_embedding: list[float],
     top_k: int,
 ) -> list[dict[str, object]]:
-    """Wrapper síncrono para invocar ``query_manual`` desde ``asyncio.to_thread``."""
-    return get_repository().query_manual(
-        manual_id=manual_id,
+    """Wrapper síncrono para consultar Chroma desde ``asyncio.to_thread``."""
+    return get_repository().query_game(
+        game_id=game_id,
         query_embedding=query_embedding,
         top_k=top_k,
     )
 
 
-def build_document_text(payload: IngestRequest) -> str:
-    """
-    Construye el texto indexable a partir del payload de ingesta.
-
-    Args:
-        payload (IngestRequest): Petición de ingesta recibida por la API.
-
-    Returns:
-        str: Texto normalizado listo para chunking.
-    """
-    if payload.text:
-        return normalize_text(payload.text)
-    return normalize_ocr_lines([line.model_dump() for line in payload.ocr_lines or []])
+def delete_sync(manual_id: str, chunk_ids: list[str]) -> int:
+    """Wrapper síncrono para borrar chunks desde ``asyncio.to_thread``."""
+    return get_repository().delete_manual(manual_id=manual_id, chunk_ids=chunk_ids)

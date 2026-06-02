@@ -40,7 +40,7 @@ def test_get_engine_creates_async_engine_lazily(monkeypatch):
 
 
 def test_get_sessionmaker_creates_factory_lazily(monkeypatch):
-    """La factory se crea una vez y produce sesiones independientes por llamada."""
+    """La factoría se crea una vez y produce sesiones independientes por llamada."""
     engine = object()
     factory = object()
     get_engine = MagicMock(return_value=engine)

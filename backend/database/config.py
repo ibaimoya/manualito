@@ -20,7 +20,7 @@ def get_database_url() -> str:
     if raw_database_url is not None:
         database_url = raw_database_url.strip()
         if not database_url:
-            raise RuntimeError(f"{DATABASE_URL_ENV} no puede estar vacia.")
+            raise RuntimeError(f"{DATABASE_URL_ENV} no puede estar vacía.")
         _validate_database_url(database_url)
         return database_url
 
@@ -50,10 +50,10 @@ def _get_secret_or_env(file_env_name: str, value_env_name: str) -> str:
     if secret_file:
         path = Path(secret_file)
         if not path.is_file():
-            raise RuntimeError(f"{file_env_name} no apunta a un fichero valido.")
+            raise RuntimeError(f"{file_env_name} no apunta a un fichero válido.")
         value = path.read_text(encoding="utf-8").strip()
         if not value:
-            raise RuntimeError(f"{file_env_name} no puede estar vacio.")
+            raise RuntimeError(f"{file_env_name} no puede estar vacío.")
         return value
 
     value = os.environ.get(value_env_name)
@@ -67,7 +67,7 @@ def _get_required_env(name: str) -> str:
     """Lee una variable de entorno obligatoria y no vacía."""
     value = os.environ.get(name)
     if value is None or not value.strip():
-        raise RuntimeError(f"{name} no esta definida.")
+        raise RuntimeError(f"{name} no está definida.")
     return value.strip()
 
 

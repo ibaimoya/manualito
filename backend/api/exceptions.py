@@ -1,4 +1,5 @@
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any, cast
 
 from fastapi import FastAPI, Request
@@ -16,6 +17,12 @@ from api.auth.exceptions import (
     DuplicateIdentityError,
     InvalidCredentialsError,
     InvalidCsrfTokenError,
+)
+from api.manuals.exceptions import (
+    GameNotFoundError,
+    ManualContextNotFoundError,
+    ManualNotFoundError,
+    ManualWithoutTextError,
 )
 from api.schemas import ApiErrorResponse, ApiFieldError
 from database.models.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
@@ -56,6 +63,13 @@ class ApiError(Exception):
     """Clase base para los errores de dominio del gateway."""
 
 
+class PublicDetailApiError(ApiError):
+    """Error de dominio con mensaje público seguro para devolver al cliente."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+
+
 class ImageTooLargeError(ApiError):
     """La imagen subida supera el tamaño máximo permitido por el gateway."""
 
@@ -64,25 +78,28 @@ class InvalidImageError(ApiError):
     """El fichero subido no contiene una imagen válida."""
 
 
-class InternalServiceUnavailableError(ApiError):
+class InternalServiceUnavailableError(PublicDetailApiError):
     """Un servicio interno no está disponible."""
 
-    def __init__(self, detail: str) -> None:
-        self.detail = detail
 
-
-class InternalResourceNotFoundError(ApiError):
+class InternalResourceNotFoundError(PublicDetailApiError):
     """Un servicio interno indica que el recurso solicitado no existe."""
 
-    def __init__(self, detail: str) -> None:
-        self.detail = detail
 
-
-class InternalServiceError(ApiError):
+class InternalServiceError(PublicDetailApiError):
     """Un servicio interno ha devuelto un error no recuperable."""
 
-    def __init__(self, detail: str) -> None:
-        self.detail = detail
+
+ExceptionHandler = Callable[[Request, Exception], JSONResponse]
+
+
+@dataclass(frozen=True, slots=True)
+class ErrorResponseConfig:
+    """Configuración pública de una excepción de dominio."""
+
+    status_code: int
+    code: str
+    detail: str | None = None
 
 
 def validation_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
@@ -107,84 +124,89 @@ def validation_exception_handler(_request: Request, _exc: Exception) -> JSONResp
     )
 
 
-def image_too_large_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return _coded_api_error_response(
+_DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
+    ImageTooLargeError: ErrorResponseConfig(
         status_code=413,
         detail="La imagen no puede superar 20 MB.",
         code="image_too_large",
-    )
-
-
-def invalid_image_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return _coded_api_error_response(
+    ),
+    InvalidImageError: ErrorResponseConfig(
         status_code=415,
         detail="El archivo no es una imagen válida.",
         code="invalid_image",
-    )
-
-
-def internal_service_unavailable_handler(
-    _request: Request,
-    exc: Exception,
-) -> JSONResponse:
-    error = cast(InternalServiceUnavailableError, exc)
-    return _coded_api_error_response(
+    ),
+    InternalServiceUnavailableError: ErrorResponseConfig(
         status_code=502,
-        detail=error.detail,
         code="service_unavailable",
-    )
-
-
-def internal_resource_not_found_handler(
-    _request: Request,
-    exc: Exception,
-) -> JSONResponse:
-    error = cast(InternalResourceNotFoundError, exc)
-    return _coded_api_error_response(
+    ),
+    InternalResourceNotFoundError: ErrorResponseConfig(
         status_code=404,
-        detail=error.detail,
         code="resource_not_found",
-    )
-
-
-def internal_service_error_handler(_request: Request, exc: Exception) -> JSONResponse:
-    error = cast(InternalServiceError, exc)
-    return _coded_api_error_response(
+    ),
+    InternalServiceError: ErrorResponseConfig(
         status_code=500,
-        detail=error.detail,
         code="internal_service_error",
-    )
-
-
-def authentication_required_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return _coded_api_error_response(
+    ),
+    AuthenticationRequiredError: ErrorResponseConfig(
         status_code=401,
         detail="Autenticación requerida.",
         code="authentication_required",
-    )
-
-
-def invalid_credentials_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return _coded_api_error_response(
+    ),
+    InvalidCredentialsError: ErrorResponseConfig(
         status_code=401,
         detail="Credenciales inválidas.",
         code="invalid_credentials",
-    )
-
-
-def duplicate_identity_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return _coded_api_error_response(
+    ),
+    DuplicateIdentityError: ErrorResponseConfig(
         status_code=409,
         detail="Email o username no disponible.",
         code="identity_unavailable",
-    )
-
-
-def invalid_csrf_token_handler(_request: Request, _exc: Exception) -> JSONResponse:
-    return _coded_api_error_response(
+    ),
+    InvalidCsrfTokenError: ErrorResponseConfig(
         status_code=403,
         detail="Token CSRF inválido.",
         code="invalid_csrf_token",
+    ),
+    AdminRequiredError: ErrorResponseConfig(
+        status_code=403,
+        detail="Permisos de administrador requeridos.",
+        code="admin_required",
+    ),
+    GameNotFoundError: ErrorResponseConfig(
+        status_code=404,
+        detail="Juego no encontrado.",
+        code="game_not_found",
+    ),
+    ManualWithoutTextError: ErrorResponseConfig(
+        status_code=422,
+        detail="No se pudo extraer texto indexable del manual.",
+        code="manual_without_text",
+    ),
+    ManualNotFoundError: ErrorResponseConfig(
+        status_code=404,
+        detail="Manual no encontrado.",
+        code="manual_not_found",
+    ),
+    ManualContextNotFoundError: ErrorResponseConfig(
+        status_code=404,
+        detail="No hay contexto disponible para ese juego.",
+        code="manual_context_not_found",
+    ),
+}
+
+
+def domain_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Traduce excepciones de dominio con una tabla explícita."""
+    config = _DOMAIN_ERROR_CONFIGS[type(exc)]
+    detail = (
+        config.detail
+        if config.detail is not None
+        else cast(PublicDetailApiError, exc).detail
+    )
+    return _coded_api_error_response(
+        status_code=config.status_code,
+        detail=detail,
+        code=config.code,
     )
 
 
@@ -197,25 +219,19 @@ def auth_validation_handler(_request: Request, exc: Exception) -> JSONResponse:
     )
 
 
-def admin_required_handler(_request: Request, _exc: Exception) -> JSONResponse:
+def rate_limit_exceeded_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    """Normaliza los límites de SlowAPI sin depender de sus métodos privados."""
+    exc = cast(RateLimitExceeded, _exc)
     return _coded_api_error_response(
-        status_code=403,
-        detail="Permisos de administrador requeridos.",
-        code="admin_required",
-    )
-
-
-def rate_limit_exceeded_handler(request: Request, _exc: Exception) -> JSONResponse:
-    response = _coded_api_error_response(
         status_code=429,
         detail=RATE_LIMITED_DETAIL,
         code="rate_limited",
+        headers=_rate_limit_headers(exc),
     )
-    return _inject_rate_limit_headers(request, response)
 
 
 def http_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
-    """Normaliza HTTPException de Starlette/FastAPI al envelope publico."""
+    """Normaliza HTTPException de Starlette/FastAPI al envelope público."""
     error = cast(StarletteHTTPException, exc)
     if error.status_code == 404:
         return _coded_api_error_response(
@@ -239,28 +255,19 @@ def http_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+_EXCEPTION_HANDLERS: tuple[tuple[type[Exception], ExceptionHandler], ...] = (
+    (StarletteHTTPException, http_exception_handler),
+    (RequestValidationError, validation_exception_handler),
+    (RateLimitExceeded, rate_limit_exceeded_handler),
+    (AuthFormValidationError, auth_validation_handler),
+    *((exception_type, domain_exception_handler) for exception_type in _DOMAIN_ERROR_CONFIGS),
+)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Registra los handlers globales del gateway."""
-    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-    app.add_exception_handler(ImageTooLargeError, image_too_large_handler)
-    app.add_exception_handler(InvalidImageError, invalid_image_handler)
-    app.add_exception_handler(
-        InternalServiceUnavailableError,
-        internal_service_unavailable_handler,
-    )
-    app.add_exception_handler(
-        InternalResourceNotFoundError,
-        internal_resource_not_found_handler,
-    )
-    app.add_exception_handler(InternalServiceError, internal_service_error_handler)
-    app.add_exception_handler(AuthenticationRequiredError, authentication_required_handler)
-    app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
-    app.add_exception_handler(DuplicateIdentityError, duplicate_identity_handler)
-    app.add_exception_handler(InvalidCsrfTokenError, invalid_csrf_token_handler)
-    app.add_exception_handler(AuthFormValidationError, auth_validation_handler)
-    app.add_exception_handler(AdminRequiredError, admin_required_handler)
+    for exception_type, handler in _EXCEPTION_HANDLERS:
+        app.add_exception_handler(exception_type, handler)
 
 
 def _api_error_response(
@@ -282,7 +289,7 @@ def _coded_api_error_response(
     code: str,
     headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
-    """Construye un error general con codigo estable y field nulo."""
+    """Construye un error general con código estable y field nulo."""
     return _api_error_response(
         status_code=status_code,
         detail=detail,
@@ -291,13 +298,16 @@ def _coded_api_error_response(
     )
 
 
-def _inject_rate_limit_headers(request: Request, response: JSONResponse) -> JSONResponse:
-    """Replica el handler oficial de SlowAPI para conservar sus headers."""
-    current_limit = getattr(request.state, "view_rate_limit", None)
-    return cast(
-        JSONResponse,
-        request.app.state.limiter._inject_headers(response, current_limit),
-    )
+def _rate_limit_headers(exc: RateLimitExceeded) -> dict[str, str]:
+    """Devuelve headers útiles de backoff sin usar APIs privadas de SlowAPI."""
+    rate_limit = exc.limit.limit
+    retry_after = max(1, int(rate_limit.get_expiry()))
+    return {
+        "Retry-After": str(retry_after),
+        "RateLimit-Limit": str(rate_limit.amount),
+        "RateLimit-Remaining": "0",
+        "RateLimit-Reset": str(retry_after),
+    }
 
 
 def _field_error(*, field: str | None, code: str, message: str) -> ApiFieldError:
@@ -308,8 +318,7 @@ def _field_error(*, field: str | None, code: str, message: str) -> ApiFieldError
 def _auth_field_errors(errors: Iterable[AuthFieldError]) -> list[ApiFieldError]:
     """Traduce errores de dominio de auth al contrato HTTP público."""
     return [
-        _field_error(field=error.field, code=error.code, message=error.message)
-        for error in errors
+        _field_error(field=error.field, code=error.code, message=error.message) for error in errors
     ]
 
 

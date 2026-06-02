@@ -1,18 +1,42 @@
 import logging
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import anyio
 import pytest
 from pydantic import ValidationError
 
-from rag.exceptions import ChunkGenerationError, EmptyDocumentError
-from rag.schemas import IngestRequest
+from rag.annotations import RAG_RETRIEVAL_TOP_K_MAX
+from rag.embeddings import EMBEDDING_MODEL
+from rag.exceptions import ContextNotFoundError, RagIndexingError
+from rag.schemas import IngestRequest, RetrieveRequest
 from rag.service import ingest_manual
 
+_MANUAL_ID = "manual-1"
+_GAME_ID = "game-1"
+_OWNER_USER_ID = "user-1"
+_CONTENT_HASH = "a" * 64
 
-# ---------------------------------------------------------------------------
-# Comprobación de estado.
-# ---------------------------------------------------------------------------
+
+def _ingest_payload(*, manual_id: str = _MANUAL_ID) -> dict:
+    """Construye una petición de ingesta con chunks ya persistidos."""
+    return {
+        "manual_id": manual_id,
+        "game_id": _GAME_ID,
+        "owner_user_id": _OWNER_USER_ID,
+        "language": "es",
+        "chunks": [
+            {
+                "id": "chunk-1",
+                "text": "Regla uno.",
+                "chunk_index": 0,
+                "source_page": 1,
+                "content_hash": _CONTENT_HASH,
+            }
+        ],
+    }
+
+
 def test_health(client):
     """El endpoint de health devuelve 200 y el cuerpo {"status": "ok"}."""
     response = client.get("/health")
@@ -21,102 +45,54 @@ def test_health(client):
 
 
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — ingesta de manuales
-#   Clase 1: Texto libre válido — indexación correcta.
-#   Clase 2: Líneas OCR válidas — indexación correcta.
-#   Clase 3: Texto no indexable tras normalizar — 422.
-#   Clase 4: No se pueden generar chunks — 422.
-#   Clase 5: Falla la vectorización o la persistencia — 500.
+# Partición de Equivalencia (EP) — ingesta de chunks preparados
+#   Clase 1: Chunks válidos — indexación correcta.
+#   Clase 2: Payload sin chunks — 422 por contrato Pydantic.
+#   Clase 3: Falla la vectorización o la persistencia — 500.
 # ---------------------------------------------------------------------------
-def test_ingest_indexes_chunks(client):
-    """Una ingesta válida devuelve el manual indexado y su número de chunks."""
+def test_ingest_indexes_prepared_chunks(client):
+    """Una ingesta válida indexa exactamente los chunks enviados por API."""
     embedding_service = MagicMock()
     embedding_service.embed_passages.return_value = [[0.1, 0.2]]
     repository = MagicMock()
     repository.upsert_manual.return_value = 1
 
     with (
-        patch("rag.service.chunk_text", return_value=["Regla uno. Regla dos."]),
         patch("rag.service.get_embedding_service", return_value=embedding_service),
         patch("rag.service.get_repository", return_value=repository),
     ):
-        response = client.post(
-            "/ingest",
-            json={"manual_id": "manual-1", "text": "Regla uno. Regla dos."},
-        )
+        response = client.post("/ingest", json=_ingest_payload())
 
     assert response.status_code == 200
-    assert response.json() == {
-        "manual_id": "manual-1",
-        "chunks_indexed": 1,
-        "status": "indexed",
-    }
-    embedding_service.embed_passages.assert_called_once()
+    body = response.json()
+    assert body["manual_id"] == _MANUAL_ID
+    assert body["chunks_indexed"] == 1
+    assert body["status"] == "indexed"
+    assert body["embedding_model"] == EMBEDDING_MODEL
+    assert body["chunk_ids"] == ["chunk-1"]
+    datetime.fromisoformat(body["indexed_at"])
+
+    embedding_service.embed_passages.assert_called_once_with(["Regla uno."])
     repository.upsert_manual.assert_called_once()
+    kwargs = repository.upsert_manual.call_args.kwargs
+    assert kwargs["manual_id"] == _MANUAL_ID
+    assert kwargs["game_id"] == _GAME_ID
+    assert kwargs["owner_user_id"] == _OWNER_USER_ID
+    assert kwargs["language"] == "es"
+    assert kwargs["embeddings"] == [[0.1, 0.2]]
+    assert [chunk.id for chunk in kwargs["chunks"]] == ["chunk-1"]
+    assert [chunk.text for chunk in kwargs["chunks"]] == ["Regla uno."]
 
 
-def test_ingest_indexes_ocr_lines(client):
-    """Las líneas OCR se normalizan e indexan igual que el texto libre."""
-    embedding_service = MagicMock()
-    embedding_service.embed_passages.return_value = [[0.1, 0.2], [0.3, 0.4]]
-    repository = MagicMock()
-    repository.upsert_manual.return_value = 2
+def test_ingest_rejects_payload_without_chunks(client):
+    """RAG no acepta documentos brutos: API debe enviar chunks persistidos."""
+    payload = _ingest_payload()
+    payload["chunks"] = []
 
-    with (
-        patch("rag.service.chunk_text", return_value=["Turno inicial", "Fin de ronda"]),
-        patch("rag.service.get_embedding_service", return_value=embedding_service),
-        patch("rag.service.get_repository", return_value=repository),
-    ):
-        response = client.post(
-            "/ingest",
-            json={
-                "manual_id": "manual-ocr",
-                "ocr_lines": [
-                    {"text": " Turno   inicial ", "confidence": 0.98},
-                    {"text": "Fin   de ronda", "confidence": 0.87},
-                ],
-                "source_page": 7,
-            },
-        )
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "manual_id": "manual-ocr",
-        "chunks_indexed": 2,
-        "status": "indexed",
-    }
-    embedding_service.embed_passages.assert_called_once_with(
-        ["Turno inicial", "Fin de ronda"]
-    )
-    repository.upsert_manual.assert_called_once_with(
-        manual_id="manual-ocr",
-        chunks=["Turno inicial", "Fin de ronda"],
-        embeddings=[[0.1, 0.2], [0.3, 0.4]],
-        source_page=7,
-    )
-
-
-def test_ingest_returns_422_when_document_has_no_indexable_text(client):
-    """Si tras normalizar no queda texto útil, la API devuelve 422."""
-    response = client.post(
-        "/ingest",
-        json={"manual_id": "manual-vacio", "text": "   \n \r\n   "},
-    )
+    response = client.post("/ingest", json=payload)
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "El documento no contiene texto indexable."}
-
-
-def test_ingest_returns_422_when_chunking_produces_no_chunks(client):
-    """Si el chunking no produce fragmentos, la API rechaza la ingesta."""
-    with patch("rag.service.chunk_text", return_value=[]):
-        response = client.post(
-            "/ingest",
-            json={"manual_id": "manual-1", "text": "Regla uno."},
-        )
-
-    assert response.status_code == 422
-    assert response.json() == {"detail": "No se pudieron generar chunks del documento."}
+    assert response.json()["detail"][0]["loc"] == ["body", "chunks"]
 
 
 def test_ingest_returns_500_when_indexing_fails(client):
@@ -124,57 +100,50 @@ def test_ingest_returns_500_when_indexing_fails(client):
     embedding_service = MagicMock()
     embedding_service.embed_passages.side_effect = RuntimeError("fallo de embeddings")
 
-    with (
-        patch("rag.service.chunk_text", return_value=["Regla uno"]),
-        patch("rag.service.get_embedding_service", return_value=embedding_service),
-    ):
-        response = client.post(
-            "/ingest",
-            json={"manual_id": "manual-1", "text": "Regla uno."},
-        )
+    with patch("rag.service.get_embedding_service", return_value=embedding_service):
+        response = client.post("/ingest", json=_ingest_payload())
 
     assert response.status_code == 500
     assert response.json() == {"detail": "Error interno al indexar el manual."}
 
 
-def test_ingest_manual_raises_domain_error_when_document_is_empty():
-    """La capa interna usa un error de dominio para documentos sin texto útil."""
-    payload = IngestRequest(manual_id="manual-vacio", text="   \n \r\n   ")
-
-    with pytest.raises(EmptyDocumentError):
-        anyio.run(ingest_manual, payload)
-
-
-def test_ingest_request_requires_text_or_ocr_lines():
-    """El contrato de entrada obliga a enviar contenido indexable."""
-    with pytest.raises(ValidationError, match="Se requiere 'text' o 'ocr_lines'"):
-        IngestRequest(manual_id="manual-sin-contenido")
-
-
-def test_ingest_manual_raises_domain_error_when_chunking_returns_empty():
-    """La capa interna usa un error de dominio si no se generan chunks."""
-    payload = IngestRequest(manual_id="manual-1", text="Regla uno.")
+def test_ingest_manual_raises_domain_error_when_repository_fails():
+    """La capa interna conserva un error de dominio para fallos de indexado."""
+    payload = IngestRequest(**_ingest_payload())
+    embedding_service = MagicMock()
+    embedding_service.embed_passages.return_value = [[0.1, 0.2]]
+    repository = MagicMock()
+    repository.upsert_manual.side_effect = RuntimeError("fallo de Chroma")
 
     with (
-        patch("rag.service.chunk_text", return_value=[]),
-        pytest.raises(ChunkGenerationError),
+        patch("rag.service.get_embedding_service", return_value=embedding_service),
+        patch("rag.service.get_repository", return_value=repository),
+        pytest.raises(RagIndexingError),
     ):
         anyio.run(ingest_manual, payload)
 
 
+def test_ingest_request_requires_prepared_chunks():
+    """El contrato de entrada exige al menos un chunk preparado."""
+    payload = _ingest_payload()
+    payload.pop("chunks")
+
+    with pytest.raises(ValidationError, match="chunks"):
+        IngestRequest(**payload)
+
+
 # ---------------------------------------------------------------------------
-# Partición de Equivalencia (EP) — recuperación de contexto
-#   Clase 6: Manual existente — devuelve chunks relevantes.
-#   Clase 7: Manual inexistente — 404.
-#   Clase 8: Falla inesperada del repositorio — 500.
+# Partición de Equivalencia (EP) — recuperación de candidatos por juego
+#   Clase 4: Juego con contexto indexado — devuelve candidatos sin texto.
+#   Clase 5: Juego sin contexto — 404.
+#   Clase 6: Falla inesperada del repositorio — 500.
 # ---------------------------------------------------------------------------
 def test_retrieve_returns_chunks(client):
-    """La recuperación válida devuelve los chunks y respeta el top_k por defecto."""
+    """La recuperación válida filtra por juego y no devuelve texto canónico."""
     repository = MagicMock()
-    repository.query_manual.return_value = [
+    repository.query_game.return_value = [
         {
-            "id": "manual-1:0",
-            "text": "Regla uno",
+            "id": "chunk-1",
             "chunk_index": 0,
             "source_page": 1,
             "score": 0.99,
@@ -189,22 +158,31 @@ def test_retrieve_returns_chunks(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"manual_id": "manual-1", "question": "¿Cómo se gana?"},
+            json={"game_id": _GAME_ID, "question": "¿Cómo se gana?"},
         )
 
     assert response.status_code == 200
-    assert response.json()["chunks"][0]["chunk_index"] == 0
-    repository.query_manual.assert_called_once_with(
-        manual_id="manual-1",
+    assert response.json() == {
+        "chunks": [
+            {
+                "id": "chunk-1",
+                "chunk_index": 0,
+                "source_page": 1,
+                "score": 0.99,
+            }
+        ]
+    }
+    repository.query_game.assert_called_once_with(
+        game_id=_GAME_ID,
         query_embedding=[0.3, 0.4],
-        top_k=3,
+        top_k=10,
     )
 
 
 def test_retrieve_passes_custom_top_k(client):
-    """Si el cliente pide otro top_k, ese valor se pasa al repositorio."""
+    """Si API pide otro top_k, ese valor se pasa al repositorio vectorial."""
     repository = MagicMock()
-    repository.query_manual.return_value = []
+    repository.query_game.return_value = []
     embedding_service = MagicMock()
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
@@ -214,24 +192,43 @@ def test_retrieve_passes_custom_top_k(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"manual_id": "manual-1", "question": "¿Cómo se gana?", "top_k": 5},
+            json={"game_id": _GAME_ID, "question": "¿Cómo se gana?", "top_k": 5},
         )
 
     assert response.status_code == 200
     assert response.json() == {"chunks": []}
-    repository.query_manual.assert_called_once_with(
-        manual_id="manual-1",
+    repository.query_game.assert_called_once_with(
+        game_id=_GAME_ID,
         query_embedding=[0.3, 0.4],
         top_k=5,
     )
 
 
-def test_retrieve_returns_404_for_missing_manual(client):
-    """Si el manual no existe en la base vectorial, el endpoint devuelve 404."""
-    from rag.exceptions import ManualNotFoundError
+def test_retrieve_request_allows_internal_overfetch_limit():
+    """RAG acepta el limite interno necesario para deduplicar en API."""
+    request = RetrieveRequest(
+        game_id=_GAME_ID,
+        question="¿Cómo se gana?",
+        top_k=RAG_RETRIEVAL_TOP_K_MAX,
+    )
 
+    assert request.top_k == RAG_RETRIEVAL_TOP_K_MAX
+
+
+def test_retrieve_request_rejects_values_above_internal_limit():
+    """RAG rechaza candidatos por encima del presupuesto interno acordado."""
+    with pytest.raises(ValidationError, match="top_k"):
+        RetrieveRequest(
+            game_id=_GAME_ID,
+            question="¿Cómo se gana?",
+            top_k=RAG_RETRIEVAL_TOP_K_MAX + 1,
+        )
+
+
+def test_retrieve_returns_404_for_missing_game_context(client):
+    """Si Chroma no tiene contexto del juego, el endpoint devuelve 404."""
     repository = MagicMock()
-    repository.query_manual.side_effect = ManualNotFoundError("manual-missing")
+    repository.query_game.side_effect = ContextNotFoundError("game-missing")
     embedding_service = MagicMock()
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
@@ -241,17 +238,17 @@ def test_retrieve_returns_404_for_missing_manual(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"manual_id": "manual-missing", "question": "¿Algo?"},
+            json={"game_id": "game-missing", "question": "¿Algo?"},
         )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Manual no encontrado."}
+    assert response.json() == {"detail": "Contexto no encontrado."}
 
 
 def test_retrieve_returns_500_when_query_fails(client):
     """Un error inesperado durante la búsqueda se traduce a 500."""
     repository = MagicMock()
-    repository.query_manual.side_effect = RuntimeError("fallo en chroma")
+    repository.query_game.side_effect = RuntimeError("fallo en Chroma")
     embedding_service = MagicMock()
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
@@ -261,20 +258,20 @@ def test_retrieve_returns_500_when_query_fails(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"manual_id": "manual-1", "question": "¿Cómo se gana?"},
+            json={"game_id": _GAME_ID, "question": "¿Cómo se gana?"},
         )
 
     assert response.status_code == 500
     assert response.json() == {
-        "detail": "Error interno al recuperar el contexto del manual."
+        "detail": "Error interno al recuperar el contexto del juego."
     }
 
 
-def test_retrieve_error_log_sanitizes_manual_id(client, caplog):
-    """El manual_id recibido no puede partir el log en varias líneas."""
-    manual_id = "manual\r\n2025-01-01 [ERROR] FALSO"
+def test_retrieve_error_log_sanitizes_game_id(client, caplog):
+    """El game_id recibido no puede partir el log en varias líneas."""
+    game_id = "game\r\n2025-01-01 [ERROR] FALSO"
     repository = MagicMock()
-    repository.query_manual.side_effect = RuntimeError("fallo en chroma")
+    repository.query_game.side_effect = RuntimeError("fallo en Chroma")
     embedding_service = MagicMock()
     embedding_service.embed_query.return_value = [0.3, 0.4]
 
@@ -285,7 +282,7 @@ def test_retrieve_error_log_sanitizes_manual_id(client, caplog):
     ):
         response = client.post(
             "/retrieve",
-            json={"manual_id": manual_id, "question": "¿Cómo se gana?"},
+            json={"game_id": game_id, "question": "¿Cómo se gana?"},
         )
 
     assert response.status_code == 500
@@ -299,4 +296,49 @@ def test_retrieve_error_log_sanitizes_manual_id(client, caplog):
     ]
     assert messages
     assert all("\r" not in message and "\n" not in message for message in messages)
-    assert any("manual??2025-01-01 [ERROR] FALSO" in message for message in messages)
+    assert any("game??2025-01-01 [ERROR] FALSO" in message for message in messages)
+
+
+# ---------------------------------------------------------------------------
+# Partición de Equivalencia (EP) — limpieza de Chroma tras borrado en Postgres
+#   Clase 7: Borrado válido — elimina chunks derivados.
+#   Clase 8: Fallo inesperado de Chroma — 500.
+# ---------------------------------------------------------------------------
+def test_delete_removes_manual_chunks(client):
+    """El endpoint interno limpia Chroma con IDs decididos por Postgres."""
+    repository = MagicMock()
+    repository.delete_manual.return_value = 2
+
+    with patch("rag.service.get_repository", return_value=repository):
+        response = client.post(
+            "/delete",
+            json={"manual_id": _MANUAL_ID, "chunk_ids": ["chunk-1", "chunk-2"]},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "manual_id": _MANUAL_ID,
+        "chunks_deleted": 2,
+        "status": "deleted",
+    }
+    repository.delete_manual.assert_called_once_with(
+        manual_id=_MANUAL_ID,
+        chunk_ids=["chunk-1", "chunk-2"],
+    )
+
+
+def test_delete_returns_500_when_chroma_delete_fails(client):
+    """Un fallo de Chroma se traduce a error interno del servicio RAG."""
+    repository = MagicMock()
+    repository.delete_manual.side_effect = RuntimeError("fallo en Chroma")
+
+    with patch("rag.service.get_repository", return_value=repository):
+        response = client.post(
+            "/delete",
+            json={"manual_id": _MANUAL_ID, "chunk_ids": ["chunk-1"]},
+        )
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": "Error interno al borrar el manual del índice."
+    }

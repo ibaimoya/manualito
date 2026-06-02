@@ -4,16 +4,23 @@ from sqlalchemy.sql.base import _NoneName
 
 from database.base import Base
 from database.models import import_all_models
-from database.models.constants import EMAIL_MAX_LENGTH
+from database.models.constants import EMAIL_MAX_LENGTH, SHA256_HEX_LENGTH
 
 
 def test_model_registry_imports_phase_2_tables():
     """El registry carga las tablas de identidad y assets para Alembic."""
     import_all_models()
 
-    assert {"users", "auth_sessions", "audit_log", "assets"}.issubset(
-        Base.metadata.tables
-    )
+    assert {
+        "users",
+        "auth_sessions",
+        "audit_log",
+        "assets",
+        "games",
+        "manuals",
+        "manual_pages",
+        "manual_chunks",
+    }.issubset(Base.metadata.tables)
     assert "email_verification_tokens" not in Base.metadata.tables
     assert "password_reset_tokens" not in Base.metadata.tables
 
@@ -104,11 +111,125 @@ def test_assets_schema_models_avatar_without_circular_fk():
     )
 
 
+def test_games_schema_supports_bgg_catalog_and_typeahead():
+    """games guarda catálogo local y typeahead sin unicidad global por nombre."""
+    import_all_models()
+    games = Base.metadata.tables["games"]
+
+    assert games.c.name.nullable is False
+    assert games.c.name_key.nullable is False
+    assert games.c.name_key.unique is None
+    assert games.c.bgg_id.unique is None
+    assert isinstance(games.c.status.type, String)
+    assert str(games.c.status.server_default.arg) == "'active'"
+    assert _single_fk(games.c.created_by_user_id).ondelete == "SET NULL"
+    assert _check_names(games) >= {
+        "ck_games_name_not_empty",
+        "ck_games_name_trimmed",
+        "ck_games_name_key_not_empty",
+        "ck_games_bgg_id_positive",
+        "ck_games_year_published_positive",
+        "ck_games_status_valid",
+    }
+
+    assert _index(games, "ix_games_name_key") is not None
+    trgm_index = _index(games, "ix_games_name_trgm")
+    assert trgm_index.dialect_options["postgresql"]["using"] == "gin"
+    assert trgm_index.dialect_options["postgresql"]["ops"] == {
+        "name": "gin_trgm_ops",
+    }
+    bgg_index = _index(games, "uq_games_bgg_id_active")
+    assert bgg_index.unique is True
+    assert _compile(bgg_index.dialect_options["postgresql"]["where"]) == (
+        "bgg_id IS NOT NULL AND deleted_at IS NULL"
+    )
+
+
+def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
+    """manuals representa el estado transaccional entre Postgres y Chroma."""
+    import_all_models()
+    manuals = Base.metadata.tables["manuals"]
+
+    assert _single_fk(manuals.c.owner_user_id).ondelete == "CASCADE"
+    assert _single_fk(manuals.c.game_id).ondelete is None
+    assert str(manuals.c.status.server_default.arg) == "'indexing'"
+    assert str(manuals.c.visibility.server_default.arg) == "'private'"
+    assert str(manuals.c.chunks_indexed.server_default.arg) == "0"
+    assert _check_names(manuals) >= {
+        "ck_manuals_title_valid",
+        "ck_manuals_status_valid",
+        "ck_manuals_language_not_empty",
+        "ck_manuals_visibility_valid",
+        "ck_manuals_chunks_indexed_non_negative",
+    }
+
+    assert _index(manuals, "ix_manuals_owner_user_id") is not None
+    assert _index(manuals, "ix_manuals_game_id") is not None
+    shared_index = _index(manuals, "ix_manuals_game_shared_active")
+    assert _compile(shared_index.dialect_options["postgresql"]["where"]) == (
+        "visibility = 'shared' AND status = 'active' AND deleted_at IS NULL"
+    )
+
+
+def test_manual_pages_schema_embeds_ocr_lines_as_jsonb_array():
+    """manual_pages guarda OCR estructurado sin crear tabla de líneas."""
+    import_all_models()
+    pages = Base.metadata.tables["manual_pages"]
+
+    assert _single_fk(pages.c.manual_id).ondelete == "CASCADE"
+    assert _single_fk(pages.c.image_asset_id).ondelete == "SET NULL"
+    assert isinstance(pages.c.ocr_lines.type, postgresql.JSONB)
+    assert str(pages.c.ocr_lines.server_default.arg) == "'[]'::jsonb"
+    assert str(pages.c.ocr_status.server_default.arg) == "'pending'"
+    assert _check_names(pages) >= {
+        "ck_manual_pages_page_number_positive",
+        "ck_manual_pages_ocr_lines_array",
+        "ck_manual_pages_ocr_status_valid",
+    }
+
+    assert _index(pages, "ix_manual_pages_manual_id") is not None
+    assert _index(pages, "ix_manual_pages_image_asset_id") is not None
+    assert _index(pages, "uq_manual_pages_manual_page_number").unique is True
+
+
+def test_manual_chunks_schema_is_chroma_source_of_truth():
+    """manual_chunks usa su UUID como id de Chroma y guarda estado de indexado."""
+    import_all_models()
+    chunks = Base.metadata.tables["manual_chunks"]
+
+    assert _single_fk(chunks.c.manual_id).ondelete == "CASCADE"
+    assert _single_fk(chunks.c.page_id).ondelete == "SET NULL"
+    assert chunks.c.content_hash.type.length == SHA256_HEX_LENGTH
+    assert chunks.c.embedding_model.nullable is True
+    assert chunks.c.indexed_at.nullable is True
+    assert _check_names(chunks) >= {
+        "ck_manual_chunks_chunk_index_non_negative",
+        "ck_manual_chunks_text_not_empty",
+        "ck_manual_chunks_source_page_positive",
+        "ck_manual_chunks_content_hash_length_valid",
+        "ck_manual_chunks_embedding_model_not_empty",
+    }
+
+    assert _index(chunks, "ix_manual_chunks_manual_id") is not None
+    assert _index(chunks, "ix_manual_chunks_page_id") is not None
+    assert _index(chunks, "ix_manual_chunks_content_hash") is not None
+    assert _index(chunks, "uq_manual_chunks_manual_chunk_index").unique is True
+
+
 def test_uuid_primary_keys_use_postgres_uuidv7_default():
     """Las PKs UUID se generan en Postgres con uuidv7()."""
     import_all_models()
 
-    for table_name in ("users", "auth_sessions", "audit_log", "assets"):
+    for table_name in (
+        "users",
+        "auth_sessions",
+        "audit_log",
+        "assets",
+        "games",
+        "manuals",
+        "manual_pages",
+        "manual_chunks",
+    ):
         id_column = Base.metadata.tables[table_name].c.id
         assert isinstance(id_column.type, postgresql.UUID)
         assert str(id_column.server_default.arg) == "uuidv7()"

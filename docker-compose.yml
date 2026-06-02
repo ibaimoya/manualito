@@ -68,6 +68,8 @@ services:
     secrets:
       - postgres_user
       - postgres_password
+    volumes:
+      - manual-assets-data:/app/storage/manual-assets
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -252,6 +254,7 @@ volumes:
   chromadb-data:
   ollama-data:
   rag-hf-cache:
+  manual-assets-data:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
 

@@ -2,6 +2,9 @@ import json
 
 import pytest
 from fastapi.exceptions import RequestValidationError
+from limits import RateLimitItemPerMinute
+from slowapi.errors import RateLimitExceeded
+from slowapi.wrappers import Limit
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.auth.exceptions import AuthFieldError, AuthFormValidationError, PasswordValidationError
@@ -12,13 +15,11 @@ from api.exceptions import (
     InternalServiceError,
     InternalServiceUnavailableError,
     InvalidImageError,
+    PublicDetailApiError,
     auth_validation_handler,
+    domain_exception_handler,
     http_exception_handler,
-    image_too_large_handler,
-    internal_resource_not_found_handler,
-    internal_service_error_handler,
-    internal_service_unavailable_handler,
-    invalid_image_handler,
+    rate_limit_exceeded_handler,
     validation_exception_handler,
 )
 
@@ -30,6 +31,9 @@ def test_api_exceptions_inherit_from_api_error():
     assert issubclass(InternalServiceUnavailableError, ApiError)
     assert issubclass(InternalResourceNotFoundError, ApiError)
     assert issubclass(InternalServiceError, ApiError)
+    assert issubclass(InternalServiceUnavailableError, PublicDetailApiError)
+    assert issubclass(InternalResourceNotFoundError, PublicDetailApiError)
+    assert issubclass(InternalServiceError, PublicDetailApiError)
 
 
 @pytest.mark.parametrize(
@@ -99,24 +103,21 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
 
 
 @pytest.mark.parametrize(
-    ("handler", "exception", "status_code", "code"),
+    ("exception", "status_code", "code"),
     [
-        (image_too_large_handler, ImageTooLargeError(), 413, "image_too_large"),
-        (invalid_image_handler, InvalidImageError(), 415, "invalid_image"),
+        (ImageTooLargeError(), 413, "image_too_large"),
+        (InvalidImageError(), 415, "invalid_image"),
         (
-            internal_service_unavailable_handler,
             InternalServiceUnavailableError("Servicio OCR no disponible."),
             502,
             "service_unavailable",
         ),
         (
-            internal_resource_not_found_handler,
             InternalResourceNotFoundError("Manual no encontrado."),
             404,
             "resource_not_found",
         ),
         (
-            internal_service_error_handler,
             InternalServiceError("Error interno al procesar la imagen con OCR."),
             500,
             "internal_service_error",
@@ -124,13 +125,12 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
     ],
 )
 def test_operational_handlers_keep_same_error_envelope(
-    handler,
     exception: Exception,
     status_code: int,
     code: str,
 ):
-    """Los errores no-formulario tambien tienen errors[] y codigo estable."""
-    response = handler(None, exception)
+    """Los errores no-formulario también tienen errors[] y código estable."""
+    response = domain_exception_handler(None, exception)
 
     body = _json_body(response)
     assert response.status_code == status_code
@@ -163,6 +163,26 @@ def test_http_exception_handler_maps_status_to_envelope(
     assert body["errors"][0]["field"] is None
     assert body["errors"][0]["code"] == code
     assert response.headers["X-Probe"] == "1"
+
+
+def test_rate_limit_handler_returns_stable_public_envelope():
+    """SlowAPI también devuelve el contrato común sin depender de APIs privadas."""
+    response = rate_limit_exceeded_handler(None, _rate_limit_exceeded())
+
+    body = _json_body(response)
+    assert response.status_code == 429
+    assert body["detail"] == "Demasiados intentos. Inténtalo más tarde."
+    assert body["errors"] == [
+        {
+            "field": None,
+            "code": "rate_limited",
+            "message": "Demasiados intentos. Inténtalo más tarde.",
+        }
+    ]
+    assert response.headers["Retry-After"] == "60"
+    assert response.headers["RateLimit-Limit"] == "1"
+    assert response.headers["RateLimit-Remaining"] == "0"
+    assert response.headers["RateLimit-Reset"] == "60"
 
 
 def test_auth_validation_handler_serializes_domain_field_errors():
@@ -205,3 +225,19 @@ def test_auth_form_validation_error_accepts_multiple_errors():
 def _json_body(response):
     """Decodifica JSONResponse sin depender de TestClient."""
     return json.loads(response.body)
+
+
+def _rate_limit_exceeded() -> RateLimitExceeded:
+    """Crea la excepción concreta que SlowAPI entrega al handler."""
+    limit = Limit(
+        RateLimitItemPerMinute(1),
+        key_func=lambda: "test-client",
+        scope=None,
+        per_method=False,
+        methods=None,
+        error_message=None,
+        exempt_when=None,
+        cost=1,
+        override_defaults=False,
+    )
+    return RateLimitExceeded(limit)

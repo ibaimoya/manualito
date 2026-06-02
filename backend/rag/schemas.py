@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from rag.annotations import (
     ChunksIndexed,
@@ -14,67 +14,86 @@ from rag.annotations import (
 )
 
 
-class OCRLine(BaseModel):
-    """Línea OCR ingerida por el servicio RAG (acepta confianza ausente)."""
+class IngestChunk(BaseModel):
+    """Chunk preparado por API y persistido previamente en Postgres."""
 
     model_config = ConfigDict(extra="forbid")
 
+    id: str = Field(min_length=1)
     text: NonEmptyText
-    confidence: float | None = None
+    chunk_index: int = Field(ge=0)
+    source_page: SourcePage
+    content_hash: str = Field(min_length=64, max_length=64)
 
 
 class IngestRequest(BaseModel):
-    """Petición de ingesta: texto plano u OCR estructurado."""
+    """Petición de indexado: RAG no trocea ni decide IDs."""
 
     model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
-    text: str | None = None
-    source_page: SourcePage | None = 1
-    ocr_lines: list[OCRLine] | None = None
-
-    @model_validator(mode="after")
-    def validate_content(self) -> IngestRequest:
-        if not self.text and not self.ocr_lines:
-            raise ValueError("Se requiere 'text' o 'ocr_lines'.")
-        return self
+    game_id: str = Field(min_length=1)
+    owner_user_id: str = Field(min_length=1)
+    language: str | None = None
+    chunks: list[IngestChunk] = Field(min_length=1)
 
 
 class RetrieveRequest(BaseModel):
-    """Petición de recuperación de contexto para una pregunta."""
+    """Petición de recuperación de candidatos por juego."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    game_id: str = Field(min_length=1)
+    question: Question
+    top_k: TopK = 10
+
+
+class DeleteRequest(BaseModel):
+    """Petición interna para borrar chunks derivados de un manual."""
 
     model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
-    question: Question
-    top_k: TopK = 3
+    chunk_ids: list[str] = Field(default_factory=list)
 
 
 class IngestResponse(BaseModel):
-    """Respuesta de ``POST /ingest`` tras persistir el manual."""
+    """Respuesta de ``POST /ingest`` tras sincronizar Chroma."""
 
     model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
     chunks_indexed: ChunksIndexed
     status: str
+    embedding_model: str
+    indexed_at: str
+    chunk_ids: list[str]
 
 
 class RetrievedChunk(BaseModel):
-    """Fragmento recuperado de ChromaDB con su metadata útil."""
+    """Candidato recuperado de Chroma, sin texto canónico."""
 
     model_config = ConfigDict(extra="forbid")
 
     id: str
-    text: str
     chunk_index: int
     source_page: int
     score: float
 
 
 class RetrieveResponse(BaseModel):
-    """Respuesta de ``POST /retrieve`` con los fragmentos más relevantes."""
+    """Respuesta de ``POST /retrieve`` con candidatos rehidratables."""
 
     model_config = ConfigDict(extra="forbid")
 
     chunks: list[RetrievedChunk]
+
+
+class DeleteResponse(BaseModel):
+    """Respuesta tras limpiar de Chroma los chunks de un manual."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    manual_id: ManualId
+    chunks_deleted: int = Field(ge=0)
+    status: str

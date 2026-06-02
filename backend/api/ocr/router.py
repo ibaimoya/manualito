@@ -4,17 +4,23 @@ from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 
 from api.annotations import HttpClient, ImageUpload
-from api.schemas import OcrLine, OcrLinesResponse
-from api.service import extract_ocr_lines
+from api.ocr.schemas import OcrLine, OcrLinesResponse
+from api.ocr.service import extract_ocr_lines
+from api.responses import (
+    IMAGE_TOO_LARGE_RESPONSE,
+    INTERNAL_ERROR_RESPONSE,
+    INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
+    INVALID_IMAGE_RESPONSE,
+)
 
 router = APIRouter()
 
 _OCR_RESPONSES: dict[int | str, dict[str, str]] = {
     404: {"description": "Recurso no encontrado en el servicio OCR."},
-    413: {"description": "La imagen supera 20 MB."},
-    415: {"description": "El archivo no es una imagen válida."},
-    500: {"description": "Error interno al procesar la imagen con OCR."},
-    502: {"description": "Servicio OCR no disponible."},
+    **IMAGE_TOO_LARGE_RESPONSE,
+    **INVALID_IMAGE_RESPONSE,
+    **INTERNAL_ERROR_RESPONSE,
+    **INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
 }
 
 

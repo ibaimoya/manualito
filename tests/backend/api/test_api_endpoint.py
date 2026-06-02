@@ -8,7 +8,7 @@ from fastapi import UploadFile
 from starlette.datastructures import Headers
 
 from api.exceptions import ImageTooLargeError, InvalidImageError
-from api.service import validate_image
+from api.manuals.validation import validate_manual_image
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
 MAX_IMAGE_SIZE = 20 * 1024 * 1024
@@ -58,6 +58,12 @@ def _configure_ocr_success(mock_client: AsyncMock, result=None):
     unload_response = _mock_response({"status": "idle", "unloaded": True})
     ocr_response = _mock_response({"lines": result})
     mock_client.post.side_effect = [unload_response, ocr_response]
+
+
+def _assert_error(response, *, code: str) -> None:
+    """Comprueba códigos de error del envelope público."""
+    body = response.json()
+    assert any(error["code"] == code for error in body["errors"])
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +164,7 @@ def test_ocr_log_sanitizes_uploaded_filename(
     """
     import logging
 
-    from api.service import extract_ocr_lines
+    from api.ocr.service import extract_ocr_lines
 
     _configure_ocr_success(override_http_client)
     upload = _upload_file(
@@ -167,14 +173,14 @@ def test_ocr_log_sanitizes_uploaded_filename(
         "image/jpeg",
     )
 
-    with caplog.at_level(logging.INFO, logger="api.service"):
+    with caplog.at_level(logging.INFO, logger="api.ocr.service"):
         lines = asyncio.run(extract_ocr_lines(image=upload, client=override_http_client))
 
     assert lines == FAKE_OCR_RESULT
     messages = [
         record.getMessage()
         for record in caplog.records
-        if record.name == "api.service" and "Petición OCR recibida" in record.getMessage()
+        if record.name == "api.ocr.service" and "Petición OCR recibida" in record.getMessage()
     ]
     assert messages
     assert all("\r" not in message and "\n" not in message for message in messages)
@@ -196,6 +202,7 @@ def test_invalid_image_content(client, data, filename, mime):
     """Archivo que no sea imagen válida es rechazado con 415."""
     response = _post_image_json(client, data, filename, mime)
     assert response.status_code == 415
+    _assert_error(response, code="invalid_image")
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +226,10 @@ def test_size_boundary(client, size, expected_status, override_http_client):
 
     if expected_status == 200:
         _configure_ocr_success(override_http_client)
-        with patch("api.service.Image.open") as mock_open:
+        with patch("api.manuals.validation.Image.open") as mock_open:
             mock_img = MagicMock()
+            mock_img.format = "JPEG"
+            mock_img.size = (10, 10)
             mock_open.return_value.__enter__ = MagicMock(return_value=mock_img)
             mock_open.return_value.__exit__ = MagicMock(return_value=False)
             response = _post_image_json(client, data, "large.jpg", "image/jpeg")
@@ -228,6 +237,8 @@ def test_size_boundary(client, size, expected_status, override_http_client):
         response = _post_image_json(client, data, "large.jpg", "image/jpeg")
 
     assert response.status_code == expected_status
+    if expected_status == 413:
+        _assert_error(response, code="image_too_large")
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +282,7 @@ def test_unknown_ocr_subpath_returns_404(client):
         files={"image": ("img.jpg", b"\x00", "image/jpeg")},
     )
     assert response.status_code == 404
+    _assert_error(response, code="not_found")
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +297,7 @@ def test_ocr_unavailable(client, valid_jpeg_bytes, override_http_client):
     response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 502
+    _assert_error(response, code="service_unavailable")
 
 
 def test_ocr_http_error(client, valid_jpeg_bytes, override_http_client):
@@ -301,6 +314,7 @@ def test_ocr_http_error(client, valid_jpeg_bytes, override_http_client):
     response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 500
+    _assert_error(response, code="internal_service_error")
 
 
 # ---------------------------------------------------------------------------
@@ -313,17 +327,25 @@ def test_missing_image_field(client):
     assert response.status_code == 422
 
 
-def test_validate_image_raises_domain_error_when_file_is_too_large():
+def test_validate_manual_image_raises_domain_error_when_file_is_too_large():
     """La validación interna expresa el exceso de tamaño como error de dominio."""
     upload = _upload_file(b"\x00" * (MAX_IMAGE_SIZE + 1), "large.jpg", "image/jpeg")
 
     with pytest.raises(ImageTooLargeError):
-        asyncio.run(validate_image(upload))
+        asyncio.run(validate_manual_image(upload))
 
 
-def test_validate_image_raises_domain_error_when_content_is_not_image():
+def test_validate_manual_image_raises_domain_error_when_content_is_not_image():
     """La validación interna expresa el contenido inválido como error de dominio."""
     upload = _upload_file(b"not an image", "manual.jpg", "image/jpeg")
 
     with pytest.raises(InvalidImageError):
-        asyncio.run(validate_image(upload))
+        asyncio.run(validate_manual_image(upload))
+
+
+def test_validate_manual_image_rejects_mime_that_does_not_match_signature(valid_jpeg_bytes):
+    """La validación compara el MIME declarado con la firma real del fichero."""
+    upload = _upload_file(valid_jpeg_bytes, "manual.png", "image/png")
+
+    with pytest.raises(InvalidImageError):
+        asyncio.run(validate_manual_image(upload))

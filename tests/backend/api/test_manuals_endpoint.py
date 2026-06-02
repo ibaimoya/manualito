@@ -1,166 +1,446 @@
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
-import httpx
+import pytest
+
+from api.auth.dependencies import get_current_auth, require_csrf
+from api.auth.service import AuthenticatedSession
+from api.exceptions import InternalServiceUnavailableError
+from api.games.dependencies import valid_game_form_id, valid_game_id
+from api.main import app
+from api.manuals.exceptions import (
+    GameNotFoundError,
+    ManualContextNotFoundError,
+    ManualNotFoundError,
+    ManualWithoutTextError,
+)
+from api.manuals.repository import ManualDetailRow
+from api.manuals.schemas import AnswerResponse, ManualCreatedResponse
+from database.models.auth import AuthSession
+from database.models.user import User
+from database.session import get_db_session
+
+_FAKE_HASH = "hash-value"
+_FAKE_SESSION_HASH = "a" * 64
+_FAKE_CSRF_HASH = "b" * 64
+_FAKE_SESSION_TOKEN = "session-manualito"
+_FAKE_CSRF_TOKEN = "csrf-manualito"
+_FAKE_SESSION = object()
+_USER_ID = uuid4()
+_GAME_ID = uuid4()
+_MANUAL_ID = uuid4()
+_OCR_LINES = [{"text": "Regla 1", "confidence": 0.9}]
 
 
-def _mock_response(payload: dict):
-    response = MagicMock()
-    response.raise_for_status.return_value = None
-    response.json.return_value = payload
-    return response
+@pytest.fixture
+def override_auth_and_db():
+    """Inyecta auth y sesión falsas para endpoints autenticados."""
+
+    def _fake_db_session() -> Iterator[object]:
+        yield _FAKE_SESSION
+
+    app.dependency_overrides[get_db_session] = _fake_db_session
+    app.dependency_overrides[get_current_auth] = lambda: _auth_session()
+    app.dependency_overrides[require_csrf] = lambda: None
+    app.dependency_overrides[valid_game_form_id] = lambda: _GAME_ID
+    app.dependency_overrides[valid_game_id] = lambda: _GAME_ID
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+        app.dependency_overrides.pop(get_current_auth, None)
+        app.dependency_overrides.pop(require_csrf, None)
+        app.dependency_overrides.pop(valid_game_form_id, None)
+        app.dependency_overrides.pop(valid_game_id, None)
 
 
-def test_create_manual_orquesta_ocr_e_ingesta(client, valid_jpeg_bytes, override_http_client):
-    unload_response = _mock_response({"status": "idle", "unloaded": True})
-    ocr_lines = [{"text": "Regla 1", "confidence": 0.9}]
-    ocr_response = _mock_response({"lines": ocr_lines})
-    rag_response = _mock_response(
-        {"manual_id": "catan-12345678", "chunks_indexed": 1, "status": "indexed"}
-    )
-    override_http_client.post.side_effect = [unload_response, ocr_response, rag_response]
-
-    with patch("api.service.uuid4", return_value=SimpleNamespace(hex="12345678abcdef00")):
-        response = client.post(
-            "/api/manuals",
-            data={"name": "Catan"},
-            files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+def test_create_manual_orquesta_servicio_persistente(
+    client,
+    valid_jpeg_bytes,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """La ruta delega la subida en el caso de uso de manuales persistidos."""
+    create_manual_mock = AsyncMock(
+        return_value=ManualCreatedResponse(
+            manual_id=_MANUAL_ID,
+            game_id=_GAME_ID,
+            status="active",
+            visibility="shared",
+            chunks_indexed=1,
+            ocr_lines=_OCR_LINES,
         )
+    )
+    monkeypatch.setattr("api.manuals.router.create_manual", create_manual_mock)
 
-    assert response.status_code == 200
-    # El gateway propaga las líneas OCR junto a la respuesta de RAG para que
-    # el cliente pueda mostrar la fuente del texto sin volver a OCR.
+    response = client.post(
+        "/api/manuals",
+        data={
+            "game_id": str(_GAME_ID),
+            "title": "Manual base",
+            "visibility": "shared",
+            "language": "es",
+        },
+        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+    )
+
+    assert response.status_code == 201
     assert response.json() == {
-        "manual_id": "catan-12345678",
+        "manual_id": str(_MANUAL_ID),
+        "game_id": str(_GAME_ID),
+        "status": "active",
+        "visibility": "shared",
         "chunks_indexed": 1,
-        "status": "indexed",
-        "ocr_lines": ocr_lines,
+        "ocr_lines": _OCR_LINES,
     }
+    create_manual_mock.assert_awaited_once()
+    kwargs = create_manual_mock.await_args.kwargs
+    assert create_manual_mock.await_args.args == (_FAKE_SESSION,)
+    assert kwargs["auth"].user.id == _USER_ID
+    assert kwargs["game_id"] == _GAME_ID
+    assert kwargs["title"] == "Manual base"
+    assert kwargs["visibility"] == "shared"
+    assert kwargs["language"] == "es"
+    assert kwargs["image"].filename == "manual.jpg"
 
 
-def test_create_manual_propaga_lineas_ocr_con_confidence(
-    client, valid_jpeg_bytes, override_http_client,
+def test_list_manuals_devuelve_manuales_propios(
+    client,
+    monkeypatch,
+    override_auth_and_db,
 ):
-    """``ocr_lines`` mantiene el orden y confidence reportados por el OCR."""
-    unload_response = _mock_response({"status": "idle", "unloaded": True})
-    ocr_lines = [
-        {"text": "Línea legible", "confidence": 0.95},
-        {"text": "Línea media", "confidence": 0.72},
-        {"text": "Línea borrosa", "confidence": 0.31},
+    """El listado expone summaries seguros para la biblioteca del usuario."""
+    list_mock = AsyncMock(return_value=[_manual_summary()])
+    monkeypatch.setattr("api.manuals.router.list_user_manuals", list_mock)
+
+    response = client.get("/api/manuals")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "manuals": [
+            {
+                "id": str(_MANUAL_ID),
+                "game_id": str(_GAME_ID),
+                "game_name": "Catan",
+                "title": "Manual base",
+                "status": "active",
+                "visibility": "private",
+                "language": "es",
+                "chunks_indexed": 1,
+                "created_at": "2026-05-31T10:00:00Z",
+                "indexed_at": "2026-05-31T10:00:00Z",
+            }
+        ]
+    }
+    list_mock.assert_awaited_once_with(
+        _FAKE_SESSION,
+        owner_user_id=_USER_ID,
+        limit=50,
+        offset=0,
+    )
+
+
+def test_list_manuals_respeta_paginacion(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El listado acota la query con limit y offset recibidos."""
+    list_mock = AsyncMock(return_value=[])
+    monkeypatch.setattr("api.manuals.router.list_user_manuals", list_mock)
+
+    response = client.get("/api/manuals", params={"limit": 10, "offset": 20})
+
+    assert response.status_code == 200
+    assert response.json() == {"manuals": []}
+    list_mock.assert_awaited_once_with(
+        _FAKE_SESSION,
+        owner_user_id=_USER_ID,
+        limit=10,
+        offset=20,
+    )
+
+
+def test_get_manual_devuelve_detalle_con_paginas(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El detalle incluye las páginas OCR sin exponer storage interno."""
+    detail = ManualDetailRow(
+        summary=_manual_summary(),
+        pages=[
+            SimpleNamespace(
+                page_number=1,
+                ocr_status="completed",
+                ocr_lines=_OCR_LINES,
+            )
+        ],
+    )
+    get_mock = AsyncMock(return_value=detail)
+    monkeypatch.setattr("api.manuals.router.get_user_manual_detail", get_mock)
+
+    response = client.get(f"/api/manuals/{_MANUAL_ID}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == str(_MANUAL_ID)
+    assert body["pages"] == [
+        {
+            "page_number": 1,
+            "ocr_status": "completed",
+            "ocr_lines": _OCR_LINES,
+        }
     ]
-    ocr_response = _mock_response({"lines": ocr_lines})
-    rag_response = _mock_response(
-        {"manual_id": "wingspan-abcd1234", "chunks_indexed": 3, "status": "indexed"},
-    )
-    override_http_client.post.side_effect = [unload_response, ocr_response, rag_response]
-
-    response = client.post(
-        "/api/manuals",
-        data={"name": "Wingspan"},
-        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+    get_mock.assert_awaited_once_with(
+        _FAKE_SESSION,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["ocr_lines"] == ocr_lines
-    # Orden y confidence preservados → necesarios para colorear el viewer.
-    assert [line["confidence"] for line in body["ocr_lines"]] == [0.95, 0.72, 0.31]
 
-
-def test_create_manual_acepta_ocr_vacio(
-    client, valid_jpeg_bytes, override_http_client,
+def test_create_manual_usa_visibilidad_privada_por_defecto(
+    client,
+    valid_jpeg_bytes,
+    monkeypatch,
+    override_auth_and_db,
 ):
-    """Si el OCR no encuentra texto, ``ocr_lines`` es lista vacía válida."""
-    unload_response = _mock_response({"status": "idle", "unloaded": True})
-    ocr_response = _mock_response({"lines": []})
-    rag_response = _mock_response(
-        {"manual_id": "vacio-deadbeef", "chunks_indexed": 0, "status": "indexed"},
+    """Si el formulario no indica visibilidad, el manual nace privado."""
+    create_manual_mock = AsyncMock(
+        return_value=ManualCreatedResponse(
+            manual_id=_MANUAL_ID,
+            game_id=_GAME_ID,
+            status="active",
+            visibility="private",
+            chunks_indexed=1,
+            ocr_lines=_OCR_LINES,
+        )
     )
-    override_http_client.post.side_effect = [unload_response, ocr_response, rag_response]
+    monkeypatch.setattr("api.manuals.router.create_manual", create_manual_mock)
 
     response = client.post(
         "/api/manuals",
-        data={"name": "Vacío"},
+        data={"game_id": str(_GAME_ID)},
         files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["ocr_lines"] == []
-    assert body["chunks_indexed"] == 0
+    assert response.status_code == 201
+    assert create_manual_mock.await_args.kwargs["visibility"] == "private"
 
 
-def test_question_manual_devuelve_respuesta_limpia(client, override_http_client):
-    rag_response = _mock_response(
-        {"chunks": [{"text": "Ganas con 10 puntos", "chunk_index": 0, "score": 0.99}]}
+def test_create_manual_devuelve_404_si_el_juego_no_existe(
+    client,
+    valid_jpeg_bytes,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """Un juego inexistente se traduce a error estable para la UI."""
+    monkeypatch.setattr(
+        "api.manuals.router.create_manual",
+        AsyncMock(side_effect=GameNotFoundError),
     )
-    llm_response = _mock_response({"answer": "Se gana con 10 puntos de victoria."})
-    override_http_client.post.side_effect = [rag_response, llm_response]
 
     response = client.post(
-        "/api/manuals/catan-12345678/questions",
-        json={"question": "Como se gana?"},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {"answer": "Se gana con 10 puntos de victoria."}
-
-
-def test_question_manual_inexistente_devuelve_404(client, override_http_client):
-    missing_response = MagicMock()
-    missing_response.status_code = 404
-    missing_response.json.return_value = {"detail": "Manual no encontrado."}
-    missing_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "Not Found",
-        request=MagicMock(),
-        response=missing_response,
-    )
-    override_http_client.post.return_value = missing_response
-
-    response = client.post(
-        "/api/manuals/manual-missing/questions",
-        json={"question": "Como se gana?"},
+        "/api/manuals",
+        data={"game_id": str(_GAME_ID)},
+        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
     )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Manual no encontrado."}
+    _assert_error(response.json(), code="game_not_found")
 
 
-def test_question_manual_devuelve_502_si_llm_no_esta_disponible(client, override_http_client):
-    rag_response = _mock_response(
-        {"chunks": [{"text": "Ganas con 10 puntos", "chunk_index": 0, "score": 0.99}]}
+def test_create_manual_devuelve_422_si_no_hay_texto_indexable(
+    client,
+    valid_jpeg_bytes,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """OCR sin texto útil se expresa como error de dominio, no como 500."""
+    monkeypatch.setattr(
+        "api.manuals.router.create_manual",
+        AsyncMock(side_effect=ManualWithoutTextError),
     )
-    override_http_client.post.side_effect = [rag_response, httpx.ConnectError("down")]
 
     response = client.post(
-        "/api/manuals/catan-12345678/questions",
-        json={"question": "Como se gana?"},
+        "/api/manuals",
+        data={"game_id": str(_GAME_ID)},
+        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+    )
+
+    assert response.status_code == 422
+    _assert_error(response.json(), code="manual_without_text")
+
+
+def test_get_manual_ajeno_o_borrado_devuelve_404(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El endpoint no revela si el manual existe para otro usuario."""
+    monkeypatch.setattr(
+        "api.manuals.router.get_user_manual_detail",
+        AsyncMock(side_effect=ManualNotFoundError),
+    )
+
+    response = client.get(f"/api/manuals/{_MANUAL_ID}")
+
+    assert response.status_code == 404
+    _assert_error(response.json(), code="manual_not_found")
+
+
+def test_delete_manual_borra_recursos_derivados(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El endpoint de borrado requiere auth/CSRF y delega en el servicio."""
+    delete_mock = AsyncMock()
+    monkeypatch.setattr("api.manuals.router.delete_manual", delete_mock)
+
+    response = client.delete(f"/api/manuals/{_MANUAL_ID}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+    delete_mock.assert_awaited_once()
+
+
+def test_delete_manual_ajeno_o_borrado_devuelve_404(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """Borrar un manual no propio usa el mismo error que uno inexistente."""
+    monkeypatch.setattr(
+        "api.manuals.router.delete_manual",
+        AsyncMock(side_effect=ManualNotFoundError),
+    )
+
+    response = client.delete(f"/api/manuals/{_MANUAL_ID}")
+
+    assert response.status_code == 404
+    _assert_error(response.json(), code="manual_not_found")
+
+
+def test_question_game_devuelve_respuesta_limpia(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """Las preguntas van contra el pool autorizado de manuales del juego."""
+    answer_mock = AsyncMock(return_value=AnswerResponse(answer="Se gana con 10 puntos."))
+    monkeypatch.setattr("api.games.router.generate_game_answer", answer_mock)
+
+    response = client.post(
+        f"/api/games/{_GAME_ID}/questions",
+        json={"question": "¿Cómo se gana?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": "Se gana con 10 puntos."}
+    answer_mock.assert_awaited_once()
+    kwargs = answer_mock.await_args.kwargs
+    assert answer_mock.await_args.args == (_FAKE_SESSION,)
+    assert kwargs["auth"].user.id == _USER_ID
+    assert kwargs["game_id"] == _GAME_ID
+    assert kwargs["question"] == "¿Cómo se gana?"
+    assert kwargs["top_k"] == 3
+
+
+def test_question_game_sin_contexto_autorizado_devuelve_404(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """Si no hay chunks autorizados, la ruta devuelve un código estable."""
+    monkeypatch.setattr(
+        "api.games.router.generate_game_answer",
+        AsyncMock(side_effect=ManualContextNotFoundError),
+    )
+
+    response = client.post(
+        f"/api/games/{_GAME_ID}/questions",
+        json={"question": "¿Cómo se gana?"},
+    )
+
+    assert response.status_code == 404
+    _assert_error(response.json(), code="manual_context_not_found")
+
+
+def test_question_game_devuelve_502_si_llm_no_esta_disponible(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El fallo de servicio interno conserva el envelope común de API."""
+    monkeypatch.setattr(
+        "api.games.router.generate_game_answer",
+        AsyncMock(
+            side_effect=InternalServiceUnavailableError("Servicio LLM no disponible.")
+        ),
+    )
+
+    response = client.post(
+        f"/api/games/{_GAME_ID}/questions",
+        json={"question": "¿Cómo se gana?"},
     )
 
     assert response.status_code == 502
-    assert response.json() == {"detail": "Servicio LLM no disponible."}
+    _assert_error(response.json(), code="service_unavailable")
 
 
-def test_question_manual_devuelve_500_si_llm_responde_timeout_http(
-    client, override_http_client,
-):
-    rag_response = _mock_response(
-        {"chunks": [{"text": "Ganas con 10 puntos", "chunk_index": 0, "score": 0.99}]}
-    )
-    timeout_response = MagicMock()
-    timeout_response.status_code = 504
-    timeout_response.json.return_value = {"detail": "El LLM tardó demasiado en responder."}
-    timeout_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "Gateway Timeout",
-        request=MagicMock(),
-        response=timeout_response,
-    )
-    override_http_client.post.side_effect = [rag_response, timeout_response]
-
-    response = client.post(
-        "/api/manuals/catan-12345678/questions",
-        json={"question": "Como se gana?"},
+def _auth_session() -> AuthenticatedSession:
+    """Construye una sesión autenticada para overrides de FastAPI."""
+    return AuthenticatedSession(
+        user=_user(),
+        auth_session=AuthSession(
+            user_id=_USER_ID,
+            token_hash=_FAKE_SESSION_HASH,
+            csrf_token_hash=_FAKE_CSRF_HASH,
+            expires_at=datetime(2026, 5, 29, tzinfo=UTC) + timedelta(days=7),
+        ),
+        session_token=_FAKE_SESSION_TOKEN,
+        csrf_token=_FAKE_CSRF_TOKEN,
     )
 
-    assert response.status_code == 500
-    assert response.json() == {"detail": "Error interno al generar la respuesta."}
+
+def _user() -> User:
+    """Crea un usuario ORM mínimo para rutas autenticadas."""
+    return User(
+        id=_USER_ID,
+        email="manualito@example.com",
+        username="Manualito",
+        username_key="manualito",
+        password_hash=_FAKE_HASH,
+        role="user",
+        status="active",
+        created_at=datetime(2026, 5, 29, tzinfo=UTC),
+        last_login_at=None,
+        password_changed_at=datetime(2026, 5, 29, tzinfo=UTC),
+    )
+
+
+def _manual_summary() -> SimpleNamespace:
+    """Construye un resumen estable para respuestas de manuales."""
+    timestamp = datetime(2026, 5, 31, 10, 0, tzinfo=UTC)
+    return SimpleNamespace(
+        id=_MANUAL_ID,
+        game_id=_GAME_ID,
+        game_name="Catan",
+        title="Manual base",
+        status="active",
+        visibility="private",
+        language="es",
+        chunks_indexed=1,
+        created_at=timestamp,
+        indexed_at=timestamp,
+    )
+
+
+def _assert_error(body: dict, *, code: str) -> None:
+    """Comprueba un error público sin depender del texto visible."""
+    assert "detail" in body
+    assert any(error["field"] is None and error["code"] == code for error in body["errors"])

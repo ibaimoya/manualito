@@ -57,10 +57,10 @@ def test_paddle_cpu_engine_extract_text_results(predict_result, expected):
 
 
 # ---------------------------------------------------------------------------
-# Analisis de Valores Limite (BVA) - redondeo de confianza a 4 decimales
+# Análisis de Valores Límite (BVA) - redondeo de confianza a 4 decimales
 #   0.123456789 -> 0.1235  (redondea al alza en el quinto decimal).
-#   0.99999     -> 1.0     (limite superior de confianza).
-#   0.0         -> 0.0     (limite inferior de confianza).
+#   0.99999     -> 1.0     (límite superior de confianza).
+#   0.0         -> 0.0     (límite inferior de confianza).
 #   0.00004     -> 0.0     (justo por debajo de 0.0001).
 #   0.00005     -> 0.0001  (justo en el punto de redondeo hacia 0.0001).
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ def test_paddle_cpu_engine_confidence_rounding(raw_score, expected_confidence):
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) - propagación de errores del modelo
-#   Clase 5: predict lanza una excepcion -> se propaga sin capturar.
+#   Clase 5: predict lanza una excepción -> se propaga sin capturar.
 # ---------------------------------------------------------------------------
 def test_paddle_cpu_engine_propagates_exception():
     """Las excepciones del motor OCR se propagan sin capturar."""
@@ -97,7 +97,7 @@ def test_paddle_cpu_engine_propagates_exception():
 
 
 def test_paddle_cpu_engine_name():
-    """El engine expone un nombre estable para logs, metricas y tests."""
+    """El engine expone un nombre estable para logs, métricas y tests."""
     assert PaddleCpuOcrEngine.name == "paddle_cpu"
 
 

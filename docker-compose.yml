@@ -14,11 +14,23 @@ x-third-party-hardening: &third-party-hardening
   security_opt:
     - no-new-privileges:true
 
-# Variante para nginx (necesita escribir en /var/cache/nginx, /var/run, /var/log/nginx).
-# Mantiene read_only=true pero añade tmpfs específicos con uid=1001 para appuser.
-# El nginx:alpine oficial corre el entrypoint como root, hace envsubst y dropea
-# privilegios — para evitar ese paso usamos USER appuser en el Dockerfile y
-# pasamos directamente a `nginx -g 'daemon off;'` sin /docker-entrypoint.sh.
+x-api-build: &api-build
+  context: .
+  dockerfile: backend/api/Dockerfile
+  additional_contexts:
+    - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+  args:
+    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+
+x-database-build: &database-build
+  context: .
+  dockerfile: backend/database/Dockerfile
+  additional_contexts:
+    - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+  args:
+    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+
+# Variante para nginx
 x-service-hardening-nginx: &service-hardening-nginx
   security_opt:
     - no-new-privileges:true
@@ -50,22 +62,65 @@ services:
     container_name: ${PROYECT_NAME:-manualito}-api
     env_file:
       - ./config/backend.env
-    build:
-      context: .
-      dockerfile: backend/api/Dockerfile
-      additional_contexts:
-        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
-      args:
-        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+      - ./config/database.env
+    image: ${PROYECT_NAME:-manualito}-api:${API_IMAGE_VERSION:-local}
+    build: *api-build
+    secrets:
+      - postgres_user
+      - postgres_password
+    volumes:
+      - manual-assets-data:/app/storage/manual-assets
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
+      database-migrate:
+        condition: service_completed_successfully
       ocr:
         condition: service_healthy
       rag:
         condition: service_healthy
       llm:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - manualito-net
+
+  database-migrate:
+    <<: *service-hardening
+    container_name: ${PROYECT_NAME:-manualito}-database-migrate
+    env_file:
+      - ./config/database.env
+    image: ${PROYECT_NAME:-manualito}-database:${DATABASE_IMAGE_VERSION:-local}
+    build: *database-build
+    secrets:
+      - postgres_user
+      - postgres_password
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - manualito-net
+
+  database:
+    <<: *third-party-hardening
+    container_name: ${PROYECT_NAME:-manualito}-database
+    image: postgres:18.4-alpine3.23
+    env_file:
+      - ./config/database.env
+    secrets:
+      - postgres_user
+      - postgres_password
+    pids_limit: 256
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$(cat /run/secrets/postgres_user)\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - database-data:/var/lib/postgresql
     networks:
       - manualito-net
 
@@ -135,6 +190,18 @@ services:
     networks:
       - manualito-net
 
+  mailpit:
+    <<: *third-party-hardening
+    container_name: ${PROYECT_NAME:-manualito}-mailpit
+    image: axllent/mailpit:${MAILPIT_VERSION:-v1.30.1}
+    pids_limit: 128
+    environment:
+      MP_MAX_MESSAGES: 1000
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - manualito-net
+
   ollama:
     <<: *third-party-hardening
     container_name: ${PROYECT_NAME:-manualito}-ollama
@@ -197,8 +264,16 @@ networks:
     driver: bridge
 
 volumes:
+  database-data:
   chromadb-data:
   ollama-data:
   rag-hf-cache:
+  manual-assets-data:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
+
+secrets:
+  postgres_user:
+    file: ./secrets/postgres_user.txt
+  postgres_password:
+    file: ./secrets/postgres_password.txt

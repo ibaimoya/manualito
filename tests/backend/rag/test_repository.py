@@ -7,11 +7,30 @@ from urllib.parse import urlunparse
 import pytest
 
 import rag.repository as repository
-from rag.exceptions import ManualNotFoundError
+from rag.exceptions import ContextNotFoundError
 from rag.repository import ChromaRepository
+from rag.schemas import IngestChunk
 
 _TEST_CHROMA_URL = os.environ["CHROMA_URL"]
 _CUSTOM_CHROMA_URL = urlunparse(("http", "mi-host:8123", "", "", "", ""))
+_CONTENT_HASH = "a" * 64
+
+
+def _chunk(
+    chunk_id: str,
+    text: str,
+    *,
+    chunk_index: int,
+    source_page: int = 5,
+) -> IngestChunk:
+    """Crea un chunk preparado como lo enviaría API."""
+    return IngestChunk(
+        id=chunk_id,
+        text=text,
+        chunk_index=chunk_index,
+        source_page=source_page,
+        content_hash=_CONTENT_HASH,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -30,68 +49,82 @@ def reset_repository_singleton(monkeypatch):
 def test_upsert_manual_deletes_orphan_chunks_from_previous_versions():
     """Tras indexar la versión nueva, borra solo los IDs sobrantes anteriores."""
     collection = MagicMock()
-    collection.get.return_value = {"ids": ["manual-1:0", "manual-1:1", "manual-1:2"]}
+    collection.get.return_value = {"ids": ["chunk-1", "chunk-2", "chunk-old"]}
     repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     count = repo.upsert_manual(
         manual_id="manual-1",
-        chunks=["Regla uno", "Regla dos"],
+        game_id="game-1",
+        owner_user_id="user-1",
+        language="es",
+        chunks=[
+            _chunk("chunk-1", "Regla uno", chunk_index=0),
+            _chunk("chunk-2", "Regla dos", chunk_index=1),
+        ],
         embeddings=[[0.1], [0.2]],
-        source_page=5,
     )
 
     assert count == 2
     collection.upsert.assert_called_once_with(
-        ids=["manual-1:0", "manual-1:1"],
+        ids=["chunk-1", "chunk-2"],
         documents=["Regla uno", "Regla dos"],
         embeddings=[[0.1], [0.2]],
         metadatas=[
             {
                 "manual_id": "manual-1",
-                "chunk_index": 0,
-                "length": 9,
+                "game_id": "game-1",
+                "owner_user_id": "user-1",
                 "source_page": 5,
+                "chunk_index": 0,
+                "content_hash": _CONTENT_HASH,
+                "language": "es",
             },
             {
                 "manual_id": "manual-1",
-                "chunk_index": 1,
-                "length": 9,
+                "game_id": "game-1",
+                "owner_user_id": "user-1",
                 "source_page": 5,
+                "chunk_index": 1,
+                "content_hash": _CONTENT_HASH,
+                "language": "es",
             },
         ],
     )
-    collection.delete.assert_called_once_with(ids=["manual-1:2"])
+    collection.delete.assert_called_once_with(ids=["chunk-old"])
 
 
-def test_upsert_manual_skips_delete_when_no_orphans_exist():
-    """Si la nueva versión ya cubre todos los IDs existentes, no llama a delete."""
+def test_upsert_manual_uses_empty_language_when_absent():
+    """Si no hay idioma detectado, la metadata mantiene una clave estable."""
     collection = MagicMock()
-    collection.get.return_value = {"ids": ["manual-1:0"]}
+    collection.get.return_value = {"ids": ["chunk-1"]}
     repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
     repo.upsert_manual(
         manual_id="manual-1",
-        chunks=["Regla única"],
+        game_id="game-1",
+        owner_user_id="user-1",
+        language=None,
+        chunks=[_chunk("chunk-1", "Regla única", chunk_index=0)],
         embeddings=[[0.1]],
-        source_page=None,
     )
 
+    metadata = collection.upsert.call_args.kwargs["metadatas"][0]
+    assert metadata["language"] == ""
     collection.delete.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — recuperación por similitud
-#   Clase 3: Manual existente con distancias válidas.
-#   Clase 4: Manual inexistente — se lanza ManualNotFoundError.
+#   Clase 3: Juego con contexto indexado y distancias válidas.
+#   Clase 4: Juego sin contexto — se lanza ContextNotFoundError.
 # ---------------------------------------------------------------------------
-def test_query_manual_returns_bounded_and_rounded_scores():
+def test_query_game_returns_bounded_and_rounded_scores():
     """La consulta devuelve score en [0, 1] y redondeado a 4 decimales."""
     collection = MagicMock()
     collection.query.return_value = {
-        "ids": [["manual-1:0", "manual-1:1"]],
-        "documents": [["Regla uno", "Regla dos"]],
+        "ids": [["chunk-1", "chunk-2"]],
         "metadatas": [[
             {"chunk_index": 0, "source_page": 2},
             {"chunk_index": 1, "source_page": 3},
@@ -101,59 +134,107 @@ def test_query_manual_returns_bounded_and_rounded_scores():
     repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
-    chunks = repo.query_manual(
-        manual_id="manual-1",
+    chunks = repo.query_game(
+        game_id="game-1",
         query_embedding=[0.4, 0.5],
         top_k=2,
     )
 
     assert chunks == [
         {
-            "id": "manual-1:0",
-            "text": "Regla uno",
+            "id": "chunk-1",
             "chunk_index": 0,
             "source_page": 2,
             "score": 0.8765,
         },
         {
-            "id": "manual-1:1",
-            "text": "Regla dos",
+            "id": "chunk-2",
             "chunk_index": 1,
             "source_page": 3,
             "score": 0.0,
         },
     ]
+    collection.query.assert_called_once_with(
+        query_embeddings=[[0.4, 0.5]],
+        n_results=2,
+        where={"game_id": "game-1"},
+    )
 
 
-def test_query_manual_raises_when_manual_has_no_indexed_chunks():
-    """Si Chroma no devuelve IDs, el repositorio considera ausente el manual."""
+def test_query_game_raises_when_game_has_no_indexed_chunks():
+    """Si Chroma no devuelve IDs, el repositorio considera ausente el contexto."""
     collection = MagicMock()
     collection.query.return_value = {
         "ids": [[]],
-        "documents": [[]],
         "metadatas": [[]],
         "distances": [[]],
     }
     repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
     repo._collection = collection
 
-    with pytest.raises(ManualNotFoundError, match="manual-1"):
-        repo.query_manual(
-            manual_id="manual-1",
+    with pytest.raises(ContextNotFoundError, match="game-1"):
+        repo.query_game(
+            game_id="game-1",
             query_embedding=[0.4, 0.5],
             top_k=2,
         )
 
 
 # ---------------------------------------------------------------------------
+# Partición de Equivalencia (EP) — borrado de chunks derivados
+#   Clase 5: Borrado con IDs conocidos.
+#   Clase 6: Borrado reconstruyendo IDs desde manual_id.
+#   Clase 7: Manual sin chunks en Chroma.
+# ---------------------------------------------------------------------------
+def test_delete_manual_deletes_known_chunk_ids():
+    """Si API envía IDs de chunks, Chroma no necesita consultar por manual_id."""
+    collection = MagicMock()
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
+    repo._collection = collection
+
+    count = repo.delete_manual(manual_id="manual-1", chunk_ids=["chunk-1", "chunk-2"])
+
+    assert count == 2
+    collection.get.assert_not_called()
+    collection.delete.assert_called_once_with(ids=["chunk-1", "chunk-2"])
+
+
+def test_delete_manual_falls_back_to_manual_lookup_when_ids_are_absent():
+    """El repositorio puede limpiar un manual completo desde metadata."""
+    collection = MagicMock()
+    collection.get.return_value = {"ids": ["chunk-1"]}
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
+    repo._collection = collection
+
+    count = repo.delete_manual(manual_id="manual-1", chunk_ids=[])
+
+    assert count == 1
+    collection.get.assert_called_once_with(where={"manual_id": "manual-1"}, include=[])
+    collection.delete.assert_called_once_with(ids=["chunk-1"])
+
+
+def test_delete_manual_is_idempotent_when_no_chunks_exist():
+    """Borrar un manual sin vectores indexados no falla."""
+    collection = MagicMock()
+    collection.get.return_value = {"ids": []}
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
+    repo._collection = collection
+
+    count = repo.delete_manual(manual_id="manual-1", chunk_ids=[])
+
+    assert count == 0
+    collection.delete.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — consultas auxiliares del repositorio
-#   Clase 5: El manual existe.
-#   Clase 6: El manual no existe.
+#   Clase 8: El manual existe.
+#   Clase 9: El manual no existe.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("ids", "expected"),
     [
-        (["manual-1:0"], True),
+        (["chunk-1"], True),
         ([], False),
     ],
     ids=["manual_existe", "manual_no_existe"],
@@ -170,8 +251,8 @@ def test_manual_exists_consulta_la_coleccion(ids, expected):
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — inicialización perezosa de Chroma
-#   Clase 7: La colección aún no existe — se crea.
-#   Clase 8: El cliente aún no existe — se construye desde la URL.
+#   Clase 10: La colección aún no existe — se crea.
+#   Clase 11: El cliente aún no existe — se construye desde la URL.
 # ---------------------------------------------------------------------------
 def test_warm_up_creates_and_caches_collection():
     """El warmup crea la colección una sola vez con el espacio esperado."""

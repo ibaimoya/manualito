@@ -31,7 +31,7 @@ def _tesseract_data(
 
 
 def test_tesseract_engine_name():
-    """El engine expone un nombre estable para logs, metricas y tests."""
+    """El engine expone un nombre estable para logs, métricas y tests."""
     assert TesseractOcrEngine.name == "tesseract"
 
 
@@ -100,7 +100,7 @@ def test_tesseract_engine_extract_text_groups_words_by_line():
 
 
 def test_tesseract_engine_filters_empty_and_invalid_entries():
-    """Descarta textos vacios y confianzas no válidas."""
+    """Descarta textos vacíos y confianzas no válidas."""
     engine = _engine_without_init()
     tesseract_result = _tesseract_data(
         text=["", " Valido ", "Sin confianza", "No numerico", "Negativo"],

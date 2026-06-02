@@ -3,18 +3,32 @@ name = "manualito"
 version = "0.1.0"
 requires-python = "==3.11.*"
 dependencies = [
+    "chromadb>=1.5.9",
     "ipykernel>=7.2.0",
     "pytesseract>=0.3.13",
 ]
 
 [dependency-groups]
 api = [
+    "aiosmtplib==5.1.0",
+    "anyio==4.13.0",
+    "email-validator==2.3.0",
     "fastapi==0.135.2",
     "httpx==0.28.1",
     "pillow==12.1.1",
+    "psycopg[binary]==3.3.4",
     "pydantic==2.12.5",
+    "pwdlib[argon2]==0.3.0",
     "python-multipart==0.0.22",
+    "slowapi==0.1.9",
+    "sqlalchemy==2.0.50",
     "uvicorn[standard]==0.44.0",
+    "pydantic-settings==2.14.1",
+]
+database = [
+    "alembic==1.18.4",
+    "psycopg[binary]==3.3.4",
+    "sqlalchemy==2.0.50",
 ]
 ocr = [
     "fastapi==0.135.2",
@@ -51,16 +65,25 @@ llm = [
     "uvicorn[standard]==0.44.0",
 ]
 test = [
+    "aiosmtplib==5.1.0",
+    "alembic==1.18.4",
+    "anyio==4.13.0",
+    "email-validator==2.3.0",
     "fastapi==0.135.2",
     "httpx==0.28.1",
     "numpy==2.4.4",
     "pillow==12.1.1",
+    "psycopg[binary]==3.3.4",
     "pydantic==2.12.5",
+    "pwdlib[argon2]==0.3.0",
     "pytest==9.0.2",
     "pytest-cov==7.1.0",
     "python-multipart==0.0.22",
     "ruff==0.15.14",
+    "slowapi==0.1.9",
+    "sqlalchemy==2.0.50",
     "uvicorn[standard]==0.44.0",
+    "pydantic-settings==2.14.1",
 ]
 
 [tool.uv]
@@ -108,6 +131,9 @@ log_level = "WARNING"
 branch = true
 relative_files = true
 source = ["backend"]
+# El entorno Alembic (env.py) y las migraciones no son lógica unit-testeable:
+# se ejercitan en el job de migraciones contra Postgres, no en pytest.
+omit = ["backend/database/alembic/*"]
 
 [tool.coverage.report]
 show_missing = true

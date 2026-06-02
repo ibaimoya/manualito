@@ -12,6 +12,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build --only-group api
 
 COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
+COPY --chown=root:root --chmod=0755 backend/database/ /app/database/
 COPY --chown=root:root --chmod=0755 backend/api/ /app/api/
 
 RUN find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
@@ -30,4 +31,5 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=6 \
 
 USER appuser
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]

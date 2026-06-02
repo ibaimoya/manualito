@@ -1,9 +1,12 @@
+from collections.abc import Mapping
+from dataclasses import dataclass
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
 class LlmError(Exception):
-    """Clase base abstracta para los errores de dominio del servicio LLM."""
+    """Clase base para los errores de dominio del servicio LLM."""
 
 
 class LlmUnavailableError(LlmError):
@@ -26,39 +29,56 @@ class EmptyLlmAnswerError(LlmError):
     """Ollama ha devuelto una respuesta vacía."""
 
 
-def llm_unavailable_handler(_request: Request, _exc: Exception):
-    return JSONResponse(status_code=502, content={"detail": "Servicio LLM no disponible."})
+@dataclass(frozen=True, slots=True)
+class LlmErrorResponse:
+    """Respuesta pública asociada a un error de dominio LLM."""
+
+    status_code: int
+    detail: str
 
 
-def llm_timeout_handler(_request: Request, _exc: Exception):
-    return JSONResponse(
+_LLM_ERROR_RESPONSES: Mapping[type[Exception], LlmErrorResponse] = {
+    LlmUnavailableError: LlmErrorResponse(
+        status_code=502,
+        detail="Servicio LLM no disponible.",
+    ),
+    LlmTimeoutError: LlmErrorResponse(
         status_code=504,
-        content={"detail": "El LLM tardó demasiado en responder."},
-    )
-
-
-def llm_generation_handler(_request: Request, _exc: Exception):
-    return JSONResponse(
+        detail="El LLM tardó demasiado en responder.",
+    ),
+    LlmGenerationError: LlmErrorResponse(
         status_code=500,
-        content={"detail": "Error interno al generar la respuesta con el LLM."},
-    )
-
-
-def invalid_llm_response_handler(_request: Request, _exc: Exception):
-    return JSONResponse(status_code=502, content={"detail": "Respuesta no válida del LLM."})
-
-
-def empty_llm_answer_handler(_request: Request, _exc: Exception):
-    return JSONResponse(
+        detail="Error interno al generar la respuesta con el LLM.",
+    ),
+    InvalidLlmResponseError: LlmErrorResponse(
+        status_code=502,
+        detail="Respuesta no válida del LLM.",
+    ),
+    EmptyLlmAnswerError: LlmErrorResponse(
         status_code=500,
-        content={"detail": "El LLM no devolvió una respuesta válida."},
+        detail="El LLM no devolvió una respuesta válida.",
+    ),
+}
+
+
+def llm_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Traduce errores LLM al contrato HTTP interno del servicio."""
+    response = _llm_error_response(exc)
+    return JSONResponse(
+        status_code=response.status_code,
+        content={"detail": response.detail},
     )
+
+
+def _llm_error_response(exc: Exception) -> LlmErrorResponse:
+    """Busca respuesta por clase concreta o por un ancestro registrado."""
+    for exception_type in type(exc).__mro__:
+        if exception_type in _LLM_ERROR_RESPONSES:
+            return _LLM_ERROR_RESPONSES[exception_type]
+    raise TypeError(f"Excepción LLM no registrada: {type(exc).__name__}")
 
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Registra los handlers globales del servicio LLM."""
-    app.add_exception_handler(LlmUnavailableError, llm_unavailable_handler)
-    app.add_exception_handler(LlmTimeoutError, llm_timeout_handler)
-    app.add_exception_handler(LlmGenerationError, llm_generation_handler)
-    app.add_exception_handler(InvalidLlmResponseError, invalid_llm_response_handler)
-    app.add_exception_handler(EmptyLlmAnswerError, empty_llm_answer_handler)
+    for exception_type in _LLM_ERROR_RESPONSES:
+        app.add_exception_handler(exception_type, llm_exception_handler)

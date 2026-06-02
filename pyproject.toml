@@ -10,6 +10,7 @@ dependencies = [
 
 [dependency-groups]
 api = [
+    "aiosmtplib==5.1.0",
     "anyio==4.13.0",
     "email-validator==2.3.0",
     "fastapi==0.135.2",
@@ -64,6 +65,7 @@ llm = [
     "uvicorn[standard]==0.44.0",
 ]
 test = [
+    "aiosmtplib==5.1.0",
     "alembic==1.18.4",
     "anyio==4.13.0",
     "email-validator==2.3.0",

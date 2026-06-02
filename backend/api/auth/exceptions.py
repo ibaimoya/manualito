@@ -49,6 +49,14 @@ class DuplicateIdentityError(AuthError):
     """Email o username ya pertenece a un usuario activo."""
 
 
+class InvalidEmailVerificationTokenError(AuthError):
+    """Token de verificación ausente, caducado o consumido."""
+
+
+class InvalidPasswordResetTokenError(AuthError):
+    """Token de reset ausente, caducado o consumido."""
+
+
 class InvalidCsrfTokenError(AuthError):
     """Token CSRF ausente o inválido."""
 

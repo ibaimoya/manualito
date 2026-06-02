@@ -3,6 +3,8 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT = "30/minute"
+
 
 class ApiSettings(BaseSettings):
     """Carga variables de entorno de API con tipos validados al arrancar."""
@@ -28,14 +30,30 @@ class ApiSettings(BaseSettings):
     game_search_rate_limit: str = "120/minute"
 
     conversation_history_messages: int = Field(default=8, ge=0, le=20)
-    conversation_create_rate_limit: str = "30/minute"
-    conversation_message_rate_limit: str = "30/minute"
+    conversation_create_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
+    conversation_message_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
 
     auth_session_days: int = Field(default=7, ge=1)
     auth_cookie_secure: bool = False
     auth_session_cookie_name: str | None = None
     auth_csrf_cookie_name: str | None = None
     auth_csrf_header_name: str = "X-CSRF-Token"
+
+    frontend_public_url: str = "http://localhost:5173"
+    smtp_host: str = "mailpit"
+    smtp_port: int = Field(default=1025, ge=1, le=65535)
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_starttls: bool = False
+    smtp_use_tls: bool = False
+    smtp_timeout: float = Field(default=10.0, gt=0)
+    smtp_from_email: str = "no-reply@manualito.local"
+    email_verification_token_minutes: int = Field(default=24 * 60, ge=1)
+    password_reset_token_minutes: int = Field(default=30, ge=1)
+    auth_email_resend_rate_limit: str = "3/minute"
+    auth_email_verify_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
+    auth_password_forgot_rate_limit: str = "5/minute"
+    auth_password_reset_rate_limit: str = "10/minute"
 
     password_min_length: int = Field(default=12, ge=1)
     password_max_length: int = Field(default=128, ge=1)
@@ -84,6 +102,21 @@ AUTH_COOKIE_SECURE = settings.auth_cookie_secure
 AUTH_SESSION_COOKIE_NAME = settings.resolved_auth_session_cookie_name
 AUTH_CSRF_COOKIE_NAME = settings.resolved_auth_csrf_cookie_name
 AUTH_CSRF_HEADER_NAME = settings.auth_csrf_header_name
+FRONTEND_PUBLIC_URL = settings.frontend_public_url
+SMTP_HOST = settings.smtp_host
+SMTP_PORT = settings.smtp_port
+SMTP_USERNAME = settings.smtp_username
+SMTP_PASSWORD = settings.smtp_password
+SMTP_STARTTLS = settings.smtp_starttls
+SMTP_USE_TLS = settings.smtp_use_tls
+SMTP_TIMEOUT = settings.smtp_timeout
+SMTP_FROM_EMAIL = settings.smtp_from_email
+EMAIL_VERIFICATION_TOKEN_MINUTES = settings.email_verification_token_minutes
+PASSWORD_RESET_TOKEN_MINUTES = settings.password_reset_token_minutes
+AUTH_EMAIL_RESEND_RATE_LIMIT = settings.auth_email_resend_rate_limit
+AUTH_EMAIL_VERIFY_RATE_LIMIT = settings.auth_email_verify_rate_limit
+AUTH_PASSWORD_FORGOT_RATE_LIMIT = settings.auth_password_forgot_rate_limit
+AUTH_PASSWORD_RESET_RATE_LIMIT = settings.auth_password_reset_rate_limit
 PASSWORD_MIN_LENGTH = settings.password_min_length
 PASSWORD_MAX_LENGTH = settings.password_max_length
 PASSWORD_HASH_CONCURRENCY = settings.password_hash_concurrency

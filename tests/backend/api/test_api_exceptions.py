@@ -7,7 +7,13 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.wrappers import Limit
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from api.auth.exceptions import AuthFieldError, AuthFormValidationError, PasswordValidationError
+from api.auth.exceptions import (
+    AuthFieldError,
+    AuthFormValidationError,
+    InvalidEmailVerificationTokenError,
+    InvalidPasswordResetTokenError,
+    PasswordValidationError,
+)
 from api.exceptions import (
     ApiError,
     ImageTooLargeError,
@@ -131,6 +137,16 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
         ),
         (GameUnavailableError(), 409, "game_unavailable"),
         (GeneratedAnswerTooLongError(), 502, "generated_answer_too_long"),
+        (
+            InvalidEmailVerificationTokenError(),
+            400,
+            "email_verification_token_invalid",
+        ),
+        (
+            InvalidPasswordResetTokenError(),
+            400,
+            "password_reset_token_invalid",
+        ),
     ],
 )
 def test_operational_handlers_keep_same_error_envelope(

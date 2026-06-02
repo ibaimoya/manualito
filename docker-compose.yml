@@ -81,6 +81,8 @@ services:
         condition: service_healthy
       llm:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     networks:
       - manualito-net
 
@@ -185,6 +187,18 @@ services:
     depends_on:
       ollama-init:
         condition: service_completed_successfully
+    networks:
+      - manualito-net
+
+  mailpit:
+    <<: *third-party-hardening
+    container_name: ${PROYECT_NAME:-manualito}-mailpit
+    image: axllent/mailpit:${MAILPIT_VERSION:-v1.30.1}
+    pids_limit: 128
+    environment:
+      MP_MAX_MESSAGES: 1000
+    ports:
+      - "127.0.0.1:8025:8025"
     networks:
       - manualito-net
 

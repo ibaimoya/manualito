@@ -28,6 +28,34 @@ class LoginRequest(StrictModel):
     password: str = Field(max_length=config.PASSWORD_MAX_LENGTH)
 
 
+class VerifyEmailRequest(StrictModel):
+    """Token recibido desde el enlace de verificación."""
+
+    token: str = Field(min_length=1, max_length=256)
+
+
+class ResendVerificationEmailRequest(StrictModel):
+    """Email al que se reenvía verificación si la cuenta existe."""
+
+    email: EmailStr = Field(max_length=EMAIL_MAX_LENGTH)
+
+
+class ForgotPasswordRequest(StrictModel):
+    """Solicitud uniforme para iniciar reset de contraseña."""
+
+    email: EmailStr = Field(max_length=EMAIL_MAX_LENGTH)
+
+
+class ResetPasswordRequest(StrictModel):
+    """Token de reset y nueva contraseña."""
+
+    token: str = Field(min_length=1, max_length=256)
+    password: str = Field(
+        min_length=config.PASSWORD_MIN_LENGTH,
+        max_length=config.PASSWORD_MAX_LENGTH,
+    )
+
+
 class UserPublic(StrictModel):
     """Representación segura de usuario expuesta por la API."""
 
@@ -38,6 +66,7 @@ class UserPublic(StrictModel):
     status: str
     created_at: datetime
     last_login_at: datetime | None
+    email_verified_at: datetime | None
 
 
 class AuthResponse(StrictModel):
@@ -45,3 +74,9 @@ class AuthResponse(StrictModel):
 
     user: UserPublic
     csrf_token: str
+
+
+class AuthMessageResponse(StrictModel):
+    """Mensaje simple para flujos de email/reset."""
+
+    detail: str

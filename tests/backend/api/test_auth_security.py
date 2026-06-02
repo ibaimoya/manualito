@@ -20,6 +20,8 @@ from api.auth.exceptions import (
     AuthenticationRequiredError,
     InvalidCredentialsError,
     InvalidCsrfTokenError,
+    InvalidEmailVerificationTokenError,
+    InvalidPasswordResetTokenError,
 )
 from api.auth.passwords import (
     PasswordValidationError,
@@ -31,7 +33,7 @@ from api.auth.passwords import (
 from api.auth.router import _client_ip
 from api.auth.tokens import generate_opaque_token, hash_token, token_matches
 from database.models.audit import AuditLog
-from database.models.auth import AuthSession
+from database.models.auth import AuthSession, EmailVerificationToken, PasswordResetToken
 from database.models.user import User
 
 _FAKE_HASH = "hash"  # placeholder de hash en fixtures, no es una credencial
@@ -375,7 +377,7 @@ async def test_register_user_hashes_password_forces_user_role_and_audits(monkeyp
     monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
     fake_session = FakeSession()
 
-    user = await service.register_user(
+    result = await service.register_user(
         cast(AsyncSession, fake_session),
         email="USER@Example.com ",
         username="Nora",
@@ -383,11 +385,18 @@ async def test_register_user_hashes_password_forces_user_role_and_audits(monkeyp
         ip_address="127.0.0.1",
     )
 
+    user = result.user
+    verification_token = next(
+        instance
+        for instance in fake_session.added
+        if isinstance(instance, EmailVerificationToken)
+    )
     audit_log = next(i for i in fake_session.added if isinstance(i, AuditLog))
     assert user.email == "user@example.com"
     assert user.username_key == "nora"
     assert user.role == "user"
     assert user.password_hash.startswith("$argon2id$")
+    assert verification_token.token_hash == hash_token(result.verification_token)
     assert audit_log.event_type == "register_ok"
     assert fake_session.commits == 1
 
@@ -399,7 +408,7 @@ async def test_register_user_awaits_password_hash_wrapper(monkeypatch):
     hash_password_mock = AsyncMock(return_value="argon2-hash")
     monkeypatch.setattr(service, "hash_password_async", hash_password_mock)
 
-    user = await service.register_user(
+    result = await service.register_user(
         cast(AsyncSession, fake_session),
         email="user@example.com",
         username="Nora",
@@ -408,7 +417,7 @@ async def test_register_user_awaits_password_hash_wrapper(monkeypatch):
     )
 
     hash_password_mock.assert_awaited_once_with("valid-password")
-    assert user.password_hash == "argon2-hash"
+    assert result.user.password_hash == "argon2-hash"
 
 
 @pytest.mark.anyio
@@ -432,6 +441,212 @@ async def test_register_user_maps_integrity_error_to_duplicate(monkeypatch):
         )
 
     assert fake_session.rollbacks == 1
+
+
+@pytest.mark.anyio
+async def test_request_email_verification_creates_hashed_token(monkeypatch):
+    """Reenvío soft crea token opaco hasheado y consume tokens previos."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    fake_session = FakeSession(scalar_result=user)
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+    monkeypatch.setattr(service, "generate_opaque_token", lambda: "verify-token")
+
+    email_job = await service.request_email_verification(
+        cast(AsyncSession, fake_session),
+        email="USER@Example.com",
+        ip_address="127.0.0.1",
+    )
+
+    verification_token = next(
+        instance
+        for instance in fake_session.added
+        if isinstance(instance, EmailVerificationToken)
+    )
+    audit_log = next(instance for instance in fake_session.added if isinstance(instance, AuditLog))
+    assert email_job == service.AuthEmailJob(
+        email="user@example.com",
+        username="Nora",
+        token="verify-token",
+    )
+    assert verification_token.token_hash == hash_token("verify-token")
+    assert verification_token.expires_at == now + timedelta(
+        minutes=config.EMAIL_VERIFICATION_TOKEN_MINUTES
+    )
+    assert audit_log.event_type == "email_verification_requested"
+    assert fake_session.commits == 1
+    assert len(fake_session.statements) == 2
+
+
+@pytest.mark.anyio
+async def test_request_email_verification_is_uniform_for_missing_user():
+    """Un email inexistente no crea token ni audita datos inventados."""
+    fake_session = FakeSession(scalar_result=None)
+
+    email_job = await service.request_email_verification(
+        cast(AsyncSession, fake_session),
+        email="missing@example.com",
+        ip_address="127.0.0.1",
+    )
+
+    assert email_job is None
+    assert fake_session.added == []
+    assert fake_session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_verify_email_token_marks_user_and_consumes_token(monkeypatch):
+    """Verificar email consume token y rellena email_verified_at."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    verification_token = EmailVerificationToken(
+        user_id=user.id,
+        token_hash=hash_token("verify-token"),
+        expires_at=now + timedelta(minutes=5),
+    )
+    fake_session = FakeSession(row_result=(verification_token, user))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+
+    await service.verify_email_token(
+        cast(AsyncSession, fake_session),
+        token="verify-token",
+        ip_address="127.0.0.1",
+    )
+
+    audit_log = next(instance for instance in fake_session.added if isinstance(instance, AuditLog))
+    assert user.email_verified_at == now
+    assert verification_token.consumed_at == now
+    assert audit_log.event_type == "email_verified"
+    assert fake_session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_verify_email_token_is_idempotent_when_user_already_verified(monkeypatch):
+    """Un segundo clic no falla si el usuario ya estaba verificado."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    user.email_verified_at = now - timedelta(minutes=1)
+    verification_token = EmailVerificationToken(
+        user_id=user.id,
+        token_hash=hash_token("verify-token"),
+        expires_at=now - timedelta(minutes=1),
+        consumed_at=now - timedelta(minutes=1),
+    )
+    fake_session = FakeSession(row_result=(verification_token, user))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+
+    await service.verify_email_token(
+        cast(AsyncSession, fake_session),
+        token="verify-token",
+        ip_address=None,
+    )
+
+    assert fake_session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_verify_email_token_rejects_missing_or_expired(monkeypatch):
+    """Tokens ausentes o caducados devuelven error de dominio controlado."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    expired_token = EmailVerificationToken(
+        user_id=user.id,
+        token_hash=hash_token("verify-token"),
+        expires_at=now - timedelta(seconds=1),
+    )
+    fake_session = FakeSession(row_result=(expired_token, user))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+
+    with pytest.raises(InvalidEmailVerificationTokenError):
+        await service.verify_email_token(
+            cast(AsyncSession, fake_session),
+            token="verify-token",
+            ip_address=None,
+        )
+
+
+@pytest.mark.anyio
+async def test_request_password_reset_creates_uniform_email_job(monkeypatch):
+    """Forgot password crea token hasheado sin exponer si no hay cuenta."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    fake_session = FakeSession(scalar_result=user)
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+    monkeypatch.setattr(service, "generate_opaque_token", lambda: "reset-token")
+
+    email_job = await service.request_password_reset(
+        cast(AsyncSession, fake_session),
+        email="user@example.com",
+        ip_address="127.0.0.1",
+    )
+
+    reset_token = next(
+        instance for instance in fake_session.added if isinstance(instance, PasswordResetToken)
+    )
+    audit_log = next(instance for instance in fake_session.added if isinstance(instance, AuditLog))
+    assert email_job == service.AuthEmailJob(
+        email="user@example.com",
+        username="Nora",
+        token="reset-token",
+    )
+    assert reset_token.token_hash == hash_token("reset-token")
+    assert reset_token.expires_at == now + timedelta(minutes=config.PASSWORD_RESET_TOKEN_MINUTES)
+    assert audit_log.event_type == "password_reset_requested"
+    assert fake_session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_reset_password_with_token_hashes_password_and_revokes_sessions(monkeypatch):
+    """Reset válido actualiza contraseña, verifica email soft y revoca sesiones."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_token("reset-token"),
+        expires_at=now + timedelta(minutes=5),
+    )
+    fake_session = FakeSession(row_result=(reset_token, user))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+    monkeypatch.setattr(service, "hash_password_async", AsyncMock(return_value="new-hash"))
+
+    await service.reset_password_with_token(
+        cast(AsyncSession, fake_session),
+        token="reset-token",
+        password="valid-password",
+        ip_address="127.0.0.1",
+    )
+
+    audit_log = next(instance for instance in fake_session.added if isinstance(instance, AuditLog))
+    assert user.password_hash == "new-hash"
+    assert user.password_changed_at == now
+    assert user.email_verified_at == now
+    assert reset_token.consumed_at == now
+    assert audit_log.event_type == "password_reset_ok"
+    assert fake_session.commits == 1
+    assert "UPDATE auth_sessions" in str(fake_session.statements[-1])
+
+
+@pytest.mark.anyio
+async def test_reset_password_with_token_rejects_consumed_token(monkeypatch):
+    """Un token de reset consumido no permite cambiar contraseña."""
+    now = datetime(2026, 6, 2, tzinfo=UTC)
+    user = _user()
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=hash_token("reset-token"),
+        expires_at=now + timedelta(minutes=5),
+        consumed_at=now,
+    )
+    fake_session = FakeSession(row_result=(reset_token, user))
+    monkeypatch.setattr(service, "utc_now", lambda: now)
+
+    with pytest.raises(InvalidPasswordResetTokenError):
+        await service.reset_password_with_token(
+            cast(AsyncSession, fake_session),
+            token="reset-token",
+            password="valid-password",
+            ip_address=None,
+        )
 
 
 @pytest.mark.anyio
@@ -710,6 +925,7 @@ def _user(password_hash: str = _FAKE_HASH) -> User:
         role="user",
         status="active",
         created_at=datetime(2026, 5, 29, tzinfo=UTC),
+        email_verified_at=None,
         last_login_at=None,
         password_changed_at=datetime(2026, 5, 29, tzinfo=UTC),
     )

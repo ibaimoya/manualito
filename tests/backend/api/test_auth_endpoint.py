@@ -1,7 +1,7 @@
 import json
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -14,8 +14,9 @@ from api.auth.exceptions import (
     DuplicateIdentityError,
     InvalidCredentialsError,
     InvalidCsrfTokenError,
+    InvalidEmailVerificationTokenError,
 )
-from api.auth.service import AuthenticatedSession, LoginResult
+from api.auth.service import AuthEmailJob, AuthenticatedSession, LoginResult, RegistrationResult
 from api.exceptions import domain_exception_handler
 from api.main import app
 from api.rate_limit import limiter
@@ -38,6 +39,7 @@ _USERNAME_WITH_EMOJI = f"{_VALID_TEST_USERNAME}\U0001f600"
 _RATE_LIMIT_TEST_IDENTIFIER = f"rate-{_VALID_TEST_USERNAME_KEY}@example.com"
 _FAKE_SESSION_TOKEN = f"session-{_VALID_TEST_USERNAME_KEY}"
 _FAKE_CSRF_TOKEN = f"csrf-{_VALID_TEST_USERNAME_KEY}"
+_FAKE_ACCOUNT_TOKEN = f"account-{_VALID_TEST_USERNAME_KEY}"
 _VALID_TEST_PASSWORD = "x" * config.PASSWORD_MIN_LENGTH
 _TOO_SHORT_TEST_PASSWORD = "x" * (config.PASSWORD_MIN_LENGTH - 1)
 _TOO_LONG_TEST_PASSWORD = "x" * (config.PASSWORD_MAX_LENGTH + 1)
@@ -216,6 +218,7 @@ def test_login_sets_session_cookie_and_filters_user_response(
     assert response.status_code == 200
     assert body["csrf_token"] == _FAKE_CSRF_TOKEN
     assert body["user"]["email"] == _VALID_TEST_EMAIL
+    assert body["user"]["email_verified_at"] is None
     assert "password_hash" not in body["user"]
     assert "username_key" not in body["user"]
     assert config.AUTH_SESSION_COOKIE_NAME in session_cookie
@@ -237,6 +240,7 @@ def test_me_returns_public_user_and_csrf_token(client):
     assert response.status_code == 200
     assert body["csrf_token"] == _FAKE_CSRF_TOKEN
     assert body["user"]["username"] == _VALID_TEST_USERNAME
+    assert body["user"]["email_verified_at"] is None
     assert "password_hash" not in body["user"]
     assert "username_key" not in body["user"]
 
@@ -263,7 +267,17 @@ def test_logout_requires_csrf_and_clears_cookies(client, monkeypatch, override_d
 def test_register_success_returns_public_user(client, monkeypatch, override_db_session):
     """Registro correcto devuelve 201 con el contrato público, sin campos sensibles."""
 
-    monkeypatch.setattr("api.auth.router.register_user", AsyncMock(return_value=_user()))
+    schedule_mock = MagicMock()
+    monkeypatch.setattr(
+        "api.auth.router.register_user",
+        AsyncMock(
+            return_value=RegistrationResult(
+                user=_user(),
+                verification_token=_FAKE_ACCOUNT_TOKEN,
+            )
+        ),
+    )
+    monkeypatch.setattr("api.auth.router.schedule_verification_email", schedule_mock)
 
     response = client.post(
         "/api/auth/register",
@@ -277,8 +291,98 @@ def test_register_success_returns_public_user(client, monkeypatch, override_db_s
     body = response.json()
     assert response.status_code == 201
     assert body["username"] == _VALID_TEST_USERNAME
+    assert body["email_verified_at"] is None
     assert "password_hash" not in body
     assert "username_key" not in body
+    assert schedule_mock.call_count == 1
+
+
+def test_verify_email_uses_token_without_csrf(client, monkeypatch, override_db_session):
+    """La verificación se autoriza con token opaco, no con sesión ni CSRF."""
+    verify_mock = AsyncMock()
+    monkeypatch.setattr("api.auth.router.verify_email_token", verify_mock)
+
+    response = client.post("/api/auth/email/verify", json={"token": _FAKE_ACCOUNT_TOKEN})
+
+    assert response.status_code == 200
+    assert response.json()["detail"] == "Email verificado."
+    verify_mock.assert_awaited_once()
+
+
+def test_verify_email_invalid_token_maps_to_400(client, monkeypatch, override_db_session):
+    """Un token de verificación inválido devuelve código estable."""
+    monkeypatch.setattr(
+        "api.auth.router.verify_email_token",
+        AsyncMock(side_effect=InvalidEmailVerificationTokenError),
+    )
+
+    response = client.post("/api/auth/email/verify", json={"token": _FAKE_ACCOUNT_TOKEN})
+
+    assert response.status_code == 400
+    _assert_error(response.json(), field=None, code="email_verification_token_invalid")
+
+
+def test_resend_verification_email_is_uniform_and_best_effort(
+    client,
+    monkeypatch,
+    override_db_session,
+):
+    """Reenvío no revela existencia y solo agenda email si el service da job."""
+    schedule_mock = MagicMock()
+    monkeypatch.setattr(
+        "api.auth.router.request_email_verification",
+        AsyncMock(
+            return_value=AuthEmailJob(
+                email=_VALID_TEST_EMAIL,
+                username=_VALID_TEST_USERNAME,
+                token=_FAKE_ACCOUNT_TOKEN,
+            )
+        ),
+    )
+    monkeypatch.setattr("api.auth.router.schedule_verification_email", schedule_mock)
+
+    response = client.post("/api/auth/email/resend", json={"email": _VALID_TEST_EMAIL})
+
+    assert response.status_code == 200
+    assert response.json()["detail"].startswith("Si existe una cuenta")
+    assert schedule_mock.call_count == 1
+
+
+def test_forgot_password_is_uniform_and_best_effort(client, monkeypatch, override_db_session):
+    """Forgot password no enumera cuentas y agenda email si procede."""
+    schedule_mock = MagicMock()
+    monkeypatch.setattr(
+        "api.auth.router.request_password_reset",
+        AsyncMock(
+            return_value=AuthEmailJob(
+                email=_VALID_TEST_EMAIL,
+                username=_VALID_TEST_USERNAME,
+                token=_FAKE_ACCOUNT_TOKEN,
+            )
+        ),
+    )
+    monkeypatch.setattr("api.auth.router.schedule_password_reset_email", schedule_mock)
+
+    response = client.post("/api/auth/password/forgot", json={"email": _VALID_TEST_EMAIL})
+
+    assert response.status_code == 200
+    assert response.json()["detail"].startswith("Si existe una cuenta")
+    assert schedule_mock.call_count == 1
+
+
+def test_reset_password_uses_token_without_csrf(client, monkeypatch, override_db_session):
+    """Reset de contraseña se autoriza con token opaco, sin sesión ni CSRF."""
+    reset_mock = AsyncMock()
+    monkeypatch.setattr("api.auth.router.reset_password_with_token", reset_mock)
+
+    response = client.post(
+        "/api/auth/password/reset",
+        json={"token": _FAKE_ACCOUNT_TOKEN, "password": _VALID_TEST_PASSWORD},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["detail"] == "Contraseña actualizada."
+    reset_mock.assert_awaited_once()
 
 
 def test_login_invalid_credentials_maps_to_401(client, monkeypatch, override_db_session):
@@ -422,6 +526,7 @@ def _user() -> User:
         role="user",
         status="active",
         created_at=datetime(2026, 5, 29, tzinfo=UTC),
+        email_verified_at=None,
         last_login_at=None,
         password_changed_at=datetime(2026, 5, 29, tzinfo=UTC),
     )

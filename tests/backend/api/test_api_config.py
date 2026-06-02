@@ -13,6 +13,10 @@ def test_api_settings_parses_environment_types(monkeypatch):
     monkeypatch.setenv("CONVERSATION_HISTORY_MESSAGES", "6")
     monkeypatch.setenv("CONVERSATION_CREATE_RATE_LIMIT", "12/minute")
     monkeypatch.setenv("CONVERSATION_MESSAGE_RATE_LIMIT", "45/minute")
+    monkeypatch.setenv("SMTP_PORT", "2525")
+    monkeypatch.setenv("SMTP_STARTTLS", "true")
+    monkeypatch.setenv("EMAIL_VERIFICATION_TOKEN_MINUTES", "60")
+    monkeypatch.setenv("PASSWORD_RESET_TOKEN_MINUTES", "15")
 
     settings = ApiSettings()
 
@@ -21,6 +25,10 @@ def test_api_settings_parses_environment_types(monkeypatch):
     assert settings.conversation_history_messages == 6
     assert settings.conversation_create_rate_limit == "12/minute"
     assert settings.conversation_message_rate_limit == "45/minute"
+    assert settings.smtp_port == 2525
+    assert settings.smtp_starttls is True
+    assert settings.email_verification_token_minutes == 60
+    assert settings.password_reset_token_minutes == 15
 
 
 def test_cookie_names_keep_host_prefix_only_when_secure():

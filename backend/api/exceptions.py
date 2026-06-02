@@ -17,6 +17,8 @@ from api.auth.exceptions import (
     DuplicateIdentityError,
     InvalidCredentialsError,
     InvalidCsrfTokenError,
+    InvalidEmailVerificationTokenError,
+    InvalidPasswordResetTokenError,
 )
 from api.conversations.exceptions import ConversationNotFoundError
 from api.manuals.exceptions import (
@@ -40,6 +42,7 @@ _MISSING_FIELD_ERRORS = {
     "username": ("username_required", "El nombre de usuario es obligatorio."),
     "password": ("password_required", "La contraseña es obligatoria."),
     "content": ("message_required", "El mensaje es obligatorio."),
+    "token": ("token_required", "El token es obligatorio."),
 }
 
 _TOO_SHORT_FIELD_ERRORS = {
@@ -49,6 +52,7 @@ _TOO_SHORT_FIELD_ERRORS = {
         "password_too_short",
         f"La contraseña debe tener al menos {config.PASSWORD_MIN_LENGTH} caracteres.",
     ),
+    "token": ("token_required", "El token es obligatorio."),
 }
 
 _TOO_LONG_FIELD_ERRORS = {
@@ -64,6 +68,10 @@ _TOO_LONG_FIELD_ERRORS = {
     "content": (
         "message_too_long",
         "El mensaje es demasiado largo.",
+    ),
+    "token": (
+        "token_too_long",
+        "El token es demasiado largo.",
     ),
 }
 
@@ -170,6 +178,16 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         status_code=409,
         detail="Email o username no disponible.",
         code="identity_unavailable",
+    ),
+    InvalidEmailVerificationTokenError: ErrorResponseConfig(
+        status_code=400,
+        detail="El enlace de verificación no es válido o ha caducado.",
+        code="email_verification_token_invalid",
+    ),
+    InvalidPasswordResetTokenError: ErrorResponseConfig(
+        status_code=400,
+        detail="El enlace de restablecimiento no es válido o ha caducado.",
+        code="password_reset_token_invalid",
     ),
     InvalidCsrfTokenError: ErrorResponseConfig(
         status_code=403,

@@ -23,6 +23,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     username: Mapped[str] = mapped_column(String(USERNAME_MAX_LENGTH), nullable=False)
     username_key: Mapped[str] = mapped_column(String(USERNAME_KEY_MAX_LENGTH), nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     role: Mapped[str] = mapped_column(

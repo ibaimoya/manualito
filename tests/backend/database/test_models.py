@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import CheckConstraint, String, Text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.base import _NoneName
@@ -16,6 +17,8 @@ def test_model_registry_imports_phase_2_tables():
         "auth_sessions",
         "audit_log",
         "assets",
+        "email_verification_tokens",
+        "password_reset_tokens",
         "games",
         "manuals",
         "manual_pages",
@@ -23,8 +26,6 @@ def test_model_registry_imports_phase_2_tables():
         "conversations",
         "messages",
     }.issubset(Base.metadata.tables)
-    assert "email_verification_tokens" not in Base.metadata.tables
-    assert "password_reset_tokens" not in Base.metadata.tables
 
 
 def test_users_schema_uses_partial_case_insensitive_email_index():
@@ -32,7 +33,7 @@ def test_users_schema_uses_partial_case_insensitive_email_index():
     import_all_models()
     users = Base.metadata.tables["users"]
 
-    assert "email_verified_at" not in users.c
+    assert users.c.email_verified_at.nullable is True
     assert "avatar_asset_id" not in users.c
     assert "display_name" not in users.c
     assert not users.c.email.unique
@@ -78,6 +79,25 @@ def test_auth_sessions_schema_supports_revocation_and_cleanup():
     assert _index(sessions, "ix_auth_sessions_user_id") is not None
     assert _index(sessions, "ix_auth_sessions_expires_at") is not None
     assert _single_fk(sessions.c.user_id).ondelete == "CASCADE"
+
+
+@pytest.mark.parametrize(
+    "table_name",
+    ["email_verification_tokens", "password_reset_tokens"],
+)
+def test_account_token_schemas_store_only_hashes_and_cascade(table_name: str):
+    """Los tokens de cuenta son opacos, expirables y caen al borrar usuario."""
+    import_all_models()
+    table = Base.metadata.tables[table_name]
+
+    assert table.c.token_hash.type.length == SHA256_HEX_LENGTH
+    assert table.c.expires_at.nullable is False
+    assert table.c.consumed_at.nullable is True
+    assert _single_fk(table.c.user_id).ondelete == "CASCADE"
+    assert _index(table, f"uq_{table_name}_token_hash").unique is True
+    assert _index(table, f"ix_{table_name}_user_id") is not None
+    assert _index(table, f"ix_{table_name}_expires_at") is not None
+    assert _check_names(table) == {f"ck_{table_name}_token_hash_length_valid"}
 
 
 def test_audit_log_avoids_reserved_metadata_name():
@@ -225,6 +245,8 @@ def test_uuid_primary_keys_use_postgres_uuidv7_default():
     for table_name in (
         "users",
         "auth_sessions",
+        "email_verification_tokens",
+        "password_reset_tokens",
         "audit_log",
         "assets",
         "games",

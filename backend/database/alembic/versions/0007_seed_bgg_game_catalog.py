@@ -172,7 +172,7 @@ def _games_table() -> TableClause:
 def _seed_rows() -> list[dict[str, str | int | None]]:
     """Normaliza la semilla inmutable antes de insertarla."""
     if len(BGG_SEED_GAMES) > SEED_GAME_LIMIT:
-        raise RuntimeError("La semilla BGG supera el limite acordado.")
+        raise RuntimeError("La semilla BGG supera el límite acordado.")
 
     return [
         {

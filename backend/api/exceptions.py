@@ -18,8 +18,11 @@ from api.auth.exceptions import (
     InvalidCredentialsError,
     InvalidCsrfTokenError,
 )
+from api.conversations.exceptions import ConversationNotFoundError
 from api.manuals.exceptions import (
     GameNotFoundError,
+    GameUnavailableError,
+    GeneratedAnswerTooLongError,
     ManualContextNotFoundError,
     ManualNotFoundError,
     ManualWithoutTextError,
@@ -36,10 +39,12 @@ _MISSING_FIELD_ERRORS = {
     "email": ("email_required", "El email es obligatorio."),
     "username": ("username_required", "El nombre de usuario es obligatorio."),
     "password": ("password_required", "La contraseña es obligatoria."),
+    "content": ("message_required", "El mensaje es obligatorio."),
 }
 
 _TOO_SHORT_FIELD_ERRORS = {
     "username": ("username_required", "El nombre de usuario es obligatorio."),
+    "content": ("message_required", "El mensaje es obligatorio."),
     "password": (
         "password_too_short",
         f"La contraseña debe tener al menos {config.PASSWORD_MIN_LENGTH} caracteres.",
@@ -55,6 +60,10 @@ _TOO_LONG_FIELD_ERRORS = {
     "password": (
         "password_too_long",
         f"La contraseña no puede superar {config.PASSWORD_MAX_LENGTH} caracteres.",
+    ),
+    "content": (
+        "message_too_long",
+        "El mensaje es demasiado largo.",
     ),
 }
 
@@ -177,6 +186,11 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         detail="Juego no encontrado.",
         code="game_not_found",
     ),
+    GameUnavailableError: ErrorResponseConfig(
+        status_code=409,
+        detail="Este juego ya no está disponible para nuevas preguntas.",
+        code="game_unavailable",
+    ),
     ManualWithoutTextError: ErrorResponseConfig(
         status_code=422,
         detail="No se pudo extraer texto indexable del manual.",
@@ -192,12 +206,22 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         detail="No hay contexto disponible para ese juego.",
         code="manual_context_not_found",
     ),
+    GeneratedAnswerTooLongError: ErrorResponseConfig(
+        status_code=502,
+        detail="El LLM generó una respuesta demasiado larga.",
+        code="generated_answer_too_long",
+    ),
+    ConversationNotFoundError: ErrorResponseConfig(
+        status_code=404,
+        detail="Conversación no encontrada.",
+        code="conversation_not_found",
+    ),
 }
 
 
 def domain_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Traduce excepciones de dominio con una tabla explícita."""
-    config = _DOMAIN_ERROR_CONFIGS[type(exc)]
+    config = _domain_error_config(exc)
     detail = (
         config.detail
         if config.detail is not None
@@ -208,6 +232,14 @@ def domain_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
         detail=detail,
         code=config.code,
     )
+
+
+def _domain_error_config(exc: Exception) -> ErrorResponseConfig:
+    """Busca configuración por clase concreta o ancestros registrados."""
+    for exception_type in type(exc).__mro__:
+        if exception_type in _DOMAIN_ERROR_CONFIGS:
+            return _DOMAIN_ERROR_CONFIGS[exception_type]
+    raise TypeError(f"Excepción de dominio no registrada: {type(exc).__name__}")
 
 
 def auth_validation_handler(_request: Request, exc: Exception) -> JSONResponse:

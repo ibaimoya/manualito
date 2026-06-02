@@ -332,7 +332,7 @@ def test_question_game_devuelve_respuesta_limpia(
 ):
     """Las preguntas van contra el pool autorizado de manuales del juego."""
     answer_mock = AsyncMock(return_value=AnswerResponse(answer="Se gana con 10 puntos."))
-    monkeypatch.setattr("api.games.router.answer_game_question", answer_mock)
+    monkeypatch.setattr("api.games.router.generate_game_answer", answer_mock)
 
     response = client.post(
         f"/api/games/{_GAME_ID}/questions",
@@ -346,7 +346,8 @@ def test_question_game_devuelve_respuesta_limpia(
     assert answer_mock.await_args.args == (_FAKE_SESSION,)
     assert kwargs["auth"].user.id == _USER_ID
     assert kwargs["game_id"] == _GAME_ID
-    assert kwargs["payload"].question == "¿Cómo se gana?"
+    assert kwargs["question"] == "¿Cómo se gana?"
+    assert kwargs["top_k"] == 3
 
 
 def test_question_game_sin_contexto_autorizado_devuelve_404(
@@ -356,7 +357,7 @@ def test_question_game_sin_contexto_autorizado_devuelve_404(
 ):
     """Si no hay chunks autorizados, la ruta devuelve un código estable."""
     monkeypatch.setattr(
-        "api.games.router.answer_game_question",
+        "api.games.router.generate_game_answer",
         AsyncMock(side_effect=ManualContextNotFoundError),
     )
 
@@ -376,7 +377,7 @@ def test_question_game_devuelve_502_si_llm_no_esta_disponible(
 ):
     """El fallo de servicio interno conserva el envelope común de API."""
     monkeypatch.setattr(
-        "api.games.router.answer_game_question",
+        "api.games.router.generate_game_answer",
         AsyncMock(
             side_effect=InternalServiceUnavailableError("Servicio LLM no disponible.")
         ),

@@ -4,6 +4,7 @@ import time
 
 import httpx
 
+from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 from llm import config
 from llm.client import OllamaClient, ollama_model_matches
 from llm.exceptions import (
@@ -13,8 +14,17 @@ from llm.exceptions import (
     LlmTimeoutError,
     LlmUnavailableError,
 )
-from llm.prompt_builder import build_prompt
-from llm.schemas import GenerateRequest
+from llm.prompt_builder import (
+    MAX_TITLE_CHARS,
+    build_condense_question_prompt,
+    build_prompt,
+    build_title_prompt,
+)
+from llm.schemas import (
+    CondenseQuestionRequest,
+    ConversationTitleRequest,
+    GenerateRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +117,11 @@ async def generate_answer(
     Returns:
         dict: Respuesta final limpia generada por el LLM.
     """
-    prompt, included_chunks = build_prompt(payload.question, payload.context_chunks)
+    prompt, included_chunks = build_prompt(
+        payload.question,
+        payload.context_chunks,
+        [message.model_dump() for message in payload.chat_history],
+    )
     total_chunks = len(payload.context_chunks)
     if included_chunks < total_chunks:
         logger.warning(
@@ -116,12 +130,81 @@ async def generate_answer(
             total_chunks,
         )
 
+    answer = await _generate_answer_with_retry(
+        prompt=prompt,
+        client=client,
+    )
+    return {"answer": answer}
+
+
+async def condense_question(
+    *,
+    payload: CondenseQuestionRequest,
+    client: httpx.AsyncClient,
+) -> dict:
+    """
+    Reformula una pregunta contextual para mejorar la recuperación RAG.
+
+    Args:
+        payload (CondenseQuestionRequest): Pregunta actual e historial reciente.
+        client (httpx.AsyncClient): Cliente HTTP compartido.
+
+    Returns:
+        dict: Pregunta independiente para usar en recuperación.
+    """
+    prompt = build_condense_question_prompt(
+        payload.question,
+        [message.model_dump() for message in payload.chat_history],
+    )
+    question = await _generate_text(
+        prompt=prompt,
+        client=client,
+        log_label="pregunta reformulada",
+    )
+    return {"question": question}
+
+
+async def generate_conversation_title(
+    *,
+    payload: ConversationTitleRequest,
+    client: httpx.AsyncClient,
+) -> dict:
+    """
+    Genera un título corto para una conversación.
+
+    Args:
+        payload (ConversationTitleRequest): Mensajes recientes del chat.
+        client (httpx.AsyncClient): Cliente HTTP compartido.
+
+    Returns:
+        dict: Título limpio y acotado.
+    """
+    prompt = build_title_prompt([message.model_dump() for message in payload.messages])
+    title = _clean_title(
+        await _generate_text(
+            prompt=prompt,
+            client=client,
+            log_label="título de conversación",
+        )
+    )
+    if not title:
+        raise EmptyLlmAnswerError
+    return {"title": title}
+
+
+async def _generate_text(
+    *,
+    prompt: str,
+    client: httpx.AsyncClient,
+    log_label: str,
+) -> str:
+    """Invoca Ollama y devuelve texto limpio para un prompt ya construido."""
     start = time.perf_counter()
     logger.info(
-        "Generando respuesta: modelo=%s, prompt_chars=%d, chunks=%d.",
+        "Generando %s: modelo=%s, prompt_chars=%d.",
+        log_label,
         config.OLLAMA_MODEL,
         len(prompt),
-        included_chunks,
     )
 
     ollama_payload = {
@@ -165,8 +248,64 @@ async def generate_answer(
 
     elapsed = time.perf_counter() - start
     logger.info(
-        "Respuesta generada en %.2fs (answer_chars=%d).",
+        "Texto generado en %.2fs (chars=%d, tipo=%s).",
         elapsed,
         len(answer),
+        log_label,
     )
-    return {"answer": answer}
+    return answer
+
+
+async def _generate_answer_with_retry(
+    *,
+    prompt: str,
+    client: httpx.AsyncClient,
+) -> str:
+    """Reintenta una vez si la respuesta no cabe en el contrato público."""
+    answer = await _generate_text(
+        prompt=prompt,
+        client=client,
+        log_label="respuesta",
+    )
+    if len(answer) <= MESSAGE_CONTENT_MAX_LENGTH:
+        return answer
+
+    logger.warning(
+        "Respuesta LLM demasiado larga (%d/%d chars); reintentando en modo breve.",
+        len(answer),
+        MESSAGE_CONTENT_MAX_LENGTH,
+    )
+    shorter_answer = await _generate_text(
+        prompt=f"{prompt}{_answer_retry_prompt_suffix()}",
+        client=client,
+        log_label="respuesta breve",
+    )
+    if len(shorter_answer) > MESSAGE_CONTENT_MAX_LENGTH:
+        logger.error(
+            "Respuesta LLM sigue siendo demasiado larga tras reintento (%d/%d chars).",
+            len(shorter_answer),
+            MESSAGE_CONTENT_MAX_LENGTH,
+        )
+        raise InvalidLlmResponseError
+    return shorter_answer
+
+
+def _answer_retry_prompt_suffix() -> str:
+    """Construye la instrucción breve con el límite actual de respuesta."""
+    return (
+        "\n\nINSTRUCCIÓN ADICIONAL:\n"
+        f"La respuesta anterior habría superado {MESSAGE_CONTENT_MAX_LENGTH} caracteres. "
+        "Genera una versión más breve que quepa en ese límite. Prioriza la respuesta "
+        "directa y las reglas imprescindibles. No indiques que estás resumiendo."
+    )
+
+
+def _clean_title(title: str) -> str:
+    """Normaliza el título devuelto por Ollama antes de validarlo."""
+    lines = title.strip().strip("\"'`").splitlines()
+    if not lines:
+        return ""
+    cleaned = lines[0].strip().rstrip(".")
+    if len(cleaned) <= MAX_TITLE_CHARS:
+        return cleaned
+    return f"{cleaned[: MAX_TITLE_CHARS - 3].rstrip()}..."

@@ -3,19 +3,21 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
+import anyio
 import pytest
 
 import api.manuals.retrieval.service as retrieval_service
 import api.manuals.service as manual_service
 from api.exceptions import InternalServiceError, InternalServiceUnavailableError
-from api.manuals.exceptions import ManualWithoutTextError
+from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualWithoutTextError
 from api.manuals.repository import (
     AuthorizedChunk,
     DeletedManualAssets,
     PersistedManual,
 )
-from api.manuals.schemas import GAME_QUESTION_TOP_K_MAX, AnswerResponse, GameQuestionRequest
+from api.manuals.schemas import GAME_QUESTION_TOP_K_MAX, AnswerResponse
 from api.manuals.validation import ValidatedManualImage
+from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 from rag.annotations import RAG_RETRIEVAL_TOP_K_MAX
 
 _USER_ID = uuid4()
@@ -365,11 +367,14 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     )
     monkeypatch.setattr(retrieval_service, "load_authorized_chunks", load_chunks_mock)
 
-    result = await retrieval_service.answer_game_question(
-        object(),
+    session = _session()
+
+    result = await retrieval_service.generate_game_answer(
+        session,
         auth=_auth(),
         game_id=_GAME_ID,
-        payload=GameQuestionRequest(question="¿Cómo se gana?", top_k=2),
+        question="¿Cómo se gana?",
+        top_k=2,
         client=object(),
     )
 
@@ -383,8 +388,40 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         _DUPLICATE_CHUNK_ID,
         _UNIQUE_CHUNK_ID,
     ]
+    assert session.rollbacks == 1
     assert "manual_id" not in llm_payload
     assert llm_payload["context_chunks"] == ["Texto A", "Texto B"]
+
+
+@pytest.mark.anyio
+async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
+    """La API valida la respuesta antes de devolverla o persistirla en chats."""
+    post_json_mock = AsyncMock(
+        side_effect=[
+            {"chunks": [{"id": str(_CHUNK_ID)}]},
+            {"answer": "x" * (MESSAGE_CONTENT_MAX_LENGTH + 1)},
+        ]
+    )
+    monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_chunks",
+        AsyncMock(
+            return_value=[
+                AuthorizedChunk(id=_CHUNK_ID, text="Texto A", content_hash="hash")
+            ]
+        ),
+    )
+
+    with pytest.raises(GeneratedAnswerTooLongError):
+        await retrieval_service.generate_game_answer(
+            _session(),
+            auth=_auth(),
+            game_id=_GAME_ID,
+            question="¿Cómo se gana?",
+            top_k=3,
+            client=object(),
+        )
 
 
 @pytest.mark.anyio
@@ -397,11 +434,12 @@ async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
     )
 
     with pytest.raises(InternalServiceError):
-        await retrieval_service.answer_game_question(
-            object(),
+        await retrieval_service.generate_game_answer(
+            _session(),
             auth=_auth(),
             game_id=_GAME_ID,
-            payload=GameQuestionRequest(question="¿Cómo se gana?"),
+            question="¿Cómo se gana?",
+            top_k=3,
             client=object(),
         )
 
@@ -490,6 +528,18 @@ def test_optional_strip_normalizes_blank_values():
 def _auth():
     """Crea un objeto de auth mínimo para casos de uso de manuales."""
     return SimpleNamespace(user=SimpleNamespace(id=_USER_ID))
+
+
+def _session():
+    """Crea una sesión falsa con rollback observable."""
+
+    async def rollback():
+        await anyio.lowlevel.checkpoint()
+        session.rollbacks += 1
+
+    session = SimpleNamespace(rollbacks=0)
+    session.rollback = rollback
+    return session
 
 
 def _validated_image() -> ValidatedManualImage:

@@ -27,6 +27,10 @@ class ApiSettings(BaseSettings):
     bgg_backoff_seconds: float = Field(default=1.0, ge=0)
     game_search_rate_limit: str = "120/minute"
 
+    conversation_history_messages: int = Field(default=8, ge=0, le=20)
+    conversation_create_rate_limit: str = "30/minute"
+    conversation_message_rate_limit: str = "30/minute"
+
     auth_session_days: int = Field(default=7, ge=1)
     auth_cookie_secure: bool = False
     auth_session_cookie_name: str | None = None
@@ -70,6 +74,9 @@ BGG_CACHE_RESULT_LIMIT = settings.bgg_cache_result_limit
 BGG_MAX_ATTEMPTS = settings.bgg_max_attempts
 BGG_BACKOFF_SECONDS = settings.bgg_backoff_seconds
 GAME_SEARCH_RATE_LIMIT = settings.game_search_rate_limit
+CONVERSATION_HISTORY_MESSAGES = settings.conversation_history_messages
+CONVERSATION_CREATE_RATE_LIMIT = settings.conversation_create_rate_limit
+CONVERSATION_MESSAGE_RATE_LIMIT = settings.conversation_message_rate_limit
 
 AUTH_SESSION_DAYS = settings.auth_session_days
 AUTH_SESSION_MAX_AGE_SECONDS = AUTH_SESSION_DAYS * 24 * 60 * 60

@@ -1,5 +1,7 @@
 """Constantes de schema compartidas."""
 
+from common import conversation_limits
+
 # Validación de Usuarios.
 EMAIL_MAX_LENGTH = 254
 USERNAME_MAX_LENGTH = 20
@@ -12,3 +14,8 @@ MANUAL_TITLE_MAX_LENGTH = 255
 MANUAL_LANGUAGE_MAX_LENGTH = 35
 EMBEDDING_MODEL_MAX_LENGTH = 128
 SHA256_HEX_LENGTH = 64
+
+# Conversaciones persistentes.
+CONVERSATION_TITLE_MAX_LENGTH = conversation_limits.CONVERSATION_TITLE_MAX_LENGTH
+MESSAGE_CONTENT_MAX_LENGTH = conversation_limits.MESSAGE_CONTENT_MAX_LENGTH
+USER_MESSAGE_MAX_LENGTH = conversation_limits.USER_MESSAGE_MAX_LENGTH

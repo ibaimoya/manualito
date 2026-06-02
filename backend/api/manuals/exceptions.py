@@ -1,9 +1,11 @@
 """Errores de dominio del flujo de manuales."""
 
-from api.games.exceptions import GameNotFoundError
+from api.games.exceptions import GameNotFoundError, GameUnavailableError
 
 __all__ = [
     "GameNotFoundError",
+    "GameUnavailableError",
+    "GeneratedAnswerTooLongError",
     "ManualContextNotFoundError",
     "ManualNotFoundError",
     "ManualWithoutTextError",
@@ -25,3 +27,7 @@ class ManualNotFoundError(ManualsError):
 
 class ManualContextNotFoundError(ManualsError):
     """No hay chunks autorizados para responder la pregunta."""
+
+
+class GeneratedAnswerTooLongError(ManualsError):
+    """El LLM generó una respuesta que no cabe en la tabla de mensajes."""

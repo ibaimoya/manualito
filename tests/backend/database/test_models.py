@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, String
+from sqlalchemy import CheckConstraint, String, Text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.base import _NoneName
 
@@ -20,6 +20,8 @@ def test_model_registry_imports_phase_2_tables():
         "manuals",
         "manual_pages",
         "manual_chunks",
+        "conversations",
+        "messages",
     }.issubset(Base.metadata.tables)
     assert "email_verification_tokens" not in Base.metadata.tables
     assert "password_reset_tokens" not in Base.metadata.tables
@@ -229,10 +231,44 @@ def test_uuid_primary_keys_use_postgres_uuidv7_default():
         "manuals",
         "manual_pages",
         "manual_chunks",
+        "conversations",
+        "messages",
     ):
         id_column = Base.metadata.tables[table_name].c.id
         assert isinstance(id_column.type, postgresql.UUID)
         assert str(id_column.server_default.arg) == "uuidv7()"
+
+
+def test_conversations_schema_tracks_user_game_and_title():
+    """conversations guarda chats propios por juego con borrado lógico."""
+    import_all_models()
+    conversations = Base.metadata.tables["conversations"]
+
+    assert _single_fk(conversations.c.user_id).ondelete == "CASCADE"
+    assert _single_fk(conversations.c.game_id).ondelete == "RESTRICT"
+    assert conversations.c.title.type.length == 80
+    assert _check_names(conversations) == {"ck_conversations_title_valid"}
+    assert _index(conversations, "ix_conversations_user_id") is not None
+    assert _index(conversations, "ix_conversations_game_id") is not None
+    active_index = _index(conversations, "ix_conversations_user_game_updated")
+    assert _compile(active_index.dialect_options["postgresql"]["where"]) == (
+        "deleted_at IS NULL"
+    )
+
+
+def test_messages_schema_cascades_from_conversation_and_limits_roles():
+    """messages conserva solo roles de chat y cae al borrar la conversación."""
+    import_all_models()
+    messages = Base.metadata.tables["messages"]
+
+    assert _single_fk(messages.c.conversation_id).ondelete == "CASCADE"
+    assert isinstance(messages.c.content.type, Text)
+    assert _check_names(messages) >= {
+        "ck_messages_role_valid",
+        "ck_messages_content_not_empty",
+        "ck_messages_content_length_valid",
+    }
+    assert _index(messages, "ix_messages_conversation_created") is not None
 
 
 def _index(table, name: str):

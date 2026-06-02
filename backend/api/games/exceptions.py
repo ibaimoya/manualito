@@ -11,3 +11,7 @@ class BggUnavailableError(GamesError):
 
 class GameNotFoundError(GamesError):
     """El juego seleccionado no existe o no está activo."""
+
+
+class GameUnavailableError(GamesError):
+    """El juego existía, pero ya no acepta nuevas preguntas."""

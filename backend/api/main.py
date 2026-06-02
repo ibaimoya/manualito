@@ -5,6 +5,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from api import dependencies
 from api.auth.router import router as auth_router
+from api.conversations.router import router as conversations_router
 from api.exceptions import register_exception_handlers
 from api.games.router import router as games_router
 from api.health.router import router as health_router
@@ -40,3 +41,4 @@ app.include_router(auth_router, tags=["Authentication"])
 app.include_router(ocr_router, tags=["OCR"])
 app.include_router(games_router, tags=["Games"])
 app.include_router(manuals_router, tags=["Manuals"])
+app.include_router(conversations_router, tags=["Conversations"])

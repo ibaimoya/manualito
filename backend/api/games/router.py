@@ -15,11 +15,12 @@ from api.games.schemas import (
     GameSearchResponse,
 )
 from api.games.service import search_game_catalog
-from api.manuals.retrieval.service import answer_game_question
+from api.manuals.retrieval.service import generate_game_answer
 from api.manuals.schemas import AnswerResponse, GameQuestionRequest
 from api.rate_limit import limiter
 from api.responses import (
     GAME_NOT_FOUND_RESPONSE,
+    GENERATED_ANSWER_TOO_LONG_RESPONSE,
     INTERNAL_ERROR_RESPONSE,
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
 )
@@ -47,6 +48,7 @@ async def search_games_handler(
     "/api/games/{game_id}/questions",
     responses={
         **GAME_NOT_FOUND_RESPONSE,
+        **GENERATED_ANSWER_TOO_LONG_RESPONSE,
         **INTERNAL_ERROR_RESPONSE,
         **INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
     },
@@ -60,10 +62,11 @@ async def answer_game_question_handler(
     _csrf: CsrfProtection,
 ) -> AnswerResponse:
     """Responde usando el pool autorizado de manuales de un juego."""
-    return await answer_game_question(
+    return await generate_game_answer(
         session,
         auth=auth,
         game_id=game_id,
-        payload=payload,
+        question=payload.question,
+        top_k=payload.top_k,
         client=client,
     )

@@ -20,7 +20,7 @@ EMAIL_COLUMN = "email"
 
 
 def upgrade() -> None:
-    """Alinea la columna con el limite interoperable habitual de email."""
+    """Alinea la columna con el límite interoperable habitual de email."""
     op.alter_column(
         USERS_TABLE,
         EMAIL_COLUMN,
@@ -31,7 +31,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Permite volver al limite anterior de trescientos veinte caracteres."""
+    """Permite volver al límite anterior de trescientos veinte caracteres."""
     op.alter_column(
         USERS_TABLE,
         EMAIL_COLUMN,

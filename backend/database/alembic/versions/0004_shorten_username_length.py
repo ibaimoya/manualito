@@ -31,7 +31,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Permite volver al limite anterior de ochenta caracteres."""
+    """Permite volver al límite anterior de ochenta caracteres."""
     op.alter_column(
         USERS_TABLE,
         USERNAME_COLUMN,

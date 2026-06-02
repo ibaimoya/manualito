@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
+from common.schemas import StrictModel
 from rag.annotations import (
     ChunksIndexed,
     ManualId,
@@ -14,10 +15,8 @@ from rag.annotations import (
 )
 
 
-class IngestChunk(BaseModel):
+class IngestChunk(StrictModel):
     """Chunk preparado por API y persistido previamente en Postgres."""
-
-    model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1)
     text: NonEmptyText
@@ -26,10 +25,8 @@ class IngestChunk(BaseModel):
     content_hash: str = Field(min_length=64, max_length=64)
 
 
-class IngestRequest(BaseModel):
+class IngestRequest(StrictModel):
     """Petición de indexado: RAG no trocea ni decide IDs."""
-
-    model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
     game_id: str = Field(min_length=1)
@@ -38,29 +35,23 @@ class IngestRequest(BaseModel):
     chunks: list[IngestChunk] = Field(min_length=1)
 
 
-class RetrieveRequest(BaseModel):
+class RetrieveRequest(StrictModel):
     """Petición de recuperación de candidatos por juego."""
-
-    model_config = ConfigDict(extra="forbid")
 
     game_id: str = Field(min_length=1)
     question: Question
     top_k: TopK = 10
 
 
-class DeleteRequest(BaseModel):
+class DeleteRequest(StrictModel):
     """Petición interna para borrar chunks derivados de un manual."""
-
-    model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
     chunk_ids: list[str] = Field(default_factory=list)
 
 
-class IngestResponse(BaseModel):
+class IngestResponse(StrictModel):
     """Respuesta de ``POST /ingest`` tras sincronizar Chroma."""
-
-    model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
     chunks_indexed: ChunksIndexed
@@ -70,10 +61,8 @@ class IngestResponse(BaseModel):
     chunk_ids: list[str]
 
 
-class RetrievedChunk(BaseModel):
+class RetrievedChunk(StrictModel):
     """Candidato recuperado de Chroma, sin texto canónico."""
-
-    model_config = ConfigDict(extra="forbid")
 
     id: str
     chunk_index: int
@@ -81,18 +70,14 @@ class RetrievedChunk(BaseModel):
     score: float
 
 
-class RetrieveResponse(BaseModel):
+class RetrieveResponse(StrictModel):
     """Respuesta de ``POST /retrieve`` con candidatos rehidratables."""
-
-    model_config = ConfigDict(extra="forbid")
 
     chunks: list[RetrievedChunk]
 
 
-class DeleteResponse(BaseModel):
+class DeleteResponse(StrictModel):
     """Respuesta tras limpiar de Chroma los chunks de un manual."""
-
-    model_config = ConfigDict(extra="forbid")
 
     manual_id: ManualId
     chunks_deleted: int = Field(ge=0)

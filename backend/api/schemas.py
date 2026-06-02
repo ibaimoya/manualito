@@ -1,9 +1,11 @@
 """Schemas Pydantic globales del gateway."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+
+from common.schemas import StrictModel as CommonStrictModel
 
 
-class StrictModel(BaseModel):
+class StrictModel(CommonStrictModel):
     """Base Pydantic estricta para contratos públicos del gateway."""
 
     model_config = ConfigDict(extra="forbid", from_attributes=True)

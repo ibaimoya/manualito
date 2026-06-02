@@ -10,11 +10,17 @@ def test_api_settings_parses_environment_types(monkeypatch):
     monkeypatch.setenv("LLM_URL", "http://llm:8000")
     monkeypatch.setenv("LLM_UNLOAD_BEFORE_OCR", "false")
     monkeypatch.setenv("PASSWORD_HASH_CONCURRENCY", "4")
+    monkeypatch.setenv("CONVERSATION_HISTORY_MESSAGES", "6")
+    monkeypatch.setenv("CONVERSATION_CREATE_RATE_LIMIT", "12/minute")
+    monkeypatch.setenv("CONVERSATION_MESSAGE_RATE_LIMIT", "45/minute")
 
     settings = ApiSettings()
 
     assert settings.llm_unload_before_ocr is False
     assert settings.password_hash_concurrency == 4
+    assert settings.conversation_history_messages == 6
+    assert settings.conversation_create_rate_limit == "12/minute"
+    assert settings.conversation_message_rate_limit == "45/minute"
 
 
 def test_cookie_names_keep_host_prefix_only_when_secure():

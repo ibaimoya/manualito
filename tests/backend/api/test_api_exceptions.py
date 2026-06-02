@@ -22,6 +22,8 @@ from api.exceptions import (
     rate_limit_exceeded_handler,
     validation_exception_handler,
 )
+from api.games.exceptions import GameUnavailableError
+from api.manuals.exceptions import GeneratedAnswerTooLongError
 
 
 def test_api_exceptions_inherit_from_api_error():
@@ -59,6 +61,11 @@ def test_api_exceptions_inherit_from_api_error():
             {"type": "string_too_long", "loc": ("body", "username")},
             "username",
             "username_too_long",
+        ),
+        (
+            {"type": "string_too_long", "loc": ("body", "content")},
+            "content",
+            "message_too_long",
         ),
         (
             {"type": "string_type", "loc": ("body", "password")},
@@ -122,6 +129,8 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
             500,
             "internal_service_error",
         ),
+        (GameUnavailableError(), 409, "game_unavailable"),
+        (GeneratedAnswerTooLongError(), 502, "generated_answer_too_long"),
     ],
 )
 def test_operational_handlers_keep_same_error_envelope(
@@ -136,6 +145,19 @@ def test_operational_handlers_keep_same_error_envelope(
     assert response.status_code == status_code
     assert body["errors"][0]["field"] is None
     assert body["errors"][0]["code"] == code
+
+
+def test_domain_exception_handler_accepts_registered_base_subclasses():
+    """Una subclase futura reutiliza la configuración pública de su ancestro."""
+
+    class ArchivedGameUnavailableError(GameUnavailableError):
+        """Caso futuro que no necesita registro propio."""
+
+    response = domain_exception_handler(None, ArchivedGameUnavailableError())
+
+    body = _json_body(response)
+    assert response.status_code == 409
+    assert body["errors"][0]["code"] == "game_unavailable"
 
 
 @pytest.mark.parametrize(

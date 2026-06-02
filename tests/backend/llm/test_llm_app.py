@@ -87,6 +87,87 @@ def test_build_prompt_truncates_chunks_outside_budget():
     assert "BBBBBBBBBBBB" not in prompt
 
 
+def test_build_prompt_includes_recent_history():
+    """El historial reciente ayuda a resolver referencias sin sustituir el contexto."""
+    prompt, included = prompt_builder.build_prompt(
+        "¿Y si empato?",
+        ["Regla de desempate"],
+        [
+            {"role": "user", "content": "¿Cómo se gana?"},
+            {"role": "assistant", "content": "Se gana con 10 puntos."},
+        ],
+    )
+
+    assert included == 1
+    assert "HISTORIAL" in prompt
+    assert "Usuario: ¿Cómo se gana?" in prompt
+    assert "Asistente: Se gana con 10 puntos." in prompt
+
+
+def test_build_prompt_truncates_long_recent_history_with_marker():
+    """Un mensaje reciente enorme conserva inicio y final, no vacía el historial."""
+    long_answer = "A" * 400 + "FINAL"
+
+    with patch.object(prompt_builder, "MAX_HISTORY_CHARS", 260):
+        prompt, _included = prompt_builder.build_prompt(
+            "¿Qué era lo último?",
+            ["Regla"],
+            [{"role": "assistant", "content": long_answer}],
+        )
+
+    assert "Asistente:" in prompt
+    assert "historial recortado: se conserva el inicio y el final" in prompt
+    assert "FINAL" in prompt
+    assert "(sin historial previo)" not in prompt
+
+
+def test_build_prompt_marks_truncated_history_with_small_budget():
+    """Un presupuesto pequeño usa marcador compacto en vez de cortar en silencio."""
+    long_answer = "INICIO" + ("A" * 200) + "FINAL"
+
+    with patch.object(prompt_builder, "MAX_HISTORY_CHARS", 70):
+        prompt, _included = prompt_builder.build_prompt(
+            "¿Qué era lo último?",
+            ["Regla"],
+            [{"role": "assistant", "content": long_answer}],
+        )
+
+    assert "[historial recortado]" in prompt
+    assert "(sin historial previo)" not in prompt
+
+
+def test_truncate_history_line_uses_tiny_marker_when_only_marker_fits():
+    """El caso mínimo sigue indicando recorte si no caben los bordes."""
+    marker = prompt_builder.TINY_TRUNCATED_HISTORY_MARKER
+
+    truncated = prompt_builder._truncate_history_line("A" * 80, len(marker))
+
+    assert truncated == marker
+
+
+def test_build_condense_question_prompt_forbids_answering():
+    """La reformulación genera una pregunta de búsqueda, no una respuesta."""
+    prompt = prompt_builder.build_condense_question_prompt(
+        "¿Y si empato?",
+        [{"role": "user", "content": "¿Cómo se gana?"}],
+    )
+
+    assert "No respondas la pregunta" in prompt
+    assert "PREGUNTA INDEPENDIENTE" in prompt
+    assert "¿Y si empato?" in prompt
+
+
+def test_build_title_prompt_is_short_and_plain():
+    """El prompt de título pide una etiqueta breve sin formato decorativo."""
+    prompt = prompt_builder.build_title_prompt(
+        [{"role": "user", "content": "¿Cómo se gana la partida?"}]
+    )
+
+    assert "Máximo 6 palabras" in prompt
+    assert "Sin comillas" in prompt
+    assert "TÍTULO" in prompt
+
+
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — dependencias auxiliares del servicio
 #   Clase 3: Cliente HTTP inicializado correctamente.
@@ -277,6 +358,95 @@ def test_generate_returns_trimmed_answer(client, override_http_client):
 
     assert response.status_code == 200
     assert response.json() == {"answer": "Respuesta final"}
+
+
+def test_generate_retries_once_when_answer_exceeds_limit(
+    client,
+    override_http_client,
+    caplog,
+):
+    """Si la respuesta se pasa del contrato, se reintenta una vez en modo breve."""
+    first_response = MagicMock()
+    first_response.raise_for_status.return_value = None
+    first_response.json.return_value = {"response": "x" * 25}
+    second_response = MagicMock()
+    second_response.raise_for_status.return_value = None
+    second_response.json.return_value = {"response": "Respuesta breve"}
+    override_http_client.post.side_effect = [first_response, second_response]
+
+    with (
+        patch.object(llm_service, "MESSAGE_CONTENT_MAX_LENGTH", 20),
+        caplog.at_level("WARNING", logger="llm.service"),
+    ):
+        response = client.post(
+            "/generate",
+            json={"question": "¿Cómo se gana?", "context_chunks": ["Regla 1"]},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": "Respuesta breve"}
+    assert override_http_client.post.call_count == 2
+    retry_prompt = override_http_client.post.call_args_list[1].kwargs["json"]["prompt"]
+    assert "INSTRUCCIÓN ADICIONAL" in retry_prompt
+    assert "Respuesta LLM demasiado larga" in caplog.text
+
+
+def test_generate_returns_502_when_retry_is_still_too_long(
+    client,
+    override_http_client,
+):
+    """Si el reintento sigue fuera del límite, se devuelve error controlado."""
+    long_response = MagicMock()
+    long_response.raise_for_status.return_value = None
+    long_response.json.return_value = {"response": "x" * 25}
+    override_http_client.post.side_effect = [long_response, long_response]
+
+    with patch.object(llm_service, "MESSAGE_CONTENT_MAX_LENGTH", 20):
+        response = client.post(
+            "/generate",
+            json={"question": "¿Cómo se gana?", "context_chunks": ["Regla 1"]},
+        )
+
+    assert response.status_code == 502
+    assert override_http_client.post.call_count == 2
+
+
+def test_condense_question_returns_standalone_question(client, override_http_client):
+    """El endpoint interno devuelve la pregunta limpia para el retriever."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"response": "  Desempate al llegar a 10 puntos  "}
+    override_http_client.post.return_value = mock_response
+
+    response = client.post(
+        "/condense-question",
+        json={
+            "question": "¿Y si empato?",
+            "chat_history": [
+                {"role": "user", "content": "¿Cómo se gana?"},
+                {"role": "assistant", "content": "Se gana con 10 puntos."},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"question": "Desempate al llegar a 10 puntos"}
+
+
+def test_conversation_title_returns_clean_short_title(client, override_http_client):
+    """El endpoint interno limpia comillas y puntos del título."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"response": ' "Cómo ganar la partida." '}
+    override_http_client.post.return_value = mock_response
+
+    response = client.post(
+        "/conversation-title",
+        json={"messages": [{"role": "user", "content": "¿Cómo se gana?"}]},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"title": "Cómo ganar la partida"}
 
 
 def test_generate_logs_warning_when_prompt_drops_chunks(

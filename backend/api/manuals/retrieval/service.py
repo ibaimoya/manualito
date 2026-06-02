@@ -1,5 +1,6 @@
 """Orquestación de recuperación RAG y respuesta LLM por juego."""
 
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 import httpx
@@ -9,54 +10,68 @@ from api import client as internal_client
 from api import config
 from api.auth.service import AuthenticatedSession
 from api.exceptions import InternalServiceError
+from api.manuals.exceptions import GeneratedAnswerTooLongError
 from api.manuals.repository import load_authorized_chunks
 from api.manuals.retrieval.deduplication import deduplicate_chunks
-from api.manuals.schemas import AnswerResponse, GameQuestionRequest
+from api.manuals.schemas import AnswerResponse
+from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 
 
-async def answer_game_question(
+async def generate_game_answer(
     session: AsyncSession,
     *,
     auth: AuthenticatedSession,
     game_id: UUID,
-    payload: GameQuestionRequest,
+    question: str,
+    top_k: int,
     client: httpx.AsyncClient,
+    chat_history: Sequence[Mapping[str, str]] = (),
+    retrieval_question: str | None = None,
 ) -> AnswerResponse:
-    """Responde una pregunta usando chunks autorizados de un juego."""
+    """Responde usando RAG sin que RAG conozca el historial ni Postgres."""
+    search_question = retrieval_question or question
     retrieval_response = await internal_client.post_json(
         client=client,
         service_name="RAG",
         url=f"{config.RAG_URL}/retrieve",
         payload={
             "game_id": str(game_id),
-            "question": payload.question,
-            "top_k": payload.top_k * config.RAG_RETRIEVAL_MULTIPLIER,
+            "question": search_question,
+            "top_k": top_k * config.RAG_RETRIEVAL_MULTIPLIER,
         },
         unavailable_detail="Servicio RAG no disponible.",
         internal_detail="Error interno al recuperar el contexto del juego.",
     )
     chunk_ids = _parse_retrieved_chunk_ids(retrieval_response)
-    authorized_chunks = await load_authorized_chunks(
-        session,
-        game_id=game_id,
-        current_user_id=auth.user.id,
-        chunk_ids=chunk_ids,
-    )
-    context_chunks = [
-        chunk.text for chunk in deduplicate_chunks(authorized_chunks)[: payload.top_k]
-    ]
+    try:
+        authorized_chunks = await load_authorized_chunks(
+            session,
+            game_id=game_id,
+            current_user_id=auth.user.id,
+            chunk_ids=chunk_ids,
+        )
+        context_chunks = [
+            chunk.text for chunk in deduplicate_chunks(authorized_chunks)[:top_k]
+        ]
+    finally:
+        await session.rollback()
+
     llm_response = await internal_client.post_json(
         client=client,
         service_name="LLM",
         url=f"{config.LLM_URL}/generate",
         payload={
-            "question": payload.question,
+            "question": question,
             "context_chunks": context_chunks,
+            "chat_history": list(chat_history),
         },
         unavailable_detail="Servicio LLM no disponible.",
         internal_detail="Error interno al generar la respuesta.",
     )
-    return AnswerResponse(answer=str(llm_response["answer"]))
+    answer = str(llm_response["answer"])
+    if len(answer) > MESSAGE_CONTENT_MAX_LENGTH:
+        raise GeneratedAnswerTooLongError
+    return AnswerResponse(answer=answer)
 
 
 def _parse_retrieved_chunk_ids(response: dict) -> list[UUID]:

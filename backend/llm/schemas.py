@@ -2,30 +2,60 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import Field
 
-from llm.annotations import Answer, ContextChunks, Question
+from common.schemas import StrictModel
+from llm.annotations import Answer, ContextChunks, ConversationTitle, Question
 
 
-class GenerateRequest(BaseModel):
+class ChatHistoryMessage(StrictModel):
+    """Mensaje de historial recibido desde API."""
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1)
+
+
+class GenerateRequest(StrictModel):
     """Petición de generación para Ollama."""
-
-    model_config = ConfigDict(extra="forbid")
 
     question: Question
     context_chunks: ContextChunks
+    chat_history: list[ChatHistoryMessage] = Field(default_factory=list, max_length=20)
     manual_id: str | None = None
 
 
-class GenerateResponse(BaseModel):
+class GenerateResponse(StrictModel):
     """Respuesta de ``POST /generate`` tras invocar a Ollama."""
-
-    model_config = ConfigDict(extra="forbid")
 
     answer: Answer
 
 
-class UnloadIfIdleResponse(BaseModel):
+class CondenseQuestionRequest(StrictModel):
+    """Pregunta actual e historial para recuperar contexto con más precisión."""
+
+    question: Question
+    chat_history: list[ChatHistoryMessage] = Field(min_length=1, max_length=20)
+
+
+class CondenseQuestionResponse(StrictModel):
+    """Pregunta independiente que RAG puede usar para buscar chunks."""
+
+    question: Question
+
+
+class ConversationTitleRequest(StrictModel):
+    """Mensajes de una conversación para generar un título corto."""
+
+    messages: list[ChatHistoryMessage] = Field(min_length=1, max_length=20)
+
+
+class ConversationTitleResponse(StrictModel):
+    """Título corto sugerido por el LLM para una conversación."""
+
+    title: ConversationTitle
+
+
+class UnloadIfIdleResponse(StrictModel):
     """
     Respuesta del endpoint ``/unload-if-idle``.
 
@@ -34,8 +64,6 @@ class UnloadIfIdleResponse(BaseModel):
     ``response_model_exclude_none=True`` para omitir los nulos en la
     serialización JSON y preservar el shape exacto que esperan los tests.
     """
-
-    model_config = ConfigDict(extra="forbid")
 
     status: Literal["busy", "idle", "error"]
     unloaded: bool

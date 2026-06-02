@@ -5,9 +5,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 
-class HealthResponse(BaseModel):
-    """Respuesta canónica del endpoint ``/health`` en todos los servicios."""
+class StrictModel(BaseModel):
+    """Base Pydantic estricta para contratos internos y públicos."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class HealthResponse(StrictModel):
+    """Respuesta canónica del endpoint ``/health`` en todos los servicios."""
 
     status: Literal["ok"] = "ok"

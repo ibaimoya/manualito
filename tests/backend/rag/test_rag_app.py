@@ -205,7 +205,7 @@ def test_retrieve_passes_custom_top_k(client):
 
 
 def test_retrieve_request_allows_internal_overfetch_limit():
-    """RAG acepta el limite interno necesario para deduplicar en API."""
+    """RAG acepta el límite interno necesario para deduplicar en API."""
     request = RetrieveRequest(
         game_id=_GAME_ID,
         question="¿Cómo se gana?",

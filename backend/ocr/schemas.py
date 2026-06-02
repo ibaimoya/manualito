@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from common.schemas import StrictModel
 
 
-class OCRLine(BaseModel):
+class OCRLine(StrictModel):
     text: str
     confidence: float
 
 
-class ExtractResponse(BaseModel):
+class ExtractResponse(StrictModel):
     lines: list[OCRLine]

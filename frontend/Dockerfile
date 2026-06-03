@@ -9,7 +9,7 @@
 # Hardening (en runtime):
 #   - usuario no-root (1001:1001)
 #   - read-only filesystem (compose monta tmpfs en /var/cache/nginx, /var/run, /var/log/nginx)
-#   - no-new-privileges + cap_drop ALL (vía docker-compose)
+#   - no-new-privileges + cap_drop ALL (vía Docker Compose)
 
 ARG NODE_VERSION=24
 ARG NGINX_VERSION=1.27

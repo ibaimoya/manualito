@@ -79,7 +79,7 @@ no hay que tocar nada al pasar a producción detrás de Nginx.
 
 ## Despliegue (Docker Compose)
 
-El servicio `frontend` está añadido a `../docker-compose.yml` con el mismo
+El servicio `frontend` está añadido a `../compose.yaml` con el mismo
 hardening que el backend (read_only, cap_drop ALL, no-new-privileges,
 pids_limit) más `tmpfs` extras para los directorios donde Nginx escribe
 (`/var/cache/nginx`, `/var/run`, `/var/log/nginx`) — todos como `uid=1001`

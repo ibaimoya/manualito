@@ -109,11 +109,17 @@ Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
 override dedicado:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.ocr-paddle-cpu.yml up --build ocr
+docker compose -f compose.yaml -f compose.ocr-paddle-cpu.yaml up --build ocr
+```
+
+Para usar PaddleOCR GPU, usa el override equivalente:
+
+```bash
+docker compose -f compose.yaml -f compose.ocr-gpu.yaml up --build ocr
 ```
 
 Los modelos de PaddleOCR CPU se cachean en el volumen Docker
-`ocr-paddlex-cpu-cache`. La variante GPU usa `docker-compose.ocr-gpu.yml` y
+`ocr-paddlex-cpu-cache`. La variante GPU usa `compose.ocr-gpu.yaml` y
 cachea sus modelos en `ocr-paddlex-gpu-cache`.
 
 ---

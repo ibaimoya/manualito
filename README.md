@@ -110,11 +110,15 @@ el build, así que para subir una versión no hay que editar Dockerfiles ni
 
 | Variable | Controla |
 | --- | --- |
-| `PYTHON_VERSION` | Imagen base de Python para los servicios backend. |
+| `PYTHON_VERSION` | Versión de Python usada por los servicios backend. |
+| `PYTHON_VARIANT` | Variante de la imagen de Python. Vacía equivale a usar la imagen sin sufijo. |
 | `UV_VERSION` | Versión de `uv` usada solo durante los stages de dependencias. |
-| `NODE_VERSION` | Imagen de Node usada para compilar el frontend. |
-| `NGINX_VERSION` | Imagen de Nginx que sirve el frontend en producción. |
-| `POSTGRES_VERSION` | Imagen de Postgres. |
+| `NODE_VERSION` | Versión de Node usada para compilar el frontend. |
+| `NODE_VARIANT` | Variante de la imagen de Node. Vacía equivale a usar la imagen sin sufijo. |
+| `NGINX_VERSION` | Versión de Nginx que sirve el frontend en producción. |
+| `NGINX_VARIANT` | Variante de la imagen de Nginx. Vacía equivale a usar la imagen sin sufijo. |
+| `POSTGRES_VERSION` | Versión de Postgres. |
+| `POSTGRES_VARIANT` | Variante de la imagen de Postgres. Vacía equivale a usar la imagen sin sufijo. |
 | `CHROMA_VERSION` | Imagen de ChromaDB. |
 | `OLLAMA_VERSION` | Imagen de Ollama. |
 | `MAILPIT_VERSION` | Imagen de Mailpit. |

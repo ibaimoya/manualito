@@ -1,10 +1,12 @@
 # syntax=docker/dockerfile:1
 
 ARG NODE_VERSION
+ARG NODE_VARIANT
 ARG NGINX_VERSION
+ARG NGINX_VARIANT
 
 # Stage: build.
-FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}-slim AS builder
+FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}${NODE_VARIANT:+-${NODE_VARIANT}} AS builder
 
 WORKDIR /app
 
@@ -22,7 +24,7 @@ COPY --link . .
 RUN pnpm build
 
 # Stage: runtime.
-FROM nginx:${NGINX_VERSION:?NGINX_VERSION_no_definida}-alpine AS runtime
+FROM nginx:${NGINX_VERSION:?NGINX_VERSION_no_definida}${NGINX_VARIANT:+-${NGINX_VARIANT}} AS runtime
 
 RUN addgroup -g 1001 -S appuser \
     && adduser -u 1001 -S appuser -G appuser \

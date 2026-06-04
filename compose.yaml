@@ -54,6 +54,7 @@ services:
       dockerfile: backend/python-base/Dockerfile
       args:
         PYTHON_VERSION: ${PYTHON_VERSION:?PYTHON_VERSION no definida}
+        PYTHON_VARIANT: ${PYTHON_VARIANT:-}
         VERSION: ${PYTHON_IMAGE_VERSION:?PYTHON_IMAGE_VERSION no definida}
     scale: 0
     network_mode: none
@@ -107,7 +108,7 @@ services:
   database:
     <<: *third-party-hardening
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-database
-    image: postgres:${POSTGRES_VERSION:?POSTGRES_VERSION no definida}
+    image: postgres:${POSTGRES_VERSION:?POSTGRES_VERSION no definida}${POSTGRES_VARIANT:+-${POSTGRES_VARIANT}}
     env_file:
       - ./config/database.env
     secrets:
@@ -253,7 +254,9 @@ services:
       context: ./frontend
       args:
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
+        NODE_VARIANT: ${NODE_VARIANT:-}
         NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}
+        NGINX_VARIANT: ${NGINX_VARIANT:-}
     ports:
       - "5173:8080"
     depends_on:

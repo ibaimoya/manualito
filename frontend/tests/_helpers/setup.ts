@@ -7,6 +7,74 @@ import { toHaveNoViolations } from 'jest-axe';
 // jest-axe → expect(html).toHaveNoViolations()
 expect.extend(toHaveNoViolations);
 
+const testWindow = globalThis.window;
+
+class TestStorage implements Storage {
+  items = new Map<string, string>();
+
+  get length() {
+    return this.items.size;
+  }
+
+  clear() {
+    this.items.clear();
+  }
+
+  getItem(key: string) {
+    return this.items.get(key) ?? null;
+  }
+
+  key(index: number) {
+    return Array.from(this.items.keys())[index] ?? null;
+  }
+
+  removeItem(key: string) {
+    this.items.delete(key);
+  }
+
+  setItem(key: string, value: string) {
+    this.items.set(key, value);
+  }
+}
+
+const localStorageMock = new TestStorage();
+const sessionStorageMock = new TestStorage();
+
+Object.defineProperty(globalThis, 'Storage', {
+  configurable: true,
+  writable: true,
+  value: TestStorage,
+});
+
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  writable: true,
+  value: localStorageMock,
+});
+Object.defineProperty(globalThis, 'sessionStorage', {
+  configurable: true,
+  writable: true,
+  value: sessionStorageMock,
+});
+
+if (testWindow !== undefined) {
+  Object.defineProperty(testWindow, 'Storage', {
+    configurable: true,
+    writable: true,
+    value: TestStorage,
+  });
+  Object.defineProperty(testWindow, 'localStorage', {
+    configurable: true,
+    writable: true,
+    value: localStorageMock,
+  });
+  Object.defineProperty(testWindow, 'sessionStorage', {
+    configurable: true,
+    writable: true,
+    value: sessionStorageMock,
+  });
+}
+
 // Limpia el DOM entre tests (jsdom es persistente por defecto).
 afterEach(() => {
   cleanup();
@@ -27,7 +95,6 @@ if (globalThis.crypto === undefined) {
 }
 
 // matchMedia → jsdom no la trae.
-const testWindow = globalThis.window;
 if (testWindow !== undefined && testWindow.matchMedia === undefined) {
   Object.defineProperty(testWindow, 'matchMedia', {
     writable: true,

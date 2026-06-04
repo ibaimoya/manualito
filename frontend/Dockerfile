@@ -8,7 +8,7 @@ FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}-slim AS builder
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
 RUN --mount=type=cache,target=/root/.npm \
     PNPM_VERSION="$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "")')" \
@@ -17,7 +17,7 @@ RUN --mount=type=cache,target=/root/.npm \
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --prefer-offline --store-dir=/pnpm/store
 
-COPY . .
+COPY --link . .
 
 RUN pnpm build
 
@@ -31,9 +31,9 @@ RUN addgroup -g 1001 -S appuser \
     && chown appuser:appuser /var/run/nginx.pid \
     && rm -f /etc/nginx/conf.d/default.conf
 
-COPY --from=builder --chown=appuser:appuser /app/dist /usr/share/nginx/html
+COPY --link --from=builder --chown=1001:1001 /app/dist /usr/share/nginx/html
 
-COPY --chown=appuser:appuser nginx.conf /etc/nginx/conf.d/default.conf
+COPY --link --chown=1001:1001 nginx.conf /etc/nginx/conf.d/default.conf
 
 USER appuser
 

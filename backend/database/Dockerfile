@@ -10,8 +10,8 @@ FROM ghcr.io/astral-sh/uv:${UV_VERSION:?UV_VERSION_no_definida} AS uv
 FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS deps
 
 # Instala uv (https://docs.astral.sh/uv/) solo en el stage de dependencias.
-COPY --from=uv /uv /uvx /usr/local/bin/
-COPY --chown=root:root --chmod=0644 pyproject.toml uv.lock /app/
+COPY --link --from=uv /uv /uvx /usr/local/bin/
+COPY --link --chown=0:0 --chmod=0644 pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build --only-group database
 
@@ -21,9 +21,9 @@ FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS runtime
 LABEL org.opencontainers.image.title="manualito-database" \
       org.opencontainers.image.description="Migraciones y modelos persistentes de Manualito."
 
-COPY --from=deps --chown=root:root /app/.venv /app/.venv
-COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
-COPY --chown=root:root --chmod=0755 backend/database/ /app/database/
+COPY --link --from=deps --chown=0:0 /app/.venv /app/.venv
+COPY --link --chown=0:0 --chmod=0755 backend/common/ /app/common/
+COPY --link --chown=0:0 --chmod=0755 backend/database/ /app/database/
 
 RUN find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
     && find /app -path /app/.venv -prune -o -type f -exec chmod 0644 {} + \

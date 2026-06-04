@@ -101,9 +101,35 @@ docker compose down
 
 La API queda expuesta en `http://localhost:8000`.
 
-Las variables de runtime del backend se configuran en `config/backend.env`.
-Docker Compose las inyecta en los servicios mediante `env_file`, así que no
-hace falta pasarlas por consola.
+### Configuración de versiones
+
+Docker Compose lee automáticamente el fichero `.env` de la raíz del proyecto.
+Ese fichero centraliza las versiones de imágenes y herramientas usadas durante
+el build, así que para subir una versión no hay que editar Dockerfiles ni
+`compose.yaml`: se cambia una sola variable en `.env`.
+
+| Variable | Controla |
+| --- | --- |
+| `PYTHON_VERSION` | Versión de Python usada por los servicios backend. |
+| `PYTHON_VARIANT` | Variante de la imagen de Python. Vacía equivale a usar la imagen sin sufijo. |
+| `UV_VERSION` | Versión de `uv` usada solo durante los stages de dependencias. |
+| `NODE_VERSION` | Versión de Node usada para compilar el frontend. |
+| `NODE_VARIANT` | Variante de la imagen de Node. Vacía equivale a usar la imagen sin sufijo. |
+| `NGINX_VERSION` | Versión de Nginx que sirve el frontend en producción. |
+| `NGINX_VARIANT` | Variante de la imagen de Nginx. Vacía equivale a usar la imagen sin sufijo. |
+| `POSTGRES_VERSION` | Versión de Postgres. |
+| `POSTGRES_VARIANT` | Variante de la imagen de Postgres. Vacía equivale a usar la imagen sin sufijo. |
+| `CHROMA_VERSION` | Imagen de ChromaDB. |
+| `OLLAMA_VERSION` | Imagen de Ollama. |
+| `MAILPIT_VERSION` | Imagen de Mailpit. |
+
+Si falta alguna variable obligatoria, Compose corta el arranque con un mensaje
+explícito, por ejemplo `UV_VERSION no definida`. La versión de `pnpm` se lee
+desde `frontend/package.json` (`packageManager`) para no duplicarla.
+
+El `.env` del repositorio no contiene secretos; las credenciales se mantienen
+en `secrets/` y la configuración de runtime del backend va en
+`config/backend.env`.
 
 Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
 override dedicado:

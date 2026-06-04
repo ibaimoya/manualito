@@ -23,6 +23,7 @@ htmlcov/
 
 # Datos del proyecto que no hacen falta para construir las imágenes backend.
 dataset/
+docs/
 frontend/
 notimportant/
 secrets/

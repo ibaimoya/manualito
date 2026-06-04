@@ -1,6 +1,6 @@
 services:
   ocr:
-    image: ${PROYECT_NAME:-manualito}-ocr:paddle-cpu
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:paddle-cpu
     build:
       args:
         OCR_RUNTIME_STAGE: paddle_cpu

@@ -2,35 +2,28 @@
 
 ARG OCR_RUNTIME_STAGE=tesseract
 ARG PYTHON_BASE_TAG
+ARG UV_VERSION
 
-FROM python-base:${PYTHON_BASE_TAG} AS ocr-base
+# Stage: uv.
+FROM ghcr.io/astral-sh/uv:${UV_VERSION:?UV_VERSION_no_definida} AS uv
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1 \
-        libglib2.0-0 \
-        libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+# Stage: base de dependencias OCR.
+FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS ocr-deps-base
 
-COPY --chown=root:root --chmod=0644 pyproject.toml uv.lock /app/
+# Instala uv (https://docs.astral.sh/uv/) solo en el stage de dependencias.
+COPY --link --from=uv /uv /uvx /usr/local/bin/
+COPY --link --chown=0:0 --chmod=0644 pyproject.toml uv.lock /app/
 
-# Tesseract
-FROM ocr-base AS tesseract
-
-ARG DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        tesseract-ocr \
-        tesseract-ocr-spa \
-    && rm -rf /var/lib/apt/lists/*
+# Stage: dependencias Tesseract.
+FROM ocr-deps-base AS tesseract-deps
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build \
     --only-group ocr \
     --only-group ocr-tesseract
 
-# Paddle CPU
-FROM ocr-base AS paddle_cpu
+# Stage: dependencias Paddle CPU.
+FROM ocr-deps-base AS paddle-cpu-deps
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build \
@@ -38,8 +31,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --only-group ocr-paddle \
     --only-group ocr-paddle-cpu
 
-# Paddle GPU
-FROM ocr-base AS paddle_gpu
+# Stage: dependencias Paddle GPU.
+FROM ocr-deps-base AS paddle-gpu-deps
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups --no-build \
@@ -47,33 +40,72 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --only-group ocr-paddle \
     --only-group ocr-paddle-gpu
 
-# Etapa común de ejecución
-FROM ${OCR_RUNTIME_STAGE} AS runtime
+# Stage: runtime Tesseract.
+FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS tesseract
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libglib2.0-0 \
+        libgomp1 \
+        tesseract-ocr \
+        tesseract-ocr-spa \
+    && rm -f /usr/bin/apt /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/apt-config /usr/bin/apt-key /usr/bin/apt-mark \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+COPY --link --from=tesseract-deps --chown=0:0 /app/.venv /app/.venv
+
+# Stage: runtime Paddle CPU.
+FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS paddle_cpu
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -f /usr/bin/apt /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/apt-config /usr/bin/apt-key /usr/bin/apt-mark \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+COPY --link --from=paddle-cpu-deps --chown=0:0 /app/.venv /app/.venv
+
+# Stage: runtime Paddle GPU.
+FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS paddle_gpu
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+    && rm -f /usr/bin/apt /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/apt-config /usr/bin/apt-key /usr/bin/apt-mark \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+COPY --link --from=paddle-gpu-deps --chown=0:0 /app/.venv /app/.venv
+
+# Stage: runtime final.
+FROM ${OCR_RUNTIME_STAGE:?OCR_RUNTIME_STAGE_no_definida} AS runtime
 
 USER root
 
 LABEL org.opencontainers.image.title="manualito-ocr" \
       org.opencontainers.image.description="Servicio OCR de Manualito con soporte para Tesseract y PaddleOCR."
 
-COPY --chown=root:root --chmod=0755 backend/common/ /app/common/
-COPY --chown=root:root --chmod=0755 backend/ocr/ /app/ocr/
+COPY --link --chown=0:0 --chmod=0755 backend/common/ /app/common/
+COPY --link --chown=0:0 --chmod=0755 backend/ocr/ /app/ocr/
 
 RUN mkdir -p /home/appuser/.paddlex \
     && chown -R appuser:appgroup /home/appuser/.paddlex \
     && find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
     && find /app -path /app/.venv -prune -o -type f -exec chmod 0644 {} + \
-    && rm -f /usr/local/bin/uv /usr/local/bin/uvx \
-        /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.* \
+    && rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.* \
         /app/.venv/bin/pip /app/.venv/bin/pip3 /app/.venv/bin/pip3.* \
-        /usr/bin/apt /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/apt-config /usr/bin/apt-key /usr/bin/apt-mark \
-    && rm -rf /root/.cache /var/cache/apt/* /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && rm -rf /root/.cache /tmp/* /var/tmp/* \
     && usermod --shell /usr/sbin/nologin root
 
 EXPOSE 8001
 
-# Tener un start-period amplio para dar margen a cargar los modelos.
 HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=12 \
-    CMD python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health', timeout=3).status == 200 else 1)"
+    CMD python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3).status == 200 else 1)"
 
 USER appuser
 

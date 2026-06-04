@@ -1,7 +1,20 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect } from 'react';
 import { ThemeProvider, useTheme } from '@/app/theme';
+
+type ThemeApi = ReturnType<typeof useTheme>;
+
+function ThemeCapture({
+  onCapture,
+}: Readonly<{ onCapture: (api: ThemeApi) => void }>) {
+  const api = useTheme();
+  useEffect(() => {
+    onCapture(api);
+  }, [api, onCapture]);
+  return null;
+}
 
 function ThemeProbe() {
   const t = useTheme();
@@ -110,14 +123,10 @@ describe('ThemeProvider', () => {
   });
 
   it('act + setMode rerendera correctamente', () => {
-    let api: { setMode: (m: 'dark' | 'light' | 'auto') => void } | undefined;
-    function Capture() {
-      api = useTheme();
-      return null;
-    }
+    let api: ThemeApi | undefined;
     render(
       <ThemeProvider>
-        <Capture />
+        <ThemeCapture onCapture={(value) => { api = value; }} />
       </ThemeProvider>,
     );
     act(() => api!.setMode('light'));
@@ -131,14 +140,10 @@ describe('ThemeProvider', () => {
   describe('robustez bajo spam', () => {
     it('20 setMode en cascada → UNA sola escritura a localStorage (debounce)', async () => {
       const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-      let api: { setMode: (m: 'dark' | 'light' | 'auto') => void } | undefined;
-      function Capture() {
-        api = useTheme();
-        return null;
-      }
+      let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <Capture />
+          <ThemeCapture onCapture={(value) => { api = value; }} />
         </ThemeProvider>,
       );
 
@@ -168,14 +173,10 @@ describe('ThemeProvider', () => {
       // localStorage no recibe writes nuevos si llamas setMode con el
       // valor actual.
       const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-      let api: { setMode: (m: 'dark' | 'light' | 'auto') => void } | undefined;
-      function Capture() {
-        api = useTheme();
-        return null;
-      }
+      let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <Capture />
+          <ThemeCapture onCapture={(value) => { api = value; }} />
         </ThemeProvider>,
       );
 
@@ -200,14 +201,10 @@ describe('ThemeProvider', () => {
       const realMM = window.matchMedia.bind(window);
       const mmSpy = vi.spyOn(window, 'matchMedia').mockImplementation(realMM);
 
-      let api: { setDensity: (d: 'compact' | 'comfy') => void } | undefined;
-      function Capture() {
-        api = useTheme();
-        return null;
-      }
+      let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <Capture />
+          <ThemeCapture onCapture={(value) => { api = value; }} />
         </ThemeProvider>,
       );
 

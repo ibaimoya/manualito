@@ -70,7 +70,7 @@ describe('api · createManual', () => {
     server.use(
       http.post('/api/manuals', ({ request }) => {
         // Verificamos solo el content-type — parsear el multipart en undici
-        // con Files puede dar problemas en jsdom + Node 24. La integración real
+        // con Files puede dar problemas en jsdom + Node 26. La integración real
         // se cubre por contract con OpenAPI y por tests E2E futuros.
         contentType = request.headers.get('content-type');
         return HttpResponse.json({

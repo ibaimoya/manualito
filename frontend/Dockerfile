@@ -3,17 +3,17 @@
 # Manualito · Frontend (React + Vite + PWA)
 #
 # Multi-stage:
-#   - builder  : node:24-slim + pnpm 11 → bundle estático en /app/dist
-#   - runtime  : nginx:1.27-alpine sirviendo el dist + proxy_pass /api → api:8000
+#   - builder  : node:26.3.0-slim + pnpm 11 → bundle estático en /app/dist
+#   - runtime  : nginx:1.29-alpine sirviendo el dist + proxy_pass /api → api:8000
 #
 # Hardening (en runtime):
 #   - usuario no-root (1001:1001)
 #   - read-only filesystem (compose monta tmpfs en /var/cache/nginx, /var/run, /var/log/nginx)
 #   - no-new-privileges + cap_drop ALL (vía Docker Compose)
 
-ARG NODE_VERSION=24
-ARG NGINX_VERSION=1.27
-ARG PNPM_VERSION=11.3.0
+ARG NODE_VERSION=26.3.0
+ARG NGINX_VERSION=1.29
+ARG PNPM_VERSION=11.5.1
 
 # ============================================================
 # Stage 1: builder
@@ -23,7 +23,7 @@ ARG PNPM_VERSION
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+RUN npm install --global pnpm@${PNPM_VERSION}
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --prefer-offline

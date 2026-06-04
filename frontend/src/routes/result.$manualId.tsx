@@ -20,7 +20,7 @@ import {
   Send,
   Sparkles,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { OcrTextSheet } from '@/features/ocr/OcrTextSheet';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
 
@@ -38,7 +38,7 @@ const SUGGESTED_QUESTIONS = [
 function ResultScreen() {
   const { manualId } = Route.useParams();
   const navigate = useNavigate();
-  const [result, setResult] = useState<ManualResult | null>(null);
+  const result = useMemo<ManualResult | null>(() => storage.getResult(manualId), [manualId]);
   const [question, setQuestion] = useState('');
   // Estado del sheet "Ver texto original".  Se abre cuando el usuario
   // pulsa el icono ScanText del header.
@@ -49,10 +49,9 @@ function ResultScreen() {
   // devolvió en POST /api/manuals (Fase L) y NameManualForm las
   // guardó con storage.setOcrLines: aquí solo leemos.  Cero peticiones
   // OCR extra → el viewer es gratis a nivel de red.
-  const [ocrLines] = useState<OcrLine[]>(() => storage.getOcrLines(manualId));
+  const ocrLines = useMemo<OcrLine[]>(() => storage.getOcrLines(manualId), [manualId]);
 
   useEffect(() => {
-    setResult(storage.getResult(manualId));
     storage.touchManual(manualId);
   }, [manualId]);
 

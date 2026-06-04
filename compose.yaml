@@ -165,7 +165,7 @@ services:
   chroma:
     <<: *third-party-hardening
     container_name: ${PROYECT_NAME:-manualito}-chroma
-    image: chromadb/chroma:${CHROMA_VERSION:-1.5.7}
+    image: chromadb/chroma:${CHROMA_VERSION:-1.5.9}
     pids_limit: 256
     volumes:
       - chromadb-data:/chroma/chroma
@@ -205,7 +205,7 @@ services:
   ollama:
     <<: *third-party-hardening
     container_name: ${PROYECT_NAME:-manualito}-ollama
-    image: ollama/ollama:${OLLAMA_VERSION:-0.23.1}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.30.4}
     pids_limit: 512
     volumes:
       - ollama-data:/root/.ollama
@@ -231,7 +231,7 @@ services:
     container_name: ${PROYECT_NAME:-manualito}-ollama-init
     env_file:
       - ./config/backend.env
-    image: ollama/ollama:${OLLAMA_VERSION:-0.23.1}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.30.4}
     pids_limit: 128
     depends_on:
       ollama:
@@ -248,9 +248,9 @@ services:
     build:
       context: ./frontend
       args:
-        NODE_VERSION: "24"
-        NGINX_VERSION: "1.27"
-        PNPM_VERSION: "11.3.0"
+        NODE_VERSION: "26.3.0"
+        NGINX_VERSION: "1.29"
+        PNPM_VERSION: "11.5.1"
     ports:
       - "5173:8080"
     depends_on:

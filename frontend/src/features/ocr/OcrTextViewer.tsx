@@ -217,36 +217,52 @@ function PlainView({ text }: Readonly<{ text: string }>) {
 function LinesView({ lines }: Readonly<{ lines: OcrLine[] }>) {
   // Pre-cómputo de índices visibles saltando líneas en blanco para que
   // el numerador #001..#NNN refleje solo líneas con contenido.
-  let visibleIdx = 0;
-  const seenKeys = new Map<string, number>();
+  const rows = useMemo(() => {
+    const seenKeys = new Map<string, number>();
+
+    return lines.map((line, index) => {
+      const baseKey = stableLineKey(line);
+      const occurrence = seenKeys.get(baseKey) ?? 0;
+      seenKeys.set(baseKey, occurrence + 1);
+      const key = `${baseKey}-${occurrence}`;
+
+      if (!line.text.trim()) {
+        return { kind: 'spacer' as const, key };
+      }
+
+      const number = lines.slice(0, index + 1).filter((item) => item.text.trim()).length;
+      return {
+        kind: 'line' as const,
+        key,
+        number,
+        text: line.text,
+        pct: Math.round(line.confidence * 100),
+        tone: confidenceTone(line.confidence),
+        stagger: Math.min(number, 16),
+      };
+    });
+  }, [lines]);
   return (
     <div className="px-2 py-3" data-testid="ocr-lines-view">
-      {lines.map((line) => {
-        const baseKey = stableLineKey(line);
-        const occurrence = seenKeys.get(baseKey) ?? 0;
-        seenKeys.set(baseKey, occurrence + 1);
-        const key = `${baseKey}-${occurrence}`;
-        if (!line.text.trim()) {
+      {rows.map((row) => {
+        if (row.kind === 'spacer') {
           return (
             <div
-              key={key}
+              key={row.key}
               aria-hidden="true"
               className="h-2"
             />
           );
         }
-        visibleIdx += 1;
-        const pct = Math.round(line.confidence * 100);
-        const tone = confidenceTone(line.confidence);
-        const stagger = Math.min(visibleIdx, 16);
+
         return (
           <OcrLineRow
-            key={key}
-            number={visibleIdx}
-            text={line.text}
-            pct={pct}
-            tone={tone}
-            stagger={stagger}
+            key={row.key}
+            number={row.number}
+            text={row.text}
+            pct={row.pct}
+            tone={row.tone}
+            stagger={row.stagger}
           />
         );
       })}

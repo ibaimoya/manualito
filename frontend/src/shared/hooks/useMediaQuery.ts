@@ -98,7 +98,7 @@ export function useMediaQueryLegacy(query: string): boolean {
     const mql = runtimeWindow.matchMedia(query);
     const onChange = () => setMatches(mql.matches);
     mql.addEventListener('change', onChange);
-    setMatches(mql.matches); // resync por si cambió entre snapshot y mount
+    globalThis.queueMicrotask(onChange);
     return () => mql.removeEventListener('change', onChange);
   }, [query]);
   return matches;

@@ -31,7 +31,9 @@ export function useDebouncedCallback<TArgs extends unknown[]>(
   // Mantenemos la última versión del callback para evitar que el closure
   // dentro del timer use una versión obsoleta de `fn`.
   const latestRef = useRef(fn);
-  latestRef.current = fn;
+  useEffect(() => {
+    latestRef.current = fn;
+  }, [fn]);
 
   const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
 
@@ -74,7 +76,9 @@ export function useDebouncedCallbackWithFlush<TArgs extends unknown[]>(
   flush: () => void;
 } {
   const latestRef = useRef(fn);
-  latestRef.current = fn;
+  useEffect(() => {
+    latestRef.current = fn;
+  }, [fn]);
 
   const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const pendingArgsRef = useRef<TArgs | null>(null);

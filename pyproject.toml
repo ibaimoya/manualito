@@ -10,19 +10,19 @@ dependencies = [
 
 [dependency-groups]
 api = [
-    "aiosmtplib==5.1.0",
+    "aiosmtplib==5.1.1",
     "anyio==4.13.0",
     "email-validator==2.3.0",
-    "fastapi==0.135.2",
+    "fastapi==0.136.3",
     "httpx==0.28.1",
-    "pillow==12.1.1",
+    "pillow==12.2.0",
     "psycopg[binary]==3.3.4",
-    "pydantic==2.12.5",
+    "pydantic==2.13.4",
     "pwdlib[argon2]==0.3.0",
-    "python-multipart==0.0.22",
+    "python-multipart==0.0.31",
     "slowapi==0.1.9",
     "sqlalchemy==2.0.50",
-    "uvicorn[standard]==0.44.0",
+    "uvicorn[standard]==0.49.0",
     "pydantic-settings==2.14.1",
 ]
 database = [
@@ -31,58 +31,59 @@ database = [
     "sqlalchemy==2.0.50",
 ]
 ocr = [
-    "fastapi==0.135.2",
-    "numpy==2.4.4",
+    "fastapi==0.136.3",
+    "numpy==2.3.5",
     "opencv-python-headless==4.13.0.92",
-    "pillow==12.1.1",
-    "python-multipart==0.0.22",
-    "uvicorn[standard]==0.44.0",
+    "pillow==12.2.0",
+    "python-multipart==0.0.31",
+    "uvicorn[standard]==0.49.0",
 ]
 ocr-paddle = [
-    "paddleocr==3.4.0",
+    "paddleocr==3.6.0",
 ]
 ocr-paddle-cpu = [
-    "paddlepaddle==3.3.0",
+    "paddlepaddle==3.3.1",
 ]
 ocr-paddle-gpu = [
-    "paddlepaddle-gpu==3.2.0",
+    "paddlepaddle-gpu==3.3.1",
 ]
 ocr-tesseract = [
     "pytesseract==0.3.13",
 ]
 rag = [
-    "chromadb-client==1.5.7",
-    "fastapi==0.135.2",
-    "numpy==2.4.4",
-    "pydantic==2.12.5",
-    "sentence-transformers==5.4.1",
-    "uvicorn[standard]==0.44.0",
+    "chromadb-client==1.5.9",
+    "fastapi==0.136.3",
+    "numpy==2.3.5",
+    "pydantic==2.13.4",
+    "sentence-transformers==5.5.1",
+    "torch==2.12.0",
+    "uvicorn[standard]==0.49.0",
 ]
 llm = [
-    "fastapi==0.135.2",
+    "fastapi==0.136.3",
     "httpx==0.28.1",
-    "pydantic==2.12.5",
-    "uvicorn[standard]==0.44.0",
+    "pydantic==2.13.4",
+    "uvicorn[standard]==0.49.0",
 ]
 test = [
-    "aiosmtplib==5.1.0",
+    "aiosmtplib==5.1.1",
     "alembic==1.18.4",
     "anyio==4.13.0",
     "email-validator==2.3.0",
-    "fastapi==0.135.2",
+    "fastapi==0.136.3",
     "httpx==0.28.1",
-    "numpy==2.4.4",
-    "pillow==12.1.1",
+    "numpy==2.3.5",
+    "pillow==12.2.0",
     "psycopg[binary]==3.3.4",
-    "pydantic==2.12.5",
+    "pydantic==2.13.4",
     "pwdlib[argon2]==0.3.0",
-    "pytest==9.0.2",
+    "pytest==9.0.3",
     "pytest-cov==7.1.0",
-    "python-multipart==0.0.22",
-    "ruff==0.15.14",
+    "python-multipart==0.0.31",
+    "ruff==0.15.15",
     "slowapi==0.1.9",
     "sqlalchemy==2.0.50",
-    "uvicorn[standard]==0.44.0",
+    "uvicorn[standard]==0.49.0",
     "pydantic-settings==2.14.1",
 ]
 

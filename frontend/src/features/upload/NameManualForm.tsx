@@ -40,16 +40,17 @@ export function subtitleForSource(source: UploadSource): string {
 export function NameManualForm({ file, onClose }: Props) {
   const navigate = useNavigate();
   const inputId = useId();
-  const [name, setName] = useState('');
+  const fileKey = file ? `${file.name}:${file.size}:${file.lastModified}` : '';
+  const [nameDraft, setNameDraft] = useState({ fileKey, value: '' });
+  const name = nameDraft.fileKey === fileKey ? nameDraft.value : '';
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Reset al recibir un fichero nuevo + focus inicial al input.
   useEffect(() => {
     if (file) {
-      setName('');
       requestAnimationFrame(() => nameInputRef.current?.focus());
     }
-  }, [file]);
+  }, [file, fileKey]);
 
   // AbortController vivo: cancela la peticion en curso si el componente
   // se desmonta o si arranca otra subida, evitando efectos post-unmount.
@@ -115,7 +116,7 @@ export function NameManualForm({ file, onClose }: Props) {
         preset="game-name"
         placeholder="Catan, Wingspan, Parchís…"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => setNameDraft({ fileKey, value: e.target.value })}
         disabled={mutation.isPending}
         maxLength={120}
       />

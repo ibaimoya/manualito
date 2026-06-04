@@ -1,5 +1,5 @@
 ARG UV_VERSION=0.11.19
-ARG PYTHON_VERSION=3.11.14-slim-bookworm
+ARG PYTHON_VERSION=3.13.13-slim-bookworm
 ARG VERSION=0.0.1
 
 # Instala uv (https://docs.astral.sh/uv/).

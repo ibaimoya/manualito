@@ -1,4 +1,4 @@
-name: ${PROYECT_NAME:-manualito}
+name: ${PROYECT_NAME:?PROYECT_NAME no definida}
 
 x-service-hardening: &service-hardening
   security_opt:
@@ -18,17 +18,19 @@ x-api-build: &api-build
   context: .
   dockerfile: backend/api/Dockerfile
   additional_contexts:
-    - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+    - "python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}=service:python-base"
   args:
-    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
+    UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
 
 x-database-build: &database-build
   context: .
   dockerfile: backend/database/Dockerfile
   additional_contexts:
-    - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+    - "python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}=service:python-base"
   args:
-    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
+    UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
 
 # Variante para nginx
 x-service-hardening-nginx: &service-hardening-nginx
@@ -51,19 +53,18 @@ services:
       context: .
       dockerfile: backend/python-base/Dockerfile
       args:
-        UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
         PYTHON_VERSION: ${PYTHON_VERSION:?PYTHON_VERSION no definida}
-        VERSION: ${PYTHON_IMAGE_VERSION:-0.0.1}
+        VERSION: ${PYTHON_IMAGE_VERSION:?PYTHON_IMAGE_VERSION no definida}
     scale: 0
     network_mode: none
 
   api:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:-manualito}-api
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-api
     env_file:
       - ./config/backend.env
       - ./config/database.env
-    image: ${PROYECT_NAME:-manualito}-api:${API_IMAGE_VERSION:-local}
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
     secrets:
       - postgres_user
@@ -88,10 +89,10 @@ services:
 
   database-migrate:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:-manualito}-database-migrate
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-database-migrate
     env_file:
       - ./config/database.env
-    image: ${PROYECT_NAME:-manualito}-database:${DATABASE_IMAGE_VERSION:-local}
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-database:${DATABASE_IMAGE_VERSION:?DATABASE_IMAGE_VERSION no definida}
     build: *database-build
     secrets:
       - postgres_user
@@ -105,8 +106,8 @@ services:
 
   database:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:-manualito}-database
-    image: postgres:18.4-alpine3.23
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-database
+    image: postgres:${POSTGRES_VERSION:?POSTGRES_VERSION no definida}
     env_file:
       - ./config/database.env
     secrets:
@@ -126,35 +127,37 @@ services:
 
   ocr:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:-manualito}-ocr
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr
     env_file:
       - ./config/backend.env
-    image: ${PROYECT_NAME:-manualito}-ocr:cpu
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:cpu
     build:
       context: .
       dockerfile: backend/ocr/Dockerfile
       additional_contexts:
-        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+        - "python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}=service:python-base"
       args:
-        OCR_RUNTIME_STAGE: ${OCR_RUNTIME_STAGE:-tesseract}
-        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+        OCR_RUNTIME_STAGE: ${OCR_RUNTIME_STAGE:?OCR_RUNTIME_STAGE no definida}
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
+        UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
     environment:
-      OCR_ENGINE: ${OCR_RUNTIME_STAGE:-tesseract}
+      OCR_ENGINE: ${OCR_RUNTIME_STAGE:?OCR_RUNTIME_STAGE no definida}
     networks:
       - manualito-net
 
   rag:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:-manualito}-rag
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-rag
     env_file:
       - ./config/backend.env
     build:
       context: .
       dockerfile: backend/rag/Dockerfile
       additional_contexts:
-        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+        - "python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}=service:python-base"
       args:
-        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
+        UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
     volumes:
       - rag-hf-cache:/home/appuser/.cache/huggingface
     depends_on:
@@ -164,8 +167,8 @@ services:
 
   chroma:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:-manualito}-chroma
-    image: chromadb/chroma:${CHROMA_VERSION:-1.5.9}
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-chroma
+    image: chromadb/chroma:${CHROMA_VERSION:?CHROMA_VERSION no definida}
     pids_limit: 256
     volumes:
       - chromadb-data:/chroma/chroma
@@ -174,16 +177,17 @@ services:
 
   llm:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:-manualito}-llm
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-llm
     env_file:
       - ./config/backend.env
     build:
       context: .
       dockerfile: backend/llm/Dockerfile
       additional_contexts:
-        - "python-base:${PYTHON_BASE_TAG:-local}=service:python-base"
+        - "python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}=service:python-base"
       args:
-        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:-local}
+        PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
+        UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
     depends_on:
       ollama-init:
         condition: service_completed_successfully
@@ -192,8 +196,8 @@ services:
 
   mailpit:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:-manualito}-mailpit
-    image: axllent/mailpit:${MAILPIT_VERSION:-v1.30.1}
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-mailpit
+    image: axllent/mailpit:${MAILPIT_VERSION:?MAILPIT_VERSION no definida}
     pids_limit: 128
     environment:
       MP_MAX_MESSAGES: 1000
@@ -204,8 +208,8 @@ services:
 
   ollama:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:-manualito}-ollama
-    image: ollama/ollama:${OLLAMA_VERSION:-0.30.4}
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ollama
+    image: ollama/ollama:${OLLAMA_VERSION:?OLLAMA_VERSION no definida}
     pids_limit: 512
     volumes:
       - ollama-data:/root/.ollama
@@ -228,10 +232,10 @@ services:
   # Descarga el modelo si falta.
   ollama-init:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:-manualito}-ollama-init
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ollama-init
     env_file:
       - ./config/backend.env
-    image: ollama/ollama:${OLLAMA_VERSION:-0.30.4}
+    image: ollama/ollama:${OLLAMA_VERSION:?OLLAMA_VERSION no definida}
     pids_limit: 128
     depends_on:
       ollama:
@@ -244,13 +248,12 @@ services:
 
   frontend:
     <<: *service-hardening-nginx
-    container_name: ${PROYECT_NAME:-manualito}-frontend
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-frontend
     build:
       context: ./frontend
       args:
-        NODE_VERSION: "26.3.0"
-        NGINX_VERSION: "1.29"
-        PNPM_VERSION: "11.5.1"
+        NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
+        NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}
     ports:
       - "5173:8080"
     depends_on:

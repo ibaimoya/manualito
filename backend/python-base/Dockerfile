@@ -1,14 +1,9 @@
-ARG UV_VERSION=0.11.19
-ARG PYTHON_VERSION=3.13.13-slim-bookworm
-ARG VERSION=0.0.1
+ARG PYTHON_VERSION
 
-# Instala uv (https://docs.astral.sh/uv/).
-FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
+# Stage: runtime base.
+FROM python:${PYTHON_VERSION:?PYTHON_VERSION_no_definida}
 
-# Instala la imagen base de python del backend.
-FROM python:${PYTHON_VERSION}
-
-ARG VERSION=0.0.1
+ARG VERSION
 ARG APP_UID=65532
 ARG APP_GID=65532
 
@@ -34,5 +29,3 @@ RUN groupadd --gid "${APP_GID}" appgroup \
                appuser \
     && mkdir -p /home/appuser/.cache /app \
     && chown -R appuser:appgroup /home/appuser
-
-COPY --from=uv /uv /uvx /usr/local/bin/

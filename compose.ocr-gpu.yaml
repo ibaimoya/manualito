@@ -1,6 +1,6 @@
 services:
   ocr:
-    image: ${PROYECT_NAME:-manualito}-ocr:gpu
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:gpu
     build:
       args:
         # cu118

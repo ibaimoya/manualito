@@ -101,9 +101,31 @@ docker compose down
 
 La API queda expuesta en `http://localhost:8000`.
 
-Las variables de runtime del backend se configuran en `config/backend.env`.
-Docker Compose las inyecta en los servicios mediante `env_file`, así que no
-hace falta pasarlas por consola.
+### Configuración de versiones
+
+Docker Compose lee automáticamente el fichero `.env` de la raíz del proyecto.
+Ese fichero centraliza las versiones de imágenes y herramientas usadas durante
+el build, así que para subir una versión no hay que editar Dockerfiles ni
+`compose.yaml`: se cambia una sola variable en `.env`.
+
+| Variable | Controla |
+| --- | --- |
+| `PYTHON_VERSION` | Imagen base de Python para los servicios backend. |
+| `UV_VERSION` | Versión de `uv` usada solo durante los stages de dependencias. |
+| `NODE_VERSION` | Imagen de Node usada para compilar el frontend. |
+| `NGINX_VERSION` | Imagen de Nginx que sirve el frontend en producción. |
+| `POSTGRES_VERSION` | Imagen de Postgres. |
+| `CHROMA_VERSION` | Imagen de ChromaDB. |
+| `OLLAMA_VERSION` | Imagen de Ollama. |
+| `MAILPIT_VERSION` | Imagen de Mailpit. |
+
+Si falta alguna variable obligatoria, Compose corta el arranque con un mensaje
+explícito, por ejemplo `UV_VERSION no definida`. La versión de `pnpm` se lee
+desde `frontend/package.json` (`packageManager`) para no duplicarla.
+
+El `.env` del repositorio no contiene secretos; las credenciales se mantienen
+en `secrets/` y la configuración de runtime del backend va en
+`config/backend.env`.
 
 Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
 override dedicado:

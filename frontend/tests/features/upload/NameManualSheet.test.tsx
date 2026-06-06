@@ -53,7 +53,7 @@ describe('NameManualSheet (switch responsive Sheet ↔ Dialog)', () => {
         <NameManualSheet
           open
           onOpenChange={() => undefined}
-          file={makeFile()}
+          files={[makeFile()]}
           source="gallery"
         />,
       ),
@@ -70,7 +70,7 @@ describe('NameManualSheet (switch responsive Sheet ↔ Dialog)', () => {
         <NameManualSheet
           open
           onOpenChange={() => undefined}
-          file={makeFile()}
+          files={[makeFile()]}
           source="camera"
         />,
       ),
@@ -86,7 +86,7 @@ describe('NameManualSheet (switch responsive Sheet ↔ Dialog)', () => {
         <NameManualSheet
           open
           onOpenChange={() => undefined}
-          file={makeFile()}
+          files={[makeFile()]}
           source="gallery"
         />,
       ),
@@ -98,7 +98,7 @@ describe('NameManualSheet (switch responsive Sheet ↔ Dialog)', () => {
         <NameManualSheet
           open
           onOpenChange={() => undefined}
-          file={makeFile()}
+          files={[makeFile()]}
           source="gallery"
         />,
       ),
@@ -113,18 +113,18 @@ describe('NameManualSheet (switch responsive Sheet ↔ Dialog)', () => {
         <NameManualSheet
           open
           onOpenChange={() => undefined}
-          file={makeFile()}
+          files={[makeFile()]}
           source="pdf"
         />,
       ),
     );
-    expect(screen.getByText(/etiquetar el PDF/i)).toBeInTheDocument();
+    expect(screen.getByText(/procesaran todas las paginas/i)).toBeInTheDocument();
     rerender(
       wrap(
         <NameManualSheet
           open
           onOpenChange={() => undefined}
-          file={makeFile()}
+          files={[makeFile()]}
           source="camera"
         />,
       ),

@@ -12,6 +12,16 @@ class ApiSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
     max_image_size: int = 20 * 1024 * 1024
+    max_manual_pdf_size: int = 50 * 1024 * 1024
+    max_manual_total_size: int = 50 * 1024 * 1024
+    max_manual_pages: int = Field(default=10, ge=1)
+    max_image_pixels: int = Field(default=25_000_000, ge=1)
+    pdf_render_dpi: int = Field(default=300, ge=72)
+    pdf_text_min_chars: int = Field(default=150, ge=0)
+    pdf_text_min_words: int = Field(default=25, ge=0)
+    pdf_text_max_bad_char_ratio: float = Field(default=0.02, ge=0, le=1)
+    pdf_text_min_alnum_ratio: float = Field(default=0.45, ge=0, le=1)
+    ocr_low_confidence_threshold: float = Field(default=0.60, ge=0, le=1)
     ocr_url: str
     rag_url: str
     llm_url: str
@@ -77,6 +87,16 @@ class ApiSettings(BaseSettings):
 settings = ApiSettings()
 
 MAX_IMAGE_SIZE = settings.max_image_size
+MAX_MANUAL_PDF_SIZE = settings.max_manual_pdf_size
+MAX_MANUAL_TOTAL_SIZE = settings.max_manual_total_size
+MAX_MANUAL_PAGES = settings.max_manual_pages
+MAX_IMAGE_PIXELS = settings.max_image_pixels
+PDF_RENDER_DPI = settings.pdf_render_dpi
+PDF_TEXT_MIN_CHARS = settings.pdf_text_min_chars
+PDF_TEXT_MIN_WORDS = settings.pdf_text_min_words
+PDF_TEXT_MAX_BAD_CHAR_RATIO = settings.pdf_text_max_bad_char_ratio
+PDF_TEXT_MIN_ALNUM_RATIO = settings.pdf_text_min_alnum_ratio
+OCR_LOW_CONFIDENCE_THRESHOLD = settings.ocr_low_confidence_threshold
 OCR_URL = settings.ocr_url
 RAG_URL = settings.rag_url
 LLM_URL = settings.llm_url

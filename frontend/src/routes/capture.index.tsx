@@ -154,7 +154,7 @@ function CaptureCameraScreen() {
       <NameManualSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        file={pickedFile}
+        files={pickedFile ? [pickedFile] : []}
         source="camera"
       />
     </div>

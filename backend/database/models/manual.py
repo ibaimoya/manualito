@@ -3,7 +3,17 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +23,7 @@ from database.models.constants import (
     EMBEDDING_MODEL_MAX_LENGTH,
     MANUAL_LANGUAGE_MAX_LENGTH,
     MANUAL_TITLE_MAX_LENGTH,
+    ON_DELETE_SET_NULL,
     SHA256_HEX_LENGTH,
 )
 
@@ -32,7 +43,21 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         ForeignKey("games.id"),
         nullable=False,
     )
+    source_asset_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("assets.id", ondelete=ON_DELETE_SET_NULL),
+    )
     title: Mapped[str | None] = mapped_column(String(MANUAL_TITLE_MAX_LENGTH))
+    source_type: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'images'"),
+    )
+    page_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("1"),
+    )
     status: Mapped[str] = mapped_column(
         String(24),
         nullable=False,
@@ -56,6 +81,8 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
             "title IS NULL OR (length(btrim(title)) > 0 AND title = btrim(title))",
             name="title_valid",
         ),
+        CheckConstraint("source_type IN ('images', 'pdf')", name="source_type_valid"),
+        CheckConstraint("page_count > 0", name="page_count_positive"),
         CheckConstraint(
             "status IN ('indexing', 'active', 'pending_review', 'hidden', 'failed')",
             name="status_valid",
@@ -68,6 +95,7 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint("chunks_indexed >= 0", name="chunks_indexed_non_negative"),
         Index("ix_manuals_owner_user_id", owner_user_id),
         Index("ix_manuals_game_id", game_id),
+        Index("ix_manuals_source_asset_id", source_asset_id),
         Index(
             "ix_manuals_game_shared_active",
             game_id,
@@ -91,7 +119,7 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
     image_asset_id: Mapped[UUID | None] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("assets.id", ondelete="SET NULL"),
+        ForeignKey("assets.id", ondelete=ON_DELETE_SET_NULL),
     )
     ocr_lines: Mapped[list[dict[str, object]]] = mapped_column(
         postgresql.JSONB,
@@ -103,6 +131,13 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         server_default=text("'pending'"),
     )
+    text_source: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'none'"),
+    )
+    text_quality: Mapped[str | None] = mapped_column(String(24))
+    ocr_confidence_mean: Mapped[float | None] = mapped_column(Float)
     ocr_engine: Mapped[str | None] = mapped_column(String(80))
     ocr_version: Mapped[str | None] = mapped_column(String(80))
 
@@ -112,6 +147,19 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint(
             "ocr_status IN ('pending', 'completed', 'failed')",
             name="ocr_status_valid",
+        ),
+        CheckConstraint(
+            "text_source IN ('none', 'ocr', 'pdf_text')",
+            name="text_source_valid",
+        ),
+        CheckConstraint(
+            "text_quality IS NULL OR text_quality IN ('ok', 'empty', 'low_confidence')",
+            name="text_quality_valid",
+        ),
+        CheckConstraint(
+            "ocr_confidence_mean IS NULL OR "
+            "(ocr_confidence_mean >= 0 AND ocr_confidence_mean <= 1)",
+            name="ocr_confidence_mean_valid",
         ),
         Index("ix_manual_pages_manual_id", manual_id),
         Index("ix_manual_pages_image_asset_id", image_asset_id),
@@ -131,7 +179,7 @@ class ManualChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     page_id: Mapped[UUID | None] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("manual_pages.id", ondelete="SET NULL"),
+        ForeignKey("manual_pages.id", ondelete=ON_DELETE_SET_NULL),
     )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)

@@ -15,7 +15,6 @@ from api.manuals.exceptions import (
     GameNotFoundError,
     ManualContextNotFoundError,
     ManualNotFoundError,
-    ManualWithoutTextError,
 )
 from api.manuals.repository import ManualDetailRow
 from api.manuals.schemas import AnswerResponse, ManualCreatedResponse
@@ -68,13 +67,15 @@ def test_create_manual_orquesta_servicio_persistente(
         return_value=ManualCreatedResponse(
             manual_id=_MANUAL_ID,
             game_id=_GAME_ID,
-            status="active",
+            status="indexing",
             visibility="shared",
-            chunks_indexed=1,
-            ocr_lines=_OCR_LINES,
+            source_type="images",
+            page_count=1,
         )
     )
+    run_process_mock = AsyncMock()
     monkeypatch.setattr("api.manuals.router.create_manual", create_manual_mock)
+    monkeypatch.setattr("api.manuals.router.process_manual", run_process_mock)
 
     response = client.post(
         "/api/manuals",
@@ -84,17 +85,17 @@ def test_create_manual_orquesta_servicio_persistente(
             "visibility": "shared",
             "language": "es",
         },
-        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+        files=[("images", ("manual.jpg", valid_jpeg_bytes, "image/jpeg"))],
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     assert response.json() == {
         "manual_id": str(_MANUAL_ID),
         "game_id": str(_GAME_ID),
-        "status": "active",
+        "status": "indexing",
         "visibility": "shared",
-        "chunks_indexed": 1,
-        "ocr_lines": _OCR_LINES,
+        "source_type": "images",
+        "page_count": 1,
     }
     create_manual_mock.assert_awaited_once()
     kwargs = create_manual_mock.await_args.kwargs
@@ -104,7 +105,9 @@ def test_create_manual_orquesta_servicio_persistente(
     assert kwargs["title"] == "Manual base"
     assert kwargs["visibility"] == "shared"
     assert kwargs["language"] == "es"
-    assert kwargs["image"].filename == "manual.jpg"
+    assert kwargs["images"][0].filename == "manual.jpg"
+    assert kwargs["pdf"] is None
+    run_process_mock.assert_awaited_once_with(_MANUAL_ID)
 
 
 def test_list_manuals_devuelve_manuales_propios(
@@ -176,6 +179,9 @@ def test_get_manual_devuelve_detalle_con_paginas(
             SimpleNamespace(
                 page_number=1,
                 ocr_status="completed",
+                text_source="ocr",
+                text_quality="ok",
+                ocr_confidence_mean=0.9,
                 ocr_lines=_OCR_LINES,
             )
         ],
@@ -192,9 +198,47 @@ def test_get_manual_devuelve_detalle_con_paginas(
         {
             "page_number": 1,
             "ocr_status": "completed",
+            "text_source": "ocr",
+            "text_quality": "ok",
+            "ocr_confidence_mean": 0.9,
             "ocr_lines": _OCR_LINES,
         }
     ]
+    get_mock.assert_awaited_once_with(
+        _FAKE_SESSION,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+    )
+
+
+def test_get_manual_processing_devuelve_estado_ligero(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El progreso no arrastra las líneas OCR completas."""
+    manual = SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)
+    pages = [
+        SimpleNamespace(page_number=1, ocr_status="completed", text_quality="ok"),
+        SimpleNamespace(page_number=2, ocr_status="failed", text_quality=None),
+    ]
+    get_mock = AsyncMock(return_value=(manual, pages))
+    monkeypatch.setattr("api.manuals.router.get_user_manual_processing_status", get_mock)
+
+    response = client.get(f"/api/manuals/{_MANUAL_ID}/processing")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "manual_id": str(_MANUAL_ID),
+        "status": "indexing",
+        "page_count": 2,
+        "completed_pages": 1,
+        "failed_pages": 1,
+        "pages": [
+            {"page_number": 1, "ocr_status": "completed", "text_quality": "ok"},
+            {"page_number": 2, "ocr_status": "failed", "text_quality": None},
+        ],
+    }
     get_mock.assert_awaited_once_with(
         _FAKE_SESSION,
         owner_user_id=_USER_ID,
@@ -213,21 +257,22 @@ def test_create_manual_usa_visibilidad_privada_por_defecto(
         return_value=ManualCreatedResponse(
             manual_id=_MANUAL_ID,
             game_id=_GAME_ID,
-            status="active",
+            status="indexing",
             visibility="private",
-            chunks_indexed=1,
-            ocr_lines=_OCR_LINES,
+            source_type="images",
+            page_count=1,
         )
     )
     monkeypatch.setattr("api.manuals.router.create_manual", create_manual_mock)
+    monkeypatch.setattr("api.manuals.router.process_manual", AsyncMock())
 
     response = client.post(
         "/api/manuals",
         data={"game_id": str(_GAME_ID)},
-        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+        files=[("images", ("manual.jpg", valid_jpeg_bytes, "image/jpeg"))],
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     assert create_manual_mock.await_args.kwargs["visibility"] == "private"
 
 
@@ -246,33 +291,11 @@ def test_create_manual_devuelve_404_si_el_juego_no_existe(
     response = client.post(
         "/api/manuals",
         data={"game_id": str(_GAME_ID)},
-        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
+        files=[("images", ("manual.jpg", valid_jpeg_bytes, "image/jpeg"))],
     )
 
     assert response.status_code == 404
     _assert_error(response.json(), code="game_not_found")
-
-
-def test_create_manual_devuelve_422_si_no_hay_texto_indexable(
-    client,
-    valid_jpeg_bytes,
-    monkeypatch,
-    override_auth_and_db,
-):
-    """OCR sin texto útil se expresa como error de dominio, no como 500."""
-    monkeypatch.setattr(
-        "api.manuals.router.create_manual",
-        AsyncMock(side_effect=ManualWithoutTextError),
-    )
-
-    response = client.post(
-        "/api/manuals",
-        data={"game_id": str(_GAME_ID)},
-        files={"image": ("manual.jpg", valid_jpeg_bytes, "image/jpeg")},
-    )
-
-    assert response.status_code == 422
-    _assert_error(response.json(), code="manual_without_text")
 
 
 def test_get_manual_ajeno_o_borrado_devuelve_404(

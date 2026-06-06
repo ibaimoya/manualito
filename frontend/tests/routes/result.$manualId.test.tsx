@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -13,6 +14,7 @@ import {
 import { ThemeProvider } from '@/app/theme';
 import { Route as ResultRoute } from '@/routes/result.$manualId';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
+import { server } from '@tests/_helpers/server';
 
 /**
  * La query semántica desktop por defecto en jsdom devuelve false, así que
@@ -20,6 +22,8 @@ import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
  */
 
 const MANUAL_ID = 'catan-test';
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
 function seedManualWithResult(opts: { withOcr: boolean }): void {
   const result: ManualResult = {
@@ -49,10 +53,46 @@ function seedManualWithResult(opts: { withOcr: boolean }): void {
   }
 }
 
+function manualDetailWithOcr() {
+  return HttpResponse.json({
+    id: MANUAL_ID,
+    game_id: 'game-1',
+    game_name: 'Catan',
+    title: 'Catan',
+    status: 'active',
+    visibility: 'private',
+    language: 'spa',
+    chunks_indexed: 3,
+    created_at: '2026-05-26T10:00:00.000Z',
+    indexed_at: '2026-05-26T10:00:10.000Z',
+    pages: [
+      {
+        page_number: 2,
+        ocr_status: 'completed',
+        text_source: 'ocr',
+        text_quality: 'ok',
+        ocr_confidence_mean: 0.82,
+        ocr_lines: [{ text: 'Pagina 2', confidence: 0.82 }],
+      },
+      {
+        page_number: 1,
+        ocr_status: 'completed',
+        text_source: 'ocr',
+        text_quality: 'ok',
+        ocr_confidence_mean: 0.9,
+        ocr_lines: [{ text: 'CATAN - REGLAS', confidence: 0.9 }],
+      },
+    ],
+  });
+}
+
 afterEach(() => {
+  server.resetHandlers();
   localStorage.clear();
   vi.useRealTimers();
 });
+
+afterAll(() => server.close());
 
 function renderResult() {
   const qc = new QueryClient({
@@ -94,8 +134,8 @@ function renderResult() {
   );
 }
 
-describe('/result · "Ver texto original" (B1)', () => {
-  it('NO muestra el botón si el manual no tiene ocr_lines persistidas', async () => {
+describe('/result · texto original multipagina', () => {
+  it('no muestra el boton si el detalle del manual no tiene lineas', async () => {
     seedManualWithResult({ withOcr: false });
     renderResult();
     expect(await screen.findByText('Catan')).toBeInTheDocument();
@@ -104,16 +144,18 @@ describe('/result · "Ver texto original" (B1)', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('muestra el botón ScanText cuando hay ocr_lines persistidas', async () => {
-    seedManualWithResult({ withOcr: true });
+  it('muestra el boton ScanText cuando el backend devuelve lineas OCR', async () => {
+    seedManualWithResult({ withOcr: false });
+    server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     renderResult();
     expect(
       await screen.findByRole('button', { name: /Ver texto original/i }),
     ).toBeInTheDocument();
   });
 
-  it('al pulsar el botón abre el sheet con el viewer y las líneas', async () => {
-    seedManualWithResult({ withOcr: true });
+  it('al pulsar el boton abre el sheet con lineas ordenadas por pagina', async () => {
+    seedManualWithResult({ withOcr: false });
+    server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     const user = userEvent.setup();
     renderResult();
     await user.click(
@@ -124,23 +166,23 @@ describe('/result · "Ver texto original" (B1)', () => {
       await screen.findByText(/Texto original del manual/i),
     ).toBeInTheDocument();
     // Y las líneas reales (vista 'lines' por defecto en el wrapper).
-    expect(screen.getByTestId('ocr-lines-view').textContent).toContain('CATAN');
-    expect(screen.getByTestId('ocr-lines-view').textContent).toContain('Borrosa');
+    const text = screen.getByTestId('ocr-lines-view').textContent ?? '';
+    expect(text).toContain('CATAN');
+    expect(text).toContain('Pagina 2');
+    expect(text.indexOf('CATAN')).toBeLessThan(text.indexOf('Pagina 2'));
   });
 
-  it('no dispara ninguna petición HTTP al abrir el viewer (todo desde localStorage)', async () => {
-    // Si el viewer hiciera POST /api/ocr aquí, fetch global sería invocado.
-    // Espiamos fetch para asegurar que cero llamadas se hacen.
-    seedManualWithResult({ withOcr: true });
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    const user = userEvent.setup();
-    renderResult();
-    await user.click(
-      await screen.findByRole('button', { name: /Ver texto original/i }),
+  it('usa cache local solo como fallback si el detalle del backend falla', async () => {
+    server.use(
+      http.get('/api/manuals/:manualId', () =>
+        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
+      ),
     );
-    await screen.findByText(/Texto original del manual/i);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    fetchSpy.mockRestore();
+    seedManualWithResult({ withOcr: true });
+    renderResult();
+    expect(
+      await screen.findByRole('button', { name: /Ver texto original/i }),
+    ).toBeInTheDocument();
   });
 });
 

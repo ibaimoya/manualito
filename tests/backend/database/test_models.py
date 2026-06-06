@@ -126,6 +126,8 @@ def test_assets_schema_models_avatar_without_circular_fk():
         "ck_assets_width_positive",
         "ck_assets_height_positive",
     }
+    kind_check = _check(assets, "ck_assets_kind_valid")
+    assert "manual_source_pdf" in str(kind_check.sqltext)
     avatar_index = _index(assets, "uq_assets_owner_avatar_active")
     assert avatar_index.unique is True
     assert _compile(avatar_index.dialect_options["postgresql"]["where"]) == (
@@ -174,11 +176,16 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
 
     assert _single_fk(manuals.c.owner_user_id).ondelete == "CASCADE"
     assert _single_fk(manuals.c.game_id).ondelete is None
+    assert _single_fk(manuals.c.source_asset_id).ondelete == "SET NULL"
+    assert str(manuals.c.source_type.server_default.arg) == "'images'"
+    assert str(manuals.c.page_count.server_default.arg) == "1"
     assert str(manuals.c.status.server_default.arg) == "'indexing'"
     assert str(manuals.c.visibility.server_default.arg) == "'private'"
     assert str(manuals.c.chunks_indexed.server_default.arg) == "0"
     assert _check_names(manuals) >= {
         "ck_manuals_title_valid",
+        "ck_manuals_source_type_valid",
+        "ck_manuals_page_count_positive",
         "ck_manuals_status_valid",
         "ck_manuals_language_not_empty",
         "ck_manuals_visibility_valid",
@@ -187,6 +194,7 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
 
     assert _index(manuals, "ix_manuals_owner_user_id") is not None
     assert _index(manuals, "ix_manuals_game_id") is not None
+    assert _index(manuals, "ix_manuals_source_asset_id") is not None
     shared_index = _index(manuals, "ix_manuals_game_shared_active")
     assert _compile(shared_index.dialect_options["postgresql"]["where"]) == (
         "visibility = 'shared' AND status = 'active' AND deleted_at IS NULL"
@@ -203,10 +211,16 @@ def test_manual_pages_schema_embeds_ocr_lines_as_jsonb_array():
     assert isinstance(pages.c.ocr_lines.type, postgresql.JSONB)
     assert str(pages.c.ocr_lines.server_default.arg) == "'[]'::jsonb"
     assert str(pages.c.ocr_status.server_default.arg) == "'pending'"
+    assert str(pages.c.text_source.server_default.arg) == "'none'"
+    assert pages.c.text_quality.nullable is True
+    assert pages.c.ocr_confidence_mean.nullable is True
     assert _check_names(pages) >= {
         "ck_manual_pages_page_number_positive",
         "ck_manual_pages_ocr_lines_array",
         "ck_manual_pages_ocr_status_valid",
+        "ck_manual_pages_text_source_valid",
+        "ck_manual_pages_text_quality_valid",
+        "ck_manual_pages_ocr_confidence_mean_valid",
     }
 
     assert _index(pages, "ix_manual_pages_manual_id") is not None
@@ -305,6 +319,15 @@ def _check_names(table) -> set[str | _NoneName | None]:
         for constraint in table.constraints
         if isinstance(constraint, CheckConstraint)
     }
+
+
+def _check(table, name: str) -> CheckConstraint:
+    """Devuelve una CHECK constraint por nombre."""
+    return next(
+        constraint
+        for constraint in table.constraints
+        if isinstance(constraint, CheckConstraint) and constraint.name == name
+    )
 
 
 def _single_fk(column):

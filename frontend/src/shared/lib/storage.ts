@@ -1,18 +1,10 @@
 import { z } from 'zod';
 
 /**
- * Wrapper alrededor de `localStorage` con validación Zod.
+ * Storage local para caches de UI y preferencias.
  *
- * Backend de Manualito todavía no persiste lista de manuales, conversaciones
- * ni preferencias.  Mientras tanto, el
- * frontend mantiene el estado en este storage local y revalida cada lectura
- * con Zod para sobrevivir a:
- *   - corrupción manual del usuario en DevTools,
- *   - cambios de schema entre versiones del frontend (campos nuevos),
- *   - lecturas desde otro navegador/perfil.
- *
- * Pattern: cada slot expone `read()`, `write(value)` y `clear()`.  Las claves
- * llevan prefijo `manualito.` para no chocar con otras apps en el mismo origen.
+ * Cada lectura se valida con Zod para tolerar cambios de schema o datos
+ * tocados desde DevTools.
  */
 
 const KEY = {
@@ -22,10 +14,7 @@ const KEY = {
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
   manualResult: (manualId: string) => `manualito.result.${manualId}`,
-  // Slot dedicado para las líneas OCR (texto + confidence por línea) que
-  // el backend devuelve en POST /api/manuals.  Lo mantenemos separado del
-  // ManualResult para poder leerlo aunque la generación LLM de las
-  // explicaciones falle, y para no inflar la lista resumida de manuales.
+  // Cache opcional para texto original cuando un flujo ya lo tenga resuelto.
   ocrLines: (manualId: string) => `manualito.ocr.${manualId}`,
 } as const;
 
@@ -33,11 +22,13 @@ const KEY = {
    Schemas
    ============================================================ */
 
+const IsoDateTimeSchema = z.iso.datetime({ offset: true });
+
 export const ManualRecordSchema = z.object({
   manual_id: z.string().min(1),
   name: z.string().min(1).max(120),
-  created_at: z.string().datetime({ offset: true }),
-  last_opened_at: z.string().datetime({ offset: true }),
+  created_at: IsoDateTimeSchema,
+  last_opened_at: IsoDateTimeSchema,
   chunks_indexed: z.number().int().nonnegative(),
 });
 export type ManualRecord = z.infer<typeof ManualRecordSchema>;
@@ -48,21 +39,15 @@ export const QAMessageSchema = z.object({
   id: z.string().min(1),
   role: z.enum(['user', 'bot', 'system']),
   text: z.string(),
-  ts: z.string().datetime({ offset: true }),
+  ts: IsoDateTimeSchema,
 });
 export type QAMessage = z.infer<typeof QAMessageSchema>;
 const QAListSchema = z.array(QAMessageSchema);
 
-/**
- * Línea OCR persistida en localStorage.  Mismo shape que devuelve el
- * backend en POST /api/manuals.ocr_lines y POST /api/ocr.lines.
- *
- * `confidence` viene en rango [0, 1] del motor OCR (Tesseract/PaddleOCR);
- * el viewer usa esos valores para colorear cada línea (verde/ámbar/rojo).
- */
+/** Shape local para texto OCR cacheado por el frontend. */
 export const OcrLineSchema = z.object({
   text: z.string(),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1).nullable(),
 });
 export type OcrLine = z.infer<typeof OcrLineSchema>;
 const OcrLinesSchema = z.array(OcrLineSchema);
@@ -76,7 +61,7 @@ export const ManualResultSchema = z.object({
   win: z.string(),
   /** Last filled "casos especiales" — opcional, se rellena bajo demanda. */
   special: z.string().optional(),
-  created_at: z.string().datetime({ offset: true }),
+  created_at: IsoDateTimeSchema,
 });
 export type ManualResult = z.infer<typeof ManualResultSchema>;
 
@@ -114,7 +99,7 @@ function safeRead<S extends z.ZodTypeAny>(
     const parsed: unknown = JSON.parse(raw);
     const result = schema.safeParse(parsed);
     if (!result.success) return fallback;
-    return result.data as z.output<S>;
+    return result.data;
   } catch {
     return fallback;
   }
@@ -224,9 +209,7 @@ export const storage = {
     safeWrite(KEY.manualResult(result.manual_id), result);
   },
 
-  /* Líneas OCR de un manual — texto + confidence devuelto por backend.
-     Se guarda al crear el manual y se consulta desde el viewer "Ver
-     texto original" del Result. */
+  /* Texto OCR cacheado cuando algun flujo lo proporciona. */
   getOcrLines(manualId: string): OcrLine[] {
     return safeRead(KEY.ocrLines(manualId), OcrLinesSchema, [] as OcrLine[]);
   },

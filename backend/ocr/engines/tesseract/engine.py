@@ -19,21 +19,12 @@ class TesseractOcrEngine:
     def __init__(self, lang: str = "spa"):
         """Inicializa Tesseract y comprueba que el binario e idioma existen."""
         self._lang = lang
-        try:
-            version = pytesseract.get_tesseract_version()
-            self._ensure_language_available()
-            logger.info("Tesseract inicializado correctamente: %s.", version)
-        except Exception:
-            logger.exception("Error al inicializar Tesseract.")
-            raise
+        version = pytesseract.get_tesseract_version()
+        self._ensure_language_available()
+        logger.info("Tesseract inicializado correctamente: %s.", version)
 
     def extract_text(self, image_path: str) -> list[OcrLine]:
-        """
-        Extrae las líneas de texto reconocidas en una imagen.
-
-        Procesa la imagen indicada mediante Tesseract, agrupa palabras por
-        línea y transforma sus confianzas porcentuales a la escala 0..1.
-        """
+        """Extrae líneas OCR normalizadas con Tesseract."""
         logger.info("Iniciando OCR sobre: %s", image_path)
         result = pytesseract.image_to_data(
             image_path,
@@ -49,6 +40,4 @@ class TesseractOcrEngine:
         """Falla pronto si Tesseract no tiene instalado el idioma configurado."""
         languages = pytesseract.get_languages(config="")
         if self._lang not in languages:
-            raise RuntimeError(
-                f"Tesseract no tiene instalado el pack de idioma {self._lang!r}."
-            )
+            raise RuntimeError(f"Tesseract no tiene instalado el pack de idioma {self._lang!r}.")

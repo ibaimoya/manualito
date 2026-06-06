@@ -474,3 +474,6 @@ frontend/src/routeTree.gen.ts
 frontend/src/shared/api/generated/
 frontend/dev-dist/
 frontend/screenshots/
+
+# Temporalmente /docs queda excluido hasta que esté preparado
+/docs

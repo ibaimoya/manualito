@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import {
   Accordion,
   AccordionContent,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { OcrTextSheet } from '@/features/ocr/OcrTextSheet';
+import { api } from '@/shared/api/client';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
 
 export const Route = createFileRoute('/result/$manualId')({
@@ -39,17 +41,21 @@ function ResultScreen() {
   const { manualId } = Route.useParams();
   const navigate = useNavigate();
   const result = useMemo<ManualResult | null>(() => storage.getResult(manualId), [manualId]);
+  const detailQuery = useQuery({
+    queryKey: ['manual-detail', manualId],
+    queryFn: ({ signal }) => api.getManual(manualId, signal),
+    enabled: result !== null,
+  });
   const [question, setQuestion] = useState('');
-  // Estado del sheet "Ver texto original".  Se abre cuando el usuario
-  // pulsa el icono ScanText del header.
   const [ocrOpen, setOcrOpen] = useState(false);
-  // Líneas OCR — leídas del localStorage en el primer render (lazy
-  // initializer evita el flash de "sin líneas" mientras un useEffect
-  // las cargaba más tarde, catálogo bug #33).  El backend ya las
-  // devolvió en POST /api/manuals (Fase L) y NameManualForm las
-  // guardó con storage.setOcrLines: aquí solo leemos.  Cero peticiones
-  // OCR extra → el viewer es gratis a nivel de red.
-  const ocrLines = useMemo<OcrLine[]>(() => storage.getOcrLines(manualId), [manualId]);
+  const cachedOcrLines = useMemo<OcrLine[]>(() => storage.getOcrLines(manualId), [manualId]);
+  const backendOcrLines = useMemo<OcrLine[]>(() => {
+    const pages = detailQuery.data?.pages ?? [];
+    return [...pages]
+      .sort((left, right) => left.page_number - right.page_number)
+      .flatMap((page) => page.ocr_lines);
+  }, [detailQuery.data]);
+  const ocrLines = detailQuery.data ? backendOcrLines : cachedOcrLines;
 
   useEffect(() => {
     storage.touchManual(manualId);
@@ -99,12 +105,6 @@ function ResultScreen() {
           {result.name}
         </h1>
         <div className="flex shrink-0 items-center gap-1">
-          {/*
-            "Ver texto original" — solo se muestra si tenemos líneas
-            persistidas (manuales creados a partir de la Fase L del
-            backend).  Manuales más antiguos no tienen ocr_lines en
-            localStorage, así que el botón quedaría sin sentido.
-          */}
           {ocrLines.length > 0 ? (
             <button
               type="button"

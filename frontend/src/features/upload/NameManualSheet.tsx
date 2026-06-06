@@ -10,7 +10,7 @@ import {
 type Props = Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  file: File | null;
+  files: File[];
   source: UploadSource;
 }>;
 
@@ -28,13 +28,19 @@ type Props = Readonly<{
  *   "JS (useMediaQuery) solo cuando hay que CAMBIAR de componente,
  *    no solo de estilo." — MDN / web.dev guidelines (ver decisión #28).
  */
-export function NameManualSheet({ open, onOpenChange, file, source }: Props) {
+export function NameManualSheet({ open, onOpenChange, files, source }: Props) {
   const isDesktop = useNamedMediaQuery('desktop');
   const subtitle = subtitleForSource(source);
   const title = 'Ponle nombre al manual';
+  const formKey = files.map((file) => `${file.name}:${file.size}:${file.lastModified}`).join('|');
 
   const form = (
-    <NameManualForm file={file} onClose={() => onOpenChange(false)} />
+    <NameManualForm
+      key={formKey}
+      files={files}
+      source={source}
+      onClose={() => onOpenChange(false)}
+    />
   );
 
   if (isDesktop) {

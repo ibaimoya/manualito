@@ -27,7 +27,8 @@ from api.manuals.exceptions import (
     GeneratedAnswerTooLongError,
     ManualContextNotFoundError,
     ManualNotFoundError,
-    ManualWithoutTextError,
+    ManualTooLargeError,
+    ManualUploadSelectionError,
 )
 from api.schemas import ApiErrorResponse, ApiFieldError
 from database.models.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
@@ -95,6 +96,18 @@ class InvalidImageError(ApiError):
     """El fichero subido no contiene una imagen válida."""
 
 
+class PdfTooLargeError(ApiError):
+    """El PDF subido supera el tamaño máximo permitido por el gateway."""
+
+
+class InvalidPdfError(ApiError):
+    """El fichero subido no contiene un PDF válido."""
+
+
+class ManualPageLimitExceededError(ApiError):
+    """El manual subido supera el número máximo de páginas permitido."""
+
+
 class InternalServiceUnavailableError(PublicDetailApiError):
     """Un servicio interno no está disponible."""
 
@@ -151,6 +164,21 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         status_code=415,
         detail="El archivo no es una imagen válida.",
         code="invalid_image",
+    ),
+    PdfTooLargeError: ErrorResponseConfig(
+        status_code=413,
+        detail="El PDF no puede superar 50 MB.",
+        code="pdf_too_large",
+    ),
+    InvalidPdfError: ErrorResponseConfig(
+        status_code=415,
+        detail="El archivo no es un PDF válido.",
+        code="invalid_pdf",
+    ),
+    ManualPageLimitExceededError: ErrorResponseConfig(
+        status_code=413,
+        detail=f"El manual no puede superar {config.MAX_MANUAL_PAGES} páginas.",
+        code="manual_too_many_pages",
     ),
     InternalServiceUnavailableError: ErrorResponseConfig(
         status_code=502,
@@ -209,10 +237,15 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         detail="Este juego ya no está disponible para nuevas preguntas.",
         code="game_unavailable",
     ),
-    ManualWithoutTextError: ErrorResponseConfig(
+    ManualUploadSelectionError: ErrorResponseConfig(
         status_code=422,
-        detail="No se pudo extraer texto indexable del manual.",
-        code="manual_without_text",
+        detail="Sube imágenes o un PDF, pero no ambos.",
+        code="manual_upload_selection_invalid",
+    ),
+    ManualTooLargeError: ErrorResponseConfig(
+        status_code=413,
+        detail="El manual supera el tamaño máximo permitido.",
+        code="manual_too_large",
     ),
     ManualNotFoundError: ErrorResponseConfig(
         status_code=404,
@@ -261,6 +294,7 @@ def _domain_error_config(exc: Exception) -> ErrorResponseConfig:
 
 
 def auth_validation_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Devuelve errores de autenticación como errores de formulario."""
     error = cast(AuthFormValidationError, exc)
     return _api_error_response(
         status_code=422,

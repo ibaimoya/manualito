@@ -8,7 +8,8 @@ __all__ = [
     "GeneratedAnswerTooLongError",
     "ManualContextNotFoundError",
     "ManualNotFoundError",
-    "ManualWithoutTextError",
+    "ManualTooLargeError",
+    "ManualUploadSelectionError",
     "ManualsError",
 ]
 
@@ -17,8 +18,12 @@ class ManualsError(Exception):
     """Clase base para errores esperados de manuales."""
 
 
-class ManualWithoutTextError(ManualsError):
-    """El OCR no produjo texto suficiente para generar chunks."""
+class ManualUploadSelectionError(ManualsError):
+    """La subida no contiene exactamente una fuente de manual."""
+
+
+class ManualTooLargeError(ManualsError):
+    """El conjunto de ficheros del manual supera el límite permitido."""
 
 
 class ManualNotFoundError(ManualsError):

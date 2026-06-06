@@ -8,6 +8,8 @@ ARG NGINX_VARIANT
 # Stage: build.
 FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}${NODE_VARIANT:+-${NODE_VARIANT}} AS builder
 
+ARG APP_VERSION
+
 WORKDIR /app
 
 COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -21,7 +23,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 COPY --link . .
 
-RUN pnpm build
+RUN APP_VERSION="${APP_VERSION:?APP_VERSION_no_definida}" pnpm build
 
 # Stage: runtime.
 FROM nginx:${NGINX_VERSION:?NGINX_VERSION_no_definida}${NGINX_VARIANT:+-${NGINX_VARIANT}} AS runtime

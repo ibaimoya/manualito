@@ -10,6 +10,7 @@ def test_api_settings_parses_environment_types(monkeypatch):
     monkeypatch.setenv("OCR_URL", "http://ocr:8000")
     monkeypatch.setenv("RAG_URL", "http://rag:8000")
     monkeypatch.setenv("LLM_URL", "http://llm:8000")
+    monkeypatch.setenv("APP_VERSION", "9.8.7")
     monkeypatch.setenv("LLM_UNLOAD_BEFORE_OCR", "false")
     monkeypatch.setenv("PASSWORD_HASH_CONCURRENCY", "4")
     monkeypatch.setenv("CONVERSATION_HISTORY_MESSAGES", "6")
@@ -23,6 +24,7 @@ def test_api_settings_parses_environment_types(monkeypatch):
 
     settings = ApiSettings()
 
+    assert settings.app_version == "9.8.7"
     assert settings.llm_unload_before_ocr is False
     assert settings.password_hash_concurrency == 4
     assert settings.conversation_history_messages == 6
@@ -41,12 +43,14 @@ def test_cookie_names_keep_host_prefix_only_when_secure():
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
+        app_version="0.1.0",
         auth_cookie_secure=False,
     )
     secure = ApiSettings(
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
+        app_version="0.1.0",
         auth_cookie_secure=True,
     )
 

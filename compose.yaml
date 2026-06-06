@@ -65,6 +65,8 @@ services:
     env_file:
       - ./config/backend.env
       - ./config/database.env
+    environment:
+      APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
     image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
     secrets:
@@ -253,6 +255,7 @@ services:
     build:
       context: ./frontend
       args:
+        APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
         NODE_VARIANT: ${NODE_VARIANT:-}
         NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}

@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Home, BookOpen, Settings as SettingsIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { LockUp } from '@/shared/components/Brand';
+import { APP_VERSION } from '@/shared/lib/appVersion';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -76,7 +77,7 @@ export function Sidebar({ pathname }: Props) {
 
       <footer className="border-t border-border px-5 py-4">
         <p className="mono text-[10px] tracking-[0.1em] text-fg-3">
-          v 0.1.0 · phi4 · ChromaDB · FastAPI
+          v {APP_VERSION} · phi4 · ChromaDB · FastAPI
         </p>
       </footer>
     </aside>

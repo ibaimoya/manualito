@@ -104,12 +104,13 @@ La API queda expuesta en `http://localhost:8000`.
 ### Configuración de versiones
 
 Docker Compose lee automáticamente el fichero `.env` de la raíz del proyecto.
-Ese fichero centraliza las versiones de imágenes y herramientas usadas durante
-el build, así que para subir una versión no hay que editar Dockerfiles ni
+Ese fichero centraliza la versión visible de la app y las versiones de imágenes
+y herramientas usadas durante el build, así que para subir una versión no hay que editar Dockerfiles ni
 `compose.yaml`: se cambia una sola variable en `.env`.
 
 | Variable | Controla |
 | --- | --- |
+| `APP_VERSION` | Versión visible de Manualito en la API y el frontend. |
 | `PYTHON_VERSION` | Versión de Python usada por los servicios backend. |
 | `PYTHON_VARIANT` | Variante de la imagen de Python. Vacía equivale a usar la imagen sin sufijo. |
 | `UV_VERSION` | Versión de `uv` usada solo durante los stages de dependencias. |

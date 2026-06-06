@@ -23,6 +23,7 @@ def _load_env_file(path: Path) -> None:
 def _load_backend_env() -> None:
     """Carga las variables usadas al importar los servicios backend."""
     config_dir = _root / "config"
+    _load_env_file(_root / ".env")
     for env_path in (config_dir / "backend.env", config_dir / "database.env"):
         _load_env_file(env_path)
 

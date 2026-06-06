@@ -7,13 +7,12 @@ import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type Density, type ThemeMode } from '@/app/theme';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { APP_VERSION } from '@/shared/lib/appVersion';
 import { storage } from '@/shared/lib/storage';
 
 export const Route = createFileRoute('/settings')({
   component: SettingsScreen,
 });
-
-const APP_VERSION = '0.1.0';
 
 function SettingsScreen() {
   const theme = useTheme();

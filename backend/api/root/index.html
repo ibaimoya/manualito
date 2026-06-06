@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manualito API</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        min-height: 100dvh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: #17151d;
+        color: #f7f3ed;
+      }
+
+      .card {
+        border: 1px solid currentColor;
+        border-radius: 4px;
+        padding: 2.4rem 2rem 1.8rem;
+      }
+
+      pre {
+        margin: 0;
+        font: 400 clamp(15px, 2vw, 20px)/1 ui-monospace, SFMono-Regular,
+          Consolas, "Liberation Mono", monospace;
+        text-align: center;
+        white-space: pre;
+      }
+
+      .meta {
+        margin: 1.4rem 0 0;
+        font: 400 clamp(15px, 2vw, 20px)/1 ui-monospace, SFMono-Regular,
+          Consolas, "Liberation Mono", monospace;
+      }
+
+      .ready,
+      .dot {
+        color: #22c55e;
+      }
+
+      .dot {
+        font-size: 1.1em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <pre>$logo</pre>
+      <p class="meta">
+        <span class="dot">●</span>
+        <span class="ready">ready</span>
+        · /docs · /health · v$version
+      </p>
+    </main>
+  </body>
+</html>

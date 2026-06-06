@@ -80,6 +80,7 @@ def test_root_banner(client):
     assert 'class="card"' in response.text
     assert 'class="ready"' in response.text
     assert "ready" in response.text
+    assert "v0.1.0" in response.text
     assert "/docs" in response.text
     assert "/health" in response.text
 

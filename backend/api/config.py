@@ -11,6 +11,7 @@ class ApiSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
+    app_version: str = Field(min_length=1)
     max_image_size: int = 20 * 1024 * 1024
     max_manual_pdf_size: int = 50 * 1024 * 1024
     max_manual_total_size: int = 50 * 1024 * 1024
@@ -86,6 +87,7 @@ class ApiSettings(BaseSettings):
 
 settings = ApiSettings()
 
+APP_VERSION = settings.app_version
 MAX_IMAGE_SIZE = settings.max_image_size
 MAX_MANUAL_PDF_SIZE = settings.max_manual_pdf_size
 MAX_MANUAL_TOTAL_SIZE = settings.max_manual_total_size

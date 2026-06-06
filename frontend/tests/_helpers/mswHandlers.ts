@@ -1,12 +1,5 @@
-import { http, HttpResponse, delay } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 
-/**
- * Handlers MSW que mimican el backend FastAPI real.
- * Importados en tests vía `setupServer(...handlers)`.
- *
- * Sigue exactamente el shape devuelto por `/openapi.json` (ver
- * backend/api/schemas.py).  Cuando el backend evolucione, regenerar.
- */
 export const handlers = [
   http.get('/health', () => HttpResponse.json({ status: 'ok' })),
 
@@ -15,8 +8,25 @@ export const handlers = [
     return HttpResponse.json({
       lines: [
         { text: 'Bienvenido al manual de prueba.', confidence: 0.94 },
-        { text: 'Página 1 de demostración.', confidence: 0.88 },
+        { text: 'Pagina 1 de demostracion.', confidence: 0.88 },
       ],
+    });
+  }),
+
+  http.get('/api/games', async ({ request }) => {
+    const query = new URL(request.url).searchParams.get('q')?.trim() || 'Catan';
+    await delay(20);
+    return HttpResponse.json({
+      games: [
+        {
+          id: 'test-game-001',
+          name: query,
+          bgg_id: 13,
+          year_published: 1995,
+          manuals_count: 0,
+        },
+      ],
+      attribution: 'Game data provided by BoardGameGeek.',
     });
   }),
 
@@ -24,15 +34,39 @@ export const handlers = [
     await delay(50);
     return HttpResponse.json({
       manual_id: 'test-manual-001',
-      chunks_indexed: 12,
-      status: 'indexed',
-      // El gateway devuelve también las líneas OCR (ver
-      // backend/api/schemas.py::ManualCreatedResponse).  El MSW mimica
-      // el mismo shape; el frontend las persiste con storage.setOcrLines.
-      ocr_lines: [
-        { text: 'Bienvenido al manual de prueba.', confidence: 0.94 },
-        { text: 'Página 1 de demostración.', confidence: 0.88 },
-      ],
+      game_id: 'test-game-001',
+      status: 'indexing',
+      visibility: 'private',
+      source_type: 'images',
+      page_count: 1,
+    });
+  }),
+
+  http.get('/api/manuals/:manualId', ({ params }) =>
+    HttpResponse.json({
+      id: params.manualId,
+      game_id: 'test-game-001',
+      game_name: 'Catan',
+      title: 'Catan',
+      status: 'active',
+      visibility: 'private',
+      language: 'spa',
+      chunks_indexed: 0,
+      created_at: '2026-05-26T10:00:00.000Z',
+      indexed_at: '2026-05-26T10:00:10.000Z',
+      pages: [],
+    }),
+  ),
+
+  http.get('/api/manuals/:manualId/processing', async () => {
+    await delay(30);
+    return HttpResponse.json({
+      manual_id: 'test-manual-001',
+      status: 'active',
+      page_count: 1,
+      completed_pages: 1,
+      failed_pages: 0,
+      pages: [{ page_number: 1, ocr_status: 'completed', text_quality: 'ok' }],
     });
   }),
 
@@ -45,11 +79,6 @@ export const handlers = [
   }),
 ];
 
-/**
- * Helpers para sobrescribir handlers en tests específicos:
- *
- *   server.use(failManualCreate(502));
- */
 export function failManualCreate(status = 500) {
   return http.post('/api/manuals', () =>
     HttpResponse.json({ detail: 'forced error' }, { status }),

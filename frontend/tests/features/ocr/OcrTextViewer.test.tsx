@@ -64,6 +64,17 @@ describe('OcrTextViewer', () => {
       expect(badge31.className).toMatch(/error/);
     });
 
+    it('muestra s/c cuando la linea viene de texto PDF sin confidence', () => {
+      render(
+        <OcrTextViewer
+          lines={[{ text: 'Texto extraido del PDF', confidence: null }]}
+          defaultView="lines"
+        />,
+      );
+
+      expect(screen.getByText('s/c')).toBeInTheDocument();
+    });
+
     it('una línea muestra confidence redondeada y se puede seleccionar/deseleccionar', async () => {
       const user = userEvent.setup();
       render(<OcrTextViewer lines={SAMPLE} defaultView="lines" />);

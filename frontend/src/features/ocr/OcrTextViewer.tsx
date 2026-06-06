@@ -7,25 +7,7 @@ import { cn } from '@/shared/lib/cn';
 import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
 import type { OcrLine } from '@/shared/lib/storage';
 
-/**
- * Visor reutilizable de texto OCR — usado en dos contextos:
- *
- *  1. `variant='screen'`  → cuerpo de la pantalla `/extract` (atajo
- *     "Solo extraer texto").  Action bar con Copiar + Guardar + Crear
- *     manual.
- *  2. `variant='embedded'` → contenido de un `<Sheet>` o `<Dialog>`
- *     abierto desde `/result` ("Ver texto original").  Action bar con
- *     Copiar + Cerrar.
- *
- * Diseñado por Claude Design (bundle `manualito-extract`, fichero
- * `ocr-text-viewer.jsx`); este TSX es la implementación canónica del
- * mismo contrato adaptada a Tailwind + tokens del proyecto.
- *
- * No realiza ninguna petición HTTP — recibe `lines` ya extraídas (el
- * backend las devuelve en `POST /api/manuals.ocr_lines` y el frontend
- * las guarda con `storage.setOcrLines`).  Esto evita disparar OCR dos
- * veces para el mismo manual (costoso en CPU / GPU).
- */
+/** Visor reutilizable para texto extraido por OCR o desde PDF. */
 
 export type OcrTextView = 'plain' | 'lines';
 
@@ -47,14 +29,15 @@ export interface OcrTextViewerProps {
   className?: string;
 }
 
-function confidenceTone(c: number): 'success' | 'warning' | 'error' {
+function confidenceTone(c: number | null): 'neutral' | 'success' | 'warning' | 'error' {
+  if (c === null) return 'neutral';
   if (c >= 0.85) return 'success';
   if (c >= 0.5) return 'warning';
   return 'error';
 }
 
 function stableLineKey(line: OcrLine): string {
-  let hash = Math.round(line.confidence * 1000);
+  let hash = Math.round((line.confidence ?? 0) * 1000);
   for (const char of line.text) {
     hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
   }
@@ -74,9 +57,7 @@ export function OcrTextViewer({
 }: Readonly<OcrTextViewerProps>) {
   const [view, setView] = useState<OcrTextView>(defaultView);
   const [copied, setCopied] = useState(false);
-  // El reset del estado "Copiado" se hace debounced para que clicks
-  // rápidos repetidos no reseteen antes de tiempo ni acumulen timers
-  // huérfanos (catálogo bug #25 — patrón canónico para feedback breve).
+  // Mantiene visible el feedback de copia durante un instante.
   const resetCopiedSoon = useDebouncedCallback(() => setCopied(false), 1500);
 
   const plainText = useMemo(
@@ -93,8 +74,7 @@ export function OcrTextViewer({
     try {
       await navigator.clipboard?.writeText(plainText);
     } catch {
-      // jsdom y browsers sin permission API: silenciamos.  El onCopyAll
-      // callback es la fuente de verdad para tests.
+      // El callback onCopyAll ya cubre tests y navegadores sin clipboard.
     }
     setCopied(true);
     resetCopiedSoon();
@@ -236,7 +216,7 @@ function LinesView({ lines }: Readonly<{ lines: OcrLine[] }>) {
         key,
         number,
         text: line.text,
-        pct: Math.round(line.confidence * 100),
+        pct: line.confidence === null ? null : Math.round(line.confidence * 100),
         tone: confidenceTone(line.confidence),
         stagger: Math.min(number, 16),
       };
@@ -273,8 +253,8 @@ function LinesView({ lines }: Readonly<{ lines: OcrLine[] }>) {
 type OcrLineRowProps = Readonly<{
   number: number;
   text: string;
-  pct: number;
-  tone: 'success' | 'warning' | 'error';
+  pct: number | null;
+  tone: 'neutral' | 'success' | 'warning' | 'error';
   stagger: number;
 }>;
 
@@ -312,7 +292,7 @@ function OcrLineRow({ number, text, pct, tone, stagger }: OcrLineRowProps) {
         {text}
       </span>
       <Badge tone={tone} size="sm" className="mt-0.5 min-w-[44px] shrink-0 justify-center">
-        {pct}%
+        {pct === null ? 's/c' : `${pct}%`}
       </Badge>
     </button>
   );

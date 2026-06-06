@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Moon, Sun, SunMoon, Type, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Moon, Sun, SunMoon, Type, FileText, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
@@ -85,19 +85,12 @@ function SettingsScreen() {
       </Group>
 
       <Group title="Privacidad y datos">
-        {/*
-          Indicador estático (no toggle): el comportamiento es siempre activo
-          por diseño — las fotos no se guardan en el backend tras OCR.
-          Catálogo bug #14: evitamos un Switch interactivo que el usuario
-          podría intentar tocar pensando que cambia algo.  Badge + role
-          'status' deja claro que es informativo, no accionable.
-        */}
         <Row
-          label="Borrar fotos tras procesar"
-          hint="Siempre activo. Tus fotos solo viajan al servidor cuando creas un manual."
+          label="Archivos del manual"
+          hint="Se guardan asociados al manual y se eliminan al borrarlo."
         >
-          <Badge role="status" ariaLabel="Borrado tras procesar: siempre activo">
-            <ImageIcon size={12} aria-hidden="true" /> Siempre activo
+          <Badge role="status" ariaLabel="Archivos gestionados por el servidor">
+            <FileText size={12} aria-hidden="true" /> Servidor
           </Badge>
         </Row>
         <Row label="Borrar historial">

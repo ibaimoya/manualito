@@ -41,7 +41,10 @@ class Asset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        CheckConstraint("kind IN ('avatar', 'manual_page_image')", name="kind_valid"),
+        CheckConstraint(
+            "kind IN ('avatar', 'manual_page_image', 'manual_source_pdf')",
+            name="kind_valid",
+        ),
         CheckConstraint("byte_size > 0", name="byte_size_positive"),
         CheckConstraint("length(sha256) = 64", name="sha256_length_valid"),
         CheckConstraint("width IS NULL OR width > 0", name="width_positive"),

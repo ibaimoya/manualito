@@ -184,6 +184,24 @@ describe('/processing/$manualId', () => {
     expect(await screen.findByText('OCR fallido')).toBeInTheDocument();
   });
 
+  it('muestra estado final de error si termina sin resultado', async () => {
+    setBootstrap({
+      steps: [
+        { id: 'summary', label: 'Resumen', state: 'failed', error: 'OCR fallido' },
+        { id: 'setup', label: 'PreparaciÃ³n', state: 'failed', error: 'OCR fallido' },
+        { id: 'turn', label: 'El turno', state: 'failed', error: 'OCR fallido' },
+        { id: 'win', label: 'CÃ³mo se gana', state: 'failed', error: 'OCR fallido' },
+      ],
+      progress: 100,
+      done: true,
+      hasAnyAnswer: false,
+      result: null,
+    });
+    renderProcessing('m1', 'Catan');
+    expect(await screen.findByText('No se ha podido procesar')).toBeInTheDocument();
+    expect(screen.getByText(/vuelve a intentarlo/i)).toBeInTheDocument();
+  });
+
   it('cuando done && result navega a /result/$manualId tras 600ms', async () => {
     setBootstrap({
       steps: [

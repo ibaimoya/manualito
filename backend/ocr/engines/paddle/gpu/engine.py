@@ -15,26 +15,16 @@ class PaddleGpuOcrEngine:
 
     def __init__(self):
         """Inicializa PaddleOCR tras comprobar que Paddle ve CUDA y una GPU."""
-        try:
-            self._ensure_cuda_available()
-            self._ocr = PaddleOCR(
-                use_textline_orientation=True,
-                lang="es",
-                device="gpu",
-            )
-            logger.info("PaddleOCR GPU inicializado correctamente.")
-        except Exception:
-            logger.exception("Error al inicializar PaddleOCR GPU.")
-            raise
+        self._ensure_cuda_available()
+        self._ocr = PaddleOCR(
+            use_textline_orientation=True,
+            lang="es",
+            device="gpu",
+        )
+        logger.info("PaddleOCR GPU inicializado correctamente.")
 
     def extract_text(self, image_path: str) -> list[OcrLine]:
-        """
-        Extrae las líneas de texto reconocidas en una imagen.
-
-        Procesa la imagen indicada mediante PaddleOCR GPU y transforma
-        su salida interna en una lista normalizada de líneas con confianza
-        redondeada a cuatro decimales.
-        """
+        """Extrae líneas OCR normalizadas con PaddleOCR GPU."""
         logger.info("Iniciando OCR sobre: %s", image_path)
         lines = normalize_paddle_result(self._ocr.predict(image_path))
         log_ocr_result(logger, image_path, lines)
@@ -52,6 +42,4 @@ class PaddleGpuOcrEngine:
             )
 
         if paddle.device.cuda.device_count() < 1:
-            raise RuntimeError(
-                "No se ha detectado ninguna GPU CUDA disponible para PaddleOCR."
-            )
+            raise RuntimeError("No se ha detectado ninguna GPU CUDA disponible para PaddleOCR.")

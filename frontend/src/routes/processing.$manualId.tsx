@@ -40,7 +40,11 @@ function ProcessingScreen() {
     });
   }, [manualId, safeName]);
 
-  const { steps, progress, done, result } = useManualBootstrap(manualId, safeName);
+  const { steps, progress, done, hasAnyAnswer, result } = useManualBootstrap(
+    manualId,
+    safeName,
+  );
+  const failed = done && !result && !hasAnyAnswer;
 
   // Cuando termine y haya al menos un acierto → navega al Result.
   useEffect(() => {
@@ -64,18 +68,27 @@ function ProcessingScreen() {
         <div className="flex flex-col items-center gap-4 pt-2">
           <div className="relative grid h-28 w-28 place-items-center rounded-full bg-primary-100">
             <div
-              className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary"
-              style={{ animation: 'mn-spin 1.4s linear infinite' }}
+              className={cn(
+                'absolute inset-0 rounded-full border-4 border-transparent',
+                failed ? 'border-t-error' : 'border-t-primary',
+              )}
+              style={failed ? undefined : { animation: 'mn-spin 1.4s linear infinite' }}
               aria-hidden="true"
             />
-            <FileText size={40} className="text-primary-700" strokeWidth={1.5} />
+            <FileText
+              size={40}
+              className={failed ? 'text-error' : 'text-primary-700'}
+              strokeWidth={1.5}
+            />
           </div>
           <div className="text-center">
             <h2 className="font-display text-xl font-bold tracking-tight text-fg">
-              Leyendo tu manual…
+              {failed ? 'No se ha podido procesar' : 'Leyendo tu manual…'}
             </h2>
             <p className="mt-1 max-w-xs text-sm text-fg-2">
-              Esto puede tardar entre 30 y 60 segundos.  Puedes minimizar la app si quieres.
+              {failed
+                ? 'Revisa el archivo o vuelve a intentarlo con otro manual.'
+                : 'Puede tardar más con PDFs o varias páginas. Puedes minimizar la app si quieres.'}
             </p>
           </div>
         </div>
@@ -116,9 +129,7 @@ function ProcessingScreen() {
                 >
                   {s.label}
                 </div>
-                {s.state === 'failed' && s.error ? (
-                  <div className="mono text-xs text-error">{s.error}</div>
-                ) : null}
+                <StepDetail step={s} />
               </div>
             </li>
           ))}
@@ -126,11 +137,23 @@ function ProcessingScreen() {
 
         <p className="flex items-center justify-center gap-2 text-xs text-fg-3">
           <Info size={14} />
-          Tus fotos solo se usan para esta consulta.
+          {failed
+            ? 'No se ha guardado ningun resultado util para este manual.'
+            : 'Tus archivos se usan para procesar e indexar este manual.'}
         </p>
       </div>
     </div>
   );
+}
+
+function StepDetail({ step }: Readonly<{ step: ProcessingStep }>) {
+  if (step.state === 'failed' && step.error) {
+    return <div className="mono text-xs text-error">{step.error}</div>;
+  }
+  if (step.text) {
+    return <div className="mono text-xs text-fg-3">{step.text}</div>;
+  }
+  return null;
 }
 
 function StepStatusIcon({ state }: Readonly<{ state: ProcessingStep['state'] }>) {

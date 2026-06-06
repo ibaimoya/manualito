@@ -21,6 +21,9 @@ from api.exceptions import (
     InternalServiceError,
     InternalServiceUnavailableError,
     InvalidImageError,
+    InvalidPdfError,
+    ManualPageLimitExceededError,
+    PdfTooLargeError,
     PublicDetailApiError,
     auth_validation_handler,
     domain_exception_handler,
@@ -36,6 +39,9 @@ def test_api_exceptions_inherit_from_api_error():
     """Todas las excepciones del gateway heredan de su base de dominio."""
     assert issubclass(ImageTooLargeError, ApiError)
     assert issubclass(InvalidImageError, ApiError)
+    assert issubclass(PdfTooLargeError, ApiError)
+    assert issubclass(InvalidPdfError, ApiError)
+    assert issubclass(ManualPageLimitExceededError, ApiError)
     assert issubclass(InternalServiceUnavailableError, ApiError)
     assert issubclass(InternalResourceNotFoundError, ApiError)
     assert issubclass(InternalServiceError, ApiError)
@@ -120,6 +126,9 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
     [
         (ImageTooLargeError(), 413, "image_too_large"),
         (InvalidImageError(), 415, "invalid_image"),
+        (PdfTooLargeError(), 413, "pdf_too_large"),
+        (InvalidPdfError(), 415, "invalid_pdf"),
+        (ManualPageLimitExceededError(), 413, "manual_too_many_pages"),
         (
             InternalServiceUnavailableError("Servicio OCR no disponible."),
             502,

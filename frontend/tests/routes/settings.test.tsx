@@ -98,13 +98,10 @@ describe('/settings', () => {
     ).toBeInTheDocument();
   });
 
-  it('muestra el indicador estático "Siempre activo" en privacidad', async () => {
+  it('muestra el indicador estático de archivos gestionados por servidor', async () => {
     renderSettings();
-    // El texto vive dentro de un <span role="status"> con un icono
-    // delante — findByText con regex falla por la separación por tags;
-    // findByRole con aria-label es el contrato accesible correcto.
     expect(
-      await screen.findByRole('status', { name: /Borrado tras procesar/i }),
+      await screen.findByRole('status', { name: /Archivos gestionados/i }),
     ).toBeInTheDocument();
   });
 

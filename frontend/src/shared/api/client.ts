@@ -8,7 +8,7 @@ import { mapApiError, type ApiErrorView } from './error-mapper';
  *
  * Convenciones:
  *   - baseUrl `/api` → relativo, lo resuelve vite proxy (dev) o nginx (prod).
- *   - timeout configurable (POST /manuals tarda ~30-60s).
+ *   - timeouts por endpoint para separar uploads, OCR y preguntas al LLM.
  *   - Mapea errores a `ApiErrorView` (ver error-mapper.ts).
  */
 
@@ -126,12 +126,12 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 }
 
 /* ============================================================
-   Endpoints reales del backend FastAPI (mayo 2026)
+   Endpoints reales del backend FastAPI
    ============================================================ */
 
 export interface OcrLine {
   text: string;
-  confidence: number;
+  confidence: number | null;
 }
 
 export interface OcrLinesResponse {
@@ -140,19 +140,81 @@ export interface OcrLinesResponse {
 
 export interface ManualCreatedResponse {
   manual_id: string;
-  chunks_indexed: number;
-  status: string;
-  /**
-   * Líneas OCR extraídas por el gateway durante la indexación.
-   * El frontend las guarda en `localStorage` para que la pantalla
-   * "Ver texto original" pueda mostrarlas sin volver a llamar al OCR.
-   *
-   * El backend siempre devuelve este campo (lista vacía si el OCR no
-   * encontró texto).  El tipo no es opcional aquí porque la respuesta
-   * del API ya garantiza su presencia.
-   */
+  game_id: string;
+  status: ManualStatus;
+  visibility: 'private' | 'shared';
+  source_type: 'images' | 'pdf';
+  page_count: number;
+}
+
+export interface GameSearchItem {
+  id: string;
+  name: string;
+  bgg_id: number | null;
+  year_published: number | null;
+  manuals_count: number;
+}
+
+export interface GameSearchResponse {
+  games: GameSearchItem[];
+  attribution: string;
+}
+
+export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';
+
+export interface ManualDetailPage {
+  page_number: number;
+  ocr_status: 'pending' | 'completed' | 'failed';
+  text_source: 'none' | 'ocr' | 'pdf_text';
+  text_quality: 'ok' | 'empty' | 'low_confidence' | null;
+  ocr_confidence_mean: number | null;
   ocr_lines: OcrLine[];
 }
+
+export interface ManualDetailResponse {
+  id: string;
+  game_id: string;
+  game_name: string;
+  title: string | null;
+  status: ManualStatus;
+  visibility: 'private' | 'shared';
+  language: string | null;
+  chunks_indexed: number;
+  created_at: string;
+  indexed_at: string | null;
+  pages: ManualDetailPage[];
+}
+
+export interface ManualProcessingPage {
+  page_number: number;
+  ocr_status: 'pending' | 'completed' | 'failed';
+  text_quality: 'ok' | 'empty' | 'low_confidence' | null;
+}
+
+export interface ManualProcessingResponse {
+  manual_id: string;
+  status: ManualStatus;
+  page_count: number;
+  completed_pages: number;
+  failed_pages: number;
+  pages: ManualProcessingPage[];
+}
+
+export type CreateManualInput =
+  | {
+      title: string;
+      images: File[];
+      visibility?: 'private' | 'shared';
+      language?: string;
+      gameId: string;
+    }
+  | {
+      title: string;
+      pdf: File;
+      visibility?: 'private' | 'shared';
+      language?: string;
+      gameId: string;
+    };
 
 export interface AnswerResponse {
   answer: string;
@@ -177,31 +239,78 @@ export const api = {
       method: 'POST',
       body: fd,
       timeoutMs: 90_000,
-      signal: signal ?? new AbortController().signal,
+      signal,
     });
   },
 
-  /**
-   * POST /api/manuals — crea + indexa el manual.
-   * Tarda 30-60s en máquinas con GPU; en CPU puede llegar a 5-10 min.
-   */
+  /** POST /api/manuals: guarda la fuente y devuelve 202 mientras procesa. */
   async createManual(
-    name: string,
-    image: File,
+    input: CreateManualInput,
     signal?: AbortSignal,
   ): Promise<ManualCreatedResponse> {
     const fd = new FormData();
-    fd.append('name', name);
-    fd.append('image', image);
+    fd.append('title', input.title);
+    fd.append('visibility', input.visibility ?? 'private');
+    if (input.language) fd.append('language', input.language);
+    fd.append('game_id', input.gameId);
+    if ('pdf' in input) {
+      fd.append('pdf', input.pdf);
+    } else {
+      for (const image of input.images) {
+        fd.append('images', image);
+      }
+    }
     return request<ManualCreatedResponse>('/manuals', {
       method: 'POST',
       body: fd,
-      timeoutMs: 10 * 60_000,
-      signal: signal ?? new AbortController().signal,
+      timeoutMs: 90_000,
+      signal,
     });
   },
 
-  /** POST /api/manuals/{id}/questions — pregunta sobre un manual ya indexado. */
+  /** GET /api/games: busca juegos seleccionables para asociar el manual. */
+  async searchGames(query: string, signal?: AbortSignal): Promise<GameSearchResponse> {
+    return request<GameSearchResponse>(
+      `/games?q=${encodeURIComponent(query)}&limit=5`,
+      {
+        method: 'GET',
+        timeoutMs: 30_000,
+        signal,
+      },
+    );
+  },
+
+  /** GET /api/manuals/{id}: detalle completo con paginas y lineas OCR. */
+  async getManual(
+    manualId: string,
+    signal?: AbortSignal,
+  ): Promise<ManualDetailResponse> {
+    return request<ManualDetailResponse>(
+      `/manuals/${encodeURIComponent(manualId)}`,
+      {
+        method: 'GET',
+        timeoutMs: 30_000,
+        signal,
+      },
+    );
+  },
+
+  /** GET /api/manuals/{id}/processing: progreso ligero para polling. */
+  async getManualProcessing(
+    manualId: string,
+    signal?: AbortSignal,
+  ): Promise<ManualProcessingResponse> {
+    return request<ManualProcessingResponse>(
+      `/manuals/${encodeURIComponent(manualId)}/processing`,
+      {
+        method: 'GET',
+        timeoutMs: 30_000,
+        signal,
+      },
+    );
+  },
+
+  /** POST /api/manuals/{id}/questions: pregunta sobre un manual ya indexado. */
   async askManual(
     manualId: string,
     question: string,
@@ -212,7 +321,7 @@ export const api = {
       body: JSON.stringify({ question }),
       headers: { 'Content-Type': 'application/json' },
       timeoutMs: 5 * 60_000,
-      signal: signal ?? new AbortController().signal,
+      signal,
     });
   },
 };

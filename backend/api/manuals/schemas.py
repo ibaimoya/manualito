@@ -6,21 +6,20 @@ from uuid import UUID
 from pydantic import Field
 
 from api.annotations import Answer, ChunksIndexed, Question
-from api.ocr.schemas import OcrLine
 from api.schemas import StrictModel
 
 GAME_QUESTION_TOP_K_MAX = 10
 
 
 class ManualCreatedResponse(StrictModel):
-    """Respuesta tras persistir un manual e intentar indexarlo."""
+    """Respuesta tras aceptar un manual para procesamiento."""
 
     manual_id: UUID
     game_id: UUID
     status: str
     visibility: str
-    chunks_indexed: ChunksIndexed
-    ocr_lines: list[OcrLine]
+    source_type: str
+    page_count: int
 
 
 class ManualSummaryResponse(StrictModel):
@@ -44,18 +43,47 @@ class ManualListResponse(StrictModel):
     manuals: list[ManualSummaryResponse]
 
 
+class ManualTextLine(StrictModel):
+    """Línea de texto guardada para una página de manual."""
+
+    text: str
+    confidence: float | None = None
+
+
 class ManualPageResponse(StrictModel):
     """Página OCR de un manual propio."""
 
     page_number: int
     ocr_status: str
-    ocr_lines: list[OcrLine]
+    text_source: str
+    text_quality: str | None
+    ocr_confidence_mean: float | None
+    ocr_lines: list[ManualTextLine]
 
 
 class ManualDetailResponse(ManualSummaryResponse):
     """Detalle de un manual propio con páginas OCR."""
 
     pages: list[ManualPageResponse]
+
+
+class ManualProcessingPageResponse(StrictModel):
+    """Estado ligero de una página durante el procesamiento."""
+
+    page_number: int
+    ocr_status: str
+    text_quality: str | None
+
+
+class ManualProcessingResponse(StrictModel):
+    """Progreso multipágina de un manual propio."""
+
+    manual_id: UUID
+    status: str
+    page_count: int
+    completed_pages: int
+    failed_pages: int
+    pages: list[ManualProcessingPageResponse]
 
 
 class GameQuestionRequest(StrictModel):

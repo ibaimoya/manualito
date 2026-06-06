@@ -1,5 +1,7 @@
 import asyncio
 import os
+import threading
+import time
 from io import BytesIO
 from unittest.mock import patch
 
@@ -163,6 +165,17 @@ def test_extract_image_text_raises_domain_error_on_ocr_failure(valid_jpeg_bytes)
     assert not os.path.exists(captured[0])
 
 
+def test_extract_image_text_raises_domain_error_on_unexpected_engine_shape(valid_jpeg_bytes):
+    """Errores estructurales del engine OCR se convierten en error de dominio."""
+    upload = _upload_file(valid_jpeg_bytes)
+
+    with (
+        patch("ocr.service.extract_text", side_effect=KeyError("text")),
+        pytest.raises(OcrProcessingError),
+    ):
+        asyncio.run(extract_image_text(upload))
+
+
 def test_extract_image_text_raises_domain_error_when_temp_file_cannot_be_written(
     valid_jpeg_bytes,
 ):
@@ -174,3 +187,31 @@ def test_extract_image_text_raises_domain_error_when_temp_file_cannot_be_written
         pytest.raises(OcrProcessingError),
     ):
         asyncio.run(extract_image_text(upload))
+
+
+def test_extract_image_text_limits_concurrent_engine_calls(valid_jpeg_bytes):
+    """El servicio no ejecuta varias extracciones pesadas a la vez por proceso."""
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+
+    def _slow_extract(_path):
+        nonlocal active, max_active
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        time.sleep(0.05)
+        with lock:
+            active -= 1
+        return FAKE_OCR_RESULT
+
+    async def _run_two_uploads():
+        await asyncio.gather(
+            extract_image_text(_upload_file(valid_jpeg_bytes, filename="a.jpg")),
+            extract_image_text(_upload_file(valid_jpeg_bytes, filename="b.jpg")),
+        )
+
+    with patch("ocr.service.extract_text", side_effect=_slow_extract):
+        asyncio.run(_run_two_uploads())
+
+    assert max_active == 1

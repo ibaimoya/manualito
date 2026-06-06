@@ -70,6 +70,20 @@ def _assert_error(response, *, code: str) -> None:
 # Comprobación de estado.
 # ---------------------------------------------------------------------------
 
+def test_root_banner(client):
+    """La raíz muestra una pantalla humana de arranque de la API."""
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "<pre>" in response.text
+    assert 'class="card"' in response.text
+    assert 'class="ready"' in response.text
+    assert "ready" in response.text
+    assert "/docs" in response.text
+    assert "/health" in response.text
+
+
 def test_health(client):
     """El endpoint de health devuelve 200 y el cuerpo {"status": "ok"}."""
     response = client.get("/health")

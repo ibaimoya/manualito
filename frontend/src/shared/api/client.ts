@@ -1,132 +1,17 @@
-import { mapApiError, type ApiErrorView } from './error-mapper';
+import { mapApiError } from './error-mapper';
+import { ApiError, TIMEOUT, queryString, request, requestVoid } from './http';
 
 /**
- * Cliente HTTP minimal.  Construido a mano (no axios) para:
- *   - Mantener el bundle pequeño (la PWA va a móvil).
- *   - No depender de codegen para los 5 endpoints iniciales.
- *   - Que `@hey-api/openapi-ts` pueda generar después sin chocar.
- *
- * Convenciones:
- *   - baseUrl `/api` → relativo, lo resuelve vite proxy (dev) o nginx (prod).
- *   - timeouts por endpoint para separar uploads, OCR y preguntas al LLM.
- *   - Mapea errores a `ApiErrorView` (ver error-mapper.ts).
+ * Recursos de manuales y juegos. El transporte (request, ApiError, CSRF) vive
+ * en `./http`. Re-exporta ApiError y helpers para no romper los imports de
+ * `@/shared/api/client`.
  */
 
-const DEFAULT_TIMEOUT_MS = 120_000;
-const BASE_URL = '/api';
-
-export class ApiError extends Error {
-  public readonly view: ApiErrorView;
-  public readonly status: number | undefined;
-  public readonly raw: unknown;
-
-  constructor(view: ApiErrorView, status: number | undefined, raw: unknown) {
-    super(view.message);
-    this.name = 'ApiError';
-    this.view = view;
-    this.status = status;
-    this.raw = raw;
-  }
-}
-
-export interface ApiErrorNotification {
-  title: string;
-  id: string;
-  description: string;
-}
-
-export function isAbortApiError(error: unknown): boolean {
-  if (error instanceof DOMException && error.name === 'AbortError') return true;
-  return (
-    error instanceof ApiError &&
-    error.raw instanceof DOMException &&
-    error.raw.name === 'AbortError'
-  );
-}
-
-export function apiErrorNotification(
-  error: unknown,
-  idPrefix: string,
-  fallback: ApiErrorNotification,
-): ApiErrorNotification {
-  if (error instanceof ApiError) {
-    return {
-      title: error.view.title,
-      id: `${idPrefix}-${error.view.code}`,
-      description: error.view.message,
-    };
-  }
-  return fallback;
-}
-
-interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  body?: BodyInit;
-  /** Cabeceras adicionales — Content-Type lo gestiona body. */
-  headers?: Record<string, string>;
-  timeoutMs?: number;
-  signal?: AbortSignal;
-}
-
-async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const url = path.startsWith('/') ? `${BASE_URL}${path}` : `${BASE_URL}/${path}`;
-  const controller = new AbortController();
-  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const timer = setTimeout(() => controller.abort(new DOMException('Timeout', 'TimeoutError')), timeoutMs);
-
-  // Si nos pasaron un signal externo, lo unimos al nuestro.
-  if (opts.signal) {
-    opts.signal.addEventListener('abort', () => controller.abort(opts.signal?.reason), {
-      once: true,
-    });
-  }
-
-  try {
-    const response = await fetch(url, {
-      method: opts.method ?? 'GET',
-      body: opts.body,
-      headers: opts.headers,
-      signal: controller.signal,
-      credentials: 'same-origin',
-    });
-
-    if (!response.ok) {
-      // Intenta extraer JSON; si no hay, usa solo el status.
-      let raw: unknown = null;
-      try {
-        raw = await response.clone().json();
-      } catch {
-        try {
-          raw = await response.text();
-        } catch {
-          /* noop */
-        }
-      }
-      throw new ApiError(
-        mapApiError({ status: response.status, raw }),
-        response.status,
-        raw,
-      );
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-    if (contentType.includes('application/json')) {
-      return (await response.json()) as T;
-    }
-    return (await response.text()) as unknown as T;
-  } catch (err) {
-    if (err instanceof ApiError) throw err;
-    if (err instanceof DOMException && err.name === 'TimeoutError') {
-      throw new ApiError(mapApiError({ status: 504 }), 504, err);
-    }
-    throw new ApiError(mapApiError(err), undefined, err);
-  } finally {
-    clearTimeout(timer);
-  }
-}
+export { ApiError, apiErrorNotification, isAbortApiError } from './http';
+export type { ApiErrorNotification } from './http';
 
 /* ============================================================
-   Endpoints reales del backend FastAPI
+   Tipos del contrato (manuales / juegos)
    ============================================================ */
 
 export interface OcrLine {
@@ -138,13 +23,35 @@ export interface OcrLinesResponse {
   lines: OcrLine[];
 }
 
+export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';
+
+export type ManualVisibility = 'private' | 'shared';
+
 export interface ManualCreatedResponse {
   manual_id: string;
   game_id: string;
   status: ManualStatus;
-  visibility: 'private' | 'shared';
+  visibility: ManualVisibility;
   source_type: 'images' | 'pdf';
   page_count: number;
+}
+
+/** Resumen de manual usado en listados (`GET /api/manuals`). */
+export interface ManualSummary {
+  id: string;
+  game_id: string;
+  game_name: string;
+  title: string | null;
+  status: ManualStatus;
+  visibility: ManualVisibility;
+  language: string | null;
+  chunks_indexed: number;
+  created_at: string;
+  indexed_at: string | null;
+}
+
+export interface ManualListResponse {
+  manuals: ManualSummary[];
 }
 
 export interface GameSearchItem {
@@ -160,8 +67,6 @@ export interface GameSearchResponse {
   attribution: string;
 }
 
-export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';
-
 export interface ManualDetailPage {
   page_number: number;
   ocr_status: 'pending' | 'completed' | 'failed';
@@ -171,17 +76,8 @@ export interface ManualDetailPage {
   ocr_lines: OcrLine[];
 }
 
-export interface ManualDetailResponse {
-  id: string;
-  game_id: string;
-  game_name: string;
-  title: string | null;
-  status: ManualStatus;
-  visibility: 'private' | 'shared';
-  language: string | null;
-  chunks_indexed: number;
-  created_at: string;
-  indexed_at: string | null;
+/** Detalle de manual = resumen + páginas OCR. */
+export interface ManualDetailResponse extends ManualSummary {
   pages: ManualDetailPage[];
 }
 
@@ -204,14 +100,14 @@ export type CreateManualInput =
   | {
       title: string;
       images: File[];
-      visibility?: 'private' | 'shared';
+      visibility?: ManualVisibility;
       language?: string;
       gameId: string;
     }
   | {
       title: string;
       pdf: File;
-      visibility?: 'private' | 'shared';
+      visibility?: ManualVisibility;
       language?: string;
       gameId: string;
     };
@@ -220,10 +116,15 @@ export interface AnswerResponse {
   answer: string;
 }
 
+const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
+
+/* ============================================================
+   Endpoints
+   ============================================================ */
+
 export const api = {
-  /** GET /health — proxied to backend's /health (sin /api). */
+  /** GET /health — proxied al /health del backend (fuera de /api). */
   async health(): Promise<{ status: string }> {
-    // /health vive fuera de /api en el backend; usamos path absoluto.
     const res = await fetch('/health', { credentials: 'same-origin' });
     if (!res.ok) {
       throw new ApiError(mapApiError({ status: res.status }), res.status, null);
@@ -231,7 +132,7 @@ export const api = {
     return (await res.json()) as { status: string };
   },
 
-  /** POST /api/ocr — extrae texto de una imagen. */
+  /** POST /api/ocr — extrae texto de una sola imagen (legado, ver Fase 5). */
   async ocr(image: File, signal?: AbortSignal): Promise<OcrLinesResponse> {
     const fd = new FormData();
     fd.append('image', image);
@@ -243,7 +144,7 @@ export const api = {
     });
   },
 
-  /** POST /api/manuals: guarda la fuente y devuelve 202 mientras procesa. */
+  /** POST /api/manuals — guarda la fuente y devuelve 202 mientras procesa. */
   async createManual(
     input: CreateManualInput,
     signal?: AbortSignal,
@@ -263,39 +164,34 @@ export const api = {
     return request<ManualCreatedResponse>('/manuals', {
       method: 'POST',
       body: fd,
-      timeoutMs: 90_000,
+      timeoutMs: TIMEOUT.UPLOAD,
       signal,
     });
   },
 
-  /** GET /api/games: busca juegos seleccionables para asociar el manual. */
-  async searchGames(query: string, signal?: AbortSignal): Promise<GameSearchResponse> {
-    return request<GameSearchResponse>(
-      `/games?q=${encodeURIComponent(query)}&limit=5`,
-      {
-        method: 'GET',
-        timeoutMs: 30_000,
-        signal,
-      },
-    );
-  },
-
-  /** GET /api/manuals/{id}: detalle completo con paginas y lineas OCR. */
-  async getManual(
-    manualId: string,
+  /** GET /api/manuals — lista los manuales del usuario autenticado. */
+  async listManuals(
+    params?: { limit?: number; offset?: number },
     signal?: AbortSignal,
-  ): Promise<ManualDetailResponse> {
-    return request<ManualDetailResponse>(
-      `/manuals/${encodeURIComponent(manualId)}`,
-      {
-        method: 'GET',
-        timeoutMs: 30_000,
-        signal,
-      },
-    );
+  ): Promise<ManualListResponse> {
+    const query = queryString({ limit: params?.limit, offset: params?.offset });
+    return request<ManualListResponse>(`/manuals${query}`, {
+      method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
   },
 
-  /** GET /api/manuals/{id}/processing: progreso ligero para polling. */
+  /** GET /api/manuals/{id} — detalle completo con páginas y líneas OCR. */
+  async getManual(manualId: string, signal?: AbortSignal): Promise<ManualDetailResponse> {
+    return request<ManualDetailResponse>(`/manuals/${encodeURIComponent(manualId)}`, {
+      method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** GET /api/manuals/{id}/processing — progreso ligero para polling. */
   async getManualProcessing(
     manualId: string,
     signal?: AbortSignal,
@@ -304,13 +200,49 @@ export const api = {
       `/manuals/${encodeURIComponent(manualId)}/processing`,
       {
         method: 'GET',
-        timeoutMs: 30_000,
+        timeoutMs: TIMEOUT.QUICK,
         signal,
       },
     );
   },
 
-  /** POST /api/manuals/{id}/questions: pregunta sobre un manual ya indexado. */
+  /** DELETE /api/manuals/{id} — borra un manual propio (204). */
+  async deleteManual(manualId: string, signal?: AbortSignal): Promise<void> {
+    await requestVoid(`/manuals/${encodeURIComponent(manualId)}`, {
+      method: 'DELETE',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** GET /api/games — typeahead de juegos seleccionables (sin auth). */
+  async searchGames(query: string, signal?: AbortSignal): Promise<GameSearchResponse> {
+    return request<GameSearchResponse>(`/games?q=${encodeURIComponent(query)}&limit=5`, {
+      method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** POST /api/games/{id}/questions — pregunta one-shot al pool del juego. */
+  async askGame(
+    gameId: string,
+    question: string,
+    options?: { topK?: number },
+    signal?: AbortSignal,
+  ): Promise<AnswerResponse> {
+    const body: { question: string; top_k?: number } = { question };
+    if (options?.topK != null) body.top_k = options.topK;
+    return request<AnswerResponse>(`/games/${encodeURIComponent(gameId)}/questions`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: JSON_HEADERS,
+      timeoutMs: TIMEOUT.LLM,
+      signal,
+    });
+  },
+
+  /** POST /api/manuals/{id}/questions — pregunta a un manual (legado, se jubila en Fase 5). */
   async askManual(
     manualId: string,
     question: string,
@@ -319,8 +251,8 @@ export const api = {
     return request<AnswerResponse>(`/manuals/${encodeURIComponent(manualId)}/questions`, {
       method: 'POST',
       body: JSON.stringify({ question }),
-      headers: { 'Content-Type': 'application/json' },
-      timeoutMs: 5 * 60_000,
+      headers: JSON_HEADERS,
+      timeoutMs: TIMEOUT.LLM,
       signal,
     });
   },

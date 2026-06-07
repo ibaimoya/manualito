@@ -4,7 +4,10 @@ import { server } from '@tests/_helpers/server';
 import { ApiError, api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  document.cookie = 'manualito_csrf=; path=/; max-age=0';
+});
 afterAll(() => server.close());
 
 describe('api error helpers', () => {
@@ -321,5 +324,110 @@ describe('isAbortApiError edge cases', () => {
     expect(isAbortApiError('')).toBe(false);
     expect(isAbortApiError({})).toBe(false);
     expect(isAbortApiError(new DOMException('Timeout', 'TimeoutError'))).toBe(false);
+  });
+});
+
+describe('api listManuals', () => {
+  it('lista manuales con paginación opcional', async () => {
+    let receivedUrl = '';
+    server.use(
+      http.get('/api/manuals', ({ request }) => {
+        const url = new URL(request.url);
+        receivedUrl = url.pathname + url.search;
+        return HttpResponse.json({ manuals: [] });
+      }),
+    );
+
+    const res = await api.listManuals({ limit: 25, offset: 50 });
+
+    expect(receivedUrl).toBe('/api/manuals?limit=25&offset=50');
+    expect(res.manuals).toEqual([]);
+  });
+
+  it('sin parámetros no añade query string', async () => {
+    let receivedUrl = '';
+    server.use(
+      http.get('/api/manuals', ({ request }) => {
+        const url = new URL(request.url);
+        receivedUrl = url.pathname + url.search;
+        return HttpResponse.json({ manuals: [] });
+      }),
+    );
+
+    await api.listManuals();
+
+    expect(receivedUrl).toBe('/api/manuals');
+  });
+});
+
+describe('api deleteManual', () => {
+  it('resuelve sin cuerpo ante un 204', async () => {
+    await expect(api.deleteManual('m-1')).resolves.toBeUndefined();
+  });
+});
+
+describe('api askGame', () => {
+  it('POSTea la pregunta al pool del juego con top_k', async () => {
+    let body: { question?: string; top_k?: number } | undefined;
+    let receivedUrl: string | undefined;
+    server.use(
+      http.post('/api/games/:gameId/questions', async ({ request }) => {
+        receivedUrl = new URL(request.url).pathname;
+        body = (await request.json()) as { question?: string; top_k?: number };
+        return HttpResponse.json({ answer: 'ok' });
+      }),
+    );
+
+    const res = await api.askGame('g-1', '¿Cómo gano?', { topK: 5 });
+
+    expect(receivedUrl).toBe('/api/games/g-1/questions');
+    expect(body).toEqual({ question: '¿Cómo gano?', top_k: 5 });
+    expect(res.answer).toBe('ok');
+  });
+
+  it('omite top_k cuando no se pasa', async () => {
+    let body: { question?: string; top_k?: number } | undefined;
+    server.use(
+      http.post('/api/games/:gameId/questions', async ({ request }) => {
+        body = (await request.json()) as { question?: string; top_k?: number };
+        return HttpResponse.json({ answer: 'ok' });
+      }),
+    );
+
+    await api.askGame('g-1', 'q');
+
+    expect(body).toEqual({ question: 'q' });
+  });
+});
+
+describe('CSRF injection en el núcleo de transporte', () => {
+  it('añade X-CSRF-Token en mutaciones cuando hay cookie legible', async () => {
+    document.cookie = 'manualito_csrf=abc123; path=/';
+    let header: string | null = null;
+    server.use(
+      http.post('/api/games/:gameId/questions', ({ request }) => {
+        header = request.headers.get('X-CSRF-Token');
+        return HttpResponse.json({ answer: 'ok' });
+      }),
+    );
+
+    await api.askGame('g-1', 'q');
+
+    expect(header).toBe('abc123');
+  });
+
+  it('no añade X-CSRF-Token en peticiones GET', async () => {
+    document.cookie = 'manualito_csrf=abc123; path=/';
+    let header: string | null = 'unset';
+    server.use(
+      http.get('/api/manuals', ({ request }) => {
+        header = request.headers.get('X-CSRF-Token');
+        return HttpResponse.json({ manuals: [] });
+      }),
+    );
+
+    await api.listManuals();
+
+    expect(header).toBeNull();
   });
 });

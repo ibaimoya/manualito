@@ -10,7 +10,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { ThemeProvider } from '@/app/theme';
-import { Route as HomeRoute } from '@/routes/home';
+import { Route as HomeRoute } from '@/routes/_app.home';
 import { storage } from '@/shared/lib/storage';
 
 afterEach(() => {
@@ -25,8 +25,7 @@ function renderHome() {
   const homeR = createRoute({
     getParentRoute: () => root,
     path: '/home',
-    component: (HomeRoute as unknown as { options: { component: React.FC } }).options
-      .component,
+    component: (HomeRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const sourceR = createRoute({
     getParentRoute: () => root,
@@ -125,9 +124,7 @@ describe('/home', () => {
     // textContent del nodo es "1 fragmentos · DD <mes>".  Buscamos el
     // patrón "DD <mes>" dentro del textContent.
     expect(
-      screen.getByText(
-        /\d{1,2}\s+(de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|sept?|oct|nov|dic)/i,
-      ),
+      screen.getByText(/\d{1,2}\s+(de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|sept?|oct|nov|dic)/i),
     ).toBeInTheDocument();
   });
 });

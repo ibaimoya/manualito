@@ -88,7 +88,7 @@ export const handlers = [
     return HttpResponse.json({
       lines: [
         { text: 'Bienvenido al manual de prueba.', confidence: 0.94 },
-        { text: 'Pagina 1 de demostracion.', confidence: 0.88 },
+        { text: 'Página 1 de demostración.', confidence: 0.88 },
       ],
     });
   }),
@@ -159,14 +159,6 @@ export const handlers = [
 
   http.delete('/api/manuals/:manualId', () => new HttpResponse(null, { status: 204 })),
 
-  http.post('/api/manuals/:manualId/questions', async ({ request }) => {
-    const body = (await request.json()) as { question?: string };
-    await delay(30);
-    return HttpResponse.json({
-      answer: `Respuesta simulada para: "${body.question ?? '...'}".`,
-    });
-  }),
-
   /* -------- Conversaciones -------- */
   http.get('/api/games/:gameId/conversations', () =>
     HttpResponse.json({ conversations: [SAMPLE_CONVERSATION] }),
@@ -198,12 +190,6 @@ export const handlers = [
 
 export function failManualCreate(status = 500) {
   return http.post('/api/manuals', () => HttpResponse.json({ detail: 'forced error' }, { status }));
-}
-
-export function failAskManual(status = 504) {
-  return http.post('/api/manuals/:manualId/questions', () =>
-    HttpResponse.json({ detail: 'forced error' }, { status }),
-  );
 }
 
 export function failAskGame(status = 504) {

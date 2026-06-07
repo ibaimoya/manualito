@@ -26,16 +26,38 @@ function readyManualResponse(manualId: string) {
   };
 }
 
+function manualDetailResponse(manualId: string, gameId = 'game-1') {
+  return {
+    id: manualId,
+    game_id: gameId,
+    game_name: 'Catan',
+    title: 'Catan',
+    status: 'active',
+    visibility: 'private',
+    language: 'spa',
+    chunks_indexed: 2,
+    created_at: '2026-05-26T10:00:00.000Z',
+    indexed_at: '2026-05-26T10:00:10.000Z',
+    pages: [],
+  };
+}
+
 describe('useManualBootstrap', () => {
   it('espera al procesamiento y lanza 4 preguntas', async () => {
     let processingCalls = 0;
     let questionCalls = 0;
+    let detailCalls = 0;
     server.use(
       http.get('/api/manuals/:id/processing', ({ params }) => {
         processingCalls++;
         return HttpResponse.json(readyManualResponse(String(params.id)));
       }),
-      http.post('/api/manuals/:id/questions', async () => {
+      http.get('/api/manuals/:id', ({ params }) => {
+        detailCalls++;
+        return HttpResponse.json(manualDetailResponse(String(params.id)));
+      }),
+      http.post('/api/games/:gameId/questions', async ({ params }) => {
+        expect(params.gameId).toBe('game-1');
         questionCalls++;
         return HttpResponse.json({ answer: 'Respuesta ' + questionCalls });
       }),
@@ -49,6 +71,7 @@ describe('useManualBootstrap', () => {
     await waitFor(() => expect(result.current.done).toBe(true), { timeout: 3000 });
 
     expect(processingCalls).toBe(1);
+    expect(detailCalls).toBe(1);
     expect(questionCalls).toBe(4);
     expect(result.current.steps.filter((step) => step.state === 'done')).toHaveLength(5);
     expect(result.current.result?.manual_id).toBe('m-1');
@@ -62,7 +85,11 @@ describe('useManualBootstrap', () => {
       http.get('/api/manuals/:id/processing', ({ params }) =>
         HttpResponse.json(readyManualResponse(String(params.id))),
       ),
-      http.post('/api/manuals/:id/questions', async () => {
+      http.get('/api/manuals/:id', ({ params }) =>
+        HttpResponse.json(manualDetailResponse(String(params.id), 'game-2')),
+      ),
+      http.post('/api/games/:gameId/questions', async ({ params }) => {
+        expect(params.gameId).toBe('game-2');
         callIndex++;
         if (callIndex % 2 === 0) {
           return HttpResponse.json({ detail: 'boom' }, { status: 500 });
@@ -93,7 +120,7 @@ describe('useManualBootstrap', () => {
           failed_pages: 2,
         }),
       ),
-      http.post('/api/manuals/:id/questions', async () => {
+      http.post('/api/games/:gameId/questions', async () => {
         questionCalls++;
         return HttpResponse.json({ answer: 'late' });
       }),

@@ -1,17 +1,19 @@
 import { RouterProvider, createRouter } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { routeTree } from '../routeTree.gen';
 
 /**
  * Router de la app — file-based routing.
  *
- * `routeTree.gen.ts` lo genera `@tanstack/router-plugin` desde `src/routes/`.
- * Si no existe (primer arranque), Vite lo crea al detectar los routes.
+ * El `queryClient` se inyecta en `RouterProvider` (no en module-scope) para que
+ * el `beforeLoad` raíz pueda resolver la sesión con la misma cache que la UI.
  */
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
   scrollRestoration: true,
+  context: { queryClient: undefined! },
 });
 
 declare module '@tanstack/react-router' {
@@ -21,5 +23,6 @@ declare module '@tanstack/react-router' {
 }
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  const queryClient = useQueryClient();
+  return <RouterProvider router={router} context={{ queryClient }} />;
 }

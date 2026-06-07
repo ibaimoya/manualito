@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/cn';
 /**
  * SegmentedControl — pill segmentado tipo iOS para elegir UN valor entre varios.
  *
- * Refactor (catálogo bugs #34 y #41): construido sobre `<RadioGroup>` de
+ * Construido sobre `<RadioGroup>` de
  * Radix UI en vez de buttons manuales.  Ventajas:
  *  - **Roving tabindex** automático: Tab solo entra/sale del grupo, no
  *    navega entre los segmentos.  Patrón canónico WAI-ARIA.

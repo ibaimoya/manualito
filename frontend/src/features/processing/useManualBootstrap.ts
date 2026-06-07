@@ -19,25 +19,25 @@ const QUESTIONS: ReadonlyArray<{ id: Exclude<StepId, 'processing'>; label: strin
     id: 'summary',
     label: 'Resumen',
     question:
-      'Resume en 2-3 frases de que va este juego, indicando numero de jugadores y duracion aproximada si lo dice el manual.',
+      'Resume en 2-3 frases de qué va este juego, indicando número de jugadores y duración aproximada si lo dice el manual.',
   },
   {
     id: 'setup',
-    label: 'Preparacion',
+    label: 'Preparación',
     question:
-      'Explica la preparacion inicial del juego, paso a paso, en una lista numerada clara y concisa.',
+      'Explica la preparación inicial del juego, paso a paso, en una lista numerada clara y concisa.',
   },
   {
     id: 'turn',
     label: 'El turno',
     question:
-      'Explica como es un turno de un jugador: en que fases se divide y que acciones puede o debe hacer.',
+      'Explica cómo es un turno de un jugador: en qué fases se divide y qué acciones puede o debe hacer.',
   },
   {
     id: 'win',
-    label: 'Como se gana',
+    label: 'Cómo se gana',
     question:
-      'Explica como se gana la partida y cualquier condicion de empate o final alternativo.',
+      'Explica cómo se gana la partida y cualquier condición de empate o final alternativo.',
   },
 ];
 
@@ -46,7 +46,7 @@ type PatchStep = (id: StepId, patch: Partial<StepRecord>) => void;
 
 function initialSteps(): StepRecord[] {
   return [
-    { id: 'processing', label: 'Procesando paginas', state: 'running' },
+    { id: 'processing', label: 'Procesando páginas', state: 'running' },
     ...QUESTIONS.map((step) => ({ id: step.id, label: step.label, state: 'pending' as const })),
   ];
 }
@@ -71,7 +71,7 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 function processingText(status: ManualProcessingResponse): string {
-  return `${status.completed_pages}/${status.page_count} paginas`;
+  return `${status.completed_pages}/${status.page_count} páginas`;
 }
 
 async function waitUntilManualReady(
@@ -84,7 +84,7 @@ async function waitUntilManualReady(
     if (status.status === 'failed') {
       patchStep('processing', {
         state: 'failed',
-        error: 'No se ha podido leer texto util del manual.',
+        error: 'No se ha podido leer texto útil del manual.',
       });
       return false;
     }
@@ -98,14 +98,14 @@ async function waitUntilManualReady(
 }
 
 async function runBootstrapStep(
-  manualId: string,
+  gameId: string,
   step: QuestionStep,
   signal: AbortSignal,
   patchStep: PatchStep,
 ): Promise<string | null> {
   patchStep(step.id, { state: 'running' });
   try {
-    const res = await api.askManual(manualId, step.question, signal);
+    const res = await api.askGame(gameId, step.question, undefined, signal);
     patchStep(step.id, { state: 'done', text: res.answer });
     return res.answer;
   } catch (err) {
@@ -177,9 +177,10 @@ export function useManualBootstrap(manualId: string, manualName: string): Bootst
           failPendingQuestions(patchStep, 'El manual no se ha podido indexar.');
           return;
         }
+        const manual = await api.getManual(manualId, controller.signal);
         const results = await Promise.allSettled(
           QUESTIONS.map((step) =>
-            runBootstrapStep(manualId, step, controller.signal, patchStep),
+            runBootstrapStep(manual.game_id, step, controller.signal, patchStep),
           ),
         );
         if (!mountedRef.current) return;

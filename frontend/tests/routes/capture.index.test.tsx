@@ -13,7 +13,7 @@ import {
 import { Toaster } from 'sonner';
 import { server } from '@tests/_helpers/server';
 import { ThemeProvider } from '@/app/theme';
-import { Route as CaptureRoute } from '@/routes/capture.index';
+import { Route as CaptureRoute } from '@/routes/_app.capture.index';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
@@ -27,8 +27,7 @@ function renderCapture() {
   const captureR = createRoute({
     getParentRoute: () => root,
     path: '/capture',
-    component: (CaptureRoute as unknown as { options: { component: React.FC } }).options
-      .component,
+    component: (CaptureRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const sourceR = createRoute({
     getParentRoute: () => root,
@@ -80,9 +79,7 @@ describe('/capture', () => {
   it('botón X cancela y vuelve a /home', async () => {
     renderCapture();
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole('button', { name: /Cancelar y volver al inicio/i }),
-    );
+    await user.click(await screen.findByRole('button', { name: /Cancelar y volver al inicio/i }));
     expect(await screen.findByTestId('home-screen')).toBeInTheDocument();
   });
 
@@ -102,10 +99,7 @@ describe('/capture', () => {
     const big = new File(['x'.repeat(21 * 1024 * 1024)], 'huge.jpg', {
       type: 'image/jpeg',
     });
-    await user.upload(
-      screen.getByTestId('picker-camera') as HTMLInputElement,
-      big,
-    );
+    await user.upload(screen.getByTestId('picker-camera') as HTMLInputElement, big);
     expect(await screen.findByText(/Archivo demasiado grande/i)).toBeInTheDocument();
   });
 
@@ -114,10 +108,7 @@ describe('/capture', () => {
     const user = userEvent.setup();
     await screen.findByText(/Captura el manual/i);
     const file = new File(['xxx'], 'shot.jpg', { type: 'image/jpeg' });
-    await user.upload(
-      screen.getByTestId('picker-camera') as HTMLInputElement,
-      file,
-    );
+    await user.upload(screen.getByTestId('picker-camera') as HTMLInputElement, file);
     expect(await screen.findByText(/Ponle nombre al manual/i)).toBeInTheDocument();
     expect(screen.getByText('shot.jpg')).toBeInTheDocument();
     // El copy debe ser el de cámara

@@ -64,7 +64,7 @@
   --m-r-xl:   28px;   /* sheets / dialogs */
   --m-r-full: 9999px;
 
-  /* — Spacing (densidad: regular) ———————————————————— */
+  /* — Spacing ———————————————————— */
   --m-space-1:  4px;
   --m-space-2:  8px;
   --m-space-3:  12px;
@@ -130,10 +130,6 @@ html.theme-dark {
 
   color-scheme: dark;
 }
-
-/* Density variants */
-html.density-compact { --m-space-3: 8px;  --m-space-4: 12px; --m-space-5: 16px; --m-space-6: 18px; --m-space-8: 24px; }
-html.density-comfy   { --m-space-3: 14px; --m-space-4: 20px; --m-space-5: 24px; --m-space-6: 28px; --m-space-8: 40px; }
 
 /* Accent swap — usa azul-meeple como primario */
 html.accent-blue {

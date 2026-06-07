@@ -67,7 +67,6 @@ export type ManualResult = z.infer<typeof ManualResultSchema>;
 
 export const SettingsSchema = z.object({
   mode: z.enum(['light', 'dark', 'auto']).default('auto'),
-  density: z.enum(['compact', 'comfy']).default('comfy'),
   accent: z.enum(['amber', 'blue']).default('amber'),
   responseDetail: z.enum(['short', 'medium', 'long']).default('medium'),
 });
@@ -108,7 +107,7 @@ function safeRead<S extends z.ZodTypeAny>(
 /**
  * Listener global de fallos de escritura — UI (capture/chat/home) puede
  * suscribirse para mostrar un toast "Espacio local agotado" cuando la
- * quota se haya agotado.  Catálogo bug #12.
+ * quota se haya agotado.
  *
  * Implementado como pub/sub minimal sin librería extra; el wrapper lo
  * dispara en cada fallo y la UI decide cómo notificar.

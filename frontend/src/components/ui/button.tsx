@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/cn';
  * Button con variantes — patrón shadcn/ui adaptado a tokens Manualito.
  * Toda variante respeta touch target ≥ 44 px en sizes md/lg.
  *
- * Refactor (catálogo bug #26): incluye soporte first-class de loading:
+ * Incluye soporte first-class de loading:
  *  - `loading` prop reemplaza el icono por un spinner manteniendo el
  *    texto → ancho estable, sin tembleque al pasar a estado pending.
  *  - `aria-busy={loading}` automático para screen readers.
@@ -31,15 +31,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary:
-          'bg-primary text-fg-inv shadow-sm hover:bg-primary-600 active:translate-y-px',
-        secondary:
-          'bg-surface text-fg border border-border hover:bg-surface-2',
+        primary: 'bg-primary text-fg-inv shadow-sm hover:bg-primary-600 active:translate-y-px',
+        secondary: 'bg-surface text-fg border border-border hover:bg-surface-2',
         ghost: 'bg-transparent text-fg-2 hover:bg-surface',
-        destructive:
-          'bg-error text-fg-inv shadow-sm hover:opacity-90 active:translate-y-px',
-        outline:
-          'bg-transparent text-fg border border-border-strong hover:bg-surface',
+        destructive: 'bg-error text-fg-inv shadow-sm hover:opacity-90 active:translate-y-px',
+        outline: 'bg-transparent text-fg border border-border-strong hover:bg-surface',
         link: 'bg-transparent text-accent underline-offset-4 hover:underline',
       },
       size: {
@@ -63,8 +59,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   /**
    * Mostrar spinner inline.  Mientras `loading=true`:
@@ -106,21 +101,28 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   //   En ese caso degradamos a "solo aria-busy" — el child es quien
   //   muestra su propio indicador visual.  Documentado en JSDoc del prop.
   const showSpinner = loading && !asChild;
-  const finalChildren: ReactNode = showSpinner ? (
-    <>
-      <Loader2
-        size={size === 'lg' ? 20 : 18}
-        strokeWidth={2}
-        className="animate-[mn-spin_0.9s_linear_infinite]"
-        aria-hidden="true"
-      />
-      {/* Texto/contenido original — sin el primer icono porque el
-          spinner ocupa su sitio. */}
-      <StripFirstIcon>{children}</StripFirstIcon>
-    </>
-  ) : (
-    children
-  );
+  const spinner = showSpinner ? (
+    <Loader2
+      size={size === 'lg' ? 20 : 18}
+      strokeWidth={2}
+      className="animate-[mn-spin_0.9s_linear_infinite]"
+      aria-hidden="true"
+    />
+  ) : null;
+  // Icon-only: solo el spinner. Con texto: spinner + texto (sin el primer
+  // icono, que el spinner reemplaza). Sin loading: los children tal cual.
+  let finalChildren: ReactNode = children;
+  if (showSpinner) {
+    finalChildren =
+      size === 'icon' ? (
+        spinner
+      ) : (
+        <>
+          {spinner}
+          <StripFirstIcon>{children}</StripFirstIcon>
+        </>
+      );
+  }
 
   return (
     <Comp
@@ -152,8 +154,7 @@ function StripFirstIcon({ children }: Readonly<{ children: ReactNode }>) {
   // Si el primer hijo parece un icono (objeto React element), lo
   // saltamos.  Resto se mantiene.
   const [first, ...rest] = children;
-  const firstIsIcon =
-    typeof first === 'object' && first !== null && 'type' in (first as object);
+  const firstIsIcon = typeof first === 'object' && first !== null && 'type' in (first as object);
   return <>{firstIsIcon ? rest : children}</>;
 }
 

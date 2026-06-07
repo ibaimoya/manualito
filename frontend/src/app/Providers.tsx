@@ -43,7 +43,7 @@ export function Providers({ children }: Props) {
   const [queryClient] = useState(createQueryClient);
 
   // Suscripción global a fallos de escritura en localStorage — muestra
-  // un toast accionable cuando se llena la cuota.  Catálogo bug #12.
+  // un toast accionable cuando se llena la cuota.
   useEffect(
     () =>
       onStorageWriteFail((reason) => {

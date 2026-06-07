@@ -13,7 +13,7 @@ const processingSearchSchema = z.object({
   name: z.string().min(1).optional(),
 });
 
-export const Route = createFileRoute('/processing/$manualId')({
+export const Route = createFileRoute('/_app/processing/$manualId')({
   validateSearch: processingSearchSchema,
   component: ProcessingScreen,
 });
@@ -40,26 +40,21 @@ function ProcessingScreen() {
     });
   }, [manualId, safeName]);
 
-  const { steps, progress, done, hasAnyAnswer, result } = useManualBootstrap(
-    manualId,
-    safeName,
-  );
+  const { steps, progress, done, hasAnyAnswer, result } = useManualBootstrap(manualId, safeName);
   const failed = done && !result && !hasAnyAnswer;
 
   // Cuando termine y haya al menos un acierto → navega al Result.
   useEffect(() => {
     if (done && result) {
       const timer = setTimeout(() => {
-        navigate({ to: '/result/$manualId', params: { manualId } }).catch(
-          () => undefined,
-        );
+        navigate({ to: '/result/$manualId', params: { manualId } }).catch(() => undefined);
       }, 600); // pequeña pausa para que el usuario vea "completo"
       return () => clearTimeout(timer);
     }
   }, [done, result, navigate, manualId]);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-2xl">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-4xl">
       <header className="border-b border-border px-4 py-3">
         <h1 className="font-display text-base font-bold">Procesando «{safeName}»</h1>
       </header>
@@ -103,10 +98,7 @@ function ProcessingScreen() {
           {steps.map((s, idx) => (
             <li
               key={s.id}
-              className={cn(
-                'flex items-center gap-3 p-4',
-                idx > 0 ? 'border-t border-border' : '',
-              )}
+              className={cn('flex items-center gap-3 p-4', idx > 0 ? 'border-t border-border' : '')}
             >
               <span
                 className={cn(

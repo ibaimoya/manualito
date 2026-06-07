@@ -83,18 +83,24 @@ body,
 /* scrollbar-gutter: stable — reserva SIEMPRE el espacio del scrollbar.
    Cuando un Sheet/Dialog activa scroll-lock (overflow:hidden), el
    scrollbar desaparece y el contenido saltaría ~15 px a la derecha.
-   Con `stable`, el hueco se mantiene → cero salto.  Catálogo bug #28. */
+   Con `stable`, el hueco se mantiene → cero salto. */
 html {
   scrollbar-gutter: stable;
 }
 
 /* Chrome dibuja una X nativa en <input type="search"> que choca con
    nuestros iconos personalizados.  Quitamos la X nativa para mantener
-   el diseño consistente.  Catálogo bug #41. */
+   el diseño consistente. */
 input[type='search']::-webkit-search-cancel-button,
 input[type='search']::-webkit-search-decoration {
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* Oculta el icono nativo de "mostrar contraseña" (Edge/Chromium): duplica el nuestro. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
 }
 
 body {
@@ -238,8 +244,7 @@ input[type='radio'] {
    produce "sticky hover" desagradable.  En `(hover: none)` neutralizamos
    los efectos visuales más comunes para que ni siquiera se apliquen al
    tap (no solo la duración).  Ver Motion docs:
-   https://motion.dev/docs/react-hover-animation
-   y catálogo bug #1 en notimportant/errores-tipicos-encontrados-frontend.md. */
+   https://motion.dev/docs/react-hover-animation */
 @media (hover: none), (pointer: coarse) {
   *:hover {
     background-color: revert !important;
@@ -257,8 +262,7 @@ input[type='radio'] {
 
 /* Refuerzo: para `prefers-reduced-motion`, neutralizamos transition
    shorthand además de duration, y eliminamos transforms iniciales de
-   Sheet/Dialog para que aparezcan/desaparezcan sin slide ni zoom.
-   Catálogo bugs #11 y #15. */
+   Sheet/Dialog para que aparezcan/desaparezcan sin slide ni zoom. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

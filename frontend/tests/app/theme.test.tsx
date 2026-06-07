@@ -21,10 +21,8 @@ function ThemeProbe() {
   return (
     <div>
       <p data-testid="mode">{t.mode}</p>
-      <p data-testid="density">{t.density}</p>
       <p data-testid="accent">{t.accent}</p>
       <button onClick={() => t.setMode('dark')}>dark</button>
-      <button onClick={() => t.setDensity('compact')}>compact</button>
       <button onClick={() => t.setAccent('blue')}>blue</button>
     </div>
   );
@@ -36,14 +34,13 @@ describe('ThemeProvider', () => {
     document.documentElement.className = '';
   });
 
-  it('valor inicial: mode=auto, density=comfy, accent=amber', () => {
+  it('valor inicial: mode=auto, accent=amber', () => {
     render(
       <ThemeProvider>
         <ThemeProbe />
       </ThemeProvider>,
     );
     expect(screen.getByTestId('mode').textContent).toBe('auto');
-    expect(screen.getByTestId('density').textContent).toBe('comfy');
     expect(screen.getByTestId('accent').textContent).toBe('amber');
   });
 
@@ -53,8 +50,7 @@ describe('ThemeProvider', () => {
         <ThemeProbe />
       </ThemeProvider>,
     );
-    // Por defecto density-comfy y theme-light (matchMedia=false en jsdom).
-    expect(document.documentElement.classList.contains('density-comfy')).toBe(true);
+    // Por defecto theme-light (matchMedia=false en jsdom).
     expect(document.documentElement.classList.contains('theme-light')).toBe(true);
   });
 
@@ -98,7 +94,7 @@ describe('ThemeProvider', () => {
   it('lee preferencias persistidas del localStorage al montar', () => {
     localStorage.setItem(
       'manualito.settings',
-      JSON.stringify({ mode: 'dark', density: 'compact', accent: 'blue' }),
+      JSON.stringify({ mode: 'dark', accent: 'blue' }),
     );
     render(
       <ThemeProvider>
@@ -106,7 +102,6 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     );
     expect(screen.getByTestId('mode').textContent).toBe('dark');
-    expect(screen.getByTestId('density').textContent).toBe('compact');
     expect(screen.getByTestId('accent').textContent).toBe('blue');
   });
 
@@ -135,7 +130,6 @@ describe('ThemeProvider', () => {
 
   /* ============================================================
      Spam de toggles — robustez bajo clicks rápidos.
-     Catálogo bug "toggle spam" en notimportant/errores-tipicos-encontrados-frontend.md
      ============================================================ */
   describe('robustez bajo spam', () => {
     it('20 setMode en cascada → UNA sola escritura a localStorage (debounce)', async () => {
@@ -193,7 +187,7 @@ describe('ThemeProvider', () => {
       });
     });
 
-    it('cambiar density NO re-suscribe el listener de prefers-color-scheme', () => {
+    it('cambiar accent NO re-suscribe el listener de prefers-color-scheme', () => {
       // En jsdom matchMedia es un shim definido en src/test/setup.ts; cada
       // llamada a window.matchMedia devuelve un MQL nuevo.  Para detectar
       // re-suscripciones contamos cuántas veces se invoca matchMedia con
@@ -213,9 +207,9 @@ describe('ThemeProvider', () => {
       ).length;
 
       act(() => {
-        api!.setDensity('compact');
-        api!.setDensity('comfy');
-        api!.setDensity('compact');
+        api!.setAccent('blue');
+        api!.setAccent('amber');
+        api!.setAccent('blue');
       });
 
       const afterCount = mmSpy.mock.calls.filter(
@@ -223,7 +217,7 @@ describe('ThemeProvider', () => {
       ).length;
 
       // En la suscripción del listener (mode==='auto') la llamada a
-      // matchMedia se reinstala SOLO cuando cambia `mode`, no `density`.
+      // matchMedia se reinstala SOLO cuando cambia `mode`, no `accent`.
       // Aceptamos pequeño aumento por `applyToHtml` que lo lee.
       expect(afterCount - initialCount).toBeLessThanOrEqual(3);
       mmSpy.mockRestore();

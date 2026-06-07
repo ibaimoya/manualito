@@ -10,38 +10,47 @@ import {
 } from '@tanstack/react-router';
 import { Route as IndexRoute } from '@/routes/index';
 import { storage } from '@/shared/lib/storage';
+import type { AuthUser } from '@/shared/api/auth';
 
 afterEach(() => {
   localStorage.clear();
 });
 
+const FAKE_USER: AuthUser = {
+  id: 'u1',
+  email: 'ana@example.com',
+  username: 'ana',
+  role: 'user',
+  status: 'active',
+  created_at: '2026-01-01T00:00:00.000Z',
+  last_login_at: null,
+  email_verified_at: null,
+};
+
 /**
- * Ruta `/` — `beforeLoad` redirige a `/onboarding` o `/home` según si el
- * usuario ha visto el onboarding.  Montamos un router fake con las 3
- * rutas y un history en `/` para que el redirect ocurra y podamos
- * comprobar dónde aterriza.
+ * `/` redirige según sesión (la inyecta el beforeLoad raíz) y el flag de
+ * onboarding. Montamos un root sintético que devuelve `user` en su contexto.
  */
-function renderIndex() {
-  const root = createRootRoute({ component: Outlet });
+function renderIndex(opts: { user: AuthUser | null; seen: boolean }) {
+  if (opts.seen) storage.markOnboardingSeen();
+  const root = createRootRoute({
+    beforeLoad: () => ({ user: opts.user }),
+    component: Outlet,
+  });
   const idx = createRoute({
     getParentRoute: () => root,
     path: '/',
-    // Reaprovechamos la lógica real del beforeLoad — no la mockeamos.
-    beforeLoad: (
-      IndexRoute as unknown as { options: { beforeLoad: () => void } }
-    ).options.beforeLoad,
+    beforeLoad: (IndexRoute as unknown as { options: { beforeLoad: () => void } }).options
+      .beforeLoad,
   });
-  const home = createRoute({
-    getParentRoute: () => root,
-    path: '/home',
-    component: () => <div>HomeScreen</div>,
-  });
-  const onboarding = createRoute({
-    getParentRoute: () => root,
-    path: '/onboarding',
-    component: () => <div>OnboardingScreen</div>,
-  });
-  const tree = root.addChildren([idx, home, onboarding]);
+  const page = (path: string, label: string) =>
+    createRoute({ getParentRoute: () => root, path, component: () => <div>{label}</div> });
+  const tree = root.addChildren([
+    idx,
+    page('/home', 'HomeScreen'),
+    page('/onboarding', 'OnboardingScreen'),
+    page('/login', 'LoginScreen'),
+  ]);
   const router = createRouter({
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: ['/'] }),
@@ -50,21 +59,18 @@ function renderIndex() {
 }
 
 describe('/ (index)', () => {
-  it('cuando el onboarding NO se ha visto → redirige a /onboarding', async () => {
-    // localStorage limpio = onboarding no visto.
-    renderIndex();
-    await waitFor(() => {
-      expect(screen.getByText('OnboardingScreen')).toBeInTheDocument();
-    });
-    expect(screen.queryByText('HomeScreen')).not.toBeInTheDocument();
+  it('sin sesión y onboarding NO visto → /onboarding', async () => {
+    renderIndex({ user: null, seen: false });
+    await waitFor(() => expect(screen.getByText('OnboardingScreen')).toBeInTheDocument());
   });
 
-  it('cuando el onboarding YA se ha visto → redirige a /home', async () => {
-    storage.markOnboardingSeen();
-    renderIndex();
-    await waitFor(() => {
-      expect(screen.getByText('HomeScreen')).toBeInTheDocument();
-    });
-    expect(screen.queryByText('OnboardingScreen')).not.toBeInTheDocument();
+  it('sin sesión y onboarding visto → /login', async () => {
+    renderIndex({ user: null, seen: true });
+    await waitFor(() => expect(screen.getByText('LoginScreen')).toBeInTheDocument());
+  });
+
+  it('con sesión → /home', async () => {
+    renderIndex({ user: FAKE_USER, seen: true });
+    await waitFor(() => expect(screen.getByText('HomeScreen')).toBeInTheDocument());
   });
 });

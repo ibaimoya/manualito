@@ -15,12 +15,11 @@ import { cn } from '@/shared/lib/cn';
 // max(500) limita la longitud del search param `q` a la misma cota que el
 // backend (500 chars en `QuestionRequest`).  Sin esto un atacante podría
 // pegar una URL `?q=…` de 100KB y reventar el LLM o el URL parser.
-// Catálogo bug #10.
 const chatSearchSchema = z.object({
   q: z.string().min(1).max(500).optional(),
 });
 
-export const Route = createFileRoute('/chat/$manualId')({
+export const Route = createFileRoute('/_app/chat/$manualId')({
   validateSearch: chatSearchSchema,
   component: ChatScreen,
 });
@@ -31,10 +30,7 @@ function ChatScreen() {
   const navigate = useNavigate();
   // Lazy initializer: lee del localStorage en el primer render para
   // evitar el flash de "no hay mensajes" mientras un useEffect carga.
-  // Catálogo bug #33.
-  const [messages, setMessages] = useState<QAMessage[]>(() =>
-    storage.listQA(manualId),
-  );
+  const [messages, setMessages] = useState<QAMessage[]>(() => storage.listQA(manualId));
   const [draft, setDraft] = useState('');
   const initialQueueRef = useRef<string | null>(initialQ ?? null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,17 +44,19 @@ function ChatScreen() {
   }, [manualId]);
 
   // AbortController para cortar la petición al LLM si el usuario navega
-  // fuera del chat antes de que termine (catálogo bug #3).  El LLM puede
+  // fuera del chat antes de que termine.  El LLM puede
   // tardar 30-60s — sin abort, la mutation completaría tras unmount y
   // escribiría en localStorage sin feedback visual.
   const askAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => askAbortRef.current?.abort(), []);
 
   const askMutation = useMutation({
-    mutationFn: (question: string) => {
+    mutationFn: async (question: string) => {
       askAbortRef.current?.abort();
       askAbortRef.current = new AbortController();
-      return api.askManual(manualId, question, askAbortRef.current.signal);
+      const signal = askAbortRef.current.signal;
+      const manual = await api.getManual(manualId, signal);
+      return api.askGame(manual.game_id, question, undefined, signal);
     },
     onError: (err) => {
       if (isAbortApiError(err)) return;
@@ -102,7 +100,7 @@ function ChatScreen() {
   // Si la URL trae ?q=... y aún no se ha enviado, dispárala una vez.
   // Después de disparar, limpiamos el search param de la URL (replace,
   // no push) para que al refrescar la página NO se re-envíe la
-  // pregunta — sería un duplicado fantasma.  Catálogo bug #32.
+  // pregunta — sería un duplicado fantasma.
   useEffect(() => {
     if (initialQueueRef.current) {
       const q = initialQueueRef.current;
@@ -127,7 +125,7 @@ function ChatScreen() {
   }, [messages, askMutation.isPending]);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-2xl">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-4xl">
       <header className="flex items-center justify-between gap-2 border-b border-border bg-bg px-2 py-2">
         <Link
           to="/result/$manualId"
@@ -209,9 +207,7 @@ function Bubble({ msg }: Readonly<{ msg: QAMessage }>) {
       <div
         className={cn(
           'max-w-[78%] rounded-2xl px-4 py-3 text-base leading-relaxed',
-          isUser
-            ? 'bg-primary text-fg-inv'
-            : 'bg-surface text-fg border border-border',
+          isUser ? 'bg-primary text-fg-inv' : 'bg-surface text-fg border border-border',
         )}
         style={{
           borderTopLeftRadius: isUser ? undefined : 6,

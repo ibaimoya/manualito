@@ -64,7 +64,7 @@ describe('NameManualForm via NameManualSheet', () => {
     expect(screen.queryByText(/Ponle nombre al manual/i)).not.toBeInTheDocument();
   });
 
-  it('muestra las paginas seleccionadas y el input de nombre', async () => {
+  it('muestra las páginas seleccionadas y el input de nombre', async () => {
     render(
       wrap(
         <NameManualSheet
@@ -78,7 +78,7 @@ describe('NameManualForm via NameManualSheet', () => {
     expect(await screen.findByText(/Ponle nombre al manual/i)).toBeInTheDocument();
     expect(screen.getByText('catan-1.jpg')).toBeInTheDocument();
     expect(screen.getByText('catan-2.jpg')).toBeInTheDocument();
-    expect(screen.getByText(/Revisa las paginas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Revisa las páginas/i)).toBeInTheDocument();
   });
 
   it('copy contextual cambia segun source', () => {
@@ -92,7 +92,7 @@ describe('NameManualForm via NameManualSheet', () => {
         />,
       ),
     );
-    expect(screen.getByText(/procesaran todas las paginas/i)).toBeInTheDocument();
+    expect(screen.getByText(/procesarán todas las páginas/i)).toBeInTheDocument();
 
     rerender(
       wrap(
@@ -107,7 +107,7 @@ describe('NameManualForm via NameManualSheet', () => {
     expect(screen.getByText(/etiquetar la foto/i)).toBeInTheDocument();
   });
 
-  it('boton Procesar requiere nombre y juego seleccionado', async () => {
+  it('botón Procesar requiere nombre y juego seleccionado', async () => {
     const user = userEvent.setup();
     render(
       wrap(
@@ -129,7 +129,7 @@ describe('NameManualForm via NameManualSheet', () => {
     expect(submit).toBeEnabled();
   });
 
-  it('permite reordenar y quitar paginas antes de subir', async () => {
+  it('permite reordenar y quitar páginas antes de subir', async () => {
     const user = userEvent.setup();
     render(
       wrap(
@@ -142,15 +142,15 @@ describe('NameManualForm via NameManualSheet', () => {
       ),
     );
 
-    await user.click(screen.getByRole('button', { name: /Subir pagina 2/i }));
-    const pageLabels = screen.getAllByText(/Pagina \d/i);
-    expect(pageLabels[0]).toHaveTextContent('Pagina 1');
+    await user.click(screen.getByRole('button', { name: /Subir página 2/i }));
+    const pageLabels = screen.getAllByText(/Página \d/i);
+    expect(pageLabels[0]).toHaveTextContent('Página 1');
     expect(screen.getByText('dos.jpg')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Quitar pagina 1/i }));
+    await user.click(screen.getByRole('button', { name: /Quitar página 1/i }));
     expect(screen.queryByText('dos.jpg')).not.toBeInTheDocument();
   });
 
-  it('envia imagenes en multipart y navega a processing', async () => {
+  it('envía imágenes en multipart y navega a processing', async () => {
     let receivedBody = '';
     server.use(
       http.post('/api/manuals', async ({ request }) => {

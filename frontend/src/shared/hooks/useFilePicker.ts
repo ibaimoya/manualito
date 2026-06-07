@@ -1,63 +1,39 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 /**
- * Hook utilitario para disparar `<input type="file">` ocultos sin que el
- * spam de clicks abra el picker múltiples veces.
- *
- * Bug #4 del catálogo `notimportant/errores-tipicos-encontrados-frontend.md`:
- * en algunos navegadores (especialmente iOS Safari), pulsar 2 veces rápido el
- * botón que llama `input.click()` abre dos diálogos en cascada — el
- * primero se cierra y el segundo queda flotante.
- *
- * Solución canónica (Stoke, dev.to): flag con timeout 400 ms — equivalente
- * a "deduplicar clicks humanos".  Al recibir `change` o `cancel` del
- * input, se resetea el flag para permitir el siguiente picker.
+ * Dispara un `<input type="file">` oculto desde un botón con estilo propio.
+ * Un flag con reset a 400 ms evita que un doble-click rápido abra dos
+ * diálogos nativos en cascada (problema típico de iOS Safari: el primero se
+ * cierra y el segundo queda flotante).
  *
  * Uso:
  *   const inputRef = useRef<HTMLInputElement>(null);
  *   const openPicker = useFilePicker(inputRef);
- *   …
  *   <button onClick={openPicker}>Subir</button>
- *   <input ref={inputRef} type="file" className="sr-only" onChange={…} />
+ *   <input ref={inputRef} type="file" className="sr-only" onChange={...} />
  *
- * Devuelve una función estable (`useCallback`) que es seguro pasar a
- * props/handlers sin causar rerenders.
+ * Devuelve una función estable (`useCallback`), segura como handler.
  */
-export function useFilePicker(
-  inputRef: React.RefObject<HTMLInputElement | null>,
-): () => void {
-  // `pickerOpenRef` evita reentradas síncronas (doble-click rápido).
-  const pickerOpenRef = useRef(false);
-  // Mantiene el id del timer para limpiarlo en unmount.
-  const resetTimerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
+export function useFilePicker(inputRef: RefObject<HTMLInputElement | null>): () => void {
+  const openRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
 
-  // Cleanup: si el componente se desmonta con un picker "abierto", limpia
-  // el flag y el timer para que la próxima sesión empiece fresca.
   useEffect(
     () => () => {
-      pickerOpenRef.current = false;
-      if (resetTimerRef.current !== null) {
-        globalThis.clearTimeout(resetTimerRef.current);
-        resetTimerRef.current = null;
-      }
+      if (timerRef.current !== null) globalThis.clearTimeout(timerRef.current);
     },
     [],
   );
 
   return useCallback(() => {
-    if (pickerOpenRef.current) return; // ya hay un picker en curso
+    if (openRef.current) return;
     const input = inputRef.current;
     if (!input) return;
-
-    pickerOpenRef.current = true;
+    openRef.current = true;
     input.click();
-
-    // Reset tras 400 ms: tiempo de double-click humano + margen para que
-    // el diálogo nativo arranque.  El reset real lo dispara también
-    // `change`/`cancel` en el componente padre cuando el usuario interactúa.
-    resetTimerRef.current = globalThis.setTimeout(() => {
-      pickerOpenRef.current = false;
-      resetTimerRef.current = null;
+    timerRef.current = globalThis.setTimeout(() => {
+      openRef.current = false;
+      timerRef.current = null;
     }, 400);
   }, [inputRef]);
 }

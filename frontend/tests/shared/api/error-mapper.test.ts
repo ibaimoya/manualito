@@ -55,6 +55,33 @@ describe('error-mapper · mapApiError', () => {
     expect(v.code).toBe('http.502');
   });
 
+  it('prioriza el código estable del backend sobre el status genérico', () => {
+    const v = mapApiError({
+      status: 404,
+      raw: {
+        detail: 'Juego no encontrado.',
+        errors: [{ field: null, code: 'game_not_found', message: 'Juego no encontrado.' }],
+      },
+    });
+
+    expect(v.code).toBe('game_not_found');
+    expect(v.title).toBe('Juego no encontrado');
+    expect(v.message).toContain('juego seleccionado');
+  });
+
+  it('distingue un PDF grande de una imagen grande aunque ambos sean 413', () => {
+    const v = mapApiError({
+      status: 413,
+      raw: {
+        detail: 'El PDF no puede superar 50 MB.',
+        errors: [{ field: null, code: 'pdf_too_large', message: 'El PDF no puede superar 50 MB.' }],
+      },
+    });
+
+    expect(v.code).toBe('pdf_too_large');
+    expect(v.title).toBe('PDF demasiado grande');
+  });
+
   it('objeto con response.status → usa tabla', () => {
     const v = mapApiError({ response: { status: 504 } });
     expect(v.code).toBe('http.504');

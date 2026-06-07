@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
-import { flushSync } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Check,
@@ -38,14 +37,14 @@ const SLIDES: Slide[] = [
     id: 'foto',
     n: 1,
     title: 'Hazle una foto',
-    sub: 'Captura las páginas del manual con la cámara. Da igual el orden — Manualito las cose por ti.',
+    sub: 'Captura las páginas del manual con la cámara. Da igual el orden. Manualito las cose por ti.',
   },
   {
     kind: 'step',
     id: 'procesa',
     n: 2,
     title: 'Lo entiende por ti',
-    sub: 'Leemos el texto, buscamos contexto y generamos una explicación clara — todo en segundos.',
+    sub: 'Leemos el texto, buscamos contexto y generamos una explicación clara en segundos.',
   },
   {
     kind: 'step',
@@ -94,58 +93,38 @@ export function Onboarding() {
   const [index, setIndex] = useState(0);
   const navigate = useNavigate();
   const N = SLIDES.length;
+  const PANELS = N + 1; // las diapositivas + la pantalla de elección final
   const heroPlaying = index === 0;
+  const isChoice = index === N;
 
   function go(next: number): void {
-    setIndex(Math.max(0, Math.min(N - 1, next)));
+    setIndex(Math.max(0, Math.min(PANELS - 1, next)));
   }
 
-  // Guard anti-spam: si el usuario pulsa "Empezar"/"Entrar a la app"
-  // varias veces rápido, `document.startViewTransition` se invocaría 2x
-  // y la 2ª transición arranca antes de que la 1ª termine → glitch
-  // visual.  Catálogo bug #5.
+  // Guard anti-spam: evita que pulsaciones dobles lancen dos navegaciones
+  // (y dos view transitions solapadas → glitch).
   const enteringRef = useRef(false);
 
-  function enterApp(): void {
+  function enterTo(to: '/register' | '/login'): void {
     if (enteringRef.current) return;
     enteringRef.current = true;
     storage.markOnboardingSeen();
-
-    const navigateNow = () => {
-      navigate({ to: '/home', replace: true }).catch(() => undefined);
-    };
-    const reduced = globalThis.window
-      .matchMedia('(prefers-reduced-motion: reduce)')
-      .matches;
-    const docAny = globalThis.document as Document & {
-      startViewTransition?: (cb: () => void) => {
-        finished: Promise<void>;
-      };
-    };
-
-    if (!reduced && typeof docAny.startViewTransition === 'function') {
-      const transition = docAny.startViewTransition(() => flushSync(navigateNow));
-      // Limpiamos el flag cuando la transición acaba (éxito o cancelación)
-      // para permitir reintentos si el usuario regresa al onboarding.
-      transition.finished.finally(() => {
+    // El router envuelve el cambio de ruta (asíncrono) en una View Transition
+    // con el timing correcto; se desactiva si el usuario prefiere sin motion.
+    const reduced = globalThis.window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    navigate({ to, replace: true, viewTransition: !reduced })
+      .catch(() => undefined)
+      .finally(() => {
         enteringRef.current = false;
       });
-    } else {
-      navigateNow();
-      enteringRef.current = false;
-    }
   }
 
   function next(): void {
-    if (index < N - 1) {
-      go(index + 1);
-      return;
-    }
-    enterApp();
+    if (index < PANELS - 1) go(index + 1);
   }
 
   function skip(): void {
-    enterApp();
+    enterTo('/login');
   }
 
   // Navegación con teclado.
@@ -153,8 +132,10 @@ export function Onboarding() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') go(index + 1);
       else if (e.key === 'ArrowLeft') go(index - 1);
-      else if (e.key === 'Enter') next();
-      else if (e.key === 'Escape') skip();
+      else if (e.key === 'Enter') {
+        if (isChoice) enterTo('/register');
+        else next();
+      } else if (e.key === 'Escape') skip();
     };
     globalThis.window.addEventListener('keydown', onKey);
     return () => globalThis.window.removeEventListener('keydown', onKey);
@@ -179,7 +160,10 @@ export function Onboarding() {
         </div>
       </header>
 
-      <div className={styles.track} style={{ transform: `translateX(${-index * 100}vw)` }}>
+      <div
+        className={styles.track}
+        style={{ width: `${PANELS * 100}vw`, transform: `translateX(${-index * 100}vw)` }}
+      >
         {/* — Slide 0: Hero — */}
         <section className={styles.slide} aria-label="Manualito · presentación">
           <div className={styles.hero}>
@@ -213,11 +197,7 @@ export function Onboarding() {
           const active = index === slideIdx;
           const isLast = slideIdx === N - 1;
           return (
-            <section
-              key={s.id}
-              className={styles.slide}
-              aria-label={`Paso ${s.n}: ${s.title}`}
-            >
+            <section key={s.id} className={styles.slide} aria-label={`Paso ${s.n}: ${s.title}`}>
               <div className={styles.step}>
                 <div className={styles.stepCopy}>
                   <span className={styles.stepNum}>
@@ -231,11 +211,8 @@ export function Onboarding() {
                     type="button"
                     className={cn(styles.pill, active && styles.isIn)}
                     onClick={next}
-                    style={{
-                      '--vt': isLast && active ? 'cta-pill' : 'none',
-                    } as CSSProperties}
                   >
-                    <span>{isLast ? 'Entrar a la app' : 'Siguiente'}</span>
+                    <span>{isLast ? 'Continuar' : 'Siguiente'}</span>
                     <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                       →
                     </span>
@@ -248,22 +225,71 @@ export function Onboarding() {
             </section>
           );
         })}
+        {/* — Última diapositiva: elección crear/entrar — */}
+        <section className={styles.slide} aria-label="Crear cuenta o entrar">
+          <AuthChoice
+            active={isChoice}
+            onRegister={() => enterTo('/register')}
+            onLogin={() => enterTo('/login')}
+          />
+        </section>
       </div>
 
       <div className={styles.pager} role="tablist" aria-label="Pasos del onboarding">
-        {SLIDES.map((slide, k) => (
-          <button
-            key={slide.id}
-            type="button"
-            role="tab"
-            aria-selected={index === k}
-            aria-label={`Ir a diapositiva ${k + 1}`}
-            onClick={() => go(k)}
-            className={styles.dotHit}
-          >
-            <span className={cn(styles.dot, index === k && styles.isOn)} />
-          </button>
-        ))}
+        {SLIDES.map((slide, k) => {
+          const dotIndex = Math.min(index, N - 1);
+          return (
+            <button
+              key={slide.id}
+              type="button"
+              role="tab"
+              aria-selected={dotIndex === k}
+              aria-label={`Ir a diapositiva ${k + 1}`}
+              onClick={() => go(k)}
+              className={styles.dotHit}
+            >
+              <span className={cn(styles.dot, dotIndex === k && styles.isOn)} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Paso final: elegir entre crear cuenta o entrar (pantalla "Todo listo" del diseño). */
+function AuthChoice({
+  active,
+  onRegister,
+  onLogin,
+}: Readonly<{ active: boolean; onRegister: () => void; onLogin: () => void }>) {
+  return (
+    <div className={cn(styles.choice, active && styles.isIn)}>
+      <span style={{ filter: 'drop-shadow(0 20px 36px rgba(0, 0, 0, 0.45))' }}>
+        <Monogram size={116} radius={28} />
+      </span>
+      <div>
+        <h1 className={styles.choiceTitle}>
+          Todo listo<span style={{ color: 'var(--m-primary-300)' }}>.</span>
+        </h1>
+        <p className={styles.choiceLead}>
+          Crea tu cuenta para guardar los manuales que aprendas, o entra si ya eres de la casa.
+        </p>
+      </div>
+      <div className={styles.choiceActions}>
+        <button type="button" className={styles.choiceCreate} onClick={onRegister}>
+          Crear cuenta
+        </button>
+        <button type="button" className={styles.choiceGhost} onClick={onLogin}>
+          Ya tengo cuenta
+        </button>
+        <p className={styles.choiceNote}>
+          Al crear una cuenta aceptas la{' '}
+          <span style={{ color: 'var(--m-primary-300)', fontWeight: 600 }}>
+            Política de privacidad
+          </span>
+          {'.'}
+        </p>
       </div>
     </div>
   );
@@ -307,7 +333,7 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
         <span className={styles.mono} style={{ opacity: 0.85 }}>
           ● REC
         </span>
-        <span className={styles.mono}>P. 4 / —</span>
+        <span className={styles.mono}>P. 4</span>
       </div>
 
       <div className={styles.viewfinder}>
@@ -462,8 +488,8 @@ function StepEntiende() {
       <div className={styles.summary}>
         <span className={styles.eyebrow}>RESUMEN</span>
         <p>
-          Construyes una isla con poblados y ciudades para sumar <strong>10 puntos</strong>.
-          Tiras dados, recibes recursos y comercias.
+          Construyes una isla con poblados y ciudades para sumar <strong>10 puntos</strong>. Tiras
+          dados, recibes recursos y comercias.
         </p>
       </div>
 

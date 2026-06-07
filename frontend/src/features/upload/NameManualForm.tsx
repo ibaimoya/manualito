@@ -28,8 +28,8 @@ type SubmitVars = {
 };
 
 export function subtitleForSource(source: UploadSource): string {
-  if (source === 'gallery') return 'Revisa las paginas antes de procesarlas.';
-  if (source === 'pdf') return 'Se procesaran todas las paginas del PDF.';
+  if (source === 'gallery') return 'Revisa las páginas antes de procesarlas.';
+  if (source === 'pdf') return 'Se procesarán todas las páginas del PDF.';
   return 'Vamos a etiquetar la foto antes de procesarla.';
 }
 
@@ -41,7 +41,7 @@ export function NameManualForm({ files, source, onClose }: Props) {
   const [selectedGame, setSelectedGame] = useState<GameSearchItem | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const searchTerm = name.trim();
-  const gameSearch = useQuery({
+  const { data: gameSearchData, isFetching: isSearchingGames } = useQuery({
     queryKey: ['games', searchTerm],
     queryFn: ({ signal }) => api.searchGames(searchTerm, signal),
     enabled: searchTerm.length >= 2 && selectedGame?.name !== searchTerm,
@@ -97,7 +97,7 @@ export function NameManualForm({ files, source, onClose }: Props) {
     e.preventDefault();
     const trimmed = name.trim();
     if (pages.length === 0) {
-      toast.warning('Anade al menos una pagina');
+      toast.warning('Añade al menos una página');
       return;
     }
     if (trimmed.length < 2) {
@@ -154,8 +154,8 @@ export function NameManualForm({ files, source, onClose }: Props) {
         maxLength={120}
       />
       <GameResults
-        games={gameSearch.data?.games ?? []}
-        isFetching={gameSearch.isFetching}
+        games={gameSearchData?.games ?? []}
+        isFetching={isSearchingGames}
         minLengthReached={searchTerm.length >= 2}
         selectedGame={selectedGame}
         onSelect={(game) => {
@@ -334,22 +334,22 @@ function PagePreview({
       ) : (
         <div className="h-16 w-16 shrink-0 rounded-lg bg-bg" aria-hidden="true" />
       )}
-      <FileMeta file={file} label={`Pagina ${pageNumber}`} />
+      <FileMeta file={file} label={`Página ${pageNumber}`} />
       <div className="flex shrink-0 gap-1">
         <IconButton
-          label={`Subir pagina ${pageNumber}`}
+          label={`Subir página ${pageNumber}`}
           disabled={disabled || !canMoveUp}
           onClick={onMoveUp}
           icon={<ChevronUp size={17} strokeWidth={2} />}
         />
         <IconButton
-          label={`Bajar pagina ${pageNumber}`}
+          label={`Bajar página ${pageNumber}`}
           disabled={disabled || !canMoveDown}
           onClick={onMoveDown}
           icon={<ChevronDown size={17} strokeWidth={2} />}
         />
         <IconButton
-          label={`Quitar pagina ${pageNumber}`}
+          label={`Quitar página ${pageNumber}`}
           disabled={disabled}
           onClick={onRemove}
           icon={<Trash2 size={17} strokeWidth={2} />}

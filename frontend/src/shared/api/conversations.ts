@@ -1,4 +1,5 @@
 import { TIMEOUT, queryString, request, requestVoid } from './http';
+import type { AnswerSource } from './client';
 
 /**
  * Cliente de conversaciones persistentes (sustituye el Q&A en localStorage):
@@ -28,6 +29,7 @@ export interface ConversationMessage {
   role: MessageRole;
   content: string;
   created_at: string;
+  sources: AnswerSource[];
 }
 
 export interface MessageListResponse {

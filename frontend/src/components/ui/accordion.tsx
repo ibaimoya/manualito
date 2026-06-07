@@ -31,7 +31,7 @@ export const AccordionTrigger = forwardRef<
       <AccordionPrimitive.Trigger
         ref={ref}
         className={cn(
-          'flex flex-1 items-center justify-between gap-3 p-4 text-left font-display text-base font-bold text-fg',
+          'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
           'transition-colors hover:bg-surface',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           '[&[data-state=open]>svg]:rotate-180',
@@ -64,7 +64,9 @@ export const AccordionContent = forwardRef<
       )}
       {...props}
     >
-      <div className={cn('px-4 pb-4 pt-0', className)}>{children}</div>
+      <div className={cn('px-[var(--m-space-4)] pb-[var(--m-space-4)] pt-0', className)}>
+        {children}
+      </div>
     </AccordionPrimitive.Content>
   );
 });

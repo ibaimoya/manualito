@@ -20,7 +20,13 @@ export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(f
 
 export const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   function CardHeader({ className, ...props }, ref) {
-    return <div ref={ref} className={cn('flex flex-col gap-1 p-4', className)} {...props} />;
+    return (
+      <div
+        ref={ref}
+        className={cn('flex flex-col gap-[var(--m-space-1)] p-[var(--m-space-4)]', className)}
+        {...props}
+      />
+    );
   },
 );
 
@@ -47,14 +53,27 @@ export const CardDescription = forwardRef<
 
 export const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   function CardContent({ className, ...props }, ref) {
-    return <div ref={ref} className={cn('p-4 pt-0', className)} {...props} />;
+    return (
+      <div
+        ref={ref}
+        className={cn('p-[var(--m-space-4)] pt-0', className)}
+        {...props}
+      />
+    );
   },
 );
 
 export const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   function CardFooter({ className, ...props }, ref) {
     return (
-      <div ref={ref} className={cn('flex items-center gap-2 p-4 pt-0', className)} {...props} />
+      <div
+        ref={ref}
+        className={cn(
+          'flex items-center gap-[var(--m-space-2)] p-[var(--m-space-4)] pt-0',
+          className,
+        )}
+        {...props}
+      />
     );
   },
 );

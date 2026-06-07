@@ -68,6 +68,7 @@ function DefaultErrorView({ error, reset }: Readonly<{ error: Error; reset: () =
         </p>
       </div>
       <button
+        type="button"
         onClick={() => {
           reset();
           const runtimeWindow = globalThis.window;

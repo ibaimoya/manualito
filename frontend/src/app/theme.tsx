@@ -13,15 +13,12 @@ import { flushSync } from 'react-dom';
 import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
-export type Density = 'compact' | 'comfy';
 export type AccentVariant = 'amber' | 'blue';
 
 type ThemeState = {
   mode: ThemeMode;
-  density: Density;
   accent: AccentVariant;
   setMode: (mode: ThemeMode) => void;
-  setDensity: (d: Density) => void;
   setAccent: (a: AccentVariant) => void;
 };
 
@@ -30,13 +27,13 @@ const ThemeContext = createContext<ThemeState | null>(null);
 const STORAGE_KEY = 'manualito.settings';
 const PERSIST_DEBOUNCE_MS = 200;
 
-type Persisted = { mode: ThemeMode; density: Density; accent: AccentVariant };
+type Persisted = { mode: ThemeMode; accent: AccentVariant };
 type BrowserRuntime = {
   document?: Document;
   window?: Window;
 };
 
-const DEFAULT_PERSISTED: Persisted = { mode: 'auto', density: 'comfy', accent: 'amber' };
+const DEFAULT_PERSISTED: Persisted = { mode: 'auto', accent: 'amber' };
 
 function getBrowserRuntime(): BrowserRuntime {
   return {
@@ -54,7 +51,6 @@ function loadFromStorage(): Persisted {
     const parsed = JSON.parse(raw) as Partial<Persisted>;
     return {
       mode: parsed.mode ?? 'auto',
-      density: parsed.density ?? 'comfy',
       accent: parsed.accent ?? 'amber',
     };
   } catch {
@@ -85,8 +81,6 @@ function applyToHtml(state: Persisted): void {
 
   root.classList.toggle('theme-dark', dark);
   root.classList.toggle('theme-light', !dark);
-  root.classList.toggle('density-compact', state.density === 'compact');
-  root.classList.toggle('density-comfy', state.density === 'comfy');
   root.classList.toggle('accent-blue', state.accent === 'blue');
 }
 
@@ -142,9 +136,8 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     persist(state);
   }, [state, persist]);
 
-  // Listener de matchMedia para modo 'auto' — re-suscribe SOLO cuando el
-  // MODO cambia, no cuando cambian density/accent.  Sin esto, cada toggle
-  // de density remontaba el listener inútilmente.
+  // Listener de matchMedia para modo 'auto': re-suscribe SOLO cuando el
+  // modo cambia, no cuando cambia el color de acento.
   useEffect(() => {
     const runtimeWindow = getBrowserRuntime().window;
     if (state.mode !== 'auto' || runtimeWindow === undefined) return;
@@ -166,13 +159,6 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
       }),
     [],
   );
-  const setDensity = useCallback(
-    (density: Density) =>
-      startTransition(() => {
-        setState((s) => (s.density === density ? s : { ...s, density }));
-      }),
-    [],
-  );
   const setAccent = useCallback(
     (accent: AccentVariant) =>
       startTransition(() => {
@@ -185,10 +171,9 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     () => ({
       ...state,
       setMode,
-      setDensity,
       setAccent,
     }),
-    [state, setMode, setDensity, setAccent],
+    [state, setMode, setAccent],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -11,7 +11,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { ThemeProvider } from '@/app/theme';
-import { Route as HistoryRoute } from '@/routes/history';
+import { Route as HistoryRoute } from '@/routes/_app.history';
 import { storage, type ManualRecord } from '@/shared/lib/storage';
 
 afterEach(() => {
@@ -38,8 +38,7 @@ function renderHistory() {
   const historyR = createRoute({
     getParentRoute: () => root,
     path: '/history',
-    component: (HistoryRoute as unknown as { options: { component: React.FC } }).options
-      .component,
+    component: (HistoryRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const sourceR = createRoute({
     getParentRoute: () => root,
@@ -63,9 +62,9 @@ function renderHistory() {
 describe('/history', () => {
   it('empty state cuando no hay manuales (lazy initializer, sin flash)', async () => {
     renderHistory();
-    // El componente lee de localStorage en el initializer de useState
-    // (catálogo bug #33) — el empty state debe estar ya pintado en
-    // el primer render, no tras un useEffect.
+    // El componente lee de localStorage en el initializer de useState:
+    // el empty state debe estar ya pintado en el primer render, no tras
+    // un useEffect.
     expect(await screen.findByText(/Aún no hay manuales por aquí/)).toBeInTheDocument();
   });
 

@@ -3,14 +3,14 @@ import { z } from 'zod';
 
 /**
  * Reproduce el schema usado en chat.$manualId.tsx (validateSearch).
- * Bug #10 del catálogo: el `q` debe estar limitado a 500 chars
- * para alinearse con el backend `QuestionRequest`.
+ * El `q` debe estar limitado a 500 chars para alinearse con el backend
+ * `QuestionRequest`.
  */
 const chatSearchSchema = z.object({
   q: z.string().min(1).max(500).optional(),
 });
 
-describe('chatSearchSchema (bug #10)', () => {
+describe('chatSearchSchema', () => {
   it('acepta una pregunta vacía (sin q)', () => {
     expect(chatSearchSchema.parse({})).toEqual({});
   });

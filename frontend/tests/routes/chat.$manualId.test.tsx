@@ -13,10 +13,10 @@ import {
 import { http, HttpResponse, delay } from 'msw';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/app/theme';
-import { Route as ChatRoute } from '@/routes/chat.$manualId';
+import { Route as ChatRoute } from '@/routes/_app.chat.$manualId';
 import { storage } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
-import { failAskManual } from '@tests/_helpers/mswHandlers';
+import { failAskGame } from '@tests/_helpers/mswHandlers';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
@@ -56,9 +56,7 @@ function renderChat(manualId: string, initialQuestion?: string) {
     validateSearch: (s) => ({
       q: typeof s.q === 'string' ? s.q : undefined,
     }),
-    component: (
-      ChatRoute as unknown as { options: { component: React.FC } }
-    ).options.component,
+    component: (ChatRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const resultR = createRoute({
     getParentRoute: () => root,
@@ -98,9 +96,7 @@ describe('/chat/$manualId', () => {
   it('empty state cuando no hay mensajes guardados', async () => {
     seedManual('m1');
     renderChat('m1');
-    expect(
-      await screen.findByText(/Empieza con una pregunta sobre el manual/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Empieza con una pregunta sobre el manual/)).toBeInTheDocument();
   });
 
   it('muestra mensajes previos del historial (lazy initializer sin flash)', async () => {
@@ -136,9 +132,7 @@ describe('/chat/$manualId', () => {
     // Bot responde según el handler MSW por defecto.
     await waitFor(
       () => {
-        expect(
-          screen.getByText(/Respuesta simulada para: "¿Y empate\?"/),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Respuesta simulada para: "¿Y empate\?"/)).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
@@ -177,7 +171,7 @@ describe('/chat/$manualId', () => {
   });
 
   it('si el LLM falla con 504, muestra toast de error (no rompe la app)', async () => {
-    server.use(failAskManual(504));
+    server.use(failAskGame(504));
     seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
@@ -212,7 +206,7 @@ describe('/chat/$manualId', () => {
   it('typing indicator mientras la mutation está en vuelo', async () => {
     // Forzamos un delay alto para ver el indicator.
     server.use(
-      http.post('/api/manuals/:manualId/questions', async () => {
+      http.post('/api/games/:gameId/questions', async () => {
         await delay(500);
         return HttpResponse.json({ answer: 'tardío' });
       }),

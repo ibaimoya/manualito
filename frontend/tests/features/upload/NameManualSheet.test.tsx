@@ -118,7 +118,7 @@ describe('NameManualSheet (switch responsive Sheet ↔ Dialog)', () => {
         />,
       ),
     );
-    expect(screen.getByText(/procesaran todas las paginas/i)).toBeInTheDocument();
+    expect(screen.getByText(/procesarán todas las páginas/i)).toBeInTheDocument();
     rerender(
       wrap(
         <NameManualSheet

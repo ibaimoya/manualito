@@ -12,7 +12,7 @@ import {
 } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/app/theme';
-import { Route as SettingsRoute } from '@/routes/settings';
+import { Route as SettingsRoute } from '@/routes/_app.settings';
 import { storage } from '@/shared/lib/storage';
 
 afterEach(() => {
@@ -34,9 +34,7 @@ function renderSettings() {
   const settingsR = createRoute({
     getParentRoute: () => root,
     path: '/settings',
-    component: (
-      SettingsRoute as unknown as { options: { component: React.FC } }
-    ).options.component,
+    component: (SettingsRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const tree = root.addChildren([settingsR]);
   const router = createRouter({
@@ -57,9 +55,7 @@ describe('/settings', () => {
   it('renderiza las dos secciones principales: Apariencia y Privacidad y datos', async () => {
     renderSettings();
     expect(await screen.findByRole('region', { name: /Apariencia/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole('region', { name: /Privacidad y datos/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /Privacidad y datos/i })).toBeInTheDocument();
   });
 
   it('cambia el modo del tema usando el SegmentedControl (light/dark/auto)', async () => {
@@ -74,14 +70,6 @@ describe('/settings', () => {
     expect(modoGroup).toBeInTheDocument();
   });
 
-  it('cambia la densidad entre Compacta y Cómoda', async () => {
-    renderSettings();
-    const user = userEvent.setup();
-    const compacta = await screen.findByRole('radio', { name: 'Compacta' });
-    await user.click(compacta);
-    expect(compacta).toHaveAttribute('aria-checked', 'true');
-  });
-
   it('cambia el color de acento entre Ámbar y Azul', async () => {
     renderSettings();
     const user = userEvent.setup();
@@ -93,9 +81,7 @@ describe('/settings', () => {
   it('muestra el hint del modo auto reflejando el tema del sistema', async () => {
     // Modo auto por defecto + matchMedia mock = "claro" según setup.
     renderSettings();
-    expect(
-      await screen.findByText(/Sigue el sistema/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Sigue el sistema/)).toBeInTheDocument();
   });
 
   it('muestra el indicador estático de archivos gestionados por servidor', async () => {

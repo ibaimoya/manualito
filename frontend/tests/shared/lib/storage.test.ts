@@ -190,21 +190,18 @@ describe('storage', () => {
       localStorage.setItem(STORAGE_KEYS.settings, '{');
       const s = storage.readSettings();
       expect(s.mode).toBe('auto');
-      expect(s.density).toBe('comfy');
       expect(s.accent).toBe('amber');
     });
 
     it('readSettings respeta valores válidos', () => {
       storage.writeSettings({
         mode: 'dark',
-        density: 'compact',
         accent: 'blue',
         responseDetail: 'long',
       });
       const s = storage.readSettings();
       expect(s).toEqual({
         mode: 'dark',
-        density: 'compact',
         accent: 'blue',
         responseDetail: 'long',
       });
@@ -222,7 +219,6 @@ describe('storage', () => {
       });
       storage.writeSettings({
         mode: 'dark',
-        density: 'comfy',
         accent: 'amber',
         responseDetail: 'medium',
       });
@@ -236,9 +232,9 @@ describe('storage', () => {
   });
 
   /* ============================================================
-     Bug #12 — propagación de fallos de escritura
+     Propagación de fallos de escritura
      ============================================================ */
-  describe('onStorageWriteFail (bug #12)', () => {
+  describe('onStorageWriteFail', () => {
     let setItemSpy: ReturnType<typeof vi.spyOn>;
 
     afterEach(() => {

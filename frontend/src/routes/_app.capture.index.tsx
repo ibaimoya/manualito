@@ -19,7 +19,7 @@ import { useFilePicker } from '@/shared/hooks/useFilePicker';
  * (`capture="environment"`) o el selector de archivo en desktop.  Cuando
  * el usuario elige un fichero se abre el bottom sheet de nombre.
  */
-export const Route = createFileRoute('/capture/')({
+export const Route = createFileRoute('/_app/capture/')({
   component: CaptureCameraScreen,
 });
 
@@ -28,7 +28,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 function CaptureCameraScreen() {
   const navigate = useNavigate();
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  // Anti doble-click del shutter (bug #4 del catálogo).
+  // Anti doble-click del shutter.
   const openCamera = useFilePicker(cameraInputRef);
 
   const [pickedFile, setPickedFile] = useState<File | null>(null);
@@ -52,7 +52,7 @@ function CaptureCameraScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-3xl">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-5xl">
       <header className="flex items-center justify-between border-b border-border bg-bg px-2 py-2">
         <button
           type="button"

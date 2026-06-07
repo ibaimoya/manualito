@@ -23,6 +23,12 @@ export interface OcrLinesResponse {
   lines: OcrLine[];
 }
 
+export interface AnswerSource {
+  manual_id: string;
+  manual_title: string | null;
+  page: number;
+}
+
 export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';
 
 export type ManualVisibility = 'private' | 'shared';
@@ -114,6 +120,7 @@ export type CreateManualInput =
 
 export interface AnswerResponse {
   answer: string;
+  sources: AnswerSource[];
 }
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
@@ -242,18 +249,4 @@ export const api = {
     });
   },
 
-  /** POST /api/manuals/{id}/questions — pregunta a un manual (legado, se jubila en Fase 5). */
-  async askManual(
-    manualId: string,
-    question: string,
-    signal?: AbortSignal,
-  ): Promise<AnswerResponse> {
-    return request<AnswerResponse>(`/manuals/${encodeURIComponent(manualId)}/questions`, {
-      method: 'POST',
-      body: JSON.stringify({ question }),
-      headers: JSON_HEADERS,
-      timeoutMs: TIMEOUT.LLM,
-      signal,
-    });
-  },
 };

@@ -14,8 +14,8 @@ import { ThemeProvider } from '@/app/theme';
 import { storage } from '@/shared/lib/storage';
 
 /**
- * Catálogo bug #31: `beforeLoad` debe redirigir a /home si el onboarding
- * ya se ha visto, incluso si el usuario pega manualmente la URL.
+ * `beforeLoad` debe redirigir a /home si el onboarding ya se ha visto,
+ * incluso si el usuario pega manualmente la URL.
  *
  * Replicamos la lógica del Route real en un router sintético — el
  * routeTree generado por TanStack Router lee `Route` desde un fichero

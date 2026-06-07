@@ -26,7 +26,7 @@ import { OcrTextSheet } from '@/features/ocr/OcrTextSheet';
 import { api } from '@/shared/api/client';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
 
-export const Route = createFileRoute('/result/$manualId')({
+export const Route = createFileRoute('/_app/result/$manualId')({
   component: ResultScreen,
 });
 
@@ -41,7 +41,7 @@ function ResultScreen() {
   const { manualId } = Route.useParams();
   const navigate = useNavigate();
   const result = useMemo<ManualResult | null>(() => storage.getResult(manualId), [manualId]);
-  const detailQuery = useQuery({
+  const { data: manualDetail } = useQuery({
     queryKey: ['manual-detail', manualId],
     queryFn: ({ signal }) => api.getManual(manualId, signal),
     enabled: result !== null,
@@ -50,12 +50,12 @@ function ResultScreen() {
   const [ocrOpen, setOcrOpen] = useState(false);
   const cachedOcrLines = useMemo<OcrLine[]>(() => storage.getOcrLines(manualId), [manualId]);
   const backendOcrLines = useMemo<OcrLine[]>(() => {
-    const pages = detailQuery.data?.pages ?? [];
-    return [...pages]
-      .sort((left, right) => left.page_number - right.page_number)
+    const pages = manualDetail?.pages ?? [];
+    return pages
+      .toSorted((left, right) => left.page_number - right.page_number)
       .flatMap((page) => page.ocr_lines);
-  }, [detailQuery.data]);
-  const ocrLines = detailQuery.data ? backendOcrLines : cachedOcrLines;
+  }, [manualDetail]);
+  const ocrLines = manualDetail ? backendOcrLines : cachedOcrLines;
 
   useEffect(() => {
     storage.touchManual(manualId);
@@ -67,7 +67,7 @@ function ResultScreen() {
         <div>
           <p className="font-display text-xl font-bold">Manual no disponible</p>
           <p className="mt-2 text-fg-2">
-            No tenemos resultados guardados para este manual.  Vuelve a procesarlo.
+            No tenemos resultados guardados para este manual. Vuelve a procesarlo.
           </p>
           <Button asChild className="mt-6">
             <Link to="/home">Volver al inicio</Link>
@@ -89,7 +89,7 @@ function ResultScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-2xl">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-4xl">
       <header className="flex items-center justify-between gap-2 border-b border-border bg-bg px-2 py-2">
         <Link
           to="/home"
@@ -126,11 +126,7 @@ function ResultScreen() {
         </div>
       </header>
 
-      <OcrTextSheet
-        open={ocrOpen}
-        onOpenChange={setOcrOpen}
-        lines={ocrLines}
-      />
+      <OcrTextSheet open={ocrOpen} onOpenChange={setOcrOpen} lines={ocrLines} />
 
       <div className="flex flex-wrap gap-2 border-b border-border px-4 py-3">
         <Badge tone="success" size="sm" icon={<Check strokeWidth={2} />}>
@@ -197,7 +193,7 @@ function ResultScreen() {
       </div>
 
       {/* Sticky composer — mismas reglas de safe-area que /chat para
-          coherencia táctil (catálogo polish Fase N). */}
+          coherencia táctil. */}
       <div
         className="sticky bottom-0 border-t border-border bg-bg/95 p-3 backdrop-blur"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
@@ -268,23 +264,21 @@ function textKey(text: string): string {
 
 function paragraphsFrom(text: string): Array<{ id: string; text: string }> {
   const seen = new Map<string, number>();
-  return text
-    .split(/\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((paragraph) => {
-      const baseId = textKey(paragraph);
-      const occurrence = seen.get(baseId) ?? 0;
-      seen.set(baseId, occurrence + 1);
-      return { id: `${baseId}-${occurrence}`, text: paragraph };
-    });
+  return text.split(/\n+/).flatMap((p) => {
+    const paragraph = p.trim();
+    if (!paragraph) return [];
+    const baseId = textKey(paragraph);
+    const occurrence = seen.get(baseId) ?? 0;
+    seen.set(baseId, occurrence + 1);
+    return [{ id: `${baseId}-${occurrence}`, text: paragraph }];
+  });
 }
 
 function BodyText({ text }: Readonly<{ text: string }>) {
   if (!text || text.trim().length === 0) {
     return (
       <p className="text-sm text-fg-3">
-        No hemos podido generar esta sección.  Puedes preguntar al manual directamente.
+        No hemos podido generar esta sección. Puedes preguntar al manual directamente.
       </p>
     );
   }

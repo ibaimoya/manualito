@@ -33,7 +33,7 @@ describe('Input', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  // ─── preset prop (refactor J1, bug #29) ──────────────────────────────
+  // ─── preset prop ──────────────────────────────
   describe('preset', () => {
     it('"game-name" aplica capitalización de palabras y spellcheck=false', () => {
       render(<Input aria-label="g" preset="game-name" />);

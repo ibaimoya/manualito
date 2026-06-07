@@ -10,7 +10,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { ThemeProvider } from '@/app/theme';
-import { Route as ProcessingRoute } from '@/routes/processing.$manualId';
+import { Route as ProcessingRoute } from '@/routes/_app.processing.$manualId';
 import { storage } from '@/shared/lib/storage';
 import type { BootstrapState } from '@/features/processing/useManualBootstrap';
 
@@ -75,9 +75,8 @@ function renderProcessing(manualId: string, name?: string) {
     validateSearch: (s) => ({
       name: typeof s.name === 'string' ? s.name : undefined,
     }),
-    component: (
-      ProcessingRoute as unknown as { options: { component: React.FC } }
-    ).options.component,
+    component: (ProcessingRoute as unknown as { options: { component: React.FC } }).options
+      .component,
   });
   const resultR = createRoute({
     getParentRoute: () => root,
@@ -104,9 +103,7 @@ function renderProcessing(manualId: string, name?: string) {
 describe('/processing/$manualId', () => {
   it('renderiza la cabecera con el nombre del manual y los 4 pasos', async () => {
     renderProcessing('abc123', 'Catan');
-    expect(
-      await screen.findByText(/Procesando «Catan»/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Procesando «Catan»/i)).toBeInTheDocument();
     expect(screen.getByText(/Resumen/)).toBeInTheDocument();
     expect(screen.getByText(/Preparación/)).toBeInTheDocument();
     expect(screen.getByText(/El turno/)).toBeInTheDocument();
@@ -115,9 +112,7 @@ describe('/processing/$manualId', () => {
 
   it('si no hay nombre en la URL muestra "Manual sin nombre"', async () => {
     renderProcessing('abc123');
-    expect(
-      await screen.findByText(/Procesando «Manual sin nombre»/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Procesando «Manual sin nombre»/)).toBeInTheDocument();
   });
 
   it('registra el manual en localStorage cuando no existe (upsert + touch)', async () => {
@@ -188,9 +183,9 @@ describe('/processing/$manualId', () => {
     setBootstrap({
       steps: [
         { id: 'summary', label: 'Resumen', state: 'failed', error: 'OCR fallido' },
-        { id: 'setup', label: 'PreparaciÃ³n', state: 'failed', error: 'OCR fallido' },
+        { id: 'setup', label: 'Preparación', state: 'failed', error: 'OCR fallido' },
         { id: 'turn', label: 'El turno', state: 'failed', error: 'OCR fallido' },
-        { id: 'win', label: 'CÃ³mo se gana', state: 'failed', error: 'OCR fallido' },
+        { id: 'win', label: 'Cómo se gana', state: 'failed', error: 'OCR fallido' },
       ],
       progress: 100,
       done: true,

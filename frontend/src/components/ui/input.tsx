@@ -10,19 +10,12 @@ import { cn } from '@/shared/lib/cn';
  *  - https://html.spec.whatwg.org/dev/interaction.html#attr-input-inputmode
  *  - https://makandracards.com/makandra/589282-better-html-forms-type-inputmode-enterkeyhint-autocomplete
  *  - https://css-tricks.com/better-form-inputs-for-better-mobile-user-experiences/
- *
- * Ver decisión catálogo bug #29 (mobile keyboard hints).
  */
-type InputPreset = 'game-name' | 'search' | 'chat-message' | 'free';
+type InputPreset = 'game-name' | 'search' | 'chat-message' | 'email' | 'username' | 'free';
 
 type PresetConfig = Pick<
   React.InputHTMLAttributes<HTMLInputElement>,
-  | 'type'
-  | 'inputMode'
-  | 'enterKeyHint'
-  | 'spellCheck'
-  | 'autoComplete'
-  | 'autoCapitalize'
+  'type' | 'inputMode' | 'enterKeyHint' | 'spellCheck' | 'autoComplete' | 'autoCapitalize'
 >;
 
 const PRESETS: Record<InputPreset, PresetConfig> = {
@@ -56,6 +49,24 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     spellCheck: true,
     autoComplete: 'off',
     autoCapitalize: 'sentences',
+  },
+  // Email de login/registro: teclado de email, sin autocapitalizar.
+  email: {
+    type: 'email',
+    inputMode: 'email',
+    enterKeyHint: 'next',
+    spellCheck: false,
+    autoComplete: 'email',
+    autoCapitalize: 'none',
+  },
+  // Nombre de usuario visible: autocompletar nick, sin spellcheck.
+  username: {
+    type: 'text',
+    inputMode: 'text',
+    enterKeyHint: 'next',
+    spellCheck: false,
+    autoComplete: 'username',
+    autoCapitalize: 'none',
   },
   // Sin preset (default).
   free: {},

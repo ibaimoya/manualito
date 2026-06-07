@@ -7,7 +7,7 @@ import { NameManualSheet } from '@/features/upload/NameManualSheet';
 import { useFilePicker } from '@/shared/hooks/useFilePicker';
 import { cn } from '@/shared/lib/cn';
 
-export const Route = createFileRoute('/capture/source')({
+export const Route = createFileRoute('/_app/capture/source')({
   component: SourcePickerScreen,
 });
 
@@ -31,8 +31,8 @@ function SourcePickerScreen() {
   function validateAndOpenSheet(files: File[], source: 'gallery' | 'pdf'): void {
     if (files.length === 0) return;
     if (source === 'gallery' && files.length > MAX_PAGES) {
-      toast.warning('Demasiadas paginas', {
-        description: `Puedes subir hasta ${MAX_PAGES} imagenes por manual.`,
+      toast.warning('Demasiadas páginas', {
+        description: `Puedes subir hasta ${MAX_PAGES} imágenes por manual.`,
       });
       return;
     }
@@ -46,13 +46,13 @@ function SourcePickerScreen() {
     }
     if (source === 'gallery' && files.some((file) => file.size > MAX_IMAGE_BYTES)) {
       toast.warning('Imagen demasiado grande', {
-        description: 'Cada imagen puede ocupar como maximo 20 MB.',
+        description: 'Cada imagen puede ocupar como máximo 20 MB.',
       });
       return;
     }
     if (source === 'pdf' && files[0]!.size > MAX_PDF_BYTES) {
       toast.warning('PDF demasiado grande', {
-        description: 'El PDF puede ocupar como maximo 50 MB.',
+        description: 'El PDF puede ocupar como máximo 50 MB.',
       });
       return;
     }
@@ -71,7 +71,7 @@ function SourcePickerScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-2xl">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-5xl">
       <header className="flex items-center justify-between border-b border-border bg-bg px-4 py-3">
         <button
           type="button"
@@ -91,18 +91,18 @@ function SourcePickerScreen() {
             paso 1 / 2
           </span>
           <h2 className="mt-2 font-display text-2xl font-bold leading-tight tracking-tight text-fg">
-            ¿De donde sacamos el manual?
+            ¿De dónde sacamos el manual?
           </h2>
           <p className="mt-1.5 text-base leading-relaxed text-fg-2">
-            Elige como subes las paginas. Foto es lo mas comodo si lo tienes en la mesa.
+            Elige cómo subes las páginas. Foto es lo más cómodo si lo tienes en la mesa.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <SourceTile
             icon={<ImageIcon size={22} strokeWidth={1.75} />}
-            label="Galeria"
-            sub={`Hasta ${MAX_PAGES} imagenes`}
+            label="Galería"
+            sub={`Hasta ${MAX_PAGES} imágenes`}
             onClick={openGallery}
           />
           <SourceTile
@@ -114,7 +114,7 @@ function SourcePickerScreen() {
           <SourceTile
             icon={<Camera size={28} strokeWidth={1.75} />}
             label="Hacer foto"
-            sub="Camara con guia de encuadre"
+            sub="Cámara con guía de encuadre"
             primary
             wide
             onClick={() => navigate({ to: '/capture' })}
@@ -122,8 +122,8 @@ function SourcePickerScreen() {
         </div>
 
         <p className="mt-auto px-2 text-center text-xs text-fg-3">
-          Tus archivos solo viajan al servidor cuando creas un manual y quedan
-          asociados a ese manual.
+          Tus archivos solo viajan al servidor cuando creas un manual y quedan asociados a ese
+          manual.
         </p>
       </div>
 
@@ -138,7 +138,7 @@ function SourcePickerScreen() {
           validateAndOpenSheet(Array.from(event.target.files ?? []), 'gallery');
           event.target.value = '';
         }}
-        aria-label="Seleccionar imagenes de la galeria"
+        aria-label="Seleccionar imágenes de la galería"
       />
       <input
         ref={pdfInputRef}
@@ -181,25 +181,21 @@ function SourceTile({ icon, label, sub, primary = false, wide = false, onClick }
       variant={primary ? 'primary' : 'secondary'}
       className={cn(
         'flex h-auto min-h-[120px] flex-col items-start gap-4 rounded-2xl p-4 text-left',
-        wide && 'col-span-2',
+        wide && 'col-span-2 md:col-span-1',
         !primary && 'border border-border bg-surface',
       )}
     >
       <span
         className={cn(
           'grid h-10 w-10 place-items-center rounded-xl',
-          primary
-            ? 'bg-white/20 text-fg-inv'
-            : 'border border-border bg-bg text-primary-700',
+          primary ? 'bg-white/20 text-fg-inv' : 'border border-border bg-bg text-primary-700',
         )}
         aria-hidden="true"
       >
         {icon}
       </span>
       <div className="w-full">
-        <div className={cn('font-semibold', primary ? 'text-fg-inv' : 'text-fg')}>
-          {label}
-        </div>
+        <div className={cn('font-semibold', primary ? 'text-fg-inv' : 'text-fg')}>{label}</div>
         <div
           className={cn(
             'mono mt-1 text-[10.5px] tracking-[0.05em]',

@@ -8,7 +8,7 @@ import { ManualCard } from '@/features/manual/ManualCard';
 import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
 import { storage, type ManualRecord } from '@/shared/lib/storage';
 
-export const Route = createFileRoute('/history')({
+export const Route = createFileRoute('/_app/history')({
   component: HistoryScreen,
 });
 
@@ -16,7 +16,7 @@ function HistoryScreen() {
   const [manuals, setManuals] = useState<ManualRecord[]>(() => storage.listManuals());
   // El input es controlado al instante (UI reactivo) pero la query
   // usada para filtrar se actualiza debounced para evitar rerender por
-  // cada tecla con 50 manuales en la lista.  Catálogo bug #27.
+  // cada tecla con 50 manuales en la lista.
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const setDebouncedQuerySoon = useDebouncedCallback(setDebouncedQuery, 150);
@@ -33,9 +33,7 @@ function HistoryScreen() {
   const filtered =
     debouncedQuery.trim().length === 0
       ? manuals
-      : manuals.filter((m) =>
-          m.name.toLowerCase().includes(debouncedQuery.toLowerCase().trim()),
-        );
+      : manuals.filter((m) => m.name.toLowerCase().includes(debouncedQuery.toLowerCase().trim()));
 
   let content: ReactNode;
   if (filtered.length > 0) {
@@ -55,18 +53,14 @@ function HistoryScreen() {
     content = <EmptyState />;
   } else {
     content = (
-      <p className="mt-4 text-center text-sm text-fg-3">
-        Ningún manual coincide con «{query}».
-      </p>
+      <p className="mt-4 text-center text-sm text-fg-3">Ningún manual coincide con «{query}».</p>
     );
   }
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 pb-10 pt-4 md:max-w-5xl md:px-8 md:pt-10">
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
-          Tus manuales
-        </h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">Tus manuales</h1>
         <div className="relative md:w-80">
           <Search
             size={18}
@@ -157,8 +151,8 @@ function EmptyState() {
           Aún no hay manuales por aquí
         </h2>
         <p className="mt-2 text-base leading-relaxed text-fg-2">
-          Saca foto a las páginas de tu primer juego y aparecerá aquí, listo para preguntarle lo
-          que sea.
+          Saca foto a las páginas de tu primer juego y aparecerá aquí, listo para preguntarle lo que
+          sea.
         </p>
       </div>
       <Button asChild size="lg">

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ManualCard } from '@/features/manual/ManualCard';
 import { storage, type ManualRecord } from '@/shared/lib/storage';
 
-export const Route = createFileRoute('/home')({
+export const Route = createFileRoute('/_app/home')({
   component: HomeScreen,
 });
 
@@ -15,7 +15,6 @@ function HomeScreen() {
   // Lista local de manuales: viene de localStorage hasta que el backend persista el índice.
   // Lazy initializer evita el flash de "empty state" mientras un useEffect
   // sincronizaba la lista en el primer mount (50 ms visible y feo).
-  // Catálogo bug #33.
   const [manuals] = useState<ManualRecord[]>(() => storage.listManuals());
 
   return (
@@ -49,18 +48,14 @@ function HomeScreen() {
             ¿Qué juego vamos a aprender?
           </h1>
           <p className="mt-2 text-base leading-relaxed text-fg-2 md:text-lg">
-            Saca foto al manual y te lo explico — paso a paso, sin tener que leerlo entero.
+            Saca foto al manual y te lo explico paso a paso, sin tener que leerlo entero.
           </p>
         </div>
       </section>
 
       <HeroCta />
 
-      {manuals.length > 0 ? (
-        <RecentManuals manuals={manuals} />
-      ) : (
-        <EmptyRecents />
-      )}
+      {manuals.length > 0 ? <RecentManuals manuals={manuals} /> : <EmptyRecents />}
     </div>
   );
 }
@@ -74,18 +69,14 @@ function HeroCta() {
     <Card
       className="@container relative overflow-hidden border-0 p-5 text-fg-inv shadow-md"
       style={{
-        background:
-          'linear-gradient(160deg, var(--m-primary-500) 0%, var(--m-primary-600) 100%)',
+        background: 'linear-gradient(160deg, var(--m-primary-500) 0%, var(--m-primary-600) 100%)',
       }}
     >
       <div className="relative flex flex-col gap-4 @md:flex-row @md:items-center @md:justify-between">
         <div className="@md:max-w-md">
-          <h2 className="font-display text-lg font-bold @md:text-xl">
-            Aprende un juego nuevo
-          </h2>
+          <h2 className="font-display text-lg font-bold @md:text-xl">Aprende un juego nuevo</h2>
           <p className="mt-1 text-sm opacity-90">
-            Sube las páginas del manual desde la cámara, la galería o un PDF — yo te
-            lo explico.
+            Sube las páginas del manual desde la cámara, la galería o un PDF, y yo te lo explico.
           </p>
         </div>
         <Button
@@ -132,8 +123,7 @@ function EmptyRecents() {
   return (
     <section className="mt-2 rounded-2xl border border-dashed border-border-strong bg-surface/60 p-6 text-center">
       <p className="text-sm text-fg-2">
-        Aún no has consultado ningún manual. Pulsa <strong>Nuevo manual</strong> para
-        empezar.
+        Aún no has consultado ningún manual. Pulsa <strong>Nuevo manual</strong> para empezar.
       </p>
     </section>
   );

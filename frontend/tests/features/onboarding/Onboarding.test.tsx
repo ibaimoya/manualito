@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,14 +13,9 @@ import {
 import { ThemeProvider } from '@/app/theme';
 import { Onboarding } from '@/features/onboarding/Onboarding';
 
-/**
- * Tests del bug #5 del catálogo: el view-transition de "Empezar" /
- * "Entrar a la app" debe deduplicarse contra spam.
- */
 beforeEach(() => {
   localStorage.clear();
 });
-
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -35,12 +30,17 @@ function renderOnboarding() {
     path: '/onboarding',
     component: Onboarding,
   });
-  const homeR = createRoute({
-    getParentRoute: () => root,
-    path: '/home',
-    component: () => <div data-testid="home-screen">Home</div>,
-  });
-  const tree = root.addChildren([onboardingR, homeR]);
+  const stub = (path: string, id: string) =>
+    createRoute({
+      getParentRoute: () => root,
+      path,
+      component: () => <div data-testid={id}>{id}</div>,
+    });
+  const tree = root.addChildren([
+    onboardingR,
+    stub('/login', 'login-screen'),
+    stub('/register', 'register-screen'),
+  ]);
   const router = createRouter({
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: ['/onboarding'] }),
@@ -54,36 +54,47 @@ function renderOnboarding() {
   );
 }
 
-describe('Onboarding view-transition guard', () => {
+describe('Onboarding', () => {
   it('renderiza el botón Empezar', async () => {
     renderOnboarding();
-    expect(
-      await screen.findByRole('button', { name: /Empezar/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Empezar/i })).toBeInTheDocument();
   });
 
-  it('múltiples clicks en Saltar solo dispara UNA navegación', async () => {
+  it('"Empezar" avanza de paso, no entra a la app', async () => {
     const user = userEvent.setup();
     renderOnboarding();
-
-    const skip = await screen.findByRole('button', { name: /Saltar/i });
-    // Tres clicks rápidos
-    await user.click(skip);
-    await user.click(skip);
-    await user.click(skip);
-
-    // markOnboardingSeen se ejecuta solo una vez (no se acumula)
-    expect(localStorage.getItem('manualito.onboarding.seen')).toBe('1');
-    // Tras la transición acabamos en /home
-    expect(await screen.findByTestId('home-screen')).toBeInTheDocument();
-  });
-
-  it('al pulsar "Empezar" en la hero navega a paso siguiente, no a /home', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-
     await user.click(await screen.findByRole('button', { name: /Empezar/i }));
-    // Sigue dentro del onboarding (next slide), no en home
-    expect(screen.queryByTestId('home-screen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('login-screen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('register-screen')).not.toBeInTheDocument();
+  });
+
+  it('Saltar marca el onboarding como visto y lleva a /login (una sola vez)', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+    const skip = await screen.findByRole('button', { name: /Saltar/i });
+    await user.click(skip);
+    await user.click(skip);
+    await user.click(skip);
+    expect(localStorage.getItem('manualito.onboarding.seen')).toBe('1');
+    expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
+  });
+
+  it('la pantalla de elección "Crear cuenta" lleva a /register', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+    // Salto a la última diapositiva y continúo hasta la pantalla de elección.
+    await user.click(await screen.findByRole('tab', { name: /Ir a diapositiva 4/i }));
+    await user.click(await screen.findByRole('button', { name: /Continuar/i }));
+    await user.click(await screen.findByRole('button', { name: /Crear cuenta/i }));
+    expect(await screen.findByTestId('register-screen')).toBeInTheDocument();
+  });
+
+  it('la pantalla de elección "Ya tengo cuenta" lleva a /login', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+    await user.click(await screen.findByRole('tab', { name: /Ir a diapositiva 4/i }));
+    await user.click(await screen.findByRole('button', { name: /Continuar/i }));
+    await user.click(await screen.findByRole('button', { name: /Ya tengo cuenta/i }));
+    expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
   });
 });

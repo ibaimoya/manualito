@@ -13,7 +13,7 @@ import {
 import { http, HttpResponse } from 'msw';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/app/theme';
-import { Route as SourceRoute } from '@/routes/capture.source';
+import { Route as SourceRoute } from '@/routes/_app.capture.source';
 import { server } from '@tests/_helpers/server';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
@@ -28,8 +28,7 @@ function renderSource(initialPath = '/capture/source') {
   const sourceR = createRoute({
     getParentRoute: () => root,
     path: '/capture/source',
-    component: (SourceRoute as unknown as { options: { component: React.FC } }).options
-      .component,
+    component: (SourceRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const captureR = createRoute({
     getParentRoute: () => root,
@@ -72,8 +71,8 @@ async function selectGame(user: ReturnType<typeof userEvent.setup>, name: string
 describe('/capture/source', () => {
   it('renderiza el titulo y las tres fuentes', async () => {
     renderSource();
-    expect(await screen.findByText(/De donde sacamos el manual\?/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Galeria/i })).toBeInTheDocument();
+    expect(await screen.findByText(/De dónde sacamos el manual\?/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Galería/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /PDF/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Hacer foto/i })).toBeInTheDocument();
   });
@@ -85,19 +84,17 @@ describe('/capture/source', () => {
     expect(await screen.findByTestId('capture-screen')).toBeInTheDocument();
   });
 
-  it('boton X cancela y vuelve a /home', async () => {
+  it('botón X cancela y vuelve a /home', async () => {
     renderSource();
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole('button', { name: /Cancelar y volver al inicio/i }),
-    );
+    await user.click(await screen.findByRole('button', { name: /Cancelar y volver al inicio/i }));
     expect(await screen.findByTestId('home-screen')).toBeInTheDocument();
   });
 
-  it('varias imagenes de galeria abren el sheet con paginas', async () => {
+  it('varias imágenes de galería abren el sheet con páginas', async () => {
     renderSource();
     const user = userEvent.setup();
-    await screen.findByText(/De donde sacamos el manual\?/i);
+    await screen.findByText(/De dónde sacamos el manual\?/i);
     const galleryInput = screen.getByTestId('picker-gallery') as HTMLInputElement;
     await user.upload(galleryInput, [
       new File(['uno'], 'uno.jpg', { type: 'image/jpeg' }),
@@ -112,7 +109,7 @@ describe('/capture/source', () => {
   it('rechaza una imagen mayor de 20 MB y no abre el sheet', async () => {
     renderSource();
     const user = userEvent.setup();
-    await screen.findByText(/De donde sacamos el manual\?/i);
+    await screen.findByText(/De dónde sacamos el manual\?/i);
     const big = new File(['x'.repeat(21 * 1024 * 1024)], 'big.jpg', {
       type: 'image/jpeg',
     });
@@ -122,9 +119,9 @@ describe('/capture/source', () => {
     expect(screen.queryByText(/Ponle nombre al manual/i)).not.toBeInTheDocument();
   });
 
-  it('rechaza imagenes fuera de JPG, PNG y WebP', async () => {
+  it('rechaza imágenes fuera de JPG, PNG y WebP', async () => {
     renderSource();
-    await screen.findByText(/De donde sacamos el manual\?/i);
+    await screen.findByText(/De dónde sacamos el manual\?/i);
 
     fireEvent.change(screen.getByTestId('picker-gallery'), {
       target: { files: [new File(['gif'], 'animado.gif', { type: 'image/gif' })] },
@@ -134,7 +131,7 @@ describe('/capture/source', () => {
     expect(screen.queryByText(/Ponle nombre al manual/i)).not.toBeInTheDocument();
   });
 
-  it('flujo completo galeria: elegir, nombrar, subir y navegar', async () => {
+  it('flujo completo galería: elegir, nombrar, subir y navegar', async () => {
     server.use(
       http.post('/api/manuals', () =>
         HttpResponse.json({
@@ -149,7 +146,7 @@ describe('/capture/source', () => {
     );
     renderSource();
     const user = userEvent.setup();
-    await screen.findByText(/De donde sacamos el manual\?/i);
+    await screen.findByText(/De dónde sacamos el manual\?/i);
     await user.upload(
       screen.getByTestId('picker-gallery') as HTMLInputElement,
       new File(['xxx'], 'foto.jpg', { type: 'image/jpeg' }),
@@ -157,9 +154,8 @@ describe('/capture/source', () => {
     await selectGame(user, 'Wingspan');
     await user.click(screen.getByRole('button', { name: /Procesar/i }));
 
-    await waitFor(
-      () => expect(screen.getByTestId('processing-screen')).toBeInTheDocument(),
-      { timeout: 3000 },
-    );
+    await waitFor(() => expect(screen.getByTestId('processing-screen')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
 import { ApiError, api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
 
@@ -60,7 +60,7 @@ describe('api health', () => {
 });
 
 describe('api createManual', () => {
-  it('envia imagenes en FormData y devuelve el contrato 202', async () => {
+  it('envía imágenes en FormData y devuelve el contrato 202', async () => {
     let body = '';
     server.use(
       http.post('/api/manuals', async ({ request }) => {
@@ -170,7 +170,7 @@ describe('api searchGames', () => {
 });
 
 describe('api getManual', () => {
-  it('lee paginas y lineas OCR del detalle de manual', async () => {
+  it('lee páginas y líneas OCR del detalle de manual', async () => {
     server.use(
       http.get('/api/manuals/:id', ({ params }) =>
         HttpResponse.json({
@@ -229,49 +229,8 @@ describe('api getManualProcessing', () => {
   });
 });
 
-describe('api askManual', () => {
-  it('POSTea JSON correcto y devuelve la respuesta', async () => {
-    let body: { question?: string } | undefined;
-    server.use(
-      http.post('/api/manuals/:id/questions', async ({ request, params }) => {
-        body = (await request.json()) as { question: string };
-        return HttpResponse.json({ answer: `Para ${params.id}: ${body.question}` });
-      }),
-    );
-
-    const out = await api.askManual('abc', 'Como gano?');
-    expect(body?.question).toBe('Como gano?');
-    expect(out.answer).toContain('abc');
-  });
-
-  it('encodea correctamente IDs con caracteres especiales', async () => {
-    let receivedUrl: string | undefined;
-    server.use(
-      http.post('/api/manuals/:id/questions', ({ request }) => {
-        receivedUrl = new URL(request.url).pathname;
-        return HttpResponse.json({ answer: 'ok' });
-      }),
-    );
-    await api.askManual('a/b c', 'q');
-    expect(receivedUrl).toBe('/api/manuals/a%2Fb%20c/questions');
-  });
-
-  it('respeta un AbortSignal externo', async () => {
-    server.use(
-      http.post('/api/manuals/:id/questions', async () => {
-        await delay(500);
-        return HttpResponse.json({ answer: 'late' });
-      }),
-    );
-    const ctrl = new AbortController();
-    const promise = api.askManual('m1', 'q', ctrl.signal);
-    setTimeout(() => ctrl.abort(), 20);
-    await expect(promise).rejects.toBeInstanceOf(ApiError);
-  });
-});
-
 describe('api ocr', () => {
-  it('POST /api/ocr con FormData devuelve las lineas extraidas', async () => {
+  it('POST /api/ocr con FormData devuelve las líneas extraídas', async () => {
     let received: string | null = null;
     server.use(
       http.post('/api/ocr', ({ request }) => {

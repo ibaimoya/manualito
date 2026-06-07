@@ -12,7 +12,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { ThemeProvider } from '@/app/theme';
-import { Route as ResultRoute } from '@/routes/result.$manualId';
+import { Route as ResultRoute } from '@/routes/_app.result.$manualId';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
 
@@ -72,7 +72,7 @@ function manualDetailWithOcr() {
         text_source: 'ocr',
         text_quality: 'ok',
         ocr_confidence_mean: 0.82,
-        ocr_lines: [{ text: 'Pagina 2', confidence: 0.82 }],
+        ocr_lines: [{ text: 'Página 2', confidence: 0.82 }],
       },
       {
         page_number: 1,
@@ -102,8 +102,7 @@ function renderResult() {
   const resultR = createRoute({
     getParentRoute: () => root,
     path: '/result/$manualId',
-    component: (ResultRoute as unknown as { options: { component: React.FC } }).options
-      .component,
+    component: (ResultRoute as unknown as { options: { component: React.FC } }).options.component,
   });
   const homeR = createRoute({
     getParentRoute: () => root,
@@ -134,42 +133,34 @@ function renderResult() {
   );
 }
 
-describe('/result · texto original multipagina', () => {
-  it('no muestra el boton si el detalle del manual no tiene lineas', async () => {
+describe('/result · texto original multipágina', () => {
+  it('no muestra el botón si el detalle del manual no tiene líneas', async () => {
     seedManualWithResult({ withOcr: false });
     renderResult();
     expect(await screen.findByText('Catan')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /Ver texto original/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver texto original/i })).not.toBeInTheDocument();
   });
 
-  it('muestra el boton ScanText cuando el backend devuelve lineas OCR', async () => {
+  it('muestra el botón ScanText cuando el backend devuelve líneas OCR', async () => {
     seedManualWithResult({ withOcr: false });
     server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     renderResult();
-    expect(
-      await screen.findByRole('button', { name: /Ver texto original/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Ver texto original/i })).toBeInTheDocument();
   });
 
-  it('al pulsar el boton abre el sheet con lineas ordenadas por pagina', async () => {
+  it('al pulsar el botón abre el sheet con líneas ordenadas por página', async () => {
     seedManualWithResult({ withOcr: false });
     server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     const user = userEvent.setup();
     renderResult();
-    await user.click(
-      await screen.findByRole('button', { name: /Ver texto original/i }),
-    );
+    await user.click(await screen.findByRole('button', { name: /Ver texto original/i }));
     // El sheet muestra el título de la pantalla.
-    expect(
-      await screen.findByText(/Texto original del manual/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Texto original del manual/i)).toBeInTheDocument();
     // Y las líneas reales (vista 'lines' por defecto en el wrapper).
     const text = screen.getByTestId('ocr-lines-view').textContent ?? '';
     expect(text).toContain('CATAN');
-    expect(text).toContain('Pagina 2');
-    expect(text.indexOf('CATAN')).toBeLessThan(text.indexOf('Pagina 2'));
+    expect(text).toContain('Página 2');
+    expect(text.indexOf('CATAN')).toBeLessThan(text.indexOf('Página 2'));
   });
 
   it('usa cache local solo como fallback si el detalle del backend falla', async () => {
@@ -180,9 +171,7 @@ describe('/result · texto original multipagina', () => {
     );
     seedManualWithResult({ withOcr: true });
     renderResult();
-    expect(
-      await screen.findByRole('button', { name: /Ver texto original/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Ver texto original/i })).toBeInTheDocument();
   });
 });
 
@@ -191,9 +180,10 @@ describe('/result · contenido principal', () => {
     // No sembramos nada.
     renderResult();
     expect(await screen.findByText(/Manual no disponible/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: /Volver al inicio/i }),
-    ).toHaveAttribute('href', '/home');
+    expect(screen.getByRole('link', { name: /Volver al inicio/i })).toHaveAttribute(
+      'href',
+      '/home',
+    );
   });
 
   it('renderiza summary + 3 acordeones con su contenido', async () => {
@@ -203,14 +193,10 @@ describe('/result · contenido principal', () => {
     // El acordeón Preparación está abierto por defecto.
     expect(screen.getByText('Preparación inicial.')).toBeInTheDocument();
     // Los demás acordeones están en el DOM; verificamos su trigger por role.
-    expect(
-      screen.getByRole('button', { name: /El turno/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /El turno/ })).toBeInTheDocument();
     // Nota: "Cómo se gana" aparece en el trigger del acordeón y como chip
     // de pregunta sugerida con `?` — el regex distingue.
-    expect(
-      screen.getByRole('button', { name: /^Cómo se gana$/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Cómo se gana$/ })).toBeInTheDocument();
   });
 
   it('chips de preguntas sugeridas navegan a /chat con ?q=', async () => {
@@ -267,8 +253,6 @@ describe('/result · contenido principal', () => {
       created_at: '2026-05-26T10:00:00.000Z',
     });
     renderResult();
-    expect(
-      await screen.findByText(/No hemos podido generar esta sección/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/No hemos podido generar esta sección/)).toBeInTheDocument();
   });
 });

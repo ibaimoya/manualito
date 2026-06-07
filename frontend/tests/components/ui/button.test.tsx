@@ -65,7 +65,7 @@ describe('Button', () => {
     expect(results).toHaveNoViolations();
   });
 
-  // ─── loading prop (refactor J1, bug #26) ────────────────────────────
+  // ─── loading prop ────────────────────────────
   describe('loading', () => {
     it('marca aria-busy y disabled cuando loading', () => {
       render(<Button loading>Procesar</Button>);
@@ -106,6 +106,20 @@ describe('Button', () => {
       const btn = screen.getByRole('button', { name: /procesar/i });
       expect(btn).toBeInTheDocument();
       expect(btn).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('en botones icon-only reemplaza el icono por spinner', () => {
+      const { container } = render(
+        <Button size="icon" loading aria-label="Enviar pregunta">
+          <Upload data-testid="send-icon" size={18} />
+        </Button>,
+      );
+
+      const btn = screen.getByRole('button', { name: /enviar pregunta/i });
+      expect(btn).toBeDisabled();
+      expect(btn).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByTestId('send-icon')).not.toBeInTheDocument();
+      expect(container.querySelectorAll('svg')).toHaveLength(1);
     });
 
     it('sin loading no expone aria-busy', () => {

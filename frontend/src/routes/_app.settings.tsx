@@ -1,16 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Moon, Sun, SunMoon, Type, FileText, Trash2 } from 'lucide-react';
+import { Moon, Sun, SunMoon, FileText, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useTheme, type AccentVariant, type Density, type ThemeMode } from '@/app/theme';
+import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { APP_VERSION } from '@/shared/lib/appVersion';
 import { storage } from '@/shared/lib/storage';
 
-export const Route = createFileRoute('/settings')({
+export const Route = createFileRoute('/_app/settings')({
   component: SettingsScreen,
 });
 
@@ -18,13 +18,11 @@ function SettingsScreen() {
   const theme = useTheme();
   const [confirmingWipe, setConfirmingWipe] = useState(false);
   // Para indicar al usuario qué tema está REALMENTE viendo cuando el
-  // modo es 'auto' (sigue el SO).  Catálogo bug #37.
+  // modo es 'auto' (sigue el SO).
   const systemPrefersDark = useNamedMediaQuery('darkMode');
   const currentSystemTheme = systemPrefersDark ? 'oscuro' : 'claro';
   const modeHint =
-    theme.mode === 'auto'
-      ? `Sigue el sistema (actualmente: ${currentSystemTheme})`
-      : undefined;
+    theme.mode === 'auto' ? `Sigue el sistema (actualmente: ${currentSystemTheme})` : undefined;
 
   function wipeAll(): void {
     storage.wipeAll();
@@ -34,11 +32,9 @@ function SettingsScreen() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-5 pb-10 pt-4 md:max-w-2xl md:px-8 md:pt-10">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-[var(--m-space-5)] px-[var(--m-space-5)] pb-10 pt-[var(--m-space-4)] md:max-w-3xl md:px-[var(--m-space-8)] md:pt-[var(--m-space-8)]">
       <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
-          Ajustes
-        </h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">Ajustes</h1>
       </header>
 
       <Group title="Apariencia">
@@ -54,17 +50,6 @@ function SettingsScreen() {
             ]}
           />
         </Row>
-        <Row label="Densidad" hint="Espaciado del contenido">
-          <SegmentedControl<Density>
-            value={theme.density}
-            onChange={theme.setDensity}
-            ariaLabel="Densidad"
-            options={[
-              { value: 'compact', label: 'Compacta' },
-              { value: 'comfy', label: 'Cómoda' },
-            ]}
-          />
-        </Row>
         <Row label="Color de acento" hint="Color del CTA principal">
           <SegmentedControl<AccentVariant>
             value={theme.accent}
@@ -75,11 +60,6 @@ function SettingsScreen() {
               { value: 'blue', label: 'Azul' },
             ]}
           />
-        </Row>
-        <Row label="Tamaño de texto" hint="Próximamente">
-          <Button size="sm" variant="ghost" disabled>
-            <Type size={16} /> Sistema
-          </Button>
         </Row>
       </Group>
 
@@ -114,7 +94,7 @@ function SettingsScreen() {
               ¿Borrar todos los manuales y conversaciones de este dispositivo?
             </p>
             <p className="mt-1 text-xs text-fg-2">
-              Esta acción no se puede deshacer.  El servidor mantiene los manuales indexados.
+              Esta acción no se puede deshacer. El servidor mantiene los manuales indexados.
             </p>
             <div className="mt-3 flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setConfirmingWipe(false)}>
@@ -138,7 +118,7 @@ function SettingsScreen() {
 function Group({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-3">
+      <h2 className="mb-[var(--m-space-2)] px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-3">
         {title}
       </h2>
       <Card className="divide-y divide-border overflow-hidden">{children}</Card>
@@ -156,7 +136,7 @@ function Row({
   children: ReactNode;
 }>) {
   return (
-    <div className="flex items-center gap-3 p-4">
+    <div className="flex items-center gap-[var(--m-space-3)] p-[var(--m-space-4)]">
       <div className="flex-1">
         <div className="font-semibold text-fg">{label}</div>
         {hint ? <div className="text-xs text-fg-3">{hint}</div> : null}

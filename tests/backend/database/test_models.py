@@ -299,10 +299,13 @@ def test_messages_schema_cascades_from_conversation_and_limits_roles():
 
     assert _single_fk(messages.c.conversation_id).ondelete == "CASCADE"
     assert isinstance(messages.c.content.type, Text)
+    assert isinstance(messages.c.sources.type, postgresql.JSONB)
+    assert str(messages.c.sources.server_default.arg) == "'[]'::jsonb"
     assert _check_names(messages) >= {
         "ck_messages_role_valid",
         "ck_messages_content_not_empty",
         "ck_messages_content_length_valid",
+        "ck_messages_sources_array",
     }
     assert _index(messages, "ix_messages_conversation_created") is not None
 

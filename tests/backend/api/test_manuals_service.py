@@ -22,6 +22,7 @@ _MANUAL_ID = uuid4()
 _CHUNK_ID = uuid4()
 _DUPLICATE_CHUNK_ID = uuid4()
 _UNIQUE_CHUNK_ID = uuid4()
+_MANUAL_TITLE = "Reglamento base"
 _INDEXED_AT = "2026-05-31T10:00:00+00:00"
 _OCR_LINES = [{"text": "Regla uno. Regla dos.", "confidence": 0.9}]
 
@@ -573,16 +574,25 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
                 id=_CHUNK_ID,
                 text="Texto A",
                 content_hash="same-hash",
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                source_page=1,
             ),
             AuthorizedChunk(
                 id=_DUPLICATE_CHUNK_ID,
                 text="Texto duplicado",
                 content_hash="same-hash",
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                source_page=1,
             ),
             AuthorizedChunk(
                 id=_UNIQUE_CHUNK_ID,
                 text="Texto B",
                 content_hash="unique-hash",
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                source_page=2,
             ),
         ]
     )
@@ -599,7 +609,13 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         client=object(),
     )
 
-    assert result == AnswerResponse(answer="Se gana con 10 puntos.")
+    assert result == AnswerResponse(
+        answer="Se gana con 10 puntos.",
+        sources=[
+            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 1},
+            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 2},
+        ],
+    )
     rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["game_id"] == str(_GAME_ID)
@@ -628,7 +644,16 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
         retrieval_service,
         "load_authorized_chunks",
         AsyncMock(
-            return_value=[AuthorizedChunk(id=_CHUNK_ID, text="Texto A", content_hash="hash")]
+            return_value=[
+                AuthorizedChunk(
+                    id=_CHUNK_ID,
+                    text="Texto A",
+                    content_hash="hash",
+                    manual_id=_MANUAL_ID,
+                    manual_title=None,
+                    source_page=1,
+                )
+            ]
         ),
     )
 

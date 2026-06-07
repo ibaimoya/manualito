@@ -49,6 +49,9 @@ class AuthorizedChunk:
     id: UUID
     text: str
     content_hash: str
+    manual_id: UUID
+    manual_title: str | None
+    source_page: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -513,6 +516,9 @@ async def load_authorized_chunks(
             id=row.id,
             text=row.text,
             content_hash=row.content_hash,
+            manual_id=row.manual_id,
+            manual_title=row.manual_title,
+            source_page=row.source_page,
         )
         for row in result
     }
@@ -533,6 +539,9 @@ def _authorized_chunks_query(
             ManualChunk.id,
             ManualChunk.text,
             ManualChunk.content_hash,
+            ManualChunk.manual_id,
+            Manual.title.label("manual_title"),
+            ManualChunk.source_page,
         )
         .join(Manual, Manual.id == ManualChunk.manual_id)
         .where(

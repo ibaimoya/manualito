@@ -120,6 +120,7 @@ async def send_message(
         conversation_id=context.id,
         user_content=user_content,
         assistant_content=answer.answer,
+        assistant_sources=[source.model_dump(mode="json") for source in answer.sources],
         title=fallback_title,
     )
     response = SendMessageResponse(

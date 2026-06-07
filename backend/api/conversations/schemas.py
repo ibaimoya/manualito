@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import Field, StringConstraints
 
+from api.manuals.schemas import AnswerSource
 from api.schemas import StrictModel
 from database.models.constants import USER_MESSAGE_MAX_LENGTH
 
@@ -49,6 +50,7 @@ class MessageResponse(StrictModel):
     role: Literal["user", "assistant"]
     content: str
     created_at: datetime
+    sources: list[AnswerSource] = Field(default_factory=list)
 
 
 class MessageListResponse(StrictModel):

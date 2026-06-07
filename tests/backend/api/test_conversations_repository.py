@@ -1,13 +1,16 @@
 from functools import partial
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import anyio
 import pytest
 from sqlalchemy.dialects import postgresql
 
+import api.conversations.repository as conversation_repository
 from api.conversations.exceptions import ConversationNotFoundError
 from api.conversations.repository import (
+    append_message_pair,
     get_owned_conversation,
     list_conversation_messages,
     list_game_conversations,
@@ -129,6 +132,61 @@ def test_list_conversation_messages_orders_chronologically():
     compiled = _compile(session.statement)
     assert "messages.conversation_id =" in compiled
     assert "messages.created_at ASC" in compiled
+
+
+def test_append_message_pair_persists_sources_only_on_assistant(monkeypatch):
+    """El turno guarda fuentes públicas solo en la respuesta del asistente."""
+    source = {"manual_id": str(_GAME_ID), "manual_title": "Reglamento", "page": 2}
+    conversation = SimpleNamespace(
+        id=_CONVERSATION_ID,
+        user_id=_USER_ID,
+        title=None,
+        updated_at=None,
+    )
+    session = SimpleNamespace(added=[], flushes=0, commits=0)
+
+    def add_all(messages):
+        session.added.extend(messages)
+
+    async def flush():
+        await anyio.lowlevel.checkpoint()
+        session.flushes += 1
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    session.add_all = add_all
+    session.flush = flush
+    session.commit = commit
+    monkeypatch.setattr(
+        conversation_repository,
+        "_get_active_conversation_for_write",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(
+        conversation_repository,
+        "get_conversation_summary",
+        AsyncMock(return_value=SimpleNamespace(id=_CONVERSATION_ID)),
+    )
+
+    stored = anyio.run(
+        partial(
+            append_message_pair,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            user_content="Pregunta",
+            assistant_content="Respuesta",
+            assistant_sources=[source],
+            title="Título",
+        )
+    )
+
+    assert stored.user_message.sources == []
+    assert stored.assistant_message.sources == [source]
+    assert session.flushes == 1
+    assert session.commits == 1
 
 
 def test_load_recent_messages_reverses_descending_slice():

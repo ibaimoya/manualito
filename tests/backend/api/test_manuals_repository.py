@@ -532,6 +532,8 @@ async def test_load_authorized_chunks_preserves_requested_order():
         SimpleNamespace(
             id=chunk_b,
             text="Texto B",
+            manual_id=_MANUAL_ID,
+            manual_title="Reglamento B",
             chunk_index=1,
             source_page=2,
             content_hash="b" * 64,
@@ -539,6 +541,8 @@ async def test_load_authorized_chunks_preserves_requested_order():
         SimpleNamespace(
             id=chunk_a,
             text="Texto A",
+            manual_id=_MANUAL_ID,
+            manual_title="Reglamento A",
             chunk_index=0,
             source_page=1,
             content_hash="a" * 64,
@@ -555,6 +559,8 @@ async def test_load_authorized_chunks_preserves_requested_order():
 
     assert [chunk.id for chunk in chunks] == [chunk_a, chunk_b]
     assert [chunk.text for chunk in chunks] == ["Texto A", "Texto B"]
+    assert [chunk.manual_title for chunk in chunks] == ["Reglamento A", "Reglamento B"]
+    assert [chunk.source_page for chunk in chunks] == [1, 2]
     assert session.executed
 
 

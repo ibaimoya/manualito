@@ -11,9 +11,9 @@ from api import config
 from api.auth.service import AuthenticatedSession
 from api.exceptions import InternalServiceError
 from api.manuals.exceptions import GeneratedAnswerTooLongError
-from api.manuals.repository import load_authorized_chunks
+from api.manuals.repository import AuthorizedChunk, load_authorized_chunks
 from api.manuals.retrieval.deduplication import deduplicate_chunks
-from api.manuals.schemas import AnswerResponse
+from api.manuals.schemas import AnswerResponse, AnswerSource
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 
 
@@ -50,9 +50,9 @@ async def generate_game_answer(
             current_user_id=auth.user.id,
             chunk_ids=chunk_ids,
         )
-        context_chunks = [
-            chunk.text for chunk in deduplicate_chunks(authorized_chunks)[:top_k]
-        ]
+        context = deduplicate_chunks(authorized_chunks)[:top_k]
+        context_chunks = [chunk.text for chunk in context]
+        sources = _answer_sources(context)
     finally:
         await session.rollback()
 
@@ -71,7 +71,7 @@ async def generate_game_answer(
     answer = str(llm_response["answer"])
     if len(answer) > MESSAGE_CONTENT_MAX_LENGTH:
         raise GeneratedAnswerTooLongError
-    return AnswerResponse(answer=answer)
+    return AnswerResponse(answer=answer, sources=sources)
 
 
 def _parse_retrieved_chunk_ids(response: dict) -> list[UUID]:
@@ -82,3 +82,22 @@ def _parse_retrieved_chunk_ids(response: dict) -> list[UUID]:
         raise InternalServiceError(
             "Error interno al recuperar el contexto del juego."
         ) from retrieval_err
+
+
+def _answer_sources(chunks: Sequence[AuthorizedChunk]) -> list[AnswerSource]:
+    """Devuelve fuentes únicas por manual y página preservando el orden."""
+    seen: set[tuple[UUID, int]] = set()
+    sources: list[AnswerSource] = []
+    for chunk in chunks:
+        key = (chunk.manual_id, chunk.source_page)
+        if key in seen:
+            continue
+        seen.add(key)
+        sources.append(
+            AnswerSource(
+                manual_id=chunk.manual_id,
+                manual_title=chunk.manual_title,
+                page=chunk.source_page,
+            )
+        )
+    return sources

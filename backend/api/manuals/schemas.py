@@ -93,7 +93,16 @@ class GameQuestionRequest(StrictModel):
     top_k: int = Field(default=3, ge=1, le=GAME_QUESTION_TOP_K_MAX)
 
 
+class AnswerSource(StrictModel):
+    """Fuente pública usada para construir una respuesta RAG."""
+
+    manual_id: UUID
+    manual_title: str | None
+    page: int = Field(ge=1)
+
+
 class AnswerResponse(StrictModel):
     """Respuesta generada a partir de chunks autorizados."""
 
     answer: Answer
+    sources: list[AnswerSource] = Field(default_factory=list)

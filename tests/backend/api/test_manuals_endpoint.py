@@ -363,7 +363,7 @@ def test_question_game_devuelve_respuesta_limpia(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"answer": "Se gana con 10 puntos."}
+    assert response.json() == {"answer": "Se gana con 10 puntos.", "sources": []}
     answer_mock.assert_awaited_once()
     kwargs = answer_mock.await_args.kwargs
     assert answer_mock.await_args.args == (_FAKE_SESSION,)

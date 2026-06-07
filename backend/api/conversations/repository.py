@@ -1,5 +1,6 @@
 """Consultas SQL de conversaciones y mensajes."""
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -188,6 +189,7 @@ async def append_message_pair(
     conversation_id: UUID,
     user_content: str,
     assistant_content: str,
+    assistant_sources: Sequence[Mapping[str, object]],
     title: str | None,
 ) -> StoredMessagePair:
     """Guarda usuario y asistente en un commit corto tras el LLM."""
@@ -200,11 +202,13 @@ async def append_message_pair(
         conversation_id=conversation.id,
         role="user",
         content=user_content,
+        sources=[],
     )
     assistant_message = Message(
         conversation_id=conversation.id,
         role="assistant",
         content=assistant_content,
+        sources=list(assistant_sources),
     )
     if conversation.title is None and title is not None:
         conversation.title = title

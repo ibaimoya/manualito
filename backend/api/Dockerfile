@@ -26,7 +26,8 @@ COPY --link --chown=0:0 --chmod=0755 backend/common/ /app/common/
 COPY --link --chown=0:0 --chmod=0755 backend/database/ /app/database/
 COPY --link --chown=0:0 --chmod=0755 backend/api/ /app/api/
 
-RUN find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
+RUN mkdir -p /app/storage/assets \
+    && find /app -path /app/.venv -prune -o -type d -exec chmod 0755 {} + \
     && find /app -path /app/.venv -prune -o -type f -exec chmod 0644 {} + \
     && rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.* \
         /app/.venv/bin/pip /app/.venv/bin/pip3 /app/.venv/bin/pip3.* \

@@ -13,6 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import client as internal_client
 from api import config
+from api.assets.storage import (
+    delete_stored_file,
+    read_stored_file,
+    save_manual_image,
+    save_manual_pdf,
+)
 from api.auth.service import AuthenticatedSession
 from api.exceptions import ApiError, InternalServiceError, ManualPageLimitExceededError
 from api.manuals.exceptions import (
@@ -41,12 +47,6 @@ from api.manuals.repository import (
     soft_delete_user_manual,
 )
 from api.manuals.schemas import ManualCreatedResponse
-from api.manuals.storage import (
-    delete_stored_file,
-    read_stored_file,
-    save_manual_image,
-    save_manual_pdf,
-)
 from api.manuals.validation import ValidatedManualImage, validate_manual_image, validate_manual_pdf
 from api.ocr.service import run_ocr
 from common.crypto import sha256_hex

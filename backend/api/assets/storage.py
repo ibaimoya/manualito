@@ -1,55 +1,66 @@
-"""Storage local de imágenes de manual."""
+"""Storage local de assets persistidos."""
 
 from pathlib import Path
+from typing import Protocol
 from uuid import UUID, uuid4
 
 import anyio
 
 from api import config
-from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
+
+
+class AssetUpload(Protocol):
+    """Contenido validado que puede guardarse como asset físico."""
+
+    content: bytes
+    extension: str
 
 
 async def save_manual_image(
-    image: ValidatedManualImage,
+    image: AssetUpload,
     *,
     owner_user_id: UUID,
     page_number: int = 1,
 ) -> str:
-    """Guarda el fichero físico y devuelve su storage_key relativo."""
-    return await _save_manual_file(
+    """Guarda una imagen de manual y devuelve su storage_key relativo."""
+    return await _save_asset_file(
         image.content,
         owner_user_id=owner_user_id,
         extension=image.extension,
         filename=f"page-{page_number}",
+        namespace="manuals",
     )
 
 
 async def save_manual_pdf(
-    pdf: ValidatedManualPdf,
+    pdf: AssetUpload,
     *,
     owner_user_id: UUID,
 ) -> str:
     """Guarda el PDF original y devuelve su storage_key relativo."""
-    return await _save_manual_file(
+    return await _save_asset_file(
         pdf.content,
         owner_user_id=owner_user_id,
         extension=pdf.extension,
         filename="source",
+        namespace="manuals",
     )
 
 
-async def _save_manual_file(
+async def _save_asset_file(
     content: bytes,
     *,
     owner_user_id: UUID,
     extension: str,
     filename: str,
+    namespace: str,
 ) -> str:
-    """Guarda bytes de manual y devuelve su ruta interna."""
+    """Guarda bytes de asset y devuelve su ruta interna."""
     storage_key = _storage_key(
         owner_user_id=owner_user_id,
         extension=extension,
         filename=filename,
+        namespace=namespace,
     )
     path = _storage_path(storage_key)
     await anyio.to_thread.run_sync(_write_file, path, content)
@@ -87,12 +98,18 @@ def _delete_stored_file(storage_key: str) -> bool:
     return True
 
 
-def _storage_key(*, owner_user_id: UUID, extension: str, filename: str) -> str:
+def _storage_key(
+    *,
+    owner_user_id: UUID,
+    extension: str,
+    filename: str,
+    namespace: str,
+) -> str:
     """Construye una ruta interna no derivada del nombre original."""
-    return f"manuals/{owner_user_id}/{uuid4().hex}/{filename}{extension}"
+    return f"{namespace}/{owner_user_id}/{uuid4().hex}/{filename}{extension}"
 
 
 def _storage_path(storage_key: str) -> Path:
     """Resuelve el storage_key dentro del directorio configurado."""
-    root = Path(config.MANUAL_STORAGE_DIR)
+    root = Path(config.ASSET_STORAGE_DIR)
     return root / storage_key

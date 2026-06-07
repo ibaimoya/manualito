@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 
-from api.manuals import storage as manual_storage
+from api.assets import storage as asset_storage
 from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
 
 
@@ -11,10 +11,10 @@ from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
 async def test_save_manual_image_writes_file_under_configured_storage(tmp_path, monkeypatch):
     """El storage usa una clave interna y escribe bytes bajo el directorio configurado."""
     owner_user_id = uuid4()
-    monkeypatch.setattr(manual_storage.config, "MANUAL_STORAGE_DIR", str(tmp_path))
-    monkeypatch.setattr(manual_storage, "uuid4", lambda: SimpleNamespace(hex="abc123"))
+    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setattr(asset_storage, "uuid4", lambda: SimpleNamespace(hex="abc123"))
 
-    storage_key = await manual_storage.save_manual_image(
+    storage_key = await asset_storage.save_manual_image(
         ValidatedManualImage(
             content=b"image-bytes",
             mime_type="image/jpeg",
@@ -33,12 +33,12 @@ async def test_save_manual_image_writes_file_under_configured_storage(tmp_path, 
 
 @pytest.mark.anyio
 async def test_save_manual_pdf_writes_original_source_file(tmp_path, monkeypatch):
-    """El PDF original se guarda como asset fuente, no como pagina renderizada."""
+    """El PDF original se guarda como asset fuente, no como página renderizada."""
     owner_user_id = uuid4()
-    monkeypatch.setattr(manual_storage.config, "MANUAL_STORAGE_DIR", str(tmp_path))
-    monkeypatch.setattr(manual_storage, "uuid4", lambda: SimpleNamespace(hex="pdf123"))
+    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setattr(asset_storage, "uuid4", lambda: SimpleNamespace(hex="pdf123"))
 
-    storage_key = await manual_storage.save_manual_pdf(
+    storage_key = await asset_storage.save_manual_pdf(
         ValidatedManualPdf(
             content=b"pdf-bytes",
             mime_type="application/pdf",
@@ -56,26 +56,26 @@ async def test_save_manual_pdf_writes_original_source_file(tmp_path, monkeypatch
 @pytest.mark.anyio
 async def test_read_stored_file_reads_bytes_from_configured_storage(tmp_path, monkeypatch):
     """El procesamiento background puede reabrir assets sin depender de la request."""
-    monkeypatch.setattr(manual_storage.config, "MANUAL_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
     storage_key = "manuals/user/manual/page-1.jpg"
     path = tmp_path / storage_key
     path.parent.mkdir(parents=True)
     path.write_bytes(b"image-bytes")
 
-    assert await manual_storage.read_stored_file(storage_key) == b"image-bytes"
+    assert await asset_storage.read_stored_file(storage_key) == b"image-bytes"
 
 
 @pytest.mark.anyio
 async def test_delete_stored_file_removes_file_and_ignores_missing(tmp_path, monkeypatch):
     """El borrado explícito limpia el fichero físico y es idempotente."""
-    monkeypatch.setattr(manual_storage.config, "MANUAL_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
     storage_key = "manuals/user/manual/page-1.jpg"
     path = tmp_path / storage_key
     path.parent.mkdir(parents=True)
     path.write_bytes(b"image-bytes")
 
-    assert await manual_storage.delete_stored_file(storage_key) is True
-    assert await manual_storage.delete_stored_file(storage_key) is True
+    assert await asset_storage.delete_stored_file(storage_key) is True
+    assert await asset_storage.delete_stored_file(storage_key) is True
 
     assert not path.exists()
 
@@ -89,6 +89,6 @@ async def test_delete_stored_file_reports_filesystem_errors(monkeypatch):
             """Simula un error del filesystem durante el borrado."""
             raise OSError("disk error")
 
-    monkeypatch.setattr(manual_storage, "_storage_path", lambda _storage_key: BrokenPath())
+    monkeypatch.setattr(asset_storage, "_storage_path", lambda _storage_key: BrokenPath())
 
-    assert await manual_storage.delete_stored_file("manuals/user/manual/page-1.jpg") is False
+    assert await asset_storage.delete_stored_file("manuals/user/manual/page-1.jpg") is False

@@ -30,7 +30,7 @@ class ApiSettings(BaseSettings):
     llm_unload_timeout: float = Field(default=5.0, gt=0)
     ocr_service_timeout: float = Field(default=300.0, gt=0)
     internal_json_timeout: float = Field(default=120.0, gt=0)
-    manual_storage_dir: str = "/app/storage/manual-assets"
+    asset_storage_dir: str = "/app/storage/assets"
 
     rag_retrieval_multiplier: int = Field(default=4, ge=1)
 
@@ -106,7 +106,7 @@ LLM_UNLOAD_BEFORE_OCR = settings.llm_unload_before_ocr
 LLM_UNLOAD_TIMEOUT = settings.llm_unload_timeout
 OCR_SERVICE_TIMEOUT = settings.ocr_service_timeout
 INTERNAL_JSON_TIMEOUT = settings.internal_json_timeout
-MANUAL_STORAGE_DIR = settings.manual_storage_dir
+ASSET_STORAGE_DIR = settings.asset_storage_dir
 RAG_RETRIEVAL_MULTIPLIER = settings.rag_retrieval_multiplier
 
 BGG_EXTERNAL_SEARCH_MIN_LENGTH = settings.bgg_external_search_min_length

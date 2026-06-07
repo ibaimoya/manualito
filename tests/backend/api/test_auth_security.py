@@ -373,7 +373,7 @@ def test_validate_csrf_token_matches_session_hash(
 
 @pytest.mark.anyio
 async def test_register_user_hashes_password_forces_user_role_and_audits(monkeypatch):
-    """Registro feliz: normaliza email, hashea, rol=user y audita register_ok."""
+    """Registro feliz normaliza, hashea, crea sesión y audita register_ok."""
     monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
     fake_session = FakeSession()
 
@@ -391,12 +391,20 @@ async def test_register_user_hashes_password_forces_user_role_and_audits(monkeyp
         for instance in fake_session.added
         if isinstance(instance, EmailVerificationToken)
     )
+    auth_session = next(
+        instance for instance in fake_session.added if isinstance(instance, AuthSession)
+    )
     audit_log = next(i for i in fake_session.added if isinstance(i, AuditLog))
     assert user.email == "user@example.com"
     assert user.username_key == "nora"
     assert user.role == "user"
+    assert user.last_login_at == datetime(2026, 5, 29, tzinfo=UTC)
     assert user.password_hash.startswith("$argon2id$")
     assert verification_token.token_hash == hash_token(result.verification_token)
+    assert auth_session.token_hash == hash_token(result.session_token)
+    assert auth_session.csrf_token_hash == hash_token(result.csrf_token)
+    assert result.session_token not in auth_session.token_hash
+    assert result.csrf_token not in auth_session.csrf_token_hash
     assert audit_log.event_type == "register_ok"
     assert fake_session.commits == 1
 

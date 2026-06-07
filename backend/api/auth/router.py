@@ -49,11 +49,12 @@ CREDENTIAL_RESET_DONE_DETAIL = "Contraseña actualizada."
 @limiter.limit("5/minute")
 async def register_handler(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     payload: RegisterRequest,
     session: DbSession,
-) -> UserPublic:
-    """Registra un usuario normal sin permitir escalada de rol."""
+) -> AuthResponse:
+    """Registra un usuario normal, crea sesión y evita escalada de rol."""
     result = await register_user(
         session,
         email=str(payload.email),
@@ -67,7 +68,12 @@ async def register_handler(
         username=result.user.username,
         token=result.verification_token,
     )
-    return to_public_user(result.user)
+    return _auth_response_with_cookies(
+        response,
+        user=to_public_user(result.user),
+        session_token=result.session_token,
+        csrf_token=result.csrf_token,
+    )
 
 
 @router.post("/api/auth/login")
@@ -85,12 +91,12 @@ async def login_handler(
         password=payload.password,
         ip_address=_client_ip(request),
     )
-    set_auth_cookies(
+    return _auth_response_with_cookies(
         response,
+        user=to_public_user(result.user),
         session_token=result.session_token,
         csrf_token=result.csrf_token,
     )
-    return AuthResponse(user=to_public_user(result.user), csrf_token=result.csrf_token)
 
 
 @router.get("/api/me")
@@ -193,7 +199,23 @@ def _client_ip(request: Request) -> str | None:
     """IP real del cliente tras el proxy.
 
     uvicorn (--proxy-headers) reescribe request.client.host desde
-    X-Forwarded-For, asi que aquí ya es la IP del cliente, no la de nginx.
+    X-Forwarded-For, así que aquí ya es la IP del cliente, no la de nginx.
     """
     client = request.client
     return client.host if client else None
+
+
+def _auth_response_with_cookies(
+    response: Response,
+    *,
+    user: UserPublic,
+    session_token: str,
+    csrf_token: str,
+) -> AuthResponse:
+    """Emite cookies de sesión y devuelve el contrato público de auth."""
+    set_auth_cookies(
+        response,
+        session_token=session_token,
+        csrf_token=csrf_token,
+    )
+    return AuthResponse(user=user, csrf_token=csrf_token)

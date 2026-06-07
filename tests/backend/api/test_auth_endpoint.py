@@ -264,8 +264,12 @@ def test_logout_requires_csrf_and_clears_cookies(client, monkeypatch, override_d
     assert "Max-Age=0" in response.headers["set-cookie"]
 
 
-def test_register_success_returns_public_user(client, monkeypatch, override_db_session):
-    """Registro correcto devuelve 201 con el contrato público, sin campos sensibles."""
+def test_register_success_sets_session_cookie_and_filters_user_response(
+    client,
+    monkeypatch,
+    override_db_session,
+):
+    """Registro correcto crea sesión y devuelve el mismo contrato seguro que login."""
 
     schedule_mock = MagicMock()
     monkeypatch.setattr(
@@ -274,6 +278,8 @@ def test_register_success_returns_public_user(client, monkeypatch, override_db_s
             return_value=RegistrationResult(
                 user=_user(),
                 verification_token=_FAKE_ACCOUNT_TOKEN,
+                session_token=_FAKE_SESSION_TOKEN,
+                csrf_token=_FAKE_CSRF_TOKEN,
             )
         ),
     )
@@ -289,11 +295,16 @@ def test_register_success_returns_public_user(client, monkeypatch, override_db_s
     )
 
     body = response.json()
+    session_cookie = response.headers["set-cookie"]
     assert response.status_code == 201
-    assert body["username"] == _VALID_TEST_USERNAME
-    assert body["email_verified_at"] is None
-    assert "password_hash" not in body
-    assert "username_key" not in body
+    assert body["csrf_token"] == _FAKE_CSRF_TOKEN
+    assert body["user"]["username"] == _VALID_TEST_USERNAME
+    assert body["user"]["email_verified_at"] is None
+    assert "password_hash" not in body["user"]
+    assert "username_key" not in body["user"]
+    assert config.AUTH_SESSION_COOKIE_NAME in session_cookie
+    assert config.AUTH_CSRF_COOKIE_NAME in session_cookie
+    assert "HttpOnly" in session_cookie
     assert schedule_mock.call_count == 1
 
 

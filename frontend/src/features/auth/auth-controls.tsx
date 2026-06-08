@@ -3,14 +3,25 @@ import { AlertTriangle, Check, Eye, EyeOff } from 'lucide-react';
 import { Input, type InputProps } from '@/components/ui/input';
 import { cn } from '@/shared/lib/cn';
 
-/** Longitud mínima de contraseña. Debe coincidir con el backend (PASSWORD_MIN_LENGTH = 12). */
+/** Ayuda de cliente; la política real de contraseña la valida el backend. */
 export const MIN_PASSWORD = 12;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function hasWhitespace(value: string): boolean {
+  for (const char of value) {
+    if (char.trim().length === 0) return true;
+  }
+  return false;
+}
 
 /** Validación de email reutilizada por formulario y por el guard de envío. */
 export function isEmail(value: string): boolean {
-  return EMAIL_RE.test(value);
+  const at = value.indexOf('@');
+  if (value.length === 0 || hasWhitespace(value) || at <= 0 || at !== value.lastIndexOf('@')) {
+    return false;
+  }
+
+  const domain = value.slice(at + 1);
+  return domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
 }
 
 /** Error del email: en vivo si ya hay texto, y siempre tras intentar enviar. */

@@ -97,4 +97,19 @@ describe('RegisterForm', () => {
     expect(await screen.findByText(/no coinciden/i)).toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
+
+  it('mantiene el aviso de email inválido y no registra', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+
+    await user.type(await screen.findByLabelText('Email'), 'marta.example.com');
+    await user.type(screen.getByLabelText('Nombre de usuario'), 'Marta');
+    await user.type(screen.getByLabelText('Contraseña'), 'claveSegura99');
+    await user.type(screen.getByLabelText('Repite la contraseña'), 'claveSegura99');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(await screen.findByText('Ese email no parece válido')).toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+  });
 });

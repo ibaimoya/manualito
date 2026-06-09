@@ -1,22 +1,22 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Plus, Settings as SettingsIcon } from 'lucide-react';
-import { useState } from 'react';
-import { Monogram } from '@/shared/components/Brand';
+import { Meeple, Monogram } from '@/shared/components/Brand';
+import { Avatar } from '@/shared/components/Avatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ManualCard } from '@/features/manual/ManualCard';
-import { storage, type ManualRecord } from '@/shared/lib/storage';
+import { manualsQueryOptions } from '@/features/manual/use-manuals';
+import { useAuth } from '@/features/auth/use-auth';
+import { type ManualSummary } from '@/shared/api/client';
 
 export const Route = createFileRoute('/_app/home')({
   component: HomeScreen,
 });
 
 function HomeScreen() {
-  // Lista local de manuales: viene de localStorage hasta que el backend persista el índice.
-  // Lazy initializer evita el flash de "empty state" mientras un useEffect
-  // sincronizaba la lista en el primer mount (50 ms visible y feo).
-  const [manuals] = useState<ManualRecord[]>(() => storage.listManuals());
-
+  const { user } = useAuth();
+  const firstName = user?.username?.split(/\s+/)[0];
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-10 pt-4 md:max-w-5xl md:px-8 md:pt-10">
       {/* Header de móvil — oculto en md+ porque la Sidebar ya muestra Brand. */}
@@ -27,10 +27,14 @@ function HomeScreen() {
         </div>
         <Link
           to="/settings"
-          className="grid h-11 w-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-          aria-label="Abrir ajustes"
+          className="grid size-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
+          aria-label="Tu cuenta"
         >
-          <SettingsIcon size={20} strokeWidth={1.75} />
+          {user ? (
+            <Avatar name={user.username || user.email} size={36} />
+          ) : (
+            <SettingsIcon size={20} strokeWidth={1.75} />
+          )}
         </Link>
       </header>
 
@@ -43,7 +47,7 @@ function HomeScreen() {
             id="home-hello"
             className="font-display text-3xl font-bold leading-tight tracking-tight text-fg md:text-4xl"
           >
-            Hola <span aria-hidden="true">👋</span>
+            {firstName ? `Hola, ${firstName}` : 'Hola'} <span aria-hidden="true">👋</span>
             <br />
             ¿Qué juego vamos a aprender?
           </h1>
@@ -55,16 +59,14 @@ function HomeScreen() {
 
       <HeroCta />
 
-      {manuals.length > 0 ? <RecentManuals manuals={manuals} /> : <EmptyRecents />}
+      <RecentSection />
     </div>
   );
 }
 
 function HeroCta() {
-  // @container permite que el HeroCta se adapte a su contenedor padre
-  // (no al viewport).  En columna estrecha (móvil, grid 1col) → layout
-  // vertical.  En contenedor ancho (desktop centrado o columna ≥ 32rem)
-  // → titular a la izq + botón a la dcha.
+  // @container: el HeroCta se adapta a su contenedor (no al viewport). En
+  // columna estrecha → vertical; en contenedor ancho → titular + botón.
   return (
     <Card
       className="@container relative overflow-hidden border-0 p-5 text-fg-inv shadow-md"
@@ -97,7 +99,16 @@ function HeroCta() {
   );
 }
 
-function RecentManuals({ manuals }: Readonly<{ manuals: ManualRecord[] }>) {
+/** Sección de recientes: resuelve la query y elige estado (carga/error/vacío/lista). */
+function RecentSection() {
+  const { data: manuals, isPending, isError } = useQuery(manualsQueryOptions());
+  if (isPending) return <RecentSkeleton />;
+  if (isError) return <RecentError />;
+  if (!manuals || manuals.length === 0) return <EmptyRecents />;
+  return <RecentManuals manuals={manuals} />;
+}
+
+function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
   return (
     <section aria-labelledby="home-recent">
       <div className="mb-3 flex items-baseline justify-between">
@@ -110,8 +121,8 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualRecord[] }>) {
       </div>
       <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
         {manuals.slice(0, 6).map((m) => (
-          <li key={m.manual_id}>
-            <ManualCard manual={m} meta={formatRelative(m.last_opened_at)} />
+          <li key={m.id}>
+            <ManualCard manual={m} meta={formatRelative(m.created_at)} />
           </li>
         ))}
       </ul>
@@ -119,10 +130,39 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualRecord[] }>) {
   );
 }
 
+function RecentSkeleton() {
+  return (
+    <section aria-hidden="true">
+      <div className="mb-3 h-5 w-24 animate-pulse rounded bg-surface-2" />
+      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <li key={i} className="h-[72px] animate-pulse rounded-2xl bg-surface-2" />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function RecentError() {
+  return (
+    <section className="rounded-2xl border border-border bg-surface/60 p-6 text-center">
+      <p className="text-sm text-fg-2">
+        No hemos podido cargar tus manuales. Reintenta en un momento.
+      </p>
+    </section>
+  );
+}
+
 function EmptyRecents() {
   return (
-    <section className="mt-2 rounded-2xl border border-dashed border-border-strong bg-surface/60 p-6 text-center">
-      <p className="text-sm text-fg-2">
+    <section className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-strong bg-surface/60 px-6 py-8 text-center">
+      <div
+        className="grid size-14 place-items-center rounded-full bg-primary-100 text-primary-700"
+        aria-hidden="true"
+      >
+        <Meeple size={28} color="currentColor" />
+      </div>
+      <p className="max-w-xs text-sm text-fg-2">
         Aún no has consultado ningún manual. Pulsa <strong>Nuevo manual</strong> para empezar.
       </p>
     </section>

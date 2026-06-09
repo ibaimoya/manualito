@@ -1,6 +1,7 @@
 import { Link, Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { Suspense } from 'react';
-import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { ErrorBoundary, FullPageError } from '@/shared/components/ErrorBoundary';
+import { Meeple } from '@/shared/components/Brand';
 import { meQueryOptions } from '@/features/auth/auth-queries';
 import type { RouterContext } from '@/app/router-context';
 
@@ -16,16 +17,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   },
   component: RootLayout,
   notFoundComponent: NotFoundComponent,
-  errorComponent: ({ error }) => (
-    <ErrorBoundary>
-      <div className="grid min-h-dvh place-items-center bg-bg p-6 text-center">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-fg">Algo ha fallado</h1>
-          <p className="mt-2 text-fg-2">{error.message}</p>
-        </div>
-      </div>
-    </ErrorBoundary>
-  ),
+  errorComponent: ({ error }) => <FullPageError message={error.message} />,
 });
 
 function RootLayout() {
@@ -59,16 +51,24 @@ function RouteLoadingFallback() {
 
 function NotFoundComponent() {
   return (
-    <div className="grid min-h-dvh place-items-center bg-bg p-6 text-center">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-fg">Página no encontrada</h1>
-        <p className="mt-2 text-fg-2">La URL que has intentado abrir no existe en Manualito.</p>
+    <div className="grid min-h-dvh place-items-center bg-bg px-6 py-10 text-center">
+      <div className="flex w-full max-w-sm flex-col items-center">
+        <div className="mb-6 grid size-24 place-items-center rounded-full bg-primary-100 text-primary-700">
+          <Meeple size={52} />
+        </div>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
+          Esta página se ha perdido
+        </h1>
+        <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">
+          La ficha ha caído fuera del tablero: la URL que intentas abrir no existe en Manualito.
+        </p>
         <Link
           to="/home"
-          className="mt-6 inline-block rounded-full bg-primary px-6 py-3 font-semibold text-fg-inv shadow-sm hover:bg-primary-600"
+          className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-primary px-6 font-body font-semibold text-fg-inv shadow-sm transition-colors hover:bg-primary-600"
         >
           Volver al inicio
         </Link>
+        <p className="mono mt-6 text-xs tracking-[0.18em] text-fg-3">ERROR 404</p>
       </div>
     </div>
   );

@@ -34,13 +34,13 @@ describe('ThemeProvider', () => {
     document.documentElement.className = '';
   });
 
-  it('valor inicial: mode=auto, accent=amber', () => {
+  it('valor inicial: mode=light, accent=amber', () => {
     render(
       <ThemeProvider>
         <ThemeProbe />
       </ThemeProvider>,
     );
-    expect(screen.getByTestId('mode').textContent).toBe('auto');
+    expect(screen.getByTestId('mode').textContent).toBe('light');
     expect(screen.getByTestId('accent').textContent).toBe('amber');
   });
 
@@ -114,7 +114,7 @@ describe('ThemeProvider', () => {
         </ThemeProvider>,
       ),
     ).not.toThrow();
-    expect(screen.getByTestId('mode').textContent).toBe('auto');
+    expect(screen.getByTestId('mode').textContent).toBe('light');
   });
 
   it('act + setMode rerendera correctamente', () => {
@@ -176,10 +176,10 @@ describe('ThemeProvider', () => {
 
       setItemSpy.mockClear();
       act(() => {
-        for (let i = 0; i < 5; i++) api!.setMode('auto');
+        for (let i = 0; i < 5; i++) api!.setMode('light');
       });
 
-      // El default es 'auto' → cinco setMode('auto') no deben provocar
+      // El default es 'light' → cinco setMode('light') no deben provocar
       // ninguna escritura porque el state no cambia.
       return waitFor(() => {
         expect(setItemSpy).not.toHaveBeenCalled();

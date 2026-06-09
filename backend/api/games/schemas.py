@@ -10,7 +10,7 @@ from database.models.constants import GAME_NAME_MAX_LENGTH
 GAME_SEARCH_QUERY_MAX_LENGTH = 100
 GAME_SEARCH_LIMIT_DEFAULT = 10
 GAME_SEARCH_LIMIT_MAX = 20
-BGG_ATTRIBUTION = "Game data provided by BoardGameGeek."
+BGG_ATTRIBUTION = "Powered by BoardGameGeek."
 
 
 class GameSearchItem(StrictModel):

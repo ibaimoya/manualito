@@ -29,7 +29,7 @@ const QUESTIONS: ReadonlyArray<{ id: Exclude<StepId, 'processing'>; label: strin
   },
   {
     id: 'turn',
-    label: 'El turno',
+    label: 'Cómo es un turno',
     question:
       'Explica cómo es un turno de un jugador: en qué fases se divide y qué acciones puede o debe hacer.',
   },

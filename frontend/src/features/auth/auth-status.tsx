@@ -33,9 +33,9 @@ export function AuthStatus({
   return (
     <div className="flex flex-col items-center text-center">
       <div
-        className={cn('mb-4 grid size-[68px] place-items-center rounded-full', TONE_CLASS[tone])}
+        className={cn('mb-4 grid size-[76px] place-items-center rounded-full', TONE_CLASS[tone])}
       >
-        <Icon size={32} strokeWidth={1.7} aria-hidden="true" />
+        <Icon size={34} strokeWidth={1.7} aria-hidden="true" />
       </div>
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">{title}</h1>
       <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">{body}</p>

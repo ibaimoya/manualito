@@ -13,6 +13,8 @@ import {
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/app/theme';
 import { Route as SettingsRoute } from '@/routes/_app.settings';
+import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
+import type { AuthUser } from '@/shared/api/auth';
 import { storage } from '@/shared/lib/storage';
 
 afterEach(() => {
@@ -26,10 +28,12 @@ beforeEach(() => {
   // lo monkey-patcha a `matches: false`).
 });
 
-function renderSettings() {
+function renderSettings(user: AuthUser | null = null) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  // Sembramos la sesión en cache para que useAuth no dispare fetch a /api/me.
+  qc.setQueryData(AUTH_ME_KEY, user ? { user, csrf_token: 'demo' } : null);
   const root = createRootRoute({ component: Outlet });
   const settingsR = createRoute({
     getParentRoute: () => root,
@@ -58,6 +62,30 @@ describe('/settings', () => {
     expect(screen.getByRole('region', { name: /Privacidad y datos/i })).toBeInTheDocument();
   });
 
+  it('muestra la sección de Cuenta con el usuario logueado (nombre, email, salir)', async () => {
+    renderSettings({
+      id: 'u1',
+      email: 'marta@x.app',
+      username: 'Marta',
+      role: 'user',
+      status: 'active',
+      created_at: '2026-01-01T00:00:00.000Z',
+      last_login_at: null,
+      email_verified_at: '2026-01-01T00:00:00.000Z',
+    });
+    expect(await screen.findByRole('region', { name: /Cuenta/i })).toBeInTheDocument();
+    expect(screen.getByText('Marta')).toBeInTheDocument();
+    expect(screen.getByText('marta@x.app')).toBeInTheDocument();
+    expect(screen.getByText('Verificado')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Salir/i })).toBeInTheDocument();
+  });
+
+  it('sin sesión en cache no monta la sección de Cuenta', async () => {
+    renderSettings();
+    await screen.findByRole('region', { name: /Apariencia/i });
+    expect(screen.queryByRole('region', { name: /Cuenta/i })).not.toBeInTheDocument();
+  });
+
   it('cambia el modo del tema usando el SegmentedControl (light/dark/auto)', async () => {
     renderSettings();
     const user = userEvent.setup();
@@ -79,8 +107,11 @@ describe('/settings', () => {
   });
 
   it('muestra el hint del modo auto reflejando el tema del sistema', async () => {
-    // Modo auto por defecto + matchMedia mock = "claro" según setup.
+    // El hint solo aparece en modo auto; el default ahora es claro, así que
+    // seleccionamos Auto primero. matchMedia mock = "claro" según setup.
     renderSettings();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('radio', { name: 'Auto' }));
     expect(await screen.findByText(/Sigue el sistema/)).toBeInTheDocument();
   });
 

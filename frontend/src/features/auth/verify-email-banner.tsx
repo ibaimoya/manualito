@@ -46,11 +46,12 @@ export function VerifyEmailBanner() {
       /* almacenamiento no disponible: se descarta solo en memoria */
     }
   };
+  const resendLabel = resend.isPending ? 'Enviando…' : 'Reenviar';
 
   return (
     <div
       aria-live="polite"
-      className="flex items-center gap-3 border-b border-accent/20 bg-accent-100 px-4 py-2.5 text-sm"
+      className="flex items-center gap-3 border-b border-b-accent/20 border-l-[3px] border-l-accent bg-accent/10 px-4 py-2.5 text-sm"
     >
       <Info size={18} className="shrink-0 text-accent" aria-hidden="true" />
       <p className="min-w-0 flex-1 text-fg">Verifica tu email para asegurar tu cuenta.</p>
@@ -64,7 +65,7 @@ export function VerifyEmailBanner() {
           onClick={() => resend.mutate(user.email)}
           className="shrink-0"
         >
-          {resend.isPending ? 'Enviando…' : 'Reenviar'}
+          {resendLabel}
         </Button>
       )}
       <button

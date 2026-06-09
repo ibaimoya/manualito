@@ -16,7 +16,7 @@ export const AccordionItem = forwardRef<
   return (
     <AccordionPrimitive.Item
       ref={ref}
-      className={cn('overflow-hidden rounded-xl border border-border bg-bg', className)}
+      className={cn('overflow-hidden rounded-xl border border-border bg-surface', className)}
       {...props}
     />
   );
@@ -32,7 +32,7 @@ export const AccordionTrigger = forwardRef<
         ref={ref}
         className={cn(
           'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
-          'transition-colors hover:bg-surface',
+          'transition-colors hover:bg-surface-2',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           '[&[data-state=open]>svg]:rotate-180',
           className,

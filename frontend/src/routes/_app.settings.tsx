@@ -1,14 +1,20 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Moon, Sun, SunMoon, FileText, Trash2 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Check, FileText, LogOut, Moon, Sun, SunMoon, Trash2 } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { Avatar } from '@/shared/components/Avatar';
+import { authApi } from '@/shared/api/auth';
+import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { APP_VERSION } from '@/shared/lib/appVersion';
 import { storage } from '@/shared/lib/storage';
+
+const RESEND_COOLDOWN = 45;
 
 export const Route = createFileRoute('/_app/settings')({
   component: SettingsScreen,
@@ -37,8 +43,10 @@ function SettingsScreen() {
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">Ajustes</h1>
       </header>
 
+      <AccountSection />
+
       <Group title="Apariencia">
-        <Row label="Modo" hint={modeHint}>
+        <Row label="Tema" hint={modeHint}>
           <SegmentedControl<ThemeMode>
             value={theme.mode}
             onChange={theme.setMode}
@@ -115,12 +123,105 @@ function SettingsScreen() {
   );
 }
 
-function Group({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
+function AccountSection() {
+  const { user } = useAuth();
+  const logout = useLogout();
+  const [cooldown, setCooldown] = useState(0);
+  const resend = useMutation({
+    mutationFn: () => authApi.resendVerification(user?.email ?? ''),
+    onSuccess: () => setCooldown(RESEND_COOLDOWN),
+  });
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  if (!user) return null;
+  const verified = user.email_verified_at !== null;
+  const displayName = user.username || user.email;
+
+  return (
+    <Group title="Cuenta" hint="Tu perfil y tu acceso">
+      <div className="flex items-center gap-3.5 p-4">
+        <Avatar name={displayName} size={52} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-base font-bold text-fg">{displayName}</p>
+          <p className="truncate text-sm text-fg-3">{user.email}</p>
+        </div>
+      </div>
+
+      <Row
+        label="Email"
+        hint={verified ? 'Verificado · tu cuenta está protegida' : 'Aún sin verificar'}
+      >
+        <EmailVerificationControl
+          verified={verified}
+          cooldown={cooldown}
+          sending={resend.isPending}
+          onResend={() => resend.mutate()}
+        />
+      </Row>
+
+      <Row label="Cerrar sesión" hint="En este dispositivo">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="text-error hover:bg-error-bg"
+          loading={logout.isPending}
+          onClick={() => logout.mutate()}
+        >
+          <LogOut size={14} strokeWidth={2} />
+          Salir
+        </Button>
+      </Row>
+    </Group>
+  );
+}
+
+function EmailVerificationControl({
+  verified,
+  cooldown,
+  sending,
+  onResend,
+}: Readonly<{
+  verified: boolean;
+  cooldown: number;
+  sending: boolean;
+  onResend: () => void;
+}>) {
+  if (verified) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-success-bg px-2.5 py-1 text-xs font-semibold text-success">
+        <Check size={13} strokeWidth={2.5} aria-hidden="true" /> Verificado
+      </span>
+    );
+  }
+  if (cooldown > 0) {
+    return (
+      <span className="shrink-0 text-xs font-semibold text-fg-3">Reenviado · {cooldown}s</span>
+    );
+  }
+  return (
+    <Button type="button" size="sm" variant="secondary" loading={sending} onClick={onResend}>
+      {sending ? 'Enviando…' : 'Reenviar verificación'}
+    </Button>
+  );
+}
+
+function Group({
+  title,
+  hint,
+  children,
+}: Readonly<{ title: string; hint?: string; children: ReactNode }>) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-[var(--m-space-2)] px-1 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-3">
-        {title}
-      </h2>
+      <div className="mb-2.5 px-1">
+        <h2 className="font-display text-lg font-bold tracking-tight text-fg">{title}</h2>
+        {hint ? <p className="mt-0.5 text-xs text-fg-3">{hint}</p> : null}
+      </div>
       <Card className="divide-y divide-border overflow-hidden">{children}</Card>
     </section>
   );

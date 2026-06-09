@@ -33,7 +33,7 @@ type BrowserRuntime = {
   window?: Window;
 };
 
-const DEFAULT_PERSISTED: Persisted = { mode: 'auto', accent: 'amber' };
+const DEFAULT_PERSISTED: Persisted = { mode: 'light', accent: 'amber' };
 
 function getBrowserRuntime(): BrowserRuntime {
   return {
@@ -50,7 +50,7 @@ function loadFromStorage(): Persisted {
     if (!raw) return DEFAULT_PERSISTED;
     const parsed = JSON.parse(raw) as Partial<Persisted>;
     return {
-      mode: parsed.mode ?? 'auto',
+      mode: parsed.mode ?? 'light',
       accent: parsed.accent ?? 'amber',
     };
   } catch {

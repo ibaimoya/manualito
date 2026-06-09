@@ -85,12 +85,13 @@ describe('/chat/$manualId', () => {
   it('renderiza el nombre del manual en el header', async () => {
     seedManual('m1', 'Wingspan');
     renderChat('m1');
-    expect(await screen.findByText('Wingspan')).toBeInTheDocument();
+    // El nombre aparece en el breadcrumb (md+) y en el título móvil.
+    expect((await screen.findAllByText('Wingspan')).length).toBeGreaterThan(0);
   });
 
   it('si no hay manual en local muestra el fallback "Manual"', async () => {
     renderChat('mDesconocido');
-    expect(await screen.findByText('Manual')).toBeInTheDocument();
+    expect((await screen.findAllByText('Manual')).length).toBeGreaterThan(0);
   });
 
   it('empty state cuando no hay mensajes guardados', async () => {

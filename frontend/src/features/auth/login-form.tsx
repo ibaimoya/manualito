@@ -1,5 +1,6 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ApiError } from '@/shared/api/http';
@@ -68,7 +69,14 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
         </AuthField>
 
         <Button type="submit" size="lg" block loading={login.isPending} className="mt-1">
-          {login.isPending ? 'Entrando…' : 'Entrar'}
+          {login.isPending ? (
+            'Entrando…'
+          ) : (
+            <>
+              Entrar
+              <ChevronRight size={18} strokeWidth={2} />
+            </>
+          )}
         </Button>
       </div>
 

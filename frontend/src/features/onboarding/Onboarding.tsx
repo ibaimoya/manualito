@@ -521,7 +521,7 @@ function StepEntiende() {
             <RefreshCw size={18} />
           </span>
           <div className={styles.accTitles}>
-            <strong>El turno</strong>
+            <strong>Cómo es un turno</strong>
             <em>3 fases</em>
           </div>
           <span className={styles.accChev}>

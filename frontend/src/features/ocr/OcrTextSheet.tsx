@@ -1,7 +1,5 @@
-import { Info } from 'lucide-react';
-import { Dialog, DialogHeader } from '@/components/ui/dialog';
-import { Sheet, SheetHeader } from '@/components/ui/sheet';
-import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Info, X } from 'lucide-react';
 import { OcrTextViewer } from './OcrTextViewer';
 import type { OcrLine } from '@/shared/lib/storage';
 
@@ -13,111 +11,67 @@ type Props = Readonly<{
 }>;
 
 const TITLE = 'Texto original del manual';
-const SUBTITLE = 'Lo que ha leído el OCR de las páginas que subiste';
+const SUBTITLE = 'Lo que leyó el OCR de las páginas que subiste';
 
 /**
- * Wrapper responsive del `<OcrTextViewer>`:
+ * Visor del texto OCR en un modal centrado, igual en móvil y escritorio.
  *
- *  - **Móvil (< md):** `<Sheet>` anclado abajo ocupando ~86 % del
- *    viewport — espacio suficiente para mostrar muchas líneas con
- *    scroll interno + action bar siempre visible.
- *  - **Desktop (md+):** `<Dialog>` centrado de ~720 px × 80 vh.
- *
- * Sigue el mismo patrón canónico que `NameManualSheet`: el contenido
- * (OcrTextViewer) es idéntico en ambos viewports, solo cambia el
- * contenedor — única forma de cumplir la regla "JS solo cuando hay
- * que CAMBIAR de componente, no solo de estilo" (ver decisión #28).
- *
- * NO realiza ninguna petición HTTP — recibe `lines` ya extraídas.
- * El consumidor (`/result`) lee `storage.getOcrLines(manualId)` y se
- * las pasa.  El backend devolvió ese mismo array al crear el manual
- * (Fase L) → cero peticiones OCR duplicadas.
+ * Centrado con `inset-0 + margin:auto` (no con `left:50% + translate`): el
+ * margen automático reparte el espacio sobrante, así que el panel queda
+ * centrado pase lo que pase con el contenedor o el scrollbar. La animación
+ * es solo de opacidad para no interferir con ese centrado.
  */
 export function OcrTextSheet({ open, onOpenChange, lines, meta }: Props) {
-  const isDesktop = useNamedMediaQuery('desktop');
-
-  // El viewer va sin padding del wrapper para que su propia franja
-  // superior (SegmentedControl + meta) y action bar queden sticky a
-  // los bordes del Sheet/Dialog.
-  const viewer = (
-    <>
-      <InfoNote />
-      <OcrTextViewer
-        lines={lines}
-        meta={meta}
-        variant="embedded"
-        defaultView="lines"
-        onClose={() => onOpenChange(false)}
-      />
-    </>
-  );
-
-  if (isDesktop) {
-    return (
-      <Dialog
-        open={open}
-        onOpenChange={onOpenChange}
-        // Dialog ancho y alto para que la lectura de texto OCR (a veces
-        // 100+ líneas) sea cómoda en desktop sin scroll inmediato.
-        //   - `w-[92vw]` sobreescribe el `w-[95vw]` default y permite
-        //     que el dialog ocupe casi el viewport completo en pantallas
-        //     pequeñas (laptop 13").
-        //   - `max-w-4xl` (~896px) en pantallas wide para evitar que
-        //     se estire demasiado.
-        //   - `h-[88vh]` casi llena el viewport — al ser un viewer
-        //     dedicado, el usuario ya está enfocado en este contenido.
-        contentClassName="w-[92vw] max-w-4xl h-[88vh] flex flex-col overflow-hidden"
-      >
-        <DialogHeader
-          title={TITLE}
-          description={SUBTITLE}
-          onClose={() => onOpenChange(false)}
-        />
-        <div className="flex min-h-0 flex-1 flex-col">{viewer}</div>
-      </Dialog>
-    );
-  }
-
   return (
-    <Sheet
-      open={open}
-      onOpenChange={onOpenChange}
-      // Móvil: el sheet llega casi al top (86 vh) para que entre el
-      // visor y aún se vea un poco del Result detrás (contexto).
-      // En tablets (md+) sin sidebar visible (rutas inmersivas) el
-      // sheet también se beneficia de un max-w más amplio.
-      contentClassName="h-[86vh] flex flex-col overflow-hidden md:max-w-3xl"
-    >
-      <SheetHeader
-        title={TITLE}
-        description={SUBTITLE}
-        onClose={() => onOpenChange(false)}
-      />
-      <div className="flex min-h-0 flex-1 flex-col">{viewer}</div>
-    </Sheet>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-[mn-fade-in_180ms_ease-out] data-[state=closed]:animate-[mn-fade-out_140ms_ease-in_forwards]" />
+        <DialogPrimitive.Content className="fixed inset-0 z-50 m-auto flex h-[88vh] w-[94vw] max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-bg shadow-lg focus:outline-none data-[state=open]:animate-[mn-fade-in_180ms_ease-out] data-[state=closed]:animate-[mn-fade-out_140ms_ease-in_forwards] md:h-[84vh]">
+          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 pb-3 pt-5">
+            <div className="min-w-0">
+              <DialogPrimitive.Title className="font-display text-xl font-bold tracking-tight text-fg">
+                {TITLE}
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description className="mt-1 text-sm text-fg-2">
+                {SUBTITLE}
+              </DialogPrimitive.Description>
+            </div>
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                aria-label="Cerrar"
+                className="grid size-11 shrink-0 place-items-center rounded-xl text-fg-2 hover:bg-surface"
+              >
+                <X size={20} strokeWidth={2} />
+              </button>
+            </DialogPrimitive.Close>
+          </header>
+
+          <InfoNote />
+
+          <OcrTextViewer
+            lines={lines}
+            meta={meta}
+            variant="embedded"
+            defaultView="plain"
+            onClose={() => onOpenChange(false)}
+          />
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
-/**
- * Alert informativa: el LLM ha usado este texto para generar las
- * explicaciones del manual.  Mejor reforzar esto que dar la sensación
- * de que el OCR y el chat son cosas independientes.
- */
 function InfoNote() {
   return (
     <div
       role="note"
-      className="mx-4 mt-2 mb-3 flex items-start gap-2 rounded-xl border border-info/30 bg-info-bg/60 px-3 py-2.5 text-[13px] leading-snug text-fg-2"
+      className="mx-4 mb-3 mt-3 flex shrink-0 items-start gap-2 rounded-xl border border-info/30 bg-info-bg/60 px-3 py-2.5 text-[13px] leading-snug text-fg-2"
     >
-      <Info
-        size={16}
-        strokeWidth={2}
-        aria-hidden="true"
-        className="mt-0.5 shrink-0 text-info"
-      />
+      <Info size={16} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0 text-info" />
       <span>
-        El LLM ha usado este texto para generar las explicaciones del manual.
-        Si notas un error en una respuesta, contrasta con la fuente.
+        El LLM usó este texto para generar las explicaciones. Si una respuesta te chirría,
+        contrasta con la fuente.
       </span>
     </div>
   );

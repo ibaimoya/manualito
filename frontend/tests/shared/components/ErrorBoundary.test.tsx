@@ -62,7 +62,7 @@ describe('ErrorBoundary', () => {
     spy.mockRestore();
   });
 
-  it('botón "Recargar" del fallback por defecto llama a window.location.reload', async () => {
+  it('botón "Reintentar" del fallback por defecto llama a window.location.reload', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     // window.location.reload no es trivial de mockear porque `location` es
     // readonly.  Reemplazamos el objeto completo con un proxy mockeable.
@@ -79,7 +79,7 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>,
       );
       const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Recargar/i }));
+      await user.click(screen.getByRole('button', { name: /Reintentar/i }));
       expect(reloadSpy).toHaveBeenCalledTimes(1);
     } finally {
       Object.defineProperty(window, 'location', {

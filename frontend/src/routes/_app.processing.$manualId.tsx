@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { Check, FileText, Info } from 'lucide-react';
 import { z } from 'zod';
+import { ScreenTopBar } from '@/app/Topbar';
 import { Progress } from '@/components/ui/progress';
 import { useManualBootstrap } from '@/features/processing/useManualBootstrap';
 import { storage } from '@/shared/lib/storage';
@@ -47,19 +48,19 @@ function ProcessingScreen() {
   useEffect(() => {
     if (done && result) {
       const timer = setTimeout(() => {
-        navigate({ to: '/result/$manualId', params: { manualId } }).catch(() => undefined);
+        navigate({ to: '/result/$manualId', params: { manualId }, replace: true }).catch(
+          () => undefined,
+        );
       }, 600); // pequeña pausa para que el usuario vea "completo"
       return () => clearTimeout(timer);
     }
   }, [done, result, navigate, manualId]);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-4xl">
-      <header className="border-b border-border px-4 py-3">
-        <h1 className="font-display text-base font-bold">Procesando «{safeName}»</h1>
-      </header>
+    <div className="flex min-h-dvh flex-col bg-bg">
+      <ScreenTopBar crumb={safeName} />
 
-      <div className="flex flex-1 flex-col gap-6 p-6">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
         <div className="flex flex-col items-center gap-4 pt-2">
           <div className="relative grid h-28 w-28 place-items-center rounded-full bg-primary-100">
             <div
@@ -142,7 +143,8 @@ function StepDetail({ step }: Readonly<{ step: ProcessingStep }>) {
   if (step.state === 'failed' && step.error) {
     return <div className="mono text-xs text-error">{step.error}</div>;
   }
-  if (step.text) {
+  // Solo el progreso de páginas; las respuestas se ven luego en /result.
+  if (step.id === 'processing' && step.text) {
     return <div className="mono text-xs text-fg-3">{step.text}</div>;
   }
   return null;

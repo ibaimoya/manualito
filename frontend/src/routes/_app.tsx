@@ -2,7 +2,9 @@ import { Link, Outlet, createFileRoute, redirect, useLocation } from '@tanstack/
 import { BookOpen, Home, Settings } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Sidebar } from '@/app/Sidebar';
+import { DesktopTopbar } from '@/app/Topbar';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { useAuth } from '@/features/auth/use-auth';
 import { cn } from '@/shared/lib/cn';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 
@@ -27,6 +29,7 @@ export function AppLayout() {
   const location = useLocation();
   const showNav = showsNav(location.pathname);
   const isDesktop = useNamedMediaQuery('desktop');
+  const { user } = useAuth();
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
@@ -38,12 +41,15 @@ export function AppLayout() {
         Saltar al contenido
       </a>
 
-      {showNav ? <Sidebar pathname={location.pathname} /> : null}
+      {/* La sidebar (fixed, hidden en móvil) se monta en todas las pantallas
+          autenticadas: da shell de escritorio también a result/chat/capture. */}
+      <Sidebar pathname={location.pathname} user={user ?? undefined} />
 
       <main
         id="main-content"
-        className={cn('flex-1 overflow-y-auto', showNav ? 'pb-[72px] md:pb-0 md:pl-60' : 'pb-0')}
+        className={cn('flex-1 overflow-y-auto md:pl-60', showNav ? 'pb-[72px] md:pb-0' : 'pb-0')}
       >
+        {showNav ? <DesktopTopbar pathname={location.pathname} /> : null}
         {showNav ? <VerifyEmailBanner /> : null}
         <Outlet />
       </main>

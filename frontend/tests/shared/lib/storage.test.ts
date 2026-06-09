@@ -189,7 +189,7 @@ describe('storage', () => {
     it('readSettings usa defaults cuando el JSON es inválido', () => {
       localStorage.setItem(STORAGE_KEYS.settings, '{');
       const s = storage.readSettings();
-      expect(s.mode).toBe('auto');
+      expect(s.mode).toBe('light');
       expect(s.accent).toBe('amber');
     });
 

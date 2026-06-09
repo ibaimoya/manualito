@@ -57,7 +57,7 @@ describe('__root', () => {
 
   it('URL desconocida renderiza el NotFoundComponent con "Volver al inicio"', async () => {
     mountRoot('/no-existe-12345', [homePage]);
-    expect(await screen.findByText(/Página no encontrada/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Esta página se ha perdido/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Volver al inicio/i })).toBeInTheDocument();
   });
 

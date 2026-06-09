@@ -27,7 +27,7 @@ const bootstrapStateRef: { current: BootstrapState } = {
     steps: [
       { id: 'summary', label: 'Resumen', state: 'pending' },
       { id: 'setup', label: 'Preparación', state: 'pending' },
-      { id: 'turn', label: 'El turno', state: 'pending' },
+      { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
       { id: 'win', label: 'Cómo se gana', state: 'pending' },
     ],
     progress: 0,
@@ -54,7 +54,7 @@ beforeEach(() => {
     steps: [
       { id: 'summary', label: 'Resumen', state: 'pending' },
       { id: 'setup', label: 'Preparación', state: 'pending' },
-      { id: 'turn', label: 'El turno', state: 'pending' },
+      { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
       { id: 'win', label: 'Cómo se gana', state: 'pending' },
     ],
     progress: 0,
@@ -103,16 +103,18 @@ function renderProcessing(manualId: string, name?: string) {
 describe('/processing/$manualId', () => {
   it('renderiza la cabecera con el nombre del manual y los 4 pasos', async () => {
     renderProcessing('abc123', 'Catan');
-    expect(await screen.findByText(/Procesando «Catan»/i)).toBeInTheDocument();
+    // El nombre va en el breadcrumb (md+) y en el título móvil.
+    expect((await screen.findAllByText('Catan')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Leyendo tu manual…')).toBeInTheDocument();
     expect(screen.getByText(/Resumen/)).toBeInTheDocument();
     expect(screen.getByText(/Preparación/)).toBeInTheDocument();
-    expect(screen.getByText(/El turno/)).toBeInTheDocument();
+    expect(screen.getByText(/Cómo es un turno/)).toBeInTheDocument();
     expect(screen.getByText(/Cómo se gana/)).toBeInTheDocument();
   });
 
   it('si no hay nombre en la URL muestra "Manual sin nombre"', async () => {
     renderProcessing('abc123');
-    expect(await screen.findByText(/Procesando «Manual sin nombre»/)).toBeInTheDocument();
+    expect((await screen.findAllByText('Manual sin nombre')).length).toBeGreaterThan(0);
   });
 
   it('registra el manual en localStorage cuando no existe (upsert + touch)', async () => {
@@ -147,7 +149,7 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'done', text: 'ok' },
         { id: 'setup', label: 'Preparación', state: 'pending' },
-        { id: 'turn', label: 'El turno', state: 'pending' },
+        { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
         { id: 'win', label: 'Cómo se gana', state: 'pending' },
       ],
       progress: 25,
@@ -167,7 +169,7 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'failed', error: 'OCR fallido' },
         { id: 'setup', label: 'Preparación', state: 'pending' },
-        { id: 'turn', label: 'El turno', state: 'pending' },
+        { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
         { id: 'win', label: 'Cómo se gana', state: 'pending' },
       ],
       progress: 25,
@@ -184,7 +186,7 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'failed', error: 'OCR fallido' },
         { id: 'setup', label: 'Preparación', state: 'failed', error: 'OCR fallido' },
-        { id: 'turn', label: 'El turno', state: 'failed', error: 'OCR fallido' },
+        { id: 'turn', label: 'Cómo es un turno', state: 'failed', error: 'OCR fallido' },
         { id: 'win', label: 'Cómo se gana', state: 'failed', error: 'OCR fallido' },
       ],
       progress: 100,
@@ -202,7 +204,7 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'done', text: 'a' },
         { id: 'setup', label: 'Preparación', state: 'done', text: 'b' },
-        { id: 'turn', label: 'El turno', state: 'done', text: 'c' },
+        { id: 'turn', label: 'Cómo es un turno', state: 'done', text: 'c' },
         { id: 'win', label: 'Cómo se gana', state: 'done', text: 'd' },
       ],
       progress: 100,

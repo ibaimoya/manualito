@@ -20,7 +20,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-function renderSource(initialPath = '/capture/source') {
+function renderSource() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -29,11 +29,6 @@ function renderSource(initialPath = '/capture/source') {
     getParentRoute: () => root,
     path: '/capture/source',
     component: (SourceRoute as unknown as { options: { component: React.FC } }).options.component,
-  });
-  const captureR = createRoute({
-    getParentRoute: () => root,
-    path: '/capture',
-    component: () => <div data-testid="capture-screen">Capture</div>,
   });
   const homeR = createRoute({
     getParentRoute: () => root,
@@ -45,12 +40,10 @@ function renderSource(initialPath = '/capture/source') {
     path: '/processing/$manualId',
     component: () => <div data-testid="processing-screen">Processing</div>,
   });
-  const tree = root.addChildren([sourceR, captureR, homeR, processingR]);
   const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({ initialEntries: [initialPath] }),
+    routeTree: root.addChildren([sourceR, homeR, processingR]),
+    history: createMemoryHistory({ initialEntries: ['/capture/source'] }),
   });
-
   return render(
     <ThemeProvider>
       <QueryClientProvider client={qc}>
@@ -61,27 +54,59 @@ function renderSource(initialPath = '/capture/source') {
   );
 }
 
-async function selectGame(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.type(await screen.findByLabelText(/Nombre del juego/i), name);
-  await user.click(
-    await screen.findByRole('button', { name: new RegExp(`^${name}\\s+1995$`, 'i') }),
-  );
+async function pickGame(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.type(await screen.findByRole('combobox', { name: /Buscar juego/i }), name);
+  await user.click(await screen.findByRole('button', { name: new RegExp(`${name}.*1995`, 'i') }));
 }
 
-describe('/capture/source', () => {
-  it('renderiza el titulo y las tres fuentes', async () => {
+describe('/capture/source · nuevo manual', () => {
+  it('arranca eligiendo juego y con las fuentes deshabilitadas', async () => {
     renderSource();
-    expect(await screen.findByText(/De dónde sacamos el manual\?/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Galería/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /PDF/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Hacer foto/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Nuevo manual/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Elige el juego/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Buscar juego/i })).toBeInTheDocument();
+    // Sin juego elegido, no se pueden añadir páginas todavía.
+    expect(screen.getByLabelText(/Seleccionar imágenes de la galería/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Seleccionar PDF/i)).toBeDisabled();
   });
 
-  it('"Hacer foto" navega a /capture', async () => {
+  it('el typeahead muestra resultados y la atribución de BoardGameGeek', async () => {
     renderSource();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /Hacer foto/i }));
-    expect(await screen.findByTestId('capture-screen')).toBeInTheDocument();
+    await user.type(await screen.findByRole('combobox', { name: /Buscar juego/i }), 'Catan');
+    expect(await screen.findByRole('button', { name: /Catan.*1995/i })).toBeInTheDocument();
+    expect(screen.getByText('BoardGameGeek')).toBeInTheDocument();
+  });
+
+  it('elegir un juego muestra el chip y habilita las fuentes', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    expect(await screen.findByRole('button', { name: /Cambiar/i })).toBeInTheDocument();
+    expect(screen.getByText(/Elegido/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Seleccionar imágenes de la galería/i)).toBeEnabled(),
+    );
+  });
+
+  it('asocia cada tarjeta visible al input nativo de fichero', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+
+    const galleryInput = screen.getByTestId('picker-gallery');
+    const galleryLabel = screen.getByText('Galería').closest('label');
+    expect(galleryLabel).toHaveAttribute('for', galleryInput.id);
+  });
+
+  it('mantiene Procesar deshabilitado hasta tener páginas', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+
+    for (const button of screen.getAllByRole('button', { name: /^Procesar$/i })) {
+      expect(button).toBeDisabled();
+    }
   });
 
   it('botón X cancela y vuelve a /home', async () => {
@@ -91,47 +116,26 @@ describe('/capture/source', () => {
     expect(await screen.findByTestId('home-screen')).toBeInTheDocument();
   });
 
-  it('varias imágenes de galería abren el sheet con páginas', async () => {
+  it('rechaza una imagen mayor de 20 MB', async () => {
     renderSource();
-    const user = userEvent.setup();
-    await screen.findByText(/De dónde sacamos el manual\?/i);
-    const galleryInput = screen.getByTestId('picker-gallery') as HTMLInputElement;
-    await user.upload(galleryInput, [
-      new File(['uno'], 'uno.jpg', { type: 'image/jpeg' }),
-      new File(['dos'], 'dos.jpg', { type: 'image/jpeg' }),
-    ]);
-
-    expect(await screen.findByText(/Ponle nombre al manual/i)).toBeInTheDocument();
-    expect(screen.getByText('uno.jpg')).toBeInTheDocument();
-    expect(screen.getByText('dos.jpg')).toBeInTheDocument();
-  });
-
-  it('rechaza una imagen mayor de 20 MB y no abre el sheet', async () => {
-    renderSource();
-    const user = userEvent.setup();
-    await screen.findByText(/De dónde sacamos el manual\?/i);
-    const big = new File(['x'.repeat(21 * 1024 * 1024)], 'big.jpg', {
-      type: 'image/jpeg',
+    await screen.findByRole('combobox', { name: /Buscar juego/i });
+    fireEvent.change(screen.getByTestId('picker-gallery'), {
+      target: { files: [new File(['x'.repeat(21 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' })] },
     });
-    await user.upload(screen.getByTestId('picker-gallery') as HTMLInputElement, big);
-
     expect(await screen.findByText(/Imagen demasiado grande/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Ponle nombre al manual/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('big.jpg')).not.toBeInTheDocument();
   });
 
-  it('rechaza imágenes fuera de JPG, PNG y WebP', async () => {
+  it('rechaza formatos fuera de JPG, PNG y WebP', async () => {
     renderSource();
-    await screen.findByText(/De dónde sacamos el manual\?/i);
-
+    await screen.findByRole('combobox', { name: /Buscar juego/i });
     fireEvent.change(screen.getByTestId('picker-gallery'), {
       target: { files: [new File(['gif'], 'animado.gif', { type: 'image/gif' })] },
     });
-
     expect(await screen.findByText(/Formato no soportado/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Ponle nombre al manual/i)).not.toBeInTheDocument();
   });
 
-  it('flujo completo galería: elegir, nombrar, subir y navegar', async () => {
+  it('flujo completo: elegir juego, añadir página y procesar', async () => {
     server.use(
       http.post('/api/manuals', () =>
         HttpResponse.json({
@@ -146,14 +150,14 @@ describe('/capture/source', () => {
     );
     renderSource();
     const user = userEvent.setup();
-    await screen.findByText(/De dónde sacamos el manual\?/i);
+    await pickGame(user, 'Wingspan');
     await user.upload(
       screen.getByTestId('picker-gallery') as HTMLInputElement,
       new File(['xxx'], 'foto.jpg', { type: 'image/jpeg' }),
     );
-    await selectGame(user, 'Wingspan');
-    await user.click(screen.getByRole('button', { name: /Procesar/i }));
-
+    expect(await screen.findByText('foto.jpg')).toBeInTheDocument();
+    const procesar = await screen.findAllByRole('button', { name: /Procesar/i });
+    await user.click(procesar[0]!);
     await waitFor(() => expect(screen.getByTestId('processing-screen')).toBeInTheDocument(), {
       timeout: 3000,
     });

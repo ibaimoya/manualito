@@ -66,7 +66,7 @@ export const ManualResultSchema = z.object({
 export type ManualResult = z.infer<typeof ManualResultSchema>;
 
 export const SettingsSchema = z.object({
-  mode: z.enum(['light', 'dark', 'auto']).default('auto'),
+  mode: z.enum(['light', 'dark', 'auto']).default('light'),
   accent: z.enum(['amber', 'blue']).default('amber'),
   responseDetail: z.enum(['short', 'medium', 'long']).default('medium'),
 });

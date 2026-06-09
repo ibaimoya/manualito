@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Accordion,
   AccordionContent,
@@ -7,12 +7,12 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   ArrowLeft,
-  Bookmark,
   Camera,
   Check,
   Flag,
@@ -21,29 +21,27 @@ import {
   Send,
   Sparkles,
 } from 'lucide-react';
+import { ScreenTopBar } from '@/app/Topbar';
 import { useEffect, useMemo, useState } from 'react';
 import { OcrTextSheet } from '@/features/ocr/OcrTextSheet';
-import { api } from '@/shared/api/client';
+import { Markdown } from '@/shared/components/Markdown';
+import { manualDetailQueryOptions, manualsQueryOptions } from '@/features/manual/use-manuals';
+import type { ManualSummary } from '@/shared/api/client';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
 
 export const Route = createFileRoute('/_app/result/$manualId')({
   component: ResultScreen,
 });
 
-const SUGGESTED_QUESTIONS = [
-  '¿Cómo se gana?',
-  '¿Cómo es un turno?',
-  '¿Y si empatamos?',
-  'Reglas opcionales',
-];
+const SUGGESTED_QUESTIONS = ['¿Cómo se gana?', '¿Cómo es un turno?', '¿Y si empatamos?', 'Reglas opcionales'];
 
 function ResultScreen() {
   const { manualId } = Route.useParams();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const result = useMemo<ManualResult | null>(() => storage.getResult(manualId), [manualId]);
   const { data: manualDetail } = useQuery({
-    queryKey: ['manual-detail', manualId],
-    queryFn: ({ signal }) => api.getManual(manualId, signal),
+    ...manualDetailQueryOptions(manualId),
     enabled: result !== null,
   });
   const [question, setQuestion] = useState('');
@@ -61,217 +59,219 @@ function ResultScreen() {
     storage.touchManual(manualId);
   }, [manualId]);
 
+  // Sin resultado cacheado (manual creado en otra sesión/dispositivo): lo
+  // regeneramos en /processing, que ya muestra el pipeline y vuelve aquí.
+  useEffect(() => {
+    if (result) return;
+    const list = qc.getQueryData<ManualSummary[]>(manualsQueryOptions().queryKey);
+    const found = list?.find((m) => m.id === manualId);
+    const name = found?.title ?? found?.game_name;
+    void navigate({
+      to: '/processing/$manualId',
+      params: { manualId },
+      search: name ? { name } : {},
+      replace: true,
+    });
+  }, [result, manualId, navigate, qc]);
+
   if (!result) {
     return (
-      <div className="grid min-h-dvh place-items-center bg-bg p-6 text-center">
-        <div>
-          <p className="font-display text-xl font-bold">Manual no disponible</p>
-          <p className="mt-2 text-fg-2">
-            No tenemos resultados guardados para este manual. Vuelve a procesarlo.
-          </p>
-          <Button asChild className="mt-6">
-            <Link to="/home">Volver al inicio</Link>
-          </Button>
-        </div>
+      <div className="grid min-h-dvh place-items-center bg-bg p-6 text-center text-fg-2">
+        <p className="text-sm">Cargando manual…</p>
       </div>
     );
   }
 
   function submitQuestion(e?: { preventDefault: () => void }): void {
     e?.preventDefault();
-    const q = question.trim();
-    if (q.length === 0) return;
-    navigate({
-      to: '/chat/$manualId',
-      params: { manualId },
-      search: { q },
-    }).catch(() => undefined);
+    askChat(question.trim());
   }
 
+  function askChat(q: string): void {
+    if (q.length === 0) return;
+    navigate({ to: '/chat/$manualId', params: { manualId }, search: { q } }).catch(() => undefined);
+  }
+
+  const ask = (
+    <AskPanel value={question} onChange={setQuestion} onSubmit={submitQuestion} onAsk={askChat} />
+  );
+
+  const scanAction =
+    ocrLines.length > 0 ? (
+      <button
+        type="button"
+        onClick={() => setOcrOpen(true)}
+        className="grid size-10 place-items-center rounded-xl text-fg-2 hover:bg-surface"
+        aria-label="Ver texto original del manual"
+        title="Ver texto original"
+      >
+        <ScanText size={20} strokeWidth={1.75} />
+      </button>
+    ) : null;
+
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg md:max-w-4xl">
-      <header className="flex items-center justify-between gap-2 border-b border-border bg-bg px-2 py-2">
-        <Link
-          to="/home"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg hover:bg-surface"
-          aria-label="Volver al inicio"
-        >
-          <ArrowLeft size={22} strokeWidth={2} />
-        </Link>
-        {/* `min-w-0` permite que `truncate` funcione dentro de un flex
-            container (sin esto, el h1 nunca se acorta y desborda el
-            header con nombres largos como "Catan: Ciudades y Caballeros"). */}
-        <h1 className="min-w-0 flex-1 truncate text-center font-display text-lg font-bold tracking-tight">
-          {result.name}
-        </h1>
-        <div className="flex shrink-0 items-center gap-1">
-          {ocrLines.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setOcrOpen(true)}
-              className="grid h-11 w-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-              aria-label="Ver texto original del manual"
-              title="Ver texto original"
-            >
-              <ScanText size={20} strokeWidth={1.75} />
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="grid h-11 w-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-            aria-label="Guardar manual"
+    <div className="flex min-h-dvh flex-col bg-bg">
+      <ScreenTopBar
+        crumb={result.name}
+        back={
+          <Link
+            to="/home"
+            className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
+            aria-label="Volver al inicio"
           >
-            <Bookmark size={20} strokeWidth={2} />
-          </button>
-        </div>
-      </header>
+            <ArrowLeft size={22} strokeWidth={2} />
+          </Link>
+        }
+        actions={scanAction}
+      />
 
       <OcrTextSheet open={ocrOpen} onOpenChange={setOcrOpen} lines={ocrLines} />
 
-      <div className="flex flex-wrap gap-2 border-b border-border px-4 py-3">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-2 px-4 pb-1 pt-4 lg:px-6">
         <Badge tone="success" size="sm" icon={<Check strokeWidth={2} />}>
           Listo
         </Badge>
-        <Badge tone="neutral" size="sm">
-          Generado con IA
-        </Badge>
+        <Tooltip content="Generado por IA: puede equivocarse. Si algo no cuadra, contrástalo con el manual original.">
+          <Badge tone="neutral" size="sm" tabIndex={0} className="cursor-help">
+            Generado con IA
+          </Badge>
+        </Tooltip>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto p-4 pb-32">
-        {result.summary ? (
-          <Card className="bg-surface p-4">
-            <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-              Resumen rápido
-            </p>
-            <p className="text-base leading-relaxed text-fg">{result.summary}</p>
-          </Card>
-        ) : null}
-
-        <Accordion type="multiple" defaultValue={['setup']} className="space-y-3">
-          <AccordionItem value="setup">
-            <AccordionTrigger>
-              <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-100 text-primary-700">
-                  <Flag size={16} strokeWidth={2} />
-                </span>
-                <span>Preparación</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <BodyText text={result.setup} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="turn">
-            <AccordionTrigger>
-              <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent-100 text-accent">
-                  <RefreshCw size={16} strokeWidth={2} />
-                </span>
-                <span>El turno</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <BodyText text={result.turn} />
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="win">
-            <AccordionTrigger>
-              <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-warning-bg text-warning">
-                  <Sparkles size={16} strokeWidth={2} />
-                </span>
-                <span>Cómo se gana</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <BodyText text={result.win} />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-
-      {/* Sticky composer — mismas reglas de safe-area que /chat para
-          coherencia táctil. */}
-      <div
-        className="sticky bottom-0 border-t border-border bg-bg/95 p-3 backdrop-blur"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
-      >
-        {/* scroll-snap-x: en móvil estrecho, los chips de preguntas
-            sugeridas se "agarran" al borde izquierdo al hacer scroll
-            horizontal, evitando que la última quede cortada a medias. */}
-        <div
-          className="mb-2 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1"
-          aria-label="Preguntas sugeridas"
+      <div className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-4 px-4 pb-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6 lg:px-6 lg:pb-6">
+        <div className="min-w-0 space-y-3">
+          <ResultReading result={result} />
+        </div>
+        <aside
+          className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-bg/95 p-3 backdrop-blur lg:mx-0 lg:bottom-auto lg:top-6 lg:self-start lg:rounded-2xl lg:border lg:bg-surface lg:p-4 lg:backdrop-blur-0"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
         >
-          {SUGGESTED_QUESTIONS.map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => {
-                navigate({
-                  to: '/chat/$manualId',
-                  params: { manualId },
-                  search: { q },
-                }).catch(() => undefined);
-              }}
-              className="h-9 shrink-0 snap-start whitespace-nowrap rounded-full border border-border bg-surface px-3 text-sm font-semibold text-fg hover:bg-surface-2"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-        <form onSubmit={submitQuestion} className="flex items-center gap-2">
-          <Input
-            preset="chat-message"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Pregunta sobre el manual…"
-            aria-label="Escribe tu pregunta"
-            className="flex-1 rounded-full"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            className="rounded-full"
-            disabled={question.trim().length === 0}
-            aria-label="Enviar pregunta"
-          >
-            <Send size={17} strokeWidth={2} />
-          </Button>
-        </form>
-        <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-fg-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/capture/source">
-              <Camera size={14} />
-              Otro manual
-            </Link>
-          </Button>
-        </div>
+          {ask}
+        </aside>
       </div>
     </div>
   );
 }
 
-function textKey(text: string): string {
-  let hash = 0;
-  for (const char of text) {
-    hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
-  }
-  return hash.toString(36);
+function ResultReading({ result }: Readonly<{ result: ManualResult }>) {
+  return (
+    <>
+      {result.summary ? (
+        <Card className="bg-surface p-4">
+          <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
+            Resumen rápido
+          </p>
+          <Markdown className="text-base leading-relaxed text-fg">{result.summary}</Markdown>
+        </Card>
+      ) : null}
+
+      <Accordion type="multiple" defaultValue={['setup']} className="space-y-3">
+        <AccordionItem value="setup">
+          <AccordionTrigger>
+            <div className="flex items-center gap-3">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-100 text-primary-700">
+                <Flag size={16} strokeWidth={2} />
+              </span>
+              <span>Preparación</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <BodyText text={result.setup} />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="turn">
+          <AccordionTrigger>
+            <div className="flex items-center gap-3">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent-100 text-accent">
+                <RefreshCw size={16} strokeWidth={2} />
+              </span>
+              <span>Cómo es un turno</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <BodyText text={result.turn} />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="win">
+          <AccordionTrigger>
+            <div className="flex items-center gap-3">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-warning-bg text-warning">
+                <Sparkles size={16} strokeWidth={2} />
+              </span>
+              <span>Cómo se gana</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <BodyText text={result.win} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </>
+  );
 }
 
-function paragraphsFrom(text: string): Array<{ id: string; text: string }> {
-  const seen = new Map<string, number>();
-  return text.split(/\n+/).flatMap((p) => {
-    const paragraph = p.trim();
-    if (!paragraph) return [];
-    const baseId = textKey(paragraph);
-    const occurrence = seen.get(baseId) ?? 0;
-    seen.set(baseId, occurrence + 1);
-    return [{ id: `${baseId}-${occurrence}`, text: paragraph }];
-  });
+function AskPanel({
+  value,
+  onChange,
+  onSubmit,
+  onAsk,
+}: Readonly<{
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: (e?: { preventDefault: () => void }) => void;
+  onAsk: (question: string) => void;
+}>) {
+  return (
+    <>
+      <p className="mono mb-2 hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700 lg:block">
+        Pregunta sobre el manual
+      </p>
+      <div
+        className="mb-2 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible"
+        aria-label="Preguntas sugeridas"
+      >
+        {SUGGESTED_QUESTIONS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => onAsk(q)}
+            className="h-9 shrink-0 snap-start whitespace-nowrap rounded-full border border-border bg-surface px-3 text-sm font-semibold text-fg hover:bg-surface-2 lg:bg-bg"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+      <form onSubmit={onSubmit} className="flex items-center gap-2">
+        <Input
+          preset="chat-message"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Pregunta sobre el manual…"
+          aria-label="Escribe tu pregunta"
+          className="flex-1 rounded-full"
+        />
+        <Button
+          type="submit"
+          size="icon"
+          className="rounded-full"
+          disabled={value.trim().length === 0}
+          aria-label="Enviar pregunta"
+        >
+          <Send size={17} strokeWidth={2} />
+        </Button>
+      </form>
+      <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-fg-3 lg:justify-start">
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/capture/source">
+            <Camera size={14} />
+            Otro manual
+          </Link>
+        </Button>
+      </div>
+    </>
+  );
 }
 
 function BodyText({ text }: Readonly<{ text: string }>) {
@@ -282,12 +282,5 @@ function BodyText({ text }: Readonly<{ text: string }>) {
       </p>
     );
   }
-  // Preserva saltos de línea simples — el LLM puede devolver listas con \n.
-  return (
-    <div className="space-y-2 text-base leading-relaxed text-fg">
-      {paragraphsFrom(text).map((paragraph) => (
-        <p key={paragraph.id}>{paragraph.text}</p>
-      ))}
-    </div>
-  );
+  return <Markdown className="text-base leading-relaxed text-fg">{text}</Markdown>;
 }

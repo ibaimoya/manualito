@@ -67,11 +67,18 @@ describe('_app shell', () => {
     ['/processing', 'processing'],
     ['/result/m1', 'result'],
     ['/chat/m1', 'chat'],
-  ])('oculta la navegación en %s (ruta inmersiva)', async (path, label) => {
+  ])('oculta la navegación principal en %s (ruta inmersiva)', async (path, label) => {
     mountApp(path);
     await screen.findByTestId(`page-${label}`);
     expect(
       screen.queryByRole('navigation', { name: /Navegación principal/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('monta la sidebar (shell de escritorio) también en rutas inmersivas', async () => {
+    mountApp('/result/m1');
+    await screen.findByTestId('page-result');
+    // La sidebar (oculta por CSS en móvil) aporta el shell en md+ a result/chat.
+    expect(screen.getByRole('navigation', { name: /Secciones de la app/i })).toBeInTheDocument();
   });
 });

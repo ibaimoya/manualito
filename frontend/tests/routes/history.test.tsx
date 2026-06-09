@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -10,24 +11,32 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
+import { server } from '@tests/_helpers/server';
 import { ThemeProvider } from '@/app/theme';
 import { Route as HistoryRoute } from '@/routes/_app.history';
-import { storage, type ManualRecord } from '@/shared/lib/storage';
 
-afterEach(() => {
-  localStorage.clear();
-});
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
-function seedManuals(rows: Array<Pick<ManualRecord, 'manual_id' | 'name'>>) {
-  for (const r of rows) {
-    storage.upsertManual({
-      manual_id: r.manual_id,
-      name: r.name,
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 10,
-    });
-  }
+function manual(id: string, name: string) {
+  return {
+    id,
+    game_id: `g-${id}`,
+    game_name: name,
+    title: name,
+    status: 'active',
+    visibility: 'private',
+    language: 'spa',
+    chunks_indexed: 10,
+    created_at: '2026-05-26T10:00:00.000Z',
+    indexed_at: '2026-05-26T10:00:10.000Z',
+  };
+}
+
+function withManuals(...names: string[]) {
+  const rows = names.map((n, i) => manual(`m${i + 1}`, n));
+  return http.get('/api/manuals', () => HttpResponse.json({ manuals: rows }));
 }
 
 function renderHistory() {
@@ -45,7 +54,17 @@ function renderHistory() {
     path: '/capture/source',
     component: () => <div>SourceScreen</div>,
   });
-  const tree = root.addChildren([historyR, sourceR]);
+  const resultR = createRoute({
+    getParentRoute: () => root,
+    path: '/result/$manualId',
+    component: () => <div>ResultScreen</div>,
+  });
+  const processingR = createRoute({
+    getParentRoute: () => root,
+    path: '/processing/$manualId',
+    component: () => <div>ProcessingScreen</div>,
+  });
+  const tree = root.addChildren([historyR, sourceR, resultR, processingR]);
   const router = createRouter({
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: ['/history'] }),
@@ -60,86 +79,72 @@ function renderHistory() {
 }
 
 describe('/history', () => {
-  it('empty state cuando no hay manuales (lazy initializer, sin flash)', async () => {
+  it('empty state cuando no hay manuales', async () => {
+    server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
     renderHistory();
-    // El componente lee de localStorage en el initializer de useState:
-    // el empty state debe estar ya pintado en el primer render, no tras
-    // un useEffect.
     expect(await screen.findByText(/Aún no hay manuales por aquí/)).toBeInTheDocument();
   });
 
-  it('lista los manuales desde localStorage', async () => {
-    seedManuals([
-      { manual_id: '1', name: 'Catan' },
-      { manual_id: '2', name: 'Wingspan' },
-      { manual_id: '3', name: 'Parchís' },
-    ]);
+  it('lista los manuales desde el backend', async () => {
+    server.use(withManuals('Catan', 'Wingspan', 'Parchís'));
     renderHistory();
     expect(await screen.findByText('Catan')).toBeInTheDocument();
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
     expect(screen.getByText('Parchís')).toBeInTheDocument();
   });
 
-  it('busca por nombre (debounced ~150ms) y filtra el listado', async () => {
-    seedManuals([
-      { manual_id: '1', name: 'Catan' },
-      { manual_id: '2', name: 'Wingspan' },
-      { manual_id: '3', name: 'Parchís' },
-    ]);
+  it('el typeahead sugiere juegos y al elegir navega al manual', async () => {
+    server.use(withManuals('Catan', 'Wingspan', 'Parchís'));
     renderHistory();
-    const search = await screen.findByRole('searchbox', { name: /Buscar manuales/i });
     const user = userEvent.setup();
+    const search = await screen.findByRole('combobox', { name: /Buscar tus juegos/i });
     await user.type(search, 'wing');
-    // El filtrado real corre tras el debounce (150ms) — waitFor cubre eso.
-    await waitFor(() => {
-      expect(screen.queryByText('Catan')).not.toBeInTheDocument();
-      expect(screen.queryByText('Parchís')).not.toBeInTheDocument();
-      expect(screen.getByText('Wingspan')).toBeInTheDocument();
-    });
+    const results = await screen.findByLabelText('Tus juegos');
+    await user.click(within(results).getByRole('button', { name: /Wingspan/i }));
+    expect(await screen.findByText('ResultScreen')).toBeInTheDocument();
   });
 
-  it('cuando no hay coincidencias muestra el mensaje "ningún manual coincide"', async () => {
-    seedManuals([{ manual_id: '1', name: 'Catan' }]);
+  it('el typeahead avisa cuando ningún juego coincide', async () => {
+    server.use(withManuals('Catan'));
     renderHistory();
-    const search = await screen.findByRole('searchbox', { name: /Buscar manuales/i });
-    const user = userEvent.setup();
-    await user.type(search, 'xyz123');
-    await waitFor(() => {
-      expect(screen.getByText(/Ningún manual coincide/)).toBeInTheDocument();
-    });
+    const search = await screen.findByRole('combobox', { name: /Buscar tus juegos/i });
+    await userEvent.setup().type(search, 'xyz123');
+    expect(await screen.findByText(/Ningún juego coincide/)).toBeInTheDocument();
   });
 
-  it('botón "Borrar Catan" abre confirm; cancelar mantiene el manual', async () => {
-    seedManuals([{ manual_id: 'm1', name: 'Catan' }]);
+  it('Borrar abre confirm; cancelar mantiene el manual', async () => {
+    server.use(withManuals('Catan'));
     renderHistory();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
     expect(await screen.findByText(/¿Borrar Catan\?/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Cancelar/i }));
-    // Sigue en pantalla.
     expect(screen.getByText('Catan')).toBeInTheDocument();
-    expect(storage.listManuals()).toHaveLength(1);
   });
 
-  it('confirmar el borrado elimina del listado y del storage', async () => {
-    seedManuals([
-      { manual_id: 'm1', name: 'Catan' },
-      { manual_id: 'm2', name: 'Wingspan' },
-    ]);
+  it('confirmar el borrado lo elimina del listado (optimista + refetch)', async () => {
+    // Handlers con estado: el DELETE quita la fila que lee el GET, para que el
+    // refetch tras invalidar no resucite el manual borrado.
+    let rows = [manual('m1', 'Catan'), manual('m2', 'Wingspan')];
+    server.use(
+      http.get('/api/manuals', () => HttpResponse.json({ manuals: rows })),
+      http.delete('/api/manuals/:id', ({ params }) => {
+        rows = rows.filter((m) => m.id !== params.id);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
     renderHistory();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
-    const borrar = await screen.findByRole('button', { name: /^Borrar$/i });
-    await user.click(borrar);
+    await user.click(await screen.findByRole('button', { name: /^Borrar$/i }));
     await waitFor(() => {
       expect(screen.queryByText('Catan')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
-    expect(storage.listManuals()).toHaveLength(1);
-    expect(storage.listManuals()[0]!.manual_id).toBe('m2');
   });
 
   it('empty state expone un CTA al primer upload (link a /capture/source)', async () => {
+    server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
     renderHistory();
     const link = await screen.findByRole('link', { name: /Subir mi primer manual/i });
     expect(link).toHaveAttribute('href', '/capture/source');

@@ -20,6 +20,9 @@ class Game(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     name_key: Mapped[str] = mapped_column(String(GAME_NAME_KEY_MAX_LENGTH), nullable=False)
     bgg_id: Mapped[int | None] = mapped_column(Integer)
     year_published: Mapped[int | None] = mapped_column(Integer)
+    min_players: Mapped[int | None] = mapped_column(Integer)
+    max_players: Mapped[int | None] = mapped_column(Integer)
+    playing_time_minutes: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(
         String(16),
         nullable=False,
@@ -38,6 +41,18 @@ class Game(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint(
             "year_published IS NULL OR year_published > 0",
             name="year_published_positive",
+        ),
+        CheckConstraint(
+            "min_players IS NULL OR min_players > 0",
+            name="min_players_positive",
+        ),
+        CheckConstraint(
+            "max_players IS NULL OR max_players > 0",
+            name="max_players_positive",
+        ),
+        CheckConstraint(
+            "playing_time_minutes IS NULL OR playing_time_minutes > 0",
+            name="playing_time_minutes_positive",
         ),
         CheckConstraint("status IN ('active', 'hidden')", name="status_valid"),
         Index("ix_games_name_key", name_key),

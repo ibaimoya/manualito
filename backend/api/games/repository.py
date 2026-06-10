@@ -3,12 +3,15 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.games.exceptions import GameNotFoundError
+from common.crypto import sha256_hex
+from database.models.conversation import Conversation
+from database.models.explanation import GameExplanation
 from database.models.game import Game
 from database.models.manual import Manual
 
@@ -82,6 +85,182 @@ async def ensure_active_game(session: AsyncSession, *, game_id: UUID) -> None:
     )
     if game_exists is None:
         raise GameNotFoundError
+
+
+async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> Row:
+    """Carga un juego no borrado; uno oculto se devuelve con su estado."""
+    result = await session.execute(
+        select(
+            Game.id,
+            Game.name,
+            Game.bgg_id,
+            Game.year_published,
+            Game.min_players,
+            Game.max_players,
+            Game.playing_time_minutes,
+            Game.status,
+        ).where(
+            Game.id == game_id,
+            Game.deleted_at.is_(None),
+        )
+    )
+    game = result.one_or_none()
+    if game is None:
+        raise GameNotFoundError
+    return game
+
+
+async def list_game_pool_manuals(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    current_user_id: UUID,
+) -> list[Row]:
+    """Lista manuales del pool visibles para el usuario sin exponer dueños."""
+    result = await session.execute(
+        select(
+            Manual.id,
+            Manual.title,
+            Manual.source_type,
+            Manual.page_count,
+            Manual.created_at,
+            (Manual.owner_user_id == current_user_id).label("is_own"),
+        )
+        .where(*_pool_visibility_filters(game_id, current_user_id))
+        .order_by(Manual.created_at.desc(), Manual.id.desc())
+    )
+    return list(result)
+
+
+async def get_pool_fingerprint(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    current_user_id: UUID,
+) -> str | None:
+    """Huella estable del pool visible; None si no hay manuales que explicar."""
+    result = await session.execute(
+        select(Manual.id, Manual.indexed_at)
+        .where(*_pool_visibility_filters(game_id, current_user_id))
+        .order_by(Manual.id.asc())
+    )
+    items = [
+        f"{row.id}:{row.indexed_at.isoformat() if row.indexed_at else ''}"
+        for row in result
+    ]
+    if not items:
+        return None
+    return sha256_hex("|".join(items))
+
+
+async def get_game_explanation(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> GameExplanation | None:
+    """Carga la explicación cacheada del usuario para un juego."""
+    result = await session.execute(
+        select(GameExplanation).where(
+            GameExplanation.user_id == user_id,
+            GameExplanation.game_id == game_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_game_explanation(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+    sections: dict[str, object],
+    source_fingerprint: str,
+) -> Row:
+    """Guarda la explicación regenerada en una sola sentencia atómica."""
+    stmt = (
+        insert(GameExplanation)
+        .values(
+            user_id=user_id,
+            game_id=game_id,
+            sections=sections,
+            source_fingerprint=source_fingerprint,
+        )
+        .on_conflict_do_update(
+            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
+            set_={
+                "sections": sections,
+                "source_fingerprint": source_fingerprint,
+                "generated_at": func.now(),
+                "updated_at": func.now(),
+            },
+        )
+        .returning(
+            GameExplanation.sections,
+            GameExplanation.source_fingerprint,
+            GameExplanation.generated_at,
+        )
+    )
+    result = await session.execute(stmt)
+    row = result.one()
+    await session.commit()
+    return row
+
+
+def _pool_visibility_filters(game_id: UUID, current_user_id: UUID) -> tuple:
+    """Predicado del pool visible: compartidos activos más los propios."""
+    return (
+        Manual.game_id == game_id,
+        Manual.deleted_at.is_(None),
+        or_(
+            (Manual.visibility == "shared") & (Manual.status == "active"),
+            (Manual.owner_user_id == current_user_id)
+            & (Manual.status.in_(("active", "pending_review"))),
+        ),
+    )
+
+
+async def count_user_game_conversations(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> int:
+    """Cuenta conversaciones propias activas de un juego."""
+    result = await session.execute(
+        select(func.count(Conversation.id)).where(
+            Conversation.user_id == user_id,
+            Conversation.game_id == game_id,
+            Conversation.deleted_at.is_(None),
+        )
+    )
+    return int(result.scalar_one())
+
+
+async def update_game_play_metadata(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    min_players: int | None,
+    max_players: int | None,
+    playing_time_minutes: int | None,
+) -> None:
+    """Rellena metadatos de mesa solo si nadie los escribió antes."""
+    await session.execute(
+        update(Game)
+        .where(
+            Game.id == game_id,
+            Game.min_players.is_(None),
+            Game.max_players.is_(None),
+            Game.playing_time_minutes.is_(None),
+        )
+        .values(
+            min_players=min_players,
+            max_players=max_players,
+            playing_time_minutes=playing_time_minutes,
+        )
+    )
+    await session.commit()
 
 
 async def upsert_bgg_games(

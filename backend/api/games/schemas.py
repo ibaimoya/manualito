@@ -1,9 +1,13 @@
 """Schemas públicos del catálogo de juegos."""
 
+from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field
 
+from api.manuals.schemas import AnswerSource
+from api.ratings.schemas import RatingResponse
 from api.schemas import StrictModel
 from database.models.constants import GAME_NAME_MAX_LENGTH
 
@@ -27,4 +31,47 @@ class GameSearchResponse(StrictModel):
     """Respuesta del typeahead local de juegos."""
 
     games: list[GameSearchItem]
+    attribution: str = BGG_ATTRIBUTION
+
+
+class GamePoolManualItem(StrictModel):
+    """Manual del pool visible en el hub del juego."""
+
+    id: UUID
+    title: str | None
+    source_type: str
+    page_count: int = Field(ge=1)
+    created_at: datetime
+    is_own: bool
+
+
+class ExplanationSection(StrictModel):
+    """Sección de la explicación con su respuesta y fuentes."""
+
+    answer: str
+    sources: list[AnswerSource] = Field(default_factory=list)
+
+
+class GameExplanationResponse(StrictModel):
+    """Explicación cacheada del juego para el usuario actual."""
+
+    status: Literal["ready", "generating"]
+    sections: dict[str, ExplanationSection] | None
+    generated_at: datetime | None
+
+
+class GameDetailResponse(StrictModel):
+    """Hub de un juego con la vista personal del usuario."""
+
+    id: UUID
+    name: str = Field(max_length=GAME_NAME_MAX_LENGTH)
+    bgg_id: int | None
+    year_published: int | None
+    min_players: int | None
+    max_players: int | None
+    playing_time_minutes: int | None
+    status: str
+    my_rating: RatingResponse | None
+    manuals: list[GamePoolManualItem]
+    conversations_count: int = Field(ge=0)
     attribution: str = BGG_ATTRIBUTION

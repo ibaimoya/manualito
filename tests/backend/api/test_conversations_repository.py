@@ -16,7 +16,9 @@ from api.conversations.repository import (
     list_game_conversations,
     load_conversation_turn_context,
     load_recent_messages,
+    rename_user_conversation,
     soft_delete_conversation,
+    update_conversation_title,
 )
 from api.games.exceptions import GameUnavailableError
 
@@ -332,6 +334,117 @@ def test_soft_delete_conversation_marks_owned_row():
     assert conversation.deleted_at is not None
     assert conversation.updated_at is conversation.deleted_at
     assert session.commits == 1
+
+
+def test_rename_user_conversation_updates_title_without_touching_activity(monkeypatch):
+    """Renombrar guarda el título nuevo sin reordenar por actividad reciente."""
+    conversation = SimpleNamespace(id=_CONVERSATION_ID, title="Viejo", updated_at="antes")
+    summary = SimpleNamespace(id=_CONVERSATION_ID, title="Nuevo")
+    session = SimpleNamespace(commits=0)
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    session.commit = commit
+    monkeypatch.setattr(
+        conversation_repository,
+        "get_owned_conversation",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(
+        conversation_repository,
+        "get_conversation_summary",
+        AsyncMock(return_value=summary),
+    )
+
+    row = anyio.run(
+        partial(
+            rename_user_conversation,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            title="Nuevo",
+        )
+    )
+
+    assert row is summary
+    assert conversation.title == "Nuevo"
+    assert conversation.updated_at == "antes"
+    assert session.commits == 1
+
+
+def test_update_conversation_title_applies_refinement_over_fallback(monkeypatch):
+    """El título refinado sustituye al fallback cuando nadie lo cambió antes."""
+    conversation = SimpleNamespace(
+        id=_CONVERSATION_ID,
+        title="Fallback inicial",
+        updated_at=None,
+    )
+    session = SimpleNamespace(commits=0)
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    session.commit = commit
+    monkeypatch.setattr(
+        conversation_repository,
+        "_get_active_conversation_for_write",
+        AsyncMock(return_value=conversation),
+    )
+
+    anyio.run(
+        partial(
+            update_conversation_title,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            expected_title="Fallback inicial",
+            title="Título refinado",
+        )
+    )
+
+    assert conversation.title == "Título refinado"
+    assert conversation.updated_at is not None
+    assert session.commits == 1
+
+
+def test_update_conversation_title_discards_when_user_already_renamed(monkeypatch):
+    """El título refinado del LLM pierde contra un rename manual del usuario."""
+    conversation = SimpleNamespace(id=_CONVERSATION_ID, title="Mi título", updated_at=None)
+    session = SimpleNamespace(commits=0, rollbacks=0)
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    async def rollback():
+        await anyio.lowlevel.checkpoint()
+        session.rollbacks += 1
+
+    session.commit = commit
+    session.rollback = rollback
+    monkeypatch.setattr(
+        conversation_repository,
+        "_get_active_conversation_for_write",
+        AsyncMock(return_value=conversation),
+    )
+
+    anyio.run(
+        partial(
+            update_conversation_title,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            expected_title="Fallback inicial",
+            title="Título refinado",
+        )
+    )
+
+    assert conversation.title == "Mi título"
+    assert session.commits == 0
+    assert session.rollbacks == 1
 
 
 def _compile(statement) -> str:

@@ -17,6 +17,7 @@ from api.conversations.schemas import (
     ConversationListResponse,
     ConversationResponse,
     MessageListResponse,
+    RenameConversationRequest,
     SendMessageRequest,
     SendMessageResponse,
 )
@@ -25,6 +26,7 @@ from api.conversations.service import (
     delete_conversation,
     list_conversations,
     list_messages,
+    rename_conversation,
     send_message,
 )
 from api.games.dependencies import ValidGameId
@@ -141,6 +143,28 @@ async def send_conversation_message_handler(
         payload=payload,
         client=client,
         background_tasks=background_tasks,
+    )
+
+
+@router.patch(
+    "/api/conversations/{conversation_id}",
+    responses=CONVERSATION_NOT_FOUND_RESPONSE,
+)
+@limiter.limit(config.CONVERSATION_RENAME_RATE_LIMIT)
+async def rename_conversation_handler(
+    request: Request,
+    auth: CurrentAuth,
+    conversation_id: UUID,
+    payload: RenameConversationRequest,
+    session: DbSession,
+    _csrf: CsrfProtection,
+) -> ConversationResponse:
+    """Renombra una conversación propia."""
+    return await rename_conversation(
+        session,
+        auth=auth,
+        conversation_id=conversation_id,
+        title=payload.title,
     )
 
 

@@ -91,10 +91,13 @@ async def send_message(
     background_tasks: BackgroundTasks,
 ) -> SendMessageResponse:
     """Genera y persiste un turno completo de conversación."""
+    # Copia plana ANTES del primer rollback: el rollback expira auth.user y
+    # tocarlo después dispararía un lazy-load síncrono (MissingGreenlet).
+    user_id = auth.user.id
     user_content = payload.content.strip()
     context = await _load_turn_context(
         session,
-        user_id=auth.user.id,
+        user_id=user_id,
         conversation_id=conversation_id,
     )
     history_payload = _history_payload(context.history)
@@ -105,7 +108,7 @@ async def send_message(
     )
     answer = await generate_game_answer(
         session,
-        auth=auth,
+        current_user_id=user_id,
         game_id=context.game_id,
         question=user_content,
         top_k=payload.top_k,
@@ -116,7 +119,7 @@ async def send_message(
     fallback_title = _fallback_title(user_content) if context.title is None else None
     stored = await repository.append_message_pair(
         session,
-        user_id=auth.user.id,
+        user_id=user_id,
         conversation_id=context.id,
         user_content=user_content,
         assistant_content=answer.answer,
@@ -132,7 +135,7 @@ async def send_message(
     if fallback_title is not None:
         _schedule_title_refresh(
             background_tasks,
-            user_id=auth.user.id,
+            user_id=user_id,
             conversation_id=context.id,
             expected_title=fallback_title,
             question=user_content,
@@ -141,6 +144,23 @@ async def send_message(
             client=client,
         )
     return response
+
+
+async def rename_conversation(
+    session: AsyncSession,
+    *,
+    auth: AuthenticatedSession,
+    conversation_id: UUID,
+    title: str,
+) -> ConversationResponse:
+    """Renombra una conversación propia con el título elegido por el usuario."""
+    row = await repository.rename_user_conversation(
+        session,
+        user_id=auth.user.id,
+        conversation_id=conversation_id,
+        title=title,
+    )
+    return ConversationResponse.model_validate(row)
 
 
 async def delete_conversation(

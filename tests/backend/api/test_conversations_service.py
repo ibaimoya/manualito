@@ -78,6 +78,7 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     assert response.assistant_message.sources == answer.sources
     assert post_json_mock.await_args.kwargs["url"].endswith("/condense-question")
     answer_kwargs = answer_mock.await_args.kwargs
+    assert answer_kwargs["current_user_id"] == _USER_ID
     assert answer_kwargs["question"] == "¿Y si empato?"
     assert answer_kwargs["retrieval_question"] == "Desempate al llegar a 10 puntos"
     assert answer_kwargs["chat_history"][0]["role"] == "user"
@@ -154,6 +155,38 @@ def test_send_message_propagates_overlong_answer_before_persisting(monkeypatch):
         )
 
     append_mock.assert_not_called()
+
+
+def test_rename_conversation_delegates_with_owner_id(monkeypatch):
+    """El servicio renombra con el id del usuario autenticado y valida la fila."""
+    rename_mock = AsyncMock(
+        return_value=SimpleNamespace(
+            id=_CONVERSATION_ID,
+            game_id=_GAME_ID,
+            game_name="Catan",
+            title="Robar con el ladrón",
+            created_at="2026-06-02T10:00:00Z",
+            updated_at="2026-06-02T10:01:00Z",
+        )
+    )
+    monkeypatch.setattr(
+        "api.conversations.service.repository.rename_user_conversation",
+        rename_mock,
+    )
+
+    response = anyio.run(
+        partial(
+            conversation_service.rename_conversation,
+            object(),
+            auth=_auth(),
+            conversation_id=_CONVERSATION_ID,
+            title="Robar con el ladrón",
+        )
+    )
+
+    assert response.title == "Robar con el ladrón"
+    assert rename_mock.await_args.kwargs["user_id"] == _USER_ID
+    assert rename_mock.await_args.kwargs["title"] == "Robar con el ladrón"
 
 
 def test_refresh_conversation_title_uses_own_session(monkeypatch):

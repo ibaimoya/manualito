@@ -228,6 +228,28 @@ async def append_message_pair(
     )
 
 
+async def rename_user_conversation(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    title: str,
+) -> Row:
+    """Renombra una conversación propia sin alterar su actividad reciente."""
+    conversation = await get_owned_conversation(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+    )
+    conversation.title = title
+    await session.commit()
+    return await get_conversation_summary(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+    )
+
+
 async def update_conversation_title(
     session: AsyncSession,
     *,

@@ -8,7 +8,7 @@ from pydantic import Field, StringConstraints
 
 from api.manuals.schemas import AnswerSource
 from api.schemas import StrictModel
-from database.models.constants import USER_MESSAGE_MAX_LENGTH
+from database.models.constants import CONVERSATION_TITLE_MAX_LENGTH, USER_MESSAGE_MAX_LENGTH
 
 CONVERSATION_LIST_LIMIT_DEFAULT = 50
 CONVERSATION_LIST_LIMIT_MAX = 100
@@ -22,6 +22,14 @@ MessageContent = Annotated[
         strip_whitespace=True,
         min_length=1,
         max_length=USER_MESSAGE_MAX_LENGTH,
+    ),
+]
+ConversationTitle = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=CONVERSATION_TITLE_MAX_LENGTH,
     ),
 ]
 
@@ -57,6 +65,12 @@ class MessageListResponse(StrictModel):
     """Listado paginado de mensajes de una conversación."""
 
     messages: list[MessageResponse]
+
+
+class RenameConversationRequest(StrictModel):
+    """Título nuevo elegido por el usuario para una conversación."""
+
+    title: ConversationTitle
 
 
 class SendMessageRequest(StrictModel):

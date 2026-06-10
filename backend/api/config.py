@@ -4,6 +4,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT = "30/minute"
+STRICT_ACTION_RATE_LIMIT = "5/minute"
 
 
 class ApiSettings(BaseSettings):
@@ -47,7 +48,7 @@ class ApiSettings(BaseSettings):
     conversation_rename_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
     rating_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
     manual_edit_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
-    manual_reprocess_rate_limit: str = "5/minute"
+    manual_reprocess_rate_limit: str = STRICT_ACTION_RATE_LIMIT
 
     auth_session_days: int = Field(default=7, ge=1)
     auth_cookie_secure: bool = False
@@ -68,11 +69,11 @@ class ApiSettings(BaseSettings):
     password_reset_token_minutes: int = Field(default=30, ge=1)
     auth_email_resend_rate_limit: str = "3/minute"
     auth_email_verify_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
-    auth_password_forgot_rate_limit: str = "5/minute"
+    auth_password_forgot_rate_limit: str = STRICT_ACTION_RATE_LIMIT
     auth_password_reset_rate_limit: str = "10/minute"
 
     account_update_rate_limit: str = "10/minute"
-    password_change_rate_limit: str = "5/minute"
+    password_change_rate_limit: str = STRICT_ACTION_RATE_LIMIT
     account_delete_rate_limit: str = "3/minute"
 
     password_min_length: int = Field(default=12, ge=1)

@@ -26,7 +26,7 @@ from api.responses import IDENTITY_UNAVAILABLE_RESPONSE
 
 router = APIRouter()
 
-PASSWORD_CHANGED_DETAIL = "Contraseña actualizada."
+CREDENTIAL_UPDATED_DETAIL = "Contraseña actualizada."
 
 
 @router.get("/api/me/stats")
@@ -110,4 +110,4 @@ async def change_password_handler(
         new_password=payload.new_password,
         ip_address=client_ip(request),
     )
-    return AuthMessageResponse(detail=PASSWORD_CHANGED_DETAIL)
+    return AuthMessageResponse(detail=CREDENTIAL_UPDATED_DETAIL)

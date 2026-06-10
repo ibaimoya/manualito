@@ -8,14 +8,10 @@ import { cn } from '@/shared/lib/cn';
 import {
   ariaInvalid,
   AuthField,
-  confirmPasswordError,
   emailFieldError,
   isEmail,
   MIN_PASSWORD,
-  PasswordInput,
-  passwordScore,
-  PasswordStrength,
-  passwordTooShortError,
+  NewPasswordFields,
 } from './auth-controls';
 import { AuthAlert } from './auth-alert';
 import { useRegister } from './use-auth';
@@ -34,10 +30,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   const emailError = emailFieldError(email.trim(), submitted);
   const usernameError =
     submitted && username.trim().length === 0 ? 'Escribe un nombre de usuario' : undefined;
-  const passwordError = passwordTooShortError(password, submitted);
-  const confirmError = confirmPasswordError(confirm, password, submitted);
   const consentError = submitted && !consent;
-  const passwordShort = submitted && password.length < MIN_PASSWORD;
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -96,36 +89,14 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
           />
         </AuthField>
 
-        <AuthField
-          label="Contraseña"
-          htmlFor={`${fieldId}-pw`}
-          hint={passwordError ? undefined : `Mínimo ${MIN_PASSWORD} caracteres`}
-          error={passwordError}
-        >
-          <PasswordInput
-            id={`${fieldId}-pw`}
-            autoComplete="new-password"
-            placeholder="Crea una contraseña"
-            value={password}
-            invalid={passwordShort}
-            aria-invalid={ariaInvalid(passwordShort)}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-          {password ? <PasswordStrength score={passwordScore(password)} /> : null}
-        </AuthField>
-
-        <AuthField label="Repite la contraseña" htmlFor={`${fieldId}-pw2`} error={confirmError}>
-          <PasswordInput
-            id={`${fieldId}-pw2`}
-            autoComplete="new-password"
-            placeholder="Repite la contraseña"
-            value={confirm}
-            invalid={Boolean(confirmError)}
-            onChange={(event) => setConfirm(event.target.value)}
-            required
-          />
-        </AuthField>
+        <NewPasswordFields
+          fieldId={fieldId}
+          password={password}
+          confirm={confirm}
+          submitted={submitted}
+          onPasswordChange={setPassword}
+          onConfirmChange={setConfirm}
+        />
 
         <ConsentField
           id={`${fieldId}-consent`}

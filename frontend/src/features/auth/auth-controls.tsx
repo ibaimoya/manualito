@@ -124,6 +124,64 @@ export function PasswordInput({
   );
 }
 
+/** Par de campos para estrenar contraseña: nueva con medidor + confirmación. */
+export function NewPasswordFields({
+  fieldId,
+  label = 'Contraseña',
+  password,
+  confirm,
+  submitted,
+  onPasswordChange,
+  onConfirmChange,
+}: Readonly<{
+  fieldId: string;
+  label?: string;
+  password: string;
+  confirm: string;
+  submitted: boolean;
+  onPasswordChange: (value: string) => void;
+  onConfirmChange: (value: string) => void;
+}>) {
+  const passwordError = passwordTooShortError(password, submitted);
+  const confirmError = confirmPasswordError(confirm, password, submitted);
+  const passwordShort = submitted && password.length < MIN_PASSWORD;
+  return (
+    <>
+      <AuthField
+        label={label}
+        htmlFor={`${fieldId}-pw`}
+        hint={passwordError ? undefined : `Mínimo ${MIN_PASSWORD} caracteres`}
+        error={passwordError}
+      >
+        <PasswordInput
+          id={`${fieldId}-pw`}
+          autoComplete="new-password"
+          placeholder="Crea una contraseña"
+          value={password}
+          invalid={passwordShort}
+          aria-invalid={ariaInvalid(passwordShort)}
+          onChange={(event) => onPasswordChange(event.target.value)}
+          required
+        />
+        {password ? <PasswordStrength score={passwordScore(password)} /> : null}
+      </AuthField>
+
+      <AuthField label="Repite la contraseña" htmlFor={`${fieldId}-pw2`} error={confirmError}>
+        <PasswordInput
+          id={`${fieldId}-pw2`}
+          autoComplete="new-password"
+          placeholder="Repite la contraseña"
+          value={confirm}
+          invalid={Boolean(confirmError)}
+          aria-invalid={ariaInvalid(Boolean(confirmError))}
+          onChange={(event) => onConfirmChange(event.target.value)}
+          required
+        />
+      </AuthField>
+    </>
+  );
+}
+
 const STRENGTH = [
   { label: '—', text: 'text-fg-3', bar: 'bg-surface-2' },
   { label: 'Débil', text: 'text-error', bar: 'bg-error' },

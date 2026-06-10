@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from slowapi.middleware import SlowAPIMiddleware
 
 from api import dependencies
+from api.account.router import router as account_router
 from api.auth.router import router as auth_router
 from api.config import settings
 from api.conversations.router import router as conversations_router
@@ -13,6 +14,7 @@ from api.health.router import router as health_router
 from api.manuals.router import router as manuals_router
 from api.ocr.router import router as ocr_router
 from api.rate_limit import limiter
+from api.ratings.router import router as ratings_router
 from api.root.router import router as root_router
 from common.logging import configure_logging, install_health_log_filter
 from database.session import dispose_engine
@@ -43,7 +45,9 @@ register_exception_handlers(app)
 app.include_router(root_router)
 app.include_router(health_router, tags=["Health"])
 app.include_router(auth_router, tags=["Authentication"])
+app.include_router(account_router, tags=["Account"])
 app.include_router(ocr_router, tags=["OCR"])
 app.include_router(games_router, tags=["Games"])
 app.include_router(manuals_router, tags=["Manuals"])
 app.include_router(conversations_router, tags=["Conversations"])
+app.include_router(ratings_router, tags=["Ratings"])

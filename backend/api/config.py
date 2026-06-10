@@ -39,10 +39,15 @@ class ApiSettings(BaseSettings):
     bgg_max_attempts: int = Field(default=3, ge=0)
     bgg_backoff_seconds: float = Field(default=1.0, ge=0)
     game_search_rate_limit: str = "120/minute"
+    explanation_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
 
     conversation_history_messages: int = Field(default=8, ge=0, le=20)
     conversation_create_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
     conversation_message_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
+    conversation_rename_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
+    rating_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
+    manual_edit_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
+    manual_reprocess_rate_limit: str = "5/minute"
 
     auth_session_days: int = Field(default=7, ge=1)
     auth_cookie_secure: bool = False
@@ -65,6 +70,10 @@ class ApiSettings(BaseSettings):
     auth_email_verify_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
     auth_password_forgot_rate_limit: str = "5/minute"
     auth_password_reset_rate_limit: str = "10/minute"
+
+    account_update_rate_limit: str = "10/minute"
+    password_change_rate_limit: str = "5/minute"
+    account_delete_rate_limit: str = "3/minute"
 
     password_min_length: int = Field(default=12, ge=1)
     password_max_length: int = Field(default=128, ge=1)
@@ -114,9 +123,14 @@ BGG_CACHE_RESULT_LIMIT = settings.bgg_cache_result_limit
 BGG_MAX_ATTEMPTS = settings.bgg_max_attempts
 BGG_BACKOFF_SECONDS = settings.bgg_backoff_seconds
 GAME_SEARCH_RATE_LIMIT = settings.game_search_rate_limit
+EXPLANATION_RATE_LIMIT = settings.explanation_rate_limit
 CONVERSATION_HISTORY_MESSAGES = settings.conversation_history_messages
 CONVERSATION_CREATE_RATE_LIMIT = settings.conversation_create_rate_limit
 CONVERSATION_MESSAGE_RATE_LIMIT = settings.conversation_message_rate_limit
+CONVERSATION_RENAME_RATE_LIMIT = settings.conversation_rename_rate_limit
+RATING_RATE_LIMIT = settings.rating_rate_limit
+MANUAL_EDIT_RATE_LIMIT = settings.manual_edit_rate_limit
+MANUAL_REPROCESS_RATE_LIMIT = settings.manual_reprocess_rate_limit
 
 AUTH_SESSION_DAYS = settings.auth_session_days
 AUTH_SESSION_MAX_AGE_SECONDS = AUTH_SESSION_DAYS * 24 * 60 * 60
@@ -139,6 +153,9 @@ AUTH_EMAIL_RESEND_RATE_LIMIT = settings.auth_email_resend_rate_limit
 AUTH_EMAIL_VERIFY_RATE_LIMIT = settings.auth_email_verify_rate_limit
 AUTH_PASSWORD_FORGOT_RATE_LIMIT = settings.auth_password_forgot_rate_limit
 AUTH_PASSWORD_RESET_RATE_LIMIT = settings.auth_password_reset_rate_limit
+ACCOUNT_UPDATE_RATE_LIMIT = settings.account_update_rate_limit
+PASSWORD_CHANGE_RATE_LIMIT = settings.password_change_rate_limit
+ACCOUNT_DELETE_RATE_LIMIT = settings.account_delete_rate_limit
 PASSWORD_MIN_LENGTH = settings.password_min_length
 PASSWORD_MAX_LENGTH = settings.password_max_length
 PASSWORD_HASH_CONCURRENCY = settings.password_hash_concurrency

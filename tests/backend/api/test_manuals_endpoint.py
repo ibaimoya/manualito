@@ -367,7 +367,7 @@ def test_question_game_devuelve_respuesta_limpia(
     answer_mock.assert_awaited_once()
     kwargs = answer_mock.await_args.kwargs
     assert answer_mock.await_args.args == (_FAKE_SESSION,)
-    assert kwargs["auth"].user.id == _USER_ID
+    assert kwargs["current_user_id"] == _USER_ID
     assert kwargs["game_id"] == _GAME_ID
     assert kwargs["question"] == "¿Cómo se gana?"
     assert kwargs["top_k"] == 3

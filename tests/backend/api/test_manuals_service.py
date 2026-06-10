@@ -602,7 +602,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
 
     result = await retrieval_service.generate_game_answer(
         session,
-        auth=_auth(),
+        current_user_id=_USER_ID,
         game_id=_GAME_ID,
         question="¿Cómo se gana?",
         top_k=2,
@@ -660,7 +660,7 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
     with pytest.raises(GeneratedAnswerTooLongError):
         await retrieval_service.generate_game_answer(
             _session(),
-            auth=_auth(),
+            current_user_id=_USER_ID,
             game_id=_GAME_ID,
             question="¿Cómo se gana?",
             top_k=3,
@@ -680,7 +680,7 @@ async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
     with pytest.raises(InternalServiceError):
         await retrieval_service.generate_game_answer(
             _session(),
-            auth=_auth(),
+            current_user_id=_USER_ID,
             game_id=_GAME_ID,
             question="¿Cómo se gana?",
             top_k=3,

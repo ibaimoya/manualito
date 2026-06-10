@@ -212,7 +212,7 @@ services:
     image: chromadb/chroma:${CHROMA_VERSION:?CHROMA_VERSION no definida}
     pids_limit: 256
     volumes:
-      - chromadb-data:/chroma/chroma
+      - chromadb-data:/data
     networks:
       - manualito-net
 

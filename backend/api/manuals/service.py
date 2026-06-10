@@ -6,7 +6,7 @@ from pathlib import PurePath
 from uuid import UUID
 
 import httpx
-from fastapi import UploadFile
+from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy.engine import Row
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,34 +19,47 @@ from api.assets.storage import (
     save_manual_image,
     save_manual_pdf,
 )
+from api.auth.audit import record_security_event
 from api.auth.service import AuthenticatedSession
-from api.exceptions import ApiError, InternalServiceError, ManualPageLimitExceededError
+from api.exceptions import (
+    ApiError,
+    InternalServiceError,
+    InternalServiceUnavailableError,
+    ManualPageLimitExceededError,
+)
 from api.manuals.exceptions import (
+    ManualBusyError,
+    ManualNotEditableError,
     ManualTooLargeError,
     ManualUploadSelectionError,
 )
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
-    DeletedManualAssets,
     PreparedChunk,
     StoredManualImage,
     StoredManualPdf,
     attach_page_image_asset,
+    begin_manual_reprocessing,
     create_manual_with_pending_pages,
     get_asset_for_processing,
     get_manual_for_processing,
+    get_manual_page_row,
+    get_page_for_edit,
     list_manual_chunks_for_ingest,
+    list_page_chunk_ids,
+    list_page_chunks_for_ingest,
     list_pages_for_processing,
     mark_manual_failed,
     mark_manual_indexed,
+    mark_page_chunks_indexed,
     mark_page_failed,
     next_chunk_index,
     replace_page_result,
     resolve_manual_processed_status,
     soft_delete_user_manual,
 )
-from api.manuals.schemas import ManualCreatedResponse
+from api.manuals.schemas import ManualCreatedResponse, ManualPageResponse
 from api.manuals.validation import ValidatedManualImage, validate_manual_image, validate_manual_pdf
 from api.ocr.service import run_ocr
 from common.crypto import sha256_hex
@@ -56,6 +69,10 @@ from common.manual_text.normalizer import normalize_ocr_lines
 from database.session import get_sessionmaker
 
 RAG_INDEX_INTERNAL_DETAIL = "Error interno al indexar el manual."
+PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL = (
+    "El texto se guardó, pero el índice no se pudo actualizar. "
+    "Re-procesa el manual para sincronizarlo."
+)
 
 logger = logging.getLogger(__name__)
 
@@ -382,6 +399,130 @@ async def _process_pdf_page(
         await mark_page_failed(session, page_id=page.id)
 
 
+async def reprocess_manual(
+    session: AsyncSession,
+    *,
+    auth: AuthenticatedSession,
+    manual_id: UUID,
+    page_number: int | None,
+    background_tasks: BackgroundTasks,
+) -> None:
+    """Reclama un manual quieto y agenda su reindexado en segundo plano."""
+    stale_chunk_ids = await begin_manual_reprocessing(
+        session,
+        owner_user_id=auth.user.id,
+        manual_id=manual_id,
+        page_number=page_number,
+    )
+    background_tasks.add_task(_run_reprocess, manual_id, stale_chunk_ids)
+
+
+async def _run_reprocess(manual_id: UUID, stale_chunk_ids: list[UUID]) -> None:
+    """Limpia el índice obsoleto y relanza el pipeline de procesamiento."""
+    async with httpx.AsyncClient() as client:
+        await delete_chunks_from_rag(
+            client=client,
+            manual_id=manual_id,
+            chunk_ids=stale_chunk_ids,
+        )
+    await process_manual(manual_id)
+
+
+async def edit_page_text(
+    *,
+    auth: AuthenticatedSession,
+    manual_id: UUID,
+    page_number: int,
+    text: str,
+    client: httpx.AsyncClient,
+    ip_address: str | None,
+) -> ManualPageResponse:
+    """Sustituye a mano el texto de una página privada y la reindexa."""
+    async with manual_lock(manual_id) as session:
+        if session is None:
+            raise ManualBusyError
+        return await _edit_page_text_locked(
+            session=session,
+            client=client,
+            auth=auth,
+            manual_id=manual_id,
+            page_number=page_number,
+            text=text,
+            ip_address=ip_address,
+        )
+
+
+async def _edit_page_text_locked(
+    *,
+    session: AsyncSession,
+    client: httpx.AsyncClient,
+    auth: AuthenticatedSession,
+    manual_id: UUID,
+    page_number: int,
+    text: str,
+    ip_address: str | None,
+) -> ManualPageResponse:
+    """Aplica la edición con el lock del manual ya adquirido."""
+    context = await get_page_for_edit(
+        session,
+        owner_user_id=auth.user.id,
+        manual_id=manual_id,
+        page_number=page_number,
+    )
+    if context.status == "indexing":
+        raise ManualBusyError
+    if context.visibility != "private":
+        raise ManualNotEditableError
+
+    old_chunk_ids = await list_page_chunk_ids(session, page_id=context.page_id)
+    await _replace_page_text(
+        session,
+        manual_id=manual_id,
+        page_id=context.page_id,
+        page_number=page_number,
+        lines=[{"text": text, "confidence": None}],
+        text_source="user_edit",
+        confidence_mean=None,
+    )
+    record_security_event(
+        session,
+        event_type="manual_page_edited",
+        success=True,
+        ip_address=ip_address,
+        user_id=auth.user.id,
+        event_data={"manual_id": str(manual_id), "page_number": page_number},
+    )
+    await session.commit()
+
+    # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
+    await delete_chunks_from_rag(client=client, manual_id=manual_id, chunk_ids=old_chunk_ids)
+    chunks = await list_page_chunks_for_ingest(session, page_id=context.page_id)
+    chunk_ids: set[UUID] = set()
+    embedding_model = None
+    indexed_at = None
+    if chunks:
+        try:
+            chunk_ids, embedding_model, indexed_at = _parse_rag_ingest_response(
+                await _index_manual_in_rag(client=client, manual=context, chunks=chunks)
+            )
+        except ApiError as rag_error:
+            raise InternalServiceUnavailableError(PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL) from (
+                rag_error
+            )
+        except (KeyError, TypeError, ValueError) as ingest_error:
+            raise InternalServiceError(PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL) from ingest_error
+    await mark_page_chunks_indexed(
+        session,
+        manual_id=manual_id,
+        chunk_ids=chunk_ids,
+        embedding_model=embedding_model,
+        indexed_at=indexed_at,
+    )
+
+    row = await get_manual_page_row(session, page_id=context.page_id)
+    return ManualPageResponse.model_validate(row)
+
+
 async def delete_manual(
     session: AsyncSession,
     *,
@@ -401,7 +542,11 @@ async def delete_manual(
                 "No se pudo borrar un fichero físico del manual '%s'.",
                 safe_for_log(str(manual_id)),
             )
-    await _delete_manual_from_rag(client=client, deleted=deleted)
+    await delete_chunks_from_rag(
+        client=client,
+        manual_id=deleted.manual_id,
+        chunk_ids=deleted.chunk_ids,
+    )
 
 
 async def _read_source_pdf(session: AsyncSession, manual) -> bytes | None:
@@ -556,28 +701,31 @@ async def _index_manual_in_rag(
     )
 
 
-async def _delete_manual_from_rag(
+async def delete_chunks_from_rag(
     *,
     client: httpx.AsyncClient,
-    deleted: DeletedManualAssets,
+    manual_id: UUID,
+    chunk_ids: list[UUID],
 ) -> None:
-    """Pide a RAG limpiar Chroma sin bloquear el borrado de Postgres."""
+    """Pide a RAG limpiar Chroma sin bloquear la escritura de Postgres."""
+    if not chunk_ids:
+        return
     try:
         await internal_client.post_json(
             client=client,
             service_name="RAG",
             url=f"{config.RAG_URL}/delete",
             payload={
-                "manual_id": str(deleted.manual_id),
-                "chunk_ids": [str(chunk_id) for chunk_id in deleted.chunk_ids],
+                "manual_id": str(manual_id),
+                "chunk_ids": [str(chunk_id) for chunk_id in chunk_ids],
             },
             unavailable_detail="Servicio RAG no disponible.",
             internal_detail="Error interno al borrar el manual del índice.",
         )
     except ApiError:
-        # Postgres ya marcó el borrado; la limpieza de Chroma se puede reintentar.
+        # Postgres es la verdad; un id huérfano en Chroma se descarta al rehidratar.
         logger.warning(
             "No se pudo limpiar Chroma para manual '%s'.",
-            safe_for_log(str(deleted.manual_id)),
+            safe_for_log(str(manual_id)),
             exc_info=True,
         )

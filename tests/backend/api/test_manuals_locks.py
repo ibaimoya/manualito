@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+import api.locks as advisory_locks
 import api.manuals.locks as manual_locks
 
 
@@ -12,15 +13,15 @@ async def test_manual_lock_yields_bound_session_and_unlocks(monkeypatch):
     conn = _FakeConnection(acquired=True)
     session = object()
     session_factory = MagicMock(return_value=_AsyncContext(session))
-    monkeypatch.setattr(manual_locks, "get_engine", lambda: _FakeEngine(conn))
-    monkeypatch.setattr(manual_locks, "AsyncSession", session_factory)
+    monkeypatch.setattr(advisory_locks, "get_engine", lambda: _FakeEngine(conn))
+    monkeypatch.setattr(advisory_locks, "AsyncSession", session_factory)
 
     manual_id = uuid4()
     async with manual_locks.manual_lock(manual_id) as locked_session:
         assert locked_session is session
 
-    assert conn.lock_params == {"manual_id": str(manual_id)}
-    assert conn.unlock_params == {"manual_id": str(manual_id)}
+    assert conn.lock_params == {"key": f"manual:{manual_id}"}
+    assert conn.unlock_params == {"key": f"manual:{manual_id}"}
     assert conn.commits == 2
     session_factory.assert_called_once_with(bind=conn, expire_on_commit=False)
 
@@ -30,8 +31,8 @@ async def test_manual_lock_yields_none_when_lock_is_busy(monkeypatch):
     """Si el manual ya está reclamado, no abre sesión ni ejecuta unlock."""
     conn = _FakeConnection(acquired=False)
     session_factory = MagicMock()
-    monkeypatch.setattr(manual_locks, "get_engine", lambda: _FakeEngine(conn))
-    monkeypatch.setattr(manual_locks, "AsyncSession", session_factory)
+    monkeypatch.setattr(advisory_locks, "get_engine", lambda: _FakeEngine(conn))
+    monkeypatch.setattr(advisory_locks, "AsyncSession", session_factory)
 
     async with manual_locks.manual_lock(uuid4()) as locked_session:
         assert locked_session is None
@@ -39,6 +40,42 @@ async def test_manual_lock_yields_none_when_lock_is_busy(monkeypatch):
     assert conn.unlock_params is None
     assert conn.commits == 1
     session_factory.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_advisory_lock_rolls_back_open_transaction_before_unlock(monkeypatch):
+    """Una transacción a medias se revierte antes de soltar el lock."""
+    conn = _FakeConnection(acquired=True)
+    conn.in_transaction = lambda: True
+    rollbacks = []
+
+    async def rollback():
+        rollbacks.append(True)
+
+    conn.rollback = rollback
+    session_factory = MagicMock(return_value=_AsyncContext(object()))
+    monkeypatch.setattr(advisory_locks, "get_engine", lambda: _FakeEngine(conn))
+    monkeypatch.setattr(advisory_locks, "AsyncSession", session_factory)
+
+    async with advisory_locks.advisory_session_lock("manual:abc"):
+        pass
+
+    assert rollbacks == [True]
+    assert conn.unlock_params == {"key": "manual:abc"}
+
+
+@pytest.mark.anyio
+async def test_advisory_lock_namespaces_keys_per_resource(monkeypatch):
+    """Claves distintas no comparten lock aunque acaben en el mismo recurso."""
+    conn = _FakeConnection(acquired=True)
+    session_factory = MagicMock(return_value=_AsyncContext(object()))
+    monkeypatch.setattr(advisory_locks, "get_engine", lambda: _FakeEngine(conn))
+    monkeypatch.setattr(advisory_locks, "AsyncSession", session_factory)
+
+    async with advisory_locks.advisory_session_lock("explanation:user:game"):
+        pass
+
+    assert conn.lock_params == {"key": "explanation:user:game"}
 
 
 class _FakeEngine:

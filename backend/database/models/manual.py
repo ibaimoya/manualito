@@ -149,7 +149,7 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="ocr_status_valid",
         ),
         CheckConstraint(
-            "text_source IN ('none', 'ocr', 'pdf_text')",
+            "text_source IN ('none', 'ocr', 'pdf_text', 'user_edit')",
             name="text_source_valid",
         ),
         CheckConstraint(

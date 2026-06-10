@@ -6,7 +6,9 @@ __all__ = [
     "GameNotFoundError",
     "GameUnavailableError",
     "GeneratedAnswerTooLongError",
+    "ManualBusyError",
     "ManualContextNotFoundError",
+    "ManualNotEditableError",
     "ManualNotFoundError",
     "ManualTooLargeError",
     "ManualUploadSelectionError",
@@ -32,6 +34,14 @@ class ManualNotFoundError(ManualsError):
 
 class ManualContextNotFoundError(ManualsError):
     """No hay chunks autorizados para responder la pregunta."""
+
+
+class ManualBusyError(ManualsError):
+    """El manual está siendo procesado y no admite cambios concurrentes."""
+
+
+class ManualNotEditableError(ManualsError):
+    """El manual está compartido y su texto no puede editarse a mano."""
 
 
 class GeneratedAnswerTooLongError(ManualsError):

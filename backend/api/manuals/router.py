@@ -3,10 +3,21 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    Form,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 
+from api import config
 from api.annotations import DbSession, HttpClient
-from api.auth.dependencies import CsrfProtection, CurrentAuth
+from api.auth.dependencies import CsrfProtection, CurrentAuth, client_ip
 from api.games.dependencies import ValidGameFormId
 from api.manuals.repository import (
     get_user_manual_detail,
@@ -14,20 +25,31 @@ from api.manuals.repository import (
     list_user_manuals,
 )
 from api.manuals.schemas import (
+    EditPageTextRequest,
     ManualCreatedResponse,
     ManualDetailResponse,
     ManualListResponse,
+    ManualPageResponse,
     ManualProcessingPageResponse,
     ManualProcessingResponse,
     ManualSummaryResponse,
 )
-from api.manuals.service import create_manual, delete_manual, process_manual
+from api.manuals.service import (
+    create_manual,
+    delete_manual,
+    edit_page_text,
+    process_manual,
+    reprocess_manual,
+)
+from api.rate_limit import limiter
 from api.responses import (
     GAME_NOT_FOUND_RESPONSE,
     IMAGE_TOO_LARGE_RESPONSE,
     INTERNAL_ERROR_RESPONSE,
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
     INVALID_IMAGE_RESPONSE,
+    MANUAL_BUSY_RESPONSE,
+    MANUAL_NOT_EDITABLE_RESPONSE,
     MANUAL_NOT_FOUND_RESPONSE,
 )
 
@@ -40,6 +62,7 @@ ManualImagesUpload = Annotated[list[UploadFile] | None, File()]
 ManualPdfUpload = Annotated[UploadFile | None, File()]
 ManualListLimit = Annotated[int, Query(ge=1, le=100)]
 ManualListOffset = Annotated[int, Query(ge=0)]
+ManualPageNumber = Annotated[int, Path(ge=1)]
 
 
 @router.get("/api/manuals")
@@ -89,19 +112,64 @@ async def get_manual_processing_handler(
     auth: CurrentAuth,
 ) -> ManualProcessingResponse:
     """Devuelve progreso ligero para consultas periódicas."""
-    manual, page_rows = await get_user_manual_processing_status(
+    return await _processing_response(session, auth=auth, manual_id=manual_id)
+
+
+@router.post(
+    "/api/manuals/{manual_id}/reprocess",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        **MANUAL_NOT_FOUND_RESPONSE,
+        **MANUAL_BUSY_RESPONSE,
+    },
+)
+@limiter.limit(config.MANUAL_REPROCESS_RATE_LIMIT)
+async def reprocess_manual_handler(
+    request: Request,
+    auth: CurrentAuth,
+    manual_id: UUID,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
+    _csrf: CsrfProtection,
+) -> ManualProcessingResponse:
+    """Reindexa un manual quieto de principio a fin."""
+    await reprocess_manual(
         session,
-        owner_user_id=auth.user.id,
+        auth=auth,
         manual_id=manual_id,
+        page_number=None,
+        background_tasks=background_tasks,
     )
-    return ManualProcessingResponse(
-        manual_id=manual.id,
-        status=manual.status,
-        page_count=manual.page_count,
-        completed_pages=sum(page.ocr_status == "completed" for page in page_rows),
-        failed_pages=sum(page.ocr_status == "failed" for page in page_rows),
-        pages=[ManualProcessingPageResponse.model_validate(page) for page in page_rows],
+    return await _processing_response(session, auth=auth, manual_id=manual_id)
+
+
+@router.post(
+    "/api/manuals/{manual_id}/pages/{page_number}/reprocess",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        **MANUAL_NOT_FOUND_RESPONSE,
+        **MANUAL_BUSY_RESPONSE,
+    },
+)
+@limiter.limit(config.MANUAL_REPROCESS_RATE_LIMIT)
+async def reprocess_manual_page_handler(
+    request: Request,
+    auth: CurrentAuth,
+    manual_id: UUID,
+    page_number: ManualPageNumber,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
+    _csrf: CsrfProtection,
+) -> ManualProcessingResponse:
+    """Reindexa una sola página, típicamente leída con baja confianza."""
+    await reprocess_manual(
+        session,
+        auth=auth,
+        manual_id=manual_id,
+        page_number=page_number,
+        background_tasks=background_tasks,
     )
+    return await _processing_response(session, auth=auth, manual_id=manual_id)
 
 
 @router.post(
@@ -142,6 +210,37 @@ async def create_manual_handler(
     return result
 
 
+@router.put(
+    "/api/manuals/{manual_id}/pages/{page_number}/text",
+    responses={
+        **MANUAL_NOT_FOUND_RESPONSE,
+        **MANUAL_NOT_EDITABLE_RESPONSE,
+        **MANUAL_BUSY_RESPONSE,
+        **INTERNAL_ERROR_RESPONSE,
+        **INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
+    },
+)
+@limiter.limit(config.MANUAL_EDIT_RATE_LIMIT)
+async def edit_manual_page_text_handler(
+    request: Request,
+    auth: CurrentAuth,
+    manual_id: UUID,
+    page_number: ManualPageNumber,
+    payload: EditPageTextRequest,
+    client: HttpClient,
+    _csrf: CsrfProtection,
+) -> ManualPageResponse:
+    """Corrige a mano el texto de una página de un manual privado."""
+    return await edit_page_text(
+        auth=auth,
+        manual_id=manual_id,
+        page_number=page_number,
+        text=payload.text,
+        client=client,
+        ip_address=client_ip(request),
+    )
+
+
 @router.delete(
     "/api/manuals/{manual_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -156,3 +255,25 @@ async def delete_manual_handler(
 ) -> None:
     """Borra un manual propio y sus recursos derivados."""
     await delete_manual(session, auth=auth, manual_id=manual_id, client=client)
+
+
+async def _processing_response(
+    session: DbSession,
+    *,
+    auth: CurrentAuth,
+    manual_id: UUID,
+) -> ManualProcessingResponse:
+    """Construye el progreso multipágina de un manual propio."""
+    manual, page_rows = await get_user_manual_processing_status(
+        session,
+        owner_user_id=auth.user.id,
+        manual_id=manual_id,
+    )
+    return ManualProcessingResponse(
+        manual_id=manual.id,
+        status=manual.status,
+        page_count=manual.page_count,
+        completed_pages=sum(page.ocr_status == "completed" for page in page_rows),
+        failed_pages=sum(page.ocr_status == "failed" for page in page_rows),
+        pages=[ManualProcessingPageResponse.model_validate(page) for page in page_rows],
+    )

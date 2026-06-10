@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import client as internal_client
 from api import config
-from api.auth.service import AuthenticatedSession
 from api.exceptions import InternalServiceError
 from api.manuals.exceptions import GeneratedAnswerTooLongError
 from api.manuals.repository import AuthorizedChunk, load_authorized_chunks
@@ -20,7 +19,7 @@ from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 async def generate_game_answer(
     session: AsyncSession,
     *,
-    auth: AuthenticatedSession,
+    current_user_id: UUID,
     game_id: UUID,
     question: str,
     top_k: int,
@@ -28,7 +27,12 @@ async def generate_game_answer(
     chat_history: Sequence[Mapping[str, str]] = (),
     retrieval_question: str | None = None,
 ) -> AnswerResponse:
-    """Responde usando RAG sin que RAG conozca el historial ni Postgres."""
+    """Responde usando RAG sin que RAG conozca el historial ni Postgres.
+
+    Recibe el id de usuario como valor plano a propósito: los llamantes
+    suelen haber soltado ya su transacción con rollback y tocar atributos
+    del ORM expirado dispararía un lazy-load síncrono (MissingGreenlet).
+    """
     search_question = retrieval_question or question
     retrieval_response = await internal_client.post_json(
         client=client,
@@ -47,7 +51,7 @@ async def generate_game_answer(
         authorized_chunks = await load_authorized_chunks(
             session,
             game_id=game_id,
-            current_user_id=auth.user.id,
+            current_user_id=current_user_id,
             chunk_ids=chunk_ids,
         )
         context = deduplicate_chunks(authorized_chunks)[:top_k]

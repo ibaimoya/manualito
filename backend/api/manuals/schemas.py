@@ -1,14 +1,24 @@
 """Schemas públicos de manuales y preguntas por juego."""
 
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, StringConstraints
 
 from api.annotations import Answer, ChunksIndexed, Question
 from api.schemas import StrictModel
 
 GAME_QUESTION_TOP_K_MAX = 10
+MANUAL_PAGE_TEXT_MAX_LENGTH = 20_000
+PageText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MANUAL_PAGE_TEXT_MAX_LENGTH,
+    ),
+]
 
 
 class ManualCreatedResponse(StrictModel):
@@ -84,6 +94,12 @@ class ManualProcessingResponse(StrictModel):
     completed_pages: int
     failed_pages: int
     pages: list[ManualProcessingPageResponse]
+
+
+class EditPageTextRequest(StrictModel):
+    """Texto corregido a mano para una página de manual propio."""
+
+    text: PageText
 
 
 class GameQuestionRequest(StrictModel):

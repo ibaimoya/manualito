@@ -19,7 +19,7 @@ type Status = 'idle' | 'typing' | 'loading' | 'results' | 'empty' | 'error';
  * Combobox accesible (WAI-ARIA): flechas para navegar, Enter para elegir,
  * Esc para limpiar. Muestra la atribución BGG que exige su ToU.
  */
-export function  GameTypeahead({ onSelect, focusOnMount }: Props) {
+export function GameTypeahead({ onSelect, focusOnMount }: Props) {
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -129,69 +129,116 @@ export function  GameTypeahead({ onSelect, focusOnMount }: Props) {
         ) : null}
       </div>
 
-      {!open && (status === 'idle' || status === 'typing') ? (
-        <p className="mt-2 flex items-center gap-1.5 pl-1 text-xs text-fg-3">
-          <Info size={13} aria-hidden="true" />
-          {status === 'idle'
-            ? 'Escribe al menos 3 letras para buscar en el catálogo.'
-            : 'Sigue escribiendo… (mínimo 3 letras)'}
-        </p>
-      ) : null}
+      <SearchHint status={status} />
 
       {open ? (
-        <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-bg shadow-lg">
-          <ul id={listId} aria-label="Resultados" className="max-h-64 overflow-y-auto">
-            {status === 'loading' ? <ResultSkeleton /> : null}
-
-            {status === 'results'
-              ? games.map((game, index) => (
-                  <ResultRow
-                    key={game.id}
-                    id={`${listId}-opt-${index}`}
-                    game={game}
-                    query={debounced}
-                    active={index === activeIndex}
-                    onPick={() => onSelect(game)}
-                    onHover={() => setHighlight(index)}
-                  />
-                ))
-              : null}
-
-            {status === 'empty' ? (
-              <li className="px-4 py-6 text-center">
-                <span className="mx-auto mb-2.5 grid size-11 place-items-center rounded-full bg-surface text-fg-3">
-                  <Search size={20} aria-hidden="true" />
-                </span>
-                <p className="text-sm font-semibold text-fg">No encontramos ese juego</p>
-                <p className="mt-1 text-xs text-fg-3">
-                  Revisa la ortografía o prueba con el nombre original.
-                </p>
-              </li>
-            ) : null}
-
-            {status === 'error' ? (
-              <li className="flex items-start gap-3 px-4 py-4">
-                <WifiOff size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-fg">No pudimos buscar</p>
-                  <p className="mt-0.5 text-xs text-fg-3">
-                    Revisa tu conexión e inténtalo de nuevo.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void refetch()}
-                    className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg hover:bg-surface"
-                  >
-                    <RotateCw size={14} aria-hidden="true" /> Reintentar
-                  </button>
-                </div>
-              </li>
-            ) : null}
-          </ul>
-          <BggAttribution />
-        </div>
+        <ResultsDropdown
+          status={status}
+          games={games}
+          listId={listId}
+          query={debounced}
+          activeIndex={activeIndex}
+          onPick={onSelect}
+          onHover={setHighlight}
+          onRetry={() => {
+            refetch().catch(() => undefined);
+          }}
+        />
       ) : null}
     </div>
+  );
+}
+
+/** Pista bajo el input mientras aún no hay búsqueda lanzada. */
+function SearchHint({ status }: Readonly<{ status: Status }>) {
+  if (status !== 'idle' && status !== 'typing') return null;
+  return (
+    <p className="mt-2 flex items-center gap-1.5 pl-1 text-xs text-fg-3">
+      <Info size={13} aria-hidden="true" />
+      {status === 'idle'
+        ? 'Escribe al menos 3 letras para buscar en el catálogo.'
+        : 'Sigue escribiendo… (mínimo 3 letras)'}
+    </p>
+  );
+}
+
+/** Desplegable anclado al input: skeleton, resultados, vacío o error. */
+function ResultsDropdown({
+  status,
+  games,
+  listId,
+  query,
+  activeIndex,
+  onPick,
+  onHover,
+  onRetry,
+}: Readonly<{
+  status: Status;
+  games: GameSearchItem[];
+  listId: string;
+  query: string;
+  activeIndex: number;
+  onPick: (game: GameSearchItem) => void;
+  onHover: (index: number) => void;
+  onRetry: () => void;
+}>) {
+  return (
+    <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-bg shadow-lg">
+      <ul id={listId} aria-label="Resultados" className="max-h-64 overflow-y-auto">
+        {status === 'loading' ? <ResultSkeleton /> : null}
+
+        {status === 'results'
+          ? games.map((game, index) => (
+              <ResultRow
+                key={game.id}
+                id={`${listId}-opt-${index}`}
+                game={game}
+                query={query}
+                active={index === activeIndex}
+                onPick={() => onPick(game)}
+                onHover={() => onHover(index)}
+              />
+            ))
+          : null}
+
+        {status === 'empty' ? <EmptyResult /> : null}
+        {status === 'error' ? <ErrorResult onRetry={onRetry} /> : null}
+      </ul>
+      <BggAttribution />
+    </div>
+  );
+}
+
+function EmptyResult() {
+  return (
+    <li className="px-4 py-6 text-center">
+      <span className="mx-auto mb-2.5 grid size-11 place-items-center rounded-full bg-surface text-fg-3">
+        <Search size={20} aria-hidden="true" />
+      </span>
+      <p className="text-sm font-semibold text-fg">No encontramos ese juego</p>
+      <p className="mt-1 text-xs text-fg-3">
+        Revisa la ortografía o prueba con el nombre original.
+      </p>
+    </li>
+  );
+}
+
+function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
+  return (
+    <li className="flex items-start gap-3 px-4 py-4">
+      <WifiOff size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-fg">No pudimos buscar</p>
+        <p className="mt-0.5 text-xs text-fg-3">Revisa tu conexión e inténtalo de nuevo.</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg hover:bg-surface"
+        >
+          <RotateCw size={14} aria-hidden="true" /> Reintentar
+        </button>
+      </div>
+    </li>
   );
 }
 

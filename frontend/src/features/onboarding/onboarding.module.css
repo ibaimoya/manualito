@@ -118,31 +118,48 @@
   letter-spacing: -0.01em;
 }
 
+/* Pastilla "glass": tinte translúcido sobre el mesh en vez de un marrón
+   opaco, para que se funda con el fondo cinematográfico. El tinte vive en
+   ::before: el fondo real del texto es el mesh oscuro (contraste ~12:1),
+   no el tinte crema al 8 %. */
 .topbarLink {
   pointer-events: auto;
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   height: 36px;
   padding: 0 14px;
   border-radius: 9999px;
-  background: #34251a;
   color: #fff8f0;
   font-family: var(--m-font-body), sans-serif;
   font-weight: 600;
   font-size: 12.5px;
   cursor: pointer;
-  border: 1px solid rgba(255, 248, 240, 0.18);
+  border: 1px solid rgba(255, 248, 240, 0.22);
   backdrop-filter: blur(10px);
   text-decoration: none;
   transition:
-    background 150ms ease,
     border-color 150ms ease,
     transform 150ms ease;
 }
 
+.topbarLink::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 248, 240, 0.08);
+  transition: background 150ms ease;
+}
+
 .topbarLink:hover {
-  background: #463222;
-  border-color: rgba(255, 248, 240, 0.34);
+  border-color: rgba(255, 248, 240, 0.38);
+}
+
+.topbarLink:hover::before {
+  background: rgba(255, 248, 240, 0.16);
 }
 
 .topbarLink:active {
@@ -814,6 +831,21 @@
   font-size: 12px;
   line-height: 1.4;
   color: rgba(255, 248, 240, 0.55);
+}
+
+/* Enlace dentro de la nota: botón que abre el modal de privacidad. */
+.noteLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--m-primary-300);
+  cursor: pointer;
+}
+
+.noteLink:hover {
+  text-decoration: underline;
 }
 
 /* — View transitions — */

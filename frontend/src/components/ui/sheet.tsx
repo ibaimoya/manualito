@@ -1,4 +1,4 @@
-import * as DialogPrimitive from '@radix-ui/react-dialog';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
 import { forwardRef, type ComponentRef, type ReactNode } from 'react';
 import {
 
@@ -32,12 +32,7 @@ export const Sheet = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /**
-   * Clases extra para el panel del Sheet — útil cuando el caso de uso
-   * necesita una anchura mayor que el default o controlar altura/flex.
-   * Se mergea DESPUÉS del className interno, así sobrescribe estilos
-   * conflictivos (max-w, h, flex…).
-   */
+  /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
   contentClassName?: string;
 }>) => (
     <ModalFrame
@@ -86,7 +81,5 @@ export const SheetFooter = ({
       {children}
     </footer>
 );
-
-export const SheetClose = DialogPrimitive.Close;
 
 export {ModalBody as SheetBody} from './dialog';

@@ -7,7 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ManualCard } from '@/features/manual/ManualCard';
 import { manualsQueryOptions } from '@/features/manual/use-manuals';
+import { RecommendedSection } from '@/features/recommend/RecommendedSection';
 import { useAuth } from '@/features/auth/use-auth';
+import { formatRelative } from '@/shared/lib/relativeDate';
 import { type ManualSummary } from '@/shared/api/client';
 
 export const Route = createFileRoute('/_app/home')({
@@ -60,6 +62,8 @@ function HomeScreen() {
       <HeroCta />
 
       <RecentSection />
+
+      <RecommendedSection />
     </div>
   );
 }
@@ -167,17 +171,4 @@ function EmptyRecents() {
       </p>
     </section>
   );
-}
-
-function formatRelative(iso: string): string {
-  const date = new Date(iso);
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.round(diffMs / 60_000);
-  if (minutes < 1) return 'ahora mismo';
-  if (minutes < 60) return `hace ${minutes} min`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `hace ${hours} h`;
-  const days = Math.round(hours / 24);
-  if (days < 30) return `hace ${days} d`;
-  return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }

@@ -31,7 +31,7 @@ function seedManualWithResult(opts: { withOcr: boolean }): void {
     name: 'Catan',
     summary: 'Resumen rápido del juego.',
     setup: 'Preparación inicial.',
-    turn: 'Cómo es un turno.',
+    turn: 'En cada turno tiras los dados y construyes.',
     win: 'Se gana con 10 puntos.',
     created_at: '2026-05-26T10:00:00.000Z',
   };
@@ -196,17 +196,15 @@ describe('/result · contenido principal', () => {
     // El acordeón Preparación está abierto por defecto.
     expect(screen.getByText('Preparación inicial.')).toBeInTheDocument();
     // Los demás acordeones están en el DOM; verificamos su trigger por role.
-    expect(screen.getByRole('button', { name: /^Cómo es un turno$/ })).toBeInTheDocument();
-    // Nota: "Cómo se gana" aparece en el trigger del acordeón y como chip
-    // de pregunta sugerida con `?` — el regex distingue.
-    expect(screen.getByRole('button', { name: /^Cómo se gana$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^¿Cómo van los turnos\?$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^¿Cómo se gana\?$/ })).toBeInTheDocument();
   });
 
   it('chips de preguntas sugeridas navegan a /chat con ?q=', async () => {
     seedManualWithResult({ withOcr: false });
     renderResult();
     const user = userEvent.setup();
-    const chip = await screen.findByRole('button', { name: '¿Cómo se gana?' });
+    const chip = await screen.findByRole('button', { name: '¿Cuántos jugadores?' });
     await user.click(chip);
     expect(await screen.findByText('Chat')).toBeInTheDocument();
   });

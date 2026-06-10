@@ -159,14 +159,6 @@ kbd {
     background-position: -200% 0;
   }
 }
-@keyframes mn-indeterminate {
-  0% {
-    left: -40%;
-  }
-  100% {
-    left: 100%;
-  }
-}
 @keyframes mn-dot {
   0%,
   80%,
@@ -278,24 +270,29 @@ kbd {
   animation: mn-slide-down 200ms var(--m-easing) forwards;
 }
 
-/* — Dialog (modal centrado para desktop) — */
+/* — Dialog (modal centrado para desktop) —
+   El centrado vive en la propiedad `translate` (utilidades -translate-x/y-1/2
+   de Tailwind v4), independiente de `transform`. El keyframe solo anima
+   scale + opacity: si incluyera translate(-50%,-50%) se SUMARÍA al centrado
+   y, con fill forwards, el modal quedaría media altura por encima del centro
+   de forma permanente. */
 @keyframes mn-zoom-in {
   from {
-    transform: translate(-50%, -50%) scale(0.96);
+    transform: scale(0.96);
     opacity: 0;
   }
   to {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
     opacity: 1;
   }
 }
 @keyframes mn-zoom-out {
   from {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
     opacity: 1;
   }
   to {
-    transform: translate(-50%, -50%) scale(0.96);
+    transform: scale(0.96);
     opacity: 0;
   }
 }

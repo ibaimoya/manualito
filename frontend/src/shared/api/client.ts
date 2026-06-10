@@ -73,6 +73,22 @@ export interface GameSearchResponse {
   attribution: string;
 }
 
+/** Juego sugerido por el recomendador content-based (ver notimportant/RECOMMENDER_CONTRACT.md). */
+export interface RecommendedGame {
+  id: string;
+  name: string;
+  bgg_id: number | null;
+  year_published: number | null;
+  /** Motivo legible de la recomendación (p. ej. «Porque tienes Catan»). */
+  reason: string;
+}
+
+export interface RecommendationsResponse {
+  recommendations: RecommendedGame[];
+  /** Atribución exigida por el ToU de la API de BoardGameGeek. */
+  attribution: string;
+}
+
 export interface ManualDetailPage {
   page_number: number;
   ocr_status: 'pending' | 'completed' | 'failed';
@@ -139,7 +155,7 @@ export const api = {
     return (await res.json()) as { status: string };
   },
 
-  /** POST /api/ocr — extrae texto de una sola imagen (legado, ver Fase 5). */
+  /** POST /api/ocr — extrae texto de una sola imagen (legado). */
   async ocr(image: File, signal?: AbortSignal): Promise<OcrLinesResponse> {
     const fd = new FormData();
     fd.append('image', image);
@@ -249,4 +265,20 @@ export const api = {
     });
   },
 
+  /**
+   * GET /api/recommendations — juegos sugeridos para el usuario (content-based
+   * sobre los metadatos de su biblioteca). Contrato definido en
+   * `notimportant/RECOMMENDER_CONTRACT.md`; el backend lo implementa en una fase posterior.
+   */
+  async getRecommendations(
+    params?: { limit?: number },
+    signal?: AbortSignal,
+  ): Promise<RecommendationsResponse> {
+    const query = queryString({ limit: params?.limit });
+    return request<RecommendationsResponse>(`/recommendations${query}`, {
+      method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
 };

@@ -51,7 +51,7 @@ function RouteLoadingFallback() {
 
 function NotFoundComponent() {
   return (
-    <div className="grid min-h-dvh place-items-center bg-bg px-6 py-10 text-center">
+    <div className="grid min-h-dvh place-items-center bg-surface px-6 py-10 text-center">
       <div className="flex w-full max-w-sm flex-col items-center">
         <div className="mb-6 grid size-24 place-items-center rounded-full bg-primary-100 text-primary-700">
           <Meeple size={52} />

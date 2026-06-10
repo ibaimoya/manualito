@@ -2,6 +2,7 @@ import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
 import { ApiError } from '@/shared/api/http';
 import { cn } from '@/shared/lib/cn';
 import {
@@ -28,8 +29,9 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   const [confirm, setConfirm] = useState('');
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
-  const emailError = emailFieldError(email, submitted);
+  const emailError = emailFieldError(email.trim(), submitted);
   const usernameError =
     submitted && username.trim().length === 0 ? 'Escribe un nombre de usuario' : undefined;
   const passwordError = passwordTooShortError(password, submitted);
@@ -42,7 +44,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
     setSubmitted(true);
     const invalidId = (
       [
-        [isEmail(email), `${fieldId}-email`],
+        [isEmail(email.trim()), `${fieldId}-email`],
         [username.trim().length > 0, `${fieldId}-name`],
         [password.length >= MIN_PASSWORD, `${fieldId}-pw`],
         [confirm.length > 0 && confirm === password, `${fieldId}-pw2`],
@@ -130,7 +132,9 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
           checked={consent}
           error={consentError}
           onChange={setConsent}
+          onShowPrivacy={() => setPrivacyOpen(true)}
         />
+        <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
         <Button type="submit" size="lg" block loading={register.isPending}>
           {register.isPending ? 'Creando cuenta…' : 'Crear cuenta'}
@@ -147,13 +151,18 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   );
 }
 
-/** Aviso de error del registro: distingue email duplicado (409) del resto. */
+/**
+ * Aviso de error del registro. En un 409 el backend no revela si el duplicado
+ * es el email o el usuario (por privacidad), así que el mensaje cubre ambos. El
+ * resto reutiliza el mensaje ya mapeado (p. ej. el detalle de un 422 de campo).
+ */
 function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
   if (error == null) return null;
   const isConflict = error instanceof ApiError && error.status === 409;
+  const mappedMessage = error instanceof ApiError ? error.view.message : null;
   return (
     <AuthAlert
-      title={isConflict ? 'Ese email ya está registrado' : 'No hemos podido crear la cuenta'}
+      title={isConflict ? 'Ese email o usuario ya está en uso' : 'No hemos podido crear la cuenta'}
       className="mt-4"
     >
       {isConflict ? (
@@ -162,10 +171,10 @@ function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
           <Link to="/login" className="font-semibold text-accent hover:underline">
             iniciar sesión
           </Link>{' '}
-          o recupera tu contraseña.
+          o usa otro email o nombre de usuario.
         </>
       ) : (
-        'Revisa los datos e inténtalo de nuevo en un momento.'
+        (mappedMessage ?? 'Revisa los datos e inténtalo de nuevo en un momento.')
       )}
     </AuthAlert>
   );
@@ -183,11 +192,13 @@ function ConsentField({
   checked,
   error,
   onChange,
+  onShowPrivacy,
 }: Readonly<{
   id: string;
   checked: boolean;
   error: boolean;
   onChange: (value: boolean) => void;
+  onShowPrivacy: () => void;
 }>) {
   return (
     <div>
@@ -206,7 +217,20 @@ function ConsentField({
           className="mt-0.5 size-5 shrink-0 accent-primary"
         />
         <span className="text-sm leading-relaxed text-fg">
-          He leído y acepto la <span className="font-semibold">Política de privacidad</span>.
+          He leído y acepto la{' '}
+          <button
+            type="button"
+            onClick={(event) => {
+              // preventDefault: el click dentro del <label> alternaría el checkbox.
+              event.preventDefault();
+              event.stopPropagation();
+              onShowPrivacy();
+            }}
+            className="font-semibold text-accent hover:underline"
+          >
+            Política de privacidad
+          </button>
+          {'.'}
         </span>
       </label>
       <p className="mt-1.5 min-h-[1.05rem] text-xs text-error" role="alert">

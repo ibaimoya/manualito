@@ -4,7 +4,6 @@ import {
   storage,
   STORAGE_KEYS,
   type ManualRecord,
-  type QAMessage,
 } from '@/shared/lib/storage';
 
 const SAMPLE: ManualRecord = {
@@ -61,17 +60,13 @@ describe('storage', () => {
       expect(new Date(list[0]!.last_opened_at).getFullYear()).toBe(2026);
     });
 
-    it('removeManual borra el manual y su Q&A asociado', () => {
+    it('removeManual borra el manual y limpia la clave Q&A legada', () => {
       storage.upsertManual(SAMPLE);
-      storage.appendQA(SAMPLE.manual_id, {
-        id: 'msg-1',
-        role: 'user',
-        text: 'hola',
-        ts: '2026-05-26T10:00:00.000Z',
-      });
+      // Resto de una versión anterior (el Q&A vivía en localStorage).
+      localStorage.setItem(STORAGE_KEYS.qa(SAMPLE.manual_id), JSON.stringify([{ id: 'x' }]));
       storage.removeManual(SAMPLE.manual_id);
       expect(storage.listManuals()).toEqual([]);
-      expect(storage.listQA(SAMPLE.manual_id)).toEqual([]);
+      expect(localStorage.getItem(STORAGE_KEYS.qa(SAMPLE.manual_id))).toBeNull();
     });
 
     it('removeManual también borra las líneas OCR asociadas', () => {
@@ -133,32 +128,6 @@ describe('storage', () => {
     });
   });
 
-  describe('q&a', () => {
-    const msg: QAMessage = {
-      id: 'm1',
-      role: 'bot',
-      text: 'respuesta',
-      ts: '2026-05-26T10:00:00.000Z',
-    };
-
-    it('appendQA y listQA mantienen orden FIFO', () => {
-      storage.appendQA('m', msg);
-      storage.appendQA('m', { ...msg, id: 'm2', role: 'user' });
-      const list = storage.listQA('m');
-      expect(list).toHaveLength(2);
-      expect(list[0]?.id).toBe('m1');
-      expect(list[1]?.id).toBe('m2');
-    });
-
-    it('clearQA borra todo el historial de UN manual sin tocar otros', () => {
-      storage.appendQA('a', msg);
-      storage.appendQA('b', msg);
-      storage.clearQA('a');
-      expect(storage.listQA('a')).toEqual([]);
-      expect(storage.listQA('b')).toHaveLength(1);
-    });
-  });
-
   describe('onboarding flag', () => {
     it('isOnboardingSeen es false al inicio', () => {
       expect(storage.isOnboardingSeen()).toBe(false);
@@ -209,14 +178,9 @@ describe('storage', () => {
   });
 
   describe('wipeAll', () => {
-    it('borra manuales, Q&A y resultados pero deja settings', () => {
+    it('borra manuales, claves Q&A legadas y resultados pero deja settings', () => {
       storage.upsertManual(SAMPLE);
-      storage.appendQA(SAMPLE.manual_id, {
-        id: 'm1',
-        role: 'user',
-        text: 'x',
-        ts: '2026-05-26T10:00:00.000Z',
-      });
+      localStorage.setItem(STORAGE_KEYS.qa(SAMPLE.manual_id), JSON.stringify([{ id: 'x' }]));
       storage.writeSettings({
         mode: 'dark',
         accent: 'amber',
@@ -224,7 +188,7 @@ describe('storage', () => {
       });
       storage.wipeAll();
       expect(storage.listManuals()).toEqual([]);
-      expect(storage.listQA(SAMPLE.manual_id)).toEqual([]);
+      expect(localStorage.getItem(STORAGE_KEYS.qa(SAMPLE.manual_id))).toBeNull();
       // settings se preserva — el usuario quiere mantener sus preferencias UI
       // al hacer "Borrar historial".
       expect(storage.readSettings().mode).toBe('dark');

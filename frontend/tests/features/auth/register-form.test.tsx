@@ -10,7 +10,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { server } from '@tests/_helpers/server';
-import { failRegister } from '@tests/_helpers/mswHandlers';
+import { failRegister, failRegisterValidation } from '@tests/_helpers/mswHandlers';
 import { ThemeProvider } from '@/app/theme';
 import { RegisterForm } from '@/features/auth/register-form';
 
@@ -72,7 +72,7 @@ describe('RegisterForm', () => {
     await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
   });
 
-  it('muestra "ya registrado" ante un 409 y no continúa', async () => {
+  it('ante un 409 avisa de email O usuario en uso (sin asumir cuál) y no continúa', async () => {
     server.use(failRegister(409));
     const user = userEvent.setup();
     const { onAuthenticated } = mountRegister();
@@ -80,7 +80,24 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
-    expect(await screen.findByText(/ya está registrado/i)).toBeInTheDocument();
+    // El backend no distingue email de usuario en un 409 → el mensaje cubre ambos.
+    expect(await screen.findByText(/email o usuario ya está en uso/i)).toBeInTheDocument();
+    // Regresión: no debe afirmar que es el email (el conflicto pudo ser el usuario).
+    expect(screen.queryByText(/Ese email ya está registrado/i)).not.toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('ante un 422 de validación muestra el mensaje de campo del backend', async () => {
+    server.use(failRegisterValidation());
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    await fillValid(user);
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(
+      await screen.findByText(/solo puede contener letras, números, puntos y guiones/i),
+    ).toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
@@ -110,6 +127,46 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText('Ese email no parece válido')).toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('acepta email con espacios alrededor (se recorta) y registra', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    await user.type(await screen.findByLabelText('Email'), '  marta@gmail.com  ');
+    await user.type(screen.getByLabelText('Nombre de usuario'), 'Marta');
+    await user.type(screen.getByLabelText('Contraseña'), 'claveSegura99');
+    await user.type(screen.getByLabelText('Repite la contraseña'), 'claveSegura99');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+  });
+
+  it('acepta una contraseña de exactamente 12 caracteres (límite inferior)', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    await user.type(await screen.findByLabelText('Email'), 'marta@gmail.com');
+    await user.type(screen.getByLabelText('Nombre de usuario'), 'Marta');
+    await user.type(screen.getByLabelText('Contraseña'), 'doceCaract12'); // 12 chars
+    await user.type(screen.getByLabelText('Repite la contraseña'), 'doceCaract12');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+  });
+
+  it('rechaza una contraseña de 11 caracteres (bajo el mínimo) y no registra', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    await user.type(await screen.findByLabelText('Email'), 'marta@gmail.com');
+    await user.type(screen.getByLabelText('Nombre de usuario'), 'Marta');
+    await user.type(screen.getByLabelText('Contraseña'), 'onceCarac11'); // 11 chars
+    await user.type(screen.getByLabelText('Repite la contraseña'), 'onceCarac11');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+
+    expect(await screen.findByText('Mínimo 12 caracteres')).toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 });

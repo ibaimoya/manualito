@@ -27,8 +27,8 @@ const bootstrapStateRef: { current: BootstrapState } = {
     steps: [
       { id: 'summary', label: 'Resumen', state: 'pending' },
       { id: 'setup', label: 'Preparación', state: 'pending' },
-      { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
-      { id: 'win', label: 'Cómo se gana', state: 'pending' },
+      { id: 'turn', label: '¿Cómo van los turnos?', state: 'pending' },
+      { id: 'win', label: '¿Cómo se gana?', state: 'pending' },
     ],
     progress: 0,
     done: false,
@@ -54,8 +54,8 @@ beforeEach(() => {
     steps: [
       { id: 'summary', label: 'Resumen', state: 'pending' },
       { id: 'setup', label: 'Preparación', state: 'pending' },
-      { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
-      { id: 'win', label: 'Cómo se gana', state: 'pending' },
+      { id: 'turn', label: '¿Cómo van los turnos?', state: 'pending' },
+      { id: 'win', label: '¿Cómo se gana?', state: 'pending' },
     ],
     progress: 0,
     done: false,
@@ -108,7 +108,7 @@ describe('/processing/$manualId', () => {
     expect(screen.getByText('Leyendo tu manual…')).toBeInTheDocument();
     expect(screen.getByText(/Resumen/)).toBeInTheDocument();
     expect(screen.getByText(/Preparación/)).toBeInTheDocument();
-    expect(screen.getByText(/Cómo es un turno/)).toBeInTheDocument();
+    expect(screen.getByText(/Cómo van los turnos/)).toBeInTheDocument();
     expect(screen.getByText(/Cómo se gana/)).toBeInTheDocument();
   });
 
@@ -149,8 +149,8 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'done', text: 'ok' },
         { id: 'setup', label: 'Preparación', state: 'pending' },
-        { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
-        { id: 'win', label: 'Cómo se gana', state: 'pending' },
+        { id: 'turn', label: '¿Cómo van los turnos?', state: 'pending' },
+        { id: 'win', label: '¿Cómo se gana?', state: 'pending' },
       ],
       progress: 25,
       done: false,
@@ -169,8 +169,8 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'failed', error: 'OCR fallido' },
         { id: 'setup', label: 'Preparación', state: 'pending' },
-        { id: 'turn', label: 'Cómo es un turno', state: 'pending' },
-        { id: 'win', label: 'Cómo se gana', state: 'pending' },
+        { id: 'turn', label: '¿Cómo van los turnos?', state: 'pending' },
+        { id: 'win', label: '¿Cómo se gana?', state: 'pending' },
       ],
       progress: 25,
       done: false,
@@ -186,8 +186,8 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'failed', error: 'OCR fallido' },
         { id: 'setup', label: 'Preparación', state: 'failed', error: 'OCR fallido' },
-        { id: 'turn', label: 'Cómo es un turno', state: 'failed', error: 'OCR fallido' },
-        { id: 'win', label: 'Cómo se gana', state: 'failed', error: 'OCR fallido' },
+        { id: 'turn', label: '¿Cómo van los turnos?', state: 'failed', error: 'OCR fallido' },
+        { id: 'win', label: '¿Cómo se gana?', state: 'failed', error: 'OCR fallido' },
       ],
       progress: 100,
       done: true,
@@ -204,8 +204,8 @@ describe('/processing/$manualId', () => {
       steps: [
         { id: 'summary', label: 'Resumen', state: 'done', text: 'a' },
         { id: 'setup', label: 'Preparación', state: 'done', text: 'b' },
-        { id: 'turn', label: 'Cómo es un turno', state: 'done', text: 'c' },
-        { id: 'win', label: 'Cómo se gana', state: 'done', text: 'd' },
+        { id: 'turn', label: '¿Cómo van los turnos?', state: 'done', text: 'c' },
+        { id: 'win', label: '¿Cómo se gana?', state: 'done', text: 'd' },
       ],
       progress: 100,
       done: true,

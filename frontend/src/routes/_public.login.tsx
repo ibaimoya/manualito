@@ -9,14 +9,25 @@ export const Route = createFileRoute('/_public/login')({
   component: LoginScreen,
 });
 
+/**
+ * Solo se redirige a rutas internas: empieza por "/" pero no por "//" ni "/\"
+ * (que el navegador resolvería como URL externa → open redirect / phishing).
+ */
+function safeInternalRedirect(target: string | undefined): string | null {
+  if (!target?.startsWith('/')) return null;
+  if (target.startsWith('//') || target.startsWith('/\\')) return null;
+  return target;
+}
+
 function LoginScreen() {
   const router = useRouter();
   const { redirect } = Route.useSearch();
   const onAuthenticated = () => {
-    if (redirect) {
-      router.history.push(redirect);
+    const dest = safeInternalRedirect(redirect);
+    if (dest) {
+      router.history.push(dest);
     } else {
-      void router.navigate({ to: '/home' });
+      router.navigate({ to: '/home' }).catch(() => undefined);
     }
   };
   return (

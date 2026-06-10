@@ -8,11 +8,9 @@ import { onStorageWriteFail } from '@/shared/lib/storage';
 type Props = Readonly<{ children: ReactNode }>;
 
 /**
- * Crea un único QueryClient para toda la app.
- * (Equivalente al singleton `httpx.AsyncClient` que el backend gestiona via lifespan).
- *
- * - retry: 1 (los 502/504 ya los re-disparamos manualmente con UX feedback).
- * - staleTime 30s: evita refetch agresivo cuando se navega entre rutas.
+ * Único QueryClient de la app.
+ * - retry: 1 (los 502/504 ya se re-disparan manualmente con UX feedback).
+ * - staleTime 30s: evita refetch agresivo al navegar entre rutas.
  * - networkMode 'always': la PWA puede tener cache aunque la red esté caída.
  */
 function createQueryClient(): QueryClient {
@@ -70,19 +68,8 @@ export function Providers({ children }: Props) {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         {children}
-        {/*
-          Toaster global — config explícita en lugar de defaults:
-          - position 'top-center': anclaje predecible en móvil; no choca con el
-            sticky composer del chat (que vive abajo).
-          - visibleToasts={3}: cota dura para evitar que una ráfaga de
-            errores (ej. 4 mutations paralelas que fallan) apile 10 toasts
-            que tapan la pantalla.  Sonner colapsa el resto en una pila.
-          - duration por defecto 5000 ms: equilibrio entre tiempo de lectura
-            y no estorbar. Los toasts críticos (storage quota, errores) se
-            sobrescriben puntualmente con duración mayor.
-          - theme="system" + richColors: contraste WCAG AA en light y dark.
-          - gap 8: separación visual entre toasts apilados.
-        */}
+        {/* Arriba para no chocar con el composer sticky del chat; máximo 3
+            toasts visibles para que una ráfaga de errores no tape la pantalla. */}
         <Toaster
           position="top-center"
           richColors

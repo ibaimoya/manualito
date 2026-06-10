@@ -5,11 +5,6 @@ import { cn } from '@/shared/lib/cn';
  * Presets de atributos móviles para casos comunes — evitan que cada
  * callsite tenga que recordar `inputMode + enterKeyHint + spellCheck +
  * autoComplete + autoCapitalize`.
- *
- * Cumple las recomendaciones de:
- *  - https://html.spec.whatwg.org/dev/interaction.html#attr-input-inputmode
- *  - https://makandracards.com/makandra/589282-better-html-forms-type-inputmode-enterkeyhint-autocomplete
- *  - https://css-tricks.com/better-form-inputs-for-better-mobile-user-experiences/
  */
 type InputPreset = 'game-name' | 'search' | 'chat-message' | 'email' | 'username' | 'free';
 
@@ -68,7 +63,6 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     autoComplete: 'username',
     autoCapitalize: 'none',
   },
-  // Sin preset (default).
   free: {},
 };
 

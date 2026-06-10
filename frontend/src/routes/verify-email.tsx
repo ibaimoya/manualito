@@ -32,7 +32,7 @@ function VerifyEmailScreen() {
 
   useEffect(() => {
     if (isSuccess) {
-      void queryClient.invalidateQueries({ queryKey: AUTH_ME_KEY });
+      queryClient.invalidateQueries({ queryKey: AUTH_ME_KEY }).catch(() => undefined);
     }
   }, [isSuccess, queryClient]);
 

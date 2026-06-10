@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
 import { Check, FileText, LogOut, Moon, Sun, SunMoon, Trash2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -11,7 +11,6 @@ import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar } from '@/shared/components/Avatar';
 import { authApi } from '@/shared/api/auth';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
-import { APP_VERSION } from '@/shared/lib/appVersion';
 import { storage } from '@/shared/lib/storage';
 
 const RESEND_COOLDOWN = 45;
@@ -116,9 +115,14 @@ function SettingsScreen() {
         ) : null}
       </Group>
 
-      <p className="mono mt-2 text-center text-[11px] text-fg-3 tracking-[0.1em]">
-        v {APP_VERSION} · phi4 · ChromaDB · FastAPI
-      </p>
+      <footer className="mt-2 flex justify-center">
+        <Link
+          to="/privacy"
+          className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
+        >
+          Política de privacidad
+        </Link>
+      </footer>
     </div>
   );
 }

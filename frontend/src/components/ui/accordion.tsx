@@ -64,7 +64,12 @@ export const AccordionContent = forwardRef<
       )}
       {...props}
     >
-      <div className={cn('px-[var(--m-space-4)] pb-[var(--m-space-4)] pt-0', className)}>
+      <div
+        className={cn(
+          'border-t border-border bg-bg px-[var(--m-space-4)] py-[var(--m-space-4)]',
+          className,
+        )}
+      >
         {children}
       </div>
     </AccordionPrimitive.Content>

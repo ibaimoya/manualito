@@ -125,12 +125,7 @@ export const Dialog = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /**
-   * Clases extra para el panel del Dialog.  Útil para anchuras más
-   * grandes (ej. `max-w-2xl` para visores de texto) o controlar altura
-   * en pantallas con mucho contenido.  Se aplica después del className
-   * por defecto, así sobrescribe.
-   */
+  /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
   contentClassName?: string;
 }>) => (
   <ModalFrame

@@ -1,24 +1,30 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Send } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, FileText, Send } from 'lucide-react';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Markdown } from '@/shared/components/Markdown';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
-import { storage, type QAMessage } from '@/shared/lib/storage';
+import { api, apiErrorNotification, isAbortApiError, type AnswerSource } from '@/shared/api/client';
+import { conversationsApi, type ConversationMessage } from '@/shared/api/conversations';
+import {
+  conversationMessagesQueryOptions,
+  conversationsKey,
+} from '@/features/conversations/use-conversations';
+import { storage } from '@/shared/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Meeple } from '@/shared/components/Brand';
-import { cn } from '@/shared/lib/cn';
 
 // max(500) limita la longitud del search param `q` a la misma cota que el
 // backend (500 chars en `QuestionRequest`).  Sin esto un atacante podría
 // pegar una URL `?q=…` de 100KB y reventar el LLM o el URL parser.
+// `c` reabre una conversación guardada (id opaco del backend).
 const chatSearchSchema = z.object({
   q: z.string().min(1).max(500).optional(),
+  c: z.string().min(1).optional(),
 });
 
 export const Route = createFileRoute('/_app/chat/$manualId')({
@@ -28,13 +34,20 @@ export const Route = createFileRoute('/_app/chat/$manualId')({
 
 function ChatScreen() {
   const { manualId } = Route.useParams();
-  const initialQ = Route.useSearch().q;
+  const { q: initialQ, c: initialC } = Route.useSearch();
   const navigate = useNavigate();
-  // Lazy initializer: lee del localStorage en el primer render para
-  // evitar el flash de "no hay mensajes" mientras un useEffect carga.
-  const [messages, setMessages] = useState<QAMessage[]>(() => storage.listQA(manualId));
+  const qc = useQueryClient();
+  const [conversationId, setConversationId] = useState<string | null>(initialC ?? null);
+  // Turnos completados en esta sesión (el backend devuelve user + assistant).
+  const [turns, setTurns] = useState<ConversationMessage[]>([]);
+  // Pregunta en vuelo: burbuja optimista hasta que llega el turno real.
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const initialQueueRef = useRef<string | null>(initialQ ?? null);
+  // Solo pedimos historial al servidor si la conversación venía en la URL
+  // (reabierta desde el resultado); las creadas aquí ya viven en `turns`.
+  // Valor fijado al montar: la navegación replace posterior no lo cambia.
+  const [reopened] = useState(initialC != null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const result = storage.getResult(manualId);
@@ -45,10 +58,15 @@ function ChatScreen() {
     storage.touchManual(manualId);
   }, [manualId]);
 
+  const history = useQuery({
+    ...conversationMessagesQueryOptions(conversationId ?? ''),
+    enabled: reopened && conversationId !== null,
+  });
+  const historyLoading = reopened && conversationId !== null && history.isPending;
+
   // AbortController para cortar la petición al LLM si el usuario navega
-  // fuera del chat antes de que termine.  El LLM puede
-  // tardar 30-60s — sin abort, la mutation completaría tras unmount y
-  // escribiría en localStorage sin feedback visual.
+  // fuera del chat antes de que termine.  El LLM puede tardar 30-60s — sin
+  // abort, la mutation completaría tras unmount sin feedback visual.
   const askAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => askAbortRef.current?.abort(), []);
 
@@ -57,11 +75,18 @@ function ChatScreen() {
       askAbortRef.current?.abort();
       askAbortRef.current = new AbortController();
       const signal = askAbortRef.current.signal;
-      const manual = await api.getManual(manualId, signal);
-      return api.askGame(manual.game_id, question, undefined, signal);
+      let cid = conversationId;
+      if (cid === null) {
+        const manual = await api.getManual(manualId, signal);
+        cid = (await conversationsApi.create(manual.game_id, signal)).id;
+      }
+      return conversationsApi.sendMessage(cid, question, undefined, signal);
     },
-    onError: (err) => {
+    onError: (err, question) => {
+      setPendingQuestion(null);
       if (isAbortApiError(err)) return;
+      // Recupera la pregunta en el composer para reintentar sin reescribirla.
+      setDraft((current) => (current.length > 0 ? current : question));
       const notification = apiErrorNotification(err, 'ask-error', {
         title: 'No hemos podido responder',
         id: 'ask-error-unknown',
@@ -73,28 +98,26 @@ function ChatScreen() {
       });
     },
     onSuccess: (data) => {
-      const botMsg: QAMessage = {
-        id: crypto.randomUUID(),
-        role: 'bot',
-        text: data.answer,
-        ts: new Date().toISOString(),
-      };
-      storage.appendQA(manualId, botMsg);
-      setMessages((prev) => [...prev, botMsg]);
+      setPendingQuestion(null);
+      setTurns((prev) => [...prev, data.user_message, data.assistant_message]);
+      setConversationId(data.conversation.id);
+      qc.invalidateQueries({ queryKey: conversationsKey(data.conversation.game_id) }).catch(
+        () => undefined,
+      );
+      // Fija ?c en la URL (replace): refrescar reabre esta misma conversación.
+      navigate({
+        to: '/chat/$manualId',
+        params: { manualId },
+        search: { c: data.conversation.id },
+        replace: true,
+      }).catch(() => undefined);
     },
   });
 
   function sendQuestion(text: string): void {
     const q = text.trim();
-    if (q.length === 0) return;
-    const userMsg: QAMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      text: q,
-      ts: new Date().toISOString(),
-    };
-    storage.appendQA(manualId, userMsg);
-    setMessages((prev) => [...prev, userMsg]);
+    if (q.length === 0 || askMutation.isPending) return;
+    setPendingQuestion(q);
     setDraft('');
     askMutation.mutate(q);
   }
@@ -108,11 +131,10 @@ function ChatScreen() {
       const q = initialQueueRef.current;
       initialQueueRef.current = null;
       sendQuestion(q);
-      // Limpia el ?q de la URL sin recargar.
       navigate({
         to: '/chat/$manualId',
         params: { manualId },
-        search: {},
+        search: initialC ? { c: initialC } : {},
         replace: true,
       }).catch(() => undefined);
     }
@@ -121,10 +143,22 @@ function ChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Una conversación reabierta puede refrescarse después de añadir turnos
+  // nuevos: el servidor ya los incluye, así que deduplicamos por id.
+  const seen = new Set<string>();
+  const messages = [...(history.data ?? []), ...turns].filter((m) => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+
   // Scroll al final cuando entra un mensaje nuevo.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, askMutation.isPending]);
+  }, [messages.length, pendingQuestion, askMutation.isPending]);
+
+  const showEmpty =
+    messages.length === 0 && pendingQuestion === null && !historyLoading && !history.isError;
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -149,14 +183,21 @@ function ChatScreen() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl space-y-3 p-4">
-          {messages.length === 0 && !askMutation.isPending ? (
+          {showEmpty ? (
             <p className="mt-6 text-center text-sm text-fg-3">
               Empieza con una pregunta sobre el manual.
+            </p>
+          ) : null}
+          {historyLoading ? <HistorySkeleton /> : null}
+          {history.isError ? (
+            <p className="mt-6 text-center text-sm text-fg-3">
+              No hemos podido recuperar esta conversación. Puedes seguir preguntando abajo.
             </p>
           ) : null}
           {messages.map((m) => (
             <Bubble key={m.id} msg={m} />
           ))}
+          {pendingQuestion ? <UserBubble content={pendingQuestion} /> : null}
           {askMutation.isPending ? <TypingIndicator /> : null}
         </div>
       </div>
@@ -187,7 +228,8 @@ function ChatScreen() {
             disabled={draft.trim().length === 0}
             aria-label="Enviar pregunta"
           >
-            <Send size={17} strokeWidth={2} />
+            {/* Centrado óptico: la masa del avión cae arriba-derecha (centroide medido). */}
+            <Send size={17} strokeWidth={2} style={{ transform: 'translate(-1.3px, 1.3px)' }} />
           </Button>
         </div>
       </form>
@@ -195,30 +237,71 @@ function ChatScreen() {
   );
 }
 
-function Bubble({ msg }: Readonly<{ msg: QAMessage }>) {
-  const isUser = msg.role === 'user';
+function UserBubble({ content }: Readonly<{ content: string }>) {
   return (
-    <div className={cn('flex gap-2', isUser ? 'justify-end' : 'justify-start')}>
-      {isUser ? null : (
-        <div
-          aria-hidden="true"
-          className="grid h-7 w-7 shrink-0 place-items-center self-end rounded-full border border-border bg-surface-2 text-primary-700"
-        >
-          <Meeple size={16} color="currentColor" />
-        </div>
-      )}
+    <div className="flex justify-end">
       <div
-        className={cn(
-          'max-w-[78%] rounded-2xl px-4 py-3 text-base leading-relaxed',
-          isUser ? 'bg-primary text-fg-inv' : 'border border-border bg-surface text-fg',
-        )}
-        style={{
-          borderTopLeftRadius: isUser ? undefined : 6,
-          borderTopRightRadius: isUser ? 6 : undefined,
-        }}
+        className="max-w-[78%] rounded-2xl bg-primary px-4 py-3 text-base leading-relaxed text-fg-inv"
+        style={{ borderTopRightRadius: 6 }}
       >
-        {isUser ? msg.text : <Markdown>{msg.text}</Markdown>}
+        {content}
       </div>
+    </div>
+  );
+}
+
+function Bubble({ msg }: Readonly<{ msg: ConversationMessage }>) {
+  if (msg.role === 'user') {
+    return <UserBubble content={msg.content} />;
+  }
+  return (
+    <div className="flex justify-start gap-2">
+      <div
+        aria-hidden="true"
+        className="grid h-7 w-7 shrink-0 place-items-center self-end rounded-full border border-border bg-surface-2 text-primary-700"
+      >
+        <Meeple size={16} color="currentColor" />
+      </div>
+      <div className="flex max-w-[78%] flex-col gap-1.5">
+        <div
+          className="rounded-2xl border border-border bg-surface px-4 py-3 text-base leading-relaxed text-fg"
+          style={{ borderTopLeftRadius: 6 }}
+        >
+          <Markdown>{msg.content}</Markdown>
+        </div>
+        {msg.sources.length > 0 ? <SourceChips sources={msg.sources} /> : null}
+      </div>
+    </div>
+  );
+}
+
+/** Páginas del manual que respaldan la respuesta del bot (deduplicadas por página). */
+function SourceChips({ sources }: Readonly<{ sources: AnswerSource[] }>) {
+  const byPage = new Map<number, string | null>();
+  for (const source of sources) {
+    if (!byPage.has(source.page)) byPage.set(source.page, source.manual_title);
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5" aria-label="Fuentes citadas">
+      {[...byPage].map(([page, title]) => (
+        <span
+          key={page}
+          title={title ?? undefined}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-bg px-2 py-0.5 text-[11px] font-semibold text-fg-3"
+        >
+          <FileText size={11} strokeWidth={2} aria-hidden="true" />
+          Pág. {page}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function HistorySkeleton() {
+  return (
+    <div aria-hidden="true" className="space-y-3 pt-2">
+      <div className="ml-auto h-12 w-3/5 animate-pulse rounded-2xl bg-surface-2" />
+      <div className="h-16 w-4/5 animate-pulse rounded-2xl bg-surface-2" />
     </div>
   );
 }

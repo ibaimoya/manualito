@@ -9,8 +9,10 @@ import {
 } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/app/theme';
-import { AppLayout } from '@/routes/_app';
+import { Route as AppRoute } from '@/routes/_app';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
+
+const AppLayout = (AppRoute as unknown as { options: { component: React.FC } }).options.component;
 
 /** Monta el shell autenticado (`AppLayout`) con rutas hijas controladas. */
 function mountApp(path: string) {

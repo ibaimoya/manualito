@@ -110,7 +110,7 @@ y herramientas usadas durante el build, así que para subir una versión no hay 
 
 | Variable | Controla |
 | --- | --- |
-| `APP_VERSION` | Versión visible de Manualito en la API y el frontend. |
+| `APP_VERSION` | Versión visible de Manualito en la API. |
 | `PYTHON_VERSION` | Versión de Python usada por los servicios backend. |
 | `PYTHON_VARIANT` | Variante de la imagen de Python. Vacía equivale a usar la imagen sin sufijo. |
 | `UV_VERSION` | Versión de `uv` usada solo durante los stages de dependencias. |

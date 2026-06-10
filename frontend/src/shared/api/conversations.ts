@@ -2,11 +2,9 @@ import { TIMEOUT, queryString, request, requestVoid } from './http';
 import type { AnswerSource } from './client';
 
 /**
- * Cliente de conversaciones persistentes (sustituye el Q&A en localStorage):
- * cuelgan de un juego, los mensajes de una conversación.
- *
- * Nota: el backend no devuelve hoy `source_page`, así que no hay chips de cita
- * hasta que se amplíe (ver roadmap).
+ * Cliente de conversaciones persistentes: cuelgan de un juego; los mensajes,
+ * de una conversación. El título lo genera el backend a partir del primer
+ * turno.
  */
 
 export type MessageRole = 'user' | 'assistant';

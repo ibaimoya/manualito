@@ -16,7 +16,7 @@ import { ThemeProvider } from '@/app/theme';
 import { Route as ChatRoute } from '@/routes/_app.chat.$manualId';
 import { storage } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
-import { failAskGame } from '@tests/_helpers/mswHandlers';
+import { failSendMessage } from '@tests/_helpers/mswHandlers';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
@@ -25,6 +25,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 afterAll(() => server.close());
+
+const CONVERSATION = {
+  id: 'conv-001',
+  game_id: 'test-game-001',
+  game_name: 'Catan',
+  title: 'Dudas de preparación',
+  created_at: '2026-05-26T10:00:00.000Z',
+  updated_at: '2026-05-26T10:05:00.000Z',
+};
 
 function seedManual(manualId: string, name = 'Catan') {
   storage.upsertManual({
@@ -45,7 +54,7 @@ function seedManual(manualId: string, name = 'Catan') {
   });
 }
 
-function renderChat(manualId: string, initialQuestion?: string) {
+function renderChat(manualId: string, search?: { q?: string; c?: string }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -55,6 +64,7 @@ function renderChat(manualId: string, initialQuestion?: string) {
     path: '/chat/$manualId',
     validateSearch: (s) => ({
       q: typeof s.q === 'string' ? s.q : undefined,
+      c: typeof s.c === 'string' ? s.c : undefined,
     }),
     component: (ChatRoute as unknown as { options: { component: React.FC } }).options.component,
   });
@@ -64,11 +74,14 @@ function renderChat(manualId: string, initialQuestion?: string) {
     component: () => <div>ResultScreen</div>,
   });
   const tree = root.addChildren([chatR, resultR]);
-  const search = initialQuestion ? `?q=${encodeURIComponent(initialQuestion)}` : '';
+  const params = new URLSearchParams();
+  if (search?.q) params.set('q', search.q);
+  if (search?.c) params.set('c', search.c);
+  const queryStr = params.size > 0 ? `?${params.toString()}` : '';
   const router = createRouter({
     routeTree: tree,
     history: createMemoryHistory({
-      initialEntries: [`/chat/${manualId}${search}`],
+      initialEntries: [`/chat/${manualId}${queryStr}`],
     }),
   });
   return render(
@@ -94,32 +107,23 @@ describe('/chat/$manualId', () => {
     expect((await screen.findAllByText('Manual')).length).toBeGreaterThan(0);
   });
 
-  it('empty state cuando no hay mensajes guardados', async () => {
+  it('empty state cuando se abre un chat nuevo (sin conversación)', async () => {
     seedManual('m1');
     renderChat('m1');
     expect(await screen.findByText(/Empieza con una pregunta sobre el manual/)).toBeInTheDocument();
   });
 
-  it('muestra mensajes previos del historial (lazy initializer sin flash)', async () => {
+  it('?c=… reabre la conversación y muestra su historial del servidor', async () => {
     seedManual('m1');
-    storage.appendQA('m1', {
-      id: 'qa-1',
-      role: 'user',
-      text: '¿Cuántos jugadores?',
-      ts: '2026-05-26T10:00:00.000Z',
-    });
-    storage.appendQA('m1', {
-      id: 'qa-2',
-      role: 'bot',
-      text: 'De 2 a 5 jugadores.',
-      ts: '2026-05-26T10:00:01.000Z',
-    });
-    renderChat('m1');
-    expect(await screen.findByText('¿Cuántos jugadores?')).toBeInTheDocument();
-    expect(screen.getByText('De 2 a 5 jugadores.')).toBeInTheDocument();
+    renderChat('m1', { c: 'conv-001' });
+    // Mensajes de SAMPLE en el handler MSW por defecto.
+    expect(await screen.findByText('¿Cómo se reparten las cartas?')).toBeInTheDocument();
+    expect(
+      screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
+    ).toBeInTheDocument();
   });
 
-  it('al enviar una pregunta: aparece el mensaje user + bot tras la respuesta', async () => {
+  it('al enviar una pregunta: burbuja optimista + respuesta del backend', async () => {
     seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
@@ -130,18 +134,17 @@ describe('/chat/$manualId', () => {
     // Mensaje del usuario aparece inmediato (optimistic UI).
     expect(await screen.findByText('¿Y empate?')).toBeInTheDocument();
 
-    // Bot responde según el handler MSW por defecto.
+    // El backend (MSW) responde el turno completo.
     await waitFor(
       () => {
-        expect(screen.getByText(/Respuesta simulada para: "¿Y empate\?"/)).toBeInTheDocument();
+        expect(
+          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
+        ).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
-
-    // Persistencia: ambos mensajes en localStorage.
-    await waitFor(() => {
-      expect(storage.listQA('m1')).toHaveLength(2);
-    });
+    // La pregunta sigue visible como turno confirmado (no se duplica).
+    expect(screen.getAllByText('¿Y empate?')).toHaveLength(1);
   });
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {
@@ -157,22 +160,22 @@ describe('/chat/$manualId', () => {
 
   it('si la URL trae ?q=foo, dispara la pregunta automáticamente al montar', async () => {
     seedManual('m1');
-    renderChat('m1', '¿Cuántos jugadores hay?');
+    renderChat('m1', { q: '¿Cuántos jugadores hay?' });
     // El mensaje del usuario aparece inmediato.
     expect(await screen.findByText('¿Cuántos jugadores hay?')).toBeInTheDocument();
-    // Y la respuesta del bot llega tras la mutation.
+    // Y la respuesta llega tras crear conversación + enviar turno.
     await waitFor(
       () => {
         expect(
-          screen.getByText(/Respuesta simulada para: "¿Cuántos jugadores hay\?"/),
+          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
         ).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
   });
 
-  it('si el LLM falla con 504, muestra toast de error (no rompe la app)', async () => {
-    server.use(failAskGame(504));
+  it('si el LLM falla con 504: toast de error y la pregunta vuelve al composer', async () => {
+    server.use(failSendMessage(504));
     seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
@@ -180,8 +183,6 @@ describe('/chat/$manualId', () => {
     await user.type(input, 'fail');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
-    // Pregunta del usuario sigue en pantalla.
-    expect(await screen.findByText('fail')).toBeInTheDocument();
     // Toast de error: el mapper traduce 504 → "Tiempo de espera agotado".
     await waitFor(
       () => {
@@ -189,6 +190,8 @@ describe('/chat/$manualId', () => {
       },
       { timeout: 3000 },
     );
+    // El draft se restaura para reintentar sin reescribir.
+    expect(input).toHaveValue('fail');
   });
 
   it('header tiene enlace "Volver al resumen" hacia /result/$manualId', async () => {
@@ -204,12 +207,65 @@ describe('/chat/$manualId', () => {
     expect(await screen.findByText('Listo')).toBeInTheDocument();
   });
 
+  it('muestra las páginas citadas (sources) bajo la respuesta del bot, deduplicadas', async () => {
+    server.use(
+      http.post('/api/conversations/:conversationId/messages', () =>
+        HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u1',
+            role: 'user',
+            content: 'madera',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b1',
+            role: 'assistant',
+            content: 'La madera la dan los bosques.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [
+              { manual_id: 'm1', manual_title: 'Catan', page: 4 },
+              { manual_id: 'm1', manual_title: 'Catan', page: 4 },
+              { manual_id: 'm1', manual_title: 'Catan', page: 7 },
+            ],
+          },
+        }),
+      ),
+    );
+    seedManual('m1');
+    renderChat('m1');
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'madera');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+    expect(await screen.findByText('Pág. 4')).toBeInTheDocument();
+    expect(screen.getByText('Pág. 7')).toBeInTheDocument();
+    // La página 4 viene dos veces pero se muestra un único chip.
+    expect(screen.getAllByText('Pág. 4')).toHaveLength(1);
+  });
+
   it('typing indicator mientras la mutation está en vuelo', async () => {
     // Forzamos un delay alto para ver el indicator.
     server.use(
-      http.post('/api/games/:gameId/questions', async () => {
+      http.post('/api/conversations/:conversationId/messages', async () => {
         await delay(500);
-        return HttpResponse.json({ answer: 'tardío' });
+        return HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u1',
+            role: 'user',
+            content: 'tarda',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b1',
+            role: 'assistant',
+            content: 'tardío',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        });
       }),
     );
     seedManual('m1');

@@ -72,7 +72,7 @@ function ManualListItem({
         <button
           type="button"
           onClick={() => setConfirming((v) => !v)}
-          className="my-2 grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-3 hover:bg-error-bg hover:text-error"
+          className="grid h-11 w-11 shrink-0 self-center place-items-center rounded-xl text-fg-3 hover:bg-error-bg hover:text-error"
           aria-label={`Borrar ${name}`}
         >
           <Trash2 size={18} strokeWidth={2} />

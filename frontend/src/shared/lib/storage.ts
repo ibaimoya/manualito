@@ -9,8 +9,9 @@ import { z } from 'zod';
 
 const KEY = {
   manuals: 'manualito.manuals',
+  // Clave legada del Q&A local (hoy las conversaciones viven en el backend);
+  // se conserva solo para limpiar restos de versiones anteriores.
   qa: (manualId: string) => `manualito.qa.${manualId}`,
-  qaIndex: 'manualito.qa-index',
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
   manualResult: (manualId: string) => `manualito.result.${manualId}`,
@@ -24,7 +25,7 @@ const KEY = {
 
 const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 
-export const ManualRecordSchema = z.object({
+const ManualRecordSchema = z.object({
   manual_id: z.string().min(1),
   name: z.string().min(1).max(120),
   created_at: IsoDateTimeSchema,
@@ -35,24 +36,15 @@ export type ManualRecord = z.infer<typeof ManualRecordSchema>;
 
 const ManualsListSchema = z.array(ManualRecordSchema);
 
-export const QAMessageSchema = z.object({
-  id: z.string().min(1),
-  role: z.enum(['user', 'bot', 'system']),
-  text: z.string(),
-  ts: IsoDateTimeSchema,
-});
-export type QAMessage = z.infer<typeof QAMessageSchema>;
-const QAListSchema = z.array(QAMessageSchema);
-
 /** Shape local para texto OCR cacheado por el frontend. */
-export const OcrLineSchema = z.object({
+const OcrLineSchema = z.object({
   text: z.string(),
   confidence: z.number().min(0).max(1).nullable(),
 });
 export type OcrLine = z.infer<typeof OcrLineSchema>;
 const OcrLinesSchema = z.array(OcrLineSchema);
 
-export const ManualResultSchema = z.object({
+const ManualResultSchema = z.object({
   manual_id: z.string().min(1),
   name: z.string().min(1),
   summary: z.string(),
@@ -65,7 +57,7 @@ export const ManualResultSchema = z.object({
 });
 export type ManualResult = z.infer<typeof ManualResultSchema>;
 
-export const SettingsSchema = z.object({
+const SettingsSchema = z.object({
   mode: z.enum(['light', 'dark', 'auto']).default('light'),
   accent: z.enum(['amber', 'blue']).default('amber'),
   responseDetail: z.enum(['short', 'medium', 'long']).default('medium'),
@@ -214,18 +206,6 @@ export const storage = {
   },
   setOcrLines(manualId: string, lines: OcrLine[]): void {
     safeWrite(KEY.ocrLines(manualId), lines);
-  },
-
-  /* Historial Q&A por manual */
-  listQA(manualId: string): QAMessage[] {
-    return safeRead(KEY.qa(manualId), QAListSchema, [] as QAMessage[]);
-  },
-  appendQA(manualId: string, msg: QAMessage): void {
-    const next = [...storage.listQA(manualId), msg];
-    safeWrite(KEY.qa(manualId), next);
-  },
-  clearQA(manualId: string): void {
-    safeRemove(KEY.qa(manualId));
   },
 
   /* Preferencias */

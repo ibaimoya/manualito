@@ -1,10 +1,9 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ApiError } from '@/shared/api/http';
-import { AuthField, PasswordInput } from './auth-controls';
+import { ariaInvalid, AuthField, PasswordInput } from './auth-controls';
 import { AuthAlert } from './auth-alert';
 import { useLogin } from './use-auth';
 
@@ -22,10 +21,24 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
   const fieldId = useId();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const identifierError =
+    submitted && identifier.trim().length === 0 ? 'Escribe tu email o nombre de usuario' : undefined;
+  const passwordError = submitted && password.length === 0 ? 'Escribe tu contraseña' : undefined;
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!identifier.trim() || !password) return;
+    setSubmitted(true);
+    // Sin foco silencioso: damos feedback y llevamos al primer campo vacío.
+    if (!identifier.trim()) {
+      document.getElementById(`${fieldId}-id`)?.focus();
+      return;
+    }
+    if (!password) {
+      document.getElementById(`${fieldId}-pw`)?.focus();
+      return;
+    }
     login.mutate({ identifier: identifier.trim(), password }, { onSuccess: onAuthenticated });
   };
 
@@ -41,23 +54,26 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
       ) : null}
 
       <div className="mt-5 flex flex-col gap-4">
-        <AuthField label="Email o usuario" htmlFor={`${fieldId}-id`}>
+        <AuthField label="Email o usuario" htmlFor={`${fieldId}-id`} error={identifierError}>
           <Input
             id={`${fieldId}-id`}
             preset="username"
             placeholder="tu@email.com"
             value={identifier}
+            aria-invalid={ariaInvalid(Boolean(identifierError))}
             onChange={(event) => setIdentifier(event.target.value)}
             required
           />
         </AuthField>
 
-        <AuthField label="Contraseña" htmlFor={`${fieldId}-pw`}>
+        <AuthField label="Contraseña" htmlFor={`${fieldId}-pw`} error={passwordError}>
           <PasswordInput
             id={`${fieldId}-pw`}
             autoComplete="current-password"
             placeholder="Tu contraseña"
             value={password}
+            invalid={Boolean(passwordError)}
+            aria-invalid={ariaInvalid(Boolean(passwordError))}
             onChange={(event) => setPassword(event.target.value)}
             required
           />
@@ -69,14 +85,7 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
         </AuthField>
 
         <Button type="submit" size="lg" block loading={login.isPending} className="mt-1">
-          {login.isPending ? (
-            'Entrando…'
-          ) : (
-            <>
-              Entrar
-              <ChevronRight size={18} strokeWidth={2} />
-            </>
-          )}
+          {login.isPending ? 'Entrando…' : 'Entrar'}
         </Button>
       </div>
 

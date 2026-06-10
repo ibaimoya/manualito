@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { Sidebar } from '@/app/Sidebar';
 import { DesktopTopbar } from '@/app/Topbar';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { useAuth } from '@/features/auth/use-auth';
 import { cn } from '@/shared/lib/cn';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
@@ -25,14 +26,18 @@ export const Route = createFileRoute('/_app')({
   component: AppLayout,
 });
 
-export function AppLayout() {
+function AppLayout() {
   const location = useLocation();
   const showNav = showsNav(location.pathname);
   const isDesktop = useNamedMediaQuery('desktop');
   const { user } = useAuth();
+  const { collapsed, toggle } = useSidebarCollapsed();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg text-fg">
+    // h-dvh exacto (no min-h): con body{overflow:hidden}, si este wrapper
+    // creciera con el contenido nada podría hacer scroll; con altura fija es
+    // #main-content quien desborda y scrollea.
+    <div className="flex h-dvh flex-col bg-bg text-fg">
       {/* Skip-link (WCAG 2.4.1): oculto hasta recibir foco con Tab. */}
       <a
         href="#main-content"
@@ -43,11 +48,20 @@ export function AppLayout() {
 
       {/* La sidebar (fixed, hidden en móvil) se monta en todas las pantallas
           autenticadas: da shell de escritorio también a result/chat/capture. */}
-      <Sidebar pathname={location.pathname} user={user ?? undefined} />
+      <Sidebar
+        pathname={location.pathname}
+        user={user ?? undefined}
+        collapsed={collapsed}
+        onToggle={toggle}
+      />
 
       <main
         id="main-content"
-        className={cn('flex-1 overflow-y-auto md:pl-60', showNav ? 'pb-[72px] md:pb-0' : 'pb-0')}
+        className={cn(
+          'flex-1 overflow-y-auto transition-[padding] duration-200 ease-[var(--ease-mn)]',
+          collapsed ? 'md:pl-[72px]' : 'md:pl-60',
+          showNav ? 'pb-[72px] md:pb-0' : 'pb-0',
+        )}
       >
         {showNav ? <DesktopTopbar pathname={location.pathname} /> : null}
         {showNav ? <VerifyEmailBanner /> : null}

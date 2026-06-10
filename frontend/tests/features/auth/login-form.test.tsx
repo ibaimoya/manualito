@@ -74,12 +74,38 @@ describe('LoginForm', () => {
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
-  it('no envía si faltan campos', async () => {
+  it('al enviar vacío avisa de ambos campos (sin clic muerto) y no envía', async () => {
     const user = userEvent.setup();
     const { onAuthenticated } = mountLogin();
 
     await user.click(await screen.findByRole('button', { name: 'Entrar' }));
 
+    expect(await screen.findByText('Escribe tu email o nombre de usuario')).toBeInTheDocument();
+    expect(screen.getByText('Escribe tu contraseña')).toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('con identificador pero sin contraseña, avisa solo de la contraseña', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountLogin();
+
+    await user.type(await screen.findByLabelText('Email o usuario'), 'marta');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Escribe tu contraseña')).toBeInTheDocument();
+    expect(screen.queryByText('Escribe tu email o nombre de usuario')).not.toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('un identificador solo de espacios no cuenta como válido', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountLogin();
+
+    await user.type(await screen.findByLabelText('Email o usuario'), '   ');
+    await user.type(screen.getByLabelText('Contraseña'), 'claveSegura');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Escribe tu email o nombre de usuario')).toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 });

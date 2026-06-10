@@ -10,7 +10,9 @@ function RegisterScreen() {
   const router = useRouter();
   return (
     <AuthShell>
-      <RegisterForm onAuthenticated={() => void router.navigate({ to: '/home' })} />
+      <RegisterForm
+        onAuthenticated={() => router.navigate({ to: '/home' }).catch(() => undefined)}
+      />
     </AuthShell>
   );
 }

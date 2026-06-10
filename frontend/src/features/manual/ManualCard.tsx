@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { type ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { gameColor } from '@/shared/lib/gameColor';
 
 type Props = Readonly<{
   manual: ManualSummary;
@@ -11,25 +12,6 @@ type Props = Readonly<{
   meta?: string;
   className?: string;
 }>;
-
-// Paleta cálida para la ficha del juego. El color es estable por nombre, así
-// la biblioteca se ve variada (como el diseño) sin depender de metadatos.
-const GAME_COLORS = [
-  'var(--m-primary-500)',
-  'var(--m-accent-500)',
-  'var(--m-primary-700)',
-  'var(--m-warning)',
-  'var(--m-success)',
-  'var(--m-error)',
-];
-
-function gameColor(name: string): string {
-  let hash = 0;
-  for (const char of name) {
-    hash = (hash * 31 + (char.codePointAt(0) ?? 0)) >>> 0;
-  }
-  return GAME_COLORS[hash % GAME_COLORS.length]!;
-}
 
 /**
  * Card de manual reutilizable. Si está indexando, lleva a su pantalla de

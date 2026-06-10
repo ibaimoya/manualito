@@ -29,13 +29,13 @@ const QUESTIONS: ReadonlyArray<{ id: Exclude<StepId, 'processing'>; label: strin
   },
   {
     id: 'turn',
-    label: 'Cómo es un turno',
+    label: '¿Cómo van los turnos?',
     question:
       'Explica cómo es un turno de un jugador: en qué fases se divide y qué acciones puede o debe hacer.',
   },
   {
     id: 'win',
-    label: 'Cómo se gana',
+    label: '¿Cómo se gana?',
     question:
       'Explica cómo se gana la partida y cualquier condición de empate o final alternativo.',
   },
@@ -194,7 +194,7 @@ export function useManualBootstrap(manualId: string, manualName: string): Bootst
       }
     }
 
-    void run();
+    run().catch(() => undefined);
 
     return () => {
       mountedRef.current = false;

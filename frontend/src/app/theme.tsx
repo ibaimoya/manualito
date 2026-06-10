@@ -85,14 +85,10 @@ function applyToHtml(state: Persisted): void {
 }
 
 /**
- * Wrapper sobre `document.startViewTransition` para que el cambio de tema
- * (que toca decenas de variables CSS) se anime como crossfade nativo en
- * lugar de saltar bruscamente.  Si el browser no lo soporta o el usuario
- * pidió reduced-motion, aplicamos inmediato.
- *
- * El crossfade del browser ABSORBE el spam-click: si llega una segunda
- * llamada mientras la primera está en curso, la anterior se cancela
- * limpiamente y empieza la nueva.  Sin flicker visual.
+ * Aplica el tema dentro de `document.startViewTransition`: el cambio masivo
+ * de variables CSS se anima como crossfade nativo y las llamadas solapadas
+ * se cancelan limpiamente (spam-click sin flicker). Sin soporte o con
+ * reduced-motion, aplica en seco.
  */
 function applyWithViewTransition(state: Persisted): void {
   const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();

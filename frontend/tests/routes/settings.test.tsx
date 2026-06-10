@@ -180,10 +180,10 @@ describe('/settings', () => {
     });
   });
 
-  it('muestra la versión + footer técnico', async () => {
+  it('el footer enlaza a la política de privacidad', async () => {
     renderSettings();
-    const para = await screen.findByText(/v 0\.1\.0/);
-    expect(para.textContent).toMatch(/phi4/);
-    expect(para.textContent).toMatch(/ChromaDB/);
+    expect(
+      await screen.findByRole('link', { name: /Política de privacidad/i }),
+    ).toBeInTheDocument();
   });
 });

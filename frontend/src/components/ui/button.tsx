@@ -8,17 +8,8 @@ import { cn } from '@/shared/lib/cn';
  * Button con variantes — patrón shadcn/ui adaptado a tokens Manualito.
  * Toda variante respeta touch target ≥ 44 px en sizes md/lg.
  *
- * Incluye soporte first-class de loading:
- *  - `loading` prop reemplaza el icono por un spinner manteniendo el
- *    texto → ancho estable, sin tembleque al pasar a estado pending.
- *  - `aria-busy={loading}` automático para screen readers.
- *  - `disabled` automático cuando loading.
- *  - `disabled:cursor-not-allowed` global → feedback visual claro.
- *
- * Ver:
- *  - https://ui.shadcn.com/docs/components/base/button
- *  - https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-busy
- *  - https://www.bekk.christmas/post/2023/24/accessible-loading-button
+ * Con `loading`: spinner en lugar del icono manteniendo el texto (ancho
+ * estable), más `aria-busy` y `disabled` automáticos.
  */
 const buttonVariants = cva(
   [
@@ -62,17 +53,8 @@ export interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   /**
-   * Mostrar spinner inline.  Mientras `loading=true`:
-   *  - El primer icono visible (si lo hay) se reemplaza por `<Loader2>` girando.
-   *  - El botón queda `disabled` y `aria-busy`.
-   *  - El TEXTO se mantiene → el ancho no salta (bug "botón tembleque").
-   *
-   * Si quieres cambiar el texto en loading, hazlo manualmente:
-   *   <Button loading={isPending}>
-   *     {isPending ? 'Subiendo…' : 'Procesar'}
-   *   </Button>
-   * (Con eso aceptas que el ancho cambia — útil para botones grandes
-   * donde el cambio aporta info, ej. CTA principal de un formulario.)
+   * Spinner inline: reemplaza el primer icono y conserva el texto para que
+   * el ancho no salte. Para cambiar también el texto, hazlo en `children`.
    */
   loading?: boolean;
 }
@@ -93,13 +75,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 ) {
   const Comp = asChild ? Slot : 'button';
 
-  // Cuando loading: insertamos el spinner como primer hijo y, si había un
-  // icono inicial, lo ocultamos visualmente.  El texto se preserva.
-  //
-  // ⚠ asChild + loading: Slot de Radix requiere UN SOLO React.Children,
-  //   por lo que NO podemos meter un Fragment con [spinner, texto] dentro.
-  //   En ese caso degradamos a "solo aria-busy" — el child es quien
-  //   muestra su propio indicador visual.  Documentado en JSDoc del prop.
+  // asChild + loading: Slot de Radix exige un único child, así que no se
+  // puede inyectar [spinner, texto] — se degrada a solo aria-busy.
   const showSpinner = loading && !asChild;
   const spinner = showSpinner ? (
     <Loader2
@@ -109,8 +86,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       aria-hidden="true"
     />
   ) : null;
-  // Icon-only: solo el spinner. Con texto: spinner + texto (sin el primer
-  // icono, que el spinner reemplaza). Sin loading: los children tal cual.
   let finalChildren: ReactNode = children;
   if (showSpinner) {
     finalChildren =
@@ -138,24 +113,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   );
 });
 
-/**
- * Auxiliar: oculta el primer hijo si es un elemento (icono) — el
- * spinner del loading ocupa su sitio.  Si el primer hijo es texto, no
- * lo toca.  Implementado con clonación rápida sin map para evitar
- * remontar elementos hijos.
- */
+/** Oculta el primer hijo si es un elemento (icono): el spinner ocupa su sitio. */
 function StripFirstIcon({ children }: Readonly<{ children: ReactNode }>) {
-  // En el 99% de los casos `children` es un array de [icono, texto].
-  // Si no es array, devolvemos tal cual.
   if (!Array.isArray(children)) {
-    // Si es un único elemento (sin icono separado), lo dejamos tal cual.
     return <>{children}</>;
   }
-  // Si el primer hijo parece un icono (objeto React element), lo
-  // saltamos.  Resto se mantiene.
   const [first, ...rest] = children;
   const firstIsIcon = typeof first === 'object' && first !== null && 'type' in (first as object);
   return <>{firstIsIcon ? rest : children}</>;
 }
-
-export { buttonVariants };

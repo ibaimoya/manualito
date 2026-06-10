@@ -25,6 +25,7 @@ import { ScreenTopBar } from '@/app/Topbar';
 import { useEffect, useMemo, useState } from 'react';
 import { OcrTextSheet } from '@/features/ocr/OcrTextSheet';
 import { Markdown } from '@/shared/components/Markdown';
+import { ConversationsSection } from '@/features/conversations/ConversationsSection';
 import { manualDetailQueryOptions, manualsQueryOptions } from '@/features/manual/use-manuals';
 import type { ManualSummary } from '@/shared/api/client';
 import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
@@ -33,7 +34,12 @@ export const Route = createFileRoute('/_app/result/$manualId')({
   component: ResultScreen,
 });
 
-const SUGGESTED_QUESTIONS = ['¿Cómo se gana?', '¿Cómo es un turno?', '¿Y si empatamos?', 'Reglas opcionales'];
+const SUGGESTED_QUESTIONS = [
+  '¿Cuántos jugadores?',
+  '¿Cuánto dura una partida?',
+  '¿Y si empatamos?',
+  'Reglas opcionales',
+];
 
 function ResultScreen() {
   const { manualId } = Route.useParams();
@@ -66,12 +72,12 @@ function ResultScreen() {
     const list = qc.getQueryData<ManualSummary[]>(manualsQueryOptions().queryKey);
     const found = list?.find((m) => m.id === manualId);
     const name = found?.title ?? found?.game_name;
-    void navigate({
+    navigate({
       to: '/processing/$manualId',
       params: { manualId },
       search: name ? { name } : {},
       replace: true,
-    });
+    }).catch(() => undefined);
   }, [result, manualId, navigate, qc]);
 
   if (!result) {
@@ -141,6 +147,9 @@ function ResultScreen() {
       <div className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-4 px-4 pb-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6 lg:px-6 lg:pb-6">
         <div className="min-w-0 space-y-3">
           <ResultReading result={result} />
+          {manualDetail ? (
+            <ConversationsSection manualId={manualId} gameId={manualDetail.game_id} />
+          ) : null}
         </div>
         <aside
           className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-bg/95 p-3 backdrop-blur lg:mx-0 lg:bottom-auto lg:top-6 lg:self-start lg:rounded-2xl lg:border lg:bg-surface lg:p-4 lg:backdrop-blur-0"
@@ -186,7 +195,7 @@ function ResultReading({ result }: Readonly<{ result: ManualResult }>) {
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent-100 text-accent">
                 <RefreshCw size={16} strokeWidth={2} />
               </span>
-              <span>Cómo es un turno</span>
+              <span>¿Cómo van los turnos?</span>
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -200,7 +209,7 @@ function ResultReading({ result }: Readonly<{ result: ManualResult }>) {
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-warning-bg text-warning">
                 <Sparkles size={16} strokeWidth={2} />
               </span>
-              <span>Cómo se gana</span>
+              <span>¿Cómo se gana?</span>
             </div>
           </AccordionTrigger>
           <AccordionContent>
@@ -259,7 +268,8 @@ function AskPanel({
           disabled={value.trim().length === 0}
           aria-label="Enviar pregunta"
         >
-          <Send size={17} strokeWidth={2} />
+          {/* Centrado óptico: la masa del avión cae arriba-derecha (centroide medido). */}
+          <Send size={17} strokeWidth={2} style={{ transform: 'translate(-1.3px, 1.3px)' }} />
         </Button>
       </form>
       <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-fg-3 lg:justify-start">

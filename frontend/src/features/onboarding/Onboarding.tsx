@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Check,
@@ -11,6 +11,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { Monogram } from '@/shared/components/Brand';
+import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
 import { storage } from '@/shared/lib/storage';
 import { cn } from '@/shared/lib/cn';
 import styles from './onboarding.module.css';
@@ -91,14 +92,21 @@ const PIPELINE_TOKENS = [
 
 export function Onboarding() {
   const [index, setIndex] = useState(0);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const navigate = useNavigate();
   const N = SLIDES.length;
   const PANELS = N + 1; // las diapositivas + la pantalla de elección final
-  const heroPlaying = index === 0;
   const isChoice = index === N;
 
+  // Las animaciones de entrada se anclan a "visitado", no al índice actual:
+  // si dependieran de `index`, la diapositiva saliente se desmontaría
+  // visualmente mientras aún es visible durante los 900ms del deslizamiento.
+  const [visited, setVisited] = useState<ReadonlySet<number>>(() => new Set([0]));
+
   function go(next: number): void {
-    setIndex(Math.max(0, Math.min(PANELS - 1, next)));
+    const clamped = Math.max(0, Math.min(PANELS - 1, next));
+    setIndex(clamped);
+    setVisited((prev) => (prev.has(clamped) ? prev : new Set(prev).add(clamped)));
   }
 
   // Guard anti-spam: evita que pulsaciones dobles lancen dos navegaciones
@@ -127,9 +135,13 @@ export function Onboarding() {
     enterTo('/login');
   }
 
-  // Navegación con teclado.
+  // Navegación con teclado. Con el modal de privacidad abierto se cede el
+  // teclado al diálogo (su Escape cierra el modal, no el onboarding). El
+  // listener va en fase de captura: corre ANTES de que Radix cierre el modal,
+  // así el guard ve el estado previo a la pulsación y no hay carrera.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (privacyOpen) return;
       if (e.key === 'ArrowRight') go(index + 1);
       else if (e.key === 'ArrowLeft') go(index - 1);
       else if (e.key === 'Enter') {
@@ -137,10 +149,10 @@ export function Onboarding() {
         else next();
       } else if (e.key === 'Escape') skip();
     };
-    globalThis.window.addEventListener('keydown', onKey);
-    return () => globalThis.window.removeEventListener('keydown', onKey);
+    globalThis.window.addEventListener('keydown', onKey, true);
+    return () => globalThis.window.removeEventListener('keydown', onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index]);
+  }, [index, privacyOpen]);
 
   return (
     <div className={styles.root}>
@@ -167,34 +179,30 @@ export function Onboarding() {
         {/* — Slide 0: Hero — */}
         <section className={styles.slide} aria-label="Manualito · presentación">
           <div className={styles.hero}>
-            <span className={cn(styles.eyebrowTop, heroPlaying && styles.isIn)}>
-              UNA APP DE MESA
-            </span>
-            <HeroWordmark playing={heroPlaying} />
-            <p className={cn(styles.tagline, heroPlaying && styles.isIn)}>
+            <span className={cn(styles.eyebrowTop, styles.isIn)}>UNA APP DE MESA</span>
+            <HeroWordmark playing />
+            <p className={cn(styles.tagline, styles.isIn)}>
               Explica cualquier manual de juego de mesa en segundos.
             </p>
             <button
               type="button"
-              className={cn(styles.pill, heroPlaying && styles.isIn)}
+              className={cn(styles.pill, styles.isIn)}
               onClick={next}
-              style={{ '--vt': index === 0 ? 'cta-pill' : 'none' } as CSSProperties}
+              style={{ '--vt': index === 0 ? 'cta-pill' : 'none' }}
             >
               <span>Empezar</span>
               <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                 →
               </span>
             </button>
-            <span className={cn(styles.scrollhint, heroPlaying && styles.isIn)}>
-              Desliza · 3 pasos · 20 s
-            </span>
+            <span className={cn(styles.scrollhint, styles.isIn)}>Desliza · 3 pasos · 20 s</span>
           </div>
         </section>
 
         {/* — Slides 1..3 — */}
         {SLIDES.slice(1).map((s, idx) => {
           const slideIdx = idx + 1;
-          const active = index === slideIdx;
+          const shown = visited.has(slideIdx);
           const isLast = slideIdx === N - 1;
           return (
             <section key={s.id} className={styles.slide} aria-label={`Paso ${s.n}: ${s.title}`}>
@@ -205,11 +213,11 @@ export function Onboarding() {
                     <span>/</span>
                     <span style={{ opacity: 0.5 }}>03</span>
                   </span>
-                  <h2 className={cn(styles.stepTitle, active && styles.isIn)}>{s.title}</h2>
-                  <p className={cn(styles.stepSub, active && styles.isIn)}>{s.sub}</p>
+                  <h2 className={cn(styles.stepTitle, shown && styles.isIn)}>{s.title}</h2>
+                  <p className={cn(styles.stepSub, shown && styles.isIn)}>{s.sub}</p>
                   <button
                     type="button"
-                    className={cn(styles.pill, active && styles.isIn)}
+                    className={cn(styles.pill, shown && styles.isIn)}
                     onClick={next}
                   >
                     <span>{isLast ? 'Continuar' : 'Siguiente'}</span>
@@ -219,7 +227,7 @@ export function Onboarding() {
                   </button>
                 </div>
                 <div className={styles.stepArt}>
-                  <StepArt id={s.id} active={active} />
+                  <StepArt id={s.id} shown={shown} />
                 </div>
               </div>
             </section>
@@ -228,12 +236,15 @@ export function Onboarding() {
         {/* — Última diapositiva: elección crear/entrar — */}
         <section className={styles.slide} aria-label="Crear cuenta o entrar">
           <AuthChoice
-            active={isChoice}
+            shown={visited.has(N)}
             onRegister={() => enterTo('/register')}
             onLogin={() => enterTo('/login')}
+            onShowPrivacy={() => setPrivacyOpen(true)}
           />
         </section>
       </div>
+
+      <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
       <div className={styles.pager} role="tablist" aria-label="Pasos del onboarding">
         {SLIDES.map((slide, k) => {
@@ -257,14 +268,20 @@ export function Onboarding() {
   );
 }
 
-/** Paso final: elegir entre crear cuenta o entrar (pantalla "Todo listo" del diseño). */
+/** Paso final: elegir entre crear cuenta o entrar. */
 function AuthChoice({
-  active,
+  shown,
   onRegister,
   onLogin,
-}: Readonly<{ active: boolean; onRegister: () => void; onLogin: () => void }>) {
+  onShowPrivacy,
+}: Readonly<{
+  shown: boolean;
+  onRegister: () => void;
+  onLogin: () => void;
+  onShowPrivacy: () => void;
+}>) {
   return (
-    <div className={cn(styles.choice, active && styles.isIn)}>
+    <div className={cn(styles.choice, shown && styles.isIn)}>
       <span style={{ filter: 'drop-shadow(0 20px 36px rgba(0, 0, 0, 0.45))' }}>
         <Monogram size={116} radius={28} />
       </span>
@@ -285,9 +302,9 @@ function AuthChoice({
         </button>
         <p className={styles.choiceNote}>
           Al crear una cuenta aceptas la{' '}
-          <span style={{ color: 'var(--m-primary-300)', fontWeight: 600 }}>
+          <button type="button" className={styles.noteLink} onClick={onShowPrivacy}>
             Política de privacidad
-          </span>
+          </button>
           {'.'}
         </p>
       </div>
@@ -295,9 +312,9 @@ function AuthChoice({
   );
 }
 
-function StepArt({ id, active }: Readonly<{ id: Slide['id']; active: boolean }>) {
-  if (id === 'foto') return <StepFoto active={active} />;
-  if (id === 'procesa') return <StepProcesa active={active} />;
+function StepArt({ id, shown }: Readonly<{ id: Slide['id']; shown: boolean }>) {
+  if (id === 'foto') return <StepFoto shown={shown} />;
+  if (id === 'procesa') return <StepProcesa shown={shown} />;
   return <StepEntiende />;
 }
 
@@ -308,7 +325,7 @@ function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
         <span key={id} className={styles.letterMask}>
           <span
             className={cn(styles.letter, playing && styles.letterIn)}
-            style={{ '--i': order } as CSSProperties}
+            style={{ '--i': order }}
           >
             {character}
           </span>
@@ -319,7 +336,7 @@ function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
 }
 
 /* — Slide 1: Foto — viewfinder con página detectada — */
-function StepFoto({ active }: Readonly<{ active: boolean }>) {
+function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
   return (
     <div className={styles.phone} aria-hidden="true">
       <div
@@ -394,12 +411,12 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
       </div>
 
       <div className={styles.thumbs}>
-        {active &&
+        {shown &&
           THUMBNAILS.map(({ id, number }) => (
             <div
               key={id}
               className={styles.thumb}
-              style={{ '--d': `${number * 200}ms` } as CSSProperties}
+              style={{ '--d': `${number * 200}ms` }}
             >
               <span className={styles.thumbNum}>{number}</span>
             </div>
@@ -410,7 +427,7 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
 }
 
 /* — Slide 2: Procesa — pipeline OCR→RAG→LLM — */
-function StepProcesa({ active }: Readonly<{ active: boolean }>) {
+function StepProcesa({ shown }: Readonly<{ shown: boolean }>) {
   const nodes: Array<{ label: string; hint: string; icon: ReactNode }> = [
     {
       label: 'OCR',
@@ -435,11 +452,7 @@ function StepProcesa({ active }: Readonly<{ active: boolean }>) {
           <span key={n.label} style={{ display: 'contents' }}>
             <div
               className={styles.node}
-              style={
-                active
-                  ? ({ '--d': `${i * 280}ms` } as CSSProperties)
-                  : { animation: 'none', opacity: 0 }
-              }
+              style={shown ? { '--d': `${i * 280}ms` } : { animation: 'none', opacity: 0 }}
             >
               <div className={styles.nodeRing}>
                 <div className={styles.nodeCore}>{n.icon}</div>
@@ -454,9 +467,7 @@ function StepProcesa({ active }: Readonly<{ active: boolean }>) {
               <div
                 className={styles.link}
                 style={
-                  active
-                    ? ({ '--d': `${i * 280 + 140}ms` } as CSSProperties)
-                    : { animation: 'none', opacity: 0 }
+                  shown ? { '--d': `${i * 280 + 140}ms` } : { animation: 'none', opacity: 0 }
                 }
               >
                 <span className={styles.linkPulse} />
@@ -466,12 +477,12 @@ function StepProcesa({ active }: Readonly<{ active: boolean }>) {
         ))}
       </div>
       <div className={styles.tokens} aria-hidden="true">
-        {active &&
+        {shown &&
           PIPELINE_TOKENS.map(({ id, label }, i) => (
             <span
               key={id}
               className={styles.token}
-              style={{ '--d': `${600 + i * 90}ms` } as CSSProperties}
+              style={{ '--d': `${600 + i * 90}ms` }}
             >
               {label}
             </span>
@@ -521,7 +532,7 @@ function StepEntiende() {
             <RefreshCw size={18} />
           </span>
           <div className={styles.accTitles}>
-            <strong>Cómo es un turno</strong>
+            <strong>¿Cómo van los turnos?</strong>
             <em>3 fases</em>
           </div>
           <span className={styles.accChev}>
@@ -536,7 +547,7 @@ function StepEntiende() {
             <Crown size={18} />
           </span>
           <div className={styles.accTitles}>
-            <strong>Cómo se gana</strong>
+            <strong>¿Cómo se gana?</strong>
             <em>10 PV</em>
           </div>
           <span className={styles.accChev}>

@@ -2,7 +2,7 @@ import { type CSSProperties } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 /** Iniciales a partir de un nombre o email (1–2 letras). */
-export function avatarInitials(name: string): string {
+function avatarInitials(name: string): string {
   const base = name.includes('@') ? name.slice(0, name.indexOf('@')) : name;
   const parts = base.trim().split(/[\s._-]+/).filter(Boolean);
   const first = parts[0]?.charAt(0) ?? '';

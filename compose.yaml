@@ -293,7 +293,6 @@ services:
     build:
       context: ./frontend
       args:
-        APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
         NODE_VARIANT: ${NODE_VARIANT:-}
         NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}

@@ -97,4 +97,17 @@ describe('Onboarding', () => {
     await user.click(await screen.findByRole('button', { name: /Ya tengo cuenta/i }));
     expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
   });
+
+  it('la política de privacidad se abre como modal, sin salir del onboarding', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+    await user.click(await screen.findByRole('tab', { name: /Ir a diapositiva 4/i }));
+    await user.click(await screen.findByRole('button', { name: /Continuar/i }));
+    await user.click(await screen.findByRole('button', { name: /Política de privacidad/i }));
+    const dialog = await screen.findByRole('dialog', { name: /Política de privacidad/i });
+    expect(dialog).toBeInTheDocument();
+    // Seguimos en el onboarding (no se navegó a /login ni /register).
+    expect(screen.queryByTestId('login-screen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('register-screen')).not.toBeInTheDocument();
+  });
 });

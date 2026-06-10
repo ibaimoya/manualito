@@ -44,6 +44,7 @@ const SAMPLE_USER_MESSAGE = {
   role: 'user',
   content: '¿Cómo se reparten las cartas?',
   created_at: '2026-05-26T10:04:00.000Z',
+  sources: [],
 };
 
 const SAMPLE_ASSISTANT_MESSAGE = {
@@ -51,6 +52,7 @@ const SAMPLE_ASSISTANT_MESSAGE = {
   role: 'assistant',
   content: 'Cada jugador recibe dos asentamientos y dos carreteras.',
   created_at: '2026-05-26T10:04:05.000Z',
+  sources: [],
 };
 
 /* ============================================================
@@ -116,8 +118,20 @@ export const handlers = [
     await delay(30);
     return HttpResponse.json({
       answer: `Respuesta simulada para: "${body.question ?? '...'}".`,
+      sources: [],
     });
   }),
+
+  http.get('/api/recommendations', () =>
+    HttpResponse.json({
+      recommendations: [
+        { id: 'rec-1', name: 'Carcassonne', bgg_id: 822, year_published: 2000, reason: 'Porque tienes Catan' },
+        { id: 'rec-2', name: 'Ticket to Ride', bgg_id: 9209, year_published: 2004, reason: 'Familiar y de rutas' },
+        { id: 'rec-3', name: 'Azul', bgg_id: 230802, year_published: 2017, reason: 'Estrategia ligera muy valorada' },
+      ],
+      attribution: 'Game data provided by BoardGameGeek.',
+    }),
+  ),
 
   /* -------- Manuales -------- */
   http.post('/api/manuals', async () => {
@@ -176,9 +190,13 @@ export const handlers = [
       conversation: SAMPLE_CONVERSATION,
       user_message: {
         ...SAMPLE_USER_MESSAGE,
+        id: `msg-user-${crypto.randomUUID()}`,
         content: body.content ?? SAMPLE_USER_MESSAGE.content,
       },
-      assistant_message: SAMPLE_ASSISTANT_MESSAGE,
+      assistant_message: {
+        ...SAMPLE_ASSISTANT_MESSAGE,
+        id: `msg-bot-${crypto.randomUUID()}`,
+      },
     });
   }),
   http.delete('/api/conversations/:conversationId', () => new HttpResponse(null, { status: 204 })),
@@ -188,12 +206,8 @@ export const handlers = [
    Overrides para tests de error / estados concretos
    ============================================================ */
 
-export function failManualCreate(status = 500) {
-  return http.post('/api/manuals', () => HttpResponse.json({ detail: 'forced error' }, { status }));
-}
-
-export function failAskGame(status = 504) {
-  return http.post('/api/games/:gameId/questions', () =>
+export function failSendMessage(status = 504) {
+  return http.post('/api/conversations/:conversationId/messages', () =>
     HttpResponse.json({ detail: 'forced error' }, { status }),
   );
 }
@@ -211,8 +225,43 @@ export function failLogin(status = 401) {
   );
 }
 
+/**
+ * Registro fallido con la forma REAL del backend. El 409
+ * (`DuplicateIdentityError`) no revela si el duplicado es el email o el
+ * usuario: devuelve el código neutro `identity_unavailable`.
+ */
 export function failRegister(status = 409) {
+  const body =
+    status === 409
+      ? {
+          detail: 'Email o username no disponible.',
+          errors: [
+            {
+              field: null,
+              code: 'identity_unavailable',
+              message: 'Email o username no disponible.',
+            },
+          ],
+        }
+      : { detail: 'forced error' };
+  return http.post('/api/auth/register', () => HttpResponse.json(body, { status }));
+}
+
+/** Registro con 422 de validación de campo del backend (p. ej. regla de username). */
+export function failRegisterValidation() {
   return http.post('/api/auth/register', () =>
-    HttpResponse.json({ detail: 'Ese email ya está registrado.' }, { status }),
+    HttpResponse.json(
+      {
+        detail: 'Datos inválidos.',
+        errors: [
+          {
+            field: 'username',
+            code: 'username_invalid',
+            message: 'El nombre de usuario solo puede contener letras, números, puntos y guiones.',
+          },
+        ],
+      },
+      { status: 422 },
+    ),
   );
 }

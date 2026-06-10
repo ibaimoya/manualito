@@ -54,9 +54,9 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
     severity: 'warning',
   },
   409: {
-    title: 'Ese email ya está registrado',
-    message: 'Ya existe una cuenta con ese email.',
-    hint: 'Inicia sesión o recupera tu contraseña.',
+    title: 'Dato no disponible',
+    message: 'Ese dato ya está en uso o no está disponible.',
+    hint: 'Revisa los datos e inténtalo de nuevo.',
     retryable: false,
     severity: 'warning',
   },
@@ -235,13 +235,6 @@ const UNKNOWN_ERROR_VIEW: ApiErrorView = {
   code: 'unknown',
 };
 
-/**
- * Punto de entrada genérico — soporta:
- *  - Response objects (fetch),
- *  - errores con `status` numérico (axios-like),
- *  - TypeError de red,
- *  - cualquier otra cosa.
- */
 /** Status de un error tipo axios (`error.response.status`); null si no aplica. */
 function responseStatus(error: object): number | null {
   if (!('response' in error)) return null;

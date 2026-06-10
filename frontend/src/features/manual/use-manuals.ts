@@ -2,7 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { api, type ManualSummary } from '@/shared/api/client';
 
 /** Raíz de las claves de cache de manuales (lista + detalle). */
-export const MANUALS_KEY = ['manuals'] as const;
+const MANUALS_KEY = ['manuals'] as const;
 const LIST_KEY = [...MANUALS_KEY, 'list'] as const;
 
 /** Lista de manuales del usuario (`GET /api/manuals`). */

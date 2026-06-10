@@ -166,23 +166,28 @@
   transform: scale(0.96);
 }
 
-/* — Pager dots (a11y: radio-group) — */
+/* — Pager (a11y: tablist) — cápsula vidriada; el punto activo se estira en píldora. */
 .pager {
   position: fixed;
-  bottom: 28px;
+  bottom: calc(env(safe-area-inset-bottom) + 28px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  gap: 4px;
   z-index: 10;
   padding: 8px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  background: rgba(15, 9, 4, 0.5);
+  border: 1px solid rgba(255, 248, 240, 0.14);
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
 }
 
 .dotHit {
+  width: 44px;
+  height: 44px;
   border: 0;
+  border-radius: 9999px;
   background: transparent;
-  padding: 8px;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -192,16 +197,14 @@
   display: block;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: rgba(255, 248, 240, 0.3);
-  transition:
-    background 220ms ease,
-    transform 220ms ease;
+  transition: all 280ms ease;
 }
 
 .dot.isOn {
   background: #fff8f0;
-  transform: scale(1.2);
+  width: 22px;
 }
 
 /* — Hero — */
@@ -504,53 +507,70 @@
   }
 }
 
-/* Pipeline (step 2) */
+/* Pipeline (step 2): nodos flotantes conectados por hilos.
+   Los hilos se alinean al centro de los anillos (no del bloque con
+   etiqueta) y el barrido va en relevo: ciclo de 3.6s en tres tramos —
+   brilla OCR, cruza el hilo 1, brilla RAG, cruza el hilo 2, brilla LLM. */
 .pipeline {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px;
-  background: #3d2b1f;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 248, 240, 0.12);
-  backdrop-filter: blur(10px);
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .node {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  width: 112px;
+  /* El icono del anillo hereda este color; el fondo real bajo él es el
+     mesh oscuro, no el tinte translúcido del propio anillo. */
+  color: #fff8f0;
   opacity: 0;
-  transform: translateY(8px);
-  animation: nodeIn 500ms ease forwards;
+  transform: translateY(20px);
+  animation: nodeIn 600ms ease forwards;
   animation-delay: var(--d, 0ms);
 }
 
 .nodeRing {
-  width: 70px;
-  height: 70px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
-  background: rgba(255, 248, 240, 0.08);
-  border: 1px solid rgba(255, 248, 240, 0.2);
+  background: radial-gradient(
+    80% 80% at 50% 30%,
+    rgba(255, 248, 240, 0.16),
+    rgba(255, 248, 240, 0.04)
+  );
+  border: 1px solid rgba(255, 248, 240, 0.16);
+  backdrop-filter: blur(12px);
   display: grid;
   place-items: center;
-  color: var(--m-primary-300);
+  animation: nodeGlow 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--g, 0ms) + 1.2s);
+}
+
+@keyframes nodeGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(224, 122, 31, 0.35);
+  }
+  20%,
+  100% {
+    box-shadow: 0 0 0 12px rgba(224, 122, 31, 0);
+  }
 }
 
 .nodeCore {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: rgba(224, 122, 31, 0.18);
+  background: linear-gradient(180deg, rgba(224, 122, 31, 0.35), rgba(168, 67, 31, 0.35));
+  border: 1px solid rgba(255, 248, 240, 0.22);
   display: grid;
   place-items: center;
 }
 
 .nodeLabel {
   font-family: var(--m-font-body), sans-serif;
-  font-size: 11px;
-  color: rgba(255, 248, 240, 0.85);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -558,16 +578,23 @@
   text-align: center;
 }
 
+.nodeLabel .mono {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 248, 240, 0.5);
+}
+
 .nodeLabel strong {
+  font-family: var(--m-font-display), sans-serif;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 18px;
   color: #fff8f0;
 }
 
 .nodeLabel em {
   font-style: normal;
-  font-size: 10px;
-  color: rgba(255, 248, 240, 0.72);
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.65);
 }
 
 .mono {
@@ -578,21 +605,29 @@
 }
 
 .link {
-  flex: 1;
-  height: 2px;
-  background: rgba(255, 248, 240, 0.15);
   position: relative;
+  flex: 1;
+  min-width: 24px;
+  height: 2px;
+  /* Centro del anillo: 92/2 − 1px de medio hilo. */
+  margin-top: 45px;
+  background: rgba(255, 248, 240, 0.18);
+  border-radius: 1px;
   overflow: hidden;
   opacity: 0;
-  animation: nodeIn 400ms ease forwards;
+  animation: linkIn 500ms ease forwards;
   animation-delay: var(--d, 0ms);
 }
 
 .linkPulse {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent 0%, var(--m-primary-300) 50%, transparent 100%);
-  animation: linkPulse 1.6s ease-in-out infinite;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--m-primary-500), transparent);
+  animation: linkPulse 3.6s linear infinite;
+  animation-delay: calc(var(--g, 0ms) + 1.2s);
 }
 
 @keyframes nodeIn {
@@ -602,34 +637,36 @@
   }
 }
 
+@keyframes linkIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* El barrido ocupa un tercio del ciclo; el resto del tiempo queda fuera
+   del hilo (overflow hidden), a la espera de su turno en el relevo. */
 @keyframes linkPulse {
   0% {
-    transform: translateX(-100%);
+    left: -30%;
+  }
+  33.333% {
+    left: 100%;
   }
   100% {
-    transform: translateX(100%);
+    left: 100%;
   }
 }
 
-.tokens {
-  margin-top: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
-
-.token {
-  font-family: var(--m-font-mono), monospace;
-  font-size: 11px;
-  color: #fff8f0;
-  padding: 4px 10px;
-  background: #3d2b1f;
-  border-radius: 9999px;
-  opacity: 0;
-  transform: translateY(4px);
-  animation: nodeIn 400ms ease forwards;
-  animation-delay: var(--d, 0ms);
+@media (max-width: 719px) {
+  .pipeline {
+    transform: scale(0.78);
+    transform-origin: center;
+  }
 }
 
 /* Card stack (step 3) */
@@ -867,9 +904,9 @@
   .letterIn,
   .thumb,
   .node,
+  .nodeRing,
   .link,
   .linkPulse,
-  .token,
   .tagline,
   .stepTitle,
   .stepSub,

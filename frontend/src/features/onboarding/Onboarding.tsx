@@ -80,16 +80,6 @@ const THUMBNAILS = [
   { id: 'thumb-3', number: 3 },
 ] as const;
 
-const PIPELINE_TOKENS = [
-  { id: 'setup', label: 'Setup' },
-  { id: 'arrow-turn', label: '→' },
-  { id: 'turn', label: 'turno' },
-  { id: 'arrow-win', label: '→' },
-  { id: 'win', label: 'ganar' },
-  { id: 'arrow-points', label: '↦' },
-  { id: 'points', label: '10 PV' },
-] as const;
-
 export function Onboarding() {
   const [index, setIndex] = useState(0);
   const [privacyOpen, setPrivacyOpen] = useState(false);
@@ -363,7 +353,7 @@ function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
               color: '#2A211A',
             }}
           >
-            3 · El turno
+            3 · Los turnos
           </div>
           <div style={{ height: 6 }} />
           {PAGE_LINE_WIDTHS.map(({ id, width }) => (
@@ -445,49 +435,43 @@ function StepProcesa({ shown }: Readonly<{ shown: boolean }>) {
       icon: <Sparkles size={26} strokeWidth={1.75} />,
     },
   ];
+  // `--g` escalona el relevo: el anillo i brilla justo cuando le llega el
+  // barrido del hilo anterior (ciclo de 3.6s repartido en tres tramos).
   return (
-    <div>
-      <div className={styles.pipeline}>
-        {nodes.map((n, i) => (
-          <span key={n.label} style={{ display: 'contents' }}>
-            <div
-              className={styles.node}
-              style={shown ? { '--d': `${i * 280}ms` } : { animation: 'none', opacity: 0 }}
-            >
-              <div className={styles.nodeRing}>
-                <div className={styles.nodeCore}>{n.icon}</div>
-              </div>
-              <div className={styles.nodeLabel}>
-                <span className={styles.mono}>0{i + 1}</span>
-                <strong>{n.label}</strong>
-                <em>{n.hint}</em>
-              </div>
+    <div className={styles.pipeline}>
+      {nodes.map((n, i) => (
+        <span key={n.label} style={{ display: 'contents' }}>
+          <div
+            className={styles.node}
+            style={
+              shown
+                ? { '--d': `${i * 280}ms`, '--g': `${i * 1200}ms` }
+                : { animation: 'none', opacity: 0 }
+            }
+          >
+            <div className={styles.nodeRing}>
+              <div className={styles.nodeCore}>{n.icon}</div>
             </div>
-            {i < nodes.length - 1 ? (
-              <div
-                className={styles.link}
-                style={
-                  shown ? { '--d': `${i * 280 + 140}ms` } : { animation: 'none', opacity: 0 }
-                }
-              >
-                <span className={styles.linkPulse} />
-              </div>
-            ) : null}
-          </span>
-        ))}
-      </div>
-      <div className={styles.tokens} aria-hidden="true">
-        {shown &&
-          PIPELINE_TOKENS.map(({ id, label }, i) => (
-            <span
-              key={id}
-              className={styles.token}
-              style={{ '--d': `${600 + i * 90}ms` }}
+            <div className={styles.nodeLabel}>
+              <span className={styles.mono}>0{i + 1}</span>
+              <strong>{n.label}</strong>
+              <em>{n.hint}</em>
+            </div>
+          </div>
+          {i < nodes.length - 1 ? (
+            <div
+              className={styles.link}
+              style={
+                shown
+                  ? { '--d': `${i * 280 + 140}ms`, '--g': `${i * 1200}ms` }
+                  : { animation: 'none', opacity: 0 }
+              }
             >
-              {label}
-            </span>
-          ))}
-      </div>
+              <span className={styles.linkPulse} />
+            </div>
+          ) : null}
+        </span>
+      ))}
     </div>
   );
 }

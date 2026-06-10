@@ -14,7 +14,7 @@ from api.auth import passwords as password_helpers
 from api.auth import service
 from api.auth.audit import record_security_event
 from api.auth.cookies import set_auth_cookies
-from api.auth.dependencies import get_current_auth, require_admin, require_csrf
+from api.auth.dependencies import client_ip, get_current_auth, require_admin, require_csrf
 from api.auth.exceptions import (
     AdminRequiredError,
     AuthenticationRequiredError,
@@ -30,7 +30,6 @@ from api.auth.passwords import (
     verify_password,
     verify_password_against_dummy,
 )
-from api.auth.router import _client_ip
 from api.auth.tokens import generate_opaque_token, hash_token, token_matches
 from database.models.audit import AuditLog
 from database.models.auth import AuthSession, EmailVerificationToken, PasswordResetToken
@@ -912,14 +911,14 @@ def test_client_ip_returns_host_when_request_has_client():
     """Con cliente en el scope, devuelve su IP (la que usan rate limit y auditoria)."""
     request = Request({"type": "http", "client": ("203.0.113.7", 54321)})
 
-    assert _client_ip(request) == "203.0.113.7"
+    assert client_ip(request) == "203.0.113.7"
 
 
 def test_client_ip_returns_none_when_request_has_no_client():
     """Sin info de cliente en el scope devuelve None en vez de reventar."""
     request = Request({"type": "http"})
 
-    assert _client_ip(request) is None
+    assert client_ip(request) is None
 
 
 def _user(password_hash: str = _FAKE_HASH) -> User:

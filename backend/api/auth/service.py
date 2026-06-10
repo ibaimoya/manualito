@@ -239,19 +239,7 @@ async def request_email_verification(
         return None
 
     now = utc_now()
-    await _consume_active_account_tokens(
-        session,
-        EmailVerificationToken,
-        user_id=user.id,
-        now=now,
-    )
-    token = _add_hashed_account_token(
-        session,
-        token_model=EmailVerificationToken,
-        user=user,
-        now=now,
-        lifetime=timedelta(minutes=config.EMAIL_VERIFICATION_TOKEN_MINUTES),
-    )
+    token = await rotate_email_verification_token(session, user=user, now=now)
     record_security_event(
         session,
         event_type="email_verification_requested",
@@ -261,6 +249,28 @@ async def request_email_verification(
     )
     await session.commit()
     return AuthEmailJob(email=user.email, username=user.username, token=token)
+
+
+async def rotate_email_verification_token(
+    session: AsyncSession,
+    *,
+    user: User,
+    now: datetime,
+) -> str:
+    """Invalida tokens de verificación previos y emite el único válido."""
+    await _consume_active_account_tokens(
+        session,
+        EmailVerificationToken,
+        user_id=user.id,
+        now=now,
+    )
+    return _add_hashed_account_token(
+        session,
+        token_model=EmailVerificationToken,
+        user=user,
+        now=now,
+        lifetime=timedelta(minutes=config.EMAIL_VERIFICATION_TOKEN_MINUTES),
+    )
 
 
 async def verify_email_token(
@@ -399,6 +409,8 @@ def to_public_user(user: User) -> UserPublic:
         created_at=user.created_at,
         last_login_at=user.last_login_at,
         email_verified_at=user.email_verified_at,
+        avatar_color=user.avatar_color,
+        avatar_figure=user.avatar_figure,
     )
 
 

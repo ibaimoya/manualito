@@ -50,3 +50,13 @@ def require_admin(auth: CurrentAuth) -> AuthenticatedSession:
     if auth.user.role != "admin":
         raise AdminRequiredError
     return auth
+
+
+def client_ip(request: Request) -> str | None:
+    """IP real del cliente tras el proxy.
+
+    uvicorn (--proxy-headers) reescribe request.client.host desde
+    X-Forwarded-For, así que aquí ya es la IP del cliente, no la de nginx.
+    """
+    client = request.client
+    return client.host if client else None

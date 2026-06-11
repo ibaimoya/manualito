@@ -108,8 +108,8 @@ function ResultScreen() {
         type="button"
         onClick={() => setOcrOpen(true)}
         className="grid size-10 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-        aria-label="Ver texto original del manual"
-        title="Ver texto original"
+        aria-label="Ver texto extraído del manual"
+        title="Ver texto extraído"
       >
         <ScanText size={20} strokeWidth={1.75} />
       </button>
@@ -176,7 +176,7 @@ function ResultReading({ result }: Readonly<{ result: ManualResult }>) {
 
       <Accordion type="multiple" defaultValue={['setup']} className="space-y-3">
         <AccordionItem value="setup">
-          <AccordionTrigger>
+          <AccordionTrigger headingLevel={2}>
             <div className="flex items-center gap-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-100 text-primary-700">
                 <Flag size={16} strokeWidth={2} />
@@ -190,7 +190,7 @@ function ResultReading({ result }: Readonly<{ result: ManualResult }>) {
         </AccordionItem>
 
         <AccordionItem value="turn">
-          <AccordionTrigger>
+          <AccordionTrigger headingLevel={2}>
             <div className="flex items-center gap-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent-100 text-accent">
                 <RefreshCw size={16} strokeWidth={2} />
@@ -204,7 +204,7 @@ function ResultReading({ result }: Readonly<{ result: ManualResult }>) {
         </AccordionItem>
 
         <AccordionItem value="win">
-          <AccordionTrigger>
+          <AccordionTrigger headingLevel={2}>
             <div className="flex items-center gap-3">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-warning-bg text-warning">
                 <Sparkles size={16} strokeWidth={2} />

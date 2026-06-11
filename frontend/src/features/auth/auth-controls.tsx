@@ -38,7 +38,7 @@ export function passwordTooShortError(password: string, submitted: boolean): str
 }
 
 /** Error del campo "repite la contraseña": en vivo si no coincide, al enviar si falta. */
-export function confirmPasswordError(
+function confirmPasswordError(
   confirm: string,
   password: string,
   submitted: boolean,
@@ -193,7 +193,7 @@ const STRENGTH = [
 type StrengthScore = 0 | 1 | 2 | 3 | 4;
 
 /** Puntuación orientativa (longitud + variedad), 0–4. No es validación dura. */
-export function passwordScore(value: string): StrengthScore {
+function passwordScore(value: string): StrengthScore {
   if (!value) return 0;
   let score = 0;
   if (value.length >= 8) score += 1;
@@ -205,7 +205,7 @@ export function passwordScore(value: string): StrengthScore {
 }
 
 /** Medidor de fuerza: barras + adjetivo (contexto en sr-only para lectores). */
-export function PasswordStrength({ score }: Readonly<{ score: StrengthScore }>) {
+function PasswordStrength({ score }: Readonly<{ score: StrengthScore }>) {
   const meta = STRENGTH[score];
   return (
     <div className="mt-3">

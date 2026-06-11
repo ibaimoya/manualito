@@ -10,7 +10,15 @@ import { cn } from '@/shared/lib/cn';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 
 // Rutas inmersivas: sin barra de navegación (ocupan toda la pantalla).
-const IMMERSIVE_PREFIXES = ['/capture', '/processing', '/result', '/chat'];
+const IMMERSIVE_PREFIXES = [
+  '/capture',
+  '/processing',
+  '/result',
+  '/chat',
+  '/game',
+  '/manual',
+  '/conversations',
+];
 
 function showsNav(pathname: string): boolean {
   return !IMMERSIVE_PREFIXES.some((prefix) => pathname.startsWith(prefix));

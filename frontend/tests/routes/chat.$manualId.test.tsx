@@ -54,7 +54,7 @@ function seedManual(manualId: string, name = 'Catan') {
   });
 }
 
-function renderChat(manualId: string, search?: { q?: string; c?: string }) {
+function renderChat(manualId: string, search?: { q?: string; c?: string; g?: string }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -65,6 +65,7 @@ function renderChat(manualId: string, search?: { q?: string; c?: string }) {
     validateSearch: (s) => ({
       q: typeof s.q === 'string' ? s.q : undefined,
       c: typeof s.c === 'string' ? s.c : undefined,
+      g: typeof s.g === 'string' ? s.g : undefined,
     }),
     component: (ChatRoute as unknown as { options: { component: React.FC } }).options.component,
   });
@@ -73,10 +74,21 @@ function renderChat(manualId: string, search?: { q?: string; c?: string }) {
     path: '/result/$manualId',
     component: () => <div>ResultScreen</div>,
   });
-  const tree = root.addChildren([chatR, resultR]);
+  const gameR = createRoute({
+    getParentRoute: () => root,
+    path: '/game/$gameId',
+    component: () => <div>GameScreen</div>,
+  });
+  const historyR = createRoute({
+    getParentRoute: () => root,
+    path: '/history',
+    component: () => <div>HistoryScreen</div>,
+  });
+  const tree = root.addChildren([chatR, resultR, gameR, historyR]);
   const params = new URLSearchParams();
   if (search?.q) params.set('q', search.q);
   if (search?.c) params.set('c', search.c);
+  if (search?.g) params.set('g', search.g);
   const queryStr = params.size > 0 ? `?${params.toString()}` : '';
   const router = createRouter({
     routeTree: tree,
@@ -95,16 +107,24 @@ function renderChat(manualId: string, search?: { q?: string; c?: string }) {
 }
 
 describe('/chat/$manualId', () => {
-  it('renderiza el nombre del manual en el header', async () => {
-    seedManual('m1', 'Wingspan');
+  it('el breadcrumb lleva el juego como tramo navegable y «Chat» como página', async () => {
+    seedManual('m1');
     renderChat('m1');
-    // El nombre aparece en el breadcrumb (md+) y en el título móvil.
-    expect((await screen.findAllByText('Wingspan')).length).toBeGreaterThan(0);
+    // El detalle del manual (MSW) resuelve el juego del trail.
+    const gameLink = await screen.findByRole('link', { name: 'Catan' });
+    expect(gameLink).toHaveAttribute('href', '/game/test-game-001');
+    expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
-  it('si no hay manual en local muestra el fallback "Manual"', async () => {
+  it('si el manual no resuelve, el trail conserva al menos Historial', async () => {
+    server.use(
+      http.get('/api/manuals/:manualId', () =>
+        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
+      ),
+    );
     renderChat('mDesconocido');
-    expect((await screen.findAllByText('Manual')).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('link', { name: 'Historial' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
   it('empty state cuando se abre un chat nuevo (sin conversación)', async () => {
@@ -194,7 +214,27 @@ describe('/chat/$manualId', () => {
     expect(input).toHaveValue('fail');
   });
 
-  it('header tiene enlace "Volver al resumen" hacia /result/$manualId', async () => {
+  it('con ?g=…, volver apunta directo al hub del juego', async () => {
+    seedManual('m1');
+    renderChat('m1', { g: 'test-game-001' });
+    const link = await screen.findByRole('link', { name: /Volver al juego/i });
+    expect(link).toHaveAttribute('href', '/game/test-game-001');
+  });
+
+  it('sin ?g=…, resuelve el juego vía manual y volver apunta al hub', async () => {
+    seedManual('m1');
+    renderChat('m1');
+    // El detalle del manual (MSW) trae game_id=test-game-001.
+    const link = await screen.findByRole('link', { name: /Volver al juego/i });
+    expect(link).toHaveAttribute('href', '/game/test-game-001');
+  });
+
+  it('sin ?g= y con el manual inaccesible, cae al resumen como último recurso', async () => {
+    server.use(
+      http.get('/api/manuals/:manualId', () =>
+        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
+      ),
+    );
     seedManual('m1');
     renderChat('m1');
     const link = await screen.findByRole('link', { name: /Volver al resumen/i });

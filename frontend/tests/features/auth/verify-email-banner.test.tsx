@@ -28,6 +28,8 @@ const BASE: AuthUser = {
   created_at: '2026-01-01T00:00:00.000Z',
   last_login_at: null,
   email_verified_at: null,
+  avatar_color: null,
+  avatar_figure: null,
 };
 
 function renderBanner(user: AuthUser | null) {
@@ -65,6 +67,14 @@ describe('VerifyEmailBanner', () => {
     renderBanner(BASE);
     await user.click(screen.getByRole('button', { name: 'Reenviar' }));
     expect(await screen.findByText(/Reenviado/)).toBeInTheDocument();
+  });
+
+  it('enlaza a la bandeja de Mailpit en pestaña nueva', () => {
+    renderBanner(BASE);
+    const link = screen.getByRole('link', { name: 'Abrir mi correo' });
+    expect(link).toHaveAttribute('href', 'http://localhost:8025');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('se puede descartar', async () => {

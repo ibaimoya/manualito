@@ -17,7 +17,8 @@ const MAX_ROWS = 8;
 export function ConversationsSection({
   manualId,
   gameId,
-}: Readonly<{ manualId: string; gameId: string }>) {
+  showViewAll = false,
+}: Readonly<{ manualId: string; gameId: string; showViewAll?: boolean }>) {
   const qc = useQueryClient();
   const { data, isPending, isError } = useQuery(conversationsQueryOptions(gameId));
   const del = useMutation({
@@ -33,21 +34,33 @@ export function ConversationsSection({
 
   return (
     <section aria-labelledby="result-conversations" className="pt-1">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h2
           id="result-conversations"
           className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700"
         >
           Tus conversaciones
         </h2>
-        <Link
-          to="/chat/$manualId"
-          params={{ manualId }}
-          className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2"
-        >
-          <Plus size={13} strokeWidth={2.25} aria-hidden="true" />
-          Nueva
-        </Link>
+        <div className="flex items-center gap-2">
+          {showViewAll && conversations.length > 0 ? (
+            <Link
+              to="/conversations/$gameId"
+              params={{ gameId }}
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-fg-2 transition-colors hover:text-fg"
+            >
+              Ver todas ({conversations.length})
+            </Link>
+          ) : null}
+          <Link
+            to="/chat/$manualId"
+            params={{ manualId }}
+            search={{ g: gameId }}
+            className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2"
+          >
+            <Plus size={13} strokeWidth={2.25} aria-hidden="true" />
+            Nueva
+          </Link>
+        </div>
       </div>
 
       {isPending ? <RowsSkeleton /> : null}
@@ -89,7 +102,7 @@ function ConversationRow({
         <Link
           to="/chat/$manualId"
           params={{ manualId }}
-          search={{ c: conversation.id }}
+          search={{ c: conversation.id, g: conversation.game_id }}
           className="flex min-w-0 flex-1 items-center gap-3 p-3.5 transition-colors hover:bg-surface-2"
         >
           <span

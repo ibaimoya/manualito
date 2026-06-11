@@ -13,6 +13,8 @@ type ModalFrameProps = Readonly<{
   contentClassName?: string;
   dataKind: DialogDataKind;
   handle?: ReactNode;
+  /** Radix enfoca el primer focusable (la X); permite redirigirlo a un campo. */
+  onOpenAutoFocus?: (event: Event) => void;
 }>;
 
 export type ModalHeaderProps = Readonly<{
@@ -47,6 +49,7 @@ export function ModalFrame({
   contentClassName,
   dataKind,
   handle,
+  onOpenAutoFocus,
 }: ModalFrameProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -57,6 +60,7 @@ export function ModalFrame({
         />
         <DialogPrimitive.Content
           {...dataAttributes(dataKind)}
+          onOpenAutoFocus={onOpenAutoFocus}
           className={cn(contentBaseClassName, 'focus:outline-none', contentClassName)}
         >
           {handle}
@@ -121,12 +125,14 @@ export const Dialog = ({
   onOpenChange,
   children,
   contentClassName,
+  onOpenAutoFocus,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
   /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
   contentClassName?: string;
+  onOpenAutoFocus?: (event: Event) => void;
 }>) => (
   <ModalFrame
     open={open}
@@ -138,6 +144,7 @@ export const Dialog = ({
     )}
     contentClassName={contentClassName}
     dataKind="dialog"
+    onOpenAutoFocus={onOpenAutoFocus}
   >
     {children}
   </ModalFrame>

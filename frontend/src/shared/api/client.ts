@@ -1,5 +1,5 @@
 import { mapApiError } from './error-mapper';
-import { ApiError, TIMEOUT, queryString, request, requestVoid } from './http';
+import { ApiError, JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } from './http';
 
 /**
  * Recursos de manuales y juegos. El transporte (request, ApiError, CSRF) vive
@@ -92,7 +92,7 @@ export interface RecommendationsResponse {
 export interface ManualDetailPage {
   page_number: number;
   ocr_status: 'pending' | 'completed' | 'failed';
-  text_source: 'none' | 'ocr' | 'pdf_text';
+  text_source: 'none' | 'ocr' | 'pdf_text' | 'user_edit';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
   ocr_confidence_mean: number | null;
   ocr_lines: OcrLine[];
@@ -139,7 +139,6 @@ export interface AnswerResponse {
   sources: AnswerSource[];
 }
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
 /* ============================================================
    Endpoints
@@ -236,6 +235,52 @@ export const api = {
       timeoutMs: TIMEOUT.QUICK,
       signal,
     });
+  },
+
+  /**
+   * PUT /api/manuals/{id}/pages/{n}/text — sustituye a mano el texto de una
+   * página (solo manuales privados) y reindexa sus chunks.
+   */
+  async editPageText(
+    manualId: string,
+    pageNumber: number,
+    text: string,
+    signal?: AbortSignal,
+  ): Promise<ManualDetailPage> {
+    return request<ManualDetailPage>(
+      `/manuals/${encodeURIComponent(manualId)}/pages/${pageNumber}/text`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ text }),
+        headers: JSON_HEADERS,
+        timeoutMs: TIMEOUT.UPLOAD,
+        signal,
+      },
+    );
+  },
+
+  /** POST /api/manuals/{id}/reprocess — reindexa el manual entero (202). */
+  async reprocessManual(
+    manualId: string,
+    signal?: AbortSignal,
+  ): Promise<ManualProcessingResponse> {
+    return request<ManualProcessingResponse>(`/manuals/${encodeURIComponent(manualId)}/reprocess`, {
+      method: 'POST',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** POST /api/manuals/{id}/pages/{n}/reprocess — reindexa una página (202). */
+  async reprocessPage(
+    manualId: string,
+    pageNumber: number,
+    signal?: AbortSignal,
+  ): Promise<ManualProcessingResponse> {
+    return request<ManualProcessingResponse>(
+      `/manuals/${encodeURIComponent(manualId)}/pages/${pageNumber}/reprocess`,
+      { method: 'POST', timeoutMs: TIMEOUT.QUICK, signal },
+    );
   },
 
   /** GET /api/games — typeahead de juegos seleccionables (sin auth). */

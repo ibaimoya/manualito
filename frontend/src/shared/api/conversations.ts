@@ -1,4 +1,4 @@
-import { TIMEOUT, queryString, request, requestVoid } from './http';
+import { JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } from './http';
 import type { AnswerSource } from './client';
 
 /**
@@ -45,7 +45,6 @@ interface PageParams {
   offset?: number;
 }
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
 export const conversationsApi = {
   /** GET /api/games/{gameId}/conversations — conversaciones propias del juego. */
@@ -105,6 +104,21 @@ export const conversationsApi = {
         signal,
       },
     );
+  },
+
+  /** PATCH /api/conversations/{id} — renombra una conversación propia. */
+  async rename(
+    conversationId: string,
+    title: string,
+    signal?: AbortSignal,
+  ): Promise<ConversationSummary> {
+    return request<ConversationSummary>(`/conversations/${encodeURIComponent(conversationId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+      headers: JSON_HEADERS,
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
   },
 
   /** DELETE /api/conversations/{id} — borra una conversación propia (204). */

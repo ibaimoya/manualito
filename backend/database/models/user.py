@@ -59,7 +59,8 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint(
             "avatar_figure IS NULL OR avatar_figure IN "
             "('initials', 'meeple', 'dice', 'crown', 'flag', "
-            "'sparkle', 'book', 'bulb', 'zap', 'hourglass')",
+            "'sparkle', 'book', 'bulb', 'zap', 'hourglass', "
+            "'trophy', 'puzzle', 'swords', 'ghost', 'shield', 'rocket')",
             name="avatar_figure_valid",
         ),
         Index(

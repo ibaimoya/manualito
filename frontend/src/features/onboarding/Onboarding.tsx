@@ -236,23 +236,21 @@ export function Onboarding() {
 
       <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
+      {/* Un punto por panel: las diapositivas y la pantalla de elección final. */}
       <div className={styles.pager} role="tablist" aria-label="Pasos del onboarding">
-        {SLIDES.map((slide, k) => {
-          const dotIndex = Math.min(index, N - 1);
-          return (
-            <button
-              key={slide.id}
-              type="button"
-              role="tab"
-              aria-selected={dotIndex === k}
-              aria-label={`Ir a diapositiva ${k + 1}`}
-              onClick={() => go(k)}
-              className={styles.dotHit}
-            >
-              <span className={cn(styles.dot, dotIndex === k && styles.isOn)} />
-            </button>
-          );
-        })}
+        {Array.from({ length: PANELS }, (_, k) => (
+          <button
+            key={SLIDES[k]?.id ?? 'final'}
+            type="button"
+            role="tab"
+            aria-selected={index === k}
+            aria-label={`Ir a diapositiva ${k + 1}`}
+            onClick={() => go(k)}
+            className={styles.dotHit}
+          >
+            <span className={cn(styles.dot, index === k && styles.isOn)} />
+          </button>
+        ))}
       </div>
     </div>
   );

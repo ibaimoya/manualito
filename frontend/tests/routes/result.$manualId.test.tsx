@@ -138,20 +138,20 @@ function renderResult() {
   );
 }
 
-describe('/result · texto original multipágina', () => {
+describe('/result · texto extraído multipágina', () => {
   it('no muestra el botón si el detalle del manual no tiene líneas', async () => {
     seedManualWithResult({ withOcr: false });
     renderResult();
     // "Catan" aparece en el breadcrumb (md+) y en el título móvil.
     expect((await screen.findAllByText('Catan')).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: /Ver texto original/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver texto extraído/i })).not.toBeInTheDocument();
   });
 
   it('muestra el botón ScanText cuando el backend devuelve líneas OCR', async () => {
     seedManualWithResult({ withOcr: false });
     server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     renderResult();
-    expect(await screen.findByRole('button', { name: /Ver texto original/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Ver texto extraído/i })).toBeInTheDocument();
   });
 
   it('al pulsar el botón abre el sheet con líneas ordenadas por página', async () => {
@@ -159,9 +159,9 @@ describe('/result · texto original multipágina', () => {
     server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     const user = userEvent.setup();
     renderResult();
-    await user.click(await screen.findByRole('button', { name: /Ver texto original/i }));
+    await user.click(await screen.findByRole('button', { name: /Ver texto extraído/i }));
     // El sheet muestra el título de la pantalla.
-    expect(await screen.findByText(/Texto original del manual/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Texto extraído del manual/i)).toBeInTheDocument();
     // La vista por defecto es texto plano; verificamos el orden por página.
     const text = screen.getByTestId('ocr-plain-view').textContent ?? '';
     expect(text).toContain('CATAN');
@@ -177,7 +177,7 @@ describe('/result · texto original multipágina', () => {
     );
     seedManualWithResult({ withOcr: true });
     renderResult();
-    expect(await screen.findByRole('button', { name: /Ver texto original/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Ver texto extraído/i })).toBeInTheDocument();
   });
 });
 

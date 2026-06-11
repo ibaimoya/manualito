@@ -24,28 +24,34 @@ export const AccordionItem = forwardRef<
 
 export const AccordionTrigger = forwardRef<
   ComponentRef<typeof AccordionPrimitive.Trigger>,
-  ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
->(function AccordionTrigger({ className, children, ...props }, ref) {
+  ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & {
+    /** Nivel del heading: Radix usa h3; pásalo cuando el anterior sea un h1. */
+    headingLevel?: 2 | 3;
+  }
+>(function AccordionTrigger({ className, children, headingLevel = 3, ...props }, ref) {
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
-    <AccordionPrimitive.Header className="flex">
-      <AccordionPrimitive.Trigger
-        ref={ref}
-        className={cn(
-          'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
-          'transition-colors hover:bg-surface-2',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-          '[&[data-state=open]>svg]:rotate-180',
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <ChevronDown
-          size={20}
-          strokeWidth={2}
-          className="shrink-0 text-fg-3 transition-transform duration-200"
-        />
-      </AccordionPrimitive.Trigger>
+    <AccordionPrimitive.Header asChild>
+      <Heading className="flex">
+        <AccordionPrimitive.Trigger
+          ref={ref}
+          className={cn(
+            'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
+            'transition-colors hover:bg-surface-2',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+            '[&[data-state=open]>svg]:rotate-180',
+            className,
+          )}
+          {...props}
+        >
+          {children}
+          <ChevronDown
+            size={20}
+            strokeWidth={2}
+            className="shrink-0 text-fg-3 transition-transform duration-200"
+          />
+        </AccordionPrimitive.Trigger>
+      </Heading>
     </AccordionPrimitive.Header>
   );
 });

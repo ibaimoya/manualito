@@ -13,6 +13,8 @@ const SAMPLE_USER = {
   created_at: '2026-05-01T09:00:00.000Z',
   last_login_at: '2026-05-26T10:00:00.000Z',
   email_verified_at: '2026-05-01T09:05:00.000Z',
+  avatar_color: null,
+  avatar_figure: null,
 };
 
 const SAMPLE_AUTH = { user: SAMPLE_USER, csrf_token: 'csrf-test-token' };
@@ -38,6 +40,76 @@ const SAMPLE_CONVERSATION = {
   created_at: '2026-05-26T10:00:00.000Z',
   updated_at: '2026-05-26T10:05:00.000Z',
 };
+
+export const SAMPLE_GAME_DETAIL = {
+  id: 'test-game-001',
+  name: 'Catan',
+  bgg_id: 13,
+  year_published: 1995,
+  min_players: 3,
+  max_players: 4,
+  playing_time_minutes: 90,
+  status: 'active',
+  my_rating: null,
+  manuals: [
+    {
+      id: 'test-manual-001',
+      title: 'Reglas base',
+      source_type: 'images',
+      page_count: 2,
+      created_at: '2026-05-26T10:00:00.000Z',
+      is_own: true,
+    },
+    {
+      id: 'test-manual-002',
+      title: 'Expansión',
+      source_type: 'pdf',
+      page_count: 12,
+      created_at: '2026-04-02T10:00:00.000Z',
+      is_own: false,
+    },
+  ],
+  conversations_count: 1,
+  attribution: 'Game data provided by BoardGameGeek.',
+};
+
+const SAMPLE_EXPLANATION_SECTION = {
+  answer: 'Respuesta de la sección.',
+  sources: [{ manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 1 }],
+};
+
+const SAMPLE_EXPLANATION = {
+  status: 'ready',
+  sections: {
+    summary: { ...SAMPLE_EXPLANATION_SECTION, answer: 'Catan va de construir y comerciar.' },
+    setup: { ...SAMPLE_EXPLANATION_SECTION, answer: 'Monta el tablero y reparte piezas.' },
+    turns: { ...SAMPLE_EXPLANATION_SECTION, answer: 'Tira dados, recoge recursos y construye.' },
+    victory: { ...SAMPLE_EXPLANATION_SECTION, answer: 'Gana quien llega a 10 puntos.' },
+  },
+  generated_at: '2026-05-26T12:00:00.000Z',
+};
+
+const SAMPLE_MANUAL_PAGES = [
+  {
+    page_number: 1,
+    ocr_status: 'completed',
+    text_source: 'ocr',
+    text_quality: 'ok',
+    ocr_confidence_mean: 0.94,
+    ocr_lines: [
+      { text: 'PREPARACIÓN', confidence: 0.97 },
+      { text: 'Coloca el tablero y reparte las piezas a cada jugador.', confidence: 0.92 },
+    ],
+  },
+  {
+    page_number: 2,
+    ocr_status: 'completed',
+    text_source: 'ocr',
+    text_quality: 'low_confidence',
+    ocr_confidence_mean: 0.55,
+    ocr_lines: [{ text: 'EL LADRÓN bloquea la casilla donde está.', confidence: 0.55 }],
+  },
+];
 
 const SAMPLE_USER_MESSAGE = {
   id: 'msg-user-001',
@@ -84,6 +156,20 @@ export const handlers = [
     HttpResponse.json({ detail: 'Contraseña actualizada.' }),
   ),
 
+  /* -------- Cuenta -------- */
+  http.get('/api/me/stats', () =>
+    HttpResponse.json({ games_count: 4, conversations_count: 7, manuals_count: 3 }),
+  ),
+  http.patch('/api/me', async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      user: { ...SAMPLE_USER, ...body },
+      csrf_token: 'csrf-test-token',
+    });
+  }),
+  http.post('/api/me/password', () => HttpResponse.json({ detail: 'Contraseña actualizada.' })),
+  http.delete('/api/me', () => new HttpResponse(null, { status: 204 })),
+
   /* -------- OCR (legado) -------- */
   http.post('/api/ocr', async () => {
     await delay(50);
@@ -112,6 +198,22 @@ export const handlers = [
       attribution: 'Game data provided by BoardGameGeek.',
     });
   }),
+
+  http.get('/api/games/:gameId', () => HttpResponse.json(SAMPLE_GAME_DETAIL)),
+
+  http.get('/api/games/:gameId/explanation', () => HttpResponse.json(SAMPLE_EXPLANATION)),
+
+  http.put('/api/games/:gameId/rating', async ({ request, params }) => {
+    const body = (await request.json()) as { score: number; note?: string };
+    return HttpResponse.json({
+      game_id: params.gameId,
+      score: body.score,
+      note: body.note ?? null,
+      created_at: '2026-05-26T12:00:00.000Z',
+      updated_at: '2026-05-26T12:00:00.000Z',
+    });
+  }),
+  http.delete('/api/games/:gameId/rating', () => new HttpResponse(null, { status: 204 })),
 
   http.post('/api/games/:gameId/questions', async ({ request }) => {
     const body = (await request.json()) as { question?: string };
@@ -173,6 +275,52 @@ export const handlers = [
 
   http.delete('/api/manuals/:manualId', () => new HttpResponse(null, { status: 204 })),
 
+  http.put('/api/manuals/:manualId/pages/:pageNumber/text', async ({ request, params }) => {
+    const body = (await request.json()) as { text: string };
+    return HttpResponse.json({
+      page_number: Number(params.pageNumber),
+      ocr_status: 'completed',
+      text_source: 'user_edit',
+      text_quality: 'ok',
+      ocr_confidence_mean: null,
+      ocr_lines: body.text.split('\n').map((text) => ({ text, confidence: null })),
+    });
+  }),
+
+  http.post('/api/manuals/:manualId/reprocess', () =>
+    HttpResponse.json(
+      {
+        manual_id: 'test-manual-001',
+        status: 'indexing',
+        page_count: 2,
+        completed_pages: 0,
+        failed_pages: 0,
+        pages: [
+          { page_number: 1, ocr_status: 'pending', text_quality: null },
+          { page_number: 2, ocr_status: 'pending', text_quality: null },
+        ],
+      },
+      { status: 202 },
+    ),
+  ),
+
+  http.post('/api/manuals/:manualId/pages/:pageNumber/reprocess', () =>
+    HttpResponse.json(
+      {
+        manual_id: 'test-manual-001',
+        status: 'indexing',
+        page_count: 2,
+        completed_pages: 1,
+        failed_pages: 0,
+        pages: [
+          { page_number: 1, ocr_status: 'completed', text_quality: 'ok' },
+          { page_number: 2, ocr_status: 'pending', text_quality: null },
+        ],
+      },
+      { status: 202 },
+    ),
+  ),
+
   /* -------- Conversaciones -------- */
   http.get('/api/games/:gameId/conversations', () =>
     HttpResponse.json({ conversations: [SAMPLE_CONVERSATION] }),
@@ -199,8 +347,23 @@ export const handlers = [
       },
     });
   }),
+  http.patch('/api/conversations/:conversationId', async ({ request, params }) => {
+    const body = (await request.json()) as { title: string };
+    return HttpResponse.json({ ...SAMPLE_CONVERSATION, id: params.conversationId, title: body.title });
+  }),
   http.delete('/api/conversations/:conversationId', () => new HttpResponse(null, { status: 204 })),
 ];
+
+/** Detalle de manual con páginas OCR reales (una OK y una de baja confianza). */
+export function manualDetailWithPages() {
+  return http.get('/api/manuals/:manualId', ({ params }) =>
+    HttpResponse.json({
+      ...SAMPLE_MANUAL_SUMMARY,
+      id: params.manualId,
+      pages: SAMPLE_MANUAL_PAGES,
+    }),
+  );
+}
 
 /* ============================================================
    Overrides para tests de error / estados concretos

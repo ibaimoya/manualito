@@ -1,10 +1,30 @@
-import { TIMEOUT, request, requestVoid } from './http';
+import { JSON_HEADERS, TIMEOUT, request, requestVoid } from './http';
 
 /**
  * Cliente de autenticación. register/login dejan sesión iniciada (autologin) y
  * devuelven `AuthResponse`; verify/resend/forgot/reset son flujos anónimos con
  * respuesta uniforme (`{ detail }`).
  */
+
+export type AvatarColor = 'primary' | 'accent' | 'contrast' | 'success' | 'warning';
+
+export type AvatarFigure =
+  | 'initials'
+  | 'meeple'
+  | 'dice'
+  | 'crown'
+  | 'flag'
+  | 'sparkle'
+  | 'book'
+  | 'bulb'
+  | 'zap'
+  | 'hourglass'
+  | 'trophy'
+  | 'puzzle'
+  | 'swords'
+  | 'ghost'
+  | 'shield'
+  | 'rocket';
 
 /** Usuario público tal y como lo expone la API (`UserPublic`). */
 export interface AuthUser {
@@ -17,6 +37,8 @@ export interface AuthUser {
   last_login_at: string | null;
   /** `null` ⇒ email sin verificar (dispara el banner soft). */
   email_verified_at: string | null;
+  avatar_color: AvatarColor | null;
+  avatar_figure: AvatarFigure | null;
 }
 
 export interface AuthResponse {
@@ -44,7 +66,6 @@ export interface ResetPasswordInput {
   password: string;
 }
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
 export const authApi = {
   /** POST /api/auth/register — crea cuenta y deja sesión iniciada (autologin). */

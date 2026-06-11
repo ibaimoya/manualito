@@ -30,8 +30,13 @@ function renderInRouter(node: ReactNode) {
     path: '/settings',
     component: () => <div>Ajustes</div>,
   });
+  const profile = createRoute({
+    getParentRoute: () => root,
+    path: '/profile',
+    component: () => <div>Perfil</div>,
+  });
   const router = createRouter({
-    routeTree: root.addChildren([home, settings]),
+    routeTree: root.addChildren([home, settings, profile]),
     history: createMemoryHistory({ initialEntries: ['/home'] }),
   });
   return render(<RouterProvider router={router} />);
@@ -44,10 +49,10 @@ describe('DesktopTopbar', () => {
     expect(screen.getByText('Historial')).toBeInTheDocument();
   });
 
-  it('el avatar usa iniciales y enlaza a la cuenta', async () => {
+  it('el avatar usa iniciales y enlaza al perfil', async () => {
     renderInRouter(<DesktopTopbar pathname="/home" />);
-    const avatar = await screen.findByRole('link', { name: /Tu cuenta/i });
-    expect(avatar).toHaveAttribute('href', '/settings');
+    const avatar = await screen.findByRole('link', { name: /Tu perfil/i });
+    expect(avatar).toHaveAttribute('href', '/profile');
     expect(avatar).toHaveTextContent('MÁ');
   });
 

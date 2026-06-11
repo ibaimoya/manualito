@@ -9,10 +9,12 @@ import {
 } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import type { AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Avatar } from '@/shared/components/Avatar';
 import { LockUp, Monogram } from '@/shared/components/Brand';
 import { cn } from '@/shared/lib/cn';
+import { elideEmail } from '@/shared/lib/elideEmail';
 
 /**
  * Sidebar persistente para desktop (`md+`).
@@ -30,9 +32,16 @@ import { cn } from '@/shared/lib/cn';
  */
 type NavTo = '/home' | '/history' | '/settings';
 
+type SidebarUser = Readonly<{
+  username: string;
+  email: string;
+  avatar_color?: AvatarColor | null;
+  avatar_figure?: AvatarFigure | null;
+}>;
+
 type Props = Readonly<{
   pathname: string;
-  user?: Readonly<{ username: string; email: string }>;
+  user?: SidebarUser;
   collapsed?: boolean;
   onToggle?: () => void;
 }>;
@@ -166,18 +175,21 @@ function MaybeTip({
 function UserCard({
   user,
   collapsed,
-}: Readonly<{ user: Readonly<{ username: string; email: string }>; collapsed: boolean }>) {
+}: Readonly<{ user: SidebarUser; collapsed: boolean }>) {
   const name = user.username || user.email;
+  const avatar = (
+    <Avatar name={name} size={34} color={user.avatar_color} figure={user.avatar_figure} />
+  );
 
   if (collapsed) {
     return (
       <Tooltip content={name} side="right">
         <Link
-          to="/settings"
-          aria-label="Tu cuenta y ajustes"
+          to="/profile"
+          aria-label="Tu perfil"
           className="grid place-items-center rounded-xl p-2 transition-colors hover:bg-surface-2"
         >
-          <Avatar name={name} size={34} />
+          {avatar}
         </Link>
       </Tooltip>
     );
@@ -185,14 +197,14 @@ function UserCard({
 
   return (
     <Link
-      to="/settings"
-      aria-label="Tu cuenta y ajustes"
+      to="/profile"
+      aria-label="Tu perfil"
       className="flex items-center gap-2.5 rounded-xl p-2 transition-colors hover:bg-surface-2"
     >
-      <Avatar name={name} size={34} />
+      {avatar}
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block truncate text-sm font-semibold text-fg">{user.username}</span>
-        <span className="block truncate text-xs text-fg-3">{user.email}</span>
+        <span className="block truncate text-xs text-fg-3">{elideEmail(user.email, 8)}</span>
       </span>
     </Link>
   );

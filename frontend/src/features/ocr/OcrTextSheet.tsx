@@ -10,7 +10,7 @@ type Props = Readonly<{
   meta?: { ocrDurationMs?: number };
 }>;
 
-const TITLE = 'Texto original del manual';
+const TITLE = 'Texto extraído del manual';
 const SUBTITLE = 'Lo que leyó el OCR de las páginas que subiste';
 
 /**

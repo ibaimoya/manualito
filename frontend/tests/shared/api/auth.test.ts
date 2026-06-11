@@ -22,6 +22,8 @@ const AUTH = {
     created_at: '2026-01-01T00:00:00.000Z',
     last_login_at: null,
     email_verified_at: null,
+    avatar_color: null,
+    avatar_figure: null,
   },
   csrf_token: 'tok',
 };

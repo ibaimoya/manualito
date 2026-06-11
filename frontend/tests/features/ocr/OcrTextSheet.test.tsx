@@ -17,7 +17,7 @@ describe('OcrTextSheet', () => {
 
   it('abierto muestra título y subtítulo', async () => {
     render(<OcrTextSheet open onOpenChange={() => undefined} lines={LINES} />);
-    expect(await screen.findByText(/Texto original del manual/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Texto extraído del manual/i)).toBeInTheDocument();
     expect(screen.getByText(/Lo que leyó el OCR/i)).toBeInTheDocument();
   });
 

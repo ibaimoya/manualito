@@ -62,7 +62,7 @@ describe('/settings', () => {
     expect(screen.getByRole('region', { name: /Privacidad y datos/i })).toBeInTheDocument();
   });
 
-  it('muestra la sección de Cuenta con el usuario logueado (nombre, email, salir)', async () => {
+  it('muestra la sección de Cuenta con enlace al perfil y salir', async () => {
     renderSettings({
       id: 'u1',
       email: 'marta@x.app',
@@ -72,11 +72,16 @@ describe('/settings', () => {
       created_at: '2026-01-01T00:00:00.000Z',
       last_login_at: null,
       email_verified_at: '2026-01-01T00:00:00.000Z',
+      avatar_color: null,
+      avatar_figure: null,
     });
     expect(await screen.findByRole('region', { name: /Cuenta/i })).toBeInTheDocument();
     expect(screen.getByText('Marta')).toBeInTheDocument();
-    expect(screen.getByText('marta@x.app')).toBeInTheDocument();
-    expect(screen.getByText('Verificado')).toBeInTheDocument();
+    // Email y verificación viven ahora en /profile, no aquí.
+    const profileLink = screen.getByRole('link', {
+      name: /Editar perfil, seguridad y verificación/i,
+    });
+    expect(profileLink).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('button', { name: /Salir/i })).toBeInTheDocument();
   });
 

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, FileText, Send } from 'lucide-react';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -12,6 +12,7 @@ import {
   conversationMessagesQueryOptions,
   conversationsKey,
 } from '@/features/conversations/use-conversations';
+import { manualDetailQueryOptions } from '@/features/manual/use-manuals';
 import { storage } from '@/shared/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,10 +22,12 @@ import { Meeple } from '@/shared/components/Brand';
 // max(500) limita la longitud del search param `q` a la misma cota que el
 // backend (500 chars en `QuestionRequest`).  Sin esto un atacante podría
 // pegar una URL `?q=…` de 100KB y reventar el LLM o el URL parser.
-// `c` reabre una conversación guardada (id opaco del backend).
+// `c` reabre una conversación guardada; `g` trae el juego desde el hub
+// (ahorra resolverlo vía manual y orienta el botón de volver).
 const chatSearchSchema = z.object({
   q: z.string().min(1).max(500).optional(),
   c: z.string().min(1).optional(),
+  g: z.string().min(1).optional(),
 });
 
 export const Route = createFileRoute('/_app/chat/$manualId')({
@@ -34,7 +37,7 @@ export const Route = createFileRoute('/_app/chat/$manualId')({
 
 function ChatScreen() {
   const { manualId } = Route.useParams();
-  const { q: initialQ, c: initialC } = Route.useSearch();
+  const { q: initialQ, c: initialC, g: gameId } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [conversationId, setConversationId] = useState<string | null>(initialC ?? null);
@@ -50,8 +53,20 @@ function ChatScreen() {
   const [reopened] = useState(initialC != null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const result = storage.getResult(manualId);
-  const manualName = result?.name ?? 'Manual';
+  // El detalle del manual da el juego para el breadcrumb y, si la URL no
+  // trae `g` (marcador antiguo), también el destino del botón de volver.
+  const manualDetail = useQuery(manualDetailQueryOptions(manualId));
+  const resolvedGameId = gameId ?? manualDetail.data?.game_id ?? null;
+  const gameName = manualDetail.data?.game_name ?? null;
+  const gameCrumb =
+    resolvedGameId === null || gameName === null
+      ? []
+      : [
+          {
+            label: gameName,
+            link: linkOptions({ to: '/game/$gameId', params: { gameId: resolvedGameId } }),
+          },
+        ];
 
   // Marca el manual como recién abierto (touch updates last_opened_at).
   useEffect(() => {
@@ -77,8 +92,8 @@ function ChatScreen() {
       const signal = askAbortRef.current.signal;
       let cid = conversationId;
       if (cid === null) {
-        const manual = await api.getManual(manualId, signal);
-        cid = (await conversationsApi.create(manual.game_id, signal)).id;
+        const gid = resolvedGameId ?? (await api.getManual(manualId, signal)).game_id;
+        cid = (await conversationsApi.create(gid, signal)).id;
       }
       return conversationsApi.sendMessage(cid, question, undefined, signal);
     },
@@ -108,7 +123,7 @@ function ChatScreen() {
       navigate({
         to: '/chat/$manualId',
         params: { manualId },
-        search: { c: data.conversation.id },
+        search: { c: data.conversation.id, g: gameId ?? data.conversation.game_id },
         replace: true,
       }).catch(() => undefined);
     },
@@ -134,7 +149,7 @@ function ChatScreen() {
       navigate({
         to: '/chat/$manualId',
         params: { manualId },
-        search: initialC ? { c: initialC } : {},
+        search: { c: initialC, g: gameId },
         replace: true,
       }).catch(() => undefined);
     }
@@ -163,16 +178,28 @@ function ChatScreen() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar
-        crumb={manualName}
+        crumb="Chat"
+        trail={[{ label: 'Historial', link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
         back={
-          <Link
-            to="/result/$manualId"
-            params={{ manualId }}
-            className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
-            aria-label="Volver al resumen"
-          >
-            <ArrowLeft size={22} strokeWidth={2} />
-          </Link>
+          resolvedGameId ? (
+            <Link
+              to="/game/$gameId"
+              params={{ gameId: resolvedGameId }}
+              className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
+              aria-label="Volver al juego"
+            >
+              <ArrowLeft size={22} strokeWidth={2} />
+            </Link>
+          ) : (
+            <Link
+              to="/result/$manualId"
+              params={{ manualId }}
+              className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
+              aria-label="Volver al resumen"
+            >
+              <ArrowLeft size={22} strokeWidth={2} />
+            </Link>
+          )
         }
         actions={
           <Badge tone="success" size="sm">

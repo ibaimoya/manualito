@@ -175,7 +175,7 @@ function ConsentField({
     <div>
       <label
         className={cn(
-          'flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors',
+          'flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition-colors',
           consentBoxClass(error, checked),
         )}
       >
@@ -185,7 +185,7 @@ function ConsentField({
           checked={checked}
           aria-invalid={ariaInvalid(error)}
           onChange={(event) => onChange(event.target.checked)}
-          className="mt-0.5 size-5 shrink-0 accent-primary"
+          className="size-5 shrink-0 accent-primary"
         />
         <span className="text-sm leading-relaxed text-fg">
           He leído y acepto la{' '}

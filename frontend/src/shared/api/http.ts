@@ -22,6 +22,9 @@ export const TIMEOUT = {
 
 const BASE_URL = '/api';
 
+/** Cabeceras para cuerpos JSON — compartidas por los módulos por recurso. */
+export const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
+
 export class ApiError extends Error {
   public readonly view: ApiErrorView;
   public readonly status: number | undefined;

@@ -28,12 +28,14 @@ export const Sheet = ({
                         onOpenChange,
                         children,
                         contentClassName,
+                        onOpenAutoFocus,
                       }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
   /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
   contentClassName?: string;
+  onOpenAutoFocus?: (event: Event) => void;
 }>) => (
     <ModalFrame
         open={open}
@@ -41,6 +43,7 @@ export const Sheet = ({
         contentBaseClassName="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-md rounded-t-3xl border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] shadow-lg"
         contentClassName={contentClassName}
         dataKind="sheet"
+        onOpenAutoFocus={onOpenAutoFocus}
         handle={
           <div className="flex justify-center pt-3" aria-hidden="true">
             <span className="h-1 w-10 rounded-full bg-border-strong"/>

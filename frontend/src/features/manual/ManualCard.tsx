@@ -15,16 +15,16 @@ type Props = Readonly<{
 
 /**
  * Card de manual reutilizable. Si está indexando, lleva a su pantalla de
- * procesamiento; si ya está activo, a su Result. Centraliza el look de Home
- * (recientes) e History y se adapta al ancho del contenedor con `@container`.
+ * procesamiento; si ya está activo, al hub de su juego. Centraliza el look de
+ * Home (recientes) e History y se adapta al contenedor con `@container`.
  */
 export function ManualCard({ manual, meta, className }: Props) {
   const name = manual.title ?? manual.game_name;
   const indexing = manual.status === 'indexing';
   return (
     <Link
-      to={indexing ? '/processing/$manualId' : '/result/$manualId'}
-      params={{ manualId: manual.id }}
+      to={indexing ? '/processing/$manualId' : '/game/$gameId'}
+      params={indexing ? { manualId: manual.id } : { gameId: manual.game_id }}
       className="@container block"
     >
       <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>

@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useMutation } from '@tanstack/react-query';
-import { Check, FileText, LogOut, Moon, Sun, SunMoon, Trash2 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { ChevronRight, FileText, LogOut, Moon, Sun, SunMoon, Trash2 } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,11 +8,8 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar } from '@/shared/components/Avatar';
-import { authApi } from '@/shared/api/auth';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { storage } from '@/shared/lib/storage';
-
-const RESEND_COOLDOWN = 45;
 
 export const Route = createFileRoute('/_app/settings')({
   component: SettingsScreen,
@@ -115,7 +111,13 @@ function SettingsScreen() {
         ) : null}
       </Group>
 
-      <footer className="mt-2 flex justify-center">
+      <footer className="mt-2 flex justify-center gap-5">
+        <Link
+          to="/about"
+          className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
+        >
+          Cómo funciona
+        </Link>
         <Link
           to="/privacy"
           className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
@@ -130,43 +132,28 @@ function SettingsScreen() {
 function AccountSection() {
   const { user } = useAuth();
   const logout = useLogout();
-  const [cooldown, setCooldown] = useState(0);
-  const resend = useMutation({
-    mutationFn: () => authApi.resendVerification(user?.email ?? ''),
-    onSuccess: () => setCooldown(RESEND_COOLDOWN),
-  });
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setTimeout(() => setCooldown((value) => value - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [cooldown]);
 
   if (!user) return null;
-  const verified = user.email_verified_at !== null;
   const displayName = user.username || user.email;
 
   return (
     <Group title="Cuenta" hint="Tu perfil y tu acceso">
-      <div className="flex items-center gap-3.5 p-4">
-        <Avatar name={displayName} size={52} />
+      <Link
+        to="/profile"
+        className="flex items-center gap-3.5 p-4 transition-colors hover:bg-surface-2"
+      >
+        <Avatar
+          name={displayName}
+          size={52}
+          color={user.avatar_color}
+          figure={user.avatar_figure}
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-base font-bold text-fg">{displayName}</p>
-          <p className="truncate text-sm text-fg-3">{user.email}</p>
+          <p className="truncate text-sm text-fg-3">Editar perfil, seguridad y verificación</p>
         </div>
-      </div>
-
-      <Row
-        label="Email"
-        hint={verified ? 'Verificado · tu cuenta está protegida' : 'Aún sin verificar'}
-      >
-        <EmailVerificationControl
-          verified={verified}
-          cooldown={cooldown}
-          sending={resend.isPending}
-          onResend={() => resend.mutate()}
-        />
-      </Row>
+        <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+      </Link>
 
       <Row label="Cerrar sesión" hint="En este dispositivo">
         <Button
@@ -182,36 +169,6 @@ function AccountSection() {
         </Button>
       </Row>
     </Group>
-  );
-}
-
-function EmailVerificationControl({
-  verified,
-  cooldown,
-  sending,
-  onResend,
-}: Readonly<{
-  verified: boolean;
-  cooldown: number;
-  sending: boolean;
-  onResend: () => void;
-}>) {
-  if (verified) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-success-bg px-2.5 py-1 text-xs font-semibold text-success">
-        <Check size={13} strokeWidth={2.5} aria-hidden="true" /> Verificado
-      </span>
-    );
-  }
-  if (cooldown > 0) {
-    return (
-      <span className="shrink-0 text-xs font-semibold text-fg-3">Reenviado · {cooldown}s</span>
-    );
-  }
-  return (
-    <Button type="button" size="sm" variant="secondary" loading={sending} onClick={onResend}>
-      {sending ? 'Enviando…' : 'Reenviar verificación'}
-    </Button>
   );
 }
 

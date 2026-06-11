@@ -20,6 +20,12 @@ AvatarFigure = Literal[
     "bulb",
     "zap",
     "hourglass",
+    "trophy",
+    "puzzle",
+    "swords",
+    "ghost",
+    "shield",
+    "rocket",
 ]
 
 

@@ -308,6 +308,10 @@ kbd {
 [data-mn-dialog][data-state='closed'] {
   animation: mn-zoom-out 160ms var(--m-easing) forwards;
 }
+[data-mn-menu][data-state='open'] {
+  animation: mn-zoom-in 140ms var(--m-easing);
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+}
 
 /* Respeta prefers-reduced-motion para todas las animaciones globales */
 @media (prefers-reduced-motion: reduce) {

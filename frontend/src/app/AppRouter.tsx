@@ -8,7 +8,7 @@ import { routeTree } from '../routeTree.gen';
  * El `queryClient` se inyecta en `RouterProvider` (no en module-scope) para que
  * el `beforeLoad` raíz pueda resolver la sesión con la misma cache que la UI.
  */
-const router = createRouter({
+export const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,

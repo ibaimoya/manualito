@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster, toast } from 'sonner';
 import { ThemeProvider, useTheme } from './theme';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { handleSessionExpired } from '@/features/auth/session-expired';
 import { onStorageWriteFail } from '@/shared/lib/storage';
 
 type Props = Readonly<{ children: ReactNode }>;
@@ -13,9 +14,13 @@ type Props = Readonly<{ children: ReactNode }>;
  * - retry: 1 (los 502/504 ya se re-disparan manualmente con UX feedback).
  * - staleTime 30s: evita refetch agresivo al navegar entre rutas.
  * - networkMode 'always': la PWA puede tener cache aunque la red esté caída.
+ * - onError global: un 401 de sesión caducada echa al login desde cualquier sitio.
  */
 function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const onError = (error: unknown): void => handleSessionExpired(error, client);
+  const client = new QueryClient({
+    queryCache: new QueryCache({ onError }),
+    mutationCache: new MutationCache({ onError }),
     defaultOptions: {
       queries: {
         retry: 1,
@@ -29,6 +34,7 @@ function createQueryClient(): QueryClient {
       },
     },
   });
+  return client;
 }
 
 /** Providers globales. Theme va fuera: el Toaster necesita leer el modo. */

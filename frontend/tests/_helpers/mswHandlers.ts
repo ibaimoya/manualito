@@ -170,17 +170,6 @@ export const handlers = [
   http.post('/api/me/password', () => HttpResponse.json({ detail: 'Contraseña actualizada.' })),
   http.delete('/api/me', () => new HttpResponse(null, { status: 204 })),
 
-  /* -------- OCR (legado) -------- */
-  http.post('/api/ocr', async () => {
-    await delay(50);
-    return HttpResponse.json({
-      lines: [
-        { text: 'Bienvenido al manual de prueba.', confidence: 0.94 },
-        { text: 'Página 1 de demostración.', confidence: 0.88 },
-      ],
-    });
-  }),
-
   /* -------- Juegos -------- */
   http.get('/api/games', async ({ request }) => {
     const query = new URL(request.url).searchParams.get('q')?.trim() || 'Catan';

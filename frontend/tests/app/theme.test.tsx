@@ -261,24 +261,5 @@ describe('ThemeProvider', () => {
       mmSpy.mockRestore();
     });
 
-    it('persistir el tema no pisa otros campos de manualito.settings', async () => {
-      localStorage.setItem(
-        'manualito.settings',
-        JSON.stringify({ mode: 'light', accent: 'amber', responseDetail: 'long' }),
-      );
-      let api: ThemeApi | undefined;
-      render(
-        <ThemeProvider>
-          <ThemeCapture onCapture={(value) => { api = value; }} />
-        </ThemeProvider>,
-      );
-      act(() => api!.setMode('dark'));
-
-      await waitFor(() => {
-        const stored = JSON.parse(localStorage.getItem('manualito.settings') ?? '{}');
-        expect(stored.mode).toBe('dark');
-        expect(stored.responseDetail).toBe('long');
-      });
-    });
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { onStorageWriteFail, storage, STORAGE_KEYS } from '@/shared/lib/storage';
 
-const SETTINGS = { mode: 'dark', accent: 'blue', responseDetail: 'long' } as const;
+const SETTINGS = { mode: 'dark', accent: 'blue' } as const;
 
 describe('storage', () => {
   beforeEach(() => {

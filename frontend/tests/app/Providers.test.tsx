@@ -106,7 +106,7 @@ describe('Providers', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     failNextSetItemWith('QuotaExceededError');
-    storage.writeSettings({ mode: 'dark', accent: 'amber', responseDetail: 'medium' });
+    storage.writeSettings({ mode: 'dark', accent: 'amber' });
 
     await waitFor(() => {
       expect(screen.getByText(/Espacio local agotado/)).toBeInTheDocument();
@@ -123,7 +123,7 @@ describe('Providers', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     failNextSetItemWith('SecurityError');
-    storage.writeSettings({ mode: 'dark', accent: 'amber', responseDetail: 'medium' });
+    storage.writeSettings({ mode: 'dark', accent: 'amber' });
 
     await waitFor(() => {
       expect(

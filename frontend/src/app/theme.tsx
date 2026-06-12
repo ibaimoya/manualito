@@ -45,9 +45,8 @@ function loadInitial(): Persisted {
   return { mode, accent };
 }
 
-/** Merge sobre lo persistido: no pisa otros campos de `manualito.settings`. */
 function persistTheme(state: Persisted): void {
-  storage.writeSettings({ ...storage.readSettings(), ...state });
+  storage.writeSettings(state);
 }
 
 /**

@@ -24,7 +24,6 @@ const LEGACY_PREFIXES = ['manualito.qa.', 'manualito.result.', 'manualito.ocr.']
 const SettingsSchema = z.object({
   mode: z.enum(['light', 'dark', 'auto']).default('light'),
   accent: z.enum(['amber', 'blue']).default('amber'),
-  responseDetail: z.enum(['short', 'medium', 'long']).default('medium'),
 });
 // z.output: los defaults rellenan huecos y el tipo runtime va completo.
 export type Settings = z.output<typeof SettingsSchema>;

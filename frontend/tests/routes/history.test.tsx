@@ -1,18 +1,9 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
 import { server } from '@tests/_helpers/server';
-import { ThemeProvider } from '@/app/theme';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { Route as HistoryRoute } from '@/routes/_app.history';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
@@ -40,42 +31,16 @@ function withManuals(...names: string[]) {
 }
 
 function renderHistory() {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const historyR = createRoute({
-    getParentRoute: () => root,
+  return renderRoute({
     path: '/history',
-    component: (HistoryRoute as unknown as { options: { component: React.FC } }).options.component,
+    initialEntry: '/history',
+    component: routeComponent(HistoryRoute),
+    stubs: {
+      '/capture/source': 'SourceScreen',
+      '/result/$manualId': 'ResultScreen',
+      '/processing/$manualId': 'ProcessingScreen',
+    },
   });
-  const sourceR = createRoute({
-    getParentRoute: () => root,
-    path: '/capture/source',
-    component: () => <div>SourceScreen</div>,
-  });
-  const resultR = createRoute({
-    getParentRoute: () => root,
-    path: '/result/$manualId',
-    component: () => <div>ResultScreen</div>,
-  });
-  const processingR = createRoute({
-    getParentRoute: () => root,
-    path: '/processing/$manualId',
-    component: () => <div>ProcessingScreen</div>,
-  });
-  const tree = root.addChildren([historyR, sourceR, resultR, processingR]);
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({ initialEntries: ['/history'] }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
 describe('/history', () => {

@@ -1,26 +1,18 @@
 import { Link, type LinkOptions } from '@tanstack/react-router';
-import { ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { useAuth } from '@/features/auth/use-auth';
 import { Avatar } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
 
 /**
- * Barra superior única del shell. Da "cierre" superior y contexto de
- * navegación (breadcrumb) a TODAS las pantallas con la MISMA base visual
- * (alto, padding, borde, fondo) para que peguen entre sí.
- *
- * - `DesktopTopbar`: pantallas con navegación (home/history/settings).
- *   Solo `md+`; en móvil la navegación vive en la bottom-nav. Muestra la
- *   cuenta a la derecha.
- * - `ScreenTopBar`: pantallas inmersivas (result/chat/processing/capture).
- *   En `md+` muestra el breadcrumb; en móvil, una cabecera clásica con
- *   botón de volver + título centrado. Las acciones de la pantalla viven
- *   a la derecha y se renderizan una sola vez.
+ * Barra superior del shell, con la misma base visual en todas las pantallas.
+ * DesktopTopbar: pantallas con navegación (md+; en móvil manda la bottom-nav).
+ * ScreenTopBar: pantallas inmersivas — breadcrumb en md+, cabecera clásica
+ * con volver + título centrado en móvil.
  */
 
-// Base compartida: en `md+` ambas barras quedan idénticas (mismo alto,
-// padding, borde y fondo) → "pegan" al cambiar de pantalla.
+// Misma base visual en md+: las dos barras "pegan" al cambiar de pantalla.
 const TOPBAR_CHROME =
   'sticky top-0 z-30 h-14 items-center gap-4 border-b border-border bg-bg/95 px-4 backdrop-blur md:px-8';
 
@@ -92,6 +84,19 @@ export function DesktopTopbar({
 interface CrumbLink {
   label: string;
   link: LinkOptions;
+}
+
+/** Botón «atrás» estándar de las pantallas inmersivas (slot `back`). */
+export function BackLink({ label, link }: Readonly<{ label: string; link: LinkOptions }>) {
+  return (
+    <Link
+      {...link}
+      aria-label={label}
+      className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
+    >
+      <ArrowLeft size={22} strokeWidth={2} />
+    </Link>
+  );
 }
 
 function CrumbSeparator() {

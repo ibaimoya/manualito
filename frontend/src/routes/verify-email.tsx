@@ -19,8 +19,7 @@ export const Route = createFileRoute('/verify-email')({
 function VerifyEmailScreen() {
   const { token } = Route.useSearch();
   const queryClient = useQueryClient();
-  // Como query (no useEffect): se ejecuta una sola vez y es segura ante el
-  // doble render de StrictMode (el token es de un solo uso).
+  // Query, no useEffect: una sola ejecución pese al doble render de StrictMode.
   const { isError, isPending, isSuccess } = useQuery({
     queryKey: ['verify-email', token],
     queryFn: () => authApi.verifyEmail(token ?? ''),

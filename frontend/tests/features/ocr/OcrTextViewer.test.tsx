@@ -12,13 +12,15 @@ const SAMPLE: OcrLine[] = [
   { text: 'Texto borroso difícil.', confidence: 0.31 },
 ];
 
-// Cleanup de timers entre tests.  No mockeamos `navigator.clipboard`
-// porque `@testing-library/user-event` ya inyecta su propio polyfill
-// al hacer `setup()` y entra en conflicto.  Validamos copia vía el
-// callback público `onCopyAll`, no via el clipboard del DOM.
 afterEach(() => {
   vi.useRealTimers();
 });
+
+/** Cambia a la vista "Por líneas" como lo haría el usuario. */
+async function switchToLines(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('radio', { name: 'Por líneas' }));
+  return screen.findByTestId('ocr-lines-view');
+}
 
 describe('OcrTextViewer', () => {
   describe('vista por defecto + cambio entre vistas', () => {
@@ -35,49 +37,38 @@ describe('OcrTextViewer', () => {
     it('al cambiar al segmento "Por líneas" muestra LinesView con #001..#NNN', async () => {
       const user = userEvent.setup();
       render(<OcrTextViewer lines={SAMPLE} />);
-      await user.click(screen.getByRole('radio', { name: 'Por líneas' }));
       // El numerador salta líneas en blanco — 3 líneas reales, no 4.
-      const linesView = await screen.findByTestId('ocr-lines-view');
+      const linesView = await switchToLines(user);
       expect(linesView.textContent).toContain('#001');
       expect(linesView.textContent).toContain('#002');
       expect(linesView.textContent).toContain('#003');
       expect(linesView.textContent).not.toContain('#004');
     });
-
-    it('respeta defaultView="lines" inicial', () => {
-      render(<OcrTextViewer lines={SAMPLE} defaultView="lines" />);
-      expect(screen.getByTestId('ocr-lines-view')).toBeInTheDocument();
-      expect(screen.queryByTestId('ocr-plain-view')).not.toBeInTheDocument();
-    });
   });
 
   describe('badges de confidence', () => {
-    it('mapea confidence ≥ 0.85 a tono success, 0.5-0.85 a warning, < 0.5 a error', () => {
-      render(<OcrTextViewer lines={SAMPLE} defaultView="lines" />);
+    it('mapea confidence ≥ 0.85 a tono success, 0.5-0.85 a warning, < 0.5 a error', async () => {
+      const user = userEvent.setup();
+      render(<OcrTextViewer lines={SAMPLE} />);
+      await switchToLines(user);
       // Los badges renderizan el porcentaje como label; localizamos por
       // texto y comprobamos la clase de tone.
-      const badge98 = screen.getByText('98%');
-      const badge72 = screen.getByText('72%');
-      const badge31 = screen.getByText('31%');
-      expect(badge98.className).toMatch(/success/);
-      expect(badge72.className).toMatch(/warning/);
-      expect(badge31.className).toMatch(/error/);
+      expect(screen.getByText('98%').className).toMatch(/success/);
+      expect(screen.getByText('72%').className).toMatch(/warning/);
+      expect(screen.getByText('31%').className).toMatch(/error/);
     });
 
-    it('muestra s/c cuando la linea viene de texto PDF sin confidence', () => {
-      render(
-        <OcrTextViewer
-          lines={[{ text: 'Texto extraido del PDF', confidence: null }]}
-          defaultView="lines"
-        />,
-      );
-
+    it('muestra s/c cuando la linea viene de texto PDF sin confidence', async () => {
+      const user = userEvent.setup();
+      render(<OcrTextViewer lines={[{ text: 'Texto extraido del PDF', confidence: null }]} />);
+      await switchToLines(user);
       expect(screen.getByText('s/c')).toBeInTheDocument();
     });
 
     it('una línea muestra confidence redondeada y se puede seleccionar/deseleccionar', async () => {
       const user = userEvent.setup();
-      render(<OcrTextViewer lines={SAMPLE} defaultView="lines" />);
+      render(<OcrTextViewer lines={SAMPLE} />);
+      await switchToLines(user);
       const linea = screen.getByRole('button', { name: /Preparación inicial/i });
       expect(linea).toHaveAttribute('aria-pressed', 'false');
       await user.click(linea);
@@ -88,18 +79,15 @@ describe('OcrTextViewer', () => {
   });
 
   describe('action bar', () => {
-    it('"Copiar todo" pasa el texto plano al callback', async () => {
-      const onCopyAll = vi.fn();
+    it('"Copiar todo" escribe el texto plano en el portapapeles', async () => {
+      // user-event inyecta un stub de clipboard funcional en setup().
       const user = userEvent.setup();
-      render(<OcrTextViewer lines={SAMPLE} onCopyAll={onCopyAll} />);
+      render(<OcrTextViewer lines={SAMPLE} />);
       await user.click(screen.getByRole('button', { name: /Copiar todo/i }));
-      expect(onCopyAll).toHaveBeenCalledTimes(1);
-      const passedText = onCopyAll.mock.calls[0]?.[0] as string;
-      // Concatena por \n, sin las líneas en blanco (que aparecen como
-      // saltos extra preservando el shape del documento original).
-      expect(passedText).toContain('CATAN');
-      expect(passedText).toContain('Preparación inicial');
-      expect(passedText).toContain('Texto borroso difícil');
+      const copied = await navigator.clipboard.readText();
+      expect(copied).toContain('CATAN');
+      expect(copied).toContain('Preparación inicial');
+      expect(copied).toContain('Texto borroso difícil');
     });
 
     it('tras copiar muestra "¡Copiado!" temporal y vuelve a "Copiar todo"', async () => {
@@ -120,36 +108,20 @@ describe('OcrTextViewer', () => {
       );
     });
 
-    it('variant="screen" muestra Save (.txt) y Create manual', () => {
-      render(<OcrTextViewer lines={SAMPLE} variant="screen" />);
-      expect(
-        screen.getByRole('button', { name: /Guardar como \.txt/i }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Crear manual con este texto/i }),
-      ).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Cerrar/i })).not.toBeInTheDocument();
-    });
-
-    it('variant="embedded" muestra Cerrar + dispara onClose', async () => {
+    it('Cerrar dispara onClose', async () => {
       const onClose = vi.fn();
       const user = userEvent.setup();
-      render(<OcrTextViewer lines={SAMPLE} variant="embedded" onClose={onClose} />);
-      expect(
-        screen.queryByRole('button', { name: /Guardar como \.txt/i }),
-      ).not.toBeInTheDocument();
+      render(<OcrTextViewer lines={SAMPLE} onClose={onClose} />);
       await user.click(screen.getByRole('button', { name: /Cerrar/i }));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('meta y casos límite', () => {
-    it('muestra contador de líneas no-blank y duración OCR formateada', () => {
-      render(<OcrTextViewer lines={SAMPLE} meta={{ ocrDurationMs: 1800 }} />);
-      // 3 líneas reales (la 2ª está en blanco) → "3 líneas · OCR 1.8s"
+  describe('casos límite', () => {
+    it('muestra contador de líneas no-blank', () => {
+      render(<OcrTextViewer lines={SAMPLE} />);
+      // 3 líneas reales (la 2ª está en blanco).
       expect(screen.getByText(/3 líneas/)).toBeInTheDocument();
-      expect(screen.getByText(/OCR/)).toBeInTheDocument();
-      expect(screen.getByText(/1\.8s/)).toBeInTheDocument();
     });
 
     it('singular "1 línea" cuando solo hay una', () => {
@@ -164,7 +136,7 @@ describe('OcrTextViewer', () => {
   });
 
   it('pasa axe a11y', async () => {
-    const { container } = render(<OcrTextViewer lines={SAMPLE} variant="embedded" />);
+    const { container } = render(<OcrTextViewer lines={SAMPLE} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

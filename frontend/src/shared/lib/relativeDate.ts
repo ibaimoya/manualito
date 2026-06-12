@@ -1,3 +1,11 @@
+// A nivel de módulo: construir Intl.DateTimeFormat por llamada cuesta caro.
+const SHORT_DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
+
+/** Fecha corta "26 may" — el formato compartido por manuales y conversaciones. */
+export function formatShortDate(iso: string): string {
+  return SHORT_DATE.format(new Date(iso));
+}
+
 /** "ahora mismo", "hace 5 min", "hace 3 h", "hace 2 d"; a partir de 30 días, fecha corta. */
 export function formatRelative(iso: string): string {
   const date = new Date(iso);
@@ -9,5 +17,5 @@ export function formatRelative(iso: string): string {
   if (hours < 24) return `hace ${hours} h`;
   const days = Math.round(hours / 24);
   if (days < 30) return `hace ${days} d`;
-  return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return SHORT_DATE.format(date);
 }

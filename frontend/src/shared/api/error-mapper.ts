@@ -1,11 +1,6 @@
 /**
- * Traductor de errores HTTP del backend → mensaje UI accionable + severidad.
- *
- * El backend FastAPI mapea sus excepciones dominio a códigos HTTP en
- * `backend/api/exceptions.py`.  Aquí espejamos cada uno con la copy y
- * la sugerencia de acción para el usuario final.
- *
- * Si añades un nuevo código en backend, añade su entrada aquí.
+ * Errores HTTP del backend → mensaje UI accionable. Espejo de
+ * backend/api/exceptions.py: un código nuevo allí necesita su entrada aquí.
  */
 
 export type ApiErrorSeverity = 'warning' | 'error' | 'info';

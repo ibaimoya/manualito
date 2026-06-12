@@ -23,13 +23,9 @@ import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { GameTypeahead, SelectedGameChip } from '@/features/upload/GameTypeahead';
-import {
-  api,
-  apiErrorNotification,
-  isAbortApiError,
-  type GameSearchItem,
-} from '@/shared/api/client';
+import { api, isAbortApiError, type GameSearchItem } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/capture/source')({
   component: NewManualScreen,
@@ -76,14 +72,10 @@ function NewManualScreen() {
     },
     onError: (err) => {
       if (isAbortApiError(err)) return;
-      const notification = apiErrorNotification(err, 'mutation-error', {
+      toastApiError(err, 'mutation-error', {
         title: 'Error inesperado',
         id: 'mutation-error-unknown',
         description: 'Vuelve a intentarlo en un momento.',
-      });
-      toast.error(notification.title, {
-        id: notification.id,
-        description: notification.description,
       });
     },
     onSuccess: (data, input) => {

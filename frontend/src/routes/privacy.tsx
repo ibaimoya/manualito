@@ -11,8 +11,7 @@ export const Route = createFileRoute('/privacy')({
 function PrivacyScreen() {
   const router = useRouter();
   const canGoBack = useCanGoBack();
-  // Si se llegó aquí navegando (Ajustes, consentimiento) volvemos atrás; si se
-  // abrió en directo (URL pegada, recarga) no hay historial → vamos al inicio.
+  // Con historial volvemos atrás; en frío (URL pegada) vamos al inicio.
   const goBack = () => {
     if (canGoBack) {
       router.history.back();

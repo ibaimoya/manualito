@@ -75,6 +75,24 @@ describe('Providers', () => {
     });
   });
 
+  it('el Toaster sigue el tema de la app, no el del SO', async () => {
+    localStorage.setItem(
+      'manualito.settings',
+      JSON.stringify({ mode: 'dark', accent: 'amber' }),
+    );
+    render(
+      <Providers>
+        <p>x</p>
+      </Providers>,
+    );
+    toast('tema oscuro');
+    await waitFor(() => {
+      expect(screen.getByText('tema oscuro')).toBeInTheDocument();
+    });
+    const toaster = document.querySelector('[data-sonner-toaster]');
+    expect(toaster).toHaveAttribute('data-sonner-theme', 'dark');
+  });
+
   it('cuota llena → muestra toast "Espacio local agotado" con descripción accionable', async () => {
     // El listener del Providers se ejecuta tras montar.  Simulamos un fallo
     // de escritura "quota" parchando Storage.prototype.setItem (vi.spyOn no

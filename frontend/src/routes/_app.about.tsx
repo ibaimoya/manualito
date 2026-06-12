@@ -52,6 +52,50 @@ const STEPS: ReadonlyArray<{ n: string; icon: ReactNode; title: string; text: st
   },
 ];
 
+const FAQ = [
+  {
+    value: 'reliable',
+    icon: Sparkles,
+    chipClass: 'bg-primary-100 text-primary-700',
+    question: '¿Es fiable lo que dice la IA?',
+    answer: (
+      <>
+        Bastante, pero no infalible. Cada respuesta lleva una{' '}
+        <strong>cita a la página del manual</strong> para que compruebes la fuente en un toque. Si
+        algo huele raro, la página original manda.
+      </>
+    ),
+  },
+  {
+    value: 'photos',
+    icon: Lock,
+    chipClass: 'bg-accent-100 text-accent',
+    question: '¿Qué pasa con mis fotos?',
+    answer: (
+      <>
+        Son <strong>privadas por defecto</strong>: solo se usan para extraer el texto. Compartir un
+        manual con el pool de su juego es opcional y reversible. Más detalle en la{' '}
+        <Link to="/privacy" className="font-semibold text-accent hover:underline">
+          política de privacidad
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    value: 'languages',
+    icon: Globe,
+    chipClass: 'bg-warning-bg text-warning',
+    question: '¿En qué idiomas funciona?',
+    answer: (
+      <>
+        Leemos manuales en <strong>español e inglés</strong>; las explicaciones y el chat responden
+        siempre en español. Más idiomas, en el horizonte.
+      </>
+    ),
+  },
+];
+
 function AboutScreen() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-5 pb-12 pt-6 md:px-8 md:pt-9">
@@ -104,60 +148,21 @@ function AboutScreen() {
       <section aria-label="Preguntas frecuentes">
         <SectionHead eyebrow="Preguntas honestas" title="FAQ" />
         <Accordion type="multiple" defaultValue={['reliable']} className="space-y-3">
-          <AccordionItem value="reliable">
-            <AccordionTrigger>
-              <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-100 text-primary-700">
-                  <Sparkles size={16} strokeWidth={2} />
-                </span>
-                <span>¿Es fiable lo que dice la IA?</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <p className="text-[15px] leading-relaxed text-fg">
-                Bastante, pero no infalible. Cada respuesta lleva una{' '}
-                <strong>cita a la página del manual</strong> para que compruebes la fuente en un
-                toque. Si algo huele raro, la página original manda.
-              </p>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="photos">
-            <AccordionTrigger>
-              <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent-100 text-accent">
-                  <Lock size={16} strokeWidth={2} />
-                </span>
-                <span>¿Qué pasa con mis fotos?</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <p className="text-[15px] leading-relaxed text-fg">
-                Son <strong>privadas por defecto</strong>: solo se usan para extraer el texto.
-                Compartir un manual con el pool de su juego es opcional y reversible. Más detalle
-                en la{' '}
-                <Link to="/privacy" className="font-semibold text-accent hover:underline">
-                  política de privacidad
-                </Link>
-                .
-              </p>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="languages">
-            <AccordionTrigger>
-              <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 place-items-center rounded-lg bg-warning-bg text-warning">
-                  <Globe size={16} strokeWidth={2} />
-                </span>
-                <span>¿En qué idiomas funciona?</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <p className="text-[15px] leading-relaxed text-fg">
-                Leemos manuales en <strong>español e inglés</strong>; las explicaciones y el chat
-                responden siempre en español. Más idiomas, en el horizonte.
-              </p>
-            </AccordionContent>
-          </AccordionItem>
+          {FAQ.map(({ value, icon: Icon, chipClass, question, answer }) => (
+            <AccordionItem key={value} value={value}>
+              <AccordionTrigger>
+                <div className="flex items-center gap-3">
+                  <span className={`grid h-8 w-8 place-items-center rounded-lg ${chipClass}`}>
+                    <Icon size={16} strokeWidth={2} />
+                  </span>
+                  <span>{question}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-[15px] leading-relaxed text-fg">{answer}</p>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
         </Accordion>
       </section>
 

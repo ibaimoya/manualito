@@ -4,7 +4,7 @@ import { useAuth } from './use-auth';
 import { useResendVerification } from './use-resend-verification';
 
 const DISMISS_KEY = 'manualito.verifyBanner.dismissed';
-// Mailpit captura todo el correo saliente; su UI vive en el 8025 (compose.yaml).
+// Mailpit captura cualquier correo saliente; su UI vive en el 8025 (compose.yaml).
 const MAILPIT_URL = 'http://localhost:8025';
 
 function readDismissed(): boolean {

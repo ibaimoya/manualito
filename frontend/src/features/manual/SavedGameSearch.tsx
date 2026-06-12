@@ -1,8 +1,9 @@
-import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Search, X } from 'lucide-react';
 import type { ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { highlightMatch } from '@/shared/components/highlightMatch';
 
 type Props = Readonly<{ manuals: ManualSummary[] }>;
 
@@ -170,18 +171,3 @@ function ResultRow({
   );
 }
 
-function highlightMatch(name: string, query: string): ReactNode {
-  const needle = query.trim();
-  if (needle.length === 0) return name;
-  const index = name.toLowerCase().indexOf(needle.toLowerCase());
-  if (index === -1) return name;
-  return (
-    <>
-      {name.slice(0, index)}
-      <mark className="rounded-[3px] bg-primary-100 px-px text-primary-700">
-        {name.slice(index, index + needle.length)}
-      </mark>
-      {name.slice(index + needle.length)}
-    </>
-  );
-}

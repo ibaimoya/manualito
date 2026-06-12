@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
+import { dropSessionCaches } from '@/features/auth/auth-queries';
 import { AuthAlert } from '@/features/auth/auth-alert';
 import {
   AuthField,
@@ -146,8 +146,7 @@ function DangerZone({ username }: Readonly<{ username: string }>) {
         id: 'account-delete',
         description: 'Gracias por probar Manualito.',
       });
-      qc.setQueryData(AUTH_ME_KEY, null);
-      qc.clear();
+      await dropSessionCaches(qc);
       await router.invalidate();
     },
     onError: () =>

@@ -19,10 +19,6 @@ export interface OcrLine {
   confidence: number | null;
 }
 
-export interface OcrLinesResponse {
-  lines: OcrLine[];
-}
-
 export interface AnswerSource {
   manual_id: string;
   manual_title: string | null;
@@ -152,18 +148,6 @@ export const api = {
       throw new ApiError(mapApiError({ status: res.status }), res.status, null);
     }
     return (await res.json()) as { status: string };
-  },
-
-  /** POST /api/ocr — extrae texto de una sola imagen (legado). */
-  async ocr(image: File, signal?: AbortSignal): Promise<OcrLinesResponse> {
-    const fd = new FormData();
-    fd.append('image', image);
-    return request<OcrLinesResponse>('/ocr', {
-      method: 'POST',
-      body: fd,
-      timeoutMs: 90_000,
-      signal,
-    });
   },
 
   /** POST /api/manuals — guarda la fuente y devuelve 202 mientras procesa. */

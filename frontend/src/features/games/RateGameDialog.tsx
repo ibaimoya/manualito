@@ -1,14 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check } from 'lucide-react';
+import { Eraser } from 'lucide-react';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
+import { Tooltip } from '@/components/ui/tooltip';
 import { GameCover } from '@/features/games/GameCover';
 import { RATE_LABELS, RatingStars } from '@/features/games/RatingStars';
 import { gameDetailKey } from '@/features/games/use-games';
 import { gamesApi, type GameDetail, type GameRating } from '@/shared/api/games';
+import { cn } from '@/shared/lib/cn';
 
 const NOTE_MAX = 120;
 
@@ -22,12 +24,15 @@ export function RateGameDialog({
   gameId,
   gameName,
   current,
+  initialScore = null,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gameId: string;
   gameName: string;
   current: GameRating | null;
+  /** Estrella pulsada fuera del diálogo: se precarga sin tocar el servidor. */
+  initialScore?: number | null;
 }>) {
   return (
     <ResponsiveModal
@@ -37,7 +42,7 @@ export function RateGameDialog({
       description={
         current
           ? 'Puedes cambiar tu valoración cuando quieras.'
-          : 'Tu valoración es solo tuya — nos ayuda a ordenar tu estantería.'
+          : 'Tu valoración nos ayuda a conocerte un poco más.'
       }
       contentClassName="max-w-lg"
     >
@@ -45,6 +50,7 @@ export function RateGameDialog({
         gameId={gameId}
         gameName={gameName}
         current={current}
+        initialScore={initialScore}
         onClose={() => onOpenChange(false)}
       />
     </ResponsiveModal>
@@ -55,20 +61,21 @@ function RateGameForm({
   gameId,
   gameName,
   current,
+  initialScore,
   onClose,
 }: Readonly<{
   gameId: string;
   gameName: string;
   current: GameRating | null;
+  initialScore: number | null;
   onClose: () => void;
 }>) {
   const qc = useQueryClient();
   const noteId = useId();
-  const [score, setScore] = useState(current?.score ?? 0);
+  const [score, setScore] = useState(initialScore ?? current?.score ?? 0);
   const [note, setNote] = useState(current?.note ?? '');
 
-  // Escribe la valoración en cache con la respuesta del servidor: aunque el
-  // refetch de la invalidación falle, la cabecera ya muestra el dato real.
+  // Cache con la respuesta del servidor: la cabecera no depende del refetch.
   function applyRating(next: GameRating | null): void {
     qc.setQueryData<GameDetail>(gameDetailKey(gameId), (old) =>
       old ? { ...old, my_rating: next } : old,
@@ -109,17 +116,36 @@ function RateGameForm({
       }),
   });
 
+  // Vaciar las estrellas solo cambia el borrador; el DELETE viaja al confirmar.
+  const clearsExisting = current !== null && score === 0;
+
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         if (score > 0) save.mutate();
+        else if (clearsExisting) remove.mutate();
       }}
       className="flex flex-col items-center text-center"
     >
       <GameCover name={gameName} size={64} />
-      <div className="mt-4">
+      <div className="mt-4 flex items-center gap-1">
+        {/* Hueco simétrico a la goma: las estrellas quedan centradas. */}
+        <span aria-hidden="true" className="size-9 shrink-0" />
         <RatingStars value={score} size={34} onSelect={setScore} />
+        <Tooltip content="Quitar valoración">
+          <button
+            type="button"
+            aria-label="Quitar valoración"
+            onClick={() => setScore(0)}
+            className={cn(
+              'grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:bg-error-bg hover:text-error',
+              score === 0 && 'invisible',
+            )}
+          >
+            <Eraser size={18} strokeWidth={2} />
+          </button>
+        </Tooltip>
       </div>
       <p
         aria-live="polite"
@@ -129,39 +155,40 @@ function RateGameForm({
       </p>
 
       <div className="mt-3 w-full max-w-sm text-left">
-        <label htmlFor={noteId} className="mb-1.5 flex items-baseline justify-between text-sm">
+        {/* px-3: casi alineada con el texto interior del Input, sin meterse. */}
+        <label htmlFor={noteId} className="mb-1.5 flex items-baseline justify-between px-3 text-sm">
           <span className="font-semibold text-fg">Añade una nota</span>
-          <span className="text-xs text-fg-3">opcional</span>
+          <span className="text-xs text-fg-3">Opcional</span>
         </label>
         <Input
           id={noteId}
           value={note}
           maxLength={NOTE_MAX}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="«Brilla a 4 jugadores…»"
+          placeholder="«Mejor con 4 jugadores…»"
         />
       </div>
-
-      {current ? (
-        <button
-          type="button"
-          onClick={() => remove.mutate()}
-          disabled={remove.isPending}
-          className="mt-4 text-sm font-semibold text-error hover:underline disabled:opacity-60"
-        >
-          Quitar valoración
-        </button>
-      ) : null}
 
       <div className="mt-5 flex w-full gap-2">
         <Button type="button" variant="ghost" block onClick={onClose}>
           Cancelar
         </Button>
-        <Button type="submit" block disabled={score === 0} loading={save.isPending}>
-          <Check size={16} strokeWidth={2.4} />
-          {current ? 'Actualizar' : 'Guardar'}
+        <Button
+          type="submit"
+          block
+          variant={clearsExisting ? 'destructive' : 'primary'}
+          disabled={score === 0 && current === null}
+          loading={save.isPending || remove.isPending}
+        >
+          {submitLabel(current !== null, clearsExisting)}
         </Button>
       </div>
     </form>
   );
+}
+
+/** Texto del botón principal según el borrador: guarda, actualiza o quita. */
+function submitLabel(hasCurrent: boolean, clearsExisting: boolean): string {
+  if (!hasCurrent) return 'Guardar';
+  return clearsExisting ? 'Quitar valoración' : 'Actualizar';
 }

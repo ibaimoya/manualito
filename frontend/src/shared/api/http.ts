@@ -69,9 +69,7 @@ export function apiErrorNotification(
   return fallback;
 }
 
-// CSRF double-submit: reflejamos la cookie legible en X-CSRF-Token en cada
-// mutación. Nombre según entorno (api/config.py): dev `manualito_csrf`,
-// prod `__Host-manualito_csrf`.
+// CSRF double-submit: la cookie legible viaja en X-CSRF-Token (nombres en api/config.py).
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 const CSRF_COOKIE_NAMES = ['__Host-manualito_csrf', 'manualito_csrf'] as const;
 const MUTATING_METHODS: ReadonlySet<string> = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);

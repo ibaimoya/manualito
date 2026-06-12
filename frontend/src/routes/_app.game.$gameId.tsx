@@ -1,14 +1,11 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   ChevronRight,
   Clock,
   FileText,
-  Flag,
   Loader2,
   Plus,
-  RefreshCw,
   RotateCw,
   ScanText,
   Send,
@@ -16,27 +13,24 @@ import {
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
-import { ScreenTopBar } from '@/app/Topbar';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { BackLink, ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ConversationsSection } from '@/features/conversations/ConversationsSection';
+import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { GameCover } from '@/features/games/GameCover';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
 import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
 import type { GameDetail, GamePoolManual } from '@/shared/api/games';
+import { QUESTION_MAX } from '@/shared/api/conversations';
 import { Markdown } from '@/shared/components/Markdown';
 import { gameColor } from '@/shared/lib/gameColor';
+import { formatShortDate } from '@/shared/lib/relativeDate';
 
 export const Route = createFileRoute('/_app/game/$gameId')({
   component: GameHubScreen,
@@ -58,18 +52,11 @@ function GameHubScreen() {
       <ScreenTopBar
         crumb={detail.data?.name ?? 'Juego'}
         trail={[{ label: 'Historial', link: linkOptions({ to: '/history' }) }]}
-        back={
-          <Link
-            to="/history"
-            className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
-            aria-label="Volver al historial"
-          >
-            <ArrowLeft size={22} strokeWidth={2} />
-          </Link>
-        }
+        back={<BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />}
       />
       {detail.isPending ? <HubSkeleton /> : null}
-      {detail.isError ? <HubError /> : null}
+      {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
+      {detail.isError && detail.data === undefined ? <HubError /> : null}
       {detail.data ? <GameHubLoaded game={detail.data} /> : null}
     </div>
   );
@@ -77,14 +64,21 @@ function GameHubScreen() {
 
 function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   const [rateOpen, setRateOpen] = useState(false);
+  // Estrella pulsada en la cabecera: se precarga en el diálogo, no se guarda.
+  const [presetScore, setPresetScore] = useState<number | null>(null);
   const ownManual = game.manuals.find((manual) => manual.is_own) ?? game.manuals[0];
   const totalPages = game.manuals.reduce((sum, manual) => sum + manual.page_count, 0);
+
+  function openRating(score?: number): void {
+    setPresetScore(score ?? null);
+    setRateOpen(true);
+  }
 
   return (
     <>
       <div className="flex-1">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-5 md:px-6 md:py-8">
-          <GameHeader game={game} onRate={() => setRateOpen(true)} />
+          <GameHeader game={game} onRate={openRating} />
           <ExplanationSection gameId={game.id} hasManuals={game.manuals.length > 0} />
           {ownManual ? (
             <ConversationsSection manualId={ownManual.id} gameId={game.id} showViewAll />
@@ -111,6 +105,7 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
         gameId={game.id}
         gameName={game.name}
         current={game.my_rating}
+        initialScore={presetScore}
       />
     </>
   );
@@ -129,7 +124,7 @@ function playersLabel(game: GameDetail): string | null {
 function GameHeader({
   game,
   onRate,
-}: Readonly<{ game: GameDetail; onRate: () => void }>) {
+}: Readonly<{ game: GameDetail; onRate: (score?: number) => void }>) {
   const players = playersLabel(game);
   const yearSuffix = game.year_published === null ? '' : ` · ${game.year_published}`;
   return (
@@ -144,17 +139,17 @@ function GameHeader({
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {players ? (
-            <Badge tone="neutral" size="sm" icon={<Users strokeWidth={2} />}>
+            <Badge tone="neutral" icon={<Users strokeWidth={2} />}>
               {players}
             </Badge>
           ) : null}
           {game.playing_time_minutes === null ? null : (
-            <Badge tone="neutral" size="sm" icon={<Clock strokeWidth={2} />}>
+            <Badge tone="neutral" icon={<Clock strokeWidth={2} />}>
               {game.playing_time_minutes} min
             </Badge>
           )}
           <Tooltip content="Generado por IA: puede equivocarse. Si algo no cuadra, contrástalo con el manual original.">
-            <Badge tone="neutral" size="sm" tabIndex={0} className="cursor-help">
+            <Badge tone="neutral" tabIndex={0} className="cursor-help">
               <Sparkles size={12} strokeWidth={2} aria-hidden="true" />
               Generado con IA
             </Badge>
@@ -167,22 +162,6 @@ function GameHeader({
     </header>
   );
 }
-
-const EXPLANATION_BLOCKS = [
-  { key: 'setup', title: 'Preparación', icon: Flag, chipClass: 'bg-primary-100 text-primary-700' },
-  {
-    key: 'turns',
-    title: '¿Cómo van los turnos?',
-    icon: RefreshCw,
-    chipClass: 'bg-accent-100 text-accent',
-  },
-  {
-    key: 'victory',
-    title: '¿Cómo se gana?',
-    icon: Sparkles,
-    chipClass: 'bg-warning-bg text-warning',
-  },
-] as const;
 
 function ExplanationSection({
   gameId,
@@ -249,47 +228,22 @@ function ExplanationSection({
   }
 
   const sections = explanation.data.sections;
+  const body = (section: { answer: string } | null | undefined) =>
+    section ? (
+      <Markdown className="text-base leading-relaxed text-fg">{section.answer}</Markdown>
+    ) : null;
   return (
     <section aria-label="Explicación del juego" className="space-y-3">
-      {sections.summary ? (
-        <Card className="bg-surface p-4">
-          <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-            Resumen rápido
-          </p>
-          <Markdown className="text-base leading-relaxed text-fg">
-            {sections.summary.answer}
-          </Markdown>
-        </Card>
-      ) : null}
-      <Accordion type="multiple" defaultValue={['setup']} className="space-y-3">
-        {EXPLANATION_BLOCKS.map(({ key, title, icon: Icon, chipClass }) => {
-          const section = sections[key];
-          if (!section) return null;
-          return (
-            <AccordionItem key={key} value={key}>
-              <AccordionTrigger headingLevel={2}>
-                <div className="flex items-center gap-3">
-                  <span className={`grid h-8 w-8 place-items-center rounded-lg ${chipClass}`}>
-                    <Icon size={16} strokeWidth={2} />
-                  </span>
-                  <span>{title}</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <Markdown className="text-base leading-relaxed text-fg">
-                  {section.answer}
-                </Markdown>
-              </AccordionContent>
-            </AccordionItem>
-          );
-        })}
-      </Accordion>
+      <ExplanationBlocks
+        summary={body(sections.summary)}
+        content={{
+          setup: body(sections.setup),
+          turns: body(sections.turns),
+          victory: body(sections.victory),
+        }}
+      />
     </section>
   );
-}
-
-function formatManualDate(iso: string): string {
-  return new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' }).format(new Date(iso));
 }
 
 function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
@@ -304,7 +258,7 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
             Manuales · fuentes
           </h2>
         </div>
-        <Button asChild variant="ghost" size="sm">
+        <Button asChild variant="ghost">
           <Link to="/capture/source">
             <Plus size={15} strokeWidth={2} />
             Añadir manual
@@ -326,36 +280,54 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
   );
 }
 
+/**
+ * Hoja de papel en miniatura: lomo del color del juego, esquina doblada y,
+ * si el manual tiene varias páginas, una segunda hoja asomando detrás.
+ */
+function ManualThumb({ color, stacked }: Readonly<{ color: string; stacked: boolean }>) {
+  return (
+    <span aria-hidden="true" className="relative h-[58px] w-[46px] shrink-0">
+      {stacked ? (
+        <span className="absolute inset-0 translate-x-[3px] translate-y-[2px] rotate-3 rounded-md border border-border bg-surface-2" />
+      ) : null}
+      <span className="relative block size-full overflow-hidden rounded-md border border-border bg-gradient-to-b from-bg to-surface shadow-sm transition-transform group-hover:-rotate-2">
+        <span className="absolute inset-y-0 left-0 w-[4px]" style={{ backgroundColor: color }} />
+        <span
+          className="absolute right-0 top-0 size-3.5 bg-surface-2 shadow-[-1px_1px_2px_rgba(53,28,12,0.12)]"
+          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }}
+        />
+        <span className="absolute inset-x-2 top-3.5 flex flex-col gap-[4px] pl-[3px]">
+          {[88, 64, 78, 50, 70].map((width) => (
+            <span
+              key={width}
+              className="h-[2.5px] rounded-full bg-fg/15"
+              style={{ width: `${width}%` }}
+            />
+          ))}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   const label = manual.title ?? (manual.source_type === 'pdf' ? 'Manual en PDF' : 'Manual en fotos');
   const body = (
     <>
-      <span
-        aria-hidden="true"
-        className="flex h-[54px] w-[42px] shrink-0 flex-col gap-[3px] rounded-lg p-2 pt-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,.25)]"
-        style={{ backgroundColor: gameColor(label) }}
-      >
-        {[90, 65, 80, 50].map((width) => (
-          <span
-            key={width}
-            className="h-[2.5px] rounded-full bg-[#FFF8F0]/55"
-            style={{ width: `${width}%` }}
-          />
-        ))}
-      </span>
+      <ManualThumb color={gameColor(label)} stacked={manual.page_count > 1} />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-sm font-bold text-fg">{label}</p>
-        <p className="mono mt-0.5 text-[11px] text-fg-3">
+        <p className="truncate font-display text-[15px] font-bold leading-tight text-fg">{label}</p>
+        <p className="mono mt-1 text-[11px] text-fg-3">
           {manual.page_count} {manual.page_count === 1 ? 'página' : 'páginas'} ·{' '}
-          {formatManualDate(manual.created_at)}
+          {formatShortDate(manual.created_at)}
         </p>
         {manual.is_own ? (
-          <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-accent group-hover:underline">
+          <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent">
             <ScanText size={13} strokeWidth={2} aria-hidden="true" />
-            Ver texto extraído
+            Texto extraído
           </span>
         ) : (
-          <p className="mt-1 text-xs text-fg-3">compartido por la comunidad</p>
+          <p className="mt-1.5 text-xs text-fg-3">Compartido por la comunidad</p>
         )}
       </div>
     </>
@@ -364,20 +336,25 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   // El manual propio se abre clicando la tarjeta entera, no un mini-enlace.
   if (manual.is_own) {
     return (
-      <Card className="transition-colors hover:border-border-strong">
+      <Card className="transition-all hover:-translate-y-px hover:border-border-strong hover:shadow-sm">
         <Link
           to="/manual/$manualId"
           params={{ manualId: manual.id }}
           aria-label={`Ver texto extraído de ${label}`}
-          className="group flex items-center gap-3 p-3"
+          className="group flex items-center gap-3.5 p-3.5"
         >
           {body}
-          <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+          <ChevronRight
+            size={18}
+            strokeWidth={2}
+            className="shrink-0 text-fg-3 transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
         </Link>
       </Card>
     );
   }
-  return <Card className="flex items-center gap-3 p-3">{body}</Card>;
+  return <Card className="flex items-center gap-3.5 p-3.5 opacity-90">{body}</Card>;
 }
 
 function HubComposer({
@@ -430,6 +407,7 @@ function HubComposer({
           <Input
             preset="chat-message"
             value={question}
+            maxLength={QUESTION_MAX}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder={`Pregunta sobre ${game.name}…`}
             aria-label="Pregunta sobre el juego"

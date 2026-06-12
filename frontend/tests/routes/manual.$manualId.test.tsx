@@ -140,6 +140,20 @@ describe('/manual/$manualId · edición de texto', () => {
     expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
   });
 
+  it('cambiar de página con Anterior/Siguiente sale del modo edición', async () => {
+    renderManual();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar texto' }));
+    expect(await screen.findByRole('textbox', { name: 'Texto de la página 1' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+    await user.click(screen.getByRole('button', { name: /Anterior/ }));
+
+    // La página 1 vuelve en modo lectura, no con el editor abierto.
+    expect(screen.queryByRole('textbox', { name: /Texto de la página/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
+  });
+
   it('409 (manual ocupado): toast de error y sigue en modo edición', async () => {
     server.use(
       http.put('/api/manuals/:manualId/pages/:pageNumber/text', () =>

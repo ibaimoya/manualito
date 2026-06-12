@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
+import { storage } from '@/shared/lib/storage';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type AccentVariant = 'amber' | 'blue';
@@ -24,7 +25,6 @@ type ThemeState = {
 
 const ThemeContext = createContext<ThemeState | null>(null);
 
-const STORAGE_KEY = 'manualito.settings';
 const PERSIST_DEBOUNCE_MS = 200;
 
 type Persisted = { mode: ThemeMode; accent: AccentVariant };
@@ -33,8 +33,6 @@ type BrowserRuntime = {
   window?: Window;
 };
 
-const DEFAULT_PERSISTED: Persisted = { mode: 'light', accent: 'amber' };
-
 function getBrowserRuntime(): BrowserRuntime {
   return {
     document: globalThis.document,
@@ -42,30 +40,14 @@ function getBrowserRuntime(): BrowserRuntime {
   };
 }
 
-function loadFromStorage(): Persisted {
-  const runtimeWindow = getBrowserRuntime().window;
-  if (runtimeWindow === undefined) return DEFAULT_PERSISTED;
-  try {
-    const raw = runtimeWindow.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PERSISTED;
-    const parsed = JSON.parse(raw) as Partial<Persisted>;
-    return {
-      mode: parsed.mode ?? 'light',
-      accent: parsed.accent ?? 'amber',
-    };
-  } catch {
-    return DEFAULT_PERSISTED;
-  }
+function loadInitial(): Persisted {
+  const { mode, accent } = storage.readSettings();
+  return { mode, accent };
 }
 
-function rawPersist(state: Persisted): void {
-  const runtimeWindow = getBrowserRuntime().window;
-  if (runtimeWindow === undefined) return;
-  try {
-    runtimeWindow.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    /* quota / privacidad — el listener global de storage avisa al usuario */
-  }
+/** Merge sobre lo persistido: no pisa otros campos de `manualito.settings`. */
+function persistTheme(state: Persisted): void {
+  storage.writeSettings({ ...storage.readSettings(), ...state });
 }
 
 /**
@@ -85,10 +67,8 @@ function applyToHtml(state: Persisted): void {
 }
 
 /**
- * Aplica el tema dentro de `document.startViewTransition`: el cambio masivo
- * de variables CSS se anima como crossfade nativo y las llamadas solapadas
- * se cancelan limpiamente (spam-click sin flicker). Sin soporte o con
- * reduced-motion, aplica en seco.
+ * Aplica el tema dentro de una View Transition (crossfade nativo, el spam se
+ * cancela limpio). Sin soporte o con reduced-motion, aplica en seco.
  */
 function applyWithViewTransition(state: Persisted): void {
   const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
@@ -105,15 +85,12 @@ function applyWithViewTransition(state: Persisted): void {
 }
 
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [state, setState] = useState<Persisted>(() => loadFromStorage());
+  const [state, setState] = useState<Persisted>(() => loadInitial());
 
-  // `useTransition` marca los setState como "no urgentes": si llega otro
-  // click rápido, React tira el render pendiente y solo procesa el último.
-  // Evita main-thread saturado al spammear toggles.
+  // useTransition: con spam de toggles React solo procesa el último click.
   const [, startTransition] = useTransition();
 
-  // Aplicación al DOM: side-effect del state.  En el PRIMER mount NO
-  // queremos View Transition (no hay "from" estado anterior).
+  // En el primer mount no hay estado "from": se aplica sin View Transition.
   const mountedRef = useRef(false);
   useEffect(() => {
     if (mountedRef.current) {
@@ -124,16 +101,13 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, [state]);
 
-  // Persistencia con debounce: 20 clicks en 1s = UN solo setItem al final.
-  // Mantiene el UI reactivo (state se actualiza al instante) pero evita
-  // el lag de spam de writes síncronos a localStorage.
-  const persist = useDebouncedCallback(rawPersist, PERSIST_DEBOUNCE_MS);
+  // Debounce: una ráfaga de clicks acaba en un solo setItem.
+  const persist = useDebouncedCallback(persistTheme, PERSIST_DEBOUNCE_MS);
   useEffect(() => {
     persist(state);
   }, [state, persist]);
 
-  // Listener de matchMedia para modo 'auto': re-suscribe SOLO cuando el
-  // modo cambia, no cuando cambia el color de acento.
+  // Depende del state completo: un listener viejo revertiría el acento.
   useEffect(() => {
     const runtimeWindow = getBrowserRuntime().window;
     if (state.mode !== 'auto' || runtimeWindow === undefined) return;
@@ -141,13 +115,9 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     const onChange = () => applyToHtml(state);
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
-    // Dep intencional: solo nos importa el modo aquí.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.mode]);
+  }, [state]);
 
-  // Setters con guard de equidad: si el valor pedido == valor actual,
-  // no disparamos setState (evita render extra cuando el usuario hace
-  // doble-click sobre el mismo segmento del SegmentedControl).
+  // Guard de igualdad: repetir el valor actual no dispara render.
   const setMode = useCallback(
     (mode: ThemeMode) =>
       startTransition(() => {

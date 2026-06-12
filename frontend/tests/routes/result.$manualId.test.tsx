@@ -1,20 +1,11 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
-import { ThemeProvider } from '@/app/theme';
 import { Route as ResultRoute } from '@/routes/_app.result.$manualId';
-import { storage, type ManualResult, type OcrLine } from '@/shared/lib/storage';
+import { storage, type ManualResult } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 /**
  * La query semántica desktop por defecto en jsdom devuelve false, así que
@@ -25,7 +16,7 @@ const MANUAL_ID = 'catan-test';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
-function seedManualWithResult(opts: { withOcr: boolean }): void {
+function seedManualWithResult(): void {
   const result: ManualResult = {
     manual_id: MANUAL_ID,
     name: 'Catan',
@@ -43,14 +34,6 @@ function seedManualWithResult(opts: { withOcr: boolean }): void {
     last_opened_at: result.created_at,
     chunks_indexed: 5,
   });
-  if (opts.withOcr) {
-    const lines: OcrLine[] = [
-      { text: 'CATAN — REGLAS', confidence: 0.97 },
-      { text: 'Construye carreteras.', confidence: 0.71 },
-      { text: 'Borrosa', confidence: 0.28 },
-    ];
-    storage.setOcrLines(MANUAL_ID, lines);
-  }
 }
 
 function manualDetailWithOcr() {
@@ -95,52 +78,22 @@ afterEach(() => {
 afterAll(() => server.close());
 
 function renderResult() {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const resultR = createRoute({
-    getParentRoute: () => root,
+  return renderRoute({
     path: '/result/$manualId',
-    component: (ResultRoute as unknown as { options: { component: React.FC } }).options.component,
+    initialEntry: `/result/${MANUAL_ID}`,
+    component: routeComponent(ResultRoute),
+    stubs: {
+      '/home': 'Home',
+      '/chat/$manualId': 'Chat',
+      '/capture/source': 'Source',
+      '/processing/$manualId': 'Processing',
+    },
   });
-  const homeR = createRoute({
-    getParentRoute: () => root,
-    path: '/home',
-    component: () => <div>Home</div>,
-  });
-  const chatR = createRoute({
-    getParentRoute: () => root,
-    path: '/chat/$manualId',
-    component: () => <div>Chat</div>,
-  });
-  const sourceR = createRoute({
-    getParentRoute: () => root,
-    path: '/capture/source',
-    component: () => <div>Source</div>,
-  });
-  const processingR = createRoute({
-    getParentRoute: () => root,
-    path: '/processing/$manualId',
-    component: () => <div>Processing</div>,
-  });
-  const tree = root.addChildren([resultR, homeR, chatR, sourceR, processingR]);
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({ initialEntries: [`/result/${MANUAL_ID}`] }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
 describe('/result · texto extraído multipágina', () => {
   it('no muestra el botón si el detalle del manual no tiene líneas', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     renderResult();
     // "Catan" aparece en el breadcrumb (md+) y en el título móvil.
     expect((await screen.findAllByText('Catan')).length).toBeGreaterThan(0);
@@ -148,14 +101,14 @@ describe('/result · texto extraído multipágina', () => {
   });
 
   it('muestra el botón ScanText cuando el backend devuelve líneas OCR', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     renderResult();
     expect(await screen.findByRole('button', { name: /Ver texto extraído/i })).toBeInTheDocument();
   });
 
   it('al pulsar el botón abre el sheet con líneas ordenadas por página', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     server.use(http.get('/api/manuals/:manualId', () => manualDetailWithOcr()));
     const user = userEvent.setup();
     renderResult();
@@ -169,16 +122,6 @@ describe('/result · texto extraído multipágina', () => {
     expect(text.indexOf('CATAN')).toBeLessThan(text.indexOf('Página 2'));
   });
 
-  it('usa cache local solo como fallback si el detalle del backend falla', async () => {
-    server.use(
-      http.get('/api/manuals/:manualId', () =>
-        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
-      ),
-    );
-    seedManualWithResult({ withOcr: true });
-    renderResult();
-    expect(await screen.findByRole('button', { name: /Ver texto extraído/i })).toBeInTheDocument();
-  });
 });
 
 describe('/result · contenido principal', () => {
@@ -190,7 +133,7 @@ describe('/result · contenido principal', () => {
   });
 
   it('renderiza summary + 3 acordeones con su contenido', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     renderResult();
     expect(await screen.findByText('Resumen rápido del juego.')).toBeInTheDocument();
     // El acordeón Preparación está abierto por defecto.
@@ -201,7 +144,7 @@ describe('/result · contenido principal', () => {
   });
 
   it('chips de preguntas sugeridas navegan a /chat con ?q=', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     renderResult();
     const user = userEvent.setup();
     const chip = await screen.findByRole('button', { name: '¿Cuántos jugadores?' });
@@ -210,7 +153,7 @@ describe('/result · contenido principal', () => {
   });
 
   it('composer: enviar una pregunta navega a /chat', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     renderResult();
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -220,7 +163,7 @@ describe('/result · contenido principal', () => {
   });
 
   it('composer disabled cuando el input está vacío o whitespace', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     renderResult();
     const send = await screen.findByRole('button', { name: /Enviar pregunta/i });
     expect(send).toBeDisabled();
@@ -230,7 +173,7 @@ describe('/result · contenido principal', () => {
   });
 
   it('botón "Otro manual" enlaza a /capture/source', async () => {
-    seedManualWithResult({ withOcr: false });
+    seedManualWithResult();
     renderResult();
     const link = await screen.findByRole('link', { name: /Otro manual/i });
     expect(link).toHaveAttribute('href', '/capture/source');

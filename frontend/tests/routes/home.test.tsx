@@ -1,17 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
 import { server } from '@tests/_helpers/server';
-import { ThemeProvider } from '@/app/theme';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { Route as HomeRoute } from '@/routes/_app.home';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
@@ -35,35 +26,17 @@ function manual(overrides: Record<string, unknown> = {}) {
 }
 
 function renderHome() {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const homeR = createRoute({
-    getParentRoute: () => root,
+  return renderRoute({
     path: '/home',
-    component: (HomeRoute as unknown as { options: { component: React.FC } }).options.component,
+    initialEntry: '/home',
+    component: routeComponent(HomeRoute),
+    stubs: {
+      '/capture/source': 'SourceScreen',
+      '/settings': 'SettingsScreen',
+      '/history': 'HistoryScreen',
+      '/result/$manualId': 'ResultScreen',
+    },
   });
-  const stub = (path: string, label: string) =>
-    createRoute({ getParentRoute: () => root, path, component: () => <div>{label}</div> });
-  const tree = root.addChildren([
-    homeR,
-    stub('/capture/source', 'SourceScreen'),
-    stub('/settings', 'SettingsScreen'),
-    stub('/history', 'HistoryScreen'),
-    stub('/result/$manualId', 'ResultScreen'),
-  ]);
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({ initialEntries: ['/home'] }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
 describe('/home', () => {

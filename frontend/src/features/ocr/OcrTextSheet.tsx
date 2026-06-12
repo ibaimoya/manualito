@@ -7,21 +7,17 @@ type Props = Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lines: OcrLine[];
-  meta?: { ocrDurationMs?: number };
 }>;
 
 const TITLE = 'Texto extraído del manual';
 const SUBTITLE = 'Lo que leyó el OCR de las páginas que subiste';
 
 /**
- * Visor del texto OCR en un modal centrado, igual en móvil y escritorio.
- *
- * Centrado con `inset-0 + margin:auto` (no con `left:50% + translate`): el
- * margen automático reparte el espacio sobrante, así que el panel queda
- * centrado pase lo que pase con el contenedor o el scrollbar. La animación
- * es solo de opacidad para no interferir con ese centrado.
+ * Visor del texto OCR en un modal centrado con `inset-0 + margin:auto`:
+ * aguanta scrollbars y contenedores raros, y la animación es solo de
+ * opacidad para no pelearse con ese centrado.
  */
-export function OcrTextSheet({ open, onOpenChange, lines, meta }: Props) {
+export function OcrTextSheet({ open, onOpenChange, lines }: Props) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -49,13 +45,7 @@ export function OcrTextSheet({ open, onOpenChange, lines, meta }: Props) {
 
           <InfoNote />
 
-          <OcrTextViewer
-            lines={lines}
-            meta={meta}
-            variant="embedded"
-            defaultView="plain"
-            onClose={() => onOpenChange(false)}
-          />
+          <OcrTextViewer lines={lines} onClose={() => onOpenChange(false)} />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

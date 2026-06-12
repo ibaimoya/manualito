@@ -1,7 +1,6 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -11,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { ScreenTopBar } from '@/app/Topbar';
+import { BackLink, ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -20,22 +19,15 @@ import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import { manualDetailQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
-import {
-  api,
-  ApiError,
-  apiErrorNotification,
-  type ManualDetailResponse,
-} from '@/shared/api/client';
+import { formatShortDate } from '@/shared/lib/relativeDate';
+import { api, ApiError, type ManualDetailResponse } from '@/shared/api/client';
+import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/manual/$manualId')({
   component: ManualDetailScreen,
 });
 
 const PROCESSING_POLL_MS = 1500;
-
-function formatUploadDate(iso: string): string {
-  return new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' }).format(new Date(iso));
-}
 
 function editErrorToast(error: unknown): void {
   if (error instanceof ApiError && error.status === 409) {
@@ -53,14 +45,10 @@ function editErrorToast(error: unknown): void {
     return;
   }
   // Resto de códigos (429 de rate limit, 404, red…): copy del mapper común.
-  const notification = apiErrorNotification(error, 'page-edit-error', {
+  toastApiError(error, 'page-edit-error', {
     title: 'No hemos podido guardar el texto',
     id: 'page-edit-error-unknown',
     description: 'Inténtalo de nuevo en un momento.',
-  });
-  toast.error(notification.title, {
-    id: notification.id,
-    description: notification.description,
   });
 }
 
@@ -93,7 +81,8 @@ function ManualDetailScreen() {
       </ManualShell>
     );
   }
-  return <ManualDetailLoaded manual={detail.data} />;
+  // key: el estado por manual no debe sobrevivir a un cambio de manual.
+  return <ManualDetailLoaded key={detail.data.id} manual={detail.data} />;
 }
 
 function ManualShell({
@@ -112,15 +101,7 @@ function ManualShell({
       <ScreenTopBar
         crumb={crumb}
         trail={trail}
-        back={
-          <Link
-            to="/history"
-            className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
-            aria-label="Volver al historial"
-          >
-            <ArrowLeft size={22} strokeWidth={2} />
-          </Link>
-        }
+        back={<BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />}
         actions={actions}
       />
       {children}
@@ -227,9 +208,15 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
     });
   }
 
+  // Cambiar de página sale del modo edición (volver no reabre el borrador).
+  function goToPage(pageNumber: number): void {
+    setActivePage(pageNumber);
+    setEditingPage(null);
+  }
+
   function jumpToMatch(delta: 1 | -1): void {
     const match = search.step(delta);
-    if (match) setActivePage(match.pageNumber);
+    if (match) goToPage(match.pageNumber);
   }
 
   const title = manual.title ?? manual.game_name;
@@ -293,10 +280,7 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
           pages={pages}
           activePage={page.page_number}
           hitsByPage={search.hitsByPage}
-          onSelect={(pageNumber) => {
-            setActivePage(pageNumber);
-            setEditingPage(null);
-          }}
+          onSelect={goToPage}
         />
 
         <div className="min-w-0">
@@ -330,20 +314,20 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
               variant="ghost"
               size="sm"
               disabled={page.page_number <= 1}
-              onClick={() => setActivePage(page.page_number - 1)}
+              onClick={() => goToPage(page.page_number - 1)}
             >
               <ChevronLeft size={16} strokeWidth={2} />
               Anterior
             </Button>
             <span className="mono text-[11px] text-fg-3">
-              subido {formatUploadDate(manual.created_at)} · {manualSourceLabel(manual)} ·{' '}
+              subido {formatShortDate(manual.created_at)} · {manualSourceLabel(manual)} ·{' '}
               {manual.pages.length} {manual.pages.length === 1 ? 'página' : 'páginas'}
             </span>
             <Button
               variant="ghost"
               size="sm"
               disabled={page.page_number >= manual.pages.length}
-              onClick={() => setActivePage(page.page_number + 1)}
+              onClick={() => goToPage(page.page_number + 1)}
             >
               Siguiente
               <ChevronRight size={16} strokeWidth={2} />

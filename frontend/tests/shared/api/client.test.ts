@@ -229,24 +229,6 @@ describe('api getManualProcessing', () => {
   });
 });
 
-describe('api ocr', () => {
-  it('POST /api/ocr con FormData devuelve las líneas extraídas', async () => {
-    let received: string | null = null;
-    server.use(
-      http.post('/api/ocr', ({ request }) => {
-        received = request.headers.get('content-type');
-        return HttpResponse.json({
-          lines: [{ text: 'hola', confidence: 0.9 }],
-        });
-      }),
-    );
-    const file = new File(['x'], 'a.jpg', { type: 'image/jpeg' });
-    const res = await api.ocr(file);
-    expect(received).toMatch(/^multipart\/form-data/);
-    expect(res.lines[0]?.text).toBe('hola');
-  });
-});
-
 describe('api response handling', () => {
   it('cuando la respuesta es text/plain, devuelve texto', async () => {
     server.use(

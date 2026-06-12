@@ -30,8 +30,7 @@ export function useSidebarCollapsed(): SidebarCollapse {
       try {
         localStorage.setItem(KEY, next ? '1' : '0');
       } catch {
-        // Almacenamiento no disponible (modo privado/cuota): el estado vive
-        // solo en memoria durante esta sesión.
+        // Sin almacenamiento (modo privado): el estado vive solo en memoria.
       }
       return next;
     });

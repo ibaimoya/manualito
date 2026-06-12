@@ -10,6 +10,7 @@ import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar } from '@/shared/components/Avatar';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { storage } from '@/shared/lib/storage';
+import { clearApiSwCache } from '@/shared/lib/swCache';
 
 export const Route = createFileRoute('/_app/settings')({
   component: SettingsScreen,
@@ -18,17 +19,17 @@ export const Route = createFileRoute('/_app/settings')({
 function SettingsScreen() {
   const theme = useTheme();
   const [confirmingWipe, setConfirmingWipe] = useState(false);
-  // Para indicar al usuario qué tema está REALMENTE viendo cuando el
-  // modo es 'auto' (sigue el SO).
+  // En modo auto, el hint dice qué tema se está viendo realmente.
   const systemPrefersDark = useNamedMediaQuery('darkMode');
   const currentSystemTheme = systemPrefersDark ? 'oscuro' : 'claro';
   const modeHint =
     theme.mode === 'auto' ? `Sigue el sistema (actualmente: ${currentSystemTheme})` : undefined;
 
-  function wipeAll(): void {
+  function wipeLocalData(): void {
     storage.wipeAll();
     storage.resetOnboarding();
-    toast.success('Historial borrado');
+    void clearApiSwCache();
+    toast.success('Datos locales borrados');
     setConfirmingWipe(false);
   }
 
@@ -75,7 +76,7 @@ function SettingsScreen() {
             <FileText size={12} aria-hidden="true" /> Servidor
           </Badge>
         </Row>
-        <Row label="Borrar historial">
+        <Row label="Borrar datos locales">
           <Button
             type="button"
             size="sm"
@@ -90,20 +91,21 @@ function SettingsScreen() {
         {confirmingWipe ? (
           <div
             role="alertdialog"
-            aria-label="Confirmar borrado del historial"
+            aria-label="Confirmar borrado de datos locales"
             className="border-t border-border bg-error-bg p-4"
           >
             <p className="text-sm font-semibold text-error">
-              ¿Borrar todos los manuales y conversaciones de este dispositivo?
+              ¿Borrar los datos guardados en este dispositivo?
             </p>
             <p className="mt-1 text-xs text-fg-2">
-              Esta acción no se puede deshacer. El servidor mantiene los manuales indexados.
+              Se vacía la caché local y volverás a ver la introducción. Tus manuales y
+              conversaciones siguen en tu cuenta.
             </p>
             <div className="mt-3 flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setConfirmingWipe(false)}>
                 Cancelar
               </Button>
-              <Button size="sm" variant="destructive" onClick={wipeAll}>
+              <Button size="sm" variant="destructive" onClick={wipeLocalData}>
                 Borrar todo
               </Button>
             </div>

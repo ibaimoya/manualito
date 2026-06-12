@@ -69,62 +69,15 @@ describe('storage', () => {
       expect(localStorage.getItem(STORAGE_KEYS.qa(SAMPLE.manual_id))).toBeNull();
     });
 
-    it('removeManual también borra las líneas OCR asociadas', () => {
+    it('removeManual también limpia la clave OCR legada', () => {
       storage.upsertManual(SAMPLE);
-      storage.setOcrLines(SAMPLE.manual_id, [
-        { text: 'línea', confidence: 0.9 },
-      ]);
-      storage.removeManual(SAMPLE.manual_id);
-      expect(storage.getOcrLines(SAMPLE.manual_id)).toEqual([]);
-    });
-  });
-
-  describe('ocr lines (slot dedicado por manual)', () => {
-    it('getOcrLines devuelve [] si nunca se han escrito', () => {
-      expect(storage.getOcrLines('no-existe')).toEqual([]);
-    });
-
-    it('setOcrLines + getOcrLines round-trip preservando confidence y orden', () => {
-      const lines = [
-        { text: 'Primera línea legible', confidence: 0.95 },
-        { text: 'Línea media', confidence: 0.72 },
-        { text: 'Línea borrosa', confidence: 0.31 },
-      ];
-      storage.setOcrLines('m-1', lines);
-      const out = storage.getOcrLines('m-1');
-      expect(out).toEqual(lines);
-      // Orden importa: el viewer pinta por número de línea.
-      expect(out.map((l) => l.confidence)).toEqual([0.95, 0.72, 0.31]);
-    });
-
-    it('setOcrLines acepta lista vacía (OCR sin texto detectado)', () => {
-      storage.setOcrLines('m-vacio', []);
-      expect(storage.getOcrLines('m-vacio')).toEqual([]);
-    });
-
-    it('aísla líneas por manual_id (no hay cross-pollination)', () => {
-      storage.setOcrLines('m-a', [{ text: 'A', confidence: 0.9 }]);
-      storage.setOcrLines('m-b', [{ text: 'B', confidence: 0.8 }]);
-      expect(storage.getOcrLines('m-a')).toEqual([{ text: 'A', confidence: 0.9 }]);
-      expect(storage.getOcrLines('m-b')).toEqual([{ text: 'B', confidence: 0.8 }]);
-    });
-
-    it('getOcrLines descarta payload corrupto y devuelve []', () => {
-      // confidence fuera de [0, 1] → el schema Zod lo rechaza.
+      // Resto de una versión anterior (el cache OCR vivía en localStorage).
       localStorage.setItem(
-        'manualito.ocr.m-x',
-        JSON.stringify([{ text: 'mala', confidence: 1.7 }]),
+        STORAGE_KEYS.ocrLines(SAMPLE.manual_id),
+        JSON.stringify([{ text: 'línea', confidence: 0.9 }]),
       );
-      expect(storage.getOcrLines('m-x')).toEqual([]);
-    });
-
-    it('wipeAll también borra las líneas OCR de todos los manuales', () => {
-      storage.upsertManual(SAMPLE);
-      storage.setOcrLines(SAMPLE.manual_id, [
-        { text: 'x', confidence: 0.9 },
-      ]);
-      storage.wipeAll();
-      expect(storage.getOcrLines(SAMPLE.manual_id)).toEqual([]);
+      storage.removeManual(SAMPLE.manual_id);
+      expect(localStorage.getItem(STORAGE_KEYS.ocrLines(SAMPLE.manual_id))).toBeNull();
     });
   });
 
@@ -190,7 +143,7 @@ describe('storage', () => {
       expect(storage.listManuals()).toEqual([]);
       expect(localStorage.getItem(STORAGE_KEYS.qa(SAMPLE.manual_id))).toBeNull();
       // settings se preserva — el usuario quiere mantener sus preferencias UI
-      // al hacer "Borrar historial".
+      // al hacer "Borrar datos locales".
       expect(storage.readSettings().mode).toBe('dark');
     });
   });

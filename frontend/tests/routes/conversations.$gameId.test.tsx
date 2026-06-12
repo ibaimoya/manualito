@@ -70,6 +70,28 @@ describe('/conversations/$gameId', () => {
     expect(await screen.findByText('Conversación renombrada')).toBeInTheDocument();
   });
 
+  it('un borrador abandonado no sobrevive al cerrar y reabrir el diálogo', async () => {
+    renderConversations();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: 'Opciones de «Dudas de preparación»' }),
+    );
+    await user.click(await screen.findByRole('menuitem', { name: 'Renombrar' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Renombrar conversación' });
+    const input = within(dialog).getByRole('textbox');
+    await user.clear(input);
+    await user.type(input, 'borrador a medias');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Opciones de «Dudas de preparación»' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Renombrar' }));
+    dialog = await screen.findByRole('dialog', { name: 'Renombrar conversación' });
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Dudas de preparación');
+  });
+
   it('borrar desde el kebab pasa por confirmación destructiva', async () => {
     renderConversations();
     const user = userEvent.setup();

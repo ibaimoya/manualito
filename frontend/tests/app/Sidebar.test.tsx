@@ -10,6 +10,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { Sidebar } from '@/app/Sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 /**
  * Sidebar solo se renderiza en desktop (Tailwind `hidden md:flex`).
@@ -40,7 +41,11 @@ function renderSidebar(
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: [pathname] }),
   });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <TooltipProvider>
+      <RouterProvider router={router} />
+    </TooltipProvider>,
+  );
 }
 
 describe('Sidebar (desktop)', () => {

@@ -9,11 +9,11 @@ import { cn } from '@/shared/lib/cn';
 
 export const RATE_LABELS = [
   '',
-  'No me convenció',
-  'Está bien',
-  'Nos gustó',
-  'Muy bueno',
-  'Imprescindible',
+  'No me ha convencido',
+  'Me esperaba algo más',
+  'Me ha gustado',
+  'Es muy bueno',
+  'Es una locura',
 ] as const;
 
 const STAR_PATH =

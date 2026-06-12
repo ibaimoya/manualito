@@ -42,9 +42,7 @@ function AppLayout() {
   const { collapsed, toggle } = useSidebarCollapsed();
 
   return (
-    // h-dvh exacto (no min-h): con body{overflow:hidden}, si este wrapper
-    // creciera con el contenido nada podría hacer scroll; con altura fija es
-    // #main-content quien desborda y scrollea.
+    // h-dvh exacto: debe desbordar #main-content, no este wrapper.
     <div className="flex h-dvh flex-col bg-bg text-fg">
       {/* Skip-link (WCAG 2.4.1): oculto hasta recibir foco con Tab. */}
       <a
@@ -54,8 +52,7 @@ function AppLayout() {
         Saltar al contenido
       </a>
 
-      {/* La sidebar (fixed, hidden en móvil) se monta en todas las pantallas
-          autenticadas: da shell de escritorio también a result/chat/capture. */}
+      {/* La sidebar da shell de escritorio también a result/chat/capture. */}
       <Sidebar
         pathname={location.pathname}
         user={user ?? undefined}

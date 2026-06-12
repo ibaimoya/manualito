@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { authApi, type AuthResponse, type LoginInput, type RegisterInput } from '@/shared/api/auth';
-import { AUTH_ME_KEY, meQueryOptions } from './auth-queries';
+import { AUTH_ME_KEY, dropSessionCaches, meQueryOptions } from './auth-queries';
 
 /** Sesión actual leída de la cache (la resuelve el `beforeLoad` raíz). */
 export function useAuth() {
@@ -39,7 +39,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: async () => {
-      queryClient.setQueryData(AUTH_ME_KEY, null);
+      await dropSessionCaches(queryClient);
       // Seguimos en una ruta protegida: revalidar echa al usuario al login.
       await router.invalidate();
     },

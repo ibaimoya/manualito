@@ -1,22 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
 import { http, HttpResponse, delay } from 'msw';
-import { Toaster } from 'sonner';
-import { ThemeProvider } from '@/app/theme';
 import { Route as ChatRoute } from '@/routes/_app.chat.$manualId';
 import { storage } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
 import { failSendMessage } from '@tests/_helpers/mswHandlers';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
@@ -55,56 +45,42 @@ function seedManual(manualId: string, name = 'Catan') {
 }
 
 function renderChat(manualId: string, search?: { q?: string; c?: string; g?: string }) {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const chatR = createRoute({
-    getParentRoute: () => root,
-    path: '/chat/$manualId',
-    validateSearch: (s) => ({
-      q: typeof s.q === 'string' ? s.q : undefined,
-      c: typeof s.c === 'string' ? s.c : undefined,
-      g: typeof s.g === 'string' ? s.g : undefined,
-    }),
-    component: (ChatRoute as unknown as { options: { component: React.FC } }).options.component,
-  });
-  const resultR = createRoute({
-    getParentRoute: () => root,
-    path: '/result/$manualId',
-    component: () => <div>ResultScreen</div>,
-  });
-  const gameR = createRoute({
-    getParentRoute: () => root,
-    path: '/game/$gameId',
-    component: () => <div>GameScreen</div>,
-  });
-  const historyR = createRoute({
-    getParentRoute: () => root,
-    path: '/history',
-    component: () => <div>HistoryScreen</div>,
-  });
-  const tree = root.addChildren([chatR, resultR, gameR, historyR]);
   const params = new URLSearchParams();
   if (search?.q) params.set('q', search.q);
   if (search?.c) params.set('c', search.c);
   if (search?.g) params.set('g', search.g);
   const queryStr = params.size > 0 ? `?${params.toString()}` : '';
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({
-      initialEntries: [`/chat/${manualId}${queryStr}`],
+  return renderRoute({
+    path: '/chat/$manualId',
+    initialEntry: `/chat/${manualId}${queryStr}`,
+    component: routeComponent(ChatRoute),
+    validateSearch: (s) => ({
+      q: typeof s.q === 'string' ? s.q : undefined,
+      c: typeof s.c === 'string' ? s.c : undefined,
+      g: typeof s.g === 'string' ? s.g : undefined,
     }),
+    stubs: {
+      '/result/$manualId': 'ResultScreen',
+      '/game/$gameId': 'GameScreen',
+      '/history': 'HistoryScreen',
+    },
   });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-        <Toaster />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
+
+describe('/chat/$manualId · search schema', () => {
+  it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
+    const schema = (
+      ChatRoute as unknown as {
+        options: { validateSearch: { parse: (v: unknown) => Record<string, unknown> } };
+      }
+    ).options.validateSearch;
+    const result = schema.parse({ q: 'a'.repeat(4001), c: 'conv-001' });
+    expect(result['q']).toBeUndefined();
+    expect(result['c']).toBe('conv-001');
+    // Una pregunta dentro de la cota pasa intacta.
+    expect(schema.parse({ q: 'a'.repeat(4000) })['q']).toHaveLength(4000);
+  });
+});
 
 describe('/chat/$manualId', () => {
   it('el breadcrumb lleva el juego como tramo navegable y «Chat» como página', async () => {
@@ -212,6 +188,52 @@ describe('/chat/$manualId', () => {
     );
     // El draft se restaura para reintentar sin reescribir.
     expect(input).toHaveValue('fail');
+  });
+
+  it('si el primer envío falla, el reintento reutiliza la conversación creada', async () => {
+    let creates = 0;
+    let sends = 0;
+    server.use(
+      http.post('/api/games/:gameId/conversations', () => {
+        creates += 1;
+        return HttpResponse.json(CONVERSATION, { status: 201 });
+      }),
+      http.post('/api/conversations/:conversationId/messages', () => {
+        sends += 1;
+        if (sends === 1) return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+        return HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u-retry',
+            role: 'user',
+            content: 'reintento',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b-retry',
+            role: 'assistant',
+            content: 'Respuesta al reintento.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        });
+      }),
+    );
+    seedManual('m1');
+    renderChat('m1');
+    const user = userEvent.setup();
+    const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await user.type(input, 'reintento');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    // Falla el envío: el draft vuelve al composer para reintentar.
+    await waitFor(() => expect(input).toHaveValue('reintento'), { timeout: 3000 });
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    expect(await screen.findByText('Respuesta al reintento.')).toBeInTheDocument();
+    expect(sends).toBe(2);
+    expect(creates).toBe(1);
   });
 
   it('con ?g=…, volver apunta directo al hub del juego', async () => {

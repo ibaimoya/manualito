@@ -27,8 +27,7 @@ function countOccurrences(text: string, needle: string): number {
 export function usePageSearch(pages: readonly ManualDetailPage[]) {
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
-  // La escritura tiene prioridad: el barrido de páginas se recalcula en
-  // segundo plano con el valor diferido, sin bloquear el input.
+  // El barrido se recalcula con el valor diferido, sin bloquear el input.
   const deferredQuery = useDeferredValue(query);
   const needle = deferredQuery.trim().toLowerCase();
 

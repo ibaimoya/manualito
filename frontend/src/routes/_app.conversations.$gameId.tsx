@@ -1,7 +1,6 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   BookOpen,
   MessagesSquare,
   MoreVertical,
@@ -13,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { ScreenTopBar } from '@/app/Topbar';
+import { BackLink, ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
@@ -28,7 +27,7 @@ import { GameCover } from '@/features/games/GameCover';
 import { gameDetailQueryOptions } from '@/features/games/use-games';
 import { conversationsKey, conversationsQueryOptions } from '@/features/conversations/use-conversations';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
-import { formatRelative } from '@/shared/lib/relativeDate';
+import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 
 export const Route = createFileRoute('/_app/conversations/$gameId')({
   component: ConversationsScreen,
@@ -73,14 +72,10 @@ function ConversationsScreen() {
           { label: gameName, link: linkOptions({ to: '/game/$gameId', params: { gameId } }) },
         ]}
         back={
-          <Link
-            to="/game/$gameId"
-            params={{ gameId }}
-            className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
-            aria-label="Volver al juego"
-          >
-            <ArrowLeft size={22} strokeWidth={2} />
-          </Link>
+          <BackLink
+            label="Volver al juego"
+            link={linkOptions({ to: '/game/$gameId', params: { gameId } })}
+          />
         }
         actions={
           counter === null ? null : <span className="mono text-[11px] text-fg-3">{counter}</span>
@@ -120,7 +115,8 @@ function ConversationsScreen() {
         ) : null}
 
         {conversations.isPending ? <ListSkeleton /> : null}
-        {conversations.isError ? (
+        {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
+        {conversations.isError && conversations.data === undefined ? (
           <Card className="bg-surface p-5 text-sm text-fg-2">
             No hemos podido cargar tus conversaciones. Inténtalo de nuevo en un momento.
           </Card>
@@ -219,7 +215,7 @@ function ConversationCard({
             </span>
           </span>
           <span className="mt-0.5 block text-xs text-fg-3">
-            abierta el {formatAbsolute(conversation.created_at)}
+            abierta el {formatShortDate(conversation.created_at)}
           </span>
         </button>
         <DropdownMenu>
@@ -296,15 +292,57 @@ function RenameDialog({
   conversation: ConversationSummary;
   gameId: string;
 }>) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenAutoFocus={(event) => {
+        event.preventDefault();
+        inputRef.current?.focus();
+      }}
+    >
+      <DialogHeader
+        title="Renombrar conversación"
+        description="Un buen título te la devuelve de un vistazo."
+        onClose={() => onOpenChange(false)}
+      />
+      <DialogBody>
+        <RenameForm
+          conversation={conversation}
+          gameId={gameId}
+          inputRef={inputRef}
+          onClose={() => onOpenChange(false)}
+        />
+      </DialogBody>
+    </Dialog>
+  );
+}
+
+/**
+ * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar:
+ * cada apertura arranca con el título actual, sin borradores abandonados.
+ */
+function RenameForm({
+  conversation,
+  gameId,
+  inputRef,
+  onClose,
+}: Readonly<{
+  conversation: ConversationSummary;
+  gameId: string;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onClose: () => void;
+}>) {
   const qc = useQueryClient();
   const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(conversation.title ?? '');
 
   const rename = useMutation({
     mutationFn: (next: string) => conversationsApi.rename(conversation.id, next),
     onSuccess: () => {
-      onOpenChange(false);
+      onClose();
       toast.success('Conversación renombrada', { id: 'conversation-rename' });
     },
     onError: () =>
@@ -318,64 +356,38 @@ function RenameDialog({
   const trimmed = title.trim();
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (next) setTitle(conversation.title ?? '');
-        onOpenChange(next);
-      }}
-      onOpenAutoFocus={(event) => {
+    <form
+      onSubmit={(event) => {
         event.preventDefault();
-        inputRef.current?.focus();
+        if (trimmed.length > 0) rename.mutate(trimmed);
       }}
     >
-      <DialogHeader
-        title="Renombrar conversación"
-        description="Un buen título te la devuelve de un vistazo."
-        onClose={() => onOpenChange(false)}
+      <label htmlFor={inputId} className="mb-1.5 flex items-baseline justify-between text-sm">
+        <span className="font-semibold text-fg">Título de la conversación</span>
+        <span className="text-xs text-fg-3">máx. {TITLE_MAX} caracteres</span>
+      </label>
+      <Input
+        id={inputId}
+        ref={inputRef}
+        value={title}
+        maxLength={TITLE_MAX}
+        onChange={(event) => setTitle(event.target.value)}
       />
-      <DialogBody>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (trimmed.length > 0) rename.mutate(trimmed);
-          }}
-        >
-          <label
-            htmlFor={inputId}
-            className="mb-1.5 flex items-baseline justify-between text-sm"
-          >
-            <span className="font-semibold text-fg">Título de la conversación</span>
-            <span className="text-xs text-fg-3">máx. {TITLE_MAX} caracteres</span>
-          </label>
-          <Input
-            id={inputId}
-            ref={inputRef}
-            value={title}
-            maxLength={TITLE_MAX}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-fg-3">
-            <Sparkles size={13} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0" />
-            Este título lo generó la IA a partir de tu primera pregunta. Cámbialo por lo que te
-            resulte más fácil de encontrar.
-          </p>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={trimmed.length === 0} loading={rename.isPending}>
-              Guardar
-            </Button>
-          </div>
-        </form>
-      </DialogBody>
-    </Dialog>
+      <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-fg-3">
+        <Sparkles size={13} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0" />
+        Este título lo generó la IA a partir de tu primera pregunta. Cámbialo por lo que te
+        resulte más fácil de encontrar.
+      </p>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={trimmed.length === 0} loading={rename.isPending}>
+          Guardar
+        </Button>
+      </div>
+    </form>
   );
-}
-
-function formatAbsolute(iso: string): string {
-  return new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' }).format(new Date(iso));
 }
 
 function EmptyState({

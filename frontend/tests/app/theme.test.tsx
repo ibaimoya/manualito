@@ -187,11 +187,10 @@ describe('ThemeProvider', () => {
       });
     });
 
-    it('cambiar accent NO re-suscribe el listener de prefers-color-scheme', () => {
+    it('fuera del modo auto no se abren suscripciones a prefers-color-scheme', () => {
       // En jsdom matchMedia es un shim definido en src/test/setup.ts; cada
-      // llamada a window.matchMedia devuelve un MQL nuevo.  Para detectar
-      // re-suscripciones contamos cuántas veces se invoca matchMedia con
-      // el query que nos interesa.
+      // llamada a window.matchMedia devuelve un MQL nuevo. Contamos las
+      // invocaciones del query: en modo light solo las hace applyToHtml.
       const realMM = window.matchMedia.bind(window);
       const mmSpy = vi.spyOn(window, 'matchMedia').mockImplementation(realMM);
 
@@ -216,11 +215,70 @@ describe('ThemeProvider', () => {
         ([q]) => q === '(prefers-color-scheme: dark)',
       ).length;
 
-      // En la suscripción del listener (mode==='auto') la llamada a
-      // matchMedia se reinstala SOLO cuando cambia `mode`, no `accent`.
-      // Aceptamos pequeño aumento por `applyToHtml` que lo lee.
       expect(afterCount - initialCount).toBeLessThanOrEqual(3);
       mmSpy.mockRestore();
+    });
+
+    it('en modo auto, el cambio de esquema del SO conserva el acento elegido', () => {
+      // Mock controlable: applyToHtml lee `matches` fresco en cada llamada
+      // y el listener de 'auto' se registra aquí para poder dispararlo.
+      let prefersDark = false;
+      const listeners = new Set<() => void>();
+      const mmSpy = vi.spyOn(window, 'matchMedia').mockImplementation(
+        (query: string) =>
+          ({
+            get matches() {
+              return query === '(prefers-color-scheme: dark)' ? prefersDark : false;
+            },
+            media: query,
+            onchange: null,
+            addEventListener: (_: string, cb: () => void) => listeners.add(cb),
+            removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
+            addListener: () => undefined,
+            removeListener: () => undefined,
+            dispatchEvent: () => false,
+          }) as unknown as MediaQueryList,
+      );
+
+      let api: ThemeApi | undefined;
+      render(
+        <ThemeProvider>
+          <ThemeCapture onCapture={(value) => { api = value; }} />
+        </ThemeProvider>,
+      );
+
+      act(() => api!.setMode('auto'));
+      act(() => api!.setAccent('blue'));
+      expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
+
+      // El SO pasa a oscuro: el listener debe aplicar el acento ACTUAL.
+      act(() => {
+        prefersDark = true;
+        for (const cb of [...listeners]) cb();
+      });
+      expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
+      expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
+      mmSpy.mockRestore();
+    });
+
+    it('persistir el tema no pisa otros campos de manualito.settings', async () => {
+      localStorage.setItem(
+        'manualito.settings',
+        JSON.stringify({ mode: 'light', accent: 'amber', responseDetail: 'long' }),
+      );
+      let api: ThemeApi | undefined;
+      render(
+        <ThemeProvider>
+          <ThemeCapture onCapture={(value) => { api = value; }} />
+        </ThemeProvider>,
+      );
+      act(() => api!.setMode('dark'));
+
+      await waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem('manualito.settings') ?? '{}');
+        expect(stored.mode).toBe('dark');
+        expect(stored.responseDetail).toBe('long');
+      });
     });
   });
 });

@@ -1,57 +1,25 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
 import { http, HttpResponse } from 'msw';
-import { Toaster } from 'sonner';
-import { ThemeProvider } from '@/app/theme';
 import { Route as SourceRoute } from '@/routes/_app.capture.source';
 import { server } from '@tests/_helpers/server';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 function renderSource() {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const sourceR = createRoute({
-    getParentRoute: () => root,
+  return renderRoute({
     path: '/capture/source',
-    component: (SourceRoute as unknown as { options: { component: React.FC } }).options.component,
+    initialEntry: '/capture/source',
+    component: routeComponent(SourceRoute),
+    stubs: {
+      '/home': 'HomeScreen',
+      '/processing/$manualId': 'ProcessingScreen',
+    },
   });
-  const homeR = createRoute({
-    getParentRoute: () => root,
-    path: '/home',
-    component: () => <div data-testid="home-screen">Home</div>,
-  });
-  const processingR = createRoute({
-    getParentRoute: () => root,
-    path: '/processing/$manualId',
-    component: () => <div data-testid="processing-screen">Processing</div>,
-  });
-  const router = createRouter({
-    routeTree: root.addChildren([sourceR, homeR, processingR]),
-    history: createMemoryHistory({ initialEntries: ['/capture/source'] }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-        <Toaster richColors />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
 async function pickGame(user: ReturnType<typeof userEvent.setup>, name: string) {
@@ -113,7 +81,7 @@ describe('/capture/source · nuevo manual', () => {
     renderSource();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: /Cancelar y volver al inicio/i }));
-    expect(await screen.findByTestId('home-screen')).toBeInTheDocument();
+    expect(await screen.findByText('HomeScreen')).toBeInTheDocument();
   });
 
   it('rechaza una imagen mayor de 20 MB', async () => {
@@ -158,7 +126,7 @@ describe('/capture/source · nuevo manual', () => {
     expect(await screen.findByText('foto.jpg')).toBeInTheDocument();
     const procesar = await screen.findAllByRole('button', { name: /Procesar/i });
     await user.click(procesar[0]!);
-    await waitFor(() => expect(screen.getByTestId('processing-screen')).toBeInTheDocument(), {
+    await waitFor(() => expect(screen.getByText('ProcessingScreen')).toBeInTheDocument(), {
       timeout: 3000,
     });
   });

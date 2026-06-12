@@ -6,11 +6,13 @@ import { server } from '@tests/_helpers/server';
 import { ThemeProvider } from '@/app/theme';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
+import { resetResendCooldown, useResendVerification } from '@/features/auth/use-resend-verification';
 import type { AuthUser } from '@/shared/api/auth';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  resetResendCooldown();
   try {
     sessionStorage.clear();
   } catch {
@@ -67,6 +69,30 @@ describe('VerifyEmailBanner', () => {
     renderBanner(BASE);
     await user.click(screen.getByRole('button', { name: 'Reenviar' }));
     expect(await screen.findByText(/Reenviado/)).toBeInTheDocument();
+  });
+
+  it('el cooldown es compartido: otra instancia del hook también queda bloqueada', async () => {
+    function SecondConsumer() {
+      const { cooldown } = useResendVerification(BASE.email);
+      return <output aria-label="cooldown gemelo">{cooldown > 0 ? 'bloqueado' : 'libre'}</output>;
+    }
+    const user = userEvent.setup();
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    qc.setQueryData(AUTH_ME_KEY, { user: BASE, csrf_token: 'x' });
+    render(
+      <ThemeProvider>
+        <QueryClientProvider client={qc}>
+          <VerifyEmailBanner />
+          <SecondConsumer />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    expect(screen.getByLabelText('cooldown gemelo')).toHaveTextContent('libre');
+    await user.click(screen.getByRole('button', { name: 'Reenviar' }));
+    expect(await screen.findByText(/Reenviado/)).toBeInTheDocument();
+    expect(screen.getByLabelText('cooldown gemelo')).toHaveTextContent('bloqueado');
   });
 
   it('enlaza a la bandeja de Mailpit en pestaña nueva', () => {

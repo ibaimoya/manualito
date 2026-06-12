@@ -40,11 +40,7 @@ export function ManualCard({ manual, meta, className }: Props) {
             <div className="truncate font-semibold text-fg">{name}</div>
             {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
-          <Badge
-            size="sm"
-            tone={indexing ? 'primary' : 'neutral'}
-            className="hidden @sm:inline-flex"
-          >
+          <Badge tone={indexing ? 'primary' : 'neutral'} className="hidden @sm:inline-flex">
             {indexing ? 'Procesando…' : 'Listo'}
           </Badge>
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />

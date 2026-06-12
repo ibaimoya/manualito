@@ -11,6 +11,7 @@ import {
 import type { FC } from 'react';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/app/theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 import type { AuthUser } from '@/shared/api/auth';
 
@@ -44,12 +45,14 @@ export function renderRoute({
   component,
   stubs = {},
   user = TEST_USER,
+  validateSearch,
 }: Readonly<{
   path: string;
   initialEntry: string;
   component: FC;
   stubs?: Record<string, string>;
   user?: AuthUser | null;
+  validateSearch?: (search: Record<string, unknown>) => Record<string, unknown>;
 }>) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -63,6 +66,7 @@ export function renderRoute({
   const main = createRoute({
     getParentRoute: () => root,
     path,
+    ...(validateSearch ? { validateSearch } : {}),
     component: () => (
       <main>
         <Component />
@@ -84,7 +88,9 @@ export function renderRoute({
   const result = render(
     <ThemeProvider>
       <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
+        <TooltipProvider>
+          <RouterProvider router={router} />
+        </TooltipProvider>
         <Toaster />
       </QueryClientProvider>
     </ThemeProvider>,

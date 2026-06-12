@@ -1,18 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
-import { ThemeProvider } from '@/app/theme';
+import { screen, waitFor } from '@testing-library/react';
 import { Route as ProcessingRoute } from '@/routes/_app.processing.$manualId';
 import { storage } from '@/shared/lib/storage';
 import type { BootstrapState } from '@/features/processing/useManualBootstrap';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 afterEach(() => {
   localStorage.clear();
@@ -65,39 +56,18 @@ beforeEach(() => {
 });
 
 function renderProcessing(manualId: string, name?: string) {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const procR = createRoute({
-    getParentRoute: () => root,
+  const search = name ? `?name=${encodeURIComponent(name)}` : '';
+  return renderRoute({
     path: '/processing/$manualId',
+    initialEntry: `/processing/${manualId}${search}`,
+    component: routeComponent(ProcessingRoute),
     validateSearch: (s) => ({
       name: typeof s.name === 'string' ? s.name : undefined,
     }),
-    component: (ProcessingRoute as unknown as { options: { component: React.FC } }).options
-      .component,
+    stubs: {
+      '/result/$manualId': 'ResultScreen',
+    },
   });
-  const resultR = createRoute({
-    getParentRoute: () => root,
-    path: '/result/$manualId',
-    component: () => <div>ResultScreen</div>,
-  });
-  const tree = root.addChildren([procR, resultR]);
-  const search = name ? `?name=${encodeURIComponent(name)}` : '';
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({
-      initialEntries: [`/processing/${manualId}${search}`],
-    }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
 describe('/processing/$manualId', () => {

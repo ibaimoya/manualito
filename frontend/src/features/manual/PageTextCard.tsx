@@ -64,27 +64,27 @@ function highlight(
 function PageStateBadge({ page }: Readonly<{ page: ManualDetailPage }>) {
   if (page.ocr_status === 'failed') {
     return (
-      <Badge tone="error" size="sm" icon={<X strokeWidth={2.4} />}>
+      <Badge tone="error" icon={<X strokeWidth={2.4} />}>
         Falló
       </Badge>
     );
   }
   if (page.text_source === 'user_edit') {
     return (
-      <Badge tone="neutral" size="sm" icon={<Pencil strokeWidth={2} />}>
+      <Badge tone="neutral" icon={<Pencil strokeWidth={2} />}>
         Editado a mano
       </Badge>
     );
   }
   if (page.text_quality === 'low_confidence') {
     return (
-      <Badge tone="warning" size="sm" icon={<AlertTriangle strokeWidth={2} />}>
+      <Badge tone="warning" icon={<AlertTriangle strokeWidth={2} />}>
         Poco clara
       </Badge>
     );
   }
   return (
-    <Badge tone="success" size="sm" icon={<Check strokeWidth={2.4} />}>
+    <Badge tone="success" icon={<Check strokeWidth={2.4} />}>
       OK
     </Badge>
   );
@@ -132,8 +132,7 @@ export function PageTextCard({
   const paragraphs = useMemo(() => pageParagraphs(page), [page]);
   const counter = { value: 0 };
 
-  // Al entrar en edición, el foco va al texto (sin `autoFocus`, que jsx-a11y
-  // veta porque también dispara en cargas de página completas).
+  // Foco manual al entrar en edición (autoFocus lo veta jsx-a11y).
   useEffect(() => {
     if (editing) draftRef.current?.focus();
   }, [editing]);
@@ -222,7 +221,6 @@ export function PageTextCard({
               Cancelar
             </Button>
             <Button type="submit" size="sm" loading={saving} disabled={!draftValid}>
-              <Check size={15} strokeWidth={2.4} />
               Guardar texto
             </Button>
           </div>

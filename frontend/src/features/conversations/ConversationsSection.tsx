@@ -26,8 +26,7 @@ export function ConversationsSection({
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
 
-  // Sin backend disponible no bloqueamos la pantalla de resultado: la
-  // sección simplemente no aparece.
+  // Sin backend, la sección simplemente no aparece.
   if (isError) return null;
 
   const conversations = data ?? [];

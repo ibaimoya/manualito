@@ -9,13 +9,12 @@ import { z } from 'zod';
 
 const KEY = {
   manuals: 'manualito.manuals',
-  // Clave legada del Q&A local (hoy las conversaciones viven en el backend);
-  // se conserva solo para limpiar restos de versiones anteriores.
+  // Clave legada del Q&A local; solo para limpiar restos de versiones viejas.
   qa: (manualId: string) => `manualito.qa.${manualId}`,
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
   manualResult: (manualId: string) => `manualito.result.${manualId}`,
-  // Cache opcional para texto original cuando un flujo ya lo tenga resuelto.
+  // Clave legada del cache OCR; solo para limpiar restos de versiones viejas.
   ocrLines: (manualId: string) => `manualito.ocr.${manualId}`,
 } as const;
 
@@ -36,13 +35,11 @@ export type ManualRecord = z.infer<typeof ManualRecordSchema>;
 
 const ManualsListSchema = z.array(ManualRecordSchema);
 
-/** Shape local para texto OCR cacheado por el frontend. */
-const OcrLineSchema = z.object({
-  text: z.string(),
-  confidence: z.number().min(0).max(1).nullable(),
-});
-export type OcrLine = z.infer<typeof OcrLineSchema>;
-const OcrLinesSchema = z.array(OcrLineSchema);
+/** Shape de una línea de texto extraído (OCR o PDF). */
+export interface OcrLine {
+  text: string;
+  confidence: number | null;
+}
 
 const ManualResultSchema = z.object({
   manual_id: z.string().min(1),
@@ -62,8 +59,7 @@ const SettingsSchema = z.object({
   accent: z.enum(['amber', 'blue']).default('amber'),
   responseDetail: z.enum(['short', 'medium', 'long']).default('medium'),
 });
-// z.infer da el tipo INPUT (campos opcionales); z.output da el OUTPUT (campos requeridos
-// porque los defaults llenan los huecos). Para uso runtime queremos el output.
+// z.output: los defaults rellenan huecos y el tipo runtime va completo.
 export type Settings = z.output<typeof SettingsSchema>;
 const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
 
@@ -97,12 +93,8 @@ function safeRead<S extends z.ZodTypeAny>(
 }
 
 /**
- * Listener global de fallos de escritura — UI (capture/chat/home) puede
- * suscribirse para mostrar un toast "Espacio local agotado" cuando la
- * quota se haya agotado.
- *
- * Implementado como pub/sub minimal sin librería extra; el wrapper lo
- * dispara en cada fallo y la UI decide cómo notificar.
+ * Pub/sub mínimo de fallos de escritura: el wrapper avisa y la UI decide
+ * cómo notificar (p. ej. el toast de cuota agotada de Providers).
  */
 type WriteFailReason = 'quota' | 'unknown' | 'denied';
 type WriteFailListener = (reason: WriteFailReason, key: string) => void;
@@ -198,14 +190,6 @@ export const storage = {
   },
   setResult(result: ManualResult): void {
     safeWrite(KEY.manualResult(result.manual_id), result);
-  },
-
-  /* Texto OCR cacheado cuando algun flujo lo proporciona. */
-  getOcrLines(manualId: string): OcrLine[] {
-    return safeRead(KEY.ocrLines(manualId), OcrLinesSchema, [] as OcrLine[]);
-  },
-  setOcrLines(manualId: string, lines: OcrLine[]): void {
-    safeWrite(KEY.ocrLines(manualId), lines);
   },
 
   /* Preferencias */

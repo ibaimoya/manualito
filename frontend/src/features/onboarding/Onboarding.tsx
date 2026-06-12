@@ -88,9 +88,7 @@ export function Onboarding() {
   const PANELS = N + 1; // las diapositivas + la pantalla de elección final
   const isChoice = index === N;
 
-  // Las animaciones de entrada se anclan a "visitado", no al índice actual:
-  // si dependieran de `index`, la diapositiva saliente se desmontaría
-  // visualmente mientras aún es visible durante los 900ms del deslizamiento.
+  // Ancladas a "visitado": con index, la saliente se vaciaría en pleno deslizamiento.
   const [visited, setVisited] = useState<ReadonlySet<number>>(() => new Set([0]));
 
   function go(next: number): void {
@@ -99,16 +97,14 @@ export function Onboarding() {
     setVisited((prev) => (prev.has(clamped) ? prev : new Set(prev).add(clamped)));
   }
 
-  // Guard anti-spam: evita que pulsaciones dobles lancen dos navegaciones
-  // (y dos view transitions solapadas → glitch).
+  // Guard anti-spam: dos pulsaciones serían dos view transitions solapadas.
   const enteringRef = useRef(false);
 
   function enterTo(to: '/register' | '/login'): void {
     if (enteringRef.current) return;
     enteringRef.current = true;
     storage.markOnboardingSeen();
-    // El router envuelve el cambio de ruta (asíncrono) en una View Transition
-    // con el timing correcto; se desactiva si el usuario prefiere sin motion.
+    // El router pone el timing de la View Transition; reduced-motion la apaga.
     const reduced = globalThis.window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     navigate({ to, replace: true, viewTransition: !reduced })
       .catch(() => undefined)
@@ -125,10 +121,7 @@ export function Onboarding() {
     enterTo('/login');
   }
 
-  // Navegación con teclado. Con el modal de privacidad abierto se cede el
-  // teclado al diálogo (su Escape cierra el modal, no el onboarding). El
-  // listener va en fase de captura: corre ANTES de que Radix cierre el modal,
-  // así el guard ve el estado previo a la pulsación y no hay carrera.
+  // Teclado en captura: el guard ve el modal de privacidad antes de que Radix lo cierre.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (privacyOpen) return;
@@ -433,8 +426,7 @@ function StepProcesa({ shown }: Readonly<{ shown: boolean }>) {
       icon: <Sparkles size={26} strokeWidth={1.75} />,
     },
   ];
-  // `--g` escalona el relevo: el anillo i brilla justo cuando le llega el
-  // barrido del hilo anterior (ciclo de 3.6s repartido en tres tramos).
+  // --g escalona el relevo entre anillos (ciclo de 3.6s en tres tramos).
   return (
     <div className={styles.pipeline}>
       {nodes.map((n, i) => (
@@ -486,72 +478,42 @@ function StepEntiende() {
         </p>
       </div>
 
-      <div className={cn(styles.acc, styles.accOpen)}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <Flag size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>Preparación</strong>
-            <em>6 pasos</em>
+      {DEMO_BLOCKS.map(({ icon: Icon, title, em, body }) => (
+        <div key={title} className={cn(styles.acc, body ? styles.accOpen : undefined)}>
+          <div className={styles.accHead}>
+            <span className={styles.accIc}>
+              <Icon size={18} />
+            </span>
+            <div className={styles.accTitles}>
+              <strong>{title}</strong>
+              <em>{em}</em>
+            </div>
+            <span className={styles.accChev}>
+              <ChevronDown size={18} />
+            </span>
           </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
+          {body ? <div className={styles.accBody}>{body}</div> : null}
         </div>
-        <div className={styles.accBody}>
-          <ol>
-            <li>Coloca los 19 hexágonos de terreno bocarriba.</li>
-            <li>Reparte los tokens de número en orden alfabético.</li>
-            <li>Cada jugador toma 2 poblados, 2 carreteras y 4 ciudades.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div className={styles.acc}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <RefreshCw size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>¿Cómo van los turnos?</strong>
-            <em>3 fases</em>
-          </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.acc}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <Crown size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>¿Cómo se gana?</strong>
-            <em>10 PV</em>
-          </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.acc}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <Check size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>Casos especiales</strong>
-            <em>Ladrón · puerto · cartas</em>
-          </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
+
+// Acordeones de mentira de la demo de Catan: solo el primero viene abierto.
+const DEMO_BLOCKS = [
+  {
+    icon: Flag,
+    title: 'Preparación',
+    em: '6 pasos',
+    body: (
+      <ol>
+        <li>Coloca los 19 hexágonos de terreno bocarriba.</li>
+        <li>Reparte los tokens de número en orden alfabético.</li>
+        <li>Cada jugador toma 2 poblados, 2 carreteras y 4 ciudades.</li>
+      </ol>
+    ),
+  },
+  { icon: RefreshCw, title: '¿Cómo van los turnos?', em: '3 fases', body: null },
+  { icon: Crown, title: '¿Cómo se gana?', em: '10 PV', body: null },
+  { icon: Check, title: 'Casos especiales', em: 'Ladrón · puerto · cartas', body: null },
+];

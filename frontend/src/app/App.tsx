@@ -1,15 +1,7 @@
 import { Providers } from './Providers';
 import { AppRouter } from './AppRouter';
 
-/**
- * Componente raíz de la PWA.
- *
- * Encapsula:
- * - Providers (QueryClient, Theme, Toaster).
- * - Router (TanStack Router con file-based routing).
- *
- * El árbol real de pantallas vive bajo `src/routes/`.
- */
+/** Raíz de la PWA: Providers + Router. Las pantallas viven en src/routes/. */
 export function App() {
   return (
     <Providers>

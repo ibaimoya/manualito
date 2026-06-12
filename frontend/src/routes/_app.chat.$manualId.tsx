@@ -1,13 +1,13 @@
-import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, FileText, Send } from 'lucide-react';
-import { ScreenTopBar } from '@/app/Topbar';
+import { FileText, Send } from 'lucide-react';
+import { BackLink, ScreenTopBar } from '@/app/Topbar';
 import { Markdown } from '@/shared/components/Markdown';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { z } from 'zod';
-import { api, apiErrorNotification, isAbortApiError, type AnswerSource } from '@/shared/api/client';
-import { conversationsApi, type ConversationMessage } from '@/shared/api/conversations';
+import { api, isAbortApiError, type AnswerSource } from '@/shared/api/client';
+import { toastApiError } from '@/shared/lib/toastApiError';
+import { conversationsApi, QUESTION_MAX, type ConversationMessage } from '@/shared/api/conversations';
 import {
   conversationMessagesQueryOptions,
   conversationsKey,
@@ -19,15 +19,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Meeple } from '@/shared/components/Brand';
 
-// max(500) limita la longitud del search param `q` a la misma cota que el
-// backend (500 chars en `QuestionRequest`).  Sin esto un atacante podría
-// pegar una URL `?q=…` de 100KB y reventar el LLM o el URL parser.
-// `c` reabre una conversación guardada; `g` trae el juego desde el hub
-// (ahorra resolverlo vía manual y orienta el botón de volver).
+// q comparte cota con el backend; c reabre conversación; g trae el juego del hub.
 const chatSearchSchema = z.object({
-  q: z.string().min(1).max(500).optional(),
-  c: z.string().min(1).optional(),
-  g: z.string().min(1).optional(),
+  q: z.string().min(1).max(QUESTION_MAX).optional().catch(undefined),
+  c: z.string().min(1).optional().catch(undefined),
+  g: z.string().min(1).optional().catch(undefined),
 });
 
 export const Route = createFileRoute('/_app/chat/$manualId')({
@@ -47,14 +43,11 @@ function ChatScreen() {
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const initialQueueRef = useRef<string | null>(initialQ ?? null);
-  // Solo pedimos historial al servidor si la conversación venía en la URL
-  // (reabierta desde el resultado); las creadas aquí ya viven en `turns`.
-  // Valor fijado al montar: la navegación replace posterior no lo cambia.
+  // Solo las conversaciones reabiertas (?c al montar) piden historial.
   const [reopened] = useState(initialC != null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // El detalle del manual da el juego para el breadcrumb y, si la URL no
-  // trae `g` (marcador antiguo), también el destino del botón de volver.
+  // El manual resuelve juego y botón de volver cuando la URL no trae g.
   const manualDetail = useQuery(manualDetailQueryOptions(manualId));
   const resolvedGameId = gameId ?? manualDetail.data?.game_id ?? null;
   const gameName = manualDetail.data?.game_name ?? null;
@@ -79,9 +72,7 @@ function ChatScreen() {
   });
   const historyLoading = reopened && conversationId !== null && history.isPending;
 
-  // AbortController para cortar la petición al LLM si el usuario navega
-  // fuera del chat antes de que termine.  El LLM puede tardar 30-60s — sin
-  // abort, la mutation completaría tras unmount sin feedback visual.
+  // Aborta la petición al LLM (30-60s) si el usuario sale del chat.
   const askAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => askAbortRef.current?.abort(), []);
 
@@ -94,6 +85,8 @@ function ChatScreen() {
       if (cid === null) {
         const gid = resolvedGameId ?? (await api.getManual(manualId, signal)).game_id;
         cid = (await conversationsApi.create(gid, signal)).id;
+        // Guardado ya: un reintento reutiliza la conversación, no crea otra.
+        setConversationId(cid);
       }
       return conversationsApi.sendMessage(cid, question, undefined, signal);
     },
@@ -102,14 +95,10 @@ function ChatScreen() {
       if (isAbortApiError(err)) return;
       // Recupera la pregunta en el composer para reintentar sin reescribirla.
       setDraft((current) => (current.length > 0 ? current : question));
-      const notification = apiErrorNotification(err, 'ask-error', {
+      toastApiError(err, 'ask-error', {
         title: 'No hemos podido responder',
         id: 'ask-error-unknown',
         description: 'Inténtalo de nuevo en un momento.',
-      });
-      toast.error(notification.title, {
-        id: notification.id,
-        description: notification.description,
       });
     },
     onSuccess: (data) => {
@@ -137,10 +126,7 @@ function ChatScreen() {
     askMutation.mutate(q);
   }
 
-  // Si la URL trae ?q=... y aún no se ha enviado, dispárala una vez.
-  // Después de disparar, limpiamos el search param de la URL (replace,
-  // no push) para que al refrescar la página NO se re-envíe la
-  // pregunta — sería un duplicado fantasma.
+  // Dispara ?q una vez y lo quita de la URL (replace): refrescar no re-envía.
   useEffect(() => {
     if (initialQueueRef.current) {
       const q = initialQueueRef.current;
@@ -153,13 +139,11 @@ function ChatScreen() {
         replace: true,
       }).catch(() => undefined);
     }
-    // sendQuestion es estable funcionalmente (cierre sobre manualId), no la
-    // metemos como dep para evitar re-disparos.
+    // sendQuestion fuera de deps: meterla provocaría re-disparos.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Una conversación reabierta puede refrescarse después de añadir turnos
-  // nuevos: el servidor ya los incluye, así que deduplicamos por id.
+  // El servidor ya incluye los turnos nuevos al refrescar: dedupe por id.
   const seen = new Set<string>();
   const messages = [...(history.data ?? []), ...turns].filter((m) => {
     if (seen.has(m.id)) return false;
@@ -182,27 +166,19 @@ function ChatScreen() {
         trail={[{ label: 'Historial', link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
         back={
           resolvedGameId ? (
-            <Link
-              to="/game/$gameId"
-              params={{ gameId: resolvedGameId }}
-              className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
-              aria-label="Volver al juego"
-            >
-              <ArrowLeft size={22} strokeWidth={2} />
-            </Link>
+            <BackLink
+              label="Volver al juego"
+              link={linkOptions({ to: '/game/$gameId', params: { gameId: resolvedGameId } })}
+            />
           ) : (
-            <Link
-              to="/result/$manualId"
-              params={{ manualId }}
-              className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
-              aria-label="Volver al resumen"
-            >
-              <ArrowLeft size={22} strokeWidth={2} />
-            </Link>
+            <BackLink
+              label="Volver al resumen"
+              link={linkOptions({ to: '/result/$manualId', params: { manualId } })}
+            />
           )
         }
         actions={
-          <Badge tone="success" size="sm">
+          <Badge tone="success">
             Listo
           </Badge>
         }
@@ -241,6 +217,7 @@ function ChatScreen() {
           <Input
             preset="chat-message"
             value={draft}
+            maxLength={QUESTION_MAX}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Pregunta…"
             aria-label="Escribe tu pregunta"

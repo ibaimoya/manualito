@@ -17,18 +17,10 @@ import { cn } from '@/shared/lib/cn';
 import { elideEmail } from '@/shared/lib/elideEmail';
 
 /**
- * Sidebar persistente para desktop (`md+`).
- *
- * En móvil queda oculta (display: none vía `hidden md:flex` del __root). Se
- * monta siempre (no condicionalmente con JS, que provocaría rerenders al
- * redimensionar) y Tailwind decide su visibilidad.
- *
- * Plegable: cuando `collapsed`, el rail se estrecha a solo iconos; cada item
- * conserva su nombre accesible (label en `sr-only`) y muestra un tooltip al
- * pasar el ratón. El estado lo gobierna el shell (`_app`) para ajustar a la vez
- * el padding del contenido principal. El control de plegado sigue el patrón de
- * las apps de chat actuales: icono de panel junto a la marca; plegada, el
- * monograma hace de botón de expandir (muestra el icono al hacer hover).
+ * Sidebar de escritorio. Siempre montada (Tailwind la oculta en móvil;
+ * condicionar con JS daría rerenders al redimensionar). Plegada queda en
+ * iconos con label sr-only + tooltip; el estado lo gobierna el shell (_app)
+ * para ajustar a la vez el padding del contenido.
  */
 type NavTo = '/home' | '/history' | '/settings';
 

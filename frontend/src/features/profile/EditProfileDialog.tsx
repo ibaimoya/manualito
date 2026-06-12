@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -210,7 +210,6 @@ function EditProfileForm({
           Cancelar
         </Button>
         <Button type="submit" loading={save.isPending} disabled={!dirty}>
-          <Check size={16} strokeWidth={2.4} />
           Guardar cambios
         </Button>
       </div>

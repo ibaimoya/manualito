@@ -48,7 +48,7 @@ describe('/game/$gameId · cabecera', () => {
     renderHub();
     expect(await screen.findByRole('group', { name: 'Puntúa este juego' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: '5 estrellas — Imprescindible' }),
+      screen.getByRole('button', { name: '5 estrellas — Es una locura' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Puntúa este juego' })).not.toBeInTheDocument();
   });
@@ -74,20 +74,54 @@ describe('/game/$gameId · cabecera', () => {
     );
     renderHub();
     const user = userEvent.setup();
-    // Las estrellas de la cabecera abren el diálogo de valoración.
-    await user.click(await screen.findByRole('button', { name: '4 estrellas — Muy bueno' }));
+    // La estrella pulsada en la cabecera abre el diálogo con esa puntuación
+    // precargada (sin tocar el servidor hasta guardar).
+    await user.click(await screen.findByRole('button', { name: '4 estrellas — Es muy bueno' }));
     const dialog = await screen.findByRole('dialog', { name: /Qué te ha parecido Catan/ });
-    // El guardado exige elegir puntuación dentro del diálogo.
-    expect(within(dialog).getByRole('button', { name: 'Guardar' })).toBeDisabled();
-    await user.click(within(dialog).getByRole('button', { name: '4 estrellas — Muy bueno' }));
+    expect(
+      within(dialog).getByRole('button', { name: '4 estrellas — Es muy bueno' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(within(dialog).getByRole('button', { name: 'Guardar' })).toBeEnabled();
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
     // Al cerrarse, la cabecera refleja la puntuación en las estrellas.
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '4 estrellas — Muy bueno' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: '4 estrellas — Es muy bueno' })).toHaveAttribute(
         'aria-pressed',
         'true',
       );
     });
+  });
+});
+
+describe('/game/$gameId · refetch fallido con cache', () => {
+  it('no apila el error a pantalla completa sobre el hub ya cargado', async () => {
+    renderHub();
+    const user = userEvent.setup();
+    await screen.findAllByRole('heading', { name: 'Catan' });
+
+    // El PUT funciona pero el refetch de la invalidación falla: la query
+    // queda en error conservando la cache → debe verse el hub, no el error.
+    server.use(
+      http.put('/api/games/:gameId/rating', () =>
+        HttpResponse.json({
+          game_id: 'test-game-001',
+          score: 4,
+          note: null,
+          created_at: '2026-05-26T12:00:00.000Z',
+          updated_at: '2026-05-26T12:00:00.000Z',
+        }),
+      ),
+      http.get('/api/games/:gameId', () => HttpResponse.json({ detail: 'caído' }, { status: 500 })),
+    );
+    await user.click(await screen.findByRole('button', { name: '4 estrellas — Es muy bueno' }));
+    const dialog = await screen.findByRole('dialog', { name: /Qué te ha parecido Catan/ });
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('heading', { name: 'Catan' }).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/No hemos encontrado este juego/)).not.toBeInTheDocument();
   });
 });
 
@@ -131,7 +165,7 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
       'href',
       '/manual/test-manual-001',
     );
-    expect(within(region).getByText(/compartido por la comunidad/)).toBeInTheDocument();
+    expect(within(region).getByText(/Compartido por la comunidad/)).toBeInTheDocument();
   });
 
   it('pie con el total agregado de manuales y páginas del pool', async () => {

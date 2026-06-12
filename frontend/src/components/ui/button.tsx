@@ -26,15 +26,12 @@ const buttonVariants = cva(
         secondary: 'bg-surface text-fg border border-border hover:bg-surface-2',
         ghost: 'bg-transparent text-fg-2 hover:bg-surface',
         destructive: 'bg-error text-fg-inv shadow-sm hover:opacity-90 active:translate-y-px',
-        outline: 'bg-transparent text-fg border border-border-strong hover:bg-surface',
-        link: 'bg-transparent text-accent underline-offset-4 hover:underline',
       },
       size: {
         sm: 'h-9 px-3 text-sm',
         md: 'h-11 px-5 text-base',
         lg: 'h-14 px-6 text-lg',
         icon: 'h-11 w-11 p-0',
-        pill: 'h-11 rounded-full px-6 text-base',
       },
       block: {
         true: 'w-full',
@@ -69,14 +66,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     loading = false,
     disabled,
     children,
+    type,
     ...props
   },
   ref,
 ) {
   const Comp = asChild ? Slot : 'button';
+  // Default 'button': sin type, dentro de un form sería submit implícito.
+  const buttonType = asChild ? type : (type ?? 'button');
 
-  // asChild + loading: Slot de Radix exige un único child, así que no se
-  // puede inyectar [spinner, texto] — se degrada a solo aria-busy.
+  // Con asChild el Slot exige un único child: sin spinner, solo aria-busy.
   const showSpinner = loading && !asChild;
   const spinner = showSpinner ? (
     <Loader2
@@ -103,6 +102,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <Comp
       ref={ref}
       className={cn(buttonVariants({ variant, size, block }), className)}
+      type={buttonType}
       disabled={asChild ? undefined : disabled || loading}
       aria-busy={loading || undefined}
       data-loading={loading || undefined}

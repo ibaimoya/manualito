@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, Dice5, Info, RotateCw, Search, WifiOff, X } from 'lucide-react';
 import { api, type GameSearchItem } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { highlightMatch } from '@/shared/components/highlightMatch';
 
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 250;
@@ -342,7 +343,7 @@ function ResultRow({
           <Dice5 size={18} aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
-          {highlightMatch(game.name, query)}
+          {highlightMatch(game.name, query, MIN_CHARS)}
         </span>
         <span className="mono shrink-0 text-xs text-fg-3">{game.year_published ?? 's/f'}</span>
       </button>
@@ -374,22 +375,6 @@ function BggAttribution() {
         Powered by <strong className="font-semibold text-fg-2">BoardGameGeek</strong>
       </span>
     </div>
-  );
-}
-
-function highlightMatch(name: string, query: string): ReactNode {
-  const needle = query.trim().toLowerCase();
-  if (needle.length < MIN_CHARS) return name;
-  const index = name.toLowerCase().indexOf(needle);
-  if (index === -1) return name;
-  return (
-    <>
-      {name.slice(0, index)}
-      <mark className="rounded-[3px] bg-primary-100 px-px text-primary-700">
-        {name.slice(index, index + needle.length)}
-      </mark>
-      {name.slice(index + needle.length)}
-    </>
   );
 }
 

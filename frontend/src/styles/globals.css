@@ -190,7 +190,7 @@ kbd {
   }
 }
 
-/* — OcrTextViewer (visor de texto OCR en /result y /extract) — */
+/* — OcrTextViewer (visor del texto extraído en /result) — */
 .ocr-body--plain,
 .ocr-body--lines {
   animation: ocr-fade-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);

@@ -8,9 +8,7 @@ import { LockUp, Meeple } from '@/shared/components/Brand';
  */
 export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    // h-dvh + scroll interno: con body{overflow:hidden}, un min-h que crece
-    // dejaría el formulario cortado sin scroll en viewports bajos. El fondo
-    // decorativo va `fixed` para no desplazarse con el contenido.
+    // h-dvh + scroll interno: un min-h creciente cortaría el form en viewports bajos.
     <div className="relative h-dvh overflow-y-auto bg-surface">
       <div
         aria-hidden="true"

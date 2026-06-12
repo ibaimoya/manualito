@@ -69,8 +69,7 @@ function HomeScreen() {
 }
 
 function HeroCta() {
-  // @container: el HeroCta se adapta a su contenedor (no al viewport). En
-  // columna estrecha → vertical; en contenedor ancho → titular + botón.
+  // @container: el HeroCta se adapta a su contenedor, no al viewport.
   return (
     <Card
       className="@container relative overflow-hidden border-0 p-5 text-fg-inv shadow-md"

@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/app/theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route as AppRoute } from '@/routes/_app';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 
@@ -44,7 +45,9 @@ function mountApp(path: string) {
   return render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <TooltipProvider>
+          <RouterProvider router={router} />
+        </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>,
   );

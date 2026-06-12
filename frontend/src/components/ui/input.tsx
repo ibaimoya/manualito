@@ -14,9 +14,7 @@ type PresetConfig = Pick<
 >;
 
 const PRESETS: Record<InputPreset, PresetConfig> = {
-  // Nombre de juego de mesa propio (Catan, Wingspan…): NO spellcheck (los
-  // marca como mal escritos), capitalización de palabras (mayúscula
-  // inicial), enter = "Listo".
+  // Nombre de juego: sin spellcheck (los marca mal), Mayúscula Por Palabra.
   'game-name': {
     type: 'text',
     inputMode: 'text',
@@ -25,8 +23,7 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     autoComplete: 'off',
     autoCapitalize: 'words',
   },
-  // Búsqueda libre: type=search activa la X nativa (con estilo) y abre
-  // el teclado de búsqueda en algunos contextos móviles.
+  // type=search: X nativa y teclado de búsqueda en móvil.
   search: {
     type: 'search',
     inputMode: 'search',
@@ -35,8 +32,7 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     autoComplete: 'off',
     autoCapitalize: 'none',
   },
-  // Mensaje de chat: capitalización de oraciones, spellcheck activo,
-  // enter = "Enviar".
+  // Chat: capitalización de oraciones, spellcheck, enter = enviar.
   'chat-message': {
     type: 'text',
     inputMode: 'text',
@@ -67,10 +63,7 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
 };
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  /**
-   * Atributos por defecto para el caso típico.  El callsite puede
-   * sobrescribir cualquier atributo individual si lo necesita.
-   */
+  /** Atributos por defecto del caso típico; cualquiera se puede sobrescribir. */
   preset?: InputPreset;
 }
 
@@ -82,8 +75,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <input
       ref={ref}
-      // El orden importa: el preset va PRIMERO, luego ...props para que
-      // el callsite pueda sobrescribir.
+      // Preset primero: el callsite sobrescribe vía ...props.
       {...presetAttrs}
       type={type ?? presetAttrs.type ?? 'text'}
       className={cn(

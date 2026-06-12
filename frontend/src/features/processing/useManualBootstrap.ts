@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, isAbortApiError, type ManualProcessingResponse } from '@/shared/api/client';
+import { manualDetailQueryOptions } from '@/features/manual/use-manuals';
 import { storage, type ManualResult } from '@/shared/lib/storage';
 
 type StepId = 'processing' | 'summary' | 'setup' | 'turn' | 'win';
@@ -152,6 +154,7 @@ export interface BootstrapState {
 }
 
 export function useManualBootstrap(manualId: string, manualName: string): BootstrapState {
+  const queryClient = useQueryClient();
   const [steps, setSteps] = useState<StepRecord[]>(initialSteps);
   const [result, setResult] = useState<ManualResult | null>(null);
   const manualNameRef = useRef(manualName);
@@ -177,7 +180,11 @@ export function useManualBootstrap(manualId: string, manualName: string): Bootst
           failPendingQuestions(patchStep, 'El manual no se ha podido indexar.');
           return;
         }
-        const manual = await api.getManual(manualId, controller.signal);
+        // fetchQuery calienta la cache para /result; retry como el fetch directo.
+        const manual = await queryClient.fetchQuery({
+          ...manualDetailQueryOptions(manualId),
+          retry: false,
+        });
         const results = await Promise.allSettled(
           QUESTIONS.map((step) =>
             runBootstrapStep(manual.game_id, step, controller.signal, patchStep),
@@ -200,7 +207,7 @@ export function useManualBootstrap(manualId: string, manualName: string): Bootst
       mountedRef.current = false;
       controller.abort();
     };
-  }, [manualId]);
+  }, [manualId, queryClient]);
 
   const doneCount = steps.filter((step) => step.state === 'done').length;
   const failedCount = steps.filter((step) => step.state === 'failed').length;

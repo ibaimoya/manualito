@@ -2,7 +2,8 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster, toast } from 'sonner';
-import { ThemeProvider } from './theme';
+import { ThemeProvider, useTheme } from './theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { onStorageWriteFail } from '@/shared/lib/storage';
 
 type Props = Readonly<{ children: ReactNode }>;
@@ -30,18 +31,31 @@ function createQueryClient(): QueryClient {
   });
 }
 
+/** Providers globales. Theme va fuera: el Toaster necesita leer el modo. */
 /**
- * Composición de providers globales.
- * Orden importa: Theme va fuera para que QueryClient y Toaster
- * puedan leer las CSS variables si necesitan.
+ * El Toaster sigue el tema de Ajustes (con "system" ignoraría el modo forzado).
+ * Arriba para no chocar con el composer del chat; máximo 3 toasts a la vez.
  */
+function AppToaster() {
+  const { mode } = useTheme();
+  return (
+    <Toaster
+      position="top-center"
+      richColors
+      closeButton
+      theme={mode === 'auto' ? 'system' : mode}
+      visibleToasts={3}
+      duration={5000}
+      gap={8}
+    />
+  );
+}
+
 export function Providers({ children }: Props) {
-  // useState para garantizar que el cliente se crea UNA sola vez,
-  // incluso con StrictMode doble-render.
+  // useState: un único cliente aunque StrictMode doble el render.
   const [queryClient] = useState(createQueryClient);
 
-  // Suscripción global a fallos de escritura en localStorage — muestra
-  // un toast accionable cuando se llena la cuota.
+  // Toast accionable cuando localStorage se queda sin cuota.
   useEffect(
     () =>
       onStorageWriteFail((reason) => {
@@ -49,7 +63,7 @@ export function Providers({ children }: Props) {
           toast.warning('Espacio local agotado', {
             id: 'storage-quota',
             description:
-              'Borra algún manual en Ajustes → Borrar historial para liberar espacio.',
+              'Libera espacio desde Ajustes → Borrar datos locales.',
             duration: 8000,
           });
         } else if (reason === 'denied') {
@@ -67,23 +81,8 @@ export function Providers({ children }: Props) {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        {children}
-        {/* Arriba para no chocar con el composer sticky del chat; máximo 3
-            toasts visibles para que una ráfaga de errores no tape la pantalla. */}
-        <Toaster
-          position="top-center"
-          richColors
-          closeButton
-          theme="system"
-          visibleToasts={3}
-          duration={5000}
-          gap={8}
-          toastOptions={{
-            classNames: {
-              toast: 'mn-toast',
-            },
-          }}
-        />
+        <TooltipProvider>{children}</TooltipProvider>
+        <AppToaster />
         {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-right" />}
       </QueryClientProvider>
     </ThemeProvider>

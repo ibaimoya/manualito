@@ -1,7 +1,10 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { delay, http, HttpResponse } from 'msw';
 import { useManualBootstrap } from '@/features/processing/useManualBootstrap';
+import { manualDetailQueryOptions } from '@/features/manual/use-manuals';
 import { storage } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
 
@@ -42,6 +45,16 @@ function manualDetailResponse(manualId: string, gameId = 'game-1') {
   };
 }
 
+function renderBootstrap(manualId: string, name: string) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const hook = renderHook(() => useManualBootstrap(manualId, name), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    ),
+  });
+  return { qc, ...hook };
+}
+
 describe('useManualBootstrap', () => {
   it('espera al procesamiento y lanza 4 preguntas', async () => {
     let processingCalls = 0;
@@ -63,7 +76,7 @@ describe('useManualBootstrap', () => {
       }),
     );
 
-    const { result } = renderHook(() => useManualBootstrap('m-1', 'Catan'));
+    const { result, qc } = renderBootstrap('m-1', 'Catan');
 
     expect(result.current.done).toBe(false);
     expect(result.current.steps).toHaveLength(5);
@@ -77,6 +90,8 @@ describe('useManualBootstrap', () => {
     expect(result.current.result?.manual_id).toBe('m-1');
     expect(result.current.result?.name).toBe('Catan');
     expect(storage.getResult('m-1')?.summary).toContain('Respuesta');
+    // El detalle queda en cache: /result lo leerá sin re-descargarlo.
+    expect(qc.getQueryData(manualDetailQueryOptions('m-1').queryKey)).toBeDefined();
   });
 
   it('si algunas preguntas fallan, guarda resultado con huecos vacios', async () => {
@@ -98,7 +113,7 @@ describe('useManualBootstrap', () => {
       }),
     );
 
-    const { result } = renderHook(() => useManualBootstrap('m-2', 'Wingspan'));
+    const { result } = renderBootstrap('m-2', 'Wingspan');
     await waitFor(() => expect(result.current.done).toBe(true), { timeout: 3000 });
 
     const failedCount = result.current.steps.filter((step) => step.state === 'failed').length;
@@ -126,7 +141,7 @@ describe('useManualBootstrap', () => {
       }),
     );
 
-    const { result } = renderHook(() => useManualBootstrap('m-3', 'X'));
+    const { result } = renderBootstrap('m-3', 'X');
     await waitFor(() => expect(result.current.done).toBe(true), { timeout: 3000 });
 
     expect(questionCalls).toBe(0);
@@ -142,7 +157,7 @@ describe('useManualBootstrap', () => {
       }),
     );
 
-    const { unmount } = renderHook(() => useManualBootstrap('m-unmount', 'X'));
+    const { unmount } = renderBootstrap('m-unmount', 'X');
     unmount();
     await new Promise((resolve) => setTimeout(resolve, 400));
 

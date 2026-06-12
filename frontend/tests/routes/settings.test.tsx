@@ -1,58 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
-import { Toaster } from 'sonner';
-import { ThemeProvider } from '@/app/theme';
 import { Route as SettingsRoute } from '@/routes/_app.settings';
-import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 import type { AuthUser } from '@/shared/api/auth';
 import { storage } from '@/shared/lib/storage';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
 });
 
-beforeEach(() => {
-  // Estabilizar matchMedia para que useNamedMediaQuery('darkMode') no
-  // dependa del entorno (jsdom no implementa matchMedia y nuestro setup
-  // lo monkey-patcha a `matches: false`).
-});
-
 function renderSettings(user: AuthUser | null = null) {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  // Sembramos la sesión en cache para que useAuth no dispare fetch a /api/me.
-  qc.setQueryData(AUTH_ME_KEY, user ? { user, csrf_token: 'demo' } : null);
-  const root = createRootRoute({ component: Outlet });
-  const settingsR = createRoute({
-    getParentRoute: () => root,
+  return renderRoute({
     path: '/settings',
-    component: (SettingsRoute as unknown as { options: { component: React.FC } }).options.component,
+    initialEntry: '/settings',
+    component: routeComponent(SettingsRoute),
+    user,
   });
-  const tree = root.addChildren([settingsR]);
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({ initialEntries: ['/settings'] }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-        <Toaster />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
 describe('/settings', () => {
@@ -138,7 +103,7 @@ describe('/settings', () => {
     ).toBeInTheDocument();
   });
 
-  it('confirma el borrado: vacía manuales y onboarding seen', async () => {
+  it('confirma el borrado: vacía storage, onboarding seen y la caché /api del SW', async () => {
     // Sembrar datos para verificar que se borran.
     storage.upsertManual({
       manual_id: 'm1',
@@ -150,6 +115,11 @@ describe('/settings', () => {
     storage.markOnboardingSeen();
     expect(storage.listManuals()).toHaveLength(1);
     expect(storage.isOnboardingSeen()).toBe(true);
+    const deleteSpy = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(globalThis, 'caches', {
+      configurable: true,
+      value: { delete: deleteSpy },
+    });
 
     renderSettings();
     const user = userEvent.setup();
@@ -162,7 +132,9 @@ describe('/settings', () => {
     await waitFor(() => {
       expect(storage.listManuals()).toHaveLength(0);
       expect(storage.isOnboardingSeen()).toBe(false);
+      expect(deleteSpy).toHaveBeenCalledWith('api');
     });
+    Reflect.deleteProperty(globalThis, 'caches');
   });
 
   it('cancela la confirmación → no borra ni cierra los datos', async () => {

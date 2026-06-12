@@ -7,6 +7,9 @@ import type { AnswerSource } from './client';
  * turno.
  */
 
+/** Cota del backend para una pregunta (USER_MESSAGE_MAX_LENGTH). */
+export const QUESTION_MAX = 4_000;
+
 export type MessageRole = 'user' | 'assistant';
 
 export interface ConversationSummary {

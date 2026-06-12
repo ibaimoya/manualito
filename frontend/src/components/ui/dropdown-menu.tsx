@@ -7,8 +7,7 @@ import { cn } from '@/shared/lib/cn';
  * flechas de teclado, Escape y cierre al hacer click fuera vienen de serie.
  */
 
-// No-modal: un item del menú puede abrir un Dialog modal, y si ambos bloquean
-// `body { pointer-events }` el desmontaje cruzado deja el bloqueo huérfano.
+// No-modal: con menú y Dialog modales, el cierre cruzado deja el body bloqueado.
 export const DropdownMenu = (
   props: ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>,
 ) => <DropdownMenuPrimitive.Root modal={false} {...props} />;

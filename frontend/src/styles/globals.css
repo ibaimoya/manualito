@@ -27,6 +27,7 @@
 
   /* Superficies y texto */
   --color-bg: var(--m-bg);
+  --color-card: var(--m-card);
   --color-surface: var(--m-surface);
   --color-surface-2: var(--m-surface-2);
   --color-border: var(--m-border);
@@ -353,6 +354,10 @@ input[type='radio'] {
 }
 
 /* — Markdown del LLM (`<Markdown>`): compacto, hereda el color del contenedor. */
+.md {
+  /* El LLM puede soltar palabras/URLs sin espacios más anchas que la tarjeta. */
+  overflow-wrap: break-word;
+}
 .md > :first-child {
   margin-top: 0;
 }

@@ -9,6 +9,7 @@ import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar } from '@/shared/components/Avatar';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
+import { cn } from '@/shared/lib/cn';
 import { storage } from '@/shared/lib/storage';
 import { clearApiSwCache } from '@/shared/lib/swCache';
 
@@ -19,11 +20,15 @@ export const Route = createFileRoute('/_app/settings')({
 function SettingsScreen() {
   const theme = useTheme();
   const [confirmingWipe, setConfirmingWipe] = useState(false);
-  // En modo auto, el hint dice qué tema se está viendo realmente.
+  // Siempre una línea (cada modo tiene copy): cambiar de modo no desplaza el layout.
   const systemPrefersDark = useNamedMediaQuery('darkMode');
   const currentSystemTheme = systemPrefersDark ? 'oscuro' : 'claro';
-  const modeHint =
-    theme.mode === 'auto' ? `Sigue el sistema (actualmente: ${currentSystemTheme})` : undefined;
+  const MODE_HINTS: Record<ThemeMode, string> = {
+    light: 'Siempre claro',
+    dark: 'Siempre oscuro',
+    auto: `Sigue el sistema (actualmente: ${currentSystemTheme})`,
+  };
+  const modeHint = MODE_HINTS[theme.mode];
 
   function wipeLocalData(): void {
     storage.wipeAll();
@@ -42,7 +47,7 @@ function SettingsScreen() {
       <AccountSection />
 
       <Group title="Apariencia">
-        <Row label="Tema" hint={modeHint}>
+        <Row label="Tema" hint={modeHint} stacked>
           <SegmentedControl<ThemeMode>
             value={theme.mode}
             onChange={theme.setMode}
@@ -193,17 +198,25 @@ function Group({
 function Row({
   label,
   hint,
+  stacked,
   children,
 }: Readonly<{
   label: string;
   hint?: string;
+  /** Control ancho: en móvil baja bajo el label (el hint cabe en una línea). */
+  stacked?: boolean;
   children: ReactNode;
 }>) {
   return (
-    <div className="flex items-center gap-[var(--m-space-3)] p-[var(--m-space-4)]">
-      <div className="flex-1">
+    <div
+      className={cn(
+        'gap-[var(--m-space-3)] p-[var(--m-space-4)]',
+        stacked ? 'flex flex-col items-end md:flex-row md:items-center' : 'flex items-center',
+      )}
+    >
+      <div className={cn('flex-1', stacked && 'self-stretch')}>
         <div className="font-semibold text-fg">{label}</div>
-        {hint ? <div className="text-xs text-fg-3">{hint}</div> : null}
+        {hint ? <div className="mt-0.5 text-xs text-fg-3">{hint}</div> : null}
       </div>
       {children}
     </div>

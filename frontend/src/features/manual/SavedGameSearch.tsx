@@ -102,7 +102,7 @@ export function SavedGameSearch({ manuals }: Props) {
       </div>
 
       {open ? (
-        <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-bg shadow-lg">
+        <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
           <ul id={listId} aria-label="Tus juegos" className="max-h-72 overflow-y-auto">
             {matches.length > 0 ? (
               matches.map((manual, index) => (

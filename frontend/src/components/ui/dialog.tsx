@@ -116,7 +116,7 @@ export const ModalBody = ({ children, className }: ModalBodyProps) => (
 export const DIALOG_CONTENT_CLASS = cn(
   'fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-md',
   '-translate-x-1/2 -translate-y-1/2',
-  'rounded-2xl border border-border bg-bg shadow-lg',
+  'rounded-2xl border border-border bg-card shadow-lg',
 );
 
 export const DIALOG_HEADER_CLASS = 'flex items-start justify-between gap-3 px-5 pb-2 pt-5';

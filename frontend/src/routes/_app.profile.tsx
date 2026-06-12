@@ -189,7 +189,9 @@ function StatCards() {
               {item.value ?? '—'}
             </span>
           )}
-          <span className="mt-0.5 block text-xs text-fg-3">{item.label}</span>
+          <span className="mt-0.5 block truncate text-xs text-fg-3" title={item.label}>
+            {item.label}
+          </span>
         </Card>
       ))}
     </div>

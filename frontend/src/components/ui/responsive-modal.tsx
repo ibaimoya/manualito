@@ -10,7 +10,7 @@ import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 
 // Variante móvil: panel anclado abajo con asa táctil.
 const SHEET_CONTENT_CLASS =
-  'fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-md rounded-t-3xl border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] shadow-lg';
+  'fixed bottom-0 left-0 right-0 z-50 mx-auto w-full max-w-md rounded-t-3xl border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-lg';
 const SHEET_HEADER_CLASS = 'flex items-start justify-between gap-3 px-5 pb-2 pt-4';
 
 /**

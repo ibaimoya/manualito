@@ -77,7 +77,7 @@ function PageThumb({
           style={{ width: `${width}%` }}
         />
       ))}
-      <span className="mono absolute left-1.5 top-1.5 rounded border border-border bg-bg px-1.5 py-px text-[10px] font-bold text-fg-2">
+      <span className="mono absolute left-1.5 top-1.5 rounded border border-border bg-card px-1.5 py-px text-[10px] font-bold text-fg-2">
         P.{page.page_number}
       </span>
       <StatusDot page={page} />
@@ -121,7 +121,7 @@ export function PageThumbRail({
       {hasLowConfidence ? (
         <p className="hidden items-center gap-1.5 px-0.5 text-[11px] leading-snug text-fg-3 md:flex">
           <AlertTriangle size={12} className="shrink-0 text-warning" aria-hidden="true" />
-          baja confianza del OCR
+          Baja confianza del OCR
         </p>
       ) : null}
     </nav>

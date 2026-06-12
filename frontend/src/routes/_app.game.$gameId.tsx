@@ -270,7 +270,7 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
           <p className="text-sm text-fg-2">Todavía no hay manuales de {game.name}.</p>
         </Card>
       ) : (
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {game.manuals.map((manual) => (
             <ManualCard key={manual.id} manual={manual} />
           ))}

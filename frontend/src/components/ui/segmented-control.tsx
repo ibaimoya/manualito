@@ -52,7 +52,7 @@ export function SegmentedControl<T extends string>({
               'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               'disabled:cursor-not-allowed disabled:opacity-50',
-              active ? 'bg-bg text-fg shadow-xs' : 'text-fg-2',
+              active ? 'bg-card text-fg shadow-xs' : 'text-fg-2',
             )}
           >
             {o.icon ? (

@@ -238,7 +238,7 @@ export function PageTextCard({
           ) : (
             <div className="flex flex-col gap-3.5">
               {paragraphs.map((paragraph, index) => (
-                <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[15px] leading-7 text-fg">
+                <p key={`${index}-${paragraph.slice(0, 24)}`} className="break-words text-[15px] leading-7 text-fg">
                   {highlight(paragraph, needle, counter, activeMatch)}
                 </p>
               ))}

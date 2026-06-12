@@ -236,7 +236,7 @@ function UserBubble({ content }: Readonly<{ content: string }>) {
   return (
     <div className="flex justify-end">
       <div
-        className="max-w-[78%] rounded-2xl bg-primary px-4 py-3 text-base leading-relaxed text-fg-inv"
+        className="max-w-[78%] break-words rounded-2xl bg-primary px-4 py-3 text-base leading-relaxed text-fg-inv"
         style={{ borderTopRightRadius: 6 }}
       >
         {content}

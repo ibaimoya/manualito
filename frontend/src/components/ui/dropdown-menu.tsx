@@ -23,7 +23,7 @@ export const DropdownMenuContent = forwardRef<
         ref={ref}
         sideOffset={sideOffset}
         data-mn-menu=""
-        className={cn('z-50 min-w-44 rounded-2xl border border-border bg-bg p-1.5 shadow-md', className)}
+        className={cn('z-50 min-w-44 rounded-2xl border border-border bg-card p-1.5 shadow-md', className)}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>

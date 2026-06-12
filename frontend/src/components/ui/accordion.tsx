@@ -72,7 +72,7 @@ export const AccordionContent = forwardRef<
     >
       <div
         className={cn(
-          'border-t border-border bg-bg px-[var(--m-space-4)] py-[var(--m-space-4)]',
+          'border-t border-border bg-card px-[var(--m-space-4)] py-[var(--m-space-4)]',
           className,
         )}
       >

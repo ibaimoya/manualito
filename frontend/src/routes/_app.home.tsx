@@ -47,7 +47,7 @@ function HomeScreen() {
         <div className="md:max-w-xl">
           <h1
             id="home-hello"
-            className="font-display text-3xl font-bold leading-tight tracking-tight text-fg md:text-4xl"
+            className="break-words font-display text-3xl font-bold leading-tight tracking-tight text-fg md:text-4xl"
           >
             {firstName ? `Hola, ${firstName}` : 'Hola'} <span aria-hidden="true">👋</span>
             <br />

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as SecurityRoute } from '@/routes/_app.security';
-import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
+import { renderRoute, routeComponent, TEST_USER } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -14,14 +14,31 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderSecurity() {
+function renderSecurity(user = TEST_USER) {
   return renderRoute({
     path: '/security',
     initialEntry: '/security',
     component: routeComponent(SecurityRoute),
     stubs: { '/home': 'Home stub', '/login': 'Login stub' },
+    user,
   });
 }
+
+describe('/security · último acceso', () => {
+  it('muestra el último inicio de sesión con su aviso de seguridad', async () => {
+    renderSecurity();
+    expect(await screen.findByText('Último acceso')).toBeInTheDocument();
+    // TEST_USER.last_login_at = 2026-05-26T10:00:00Z.
+    expect(screen.getByText(/26 de mayo de 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Si no lo reconoces, cambia la/)).toBeInTheDocument();
+  });
+
+  it('sin fecha de login la sección no se muestra', async () => {
+    renderSecurity({ ...TEST_USER, last_login_at: null });
+    await screen.findByRole('heading', { name: 'Cuenta y seguridad' });
+    expect(screen.queryByText('Último acceso')).not.toBeInTheDocument();
+  });
+});
 
 describe('/security · cambiar contraseña', () => {
   it('valida en local antes de llamar al backend', async () => {

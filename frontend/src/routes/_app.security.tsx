@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Lock, Trash2 } from 'lucide-react';
+import { AlertTriangle, History, Lock, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -34,9 +34,45 @@ function SecurityScreen() {
           Cuenta y seguridad
         </h1>
       </header>
+      <LastAccessSection lastLoginAt={user.last_login_at} />
       <ChangePasswordSection />
       <DangerZone username={user.username} />
     </div>
+  );
+}
+
+const LAST_ACCESS_DATE = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+/** El login más reciente de la cuenta en cualquier dispositivo (señal de seguridad). */
+function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | null }>) {
+  if (lastLoginAt === null) return null;
+  return (
+    <section aria-label="Último acceso">
+      <SectionHead eyebrow="Actividad" title="Último acceso" />
+      <Card className="flex items-center gap-3.5 p-5">
+        <span
+          aria-hidden="true"
+          className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-100 text-primary-700"
+        >
+          <History size={17} strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-fg">
+            {LAST_ACCESS_DATE.format(new Date(lastLoginAt))}
+          </p>
+          <p className="mt-0.5 text-xs leading-relaxed text-fg-3">
+            El inicio de sesión más reciente de tu cuenta. Si no lo reconoces, cambia la
+            contraseña.
+          </p>
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -95,7 +131,7 @@ function ChangePasswordSection() {
             <PasswordInput
               id={`${fieldId}-current`}
               autoComplete="current-password"
-              placeholder="Tu contraseña de ahora"
+              placeholder="Tu contraseña"
               value={current}
               invalid={wrongCurrent}
               onChange={(event) => setCurrent(event.target.value)}

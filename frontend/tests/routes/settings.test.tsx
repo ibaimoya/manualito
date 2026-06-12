@@ -76,13 +76,12 @@ describe('/settings', () => {
     expect(azul).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('muestra el hint del modo auto reflejando el tema del sistema', async () => {
-    // El hint solo aparece en modo auto; el default ahora es claro, así que
-    // seleccionamos Auto primero. matchMedia mock = "claro" según setup.
+  it('el hint del tema es estático: no cambia al alternar de modo', async () => {
     renderSettings();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('radio', { name: 'Auto' }));
-    expect(await screen.findByText(/Sigue el sistema/)).toBeInTheDocument();
+    expect(await screen.findByText('Claro, oscuro o el del sistema')).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Auto' }));
+    expect(screen.getByText('Claro, oscuro o el del sistema')).toBeInTheDocument();
   });
 
   it('muestra el indicador estático de archivos gestionados por servidor', async () => {

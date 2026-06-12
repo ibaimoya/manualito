@@ -156,7 +156,7 @@ function EditProfileForm({
                   >
                     {option.value === 'initials' ? (
                       <span className="font-display text-xs font-extrabold">
-                        {(username || user.username).slice(0, 2).toUpperCase()}
+                        {(username || user.username).trim().charAt(0).toUpperCase()}
                       </span>
                     ) : (
                       <AvatarGlyph figure={option.value} size={30} />

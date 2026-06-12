@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import {
   BookOpen,
+  CircleHelp,
   Home,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,7 +23,7 @@ import { elideEmail } from '@/shared/lib/elideEmail';
  * iconos con label sr-only + tooltip; el estado lo gobierna el shell (_app)
  * para ajustar a la vez el padding del contenido.
  */
-type NavTo = '/home' | '/history' | '/settings';
+type NavTo = '/home' | '/history' | '/settings' | '/about';
 
 type SidebarUser = Readonly<{
   username: string;
@@ -38,9 +39,16 @@ type Props = Readonly<{
   onToggle?: () => void;
 }>;
 
-const NAV_ITEMS: Array<{ to: NavTo; icon: ReactNode; label: string }> = [
+type NavItem = { to: NavTo; icon: ReactNode; label: string };
+
+const NAV_MAIN: NavItem[] = [
   { to: '/home', icon: <Home size={18} strokeWidth={1.75} />, label: 'Inicio' },
   { to: '/history', icon: <BookOpen size={18} strokeWidth={1.75} />, label: 'Historial' },
+];
+
+// Utilidades de soporte, ancladas abajo junto al perfil.
+const NAV_FOOTER: NavItem[] = [
+  { to: '/about', icon: <CircleHelp size={18} strokeWidth={1.75} />, label: 'Ayuda' },
   { to: '/settings', icon: <SettingsIcon size={18} strokeWidth={1.75} />, label: 'Ajustes' },
 ];
 
@@ -114,31 +122,17 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         </Button>
       </div>
 
-      <nav className={cn('flex-1', collapsed ? 'px-2' : 'px-3')} aria-label="Secciones de la app">
-        <ul className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => (
-            <li key={item.to}>
-              <MaybeTip show={collapsed} label={item.label}>
-                <Link
-                  to={item.to}
-                  aria-current={pathname === item.to ? 'page' : undefined}
-                  className={cn(
-                    'flex min-h-11 items-center rounded-xl text-sm font-semibold transition-colors',
-                    collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
-                    pathname === item.to
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-fg-2 hover:bg-surface-2 hover:text-fg',
-                  )}
-                >
-                  <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center">
-                    {item.icon}
-                  </span>
-                  <span className={cn(collapsed && 'sr-only')}>{item.label}</span>
-                </Link>
-              </MaybeTip>
-            </li>
-          ))}
-        </ul>
+      <nav
+        className={cn('flex flex-1 flex-col', collapsed ? 'px-2' : 'px-3')}
+        aria-label="Secciones de la app"
+      >
+        <NavList items={NAV_MAIN} pathname={pathname} collapsed={collapsed} />
+        <NavList
+          items={NAV_FOOTER}
+          pathname={pathname}
+          collapsed={collapsed}
+          className="mt-auto pb-3"
+        />
       </nav>
 
       {user ? (
@@ -147,6 +141,40 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         </footer>
       ) : null}
     </aside>
+  );
+}
+
+function NavList({
+  items,
+  pathname,
+  collapsed,
+  className,
+}: Readonly<{ items: NavItem[]; pathname: string; collapsed: boolean; className?: string }>) {
+  return (
+    <ul className={cn('flex flex-col gap-1', className)}>
+      {items.map((item) => (
+        <li key={item.to}>
+          <MaybeTip show={collapsed} label={item.label}>
+            <Link
+              to={item.to}
+              aria-current={pathname === item.to ? 'page' : undefined}
+              className={cn(
+                'flex min-h-11 items-center rounded-xl text-sm font-semibold transition-colors',
+                collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
+                pathname === item.to
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'text-fg-2 hover:bg-surface-2 hover:text-fg',
+              )}
+            >
+              <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center">
+                {item.icon}
+              </span>
+              <span className={cn(collapsed && 'sr-only')}>{item.label}</span>
+            </Link>
+          </MaybeTip>
+        </li>
+      ))}
+    </ul>
   );
 }
 

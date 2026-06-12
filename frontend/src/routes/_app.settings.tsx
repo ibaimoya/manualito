@@ -6,7 +6,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
-import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { Avatar } from '@/shared/components/Avatar';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { cn } from '@/shared/lib/cn';
@@ -20,16 +19,6 @@ export const Route = createFileRoute('/_app/settings')({
 function SettingsScreen() {
   const theme = useTheme();
   const [confirmingWipe, setConfirmingWipe] = useState(false);
-  // Siempre una línea (cada modo tiene copy): cambiar de modo no desplaza el layout.
-  const systemPrefersDark = useNamedMediaQuery('darkMode');
-  const currentSystemTheme = systemPrefersDark ? 'oscuro' : 'claro';
-  const MODE_HINTS: Record<ThemeMode, string> = {
-    light: 'Siempre claro',
-    dark: 'Siempre oscuro',
-    auto: `Sigue el sistema (actualmente: ${currentSystemTheme})`,
-  };
-  const modeHint = MODE_HINTS[theme.mode];
-
   function wipeLocalData(): void {
     storage.wipeAll();
     storage.resetOnboarding();
@@ -47,7 +36,8 @@ function SettingsScreen() {
       <AccountSection />
 
       <Group title="Apariencia">
-        <Row label="Tema" hint={modeHint} stacked>
+        {/* Hint estático a propósito: un caption que cambia con la selección reflowea. */}
+        <Row label="Tema" hint="Claro, oscuro o el del sistema" stacked>
           <SegmentedControl<ThemeMode>
             value={theme.mode}
             onChange={theme.setMode}
@@ -118,13 +108,7 @@ function SettingsScreen() {
         ) : null}
       </Group>
 
-      <footer className="mt-2 flex justify-center gap-5">
-        <Link
-          to="/about"
-          className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
-        >
-          Cómo funciona
-        </Link>
+      <footer className="mt-2 flex justify-center">
         <Link
           to="/privacy"
           className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"

@@ -25,12 +25,15 @@ export const Route = createFileRoute('/_app/about')({
   component: AboutScreen,
 });
 
+const CONTACT_EMAIL = 'support@manualito.com';
+const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
+
 const STEPS: ReadonlyArray<{ n: string; icon: ReactNode; title: string; text: string }> = [
   {
     n: '01',
     icon: <Camera size={22} strokeWidth={1.75} />,
     title: 'Hazle una foto',
-    text: 'Fotografía el manual o sube el PDF. Varias páginas a la vez, sin orden.',
+    text: 'Sácale una foto al manual o sube el PDF. Varias páginas a la vez, sin orden.',
   },
   {
     n: '02',
@@ -74,7 +77,7 @@ const FAQ = [
     answer: (
       <>
         Son <strong>privadas por defecto</strong>: solo se usan para extraer el texto. Compartir un
-        manual con el pool de su juego es opcional y reversible. Más detalle en la{' '}
+        manual con la comunidad de su juego es opcional y reversible. Más detalle en la{' '}
         <Link to="/privacy" className="font-semibold text-accent hover:underline">
           política de privacidad
         </Link>
@@ -89,8 +92,8 @@ const FAQ = [
     question: '¿En qué idiomas funciona?',
     answer: (
       <>
-        Leemos manuales en <strong>español e inglés</strong>; las explicaciones y el chat responden
-        siempre en español. Más idiomas, en el horizonte.
+        De momento, solo funciona <strong>en español</strong>, aunque aunque añadir otros idiomas
+        está previsto para futuras versiones.
       </>
     ),
   },
@@ -104,11 +107,11 @@ function AboutScreen() {
         <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-fg md:text-4xl">
           De la caja a la mesa
           <br />
-          sin leer 24 páginas
+          sin leer ni una página
         </h1>
         <p className="max-w-md text-[15px] leading-relaxed text-fg-2">
-          Manualito lee el manual de tu juego de mesa y te lo explica en claro. Y cuando surja la
-          duda a mitad de partida, se lo preguntas.
+          Manualito lee el manual de tu juego de mesa y te lo explica en claro. Y cuando surja una
+          duda en mitad de la partida, se la preguntas.
         </p>
       </header>
 
@@ -121,15 +124,16 @@ function AboutScreen() {
                 <div className="flex items-center justify-between">
                   <span
                     aria-hidden="true"
-                    className={`grid size-10 place-items-center rounded-xl ${
-                      index === 3 ? 'bg-accent-100 text-accent' : 'bg-primary-100 text-primary-700'
-                    }`}
+                    className="grid size-10 place-items-center rounded-xl bg-primary-100 text-primary-700"
                   >
                     {step.icon}
                   </span>
                   <span className="mono text-[11px] tracking-[0.12em] text-fg-3">{step.n}</span>
                 </div>
-                <h3 className="font-display text-base font-bold text-fg">{step.title}</h3>
+                {/* min-h de 2 líneas en md: «Te lo explicamos» parte y desalineaba los cuerpos. */}
+                <h3 className="font-display text-base font-bold text-fg md:min-h-12">
+                  {step.title}
+                </h3>
                 <p className="text-[13px] leading-relaxed text-fg-2">{step.text}</p>
               </Card>
               {index < STEPS.length - 1 ? (
@@ -146,8 +150,8 @@ function AboutScreen() {
       </section>
 
       <section aria-label="Preguntas frecuentes">
-        <SectionHead eyebrow="Preguntas honestas" title="FAQ" />
-        <Accordion type="multiple" defaultValue={['reliable']} className="space-y-3">
+        <SectionHead eyebrow="Sin rodeos" title="FAQ" />
+        <Accordion type="multiple" className="space-y-3">
           {FAQ.map(({ value, icon: Icon, chipClass, question, answer }) => (
             <AccordionItem key={value} value={value}>
               <AccordionTrigger>
@@ -173,21 +177,21 @@ function AboutScreen() {
           </p>
           <h3 className="mt-1.5 font-display text-base font-bold text-fg">Manualito es un TFG</h3>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-fg-2">
-            Trabajo de Fin de Grado en desarrollo activo: puede haber bordes sin pulir. Tus avisos
+            Trabajo de Fin de Grado en desarrollo: puede aparecer algún bug. Tus avisos
             de errores valen oro.
           </p>
         </Card>
         <Card className="flex flex-col justify-center gap-2.5 p-5">
-          <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
             ¿Hablamos?
           </p>
           <p className="text-[13.5px] leading-relaxed text-fg-2">
             Dudas, fallos o juegos que no leemos bien.
           </p>
           <Button asChild variant="secondary" size="sm">
-            <a href="mailto:hola@manualito.app">
+            <a href={CONTACT_MAILTO}>
               <Mail size={15} strokeWidth={2} />
-              hola@manualito.app
+              {CONTACT_EMAIL}
             </a>
           </Button>
         </Card>

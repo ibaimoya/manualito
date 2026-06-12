@@ -19,13 +19,10 @@ import type { AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Meeple } from '@/shared/components/Brand';
 import { cn } from '@/shared/lib/cn';
 
-/** Iniciales a partir de un nombre o email (1–2 letras). */
+/** Inicial a partir de un nombre o email (una sola letra). */
 function avatarInitials(name: string): string {
   const base = name.includes('@') ? name.slice(0, name.indexOf('@')) : name;
-  const parts = base.trim().split(/[\s._-]+/).filter(Boolean);
-  const first = parts[0]?.charAt(0) ?? '';
-  const last = parts.length > 1 ? (parts.at(-1)?.charAt(0) ?? '') : '';
-  return (first + last).toUpperCase() || '?';
+  return base.trim().charAt(0).toUpperCase() || '?';
 }
 
 const COLOR_CLASS: Record<AvatarColor, string> = {
@@ -91,6 +88,8 @@ export function Avatar({
     width: size,
     height: size,
     fontSize: Math.round(size * 0.38),
+    // line-height 1: la caja de línea no añade leading asimétrico al centrar.
+    lineHeight: 1,
     letterSpacing: '-0.01em',
     color: '#FFF8F0',
   };

@@ -22,7 +22,7 @@ const TITLES: Record<string, string> = {
   '/settings': 'Ajustes',
   '/profile': 'Perfil',
   '/security': 'Cuenta y seguridad',
-  '/about': 'Cómo funciona',
+  '/about': 'Ayuda',
 };
 
 function HomeCrumb() {

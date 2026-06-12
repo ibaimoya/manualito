@@ -49,11 +49,11 @@ describe('DesktopTopbar', () => {
     expect(screen.getByText('Historial')).toBeInTheDocument();
   });
 
-  it('el avatar usa iniciales y enlaza al perfil', async () => {
+  it('el avatar usa la inicial y enlaza al perfil', async () => {
     renderInRouter(<DesktopTopbar pathname="/home" />);
     const avatar = await screen.findByRole('link', { name: /Tu perfil/i });
     expect(avatar).toHaveAttribute('href', '/profile');
-    expect(avatar).toHaveTextContent('MÁ');
+    expect(avatar).toHaveTextContent('M');
   });
 
   it('permite sobreescribir el crumb (páginas de juego)', async () => {

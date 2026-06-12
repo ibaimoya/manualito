@@ -103,17 +103,10 @@ describe('/settings', () => {
     ).toBeInTheDocument();
   });
 
-  it('confirma el borrado: vacía storage, onboarding seen y la caché /api del SW', async () => {
-    // Sembrar datos para verificar que se borran.
-    storage.upsertManual({
-      manual_id: 'm1',
-      name: 'Catan',
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 5,
-    });
+  it('confirma el borrado: barre claves legadas, onboarding seen y la caché /api del SW', async () => {
+    // Restos de versiones viejas que el barrido debe limpiar.
+    localStorage.setItem('manualito.result.m1', JSON.stringify({ summary: 's' }));
     storage.markOnboardingSeen();
-    expect(storage.listManuals()).toHaveLength(1);
     expect(storage.isOnboardingSeen()).toBe(true);
     const deleteSpy = vi.fn().mockResolvedValue(true);
     Object.defineProperty(globalThis, 'caches', {
@@ -130,7 +123,7 @@ describe('/settings', () => {
     await user.click(allButtons[allButtons.length - 1]!);
 
     await waitFor(() => {
-      expect(storage.listManuals()).toHaveLength(0);
+      expect(localStorage.getItem('manualito.result.m1')).toBeNull();
       expect(storage.isOnboardingSeen()).toBe(false);
       expect(deleteSpy).toHaveBeenCalledWith('api');
     });
@@ -138,18 +131,12 @@ describe('/settings', () => {
   });
 
   it('cancela la confirmación → no borra ni cierra los datos', async () => {
-    storage.upsertManual({
-      manual_id: 'm1',
-      name: 'Catan',
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 5,
-    });
+    localStorage.setItem('manualito.result.m1', JSON.stringify({ summary: 's' }));
     renderSettings();
     const user = userEvent.setup();
     await user.click((await screen.findAllByRole('button', { name: /Borrar todo/i }))[0]!);
     await user.click(await screen.findByRole('button', { name: /Cancelar/i }));
-    expect(storage.listManuals()).toHaveLength(1);
+    expect(localStorage.getItem('manualito.result.m1')).not.toBeNull();
     await waitFor(() => {
       expect(
         screen.queryByRole('alertdialog', { name: /Confirmar borrado/i }),

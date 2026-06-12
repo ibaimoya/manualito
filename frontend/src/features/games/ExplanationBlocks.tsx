@@ -31,10 +31,7 @@ const BLOCKS: ReadonlyArray<{
   },
 ];
 
-/**
- * Resumen rápido + acordeones de la explicación: la misma pieza visual en
- * /game y /result (cada pantalla aporta su contenido ya renderizado).
- */
+/** Resumen rápido + acordeones de la explicación del juego en el hub. */
 export function ExplanationBlocks({
   summary,
   content,

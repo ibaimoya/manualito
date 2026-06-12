@@ -13,7 +13,6 @@ import {
   conversationsKey,
 } from '@/features/conversations/use-conversations';
 import { manualDetailQueryOptions } from '@/features/manual/use-manuals';
-import { storage } from '@/shared/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,11 +59,6 @@ function ChatScreen() {
             link: linkOptions({ to: '/game/$gameId', params: { gameId: resolvedGameId } }),
           },
         ];
-
-  // Marca el manual como recién abierto (touch updates last_opened_at).
-  useEffect(() => {
-    storage.touchManual(manualId);
-  }, [manualId]);
 
   const history = useQuery({
     ...conversationMessagesQueryOptions(conversationId ?? ''),
@@ -171,10 +165,7 @@ function ChatScreen() {
               link={linkOptions({ to: '/game/$gameId', params: { gameId: resolvedGameId } })}
             />
           ) : (
-            <BackLink
-              label="Volver al resumen"
-              link={linkOptions({ to: '/result/$manualId', params: { manualId } })}
-            />
+            <BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />
           )
         }
         actions={

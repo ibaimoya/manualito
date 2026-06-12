@@ -215,15 +215,6 @@ export const handlers = [
   }),
   http.delete('/api/games/:gameId/rating', () => new HttpResponse(null, { status: 204 })),
 
-  http.post('/api/games/:gameId/questions', async ({ request }) => {
-    const body = (await request.json()) as { question?: string };
-    await delay(30);
-    return HttpResponse.json({
-      answer: `Respuesta simulada para: "${body.question ?? '...'}".`,
-      sources: [],
-    });
-  }),
-
   http.get('/api/recommendations', () =>
     HttpResponse.json({
       recommendations: [

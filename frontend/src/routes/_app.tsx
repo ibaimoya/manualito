@@ -13,7 +13,6 @@ import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 const IMMERSIVE_PREFIXES = [
   '/capture',
   '/processing',
-  '/result',
   '/chat',
   '/game',
   '/manual',

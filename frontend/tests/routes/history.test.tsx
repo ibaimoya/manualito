@@ -37,7 +37,7 @@ function renderHistory() {
     component: routeComponent(HistoryRoute),
     stubs: {
       '/capture/source': 'SourceScreen',
-      '/result/$manualId': 'ResultScreen',
+      '/game/$gameId': 'GameHubScreen',
       '/processing/$manualId': 'ProcessingScreen',
     },
   });
@@ -58,7 +58,7 @@ describe('/history', () => {
     expect(screen.getByText('Parchís')).toBeInTheDocument();
   });
 
-  it('el typeahead sugiere juegos y al elegir navega al manual', async () => {
+  it('el typeahead sugiere juegos y al elegir navega al hub del juego', async () => {
     server.use(withManuals('Catan', 'Wingspan', 'Parchís'));
     renderHistory();
     const user = userEvent.setup();
@@ -66,7 +66,7 @@ describe('/history', () => {
     await user.type(search, 'wing');
     const results = await screen.findByLabelText('Tus juegos');
     await user.click(within(results).getByRole('button', { name: /Wingspan/i }));
-    expect(await screen.findByText('ResultScreen')).toBeInTheDocument();
+    expect(await screen.findByText('GameHubScreen')).toBeInTheDocument();
   });
 
   it('el typeahead avisa cuando ningún juego coincide', async () => {

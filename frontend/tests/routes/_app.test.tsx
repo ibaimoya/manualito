@@ -34,7 +34,7 @@ function mountApp(path: string) {
       page('/history', 'history'),
       page('/capture', 'capture'),
       page('/processing', 'processing'),
-      page('/result/$manualId', 'result'),
+      page('/game/$gameId', 'game'),
       page('/chat/$manualId', 'chat'),
     ]),
   ]);
@@ -70,7 +70,7 @@ describe('_app shell', () => {
   it.each([
     ['/capture', 'capture'],
     ['/processing', 'processing'],
-    ['/result/m1', 'result'],
+    ['/game/g1', 'game'],
     ['/chat/m1', 'chat'],
   ])('oculta la navegación principal en %s (ruta inmersiva)', async (path, label) => {
     mountApp(path);
@@ -81,9 +81,9 @@ describe('_app shell', () => {
   });
 
   it('monta la sidebar (shell de escritorio) también en rutas inmersivas', async () => {
-    mountApp('/result/m1');
-    await screen.findByTestId('page-result');
-    // La sidebar (oculta por CSS en móvil) aporta el shell en md+ a result/chat.
+    mountApp('/game/g1');
+    await screen.findByTestId('page-game');
+    // La sidebar (oculta por CSS en móvil) aporta el shell en md+ a game/chat.
     expect(screen.getByRole('navigation', { name: /Secciones de la app/i })).toBeInTheDocument();
   });
 });

@@ -1,21 +1,18 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { Check, FileText, Info } from 'lucide-react';
+import { FileText, Info } from 'lucide-react';
 import { z } from 'zod';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Progress } from '@/components/ui/progress';
-import { useManualBootstrap } from '@/features/processing/useManualBootstrap';
-import { storage } from '@/shared/lib/storage';
+import {
+  manualDetailQueryOptions,
+  manualProcessingQueryOptions,
+} from '@/features/manual/use-manuals';
 import { cn } from '@/shared/lib/cn';
 
-type ProcessingStep = ReturnType<typeof useManualBootstrap>['steps'][number];
-
-const processingSearchSchema = z.object({
-  name: z.string().min(1).optional(),
-});
-
 export const Route = createFileRoute('/_app/processing/$manualId')({
-  validateSearch: processingSearchSchema,
+  validateSearch: z.object({ name: z.string().min(1).optional() }),
   component: ProcessingScreen,
 });
 
@@ -25,36 +22,26 @@ function ProcessingScreen() {
   const navigate = useNavigate();
   const safeName = name?.trim() ?? 'Manual sin nombre';
 
-  // Registrar/touchear el manual en local apenas llega aquí.
-  useEffect(() => {
-    const existing = storage.listManuals().find((m) => m.manual_id === manualId);
-    if (existing) {
-      storage.touchManual(manualId);
-      return;
-    }
-    storage.upsertManual({
-      manual_id: manualId,
-      name: safeName,
-      created_at: new Date().toISOString(),
-      last_opened_at: new Date().toISOString(),
-      chunks_indexed: 0,
-    });
-  }, [manualId, safeName]);
+  const processing = useQuery(manualProcessingQueryOptions(manualId));
+  const status = processing.data?.status;
+  const indexed = status !== undefined && status !== 'indexing' && status !== 'failed';
+  // El detalle resuelve a qué juego pertenece el manual ya indexado.
+  const detail = useQuery({ ...manualDetailQueryOptions(manualId), enabled: indexed });
+  const gameId = detail.data?.game_id ?? null;
+  const failed = status === 'failed' || processing.isError || detail.isError;
 
-  const { steps, progress, done, hasAnyAnswer, result } = useManualBootstrap(manualId, safeName);
-  const failed = done && !result && !hasAnyAnswer;
-
-  // Cuando termine y haya al menos un acierto → navega al Result.
+  // Pausa breve para que se vea el 100 % antes de saltar al hub del juego.
   useEffect(() => {
-    if (done && result) {
-      const timer = setTimeout(() => {
-        navigate({ to: '/result/$manualId', params: { manualId }, replace: true }).catch(
-          () => undefined,
-        );
-      }, 600); // pequeña pausa para que el usuario vea "completo"
-      return () => clearTimeout(timer);
-    }
-  }, [done, result, navigate, manualId]);
+    if (gameId === null) return;
+    const timer = setTimeout(() => {
+      navigate({ to: '/game/$gameId', params: { gameId }, replace: true }).catch(() => undefined);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [gameId, navigate]);
+
+  const pageCount = processing.data?.page_count ?? 0;
+  const completedPages = indexed ? pageCount : (processing.data?.completed_pages ?? 0);
+  const progress = pageCount > 0 ? Math.round((completedPages / pageCount) * 100) : 0;
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -89,44 +76,20 @@ function ProcessingScreen() {
           </div>
         </div>
 
-        <Progress
-          value={progress}
-          aria-label={`Progreso: ${progress} por ciento`}
-          aria-valuetext={`${progress}%`}
-        />
-
-        <ol className="overflow-hidden rounded-2xl border border-border">
-          {steps.map((s, idx) => (
-            <li
-              key={s.id}
-              className={cn('flex items-center gap-3 p-4', idx > 0 ? 'border-t border-border' : '')}
-            >
-              <span
-                className={cn(
-                  'grid h-7 w-7 shrink-0 place-items-center rounded-full',
-                  s.state === 'done' && 'bg-success-bg text-success',
-                  s.state === 'running' && 'bg-primary-100 text-primary',
-                  s.state === 'failed' && 'bg-error-bg text-error',
-                  s.state === 'pending' && 'bg-surface text-fg-3',
-                )}
-                aria-hidden="true"
-              >
-                <StepStatusIcon state={s.state} />
-              </span>
-              <div className="flex-1">
-                <div
-                  className={cn(
-                    'text-sm font-semibold',
-                    s.state === 'pending' ? 'text-fg-3' : 'text-fg',
-                  )}
-                >
-                  {s.label}
-                </div>
-                <StepDetail step={s} />
-              </div>
-            </li>
-          ))}
-        </ol>
+        {failed ? null : (
+          <>
+            <Progress
+              value={progress}
+              aria-label={`Progreso: ${progress} por ciento`}
+              aria-valuetext={`${progress}%`}
+            />
+            {pageCount > 0 ? (
+              <p className="mono text-center text-xs text-fg-3">
+                {completedPages}/{pageCount} páginas
+              </p>
+            ) : null}
+          </>
+        )}
 
         <p className="flex items-center justify-center gap-2 text-xs text-fg-3">
           <Info size={14} />
@@ -137,29 +100,4 @@ function ProcessingScreen() {
       </div>
     </div>
   );
-}
-
-function StepDetail({ step }: Readonly<{ step: ProcessingStep }>) {
-  if (step.state === 'failed' && step.error) {
-    return <div className="mono text-xs text-error">{step.error}</div>;
-  }
-  // Solo el progreso de páginas; las respuestas se ven luego en /result.
-  if (step.id === 'processing' && step.text) {
-    return <div className="mono text-xs text-fg-3">{step.text}</div>;
-  }
-  return null;
-}
-
-function StepStatusIcon({ state }: Readonly<{ state: ProcessingStep['state'] }>) {
-  if (state === 'done') return <Check size={16} strokeWidth={2.5} />;
-  if (state === 'running') {
-    return (
-      <span
-        className="block h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent"
-        style={{ animation: 'mn-spin 0.9s linear infinite' }}
-      />
-    );
-  }
-  if (state === 'failed') return <span className="font-bold">!</span>;
-  return <span className="block h-1.5 w-1.5 rounded-full bg-current" />;
 }

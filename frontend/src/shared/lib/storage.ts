@@ -1,58 +1,25 @@
 import { z } from 'zod';
 
 /**
- * Storage local para caches de UI y preferencias.
+ * Storage local para preferencias de UI.
  *
  * Cada lectura se valida con Zod para tolerar cambios de schema o datos
- * tocados desde DevTools.
+ * tocados desde DevTools. Los datos de manuales viven en el backend; las
+ * claves por manual de versiones viejas solo se conservan para limpiarlas.
  */
 
 const KEY = {
-  manuals: 'manualito.manuals',
-  // Clave legada del Q&A local; solo para limpiar restos de versiones viejas.
-  qa: (manualId: string) => `manualito.qa.${manualId}`,
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
-  manualResult: (manualId: string) => `manualito.result.${manualId}`,
-  // Clave legada del cache OCR; solo para limpiar restos de versiones viejas.
-  ocrLines: (manualId: string) => `manualito.ocr.${manualId}`,
 } as const;
+
+// Restos de cuando los manuales y sus respuestas se cacheaban en local.
+const LEGACY_KEY = 'manualito.manuals';
+const LEGACY_PREFIXES = ['manualito.qa.', 'manualito.result.', 'manualito.ocr.'];
 
 /* ============================================================
    Schemas
    ============================================================ */
-
-const IsoDateTimeSchema = z.iso.datetime({ offset: true });
-
-const ManualRecordSchema = z.object({
-  manual_id: z.string().min(1),
-  name: z.string().min(1).max(120),
-  created_at: IsoDateTimeSchema,
-  last_opened_at: IsoDateTimeSchema,
-  chunks_indexed: z.number().int().nonnegative(),
-});
-export type ManualRecord = z.infer<typeof ManualRecordSchema>;
-
-const ManualsListSchema = z.array(ManualRecordSchema);
-
-/** Shape de una línea de texto extraído (OCR o PDF). */
-export interface OcrLine {
-  text: string;
-  confidence: number | null;
-}
-
-const ManualResultSchema = z.object({
-  manual_id: z.string().min(1),
-  name: z.string().min(1),
-  summary: z.string(),
-  setup: z.string(),
-  turn: z.string(),
-  win: z.string(),
-  /** Last filled "casos especiales" — opcional, se rellena bajo demanda. */
-  special: z.string().optional(),
-  created_at: IsoDateTimeSchema,
-});
-export type ManualResult = z.infer<typeof ManualResultSchema>;
 
 const SettingsSchema = z.object({
   mode: z.enum(['light', 'dark', 'auto']).default('light'),
@@ -150,48 +117,6 @@ function safeRemove(key: string): void {
    ============================================================ */
 
 export const storage = {
-  /* Manuales recientes */
-  listManuals(): ManualRecord[] {
-    return safeRead(KEY.manuals, ManualsListSchema, [] as ManualRecord[]);
-  },
-  upsertManual(record: ManualRecord): void {
-    const existing = storage.listManuals();
-    const filtered = existing.filter((m) => m.manual_id !== record.manual_id);
-    const next: ManualRecord[] = [record, ...filtered].slice(0, 100);
-    safeWrite(KEY.manuals, next);
-  },
-  touchManual(manualId: string): void {
-    const existing = storage.listManuals();
-    const idx = existing.findIndex((m) => m.manual_id === manualId);
-    if (idx < 0) return;
-    const item = existing[idx];
-    if (!item) return;
-    const updated: ManualRecord = { ...item, last_opened_at: new Date().toISOString() };
-    const next: ManualRecord[] = [updated, ...existing.filter((_, i) => i !== idx)];
-    safeWrite(KEY.manuals, next);
-  },
-  removeManual(manualId: string): void {
-    const next = storage.listManuals().filter((m) => m.manual_id !== manualId);
-    safeWrite(KEY.manuals, next);
-    safeRemove(KEY.qa(manualId));
-    safeRemove(KEY.manualResult(manualId));
-    safeRemove(KEY.ocrLines(manualId));
-  },
-
-  /* Resultado pre-generado de un manual (las 4 respuestas iniciales) */
-  getResult(manualId: string): ManualResult | null {
-    const fallback = null as ManualResult | null;
-    const value = safeRead(
-      KEY.manualResult(manualId),
-      ManualResultSchema.nullable(),
-      fallback,
-    );
-    return value;
-  },
-  setResult(result: ManualResult): void {
-    safeWrite(KEY.manualResult(result.manual_id), result);
-  },
-
   /* Preferencias */
   readSettings(): Settings {
     return safeRead(KEY.settings, SettingsSchema, DEFAULT_SETTINGS);
@@ -223,15 +148,19 @@ export const storage = {
     safeRemove(KEY.onboardingSeen);
   },
 
-  /* Wipe total (botón "borrar historial" en settings) */
+  /* Barrido de claves legadas (botón "Borrar datos locales" en settings) */
   wipeAll(): void {
-    const manuals = storage.listManuals();
-    for (const m of manuals) {
-      safeRemove(KEY.qa(m.manual_id));
-      safeRemove(KEY.manualResult(m.manual_id));
-      safeRemove(KEY.ocrLines(m.manual_id));
+    const localStorage = getLocalStorage();
+    if (!localStorage) return;
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key === null) continue;
+      if (key === LEGACY_KEY || LEGACY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        doomed.push(key);
+      }
     }
-    safeRemove(KEY.manuals);
+    for (const key of doomed) safeRemove(key);
   },
 };
 

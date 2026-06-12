@@ -130,12 +130,6 @@ export type CreateManualInput =
       gameId: string;
     };
 
-export interface AnswerResponse {
-  answer: string;
-  sources: AnswerSource[];
-}
-
-
 /* ============================================================
    Endpoints
    ============================================================ */
@@ -272,24 +266,6 @@ export const api = {
     return request<GameSearchResponse>(`/games?q=${encodeURIComponent(query)}&limit=5`, {
       method: 'GET',
       timeoutMs: TIMEOUT.QUICK,
-      signal,
-    });
-  },
-
-  /** POST /api/games/{id}/questions — pregunta one-shot al pool del juego. */
-  async askGame(
-    gameId: string,
-    question: string,
-    options?: { topK?: number },
-    signal?: AbortSignal,
-  ): Promise<AnswerResponse> {
-    const body: { question: string; top_k?: number } = { question };
-    if (options?.topK != null) body.top_k = options.topK;
-    return request<AnswerResponse>(`/games/${encodeURIComponent(gameId)}/questions`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: JSON_HEADERS,
-      timeoutMs: TIMEOUT.LLM,
       signal,
     });
   },

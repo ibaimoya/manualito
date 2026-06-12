@@ -12,7 +12,7 @@ const MAX_RESULTS = 8;
 /**
  * Buscador con dropdown (combobox) sobre los juegos ya guardados. Mismo
  * patrón visual que el typeahead de BGG, pero filtra en local y al elegir
- * navega directo al manual; sin atribución externa.
+ * navega al hub de su juego; sin atribución externa.
  */
 export function SavedGameSearch({ manuals }: Props) {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ export function SavedGameSearch({ manuals }: Props) {
   const activeIndex = matches.length > 0 ? Math.min(highlight, matches.length - 1) : 0;
 
   function go(manual: ManualSummary): void {
-    navigate({ to: '/result/$manualId', params: { manualId: manual.id } }).catch(() => undefined);
+    navigate({ to: '/game/$gameId', params: { gameId: manual.game_id } }).catch(() => undefined);
   }
 
   function reset(): void {

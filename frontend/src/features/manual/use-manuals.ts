@@ -23,6 +23,15 @@ export function manualDetailQueryOptions(manualId: string) {
   });
 }
 
+/** Progreso de indexado del manual; se re-sondea mientras siga en `indexing`. */
+export function manualProcessingQueryOptions(manualId: string) {
+  return queryOptions({
+    queryKey: [...MANUALS_KEY, 'processing', manualId],
+    queryFn: ({ signal }) => api.getManualProcessing(manualId, signal),
+    refetchInterval: (query) => (query.state.data?.status === 'indexing' ? 1_500 : false),
+  });
+}
+
 /** Borra un manual con update optimista de la lista y rollback ante error. */
 export function useDeleteManual() {
   const qc = useQueryClient();

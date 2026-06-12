@@ -106,13 +106,7 @@ describe('Providers', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     failNextSetItemWith('QuotaExceededError');
-    storage.upsertManual({
-      manual_id: 'x',
-      name: 'X',
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 1,
-    });
+    storage.writeSettings({ mode: 'dark', accent: 'amber', responseDetail: 'medium' });
 
     await waitFor(() => {
       expect(screen.getByText(/Espacio local agotado/)).toBeInTheDocument();
@@ -129,13 +123,7 @@ describe('Providers', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     failNextSetItemWith('SecurityError');
-    storage.upsertManual({
-      manual_id: 'y',
-      name: 'Y',
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 1,
-    });
+    storage.writeSettings({ mode: 'dark', accent: 'amber', responseDetail: 'medium' });
 
     await waitFor(() => {
       expect(

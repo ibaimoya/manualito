@@ -3,7 +3,6 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse, delay } from 'msw';
 import { Route as ChatRoute } from '@/routes/_app.chat.$manualId';
-import { storage } from '@/shared/lib/storage';
 import { server } from '@tests/_helpers/server';
 import { failSendMessage } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
@@ -25,25 +24,6 @@ const CONVERSATION = {
   updated_at: '2026-05-26T10:05:00.000Z',
 };
 
-function seedManual(manualId: string, name = 'Catan') {
-  storage.upsertManual({
-    manual_id: manualId,
-    name,
-    created_at: '2026-05-26T10:00:00.000Z',
-    last_opened_at: '2026-05-26T10:00:00.000Z',
-    chunks_indexed: 12,
-  });
-  storage.setResult({
-    manual_id: manualId,
-    name,
-    summary: 's',
-    setup: 'a',
-    turn: 'b',
-    win: 'c',
-    created_at: '2026-05-26T10:00:00.000Z',
-  });
-}
-
 function renderChat(manualId: string, search?: { q?: string; c?: string; g?: string }) {
   const params = new URLSearchParams();
   if (search?.q) params.set('q', search.q);
@@ -60,7 +40,6 @@ function renderChat(manualId: string, search?: { q?: string; c?: string; g?: str
       g: typeof s.g === 'string' ? s.g : undefined,
     }),
     stubs: {
-      '/result/$manualId': 'ResultScreen',
       '/game/$gameId': 'GameScreen',
       '/history': 'HistoryScreen',
     },
@@ -84,7 +63,6 @@ describe('/chat/$manualId · search schema', () => {
 
 describe('/chat/$manualId', () => {
   it('el breadcrumb lleva el juego como tramo navegable y «Chat» como página', async () => {
-    seedManual('m1');
     renderChat('m1');
     // El detalle del manual (MSW) resuelve el juego del trail.
     const gameLink = await screen.findByRole('link', { name: 'Catan' });
@@ -104,13 +82,11 @@ describe('/chat/$manualId', () => {
   });
 
   it('empty state cuando se abre un chat nuevo (sin conversación)', async () => {
-    seedManual('m1');
     renderChat('m1');
     expect(await screen.findByText(/Empieza con una pregunta sobre el manual/)).toBeInTheDocument();
   });
 
   it('?c=… reabre la conversación y muestra su historial del servidor', async () => {
-    seedManual('m1');
     renderChat('m1', { c: 'conv-001' });
     // Mensajes de SAMPLE en el handler MSW por defecto.
     expect(await screen.findByText('¿Cómo se reparten las cartas?')).toBeInTheDocument();
@@ -120,7 +96,6 @@ describe('/chat/$manualId', () => {
   });
 
   it('al enviar una pregunta: burbuja optimista + respuesta del backend', async () => {
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -144,7 +119,6 @@ describe('/chat/$manualId', () => {
   });
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -155,7 +129,6 @@ describe('/chat/$manualId', () => {
   });
 
   it('si la URL trae ?q=foo, dispara la pregunta automáticamente al montar', async () => {
-    seedManual('m1');
     renderChat('m1', { q: '¿Cuántos jugadores hay?' });
     // El mensaje del usuario aparece inmediato.
     expect(await screen.findByText('¿Cuántos jugadores hay?')).toBeInTheDocument();
@@ -172,7 +145,6 @@ describe('/chat/$manualId', () => {
 
   it('si el LLM falla con 504: toast de error y la pregunta vuelve al composer', async () => {
     server.use(failSendMessage(504));
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -220,7 +192,6 @@ describe('/chat/$manualId', () => {
         });
       }),
     );
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -237,34 +208,30 @@ describe('/chat/$manualId', () => {
   });
 
   it('con ?g=…, volver apunta directo al hub del juego', async () => {
-    seedManual('m1');
     renderChat('m1', { g: 'test-game-001' });
     const link = await screen.findByRole('link', { name: /Volver al juego/i });
     expect(link).toHaveAttribute('href', '/game/test-game-001');
   });
 
   it('sin ?g=…, resuelve el juego vía manual y volver apunta al hub', async () => {
-    seedManual('m1');
     renderChat('m1');
     // El detalle del manual (MSW) trae game_id=test-game-001.
     const link = await screen.findByRole('link', { name: /Volver al juego/i });
     expect(link).toHaveAttribute('href', '/game/test-game-001');
   });
 
-  it('sin ?g= y con el manual inaccesible, cae al resumen como último recurso', async () => {
+  it('sin ?g= y con el manual inaccesible, cae al historial como último recurso', async () => {
     server.use(
       http.get('/api/manuals/:manualId', () =>
         HttpResponse.json({ detail: 'missing' }, { status: 404 }),
       ),
     );
-    seedManual('m1');
     renderChat('m1');
-    const link = await screen.findByRole('link', { name: /Volver al resumen/i });
-    expect(link).toHaveAttribute('href', '/result/m1');
+    const link = await screen.findByRole('link', { name: /Volver al historial/i });
+    expect(link).toHaveAttribute('href', '/history');
   });
 
   it('badge "Listo" presente en el header del chat', async () => {
-    seedManual('m1');
     renderChat('m1');
     expect(await screen.findByText('Listo')).toBeInTheDocument();
   });
@@ -295,7 +262,6 @@ describe('/chat/$manualId', () => {
         }),
       ),
     );
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'madera');
@@ -330,7 +296,6 @@ describe('/chat/$manualId', () => {
         });
       }),
     );
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);

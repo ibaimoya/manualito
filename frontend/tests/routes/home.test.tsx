@@ -34,7 +34,6 @@ function renderHome() {
       '/capture/source': 'SourceScreen',
       '/settings': 'SettingsScreen',
       '/history': 'HistoryScreen',
-      '/result/$manualId': 'ResultScreen',
     },
   });
 }

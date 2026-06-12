@@ -307,52 +307,25 @@ describe('api deleteManual', () => {
   });
 });
 
-describe('api askGame', () => {
-  it('POSTea la pregunta al pool del juego con top_k', async () => {
-    let body: { question?: string; top_k?: number } | undefined;
-    let receivedUrl: string | undefined;
-    server.use(
-      http.post('/api/games/:gameId/questions', async ({ request }) => {
-        receivedUrl = new URL(request.url).pathname;
-        body = (await request.json()) as { question?: string; top_k?: number };
-        return HttpResponse.json({ answer: 'ok' });
-      }),
-    );
-
-    const res = await api.askGame('g-1', '¿Cómo gano?', { topK: 5 });
-
-    expect(receivedUrl).toBe('/api/games/g-1/questions');
-    expect(body).toEqual({ question: '¿Cómo gano?', top_k: 5 });
-    expect(res.answer).toBe('ok');
-  });
-
-  it('omite top_k cuando no se pasa', async () => {
-    let body: { question?: string; top_k?: number } | undefined;
-    server.use(
-      http.post('/api/games/:gameId/questions', async ({ request }) => {
-        body = (await request.json()) as { question?: string; top_k?: number };
-        return HttpResponse.json({ answer: 'ok' });
-      }),
-    );
-
-    await api.askGame('g-1', 'q');
-
-    expect(body).toEqual({ question: 'q' });
-  });
-});
-
 describe('CSRF injection en el núcleo de transporte', () => {
   it('añade X-CSRF-Token en mutaciones cuando hay cookie legible', async () => {
     document.cookie = 'manualito_csrf=abc123; path=/';
     let header: string | null = null;
     server.use(
-      http.post('/api/games/:gameId/questions', ({ request }) => {
+      http.post('/api/manuals/:manualId/reprocess', ({ request }) => {
         header = request.headers.get('X-CSRF-Token');
-        return HttpResponse.json({ answer: 'ok' });
+        return HttpResponse.json({
+          manual_id: 'm-1',
+          status: 'indexing',
+          page_count: 1,
+          completed_pages: 0,
+          failed_pages: 0,
+          pages: [],
+        });
       }),
     );
 
-    await api.askGame('g-1', 'q');
+    await api.reprocessManual('m-1');
 
     expect(header).toBe('abc123');
   });

@@ -179,7 +179,7 @@ function UserCard({
         <Link
           to="/profile"
           aria-label="Tu perfil"
-          className="grid place-items-center rounded-xl p-2 transition-colors hover:bg-surface-2"
+          className="mx-auto grid size-11 place-items-center rounded-xl transition-colors hover:bg-surface-2"
         >
           {avatar}
         </Link>

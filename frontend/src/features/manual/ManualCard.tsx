@@ -25,6 +25,7 @@ export function ManualCard({ manual, meta, className }: Props) {
     <Link
       to={indexing ? '/processing/$manualId' : '/game/$gameId'}
       params={indexing ? { manualId: manual.id } : { gameId: manual.game_id }}
+      search={indexing ? { name } : undefined}
       className="@container block"
     >
       <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>

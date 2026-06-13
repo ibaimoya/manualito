@@ -89,6 +89,9 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     assert append_mock.await_args.kwargs["title"] == "¿Y si empato?"
     assert session.rollbacks == 2
     assert len(background_tasks.tasks) == 1
+    title_task = background_tasks.tasks[0]
+    assert title_task[1]["game_name"] == "Catan"
+    assert "answer" not in title_task[1]
 
 
 def test_send_message_skips_condense_without_history(monkeypatch):
@@ -215,8 +218,8 @@ def test_refresh_conversation_title_uses_own_session(monkeypatch):
             user_id=_USER_ID,
             conversation_id=_CONVERSATION_ID,
             expected_title="Fallback",
+            game_name="Catan",
             question="¿Cómo se gana?",
-            answer="Con 10 puntos.",
             history=[],
             client=object(),
         )
@@ -229,6 +232,11 @@ def test_refresh_conversation_title_uses_own_session(monkeypatch):
         expected_title="Fallback",
         title="Título refinado",
     )
+    title_payload = conversation_service.internal_client.post_json.await_args.kwargs["payload"]
+    assert title_payload == {
+        "game_name": "Catan",
+        "messages": [{"role": "user", "content": "¿Cómo se gana?"}],
+    }
 
 
 def _auth() -> AuthenticatedSession:
@@ -242,6 +250,7 @@ def _turn_context(*, title: str | None, history: list[SimpleNamespace]) -> Simpl
         id=_CONVERSATION_ID,
         user_id=_USER_ID,
         game_id=_GAME_ID,
+        game_name="Catan",
         title=title,
         history=tuple(history),
     )

@@ -81,9 +81,25 @@ describe('/chat/$manualId', () => {
     expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
-  it('empty state cuando se abre un chat nuevo (sin conversación)', async () => {
+  it('bienvenida cuando se abre un chat nuevo (sin conversación)', async () => {
     renderChat('m1');
-    expect(await screen.findByText(/Empieza con una pregunta sobre el manual/)).toBeInTheDocument();
+    expect(await screen.findByText(/Pregúntame sobre/)).toBeInTheDocument();
+  });
+
+  it('pulsar una pregunta-tarjeta de la bienvenida la envía', async () => {
+    renderChat('m1');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '¿Cómo se gana?' }));
+    // La pregunta entra como turno y el backend (MSW) responde.
+    expect(await screen.findByText('¿Cómo se gana?')).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 
   it('?c=… reabre la conversación y muestra su historial del servidor', async () => {
@@ -231,11 +247,6 @@ describe('/chat/$manualId', () => {
     expect(link).toHaveAttribute('href', '/history');
   });
 
-  it('badge "Listo" presente en el header del chat', async () => {
-    renderChat('m1');
-    expect(await screen.findByText('Listo')).toBeInTheDocument();
-  });
-
   it('muestra las páginas citadas (sources) bajo la respuesta del bot, deduplicadas', async () => {
     server.use(
       http.post('/api/conversations/:conversationId/messages', () =>
@@ -306,5 +317,46 @@ describe('/chat/$manualId', () => {
     expect(
       await screen.findByRole('status', { name: /Escribiendo respuesta/i }),
     ).toBeInTheDocument();
+  });
+
+  it('copiar respuesta: escribe el contenido (Markdown) en el portapapeles', async () => {
+    server.use(
+      http.post('/api/conversations/:conversationId/messages', () =>
+        HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u1',
+            role: 'user',
+            content: 'q',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b1',
+            role: 'assistant',
+            content: 'Respuesta **copiable**.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        }),
+      ),
+    );
+    renderChat('m1');
+    const user = userEvent.setup();
+    // El mock va después de setup() para que no lo pise el portapapeles de userEvent.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+    await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'q');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    // El botón de copiar aparece cuando la respuesta termina de escribirse.
+    const copyBtn = await screen.findByRole(
+      'button',
+      { name: /Copiar respuesta/i },
+      { timeout: 3000 },
+    );
+    await user.click(copyBtn);
+    expect(writeText).toHaveBeenCalledWith('Respuesta **copiable**.');
   });
 });

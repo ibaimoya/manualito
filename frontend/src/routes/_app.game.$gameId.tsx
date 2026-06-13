@@ -8,7 +8,6 @@ import {
   Plus,
   RotateCw,
   ScanText,
-  Send,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -17,9 +16,9 @@ import { BackLink, ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ConversationsSection } from '@/features/conversations/ConversationsSection';
+import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { GameCover } from '@/features/games/GameCover';
 import { RatingStars } from '@/features/games/RatingStars';
@@ -397,33 +396,13 @@ function HubComposer({
             </button>
           ))}
         </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            ask(question);
-          }}
-          className="flex items-center gap-2"
-        >
-          <Input
-            preset="chat-message"
-            value={question}
-            maxLength={QUESTION_MAX}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder={`Pregunta sobre ${game.name}…`}
-            aria-label="Pregunta sobre el juego"
-            className="flex-1 rounded-full"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            className="rounded-full"
-            disabled={question.trim().length === 0}
-            aria-label="Enviar pregunta"
-          >
-            {/* Centrado óptico: la masa del avión cae arriba-derecha (centroide medido). */}
-            <Send size={17} strokeWidth={2} style={{ transform: 'translate(-1.3px, 1.3px)' }} />
-          </Button>
-        </form>
+        <MessageComposer
+          value={question}
+          onChange={setQuestion}
+          onSubmit={() => ask(question)}
+          placeholder={`Pregunta sobre ${game.name}…`}
+          maxLength={QUESTION_MAX}
+        />
       </div>
     </div>
   );

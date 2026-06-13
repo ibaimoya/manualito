@@ -30,6 +30,7 @@ class ConversationTurnContext:
     id: UUID
     user_id: UUID
     game_id: UUID
+    game_name: str
     title: str | None
     history: tuple[MessageSnapshot, ...]
 
@@ -122,6 +123,7 @@ async def load_conversation_turn_context(
         id=conversation.conversation.id,
         user_id=conversation.conversation.user_id,
         game_id=conversation.conversation.game_id,
+        game_name=conversation.game_name,
         title=conversation.conversation.title,
         history=tuple(
             MessageSnapshot(message.role, message.content) for message in history
@@ -315,6 +317,7 @@ class _ConversationWithGameState:
     """Resultado interno para distinguir 404 de juego no disponible."""
 
     conversation: Conversation
+    game_name: str
     game_status: str
     game_deleted_at: datetime | None
 
@@ -329,6 +332,7 @@ async def _get_owned_conversation_with_game_state(
     result = await session.execute(
         select(
             Conversation,
+            Game.name.label("game_name"),
             Game.status.label("game_status"),
             Game.deleted_at.label("game_deleted_at"),
         )
@@ -344,6 +348,7 @@ async def _get_owned_conversation_with_game_state(
         raise ConversationNotFoundError
     return _ConversationWithGameState(
         conversation=row[0],
+        game_name=row.game_name,
         game_status=row.game_status,
         game_deleted_at=row.game_deleted_at,
     )

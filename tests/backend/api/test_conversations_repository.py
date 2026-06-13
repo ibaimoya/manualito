@@ -457,6 +457,7 @@ def _conversation_row(conversation, *, game_status: str):
 
     class FakeRow:
         game_deleted_at = None
+        game_name = "Catan"
 
         def __init__(self):
             self.game_status = game_status

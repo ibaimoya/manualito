@@ -179,7 +179,10 @@ async def generate_conversation_title(
     Returns:
         dict: Título limpio y acotado.
     """
-    prompt = build_title_prompt([message.model_dump() for message in payload.messages])
+    prompt = build_title_prompt(
+        payload.game_name,
+        [message.model_dump() for message in payload.messages],
+    )
     title = _clean_title(
         await _generate_text(
             prompt=prompt,

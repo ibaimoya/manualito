@@ -126,13 +126,16 @@ describe('/game/$gameId · refetch fallido con cache', () => {
 });
 
 describe('/game/$gameId · explicación', () => {
-  it('renderiza el resumen y los acordeones con sus secciones', async () => {
+  it('renderiza el resumen y los acordeones cerrados, que se abren al pulsar', async () => {
     renderHub();
     expect(await screen.findByText('Catan va de construir y comerciar.')).toBeInTheDocument();
-    // Preparación abierta por defecto; el resto accesibles por trigger.
-    expect(screen.getByText('Monta el tablero y reparte piezas.')).toBeInTheDocument();
+    // Las secciones arrancan cerradas: solo los triggers, sin su contenido.
     expect(screen.getByRole('button', { name: /¿Cómo van los turnos\?/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /¿Cómo se gana\?/ })).toBeInTheDocument();
+    expect(screen.queryByText('Monta el tablero y reparte piezas.')).not.toBeInTheDocument();
+    // Al abrir «Preparación», aparece su contenido.
+    await userEvent.setup().click(screen.getByRole('button', { name: /Preparación/ }));
+    expect(await screen.findByText('Monta el tablero y reparte piezas.')).toBeInTheDocument();
   });
 
   it('estado generating: muestra el aviso de "preparando" sin secciones', async () => {

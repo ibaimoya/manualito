@@ -1,26 +1,43 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  FileText,
+  Files,
+  Images,
+  Layers,
   Loader2,
+  Pencil,
   RotateCw,
   Search,
   Trash2,
+  X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { BackLink, ScreenTopBar } from '@/app/Topbar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip } from '@/components/ui/tooltip';
 import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
+import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import { manualDetailQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
-import { formatShortDate } from '@/shared/lib/relativeDate';
-import { api, ApiError, type ManualDetailResponse } from '@/shared/api/client';
+import { formatLongDate } from '@/shared/lib/relativeDate';
+import { api, ApiError, type ManualDetailPage, type ManualDetailResponse } from '@/shared/api/client';
+import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/manual/$manualId')({
@@ -44,12 +61,19 @@ function editErrorToast(error: unknown): void {
     });
     return;
   }
-  // Resto de códigos (429 de rate limit, 404, red…): copy del mapper común.
   toastApiError(error, 'page-edit-error', {
     title: 'No hemos podido guardar el texto',
     id: 'page-edit-error-unknown',
     description: 'Inténtalo de nuevo en un momento.',
   });
+}
+
+/** El foco está en un campo de texto: no robar las flechas para navegar. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+  );
 }
 
 function ManualDetailScreen() {
@@ -88,13 +112,11 @@ function ManualDetailScreen() {
 function ManualShell({
   crumb,
   trail,
-  actions,
   children,
 }: Readonly<{
   crumb: string;
   trail?: Parameters<typeof ScreenTopBar>[0]['trail'];
-  actions?: React.ReactNode;
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -102,7 +124,6 @@ function ManualShell({
         crumb={crumb}
         trail={trail}
         back={<BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />}
-        actions={actions}
       />
       {children}
     </div>
@@ -118,14 +139,15 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [reprocessOpen, setReprocessOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [showConfidence, setShowConfidence] = useState(false);
   const search = usePageSearch(pages);
   const detailKey = manualDetailQueryOptions(manual.id).queryKey;
 
   const page = pages.find((item) => item.page_number === activePage) ?? pages[0]!;
   const busy = manual.status === 'indexing';
   const editable = manual.visibility === 'private' && !busy;
+  const editing = editingPage === page.page_number;
 
-  // Mientras se re-procesa, sondea el progreso y refresca el detalle al acabar.
   const processing = useQuery({
     queryKey: ['manuals', 'processing', manual.id],
     queryFn: ({ signal }) => api.getManualProcessing(manual.id, signal),
@@ -163,7 +185,6 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
     onError: (error) => {
       editErrorToast(error);
       if (error instanceof ApiError && (error.status === 502 || error.status === 500)) {
-        // El texto SÍ se guardó: refresca y sal del modo edición.
         qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
         setEditingPage(null);
       }
@@ -208,8 +229,17 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
     });
   }
 
+  function confirmSave(): void {
+    if (pendingText === null) return;
+    saveText.mutate(
+      { pageNumber: page.page_number, text: pendingText },
+      { onSettled: () => setPendingText(null) },
+    );
+  }
+
   // Cambiar de página sale del modo edición (volver no reabre el borrador).
   function goToPage(pageNumber: number): void {
+    if (pageNumber < 1 || pageNumber > pages.length) return;
     setActivePage(pageNumber);
     setEditingPage(null);
   }
@@ -219,271 +249,502 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
     if (match) goToPage(match.pageNumber);
   }
 
+  // Atajos ← → para cambiar de página (no mientras se edita ni desde un input).
+  useEffect(() => {
+    function onKey(event: KeyboardEvent): void {
+      if (editingPage !== null || isTypingTarget(event.target)) return;
+      if (event.key === 'ArrowLeft') goToPage(page.page_number - 1);
+      else if (event.key === 'ArrowRight') goToPage(page.page_number + 1);
+    }
+    globalThis.window.addEventListener('keydown', onKey);
+    return () => globalThis.window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingPage, page.page_number, pages.length]);
+
   const title = manual.title ?? manual.game_name;
   // Sin esto, el manual titulado como el juego pinta «Monopoly > Monopoly».
   const crumb = title === manual.game_name ? 'Texto extraído' : title;
+  // El detalle no trae source_type; se infiere del origen del texto de las páginas.
+  const sourceIsPdf = pages.some((item) => item.text_source === 'pdf_text');
   const activeMatch =
     search.active !== null && search.active.pageNumber === page.page_number
       ? search.active.indexInPage
       : null;
+  const isFailed = pageStatus(page).key === 'failed';
+  const canEdit = editable && !isFailed;
+  // El modo confianza solo aplica si la página trae confianzas por línea (no
+  // ocurre en páginas editadas a mano, cuyo texto no procede del OCR).
+  const hasConfidence = page.ocr_lines.some((line) => line.confidence != null);
 
   return (
     <ManualShell
       crumb={crumb}
       trail={[
         { label: 'Historial', link: linkOptions({ to: '/history' }) },
-        { label: manual.game_name, link: linkOptions({ to: '/game/$gameId', params: { gameId: manual.game_id } }) },
+        {
+          label: manual.game_name,
+          link: linkOptions({ to: '/game/$gameId', params: { gameId: manual.game_id } }),
+        },
       ]}
-      actions={
-        <>
-          <button
-            type="button"
-            onClick={() => setReprocessOpen(true)}
-            disabled={busy}
-            className="grid size-10 place-items-center rounded-xl text-fg-2 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Re-procesar manual"
-            title="Re-procesar manual"
-          >
-            <RotateCw size={19} strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleteOpen(true)}
-            className="grid size-10 place-items-center rounded-xl text-error hover:bg-error-bg"
-            aria-label="Borrar manual"
-            title="Borrar manual"
-          >
-            <Trash2 size={19} strokeWidth={1.75} />
-          </button>
-        </>
-      }
     >
-      {busy ? (
-        <output className="flex items-center gap-3 border-b border-border bg-warning-bg px-4 py-2.5 md:px-8">
-          <Loader2 size={16} className="shrink-0 animate-spin text-warning" aria-hidden="true" />
-          <p className="text-sm font-semibold text-fg">Re-procesando el manual…</p>
-          <div className="ml-auto w-40 max-w-[40%]">
-            <Progress
-              value={
-                processing.data
-                  ? (processing.data.completed_pages / Math.max(processing.data.page_count, 1)) *
-                    100
-                  : 5
-              }
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 md:grid md:h-[calc(100dvh_-_3.5rem)] md:flex-none md:max-w-none md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:gap-0 md:overflow-hidden md:p-0">
+        {/* ───── RAIL ───── */}
+        <aside className="min-w-0 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border md:px-4 md:py-5">
+          <PageThumbRail
+            pages={pages}
+            activePage={page.page_number}
+            hitsByPage={search.hitsByPage}
+            onSelect={goToPage}
+          />
+        </aside>
+
+        {/* ───── COLUMNA PRINCIPAL ───── */}
+        <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:gap-0 md:overflow-hidden">
+          {/* cabecera del manual: título + metadatos + acciones (centradas en la celda) */}
+          <div className="flex items-center gap-4 md:border-b md:border-border md:px-6 md:py-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate font-display text-xl font-extrabold tracking-tight text-fg">
+                {title}
+              </h1>
+              <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock size={13} aria-hidden="true" /> Subido el {formatLongDate(manual.created_at)}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  {sourceIsPdf ? <FileText size={13} aria-hidden="true" /> : <Images size={13} aria-hidden="true" />}{' '}
+                  {sourceIsPdf ? 'PDF' : 'Fotos'}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Files size={13} aria-hidden="true" /> {pages.length}{' '}
+                  {pages.length === 1 ? 'página' : 'páginas'}
+                </span>
+              </div>
+            </div>
+            <ManualActionsMenu
+              busy={busy}
+              onReprocess={() => setReprocessOpen(true)}
+              onDelete={() => setDeleteOpen(true)}
             />
           </div>
-        </output>
-      ) : null}
 
-      <div className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-5 px-4 py-4 md:grid-cols-[216px_minmax(0,1fr)] md:gap-6 md:px-6 md:py-6">
-        <PageThumbRail
-          pages={pages}
-          activePage={page.page_number}
-          hitsByPage={search.hitsByPage}
-          onSelect={goToPage}
-        />
+          {busy ? <ReprocessBanner data={processing.data ?? null} /> : null}
 
-        <div className="min-w-0">
-          <SearchToolbar
-            query={search.query}
-            onSearch={search.search}
-            totalHits={search.totalHits}
-            pagesWithHits={search.pagesWithHits}
-            onStep={jumpToMatch}
-            confidence={page.ocr_confidence_mean}
-          />
+          {/* visor con scroll propio en escritorio */}
+          <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:px-6 md:py-5">
+            <div className="mx-auto flex max-w-3xl flex-col gap-4">
+              {/* fila de control: navegación de página + estado */}
+              <div className="flex flex-wrap items-center gap-3">
+                <PageNav
+                  pageNumber={page.page_number}
+                  total={pages.length}
+                  onPrev={() => goToPage(page.page_number - 1)}
+                  onNext={() => goToPage(page.page_number + 1)}
+                />
+                <StatusChip page={page} />
+              </div>
 
-          <PageTextCard
-            page={page}
-            pageCount={manual.pages.length}
-            needle={search.needle}
-            activeMatch={activeMatch}
-            editable={editable}
-            editing={editingPage === page.page_number}
-            busy={busy}
-            saving={saveText.isPending}
-            reprocessing={reprocess.isPending}
-            onStartEdit={() => setEditingPage(page.page_number)}
-            onCancelEdit={() => setEditingPage(null)}
-            onSave={(text) => setPendingText(text)}
-            onReprocessPage={() => reprocess.mutate(page.page_number)}
-          />
+              {/* fila de búsqueda + acciones de la vista (confianza, editar) */}
+              <div className="flex flex-wrap items-center gap-3">
+                <SearchField
+                  query={search.query}
+                  onSearch={search.search}
+                  total={search.totalHits}
+                  position={search.activePosition}
+                  onStep={jumpToMatch}
+                />
+                <div className="flex shrink-0 items-center gap-2">
+                  {!editing && !isFailed ? (
+                    <ConfidenceToggle
+                      pressed={showConfidence}
+                      disabled={!hasConfidence}
+                      onToggle={() => setShowConfidence((value) => !value)}
+                    />
+                  ) : null}
+                  {canEdit && !editing ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setEditingPage(page.page_number)}
+                    >
+                      <Pencil size={15} strokeWidth={2} />
+                      Editar texto
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
 
-          <footer className="mt-5 flex items-center justify-between gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page.page_number <= 1}
-              onClick={() => goToPage(page.page_number - 1)}
-            >
-              <ChevronLeft size={16} strokeWidth={2} />
-              Anterior
-            </Button>
-            <span className="mono text-[11px] text-fg-3">
-              subido {formatShortDate(manual.created_at)} · {manualSourceLabel(manual)} ·{' '}
-              {manual.pages.length} {manual.pages.length === 1 ? 'página' : 'páginas'}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page.page_number >= manual.pages.length}
-              onClick={() => goToPage(page.page_number + 1)}
-            >
-              Siguiente
-              <ChevronRight size={16} strokeWidth={2} />
-            </Button>
-          </footer>
+              <PageTextCard
+                page={page}
+                pageCount={pages.length}
+                needle={search.needle}
+                activeMatch={activeMatch}
+                editing={editing}
+                showConfidence={showConfidence}
+                busy={busy}
+                saving={saveText.isPending}
+                reprocessing={reprocess.isPending}
+                onCancelEdit={() => setEditingPage(null)}
+                onSave={(text) => setPendingText(text)}
+                onReprocessPage={() => reprocess.mutate(page.page_number)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Confirmación suave antes de sustituir el texto leído por el OCR. */}
-      <Dialog open={pendingText !== null} onOpenChange={(open) => !open && setPendingText(null)}>
+      <ManualDialogs
+        pageNumber={page.page_number}
+        pageCount={pages.length}
+        gameName={manual.game_name}
+        title={title}
+        shared={manual.visibility === 'shared'}
+        saveOpen={pendingText !== null}
+        onSaveClose={() => setPendingText(null)}
+        onSaveConfirm={confirmSave}
+        saving={saveText.isPending}
+        reprocessOpen={reprocessOpen}
+        onReprocessOpenChange={setReprocessOpen}
+        onReprocessConfirm={() => reprocess.mutate(undefined)}
+        reprocessing={reprocess.isPending}
+        deleteOpen={deleteOpen}
+        onDeleteOpenChange={setDeleteOpen}
+        onDeleteConfirm={confirmDelete}
+        deleting={deleteManual.isPending}
+      />
+    </ManualShell>
+  );
+}
+
+/** Los tres diálogos de confirmación del detalle (guardar edición, re-procesar, eliminar). */
+function ManualDialogs({
+  pageNumber,
+  pageCount,
+  gameName,
+  title,
+  shared,
+  saveOpen,
+  onSaveClose,
+  onSaveConfirm,
+  saving,
+  reprocessOpen,
+  onReprocessOpenChange,
+  onReprocessConfirm,
+  reprocessing,
+  deleteOpen,
+  onDeleteOpenChange,
+  onDeleteConfirm,
+  deleting,
+}: Readonly<{
+  pageNumber: number;
+  pageCount: number;
+  gameName: string;
+  title: string;
+  shared: boolean;
+  saveOpen: boolean;
+  onSaveClose: () => void;
+  onSaveConfirm: () => void;
+  saving: boolean;
+  reprocessOpen: boolean;
+  onReprocessOpenChange: (open: boolean) => void;
+  onReprocessConfirm: () => void;
+  reprocessing: boolean;
+  deleteOpen: boolean;
+  onDeleteOpenChange: (open: boolean) => void;
+  onDeleteConfirm: () => void;
+  deleting: boolean;
+}>) {
+  return (
+    <>
+      {/* Confirmación antes de sustituir el texto leído por el editado. */}
+      <Dialog open={saveOpen} onOpenChange={(open) => !open && onSaveClose()}>
         <DialogHeader
-          title="¿Guardar el texto editado?"
-          description={`Sustituirá lo leído en la página ${page.page_number}: la IA responderá con tu versión.`}
-          onClose={() => setPendingText(null)}
+          title="¿Guardar los cambios?"
+          description={`Sustituirá lo leído en la página ${pageNumber}: la IA responderá con tu versión y la página quedará como «Editada a mano».`}
+          onClose={onSaveClose}
         />
         <DialogBody className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setPendingText(null)}>
+          <Button variant="ghost" onClick={onSaveClose}>
             Seguir editando
           </Button>
-          <Button
-            loading={saveText.isPending}
-            onClick={() => {
-              if (pendingText === null) return;
-              saveText.mutate(
-                { pageNumber: page.page_number, text: pendingText },
-                { onSettled: () => setPendingText(null) },
-              );
-            }}
-          >
-            Guardar texto
+          <Button loading={saving} onClick={onSaveConfirm}>
+            Guardar
           </Button>
         </DialogBody>
       </Dialog>
 
-      <Dialog open={reprocessOpen} onOpenChange={setReprocessOpen}>
+      <Dialog open={reprocessOpen} onOpenChange={onReprocessOpenChange}>
         <DialogHeader
           title="Re-procesar manual"
           description="Volveremos a leer todas las páginas con OCR y a indexar el texto. La explicación del juego se regenerará."
-          onClose={() => setReprocessOpen(false)}
+          onClose={() => onReprocessOpenChange(false)}
         />
         <DialogBody className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setReprocessOpen(false)}>
+          <Button variant="ghost" onClick={() => onReprocessOpenChange(false)}>
             Cancelar
           </Button>
-          <Button loading={reprocess.isPending} onClick={() => reprocess.mutate(undefined)}>
+          <Button loading={reprocessing} onClick={onReprocessConfirm}>
             <RotateCw size={16} strokeWidth={2} />
             Re-procesar
           </Button>
         </DialogBody>
       </Dialog>
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <Dialog open={deleteOpen} onOpenChange={onDeleteOpenChange}>
         <DialogHeader
-          title="Borrar manual"
-          description="Confirma que quieres eliminarlo."
-          onClose={() => setDeleteOpen(false)}
+          title="Eliminar manual"
+          description="Confirma que quieres borrarlo."
+          onClose={() => onDeleteOpenChange(false)}
         />
         <DialogBody>
           <div className="rounded-2xl border border-error bg-error-bg p-4 text-sm leading-relaxed text-fg">
             <p className="font-semibold">Esta acción no se puede deshacer.</p>
             <p className="mt-1">
-              Se borrará <strong>«{title}»</strong> de {manual.game_name}: sus {manual.pages.length}{' '}
-              {manual.pages.length === 1 ? 'página' : 'páginas'} y su texto extraído. La explicación
-              del juego se regenerará con los manuales restantes.
+              Se borrará <strong>«{title}»</strong> de {gameName}: sus {pageCount}{' '}
+              {pageCount === 1 ? 'página' : 'páginas'} y su texto extraído. La explicación del
+              juego se regenerará con los manuales restantes.
             </p>
-            {manual.visibility === 'shared' ? (
+            {shared ? (
               <p className="mt-2">
-                Es <strong>compartido</strong>: dejará de estar en el pool de {manual.game_name}{' '}
-                para otras personas.
+                Es <strong>compartido</strong>: dejará de estar en el pool de {gameName} para otras
+                personas.
               </p>
             ) : null}
           </div>
           <div className="mt-4 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+            <Button variant="ghost" onClick={() => onDeleteOpenChange(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" loading={deleteManual.isPending} onClick={confirmDelete}>
+            <Button variant="destructive" loading={deleting} onClick={onDeleteConfirm}>
               <Trash2 size={16} strokeWidth={2} />
-              Borrar manual
+              Eliminar manual
             </Button>
           </div>
         </DialogBody>
       </Dialog>
-    </ManualShell>
+    </>
   );
 }
 
-function manualSourceLabel(manual: ManualDetailResponse): string {
-  return manual.pages.some((page) => page.text_source === 'pdf_text') ? 'PDF' : 'fotos';
+function ManualActionsMenu({
+  busy,
+  onReprocess,
+  onDelete,
+}: Readonly<{ busy: boolean; onReprocess: () => void; onDelete: () => void }>) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="secondary" size="sm" className="shrink-0">
+          Acciones
+          <ChevronDown size={15} strokeWidth={2} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem disabled={busy} onSelect={onReprocess}>
+          <RotateCw size={16} strokeWidth={2} />
+          Re-procesar todo
+        </DropdownMenuItem>
+        <hr className="my-1 border-t border-border" />
+        <DropdownMenuItem danger onSelect={onDelete}>
+          {/* Ajuste óptico: el cuerpo de la papelera pesa abajo (centro de masa ~0.5px
+              más bajo que los demás iconos del menú); la subimos para alinearla. */}
+          <Trash2 size={16} strokeWidth={2} className="-translate-y-[0.5px]" />
+          Eliminar manual
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
-function SearchToolbar({
+function ReprocessBanner({
+  data,
+}: Readonly<{ data: { completed_pages: number; page_count: number } | null }>) {
+  const pct = data ? (data.completed_pages / Math.max(data.page_count, 1)) * 100 : 5;
+  return (
+    <div className="md:px-6 md:pt-4">
+      <output className="flex items-center gap-3 rounded-2xl border border-primary bg-primary-50 p-3.5">
+        <Loader2 size={20} className="shrink-0 animate-spin text-primary" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-bold text-fg">Re-procesando el manual…</p>
+          <div className="mt-1.5">
+            <Progress value={pct} />
+          </div>
+        </div>
+        {data ? (
+          <span className="mono shrink-0 text-xs font-semibold text-primary-700">
+            {data.completed_pages} de {data.page_count} páginas
+          </span>
+        ) : null}
+      </output>
+    </div>
+  );
+}
+
+function PageNav({
+  pageNumber,
+  total,
+  onPrev,
+  onNext,
+}: Readonly<{ pageNumber: number; total: number; onPrev: () => void; onNext: () => void }>) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <NavButton label="Página anterior" disabled={pageNumber <= 1} onClick={onPrev}>
+        <ChevronLeft size={18} strokeWidth={2} />
+      </NavButton>
+      <span className="min-w-[88px] text-center font-display text-sm font-bold text-fg">
+        Página {pageNumber} <span className="font-semibold text-fg-3">/ {total}</span>
+      </span>
+      <NavButton label="Página siguiente" disabled={pageNumber >= total} onClick={onNext}>
+        <ChevronRight size={18} strokeWidth={2} />
+      </NavButton>
+    </div>
+  );
+}
+
+function NavButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: Readonly<{ label: string; disabled: boolean; onClick: () => void; children: ReactNode }>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="grid size-9 place-items-center rounded-xl border border-border bg-card text-fg hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
+  const st = pageStatus(page);
+  return (
+    <Tooltip content={st.tip}>
+      <Badge
+        tone={st.tone}
+        icon={<st.Icon strokeWidth={2.2} />}
+        tabIndex={0}
+        role="status"
+        aria-label={`Estado de lectura: ${st.label}`}
+        className="h-[30px] cursor-help px-2.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        {st.label}
+      </Badge>
+    </Tooltip>
+  );
+}
+
+function ConfidenceToggle({
+  pressed,
+  disabled,
+  onToggle,
+}: Readonly<{ pressed: boolean; disabled: boolean; onToggle: () => void }>) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      disabled={disabled}
+      onClick={onToggle}
+      title={
+        disabled
+          ? 'Esta página no tiene confianza OCR (texto editado a mano)'
+          : 'Colorea cada línea según la confianza del OCR'
+      }
+      className={cn(
+        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-55',
+        pressed
+          ? 'border-primary bg-primary-50 text-primary-700'
+          : 'border-border-strong bg-card text-fg-2 hover:bg-surface',
+      )}
+    >
+      <Layers size={15} strokeWidth={2} aria-hidden="true" />
+      Confianza por línea
+      <ChevronDown
+        size={14}
+        strokeWidth={2}
+        aria-hidden="true"
+        className={cn('transition-transform', pressed && 'rotate-180')}
+      />
+    </button>
+  );
+}
+
+function SearchField({
   query,
   onSearch,
-  totalHits,
-  pagesWithHits,
+  total,
+  position,
   onStep,
-  confidence,
 }: Readonly<{
   query: string;
   onSearch: (query: string) => void;
-  totalHits: number;
-  pagesWithHits: number;
+  total: number;
+  position: number;
   onStep: (delta: 1 | -1) => void;
-  confidence: number | null;
 }>) {
   const hasQuery = query.trim().length > 0;
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2.5">
-      <div className="relative min-w-0 flex-1 basis-56">
-        <Search
-          size={16}
-          strokeWidth={2}
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-3"
-        />
-        <Input
-          preset="search"
-          value={query}
-          onChange={(event) => onSearch(event.target.value)}
-          placeholder="Busca en el texto extraído…"
-          aria-label="Buscar en el texto del manual"
-          className="pl-10"
-        />
-      </div>
+    <div
+      className={cn(
+        'flex h-10 min-w-0 max-w-[460px] flex-1 items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors',
+        hasQuery
+          ? 'border-primary'
+          : 'border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
+      )}
+      style={hasQuery ? { boxShadow: 'var(--m-shadow-ring-primary)' } : undefined}
+    >
+      <Search size={16} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => onSearch(event.target.value)}
+        placeholder="Buscar en todo el manual…"
+        aria-label="Buscar en el texto del manual"
+        enterKeyHint="search"
+        className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+      />
       {hasQuery ? (
-        <>
-          <span className="mono text-[11px] text-fg-3" aria-live="polite">
-            {totalHits} en {pagesWithHits} {pagesWithHits === 1 ? 'pág.' : 'págs.'}
+        <span className="flex shrink-0 items-center gap-0.5">
+          <span
+            className="mono whitespace-nowrap px-1.5 text-[11.5px] tabular-nums text-fg-2"
+            aria-live="polite"
+          >
+            {position} / {total}
           </span>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => onStep(-1)}
-              disabled={totalHits === 0}
-              className="grid size-9 place-items-center rounded-xl border border-border text-fg-2 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Coincidencia anterior"
-            >
-              <ChevronLeft size={16} strokeWidth={2} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onStep(1)}
-              disabled={totalHits === 0}
-              className="grid size-9 place-items-center rounded-xl border border-border text-fg-2 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Coincidencia siguiente"
-            >
-              <ChevronRight size={16} strokeWidth={2} />
-            </button>
-          </div>
-        </>
+          <SearchMiniButton label="Coincidencia anterior" disabled={total === 0} onClick={() => onStep(-1)}>
+            <ChevronLeft size={15} strokeWidth={2} />
+          </SearchMiniButton>
+          <SearchMiniButton label="Coincidencia siguiente" disabled={total === 0} onClick={() => onStep(1)}>
+            <ChevronRight size={15} strokeWidth={2} />
+          </SearchMiniButton>
+          <SearchMiniButton label="Limpiar búsqueda" disabled={false} onClick={() => onSearch('')}>
+            <X size={14} strokeWidth={2} />
+          </SearchMiniButton>
+        </span>
       ) : null}
-      <span className="mono ml-auto hidden text-[11px] text-fg-3 md:inline">
-        {confidence === null ? 'sin confianza OCR' : `OCR conf. ${confidence.toFixed(2)}`}
-      </span>
     </div>
+  );
+}
+
+function SearchMiniButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: Readonly<{ label: string; disabled: boolean; onClick: () => void; children: ReactNode }>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="grid size-7 place-items-center rounded-lg text-fg-2 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -491,16 +752,16 @@ function DetailSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-5 px-4 py-4 md:grid-cols-[216px_minmax(0,1fr)] md:gap-6 md:px-6 md:py-6"
+      className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-5 px-4 py-4 md:max-w-none md:grid-cols-[300px_minmax(0,1fr)] md:gap-0 md:p-0"
     >
-      <div className="flex gap-2 md:flex-col">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-24 w-20 animate-pulse rounded-xl bg-surface-2 md:w-full" />
+      <div className="flex gap-2 md:flex-col md:border-r md:border-border md:px-4 md:py-5">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-16 w-28 animate-pulse rounded-2xl bg-surface-2 md:w-full" />
         ))}
       </div>
-      <div className="space-y-4">
+      <div className="space-y-4 md:px-6 md:py-5">
         <div className="h-10 w-72 max-w-full animate-pulse rounded-xl bg-surface-2" />
-        <div className="h-72 animate-pulse rounded-2xl bg-surface-2" />
+        <div className="h-[clamp(320px,52vh,520px)] animate-pulse rounded-2xl bg-surface-2" />
       </div>
     </div>
   );

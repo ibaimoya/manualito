@@ -50,7 +50,7 @@ export function ExplanationBlocks({
           {summary}
         </Card>
       ) : null}
-      <Accordion type="multiple" defaultValue={['setup']} className="space-y-3">
+      <Accordion type="multiple" className="space-y-3">
         {BLOCKS.map(({ key, title, icon: Icon, chipClass }) => {
           const body = content[key];
           if (body === null) return null;

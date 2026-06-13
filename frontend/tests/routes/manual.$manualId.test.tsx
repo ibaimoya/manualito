@@ -34,10 +34,10 @@ describe('/manual/$manualId · lectura', () => {
     renderManual();
     const rail = await screen.findByRole('navigation', { name: 'Páginas del manual' });
     expect(
-      within(rail).getByRole('button', { name: 'Página 1 — leída correctamente' }),
+      within(rail).getByRole('button', { name: 'Página 1 · Escaneado correctamente' }),
     ).toBeInTheDocument();
     expect(
-      within(rail).getByRole('button', { name: 'Página 2 — baja confianza' }),
+      within(rail).getByRole('button', { name: 'Página 2 · Poco clara' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
   });
@@ -49,22 +49,32 @@ describe('/manual/$manualId · lectura', () => {
       name: 'Buscar en el texto del manual',
     });
     await user.type(search, 'ladrón');
-    expect(await screen.findByText(/1 en 1 pág/)).toBeInTheDocument();
+    // Contador global n / N (1 coincidencia, en la página 2).
+    expect(await screen.findByText('1 / 1')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Coincidencia siguiente' }));
     // El cursor salta a la página 2 y marca la coincidencia activa.
     expect(await screen.findByRole('article')).toHaveAccessibleName('Página 2 de 2');
     expect(document.querySelector('mark[data-active-match]')).toHaveTextContent(/LADRÓN/i);
   });
 
-  it('la página de baja confianza muestra el aviso con re-proceso puntual', async () => {
+  it('el toggle de confianza por línea muestra leyenda y porcentaje por línea', async () => {
     renderManual();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Página 2 — baja confianza' }));
-    const aviso = await screen.findByRole('status');
-    expect(aviso).toHaveTextContent(/baja confianza/);
-    expect(
-      within(aviso).getByRole('button', { name: /Re-procesar página/ }),
-    ).toBeInTheDocument();
+    const toggle = await screen.findByRole('button', { name: /Confianza por línea/ });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Confianza OCR')).toBeInTheDocument();
+    // La página 1 tiene una línea con confianza 0.97 → chip «97 %».
+    expect(screen.getByText('97%')).toBeInTheDocument();
+  });
+
+  it('la página poco clara muestra el aviso con re-proceso puntual', async () => {
+    renderManual();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Página 2 · Poco clara' }));
+    expect(await screen.findByText(/El OCR no está seguro de esta página/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Releer esta página/ })).toBeInTheDocument();
   });
 });
 
@@ -121,13 +131,13 @@ describe('/manual/$manualId · edición de texto', () => {
     const textarea = await screen.findByRole('textbox', { name: 'Texto de la página 1' });
     await user.clear(textarea);
     await user.type(textarea, 'PREPARACIÓN corregida a mano.');
-    await user.click(screen.getByRole('button', { name: 'Guardar texto' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
-    const confirm = await screen.findByRole('dialog', { name: '¿Guardar el texto editado?' });
+    const confirm = await screen.findByRole('dialog', { name: '¿Guardar los cambios?' });
     expect(confirm).toHaveTextContent(/Sustituirá lo leído en la página 1/);
-    await user.click(within(confirm).getByRole('button', { name: 'Guardar texto' }));
+    await user.click(within(confirm).getByRole('button', { name: 'Guardar' }));
 
-    expect(await screen.findByText('Editado a mano')).toBeInTheDocument();
+    expect(await screen.findByText('Editada a mano')).toBeInTheDocument();
     expect(screen.getByText('PREPARACIÓN corregida a mano.')).toBeInTheDocument();
   });
 
@@ -146,8 +156,8 @@ describe('/manual/$manualId · edición de texto', () => {
     await user.click(await screen.findByRole('button', { name: 'Editar texto' }));
     expect(await screen.findByRole('textbox', { name: 'Texto de la página 1' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
-    await user.click(screen.getByRole('button', { name: /Anterior/ }));
+    await user.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    await user.click(screen.getByRole('button', { name: 'Página anterior' }));
 
     // La página 1 vuelve en modo lectura, no con el editor abierto.
     expect(screen.queryByRole('textbox', { name: /Texto de la página/ })).not.toBeInTheDocument();
@@ -165,9 +175,9 @@ describe('/manual/$manualId · edición de texto', () => {
     await user.click(await screen.findByRole('button', { name: 'Editar texto' }));
     const textarea = await screen.findByRole('textbox', { name: 'Texto de la página 1' });
     await user.type(textarea, ' más texto');
-    await user.click(screen.getByRole('button', { name: 'Guardar texto' }));
-    const confirm = await screen.findByRole('dialog', { name: '¿Guardar el texto editado?' });
-    await user.click(within(confirm).getByRole('button', { name: 'Guardar texto' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+    const confirm = await screen.findByRole('dialog', { name: '¿Guardar los cambios?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText('El manual se está procesando')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Texto de la página 1' })).toBeInTheDocument();
@@ -178,7 +188,8 @@ describe('/manual/$manualId · acciones de cabecera', () => {
   it('re-procesar pide confirmación y lanza el POST al confirmar', async () => {
     renderManual();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Re-procesar manual' }));
+    await user.click(await screen.findByRole('button', { name: 'Acciones' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Re-procesar todo/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Re-procesar manual' });
     await user.click(within(dialog).getByRole('button', { name: 'Re-procesar' }));
     await waitFor(() => {
@@ -186,12 +197,13 @@ describe('/manual/$manualId · acciones de cabecera', () => {
     });
   });
 
-  it('borrar manual confirma, borra y navega al historial', async () => {
+  it('eliminar manual confirma, borra y navega al historial', async () => {
     renderManual();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Borrar manual' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Borrar manual' });
-    await user.click(within(dialog).getByRole('button', { name: /Borrar manual/ }));
+    await user.click(await screen.findByRole('button', { name: 'Acciones' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Eliminar manual/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Eliminar manual' });
+    await user.click(within(dialog).getByRole('button', { name: /Eliminar manual/ }));
     expect(await screen.findByText('Historial stub')).toBeInTheDocument();
   });
 

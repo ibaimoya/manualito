@@ -66,7 +66,9 @@ export function SavedGameSearch({ manuals }: Props) {
       <div
         className={cn(
           'flex h-11 items-center gap-2.5 border bg-bg px-3.5 transition-colors',
-          open ? 'rounded-t-2xl border-primary' : 'rounded-2xl border-border-strong',
+          open
+            ? 'rounded-t-2xl border-primary'
+            : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
         <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
@@ -87,7 +89,7 @@ export function SavedGameSearch({ manuals }: Props) {
           onKeyDown={handleKeyDown}
           placeholder="Buscar entre tus juegos…"
           aria-label="Buscar tus juegos"
-          className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3"
+          className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
         {query.length > 0 ? (
           <button

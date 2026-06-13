@@ -167,6 +167,7 @@ function NewManualScreen() {
 
   const ready = game !== null && mode !== null && pages.length > 0;
   const busy = mutation.isPending;
+  const ctaLabel = ready ? `Procesar ${pages.length} ${pageWord(mode, pages.length)}` : 'Procesar';
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -181,19 +182,6 @@ function NewManualScreen() {
           >
             <X size={20} strokeWidth={2} />
           </button>
-        }
-        actions={
-          <Button
-            type="button"
-            size="md"
-            className="hidden md:inline-flex"
-            loading={busy}
-            disabled={!ready}
-            onClick={submitManual}
-          >
-            <Sparkles size={18} strokeWidth={2} />
-            {ready ? `Procesar ${pages.length} ${pageWord(mode, pages.length)}` : 'Procesar'}
-          </Button>
         }
       />
 
@@ -294,13 +282,25 @@ function NewManualScreen() {
               </ul>
             </div>
           )}
+
+          <Button
+            block
+            size="lg"
+            className="hidden md:flex"
+            loading={busy}
+            disabled={!ready}
+            onClick={submitManual}
+          >
+            <Sparkles size={18} strokeWidth={2} />
+            {ctaLabel}
+          </Button>
         </section>
       </div>
 
       <footer className="sticky bottom-0 border-t border-border bg-bg/95 p-4 backdrop-blur md:hidden">
         <Button block size="lg" loading={busy} disabled={!ready} onClick={submitManual}>
           <Sparkles size={18} strokeWidth={2} />
-          {ready ? `Procesar ${pages.length} ${pageWord(mode, pages.length)}` : 'Procesar'}
+          {ctaLabel}
         </Button>
       </footer>
     </div>

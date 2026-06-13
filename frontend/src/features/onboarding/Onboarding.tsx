@@ -56,6 +56,9 @@ const SLIDES: Slide[] = [
   },
 ];
 
+// Pasos reales del recorrido (la pantalla final de elección no cuenta).
+const STEP_COUNT = SLIDES.filter((slide) => slide.kind === 'step').length;
+
 const PAGE_LINE_WIDTHS = [
   { id: 'manual-line-1', width: 88 },
   { id: 'manual-line-2', width: 95 },
@@ -146,7 +149,12 @@ export function Onboarding() {
       <header className={styles.topbar}>
         <span className={styles.topbarBrand}>
           <Monogram size={32} radius={9} />
-          <span className={styles.topbarName}>Manualito</span>
+          <span className={styles.topbarName}>
+            <span>Manualito</span>
+            <span aria-hidden="true" style={{ color: 'var(--m-primary-500)' }}>
+              .
+            </span>
+          </span>
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className={styles.topbarLink} onClick={skip} type="button">
@@ -178,7 +186,9 @@ export function Onboarding() {
                 →
               </span>
             </button>
-            <span className={cn(styles.scrollhint, styles.isIn)}>Desliza · 3 pasos · 20 s</span>
+            <span className={cn(styles.scrollhint, styles.isIn)}>
+              Desliza · {STEP_COUNT} pasos · 20 s
+            </span>
           </div>
         </section>
 
@@ -194,7 +204,7 @@ export function Onboarding() {
                   <span className={styles.stepNum}>
                     <span>{String(s.n).padStart(2, '0')}</span>
                     <span>/</span>
-                    <span style={{ opacity: 0.5 }}>03</span>
+                    <span style={{ opacity: 0.5 }}>{String(STEP_COUNT).padStart(2, '0')}</span>
                   </span>
                   <h2 className={cn(styles.stepTitle, shown && styles.isIn)}>{s.title}</h2>
                   <p className={cn(styles.stepSub, shown && styles.isIn)}>{s.sub}</p>

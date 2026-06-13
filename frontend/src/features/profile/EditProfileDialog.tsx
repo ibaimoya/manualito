@@ -148,10 +148,8 @@ function EditProfileForm({
                     title={option.label}
                     onClick={() => setFigure(option.value)}
                     className={cn(
-                      'grid size-9 place-items-center rounded-full border text-fg-2 transition-colors',
-                      selected
-                        ? cn('border-transparent text-[#FFF8F0]', COLORS.find((c) => c.value === color)?.className)
-                        : 'border-border-strong bg-bg hover:bg-surface-2',
+                      'grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 transition-colors',
+                      selected ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg' : 'hover:bg-surface-2',
                     )}
                   >
                     {option.value === 'initials' ? (

@@ -137,11 +137,14 @@ kbd {
   font-feature-settings: 'zero' on;
 }
 
-/* Focus ring común — buena a11y por defecto */
-:focus-visible {
-  outline: 2px solid var(--m-primary-500);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Focus ring común — buena a11y por defecto. En @layer base: fuera de capa
+   ganaría a las utilities y se sumaría a los anillos propios de cada componente. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--m-primary-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────

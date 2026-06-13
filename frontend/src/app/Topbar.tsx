@@ -1,8 +1,6 @@
 import { Link, type LinkOptions } from '@tanstack/react-router';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
-import { useAuth } from '@/features/auth/use-auth';
-import { Avatar } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -25,54 +23,41 @@ const TITLES: Record<string, string> = {
   '/about': 'Ayuda',
 };
 
+// Mismo cuerpo en todos los tramos: con tamaños mezclados los baselines no casan.
+const CRUMB_LINK_CLASS =
+  'shrink-0 font-display text-sm font-semibold text-fg-2 transition-colors hover:text-fg';
+const CRUMB_CURRENT_CLASS = 'truncate font-display text-sm font-bold tracking-tight text-fg';
+
 function HomeCrumb() {
   return (
-    <Link
-      to="/home"
-      className="shrink-0 font-display text-sm font-semibold text-fg-2 transition-colors hover:text-fg"
-    >
-      Manualito
-    </Link>
-  );
-}
-
-function AccountAvatar() {
-  const { user } = useAuth();
-  const label = user?.username ?? user?.email ?? '';
-  if (!user || !label) return null;
-  return (
-    <Link
-      to="/profile"
-      aria-label="Tu perfil"
-      title={label}
-      className="shrink-0 rounded-full transition-opacity hover:opacity-80"
-    >
-      <Avatar name={label} size={36} color={user.avatar_color} figure={user.avatar_figure} />
+    <Link to="/home" className={CRUMB_LINK_CLASS}>
+      Inicio
     </Link>
   );
 }
 
 export function DesktopTopbar({
   pathname,
-  crumb,
   actions,
-}: Readonly<{ pathname?: string; crumb?: string; actions?: ReactNode }>) {
-  const title = crumb ?? (pathname ? TITLES[pathname] : undefined) ?? 'Manualito';
+}: Readonly<{ pathname: string; actions?: ReactNode }>) {
+  const title = TITLES[pathname] ?? 'Inicio';
 
   return (
     <div className={cn(TOPBAR_CHROME, 'hidden md:flex')}>
       {/* Sin leading-none: con truncate (overflow hidden) recortaba la j/g/y. */}
-      <nav aria-label="Ruta de navegación" className="flex min-w-0 flex-1 items-center gap-1.5">
-        <HomeCrumb />
-        <ChevronRight size={15} strokeWidth={2.25} className="shrink-0 text-fg-3" aria-hidden="true" />
-        <span className="truncate font-display text-[15px] font-bold tracking-tight text-fg">
-          {title}
-        </span>
-      </nav>
-      <div className="flex shrink-0 items-center gap-1">
-        {actions}
-        <AccountAvatar />
-      </div>
+      {/* En la raíz no hay breadcrumb (sería «Inicio > Inicio»): solo el título. */}
+      {pathname === '/home' ? (
+        <span className={cn('min-w-0 flex-1', CRUMB_CURRENT_CLASS)}>{title}</span>
+      ) : (
+        <nav aria-label="Ruta de navegación" className="flex min-w-0 flex-1 items-center gap-1.5">
+          <HomeCrumb />
+          <CrumbSeparator />
+          <span aria-current="page" className={CRUMB_CURRENT_CLASS}>
+            {title}
+          </span>
+        </nav>
+      )}
+      {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
     </div>
   );
 }
@@ -130,19 +115,13 @@ export function ScreenTopBar({
         {trail?.map((item) => (
           <Fragment key={item.label}>
             <CrumbSeparator />
-            <Link
-              {...item.link}
-              className="max-w-44 shrink-0 truncate font-display text-sm font-semibold text-fg-2 transition-colors hover:text-fg"
-            >
+            <Link {...item.link} className={cn(CRUMB_LINK_CLASS, 'max-w-44 truncate')}>
               {item.label}
             </Link>
           </Fragment>
         ))}
         <CrumbSeparator />
-        <span
-          aria-current="page"
-          className="truncate font-display text-[15px] font-bold tracking-tight text-fg"
-        >
+        <span aria-current="page" className={CRUMB_CURRENT_CLASS}>
           {crumb}
         </span>
       </nav>

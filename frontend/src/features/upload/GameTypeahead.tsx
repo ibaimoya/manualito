@@ -84,7 +84,9 @@ export function GameTypeahead({ onSelect, focusOnMount }: Props) {
       <div
         className={cn(
           'flex h-12 items-center gap-2.5 border bg-bg px-3.5 transition-colors',
-          open ? 'rounded-t-2xl border-primary' : 'rounded-2xl border-border-strong',
+          open
+            ? 'rounded-t-2xl border-primary'
+            : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
         <Search size={20} className="shrink-0 text-fg-3" aria-hidden="true" />
@@ -110,7 +112,8 @@ export function GameTypeahead({ onSelect, focusOnMount }: Props) {
           onKeyDown={handleKeyDown}
           placeholder="Escribe el nombre del juego…"
           aria-label="Buscar juego"
-          className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-3"
+          // El foco lo pinta el contenedor: el outline global aquí queda descuadrado.
+          className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
         {status === 'loading' ? (
           <span

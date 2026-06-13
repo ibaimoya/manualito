@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   createMemoryHistory,
@@ -10,13 +10,6 @@ import {
 } from '@tanstack/react-router';
 import { type ReactNode } from 'react';
 import { DesktopTopbar, ScreenTopBar } from '@/app/Topbar';
-
-vi.mock('@/features/auth/use-auth', () => ({
-  useAuth: () => ({
-    user: { username: 'Marta Álvarez', email: 'marta@x.com' },
-    isAuthenticated: true,
-  }),
-}));
 
 function renderInRouter(node: ReactNode) {
   const root = createRootRoute({ component: Outlet });
@@ -45,28 +38,24 @@ function renderInRouter(node: ReactNode) {
 describe('DesktopTopbar', () => {
   it('muestra el breadcrumb y el título de la sección activa', async () => {
     renderInRouter(<DesktopTopbar pathname="/history" />);
-    expect(await screen.findByText('Manualito')).toBeInTheDocument();
+    const root = await screen.findByRole('link', { name: 'Inicio' });
+    expect(root).toHaveAttribute('href', '/home');
     expect(screen.getByText('Historial')).toBeInTheDocument();
   });
 
-  it('el avatar usa la inicial y enlaza al perfil', async () => {
+  it('en la raíz no hay breadcrumb: solo el título «Inicio»', async () => {
     renderInRouter(<DesktopTopbar pathname="/home" />);
-    const avatar = await screen.findByRole('link', { name: /Tu perfil/i });
-    expect(avatar).toHaveAttribute('href', '/profile');
-    expect(avatar).toHaveTextContent('M');
-  });
-
-  it('permite sobreescribir el crumb (páginas de juego)', async () => {
-    renderInRouter(<DesktopTopbar crumb="Catan" />);
-    expect(await screen.findByText('Manualito')).toBeInTheDocument();
-    expect(screen.getByText('Catan')).toBeInTheDocument();
+    expect(await screen.findByText('Inicio')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: 'Ruta de navegación' }),
+    ).not.toBeInTheDocument();
   });
 });
 
 describe('ScreenTopBar', () => {
-  it('comparte la base: breadcrumb a Manualito + crumb de la pantalla', async () => {
+  it('comparte la base: breadcrumb a Inicio + crumb de la pantalla', async () => {
     renderInRouter(<ScreenTopBar crumb="Catan" />);
-    expect(await screen.findByText('Manualito')).toBeInTheDocument();
+    expect(await screen.findByText('Inicio')).toBeInTheDocument();
     // El crumb aparece en el breadcrumb (md+) y en el título móvil.
     expect(screen.getAllByText('Catan').length).toBeGreaterThan(0);
   });

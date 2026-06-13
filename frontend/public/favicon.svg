@@ -1,7 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Manualito">
-  <!-- Cuadrado redondeado ámbar — mismo color que --m-primary-500 (#E07A1F) del Monogram en src/shared/components/Brand.tsx. Radius 12 = 25% de 48, coherente con `radius={Math.round(size * 0.25)}` del componente. -->
   <rect width="48" height="48" rx="12" fill="#E07A1F"/>
-  <!-- Meeple crema (#FFF8F0 = --m-bg).  El path original vive en viewBox 32x32; lo desplazamos (8,8) para centrarlo en el cuadrado de 48x48, dejando 8 px de margen — equivale al 62 % de meeple dentro del 100 % del cuadrado. -->
   <g transform="translate(8 8)">
     <path d="M16 4c2.8 0 5 2.2 5 5 0 1.6-.7 3-1.9 4 .1.1 5.4 3 5.4 8.5V25c0 1.7-1.3 3-3 3h-3c-.6 0-1-.4-1-1l-.5-4c0-.3-.2-.5-.5-.5h-1c-.3 0-.5.2-.5.5L14.5 27c0 .6-.4 1-1 1h-3c-1.7 0-3-1.3-3-3v-3.5c0-5.5 5.3-8.4 5.4-8.5C11.7 12 11 10.6 11 9c0-2.8 2.2-5 5-5z" fill="#FFF8F0"/>
   </g>

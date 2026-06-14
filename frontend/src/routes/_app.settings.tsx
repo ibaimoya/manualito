@@ -74,7 +74,7 @@ function AccountSection() {
   const displayName = user.username || user.email;
 
   return (
-    <Group title="Cuenta" hint="Tu perfil y tu acceso">
+    <Group title="Cuenta">
       <Link
         to="/profile"
         className="flex items-center gap-3.5 p-4 transition-colors hover:bg-surface-2"

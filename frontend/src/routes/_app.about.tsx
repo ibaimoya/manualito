@@ -130,7 +130,7 @@ function AboutScreen() {
                   </span>
                   <span className="mono text-[11px] tracking-[0.12em] text-fg-3">{step.n}</span>
                 </div>
-                {/* min-h de 2 líneas en md: «Te lo explicamos» parte y desalineaba los cuerpos. */}
+                {/* min-h de 2 líneas en md: "Te lo explicamos" parte y desalineaba los cuerpos. */}
                 <h3 className="font-display text-base font-bold text-fg md:min-h-12">
                   {step.title}
                 </h3>

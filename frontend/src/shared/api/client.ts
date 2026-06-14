@@ -3,8 +3,8 @@ import { ApiError, JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } fr
 
 /**
  * Recursos de manuales y juegos. El transporte (request, ApiError, CSRF) vive
- * en `./http`. Re-exporta ApiError y helpers para no romper los imports de
- * `@/shared/api/client`.
+ * en "./http". Re-exporta ApiError y helpers para no romper los imports de
+ * "@/shared/api/client".
  */
 
 export { ApiError, apiErrorNotification, isAbortApiError } from './http';
@@ -38,7 +38,7 @@ export interface ManualCreatedResponse {
   page_count: number;
 }
 
-/** Resumen de manual usado en listados (`GET /api/manuals`). */
+/** Resumen de manual usado en listados ("GET /api/manuals"). */
 export interface ManualSummary {
   id: string;
   game_id: string;
@@ -77,7 +77,7 @@ export interface RecommendedGame {
   name: string;
   bgg_id: number | null;
   year_published: number | null;
-  /** Motivo legible de la recomendación (p. ej. «Porque tienes Catan»). */
+  /** Motivo legible de la recomendación (p. ej. "Porque tienes Catan"). */
   reason: string;
 }
 
@@ -286,7 +286,7 @@ export const api = {
   /**
    * GET /api/recommendations — juegos sugeridos para el usuario (content-based
    * sobre los metadatos de su biblioteca). Contrato definido en
-   * `notimportant/RECOMMENDER_CONTRACT.md`; el backend lo implementa en una fase posterior.
+   * "notimportant/RECOMMENDER_CONTRACT.md"; el backend lo implementa en una fase posterior.
    */
   async getRecommendations(
     params?: { limit?: number },

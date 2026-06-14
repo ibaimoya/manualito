@@ -13,7 +13,7 @@ interface State {
 
 /**
  * Error boundary genérico — React no atrapa errores en hooks/render salvo con esto.
- * Acompaña al `errorComponent` que TanStack Router instala por ruta.
+ * Acompaña al "errorComponent" que TanStack Router instala por ruta.
  */
 export class ErrorBoundary extends Component<Props, State> {
   override state: State = { error: null };
@@ -50,8 +50,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
 /**
  * Pantalla de error a página completa, calmada y accionable. La comparten el
- * ErrorBoundary y el `errorComponent` raíz del router. El enlace de inicio usa
- * `<a>` (recarga real) porque en estado de error el router puede no ser fiable.
+ * ErrorBoundary y el "errorComponent" raíz del router. El enlace de inicio usa
+ * "<a>" (recarga real) porque en estado de error el router puede no ser fiable.
  */
 export function FullPageError({
   message,

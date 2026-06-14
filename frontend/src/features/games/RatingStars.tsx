@@ -40,7 +40,7 @@ function Star({ size = 20, filled = false }: Readonly<{ size?: number; filled?: 
 }
 
 /**
- * Fila de 5 estrellas. Sin `onSelect` es solo lectura; con él, cada estrella
+ * Fila de 5 estrellas. Sin "onSelect" es solo lectura; con él, cada estrella
  * es un botón con hover/focus que previsualiza la puntuación.
  */
 export function RatingStars({
@@ -54,7 +54,7 @@ export function RatingStars({
   size?: number;
   onSelect?: (score: number) => void;
   className?: string;
-  /** `start`: el glifo de la primera estrella se alinea al borde izquierdo. */
+  /** "start": el glifo de la primera estrella se alinea al borde izquierdo. */
   align?: 'center' | 'start';
 }>) {
   const [hover, setHover] = useState(0);

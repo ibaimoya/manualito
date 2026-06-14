@@ -1,9 +1,9 @@
 import { mapApiError, type ApiErrorView } from './error-mapper';
 
 /**
- * Núcleo de transporte HTTP: `request`/`requestVoid` (fetch con timeout, CSRF y
- * mapeo de errores) y `ApiError`. Lo reutilizan los módulos por recurso
- * (`./client`, `./auth`, `./conversations`).
+ * Núcleo de transporte HTTP: "request"/"requestVoid" (fetch con timeout, CSRF y
+ * mapeo de errores) y "ApiError". Lo reutilizan los módulos por recurso
+ * ("./client", "./auth", "./conversations").
  */
 
 const DEFAULT_TIMEOUT_MS = 180_000;
@@ -136,7 +136,7 @@ async function readErrorBody(response: Response): Promise<unknown> {
   }
 }
 
-/** Normaliza cualquier excepción de red/timeout a `ApiError`. */
+/** Normaliza cualquier excepción de red/timeout a "ApiError". */
 function toApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err;
   if (err instanceof DOMException && err.name === 'TimeoutError') {
@@ -197,7 +197,7 @@ export async function requestVoid(path: string, opts: RequestOptions = {}): Prom
   await executeRequest(path, opts);
 }
 
-/** Query-string (`?a=1&b=2`) omitiendo null/undefined; vacío si no hay params. */
+/** Query-string ("?a=1&b=2") omitiendo null/undefined; vacío si no hay params. */
 export function queryString(
   params: Record<string, string | number | boolean | null | undefined>,
 ): string {

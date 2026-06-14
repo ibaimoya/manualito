@@ -3,7 +3,7 @@ import { useRouter } from '@tanstack/react-router';
 import { authApi, type AuthResponse, type LoginInput, type RegisterInput } from '@/shared/api/auth';
 import { AUTH_ME_KEY, dropSessionCaches, meQueryOptions } from './auth-queries';
 
-/** Sesión actual leída de la cache (la resuelve el `beforeLoad` raíz). */
+/** Sesión actual leída de la cache (la resuelve el "beforeLoad" raíz). */
 export function useAuth() {
   const { data } = useQuery(meQueryOptions());
   return { user: data?.user ?? null, isAuthenticated: data?.user != null };
@@ -11,7 +11,7 @@ export function useAuth() {
 
 /**
  * Login y registro comparten efecto: cachear la sesión. No invalidamos el
- * router porque la pantalla navega a continuación y el `beforeLoad` raíz vuelve
+ * router porque la pantalla navega a continuación y el "beforeLoad" raíz vuelve
  * a leer esta cache ya actualizada.
  */
 function useEnterSession<TInput>(mutationFn: (input: TInput) => Promise<AuthResponse>) {

@@ -109,7 +109,7 @@ export const ModalBody = ({ children, className }: ModalBodyProps) => (
 );
 
 /**
- * Dialog centrado para desktop (`md+`): fade + zoom-in, ancho fijo (max-w-md
+ * Dialog centrado para desktop ("md+"): fade + zoom-in, ancho fijo (max-w-md
  * por defecto). La variante móvil anclada abajo vive en ResponsiveModal.
  */
 

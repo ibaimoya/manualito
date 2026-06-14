@@ -11,7 +11,7 @@ import {
 } from '@/features/manual/pageStatus';
 import { cn } from '@/shared/lib/cn';
 
-/** Cota del backend (`MANUAL_PAGE_TEXT_MAX_LENGTH`). */
+/** Cota del backend ("MANUAL_PAGE_TEXT_MAX_LENGTH"). */
 const PAGE_TEXT_MAX = 20_000;
 /** Misma altura del cajón en lectura y edición: entrar/salir no mueve el layout. */
 const BOX_CLASS = 'h-[clamp(360px,60vh,640px)]';
@@ -39,7 +39,7 @@ function pageLines(page: ManualDetailPage): ReadonlyArray<{ text: string; confid
     .filter((line) => line.text.length > 0);
 }
 
-/** Resalta `needle` en `text`; `counter` lleva el índice global para marcar la activa. */
+/** Resalta "needle" en "text"; "counter" lleva el índice global para marcar la activa. */
 function highlight(
   text: string,
   needle: string,
@@ -98,7 +98,7 @@ function ConfidenceLegend() {
   );
 }
 
-/** Chip de porcentaje de confianza de una línea (o «s/d» si no hay dato). */
+/** Chip de porcentaje de confianza de una línea (o "s/d" si no hay dato). */
 function ConfidenceChip({ confidence }: Readonly<{ confidence: number | null }>) {
   const meta = confidence == null ? null : confidenceTone(confidence);
   const pct = confidence == null ? null : Math.round(confidence * 100);
@@ -290,7 +290,7 @@ export function PageTextCard({
   const empty = paragraphs.length === 0;
 
   // Contenido del cajón en una variable: evita anidar ternarios en el JSX y
-  // mantiene el resaltado inline (el `counter` se comparte en un solo render).
+  // mantiene el resaltado inline (el "counter" se comparte en un solo render).
   let body: ReactNode;
   if (empty) {
     body = (

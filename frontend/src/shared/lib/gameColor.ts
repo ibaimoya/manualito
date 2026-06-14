@@ -1,4 +1,4 @@
-// Paleta cálida estable por nombre; `deep` es el extremo oscuro del gradiente.
+// Paleta cálida estable por nombre; "deep" es el extremo oscuro del gradiente.
 const GAME_TONES = [
   { color: 'var(--m-primary-500)', deep: 'var(--m-primary-700)' },
   { color: 'var(--m-accent-500)', deep: '#1E4A60' },

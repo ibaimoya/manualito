@@ -12,11 +12,11 @@ export const MEDIA_QUERIES = {
 export type MediaQueryName = keyof typeof MEDIA_QUERIES;
 
 /**
- * Suscripción reactiva a una media query (`window.matchMedia`).
+ * Suscripción reactiva a una media query ("window.matchMedia").
  *
- * - SSR-safe: sin `window` devuelve `false` sin lanzar.
+ * - SSR-safe: sin "window" devuelve "false" sin lanzar.
  * - Sin parpadeo de hidratación: el primer render ya lee el valor real,
- *   y `useSyncExternalStore` lo mantiene pegado a la fuente canónica.
+ *   y "useSyncExternalStore" lo mantiene pegado a la fuente canónica.
  */
 export function useMediaQuery(query: string): boolean {
   const subscribe = (onChange: () => void): (() => void) => {

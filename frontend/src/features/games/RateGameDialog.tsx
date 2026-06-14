@@ -16,7 +16,7 @@ const NOTE_MAX = 120;
 
 /**
  * Modal/sheet de valoración: pregunta cálida, 5 estrellas grandes con
- * etiqueta dinámica, nota opcional corta y «Quitar valoración» al editar.
+ * etiqueta dinámica, nota opcional corta y "Quitar valoración" al editar.
  */
 export function RateGameDialog({
   open,

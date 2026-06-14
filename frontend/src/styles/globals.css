@@ -7,8 +7,8 @@
 @import './tokens.css';
 
 /* @theme inline → expone los CSS vars de la marca como utilidades de Tailwind v4.
-   Esto permite escribir `bg-primary`, `text-text-2`, `border-border-strong`, etc.
-   Mantenemos el namespace `--m-*` y duplicamos en `--color-*` / `--font-*` / etc. */
+   Esto permite escribir "bg-primary", "text-text-2", "border-border-strong", etc.
+   Mantenemos el namespace "--m-*" y duplicamos en "--color-*" / "--font-*" / etc. */
 @theme inline {
   /* Colores marca */
   --color-primary: var(--m-primary-500);
@@ -81,7 +81,7 @@ body,
   min-height: 100dvh;
 }
 
-/* #main-content es el único contenedor con scroll.  `scrollbar-gutter: stable`
+/* #main-content es el único contenedor con scroll.  "scrollbar-gutter: stable"
    reserva ahí el hueco del scrollbar para que el contenido no salte cuando
    aparece/desaparece (al cambiar de pantalla o de ajuste).  Al ir solo aquí
    —y no en html— el hueco es uno, pegado al borde, no dos. */
@@ -169,8 +169,8 @@ kbd {
     border-radius: 4px;
   }
 
-  /* Tailwind v4 quitó el `cursor: pointer` por defecto de los botones; lo
-     reponemos para que cualquier control clicable muestre la mano (los `<a>`
+  /* Tailwind v4 quitó el "cursor: pointer" por defecto de los botones; lo
+     reponemos para que cualquier control clicable muestre la mano (los "<a>"
      ya lo traen de nativo). Los deshabilitados conservan su propio cursor. */
   button:not(:disabled),
   [role='button']:not(:disabled) {
@@ -273,8 +273,8 @@ kbd {
 }
 
 /* — Dialog (modal centrado para desktop) —
-   El centrado vive en la propiedad `translate` (utilidades -translate-x/y-1/2
-   de Tailwind v4), independiente de `transform`. El keyframe solo anima
+   El centrado vive en la propiedad "translate" (utilidades -translate-x/y-1/2
+   de Tailwind v4), independiente de "transform". El keyframe solo anima
    scale + opacity: si incluyera translate(-50%,-50%) se SUMARÍA al centrado
    y, con fill forwards, el modal quedaría media altura por encima del centro
    de forma permanente. */
@@ -339,7 +339,7 @@ input[type='radio'] {
 /* — Capacidad de input: pointer & hover (decisión #28 — Principio 2) —
    Detectamos la CAPACIDAD del dispositivo, no el dispositivo (anti UA-sniff).
 
-   Touch real (`pointer: coarse`): garantizamos área mínima 44×44 px
+   Touch real ("pointer: coarse"): garantizamos área mínima 44×44 px
    en todos los botones e icon-buttons.  Cumple WCAG 2.2 SC 2.5.8 sin
    tener que enumerar tamaños en cada componente. */
 @media (pointer: coarse) {
@@ -352,7 +352,7 @@ input[type='radio'] {
 
 /* Hover states activos SOLO cuando puede hacerse hover real.
    En táctil puro el navegador simula hover tras el primer tap, lo que
-   produce "sticky hover" desagradable.  En `(hover: none)` neutralizamos
+   produce "sticky hover" desagradable.  En "(hover: none)" neutralizamos
    los efectos visuales más comunes para que ni siquiera se apliquen al
    tap (no solo la duración).  Ver Motion docs:
    https://motion.dev/docs/react-hover-animation */
@@ -363,20 +363,20 @@ input[type='radio'] {
     box-shadow: revert !important;
     border-color: revert !important;
     /* Tailwind v4 reparte el transform en propiedades propias: hay que revertir
-       las tres, no solo `transform`, o el hover «pegajoso» sobreviviría al tap. */
+       las tres, no solo "transform", o el hover pegajoso sobreviviría al tap. */
     transform: revert !important;
     translate: revert !important;
     scale: revert !important;
     rotate: revert !important;
     transition-duration: 0ms !important;
   }
-  /* Mantenemos `:active` como feedback de tap inmediato y corto. */
+  /* Mantenemos ":active" como feedback de tap inmediato y corto. */
   *:active {
     transition-duration: 80ms !important;
   }
 }
 
-/* Refuerzo: para `prefers-reduced-motion`, neutralizamos transition
+/* Refuerzo: para "prefers-reduced-motion", neutralizamos transition
    shorthand además de duration, y eliminamos transforms iniciales de
    Sheet/Dialog para que aparezcan/desaparezcan sin slide ni zoom. */
 @media (prefers-reduced-motion: reduce) {
@@ -392,7 +392,7 @@ input[type='radio'] {
   }
 }
 
-/* — Markdown del LLM (`<Markdown>`): compacto, hereda el color del contenedor. */
+/* — Markdown del LLM ("<Markdown>"): compacto, hereda el color del contenedor. */
 .md {
   /* El LLM puede soltar palabras/URLs sin espacios más anchas que la tarjeta. */
   overflow-wrap: break-word;

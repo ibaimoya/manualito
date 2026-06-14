@@ -64,7 +64,7 @@ export function DesktopTopbar({
         <span className="h-[22px] w-px bg-border" aria-hidden="true" />
       </div>
       {/* Sin leading-none: con truncate (overflow hidden) recortaba la j/g/y. */}
-      {/* En la raíz no hay breadcrumb (sería «Inicio > Inicio»): solo el título. */}
+      {/* En la raíz no hay breadcrumb (sería "Inicio > Inicio"): solo el título. */}
       {pathname === '/home' ? (
         <span className={cn('min-w-0 flex-1', CRUMB_CURRENT_CLASS)}>{title}</span>
       ) : (
@@ -90,7 +90,7 @@ export function DesktopTopbar({
 }
 
 /**
- * Tramo intermedio del breadcrumb. `link` se construye con `linkOptions()`
+ * Tramo intermedio del breadcrumb. "link" se construye con "linkOptions()"
  * en el callsite: destino y params quedan validados por el router en compile.
  */
 interface CrumbLink {
@@ -99,8 +99,8 @@ interface CrumbLink {
 }
 
 /**
- * Botón «atrás» del topbar, antes de las migajas. Se apoya en la pila del router
- * (`history.back`). Si entraste directo (deep-link o recarga) y no hay nada detrás,
+ * Botón atrás del topbar, antes de las migajas. Se apoya en la pila del router
+ * ("history.back"). Si entraste directo (deep-link o recarga) y no hay nada detrás,
  * se muestra apagado y no clicable: la salida es por las migajas o el menú.
  */
 export function BackButton() {
@@ -138,7 +138,7 @@ export function ScreenTopBar({
   actions,
 }: Readonly<{
   crumb: string;
-  /** Tramos navegables entre «Manualito» y la página actual. */
+  /** Tramos navegables entre "Manualito" y la página actual. */
   trail?: readonly CrumbLink[];
   actions?: ReactNode;
 }>) {

@@ -3,8 +3,8 @@ import { cn } from '@/shared/lib/cn';
 
 /**
  * Presets de atributos móviles para casos comunes — evitan que cada
- * callsite tenga que recordar `inputMode + enterKeyHint + spellCheck +
- * autoComplete + autoCapitalize`.
+ * callsite tenga que recordar "inputMode + enterKeyHint + spellCheck +
+ * autoComplete + autoCapitalize".
  */
 type InputPreset = 'game-name' | 'search' | 'chat-message' | 'email' | 'username' | 'free';
 

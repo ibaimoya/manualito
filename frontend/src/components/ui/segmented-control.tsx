@@ -5,9 +5,9 @@ import { cn } from '@/shared/lib/cn';
 /**
  * SegmentedControl — pill segmentado tipo iOS para elegir UN valor entre varios.
  *
- * Sobre `<RadioGroup>` de Radix: roving tabindex, navegación con flechas,
+ * Sobre "<RadioGroup>" de Radix: roving tabindex, navegación con flechas,
  * Space/Enter para seleccionar y ARIA semántico de serie. Sin
- * `transition-colors` interno que choque con las View Transitions del tema.
+ * "transition-colors" interno que choque con las View Transitions del tema.
  */
 export interface SegmentOption<T extends string> {
   value: T;

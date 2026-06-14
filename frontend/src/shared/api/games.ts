@@ -49,7 +49,7 @@ export interface ExplanationSection {
 export type ExplanationSectionKey = 'summary' | 'setup' | 'turns' | 'victory';
 
 export interface GameExplanation {
-  /** `generating` ⇒ otra petición la está generando; reintentar en breve. */
+  /** "generating" ⇒ otra petición la está generando; reintentar en breve. */
   status: 'ready' | 'generating';
   sections: Partial<Record<ExplanationSectionKey, ExplanationSection>> | null;
   generated_at: string | null;

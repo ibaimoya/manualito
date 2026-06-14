@@ -214,7 +214,7 @@ function ChatScreen() {
   const showEmpty =
     messages.length === 0 && pendingQuestion === null && !historyLoading && !history.isError;
   const hasConversation = !showEmpty;
-  // Hasta que el backend nombra la conversación seguimos en «Nueva conversación»,
+  // Hasta que el backend nombra la conversación seguimos en "Nueva conversación",
   // así el título solo se reescribe una vez: cuando llega el nombre real.
   const resolvedTitle = conversationId
     ? (conversations.data?.find((c) => c.id === conversationId)?.title ?? null)
@@ -293,7 +293,7 @@ function ChatBotAvatar({ size = 34 }: Readonly<{ size?: number }>) {
   );
 }
 
-/** Cabecera del chat: portada + título de la conversación + juego + «Nueva». */
+/** Cabecera del chat: portada + título de la conversación + juego + "Nueva". */
 function ChatHeader({
   gameName,
   title,

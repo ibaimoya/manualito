@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/cn';
 /**
  * Renderiza el Markdown que devuelve el LLM (negritas, listas, tablas, código…).
  * react-markdown no inyecta HTML crudo y sanea las URLs por defecto, así que es
- * seguro frente a contenido del modelo. El estilo vive en la clase `.md`
+ * seguro frente a contenido del modelo. El estilo vive en la clase ".md"
  * (globals.css): compacto y hereda el color del contenedor (burbuja/tarjeta).
  */
 export function Markdown({

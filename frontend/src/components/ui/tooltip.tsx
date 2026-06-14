@@ -16,8 +16,8 @@ export function TooltipProvider({ children }: Readonly<{ children: ReactNode }>)
 
 /**
  * Tooltip ligero sobre Radix. Aparece al pasar el ratón o con foco de
- * teclado y desaparece al salir. El disparador (`children`) debe aceptar
- * `ref` (p. ej. un componente con `forwardRef`).
+ * teclado y desaparece al salir. El disparador ("children") debe aceptar
+ * "ref" (p. ej. un componente con "forwardRef").
  */
 export function Tooltip({
   content,

@@ -6,7 +6,7 @@ export function conversationsKey(gameId: string) {
   return ['conversations', gameId] as const;
 }
 
-/** Conversaciones del usuario para un juego (`GET /api/games/{id}/conversations`). */
+/** Conversaciones del usuario para un juego ("GET /api/games/{id}/conversations"). */
 export function conversationsQueryOptions(gameId: string) {
   return queryOptions({
     queryKey: conversationsKey(gameId),
@@ -15,7 +15,7 @@ export function conversationsQueryOptions(gameId: string) {
   });
 }
 
-/** Mensajes de una conversación (`GET /api/conversations/{id}/messages`). */
+/** Mensajes de una conversación ("GET /api/conversations/{id}/messages"). */
 export function conversationMessagesQueryOptions(conversationId: string) {
   return queryOptions({
     queryKey: ['conversations', 'messages', conversationId] as const,

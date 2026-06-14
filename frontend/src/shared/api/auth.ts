@@ -2,8 +2,8 @@ import { JSON_HEADERS, TIMEOUT, request, requestVoid } from './http';
 
 /**
  * Cliente de autenticación. register/login dejan sesión iniciada (autologin) y
- * devuelven `AuthResponse`; verify/resend/forgot/reset son flujos anónimos con
- * respuesta uniforme (`{ detail }`).
+ * devuelven "AuthResponse"; verify/resend/forgot/reset son flujos anónimos con
+ * respuesta uniforme ("{ detail }").
  */
 
 export type AvatarColor = 'primary' | 'accent' | 'contrast' | 'success' | 'warning';
@@ -26,7 +26,7 @@ export type AvatarFigure =
   | 'shield'
   | 'rocket';
 
-/** Usuario público tal y como lo expone la API (`UserPublic`). */
+/** Usuario público tal y como lo expone la API ("UserPublic"). */
 export interface AuthUser {
   id: string;
   email: string;
@@ -35,7 +35,7 @@ export interface AuthUser {
   status: string;
   created_at: string;
   last_login_at: string | null;
-  /** `null` ⇒ email sin verificar (dispara el banner soft). */
+  /** "null" ⇒ email sin verificar (dispara el banner soft). */
   email_verified_at: string | null;
   avatar_color: AvatarColor | null;
   avatar_figure: AvatarFigure | null;

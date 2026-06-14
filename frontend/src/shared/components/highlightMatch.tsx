@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** Resalta la primera coincidencia de `query` en `name` (insensible a mayúsculas). */
+/** Resalta la primera coincidencia de "query" en "name" (insensible a mayúsculas). */
 export function highlightMatch(name: string, query: string, minChars = 1): ReactNode {
   const needle = query.trim().toLowerCase();
   if (needle.length === 0 || needle.length < minChars) return name;

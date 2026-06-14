@@ -8,8 +8,8 @@ import { cn } from '@/shared/lib/cn';
  * Button con variantes — patrón shadcn/ui adaptado a tokens Manualito.
  * Toda variante respeta touch target ≥ 44 px en sizes md/lg.
  *
- * Con `loading`: spinner en lugar del icono manteniendo el texto (ancho
- * estable), más `aria-busy` y `disabled` automáticos.
+ * Con "loading": spinner en lugar del icono manteniendo el texto (ancho
+ * estable), más "aria-busy" y "disabled" automáticos.
  */
 const buttonVariants = cva(
   [
@@ -51,7 +51,7 @@ export interface ButtonProps
   asChild?: boolean;
   /**
    * Spinner inline: reemplaza el primer icono y conserva el texto para que
-   * el ancho no salte. Para cambiar también el texto, hazlo en `children`.
+   * el ancho no salte. Para cambiar también el texto, hazlo en "children".
    */
   loading?: boolean;
 }

@@ -5,7 +5,7 @@ import { api, type ManualSummary } from '@/shared/api/client';
 const MANUALS_KEY = ['manuals'] as const;
 const LIST_KEY = [...MANUALS_KEY, 'list'] as const;
 
-/** Lista de manuales del usuario (`GET /api/manuals`). */
+/** Lista de manuales del usuario ("GET /api/manuals"). */
 export function manualsQueryOptions() {
   return queryOptions({
     queryKey: LIST_KEY,
@@ -14,7 +14,7 @@ export function manualsQueryOptions() {
   });
 }
 
-/** Detalle de un manual con páginas + OCR (`GET /api/manuals/{id}`). */
+/** Detalle de un manual con páginas + OCR ("GET /api/manuals/{id}"). */
 export function manualDetailQueryOptions(manualId: string) {
   return queryOptions({
     queryKey: [...MANUALS_KEY, 'detail', manualId],
@@ -23,7 +23,7 @@ export function manualDetailQueryOptions(manualId: string) {
   });
 }
 
-/** Progreso de indexado del manual; se re-sondea mientras siga en `indexing`. */
+/** Progreso de indexado del manual; se re-sondea mientras siga en "indexing". */
 export function manualProcessingQueryOptions(manualId: string) {
   return queryOptions({
     queryKey: [...MANUALS_KEY, 'processing', manualId],

@@ -16,7 +16,7 @@ type Props = Readonly<{
 /**
  * Card de manual reutilizable. Si está indexando, lleva a su pantalla de
  * procesamiento; si ya está activo, al hub de su juego. Centraliza el look de
- * Home (recientes) e History y se adapta al contenedor con `@container`.
+ * Home (recientes) e History y se adapta al contenedor con "@container".
  */
 export function ManualCard({ manual, meta, className }: Props) {
   const name = manual.title ?? manual.game_name;

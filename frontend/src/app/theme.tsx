@@ -50,8 +50,8 @@ function persistTheme(state: Persisted): void {
 }
 
 /**
- * Aplica los flags al `<html>` (clases) para que tokens.css reaccione.
- * `mode: 'auto'` consulta `prefers-color-scheme` cada vez que se llama.
+ * Aplica los flags al "<html>" (clases) para que tokens.css reaccione.
+ * "mode: 'auto'" consulta "prefers-color-scheme" cada vez que se llama.
  */
 function applyToHtml(state: Persisted): void {
   const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();

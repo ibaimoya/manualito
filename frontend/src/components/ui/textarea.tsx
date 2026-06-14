@@ -3,7 +3,7 @@ import { cn } from '@/shared/lib/cn';
 
 export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
 
-/** Área de texto del design system: mismo borde/focus que `<Input>`. */
+/** Área de texto del design system: mismo borde/focus que "<Input>". */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
   { className, ...props },
   ref,

@@ -4,15 +4,15 @@ import { router } from '@/app/AppRouter';
 import { ApiError } from '@/shared/api/http';
 import { dropSessionCaches } from './auth-queries';
 
-// Código estable de api/exceptions.py: «la request no trae una sesión válida».
-// `invalid_credentials` (login o contraseña actual mal escrita) NO entra aquí.
+// Código estable de api/exceptions.py: la request no trae una sesión válida.
+// "invalid_credentials" (login o contraseña actual mal escrita) NO entra aquí.
 const SESSION_EXPIRED_CODE = 'authentication_required';
 
 // Una pantalla con varias queries dispara N errores a la vez; basta una salida.
 let redirecting = false;
 
 /**
- * Handler global de sesión caducada, enganchado a los `onError` del QueryClient:
+ * Handler global de sesión caducada, enganchado a los "onError" del QueryClient:
  * limpia las cachés de la cuenta y vuelve al login conservando la URL actual
  * para regresar tras autenticarse.
  */

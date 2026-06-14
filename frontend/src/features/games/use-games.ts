@@ -61,7 +61,7 @@ export function gameDetailQueryOptions(gameId: string) {
 
 /**
  * Explicación cacheada del juego. Mientras otro proceso la genera
- * (`status: generating`) se re-pide en intervalos cortos.
+ * ("status: generating") se re-pide en intervalos cortos.
  */
 export function gameExplanationQueryOptions(gameId: string) {
   return queryOptions({

@@ -230,7 +230,7 @@ const UNKNOWN_ERROR_VIEW: ApiErrorView = {
   code: 'unknown',
 };
 
-/** Status de un error tipo axios (`error.response.status`); null si no aplica. */
+/** Status de un error tipo axios ("error.response.status"); null si no aplica. */
 function responseStatus(error: object): number | null {
   if (!('response' in error)) return null;
   const res = (error as { response?: { status?: number } }).response;

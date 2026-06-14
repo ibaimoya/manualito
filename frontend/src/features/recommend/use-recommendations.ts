@@ -6,7 +6,7 @@ export const RECOMMENDATIONS_KEY = ['recommendations'] as const;
 
 const RECOMMENDATIONS_LIMIT = 6;
 
-/** Recomendaciones content-based del usuario (`GET /api/recommendations`). */
+/** Recomendaciones content-based del usuario ("GET /api/recommendations"). */
 export function recommendationsQueryOptions() {
   return queryOptions({
     queryKey: RECOMMENDATIONS_KEY,

@@ -49,7 +49,7 @@ function confirmPasswordError(
   return undefined;
 }
 
-/** `aria-invalid` solo cuando hay error (evita renderizar `aria-invalid="false"`). */
+/** "aria-invalid" solo cuando hay error (evita renderizar "aria-invalid="false""). */
 export function ariaInvalid(hasError: boolean): true | undefined {
   return hasError || undefined;
 }

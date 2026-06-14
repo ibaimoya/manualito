@@ -30,7 +30,7 @@ import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/capture/source')({
-  // `gameId` opcional: si entras desde el hub de un juego, llega preseleccionado.
+  // "gameId" opcional: si entras desde el hub de un juego, llega preseleccionado.
   validateSearch: (search: Record<string, unknown>): { gameId?: string } => ({
     gameId: typeof search.gameId === 'string' && search.gameId ? search.gameId : undefined,
   }),
@@ -75,7 +75,7 @@ function NewManualScreen() {
     () => (presetDetail.data ? toGameSearchItem(presetDetail.data) : null),
     [presetDetail.data],
   );
-  // `undefined` ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
+  // "undefined" ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
   const [chosenGame, setChosenGame] = useState<GameSearchItem | null | undefined>(undefined);
   const game = chosenGame === undefined ? presetGame : chosenGame;
   const [pages, setPages] = useState<File[]>([]);
@@ -372,7 +372,7 @@ function StepHeader({ n, title, done }: Readonly<{ n: number; title: string; don
 }
 
 /**
- * Interruptor «compartir con la comunidad»: toda la tarjeta es el control
+ * Interruptor "compartir con la comunidad": toda la tarjeta es el control
  * (role=switch) para una zona táctil amplia; la pastilla de la derecha es decorativa.
  */
 function ShareToggle({

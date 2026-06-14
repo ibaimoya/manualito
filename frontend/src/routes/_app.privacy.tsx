@@ -3,10 +3,10 @@ import { ShieldCheck } from 'lucide-react';
 import { PrivacySections } from '@/features/legal/PrivacySections';
 
 /**
- * Pantalla legal dentro del shell de la app (sidebar + breadcrumb «Inicio ›
- * Política de privacidad»), no una página suelta. Es pública: el guard de `_app`
- * deja pasar `/privacy` sin sesión. El consentimiento previo al registro usa
- * además `PrivacyPolicyModal`, así que el aviso legal siempre está accesible.
+ * Pantalla legal dentro del shell de la app (sidebar + breadcrumb "Inicio ›
+ * Política de privacidad"), no una página suelta. Es pública: el guard de "_app"
+ * deja pasar "/privacy" sin sesión. El consentimiento previo al registro usa
+ * además "PrivacyPolicyModal", así que el aviso legal siempre está accesible.
  */
 export const Route = createFileRoute('/_app/privacy')({
   component: PrivacyScreen,

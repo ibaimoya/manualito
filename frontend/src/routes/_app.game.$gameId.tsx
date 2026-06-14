@@ -224,8 +224,8 @@ function ExplanationSection({
   // los huecos pendientes se pintan con spinner. Listo: las 4 secciones están.
   const data = explanation.data;
   const sections = data?.sections ?? {};
-  // `live` solo cuando se está generando ahora: anima el tecleo en la 1ª vez,
-  // no al revisitar (que llega cacheado como `ready`).
+  // "live" solo cuando se está generando ahora: anima el tecleo en la 1ª vez,
+  // no al revisitar (que llega cacheado como "ready").
   const live = data?.status === 'generating';
   const busy = data === undefined || live;
   const pick = (key: ExplanationSectionKey) => sections[key]?.answer ?? null;

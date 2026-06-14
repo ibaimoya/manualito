@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 /**
  * Estado plegado/expandido de la sidebar de escritorio, persistido en
  * localStorage para que la preferencia sobreviva recargas. Es preferencia de
- * UI pura (no afecta a datos), por eso vive fuera del wrapper `storage` con
+ * UI pura (no afecta a datos), por eso vive fuera del wrapper "storage" con
  * validación Zod: una lectura tolerante a fallos basta.
  */
 const KEY = 'manualito.sidebar.collapsed';

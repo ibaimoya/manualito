@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Animaciones tipo «máquina de escribir» del chat: revelar la respuesta letra a
+ * Animaciones tipo máquina de escribir del chat: revelar la respuesta letra a
  * letra y reescribir el título cuando cambia. Ambas respetan reduced-motion (si
  * está activo, ponen el texto al instante) y acotan la duración para no eternizarse.
  */
 
 function prefersReducedMotion(): boolean {
-  // globalThis.matchMedia (no `window`) y guardado por si no hay DOM (SSR/tests).
+  // globalThis.matchMedia (no "window") y guardado por si no hay DOM (SSR/tests).
   return (
     typeof globalThis.matchMedia === 'function' &&
     globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -19,7 +19,7 @@ const MIN_TICKS = 24;
 const MAX_TICKS = 70;
 
 /**
- * Revela `text` progresivamente cuando `animate` es true (respuesta recién
+ * Revela "text" progresivamente cuando "animate" es true (respuesta recién
  * llegada). Si no, lo muestra entero al instante (historial, reduced-motion).
  */
 export function useTypewriter(
@@ -56,7 +56,7 @@ export function useTypewriter(
 const TITLE_CHAR_MS = 32;
 
 /**
- * Muestra `target`; cuando cambia, lo borra letra a letra y escribe el nuevo
+ * Muestra "target"; cuando cambia, lo borra letra a letra y escribe el nuevo
  * (como un chatbot renombrando la conversación). En el primer montaje lo pone directo.
  */
 export function useRetypingTitle(target: string): string {

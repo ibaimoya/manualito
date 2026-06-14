@@ -6,9 +6,9 @@ import { meQueryOptions } from '@/features/auth/auth-queries';
 import type { RouterContext } from '@/app/router-context';
 
 /**
- * Raíz del router. Resuelve la sesión una sola vez en `beforeLoad` y la deja en
- * el contexto (`user`) para que los guards de `_app`/`_public` decidan sin
- * parpadeo. El shell autenticado vive en `_app`; aquí solo va lo global.
+ * Raíz del router. Resuelve la sesión una sola vez en "beforeLoad" y la deja en
+ * el contexto ("user") para que los guards de "_app"/"_public" decidan sin
+ * parpadeo. El shell autenticado vive en "_app"; aquí solo va lo global.
  */
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ context }) => {

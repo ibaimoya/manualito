@@ -46,7 +46,7 @@ import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/manual/$manualId')({
-  // `page` opcional: las citas del chat abren el manual en la página citada.
+  // "page" opcional: las citas del chat abren el manual en la página citada.
   validateSearch: (search: Record<string, unknown>): { page?: number } => {
     const page = Number(search.page);
     return Number.isInteger(page) && page > 0 ? { page } : {};
@@ -276,7 +276,7 @@ function ManualDetailLoaded({
   }, [editingPage, page.page_number, pages.length]);
 
   const title = manual.title ?? manual.game_name;
-  // Sin esto, el manual titulado como el juego pinta «Monopoly > Monopoly».
+  // Sin esto, el manual titulado como el juego pinta "Monopoly > Monopoly".
   const crumb = title === manual.game_name ? 'Texto extraído' : title;
   const sourceIsPdf = manual.source_type === 'pdf';
   const activeMatch =

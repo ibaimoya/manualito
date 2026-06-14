@@ -1,7 +1,7 @@
 /**
  * Acorta emails larguísimos conservando el dominio visible
- * (`aaaaaaaaaaaaaaaaaa…@gmail.com`), que orienta más que un corte CSS a
- * ciegas. `localMax` se ajusta al hueco: 18 cabe en el perfil, la sidebar
+ * ("aaaaaaaaaaaaaaaaaa…@gmail.com"), que orienta más que un corte CSS a
+ * ciegas. "localMax" se ajusta al hueco: 18 cabe en el perfil, la sidebar
  * necesita menos.
  */
 export function elideEmail(email: string, localMax = 18): string {

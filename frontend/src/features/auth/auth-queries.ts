@@ -9,7 +9,7 @@ export const AUTH_ME_KEY = ['auth', 'me'] as const;
 /**
  * Borra cualquier rastro de la cuenta saliente: cache de queries y respuestas /api
  * del service worker. El marcador de sesión se repone a null tras el clear
- * para que el siguiente `beforeLoad` no tenga que volver a pedir /api/me.
+ * para que el siguiente "beforeLoad" no tenga que volver a pedir /api/me.
  */
 export async function dropSessionCaches(queryClient: QueryClient): Promise<void> {
   queryClient.clear();
@@ -19,8 +19,8 @@ export async function dropSessionCaches(queryClient: QueryClient): Promise<void>
 }
 
 /**
- * Sesión actual vía `/api/me`. Un 401 es estado anónimo legítimo (devolvemos
- * `null`), no un error de UI; el resto de errores sí se propagan.
+ * Sesión actual vía "/api/me". Un 401 es estado anónimo legítimo (devolvemos
+ * "null"), no un error de UI; el resto de errores sí se propagan.
  */
 export function meQueryOptions() {
   return queryOptions({

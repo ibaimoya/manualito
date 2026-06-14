@@ -77,9 +77,9 @@ export function Avatar({
   name: string;
   size?: number;
   tone?: 'accent' | 'primary';
-  /** Color elegido en el perfil; si falta, cae al `tone` clásico. */
+  /** Color elegido en el perfil; si falta, cae al "tone" clásico. */
   color?: AvatarColor | null;
-  /** Figura elegida en el perfil; `initials`/`null` muestran las iniciales. */
+  /** Figura elegida en el perfil; "initials"/"null" muestran las iniciales. */
   figure?: AvatarFigure | null;
   ring?: boolean;
   className?: string;

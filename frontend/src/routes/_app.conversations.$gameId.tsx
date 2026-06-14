@@ -39,7 +39,7 @@ export const Route = createFileRoute('/_app/conversations/$gameId')({
 
 const TITLE_MAX = 80;
 
-/** Contador del topbar: total guardadas, o «X de N» mientras se filtra. */
+/** Contador del topbar: total guardadas, o "X de N" mientras se filtra. */
 function counterLabel(needle: string, visibleCount: number, total: number): string | null {
   if (needle.length > 0) return `${visibleCount} de ${total}`;
   if (total > 0) return `${total} ${total === 1 ? 'guardada' : 'guardadas'}`;

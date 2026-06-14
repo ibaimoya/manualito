@@ -55,7 +55,7 @@ function PageButton({
       aria-label={`Página ${page.page_number} · ${st.label}${hitsLabel}`}
       className={cn(
         // border-2 constante: el grosor no cambia entre estados, así la tarjeta
-        // no «crece» al activarse. La activa se distingue por color y fondo.
+        // no crece al activarse. La activa se distingue por color y fondo.
         'group relative flex shrink-0 border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         // móvil: chip vertical · escritorio: fila completa
         'h-[58px] w-[46px] flex-col items-center justify-center gap-1 rounded-xl',

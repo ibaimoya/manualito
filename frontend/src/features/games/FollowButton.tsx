@@ -3,9 +3,9 @@ import { useToggleFollow } from '@/features/games/use-games';
 import { cn } from '@/shared/lib/cn';
 
 /**
- * Seguir / dejar de seguir un juego. Seguido se muestra como `Siguiendo` con un
+ * Seguir / dejar de seguir un juego. Seguido se muestra como "Siguiendo" con un
  * tinte de error al hover (señal de que vas a dejar de seguir); sin seguir es el
- * CTA primario `Seguir`. Width estable: el icono se sustituye por un spinner.
+ * CTA primario "Seguir". Width estable: el icono se sustituye por un spinner.
  */
 export function FollowButton({
   gameId,

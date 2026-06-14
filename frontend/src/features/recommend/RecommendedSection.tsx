@@ -7,7 +7,7 @@ import { type RecommendedGame } from '@/shared/api/client';
 import { recommendationsQueryOptions } from './use-recommendations';
 
 /**
- * Sección «Para ti» de la Home: recomendaciones content-based.  Es contenido
+ * Sección "Para ti" de la Home: recomendaciones content-based. Es contenido
  * secundario de descubrimiento, así que si está cargando, falla o llega vacía
  * no se renderiza nada (no estorba ni mete ruido en la pantalla principal).
  */

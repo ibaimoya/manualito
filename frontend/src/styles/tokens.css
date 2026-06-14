@@ -98,7 +98,7 @@
   color-scheme: light;
 }
 
-/* — Dark mode «Brasa» (cálido, 4 niveles: bg < card < surface < surface-2) — */
+/* Dark mode "Brasa" (cálido, 4 niveles: bg < card < surface < surface-2) */
 html.theme-dark {
   --m-bg:        #15100B;     /* página — brasa apagada */
   --m-card:      #231B11;     /* tarjetas, filas, menús */

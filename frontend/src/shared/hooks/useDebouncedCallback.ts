@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 /**
- * Callback debounced: las llamadas se colapsan tras `delayMs` de inactividad.
- * La devuelta es estable e invoca la última `fn` (vía ref), así que puede ir
+ * Callback debounced: las llamadas se colapsan tras "delayMs" de inactividad.
+ * La devuelta es estable e invoca la última "fn" (vía ref), así que puede ir
  * en deps de effects; el timer pendiente se cancela al desmontar.
  */
 export function useDebouncedCallback<TArgs extends unknown[]>(

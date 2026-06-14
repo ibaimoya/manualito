@@ -35,7 +35,7 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
         return_value={"question": "Desempate al llegar a 10 puntos"},
     )
     source_payload = [
-        {"manual_id": str(_MANUAL_ID), "manual_title": _MANUAL_TITLE, "page": 4}
+        {"manual_id": str(_MANUAL_ID), "manual_title": _MANUAL_TITLE, "page": 4, "is_own": True}
     ]
     answer = AnswerResponse(
         answer="Gana quien tenga más oro.",
@@ -44,6 +44,7 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
                 manual_id=_MANUAL_ID,
                 manual_title=_MANUAL_TITLE,
                 page=4,
+                is_own=True,
             )
         ],
     )

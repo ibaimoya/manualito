@@ -584,6 +584,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
                 manual_id=_MANUAL_ID,
                 manual_title=_MANUAL_TITLE,
                 source_page=1,
+                is_own=True,
             ),
             AuthorizedChunk(
                 id=_DUPLICATE_CHUNK_ID,
@@ -592,6 +593,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
                 manual_id=_MANUAL_ID,
                 manual_title=_MANUAL_TITLE,
                 source_page=1,
+                is_own=True,
             ),
             AuthorizedChunk(
                 id=_UNIQUE_CHUNK_ID,
@@ -600,6 +602,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
                 manual_id=_MANUAL_ID,
                 manual_title=_MANUAL_TITLE,
                 source_page=2,
+                is_own=False,
             ),
         ]
     )
@@ -619,8 +622,8 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     assert result == AnswerResponse(
         answer="Se gana con 10 puntos.",
         sources=[
-            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 1},
-            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 2},
+            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 1, "is_own": True},
+            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 2, "is_own": False},
         ],
     )
     rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
@@ -659,6 +662,7 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
                     manual_id=_MANUAL_ID,
                     manual_title=None,
                     source_page=1,
+                    is_own=True,
                 )
             ]
         ),

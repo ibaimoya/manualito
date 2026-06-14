@@ -23,6 +23,7 @@ import {
   QUESTION_MAX,
   type ConversationMessage,
 } from '@/shared/api/conversations';
+import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 // q comparte cota con el backend; c reabre conversación; g trae el juego del hub.
@@ -465,10 +466,14 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
 
 /** Páginas del manual que respaldan la respuesta, clicables (deduplicadas por página). */
 function SourceChips({ sources }: Readonly<{ sources: AnswerSource[] }>) {
-  const byPage = new Map<number, { manualId: string; title: string | null }>();
+  const byPage = new Map<number, { manualId: string; title: string | null; isOwn: boolean }>();
   for (const source of sources) {
     if (!byPage.has(source.page)) {
-      byPage.set(source.page, { manualId: source.manual_id, title: source.manual_title });
+      byPage.set(source.page, {
+        manualId: source.manual_id,
+        title: source.manual_title,
+        isOwn: source.is_own,
+      });
     }
   }
   const pages = [...byPage.entries()].sort((a, b) => a[0] - b[0]);
@@ -479,24 +484,67 @@ function SourceChips({ sources }: Readonly<{ sources: AnswerSource[] }>) {
         Fuentes consultadas
       </p>
       <div className="flex flex-wrap gap-[7px]">
-        {pages.map(([page, { manualId, title }]) => (
-          <Link
-            key={page}
-            to="/manual/$manualId"
-            params={{ manualId }}
-            search={{ page }}
-            title={title ?? undefined}
-            aria-label={`Abrir página ${page} del manual`}
-            className="inline-flex h-[30px] items-center gap-1.5 rounded-full border border-border-strong bg-card pl-[9px] pr-[11px] text-[12.5px] font-semibold text-fg-2 transition-colors hover:border-primary hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            <span className="grid size-[18px] place-items-center rounded-[5px] bg-primary-100 text-primary-700">
-              <FileText size={11} strokeWidth={2} aria-hidden="true" />
-            </span>
-            Pág. {page}
-          </Link>
+        {pages.map(([page, source]) => (
+          <SourceChip key={page} page={page} {...source} />
         ))}
       </div>
     </div>
+  );
+}
+
+const CHIP_BASE =
+  'inline-flex h-[30px] items-center gap-1.5 rounded-full border pl-[9px] pr-[11px] text-[12.5px] font-semibold';
+
+/**
+ * Cita de una página. Solo los manuales propios abren el visor (es solo del
+ * dueño); los de la comunidad se citan como fuente pero NO son clicables, para
+ * no llevar a una pantalla que daría 404.
+ */
+function SourceChip({
+  page,
+  manualId,
+  title,
+  isOwn,
+}: Readonly<{ page: number; manualId: string; title: string | null; isOwn: boolean }>) {
+  const icon = (
+    <span
+      className={cn(
+        'grid size-[18px] place-items-center rounded-[5px]',
+        isOwn ? 'bg-primary-100 text-primary-700' : 'bg-surface-2 text-fg-3',
+      )}
+    >
+      <FileText size={11} strokeWidth={2} aria-hidden="true" />
+    </span>
+  );
+
+  if (!isOwn) {
+    return (
+      <span
+        title={title ? `${title} · manual de la comunidad` : 'Manual de la comunidad'}
+        aria-label={`Página ${page} de un manual de la comunidad (no disponible)`}
+        className={cn(CHIP_BASE, 'cursor-default border-border bg-card text-fg-3')}
+      >
+        {icon}
+        Pág. {page}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      to="/manual/$manualId"
+      params={{ manualId }}
+      search={{ page }}
+      title={title ?? undefined}
+      aria-label={`Abrir página ${page} del manual`}
+      className={cn(
+        CHIP_BASE,
+        'border-border-strong bg-card text-fg-2 transition-colors hover:border-primary hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+      )}
+    >
+      {icon}
+      Pág. {page}
+    </Link>
   );
 }
 

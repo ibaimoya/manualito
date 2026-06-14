@@ -23,6 +23,8 @@ export interface AnswerSource {
   manual_id: string;
   manual_title: string | null;
   page: number;
+  /** Si el manual citado es del usuario: solo entonces se puede abrir el visor. */
+  is_own: boolean;
 }
 
 export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';

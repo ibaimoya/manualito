@@ -78,7 +78,7 @@ export const SAMPLE_GAME_DETAIL = {
 
 const SAMPLE_EXPLANATION_SECTION = {
   answer: 'Respuesta de la sección.',
-  sources: [{ manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 1 }],
+  sources: [{ manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 1, is_own: true }],
 };
 
 const SAMPLE_EXPLANATION = {

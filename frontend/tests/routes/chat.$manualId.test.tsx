@@ -42,6 +42,7 @@ function renderChat(manualId: string, search?: { q?: string; c?: string; g?: str
     stubs: {
       '/game/$gameId': 'GameScreen',
       '/history': 'HistoryScreen',
+      '/manual/$manualId': 'ManualScreen',
     },
   });
 }
@@ -223,7 +224,7 @@ describe('/chat/$manualId', () => {
     expect(creates).toBe(1);
   });
 
-  it('muestra las páginas citadas (sources) bajo la respuesta del bot, deduplicadas', async () => {
+  it('cita páginas: las propias enlazan al visor, las de la comunidad no', async () => {
     server.use(
       http.post('/api/conversations/:conversationId/messages', () =>
         HttpResponse.json({
@@ -241,9 +242,9 @@ describe('/chat/$manualId', () => {
             content: 'La madera la dan los bosques.',
             created_at: '2026-05-26T10:06:05.000Z',
             sources: [
-              { manual_id: 'm1', manual_title: 'Catan', page: 4 },
-              { manual_id: 'm1', manual_title: 'Catan', page: 4 },
-              { manual_id: 'm1', manual_title: 'Catan', page: 7 },
+              { manual_id: 'm1', manual_title: 'Catan', page: 4, is_own: true },
+              { manual_id: 'm1', manual_title: 'Catan', page: 4, is_own: true },
+              { manual_id: 'm2', manual_title: 'Catan (comunidad)', page: 7, is_own: false },
             ],
           },
         }),
@@ -253,10 +254,14 @@ describe('/chat/$manualId', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'madera');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
-    expect(await screen.findByText('Pág. 4')).toBeInTheDocument();
-    expect(screen.getByText('Pág. 7')).toBeInTheDocument();
-    // La página 4 viene dos veces pero se muestra un único chip.
+    // La página propia (4) se deduplica y enlaza al visor del manual.
+    const own = await screen.findByRole('link', { name: 'Abrir página 4 del manual' });
+    expect(own.getAttribute('href')).toContain('/manual/m1');
+    expect(own.getAttribute('href')).toContain('page=4');
     expect(screen.getAllByText('Pág. 4')).toHaveLength(1);
+    // La de la comunidad (7) se cita pero NO es un enlace (no puedes abrirla).
+    expect(screen.getByText('Pág. 7')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
   });
 
   it('typing indicator mientras la mutation está en vuelo', async () => {

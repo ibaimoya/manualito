@@ -152,7 +152,7 @@ def test_first_poll_generates_only_the_summary_for_the_game(monkeypatch):
     generate_mock = AsyncMock(
         return_value=AnswerResponse(
             answer="Construyes una isla.",
-            sources=[AnswerSource(manual_id=_MANUAL_ID, manual_title="Base", page=2)],
+            sources=[AnswerSource(manual_id=_MANUAL_ID, manual_title="Base", page=2, is_own=True)],
         )
     )
     upsert_mock = AsyncMock(return_value=_partial_explanation("summary"))

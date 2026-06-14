@@ -10,6 +10,7 @@ from api.manuals.exceptions import ManualContextNotFoundError, ManualNotFoundErr
 from api.manuals.repository import (
     StoredManualImage,
     StoredManualPdf,
+    _authorized_chunks_query,
     _manual_summary_query,
     attach_page_image_asset,
     create_manual_with_pending_pages,
@@ -551,6 +552,7 @@ async def test_load_authorized_chunks_preserves_requested_order():
             chunk_index=1,
             source_page=2,
             content_hash="b" * 64,
+            is_own=False,
         ),
         SimpleNamespace(
             id=chunk_a,
@@ -560,6 +562,7 @@ async def test_load_authorized_chunks_preserves_requested_order():
             chunk_index=0,
             source_page=1,
             content_hash="a" * 64,
+            is_own=True,
         ),
     ]
     session = _FakeSession(execute_results=[rows])
@@ -575,7 +578,18 @@ async def test_load_authorized_chunks_preserves_requested_order():
     assert [chunk.text for chunk in chunks] == ["Texto A", "Texto B"]
     assert [chunk.manual_title for chunk in chunks] == ["Reglamento A", "Reglamento B"]
     assert [chunk.source_page for chunk in chunks] == [1, 2]
+    assert [chunk.is_own for chunk in chunks] == [True, False]
     assert session.executed
+
+
+def test_authorized_chunks_query_selects_ownership_flag():
+    """La query calcula si cada fuente pertenece al usuario actual."""
+    stmt = _authorized_chunks_query(_GAME_ID, _OWNER_USER_ID, [_CHUNK_ID])
+
+    compiled = str(stmt.compile(dialect=postgresql.dialect()))
+
+    assert "manuals.owner_user_id =" in compiled
+    assert "AS is_own" in compiled
 
 
 @pytest.mark.parametrize("chunk_ids,execute_results", [([], []), ([uuid4()], [[]])])

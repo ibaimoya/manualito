@@ -4,11 +4,13 @@ from uuid import uuid4
 
 import anyio
 import pytest
+from sqlalchemy.dialects import postgresql
 
 from api.manuals.exceptions import ManualContextNotFoundError, ManualNotFoundError
 from api.manuals.repository import (
     StoredManualImage,
     StoredManualPdf,
+    _manual_summary_query,
     attach_page_image_asset,
     create_manual_with_pending_pages,
     get_asset_for_processing,
@@ -130,7 +132,19 @@ async def test_list_user_manuals_maps_explicit_rows():
     assert manuals[0].id == _MANUAL_ID
     assert manuals[0].game_name == "Catan"
     assert manuals[0].title == "Manual base"
+    assert manuals[0].source_type == "images"
+    assert manuals[0].page_count == 2
     assert manuals[0].chunks_indexed == 2
+
+
+def test_manual_summary_query_selects_public_upload_metadata():
+    """El resumen selecciona metadatos de origen para lista y detalle."""
+    compiled = str(
+        _manual_summary_query(_OWNER_USER_ID).compile(dialect=postgresql.dialect())
+    )
+
+    assert "manuals.source_type" in compiled
+    assert "manuals.page_count" in compiled
 
 
 @pytest.mark.anyio
@@ -614,6 +628,8 @@ def _manual_row(*, title: str | None):
         title=title,
         status="active",
         visibility="private",
+        source_type="images",
+        page_count=2,
         language="es",
         chunks_indexed=2,
         created_at=_INDEXED_AT,

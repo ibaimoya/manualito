@@ -131,6 +131,8 @@ def test_list_manuals_devuelve_manuales_propios(
                 "title": "Manual base",
                 "status": "active",
                 "visibility": "private",
+                "source_type": "images",
+                "page_count": 1,
                 "language": "es",
                 "chunks_indexed": 1,
                 "created_at": "2026-05-31T10:00:00Z",
@@ -194,6 +196,8 @@ def test_get_manual_devuelve_detalle_con_paginas(
     assert response.status_code == 200
     body = response.json()
     assert body["id"] == str(_MANUAL_ID)
+    assert body["source_type"] == "images"
+    assert body["page_count"] == 1
     assert body["pages"] == [
         {
             "page_number": 1,
@@ -456,6 +460,8 @@ def _manual_summary() -> SimpleNamespace:
         title="Manual base",
         status="active",
         visibility="private",
+        source_type="images",
+        page_count=1,
         language="es",
         chunks_indexed=1,
         created_at=timestamp,

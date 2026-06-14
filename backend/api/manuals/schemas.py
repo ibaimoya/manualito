@@ -41,6 +41,8 @@ class ManualSummaryResponse(StrictModel):
     title: str | None
     status: str
     visibility: str
+    source_type: str
+    page_count: int
     language: str | None
     chunks_indexed: ChunksIndexed
     created_at: datetime

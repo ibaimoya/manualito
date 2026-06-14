@@ -1,5 +1,5 @@
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import {
   forwardRef,
   type ComponentPropsWithoutRef,
@@ -27,8 +27,10 @@ export const AccordionTrigger = forwardRef<
   ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & {
     /** Nivel del heading: Radix usa h3; pásalo cuando el anterior sea un h1. */
     headingLevel?: 2 | 3;
+    /** En carga: spinner en vez de la flecha (combínalo con el item disabled). */
+    loading?: boolean;
   }
->(function AccordionTrigger({ className, children, headingLevel = 3, ...props }, ref) {
+>(function AccordionTrigger({ className, children, headingLevel = 3, loading = false, ...props }, ref) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <AccordionPrimitive.Header asChild>
@@ -37,19 +39,28 @@ export const AccordionTrigger = forwardRef<
           ref={ref}
           className={cn(
             'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
-            'transition-colors hover:bg-surface-2',
+            'transition-colors',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-            '[&[data-state=open]>svg]:rotate-180',
+            loading ? 'cursor-default' : 'hover:bg-surface-2 [&[data-state=open]>svg]:rotate-180',
             className,
           )}
           {...props}
         >
           {children}
-          <ChevronDown
-            size={20}
-            strokeWidth={2}
-            className="shrink-0 text-fg-3 transition-transform duration-200"
-          />
+          {loading ? (
+            <Loader2
+              size={18}
+              strokeWidth={2}
+              className="shrink-0 animate-spin text-fg-3"
+              aria-hidden="true"
+            />
+          ) : (
+            <ChevronDown
+              size={20}
+              strokeWidth={2}
+              className="shrink-0 text-fg-3 transition-transform duration-200"
+            />
+          )}
         </AccordionPrimitive.Trigger>
       </Heading>
     </AccordionPrimitive.Header>

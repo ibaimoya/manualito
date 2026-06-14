@@ -15,12 +15,16 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderManual() {
+function renderManual(page?: number) {
   server.use(manualDetailWithPages());
   return renderRoute({
     path: '/manual/$manualId',
-    initialEntry: '/manual/test-manual-001',
+    initialEntry: page ? `/manual/test-manual-001?page=${page}` : '/manual/test-manual-001',
     component: routeComponent(ManualRoute),
+    validateSearch: (s) => {
+      const n = Number(s.page);
+      return Number.isInteger(n) && n > 0 ? { page: n } : {};
+    },
     stubs: {
       '/history': 'Historial stub',
       '/home': 'Home stub',
@@ -40,6 +44,11 @@ describe('/manual/$manualId · lectura', () => {
       within(rail).getByRole('button', { name: 'Página 2 · Poco clara' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
+  });
+
+  it('abre directamente en la página citada cuando llega ?page (cita del chat)', async () => {
+    renderManual(2);
+    expect(await screen.findByRole('article')).toHaveAccessibleName('Página 2 de 2');
   });
 
   it('la búsqueda cuenta coincidencias y resalta al saltar a una', async () => {
@@ -103,6 +112,8 @@ describe('/manual/$manualId · edición de texto', () => {
           title: 'Catan',
           status: 'active',
           visibility: 'private',
+          source_type: 'pdf',
+          page_count: 1,
           language: 'spa',
           chunks_indexed: 2,
           created_at: '2026-05-26T10:00:00.000Z',

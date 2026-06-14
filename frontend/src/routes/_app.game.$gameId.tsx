@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Clock,
   FileText,
-  Loader2,
   Plus,
   RotateCw,
   ScanText,
@@ -12,7 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
-import { BackLink, ScreenTopBar } from '@/app/Topbar';
+import { ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -23,11 +22,17 @@ import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { GameCover } from '@/features/games/GameCover';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
-import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
+import {
+  gameDetailQueryOptions,
+  gameExplanationQueryOptions,
+} from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
-import type { GameDetail, GamePoolManual } from '@/shared/api/games';
+import {
+  type ExplanationSectionKey,
+  type GameDetail,
+  type GamePoolManual,
+} from '@/shared/api/games';
 import { QUESTION_MAX } from '@/shared/api/conversations';
-import { Markdown } from '@/shared/components/Markdown';
 import { gameColor } from '@/shared/lib/gameColor';
 import { formatShortDate } from '@/shared/lib/relativeDate';
 
@@ -50,8 +55,7 @@ function GameHubScreen() {
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar
         crumb={detail.data?.name ?? 'Juego'}
-        trail={[{ label: 'Historial', link: linkOptions({ to: '/history' }) }]}
-        back={<BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />}
+        trail={[{ label: 'Biblioteca', link: linkOptions({ to: '/history' }) }]}
       />
       {detail.isPending ? <HubSkeleton /> : null}
       {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
@@ -180,7 +184,7 @@ function ExplanationSection({
           gana.
         </p>
         <Button asChild className="mt-4">
-          <Link to="/capture/source">
+          <Link to="/capture/source" search={{ gameId }}>
             <Plus size={16} strokeWidth={2} />
             Subir manual
           </Link>
@@ -189,9 +193,8 @@ function ExplanationSection({
     );
   }
 
-  if (explanation.isPending) return <ExplanationSkeleton />;
-
-  if (explanation.isError) {
+  // Un sondeo fallido con datos en cache: mejor seguir mostrando lo que haya.
+  if (explanation.isError && explanation.data === undefined) {
     const notFound = explanation.error instanceof ApiError && explanation.error.status === 404;
     return (
       <Card className="bg-surface p-5">
@@ -215,31 +218,23 @@ function ExplanationSection({
     );
   }
 
-  if (explanation.data.status === 'generating' || explanation.data.sections === null) {
-    return (
-      <Card className="flex items-center gap-3 bg-surface p-5" role="status">
-        <Loader2 size={18} className="shrink-0 animate-spin text-primary" aria-hidden="true" />
-        <p className="text-sm leading-relaxed text-fg">
-          Estamos leyendo tus manuales y preparando la explicación… puede tardar un momento.
-        </p>
-      </Card>
-    );
-  }
+  // Sin datos aún o generando: el resumen llega primero y el resto se rellena;
+  // los huecos pendientes se pintan con spinner. Listo: las 4 secciones están.
+  const data = explanation.data;
+  const sections = data?.sections ?? {};
+  const busy = data === undefined || data.status === 'generating';
+  const pick = (key: ExplanationSectionKey) => sections[key]?.answer ?? null;
 
-  const sections = explanation.data.sections;
-  const body = (section: { answer: string } | null | undefined) =>
-    section ? (
-      <Markdown className="text-base leading-relaxed text-fg">{section.answer}</Markdown>
-    ) : null;
   return (
-    <section aria-label="Explicación del juego" className="space-y-3">
+    <section
+      aria-label={busy ? 'Preparando la explicación' : 'Explicación del juego'}
+      aria-busy={busy || undefined}
+      className="space-y-3"
+    >
       <ExplanationBlocks
-        summary={body(sections.summary)}
-        content={{
-          setup: body(sections.setup),
-          turns: body(sections.turns),
-          victory: body(sections.victory),
-        }}
+        gameId={gameId}
+        summary={pick('summary')}
+        content={{ setup: pick('setup'), turns: pick('turns'), victory: pick('victory') }}
       />
     </section>
   );
@@ -258,7 +253,7 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
           </h2>
         </div>
         <Button asChild variant="ghost">
-          <Link to="/capture/source">
+          <Link to="/capture/source" search={{ gameId: game.id }}>
             <Plus size={15} strokeWidth={2} />
             Añadir manual
           </Link>

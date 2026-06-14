@@ -18,6 +18,8 @@ function manual(id: string, name: string) {
     title: name,
     status: 'active',
     visibility: 'private',
+    source_type: 'pdf',
+    page_count: 8,
     language: 'spa',
     chunks_indexed: 10,
     created_at: '2026-05-26T10:00:00.000Z',
@@ -25,10 +27,30 @@ function manual(id: string, name: string) {
   };
 }
 
+function libraryGame(id: string, name: string) {
+  return {
+    id,
+    name,
+    bgg_id: null,
+    year_published: null,
+    manuals_count: 1,
+    conversations_count: 0,
+    last_activity_at: '2026-05-26T10:00:00.000Z',
+  };
+}
+
 function withManuals(...names: string[]) {
   const rows = names.map((n, i) => manual(`m${i + 1}`, n));
   return http.get('/api/manuals', () => HttpResponse.json({ manuals: rows }));
 }
+
+function withGames(...names: string[]) {
+  const rows = names.map((n, i) => libraryGame(`g${i + 1}`, n));
+  return http.get('/api/games/mine', () => HttpResponse.json({ games: rows }));
+}
+
+const NO_GAMES = http.get('/api/games/mine', () => HttpResponse.json({ games: [] }));
+const NO_MANUALS = http.get('/api/manuals', () => HttpResponse.json({ manuals: [] }));
 
 function renderHistory() {
   return renderRoute({
@@ -38,60 +60,90 @@ function renderHistory() {
     stubs: {
       '/capture/source': 'SourceScreen',
       '/game/$gameId': 'GameHubScreen',
+      '/manual/$manualId': 'ManualEditScreen',
       '/processing/$manualId': 'ProcessingScreen',
     },
   });
 }
 
+async function goToManuals(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('radio', { name: 'Manuales' }));
+}
+
 describe('/history', () => {
-  it('empty state cuando no hay manuales', async () => {
-    server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
+  it('Juegos vacío: estado vacío con CTA al primer upload', async () => {
+    server.use(NO_GAMES, NO_MANUALS);
     renderHistory();
-    expect(await screen.findByText(/Aún no hay manuales por aquí/)).toBeInTheDocument();
+    expect(await screen.findByText(/Aún no sigues ningún juego/)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Subir un manual/i });
+    expect(link).toHaveAttribute('href', '/capture/source');
   });
 
-  it('lista los manuales desde el backend', async () => {
-    server.use(withManuals('Catan', 'Wingspan', 'Parchís'));
+  it('vista Juegos: lista los juegos y enlaza a su hub', async () => {
+    server.use(withGames('Catan', 'Wingspan'), NO_MANUALS);
     renderHistory();
-    expect(await screen.findByText('Catan')).toBeInTheDocument();
-    expect(screen.getByText('Wingspan')).toBeInTheDocument();
-    expect(screen.getByText('Parchís')).toBeInTheDocument();
+    const catan = await screen.findByRole('link', { name: /Abrir Catan/i });
+    expect(catan).toHaveAttribute('href', '/game/g1');
+    expect(screen.getByRole('link', { name: /Abrir Wingspan/i })).toBeInTheDocument();
   });
 
-  it('el typeahead sugiere juegos y al elegir navega al hub del juego', async () => {
-    server.use(withManuals('Catan', 'Wingspan', 'Parchís'));
+  it('vista Juegos: el buscador sugiere y salta al hub del juego', async () => {
+    server.use(withGames('Catan', 'Wingspan', 'Parchís'), NO_MANUALS);
     renderHistory();
     const user = userEvent.setup();
-    const search = await screen.findByRole('combobox', { name: /Buscar tus juegos/i });
+    const search = await screen.findByRole('combobox', { name: /Saltar a un juego/i });
     await user.type(search, 'wing');
     const results = await screen.findByLabelText('Tus juegos');
     await user.click(within(results).getByRole('button', { name: /Wingspan/i }));
     expect(await screen.findByText('GameHubScreen')).toBeInTheDocument();
   });
 
-  it('el typeahead avisa cuando ningún juego coincide', async () => {
-    server.use(withManuals('Catan'));
+  it('vista Juegos: el buscador avisa cuando ningún juego coincide', async () => {
+    server.use(withGames('Catan'), NO_MANUALS);
     renderHistory();
-    const search = await screen.findByRole('combobox', { name: /Buscar tus juegos/i });
-    await userEvent.setup().type(search, 'xyz123');
+    const user = userEvent.setup();
+    const search = await screen.findByRole('combobox', { name: /Saltar a un juego/i });
+    await user.type(search, 'xyz123');
     expect(await screen.findByText(/Ningún juego coincide/)).toBeInTheDocument();
   });
 
-  it('Borrar abre confirm; cancelar mantiene el manual', async () => {
-    server.use(withManuals('Catan'));
+  it('cambiar a Manuales lista los manuales del backend', async () => {
+    server.use(NO_GAMES, withManuals('Catan', 'Wingspan', 'Parchís'));
     renderHistory();
     const user = userEvent.setup();
+    await screen.findByText(/Aún no sigues ningún juego/);
+    await goToManuals(user);
+    expect(await screen.findByText('Catan')).toBeInTheDocument();
+    expect(screen.getByText('Wingspan')).toBeInTheDocument();
+    expect(screen.getByText('Parchís')).toBeInTheDocument();
+  });
+
+  it('en Manuales, el filtro acota la lista por nombre', async () => {
+    server.use(NO_GAMES, withManuals('Catan', 'Wingspan', 'Parchís'));
+    renderHistory();
+    const user = userEvent.setup();
+    await goToManuals(user);
+    const filter = await screen.findByRole('searchbox', { name: /Filtrar tus manuales/i });
+    await user.type(filter, 'wing');
+    await waitFor(() => expect(screen.queryByText('Catan')).not.toBeInTheDocument());
+    expect(screen.getByText('Wingspan')).toBeInTheDocument();
+  });
+
+  it('en Manuales, Borrar abre confirm; cancelar mantiene el manual', async () => {
+    server.use(NO_GAMES, withManuals('Catan'));
+    renderHistory();
+    const user = userEvent.setup();
+    await goToManuals(user);
     await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
-    expect(await screen.findByText(/¿Borrar Catan\?/)).toBeInTheDocument();
+    expect(await screen.findByText(/¿Borrar este manual de Catan\?/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Cancelar/i }));
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
 
-  it('confirmar el borrado lo elimina del listado (optimista + refetch)', async () => {
-    // Handlers con estado: el DELETE quita la fila que lee el GET, para que el
-    // refetch tras invalidar no resucite el manual borrado.
+  it('en Manuales, confirmar el borrado lo elimina (optimista + refetch)', async () => {
     let rows = [manual('m1', 'Catan'), manual('m2', 'Wingspan')];
     server.use(
+      NO_GAMES,
       http.get('/api/manuals', () => HttpResponse.json({ manuals: rows })),
       http.delete('/api/manuals/:id', ({ params }) => {
         rows = rows.filter((m) => m.id !== params.id);
@@ -100,18 +152,12 @@ describe('/history', () => {
     );
     renderHistory();
     const user = userEvent.setup();
+    await goToManuals(user);
     await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
     await user.click(await screen.findByRole('button', { name: /^Borrar$/i }));
     await waitFor(() => {
       expect(screen.queryByText('Catan')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
-  });
-
-  it('empty state expone un CTA al primer upload (link a /capture/source)', async () => {
-    server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
-    renderHistory();
-    const link = await screen.findByRole('link', { name: /Subir mi primer manual/i });
-    expect(link).toHaveAttribute('href', '/capture/source');
   });
 });

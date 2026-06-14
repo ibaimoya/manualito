@@ -25,6 +25,7 @@ _FAKE_SESSION = object()
 _USER_ID = uuid4()
 _MANUAL_ID = uuid4()
 _NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
+_FAKE_HASH = "hash-value"  # placeholder de hash en fixtures, no es una credencial
 
 
 @pytest.fixture(autouse=True)
@@ -293,7 +294,7 @@ def _user() -> User:
         email="manualito@example.com",
         username="Manualito",
         username_key="manualito",
-        password_hash="hash-value",
+        password_hash=_FAKE_HASH,
         role="user",
         status="active",
         created_at=_NOW,

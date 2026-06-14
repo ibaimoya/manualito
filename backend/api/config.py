@@ -40,6 +40,7 @@ class ApiSettings(BaseSettings):
     bgg_max_attempts: int = Field(default=3, ge=0)
     bgg_backoff_seconds: float = Field(default=1.0, ge=0)
     game_search_rate_limit: str = "120/minute"
+    game_create_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
     explanation_rate_limit: str = DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT
 
     conversation_history_messages: int = Field(default=8, ge=0, le=20)
@@ -124,6 +125,7 @@ BGG_CACHE_RESULT_LIMIT = settings.bgg_cache_result_limit
 BGG_MAX_ATTEMPTS = settings.bgg_max_attempts
 BGG_BACKOFF_SECONDS = settings.bgg_backoff_seconds
 GAME_SEARCH_RATE_LIMIT = settings.game_search_rate_limit
+GAME_CREATE_RATE_LIMIT = settings.game_create_rate_limit
 EXPLANATION_RATE_LIMIT = settings.explanation_rate_limit
 CONVERSATION_HISTORY_MESSAGES = settings.conversation_history_messages
 CONVERSATION_CREATE_RATE_LIMIT = settings.conversation_create_rate_limit

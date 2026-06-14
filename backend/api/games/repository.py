@@ -87,6 +87,106 @@ async def ensure_active_game(session: AsyncSession, *, game_id: UUID) -> None:
         raise GameNotFoundError
 
 
+async def create_manual_game(
+    session: AsyncSession,
+    *,
+    name: str,
+    name_key: str,
+    created_by_user_id: UUID,
+) -> Row:
+    """Inserta un juego sin BGG atribuido al usuario y devuelve su ficha."""
+    result = await session.execute(
+        insert(Game)
+        .values(
+            name=name,
+            name_key=name_key,
+            status="active",
+            created_by_user_id=created_by_user_id,
+        )
+        .returning(Game.id, Game.name, Game.bgg_id, Game.year_published)
+    )
+    row = result.one()
+    await session.commit()
+    return row
+
+
+async def list_my_games(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    limit: int,
+    offset: int,
+) -> list[Row]:
+    """Juegos con manual o conversacion del usuario, por actividad reciente."""
+    engaged = (
+        select(Manual.game_id.label("game_id"))
+        .where(Manual.owner_user_id == user_id, Manual.deleted_at.is_(None))
+        .union(
+            select(Conversation.game_id).where(
+                Conversation.user_id == user_id,
+                Conversation.deleted_at.is_(None),
+            ),
+        )
+        .subquery()
+    )
+    manuals_count = (
+        select(func.count(Manual.id))
+        .where(
+            Manual.game_id == Game.id,
+            Manual.owner_user_id == user_id,
+            Manual.deleted_at.is_(None),
+        )
+        .correlate(Game)
+        .scalar_subquery()
+    )
+    conversations_count = (
+        select(func.count(Conversation.id))
+        .where(
+            Conversation.game_id == Game.id,
+            Conversation.user_id == user_id,
+            Conversation.deleted_at.is_(None),
+        )
+        .correlate(Game)
+        .scalar_subquery()
+    )
+    last_activity = func.greatest(
+        select(func.max(Manual.updated_at))
+        .where(
+            Manual.game_id == Game.id,
+            Manual.owner_user_id == user_id,
+            Manual.deleted_at.is_(None),
+        )
+        .correlate(Game)
+        .scalar_subquery(),
+        select(func.max(Conversation.updated_at))
+        .where(
+            Conversation.game_id == Game.id,
+            Conversation.user_id == user_id,
+            Conversation.deleted_at.is_(None),
+        )
+        .correlate(Game)
+        .scalar_subquery(),
+    ).label("last_activity_at")
+
+    result = await session.execute(
+        select(
+            Game.id,
+            Game.name,
+            Game.bgg_id,
+            Game.year_published,
+            manuals_count.label("manuals_count"),
+            conversations_count.label("conversations_count"),
+            last_activity,
+        )
+        .join(engaged, engaged.c.game_id == Game.id)
+        .where(Game.deleted_at.is_(None))
+        .order_by(last_activity.desc(), Game.name)
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result)
+
+
 async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> Row:
     """Carga un juego no borrado; uno oculto se devuelve con su estado."""
     result = await session.execute(

@@ -11,6 +11,7 @@ import { z } from 'zod';
 const KEY = {
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
+  explainedAnimated: 'manualito.explained.animated',
 } as const;
 
 // Restos de cuando los manuales y sus respuestas se cacheaban en local.
@@ -28,6 +29,9 @@ const SettingsSchema = z.object({
 // z.output: los defaults rellenan huecos y el tipo runtime va completo.
 export type Settings = z.output<typeof SettingsSchema>;
 const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
+
+// Tokens `juego:apartado` cuya animación de tecleo ya vio el usuario.
+const ExplainedAnimatedSchema = z.array(z.string());
 
 /* ============================================================
    Low-level safe accessors
@@ -145,6 +149,16 @@ export const storage = {
   },
   resetOnboarding(): void {
     safeRemove(KEY.onboardingSeen);
+  },
+
+  /* Animación de tecleo de la explicación: una vez por apartado y juego */
+  hasExplanationAnimated(token: string): boolean {
+    return safeRead(KEY.explainedAnimated, ExplainedAnimatedSchema, []).includes(token);
+  },
+  markExplanationAnimated(token: string): void {
+    const seen = safeRead(KEY.explainedAnimated, ExplainedAnimatedSchema, []);
+    if (seen.includes(token)) return;
+    safeWrite(KEY.explainedAnimated, [...seen, token]);
   },
 
   /* Barrido de claves legadas (botón "Borrar datos locales" en settings) */

@@ -49,18 +49,19 @@ function renderSidebar(
 }
 
 describe('Sidebar (desktop)', () => {
-  it('renderiza los 3 enlaces de navegación con labels exactos', async () => {
+  it('renderiza los enlaces de navegación con labels exactos', async () => {
     renderSidebar('/home');
     // Usar nombre exacto para no colisionar con el LockUp ("Manualito · ir al inicio")
     expect(await screen.findByRole('link', { name: 'Inicio' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Historial' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Biblioteca' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
   });
 
   it('marca el item activo con aria-current="page" según el pathname', async () => {
     renderSidebar('/history');
-    const historial = await screen.findByRole('link', { name: 'Historial' });
-    expect(historial).toHaveAttribute('aria-current', 'page');
+    const biblioteca = await screen.findByRole('link', { name: 'Biblioteca' });
+    expect(biblioteca).toHaveAttribute('aria-current', 'page');
     expect(
       screen.getByRole('link', { name: 'Inicio' }),
     ).not.toHaveAttribute('aria-current');

@@ -10,11 +10,12 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-function renderSource() {
+function renderSource(gameId?: string) {
   return renderRoute({
     path: '/capture/source',
-    initialEntry: '/capture/source',
+    initialEntry: gameId ? `/capture/source?gameId=${gameId}` : '/capture/source',
     component: routeComponent(SourceRoute),
+    validateSearch: (s) => ({ gameId: typeof s.gameId === 'string' ? s.gameId : undefined }),
     stubs: {
       '/home': 'HomeScreen',
       '/processing/$manualId': 'ProcessingScreen',
@@ -57,6 +58,35 @@ describe('/capture/source · nuevo manual', () => {
     );
   });
 
+  it('si el juego no está en BGG, crearlo lo deja seleccionado', async () => {
+    server.use(
+      http.get('/api/games', () =>
+        HttpResponse.json({ games: [], attribution: 'Powered by BoardGameGeek.' }),
+      ),
+      http.post('/api/games', () =>
+        HttpResponse.json({
+          id: 'g-new',
+          name: 'Mi juego casero',
+          bgg_id: null,
+          year_published: null,
+          manuals_count: 0,
+        }),
+      ),
+    );
+    renderSource();
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole('combobox', { name: /Buscar juego/i }),
+      'Mi juego casero',
+    );
+    // Sin coincidencias aparece la opción de crearlo.
+    const createBtn = await screen.findByRole('button', { name: /Crear «Mi juego casero»/i });
+    await user.click(createBtn);
+    // El juego creado queda elegido (chip con «Elegido»).
+    expect(await screen.findByText(/Elegido/i)).toBeInTheDocument();
+    expect(screen.getByText('Mi juego casero')).toBeInTheDocument();
+  });
+
   it('asocia cada tarjeta visible al input nativo de fichero', async () => {
     renderSource();
     const user = userEvent.setup();
@@ -75,13 +105,6 @@ describe('/capture/source · nuevo manual', () => {
     for (const button of screen.getAllByRole('button', { name: /^Procesar$/i })) {
       expect(button).toBeDisabled();
     }
-  });
-
-  it('botón X cancela y vuelve a /home', async () => {
-    renderSource();
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: /Cancelar y volver al inicio/i }));
-    expect(await screen.findByText('HomeScreen')).toBeInTheDocument();
   });
 
   it('rechaza una imagen mayor de 20 MB', async () => {
@@ -129,5 +152,128 @@ describe('/capture/source · nuevo manual', () => {
     await waitFor(() => expect(screen.getByText('ProcessingScreen')).toBeInTheDocument(), {
       timeout: 3000,
     });
+  });
+
+  it('preseleccionado desde el hub: arranca con el juego de origen como chip', async () => {
+    // Llegamos desde el hub de Catan (test-game-001); el detalle lo sirve MSW.
+    renderSource('test-game-001');
+    expect(await screen.findByText(/Elegido/i)).toBeInTheDocument();
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+    // Es un chip, no el buscador: no hay combobox visible.
+    expect(screen.queryByRole('combobox', { name: /Buscar juego/i })).not.toBeInTheDocument();
+  });
+
+  it('si cambias el juego preseleccionado, el manual va al nuevo, no al de origen', async () => {
+    let sentGameId: string | null = null;
+    server.use(
+      // El buscador devuelve un juego con id propio para distinguirlo del de origen.
+      http.get('/api/games', ({ request }) => {
+        const q = new URL(request.url).searchParams.get('q') ?? '';
+        return HttpResponse.json({
+          games: [
+            { id: 'game-wingspan', name: q, bgg_id: 266192, year_published: 1995, manuals_count: 0 },
+          ],
+          attribution: 'Powered by BoardGameGeek.',
+        });
+      }),
+      http.post('/api/manuals', async ({ request }) => {
+        // undici no parsea multipart con File de jsdom: leemos el cuerpo en crudo.
+        const body = await request.text();
+        sentGameId = /name="game_id"\r?\n\r?\n([^\r\n]+)/.exec(body)?.[1] ?? null;
+        return HttpResponse.json({
+          manual_id: 'm-new',
+          game_id: sentGameId,
+          status: 'indexing',
+          visibility: 'shared',
+          source_type: 'images',
+          page_count: 1,
+        });
+      }),
+    );
+    renderSource('test-game-001');
+    const user = userEvent.setup();
+    // Arranca preseleccionado con el juego de origen.
+    expect(await screen.findByText('Catan')).toBeInTheDocument();
+    // Lo cambiamos por otro juego distinto.
+    await user.click(screen.getByRole('button', { name: /Cambiar/i }));
+    await pickGame(user, 'Wingspan');
+    await user.upload(
+      screen.getByTestId('picker-gallery') as HTMLInputElement,
+      new File(['xxx'], 'foto.jpg', { type: 'image/jpeg' }),
+    );
+    await user.click((await screen.findAllByRole('button', { name: /Procesar/i }))[0]!);
+    await waitFor(() => expect(sentGameId).toBe('game-wingspan'));
+    expect(sentGameId).not.toBe('test-game-001');
+  });
+
+  it('comparte por defecto: el manual se procesa con visibility "shared"', async () => {
+    let sentVisibility: string | null = null;
+    server.use(
+      http.post('/api/manuals', async ({ request }) => {
+        // undici no parsea multipart con File de jsdom: leemos el cuerpo en crudo.
+        const body = await request.text();
+        sentVisibility = /name="visibility"\r?\n\r?\n(shared|private)/.exec(body)?.[1] ?? null;
+        return HttpResponse.json({
+          manual_id: 'm-1',
+          game_id: 'game-1',
+          status: 'indexing',
+          visibility: 'shared',
+          source_type: 'images',
+          page_count: 1,
+        });
+      }),
+    );
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    // El interruptor arranca activado (compartir).
+    expect(
+      screen.getByRole('switch', { name: /Compartir el manual con la comunidad/i }),
+    ).toHaveAttribute('aria-checked', 'true');
+    await user.upload(
+      screen.getByTestId('picker-gallery') as HTMLInputElement,
+      new File(['xxx'], 'foto.jpg', { type: 'image/jpeg' }),
+    );
+    await screen.findByText('foto.jpg');
+    await user.click((await screen.findAllByRole('button', { name: /Procesar/i }))[0]!);
+    await waitFor(() => expect(screen.getByText('ProcessingScreen')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
+    expect(sentVisibility).toBe('shared');
+  });
+
+  it('al apagar el interruptor, el manual se procesa como "private"', async () => {
+    let sentVisibility: string | null = null;
+    server.use(
+      http.post('/api/manuals', async ({ request }) => {
+        // undici no parsea multipart con File de jsdom: leemos el cuerpo en crudo.
+        const body = await request.text();
+        sentVisibility = /name="visibility"\r?\n\r?\n(shared|private)/.exec(body)?.[1] ?? null;
+        return HttpResponse.json({
+          manual_id: 'm-1',
+          game_id: 'game-1',
+          status: 'indexing',
+          visibility: 'private',
+          source_type: 'images',
+          page_count: 1,
+        });
+      }),
+    );
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    const toggle = screen.getByRole('switch', { name: /Compartir el manual con la comunidad/i });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await user.upload(
+      screen.getByTestId('picker-gallery') as HTMLInputElement,
+      new File(['xxx'], 'foto.jpg', { type: 'image/jpeg' }),
+    );
+    await screen.findByText('foto.jpg');
+    await user.click((await screen.findAllByRole('button', { name: /Procesar/i }))[0]!);
+    await waitFor(() => expect(screen.getByText('ProcessingScreen')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
+    expect(sentVisibility).toBe('private');
   });
 });

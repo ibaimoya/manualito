@@ -4,7 +4,7 @@ import { BookOpen, Check, ChevronRight, Copy, FileText, Plus, Sparkles } from 'l
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { BackLink, ScreenTopBar } from '@/app/Topbar';
+import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import {
@@ -214,17 +214,7 @@ function ChatScreen() {
     <div className="flex h-dvh flex-col bg-bg">
       <ScreenTopBar
         crumb="Chat"
-        trail={[{ label: 'Historial', link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
-        back={
-          resolvedGameId ? (
-            <BackLink
-              label="Volver al juego"
-              link={linkOptions({ to: '/game/$gameId', params: { gameId: resolvedGameId } })}
-            />
-          ) : (
-            <BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />
-          )
-        }
+        trail={[{ label: 'Biblioteca', link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
       />
 
       <ChatHeader
@@ -442,7 +432,9 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
   return (
     <button
       type="button"
-      onClick={() => void copy()}
+      onClick={() => {
+        copy().catch(() => undefined);
+      }}
       aria-label="Copiar respuesta"
       className="mt-1.5 grid size-7 place-items-center rounded-lg text-fg-3 transition-[color,background-color,opacity] hover:bg-surface-2 hover:text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-visible:opacity-100"
     >
@@ -476,6 +468,7 @@ function SourceChips({ sources }: Readonly<{ sources: AnswerSource[] }>) {
             key={page}
             to="/manual/$manualId"
             params={{ manualId }}
+            search={{ page }}
             title={title ?? undefined}
             aria-label={`Abrir página ${page} del manual`}
             className="inline-flex h-[30px] items-center gap-1.5 rounded-full border border-border-strong bg-card pl-[9px] pr-[11px] text-[12.5px] font-semibold text-fg-2 transition-colors hover:border-primary hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

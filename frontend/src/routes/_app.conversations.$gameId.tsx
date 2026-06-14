@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { BackLink, ScreenTopBar } from '@/app/Topbar';
+import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
@@ -25,9 +25,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { GameCover } from '@/features/games/GameCover';
 import { gameDetailQueryOptions } from '@/features/games/use-games';
-import { conversationsKey, conversationsQueryOptions } from '@/features/conversations/use-conversations';
+import {
+  conversationsKey,
+  conversationsQueryOptions,
+} from '@/features/conversations/use-conversations';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
+import { cn } from '@/shared/lib/cn';
 
 export const Route = createFileRoute('/_app/conversations/$gameId')({
   component: ConversationsScreen,
@@ -68,15 +72,9 @@ function ConversationsScreen() {
       <ScreenTopBar
         crumb="Tus conversaciones"
         trail={[
-          { label: 'Historial', link: linkOptions({ to: '/history' }) },
+          { label: 'Biblioteca', link: linkOptions({ to: '/history' }) },
           { label: gameName, link: linkOptions({ to: '/game/$gameId', params: { gameId } }) },
         ]}
-        back={
-          <BackLink
-            label="Volver al juego"
-            link={linkOptions({ to: '/game/$gameId', params: { gameId } })}
-          />
-        }
         actions={
           counter === null ? null : <span className="mono text-[11px] text-fg-3">{counter}</span>
         }
@@ -197,15 +195,32 @@ function ConversationCard({
   });
 
   return (
-    <li className={remove.isPending ? 'opacity-50' : undefined}>
-      <Card className="flex items-start gap-3 p-3.5 transition-colors hover:border-border-strong">
+    <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
+      <Card
+        className={cn(
+          'relative flex items-start gap-3 p-3.5',
+          'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
+          'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
+          'active:translate-y-0 active:shadow-xs',
+        )}
+      >
         <span
           aria-hidden="true"
-          className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-100 text-accent"
+          className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-100 text-accent transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
         >
           <MessagesSquare size={18} strokeWidth={1.9} />
         </span>
-        <button type="button" onClick={openChat} className="min-w-0 flex-1 text-left">
+        {/* Botón principal: su ::after se estira sobre toda la card, así que se
+            abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
+        <button
+          type="button"
+          onClick={openChat}
+          className={cn(
+            'min-w-0 flex-1 cursor-pointer text-left',
+            "after:absolute after:inset-0 after:rounded-2xl after:content-['']",
+            'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
+          )}
+        >
           <span className="flex items-baseline gap-2.5">
             <span className="min-w-0 flex-1 truncate font-display text-[15px] font-bold text-fg">
               {title}
@@ -223,7 +238,7 @@ function ConversationCard({
             <button
               type="button"
               aria-label={`Opciones de «${title}»`}
-              className="grid size-9 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface hover:text-fg data-[state=open]:bg-surface"
+              className="relative z-10 grid size-9 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface hover:text-fg data-[state=open]:bg-surface"
             >
               <MoreVertical size={17} strokeWidth={2} />
             </button>
@@ -262,15 +277,19 @@ function ConversationCard({
           <div className="rounded-2xl border border-error bg-error-bg p-4 text-sm leading-relaxed text-fg">
             <p className="font-semibold">Esta acción no se puede deshacer.</p>
             <p className="mt-1">
-              Se borrará <strong>«{title}»</strong> con todos sus mensajes. La explicación del
-              juego y tus manuales no se tocan.
+              Se borrará <strong>«{title}»</strong> con todos sus mensajes. La explicación del juego
+              y tus manuales no se tocan.
             </p>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" loading={remove.isPending} onClick={() => remove.mutate()}>
+            <Button
+              variant="destructive"
+              loading={remove.isPending}
+              onClick={() => remove.mutate()}
+            >
               <Trash2 size={16} strokeWidth={2} />
               Borrar conversación
             </Button>
@@ -375,8 +394,8 @@ function RenameForm({
       />
       <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-fg-3">
         <Sparkles size={13} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Este título lo generó la IA a partir de tu primera pregunta. Cámbialo por lo que te
-        resulte más fácil de encontrar.
+        Este título lo generó la IA a partir de tu primera pregunta. Cámbialo por lo que te resulte
+        más fácil de encontrar.
       </p>
       <div className="mt-4 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>
@@ -399,8 +418,8 @@ function EmptyState({
     <div className="rounded-2xl border-[1.5px] border-dashed border-border-strong bg-surface px-6 py-11 text-center">
       <h2 className="font-display text-lg font-bold text-fg">Aún no has preguntado nada</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-fg-2">
-        Cuando preguntes algo sobre {gameName}, guardaremos aquí la conversación con un título
-        corto para que la retomes cuando quieras.
+        Cuando preguntes algo sobre {gameName}, guardaremos aquí la conversación con un título corto
+        para que la retomes cuando quieras.
       </p>
       {chatManualId === null ? null : (
         <Button asChild className="mt-4">
@@ -414,10 +433,7 @@ function EmptyState({
   );
 }
 
-function NoResults({
-  filter,
-  onClear,
-}: Readonly<{ filter: string; onClear: () => void }>) {
+function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () => void }>) {
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
       <span className="grid size-12 place-items-center rounded-2xl bg-surface text-fg-3">

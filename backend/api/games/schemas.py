@@ -1,10 +1,10 @@
 """Schemas públicos del catálogo de juegos."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, StringConstraints
 
 from api.manuals.schemas import AnswerSource
 from api.ratings.schemas import RatingResponse
@@ -32,6 +32,36 @@ class GameSearchResponse(StrictModel):
 
     games: list[GameSearchItem]
     attribution: str = BGG_ATTRIBUTION
+
+
+GameName = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=GAME_NAME_MAX_LENGTH),
+]
+
+
+class CreateGameRequest(StrictModel):
+    """Alta manual de un juego que no aparece en BoardGameGeek."""
+
+    name: GameName
+
+
+class MyGameItem(StrictModel):
+    """Juego de la biblioteca del usuario (con el que ha interactuado)."""
+
+    id: UUID
+    name: str = Field(max_length=GAME_NAME_MAX_LENGTH)
+    bgg_id: int | None
+    year_published: int | None
+    manuals_count: int = Field(ge=0)
+    conversations_count: int = Field(ge=0)
+    last_activity_at: datetime
+
+
+class MyGamesResponse(StrictModel):
+    """Biblioteca del usuario: juegos por actividad reciente."""
+
+    games: list[MyGameItem]
 
 
 class GamePoolManualItem(StrictModel):

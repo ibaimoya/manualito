@@ -13,6 +13,8 @@ export interface SegmentOption<T extends string> {
   value: T;
   label: string;
   icon?: ReactNode;
+  /** Contador opcional: pinta una píldora con el número (p. ej. nº de items). */
+  count?: number;
 }
 
 export interface SegmentedControlProps<T extends string> {
@@ -61,6 +63,17 @@ export function SegmentedControl<T extends string>({
               </span>
             ) : null}
             {o.label}
+            {typeof o.count === 'number' ? (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'mono grid h-[18px] min-w-[18px] place-items-center rounded-full px-1.5 text-[11px] font-semibold',
+                  active ? 'bg-primary-100 text-primary-700' : 'bg-surface-2 text-fg-3',
+                )}
+              >
+                {o.count}
+              </span>
+            ) : null}
             <RadioGroupPrimitive.Indicator className="sr-only" />
           </RadioGroupPrimitive.Item>
         );

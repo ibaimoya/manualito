@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as GameRoute } from '@/routes/_app.game.$gameId';
+import { storage } from '@/shared/lib/storage';
 import { SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
@@ -128,17 +129,24 @@ describe('/game/$gameId · refetch fallido con cache', () => {
 describe('/game/$gameId · explicación', () => {
   it('renderiza el resumen y los acordeones cerrados, que se abren al pulsar', async () => {
     renderHub();
-    expect(await screen.findByText('Catan va de construir y comerciar.')).toBeInTheDocument();
+    // El resumen se revela letra a letra (animación del chat): espera al texto completo.
+    await waitFor(
+      () => expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
+      { timeout: 3000 },
+    );
     // Las secciones arrancan cerradas: solo los triggers, sin su contenido.
     expect(screen.getByRole('button', { name: /¿Cómo van los turnos\?/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /¿Cómo se gana\?/ })).toBeInTheDocument();
     expect(screen.queryByText('Monta el tablero y reparte piezas.')).not.toBeInTheDocument();
-    // Al abrir «Preparación», aparece su contenido.
+    // Al abrir «Preparación», su contenido aparece (también animado).
     await userEvent.setup().click(screen.getByRole('button', { name: /Preparación/ }));
-    expect(await screen.findByText('Monta el tablero y reparte piezas.')).toBeInTheDocument();
+    await waitFor(
+      () => expect(screen.getByText('Monta el tablero y reparte piezas.')).toBeInTheDocument(),
+      { timeout: 3000 },
+    );
   });
 
-  it('estado generating: muestra el aviso de "preparando" sin secciones', async () => {
+  it('estado generating: esqueleto de carga con los acordeones bloqueados', async () => {
     server.use(
       http.get('/api/games/:gameId/explanation', () =>
         HttpResponse.json({ status: 'generating', sections: null, generated_at: null }),
@@ -146,7 +154,24 @@ describe('/game/$gameId · explicación', () => {
     );
     renderHub();
     await screen.findAllByRole('heading', { name: 'Catan' });
-    expect(await screen.findByText(/preparando la explicación/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('region', { name: /Preparando la explicación/i }),
+    ).toBeInTheDocument();
+    // Misma estructura final pero sin poder desplegar mientras se genera.
+    expect(screen.getByRole('button', { name: /Preparación/ })).toBeDisabled();
+  });
+
+  it('no re-anima el resumen ya visto antes: aparece entero sin teclear', async () => {
+    // Simula una visita anterior: el resumen de este juego ya se tecleó una vez.
+    storage.markExplanationAnimated('test-game-001:summary');
+    renderHub();
+    // Cuando la explicación está lista (acordeón ya habilitado), el resumen está
+    // completo en el mismo render: sin la animación letra a letra (que lo dejaría
+    // a medias). Si re-animara, este getByText síncrono no encontraría el texto.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled(),
+    );
+    expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument();
   });
 
   it('error 404 (sin indexar): aviso con botón de reintentar', async () => {
@@ -186,7 +211,10 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
   it('no tiene violaciones de accesibilidad', async () => {
     const { container } = renderHub();
     await screen.findAllByRole('heading', { name: 'Catan' });
-    await screen.findByText('Catan va de construir y comerciar.');
+    await waitFor(
+      () => expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
+      { timeout: 3000 },
+    );
     expect(await axe(container)).toHaveNoViolations();
   });
 });

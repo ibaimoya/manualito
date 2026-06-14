@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import {
   BookOpen,
   CircleHelp,
+  Compass,
   Home,
   PanelLeftClose,
   PanelLeftOpen,
@@ -23,7 +24,7 @@ import { elideEmail } from '@/shared/lib/elideEmail';
  * iconos con label sr-only + tooltip; el estado lo gobierna el shell (_app)
  * para ajustar a la vez el padding del contenido.
  */
-type NavTo = '/home' | '/history' | '/settings' | '/about';
+type NavTo = '/home' | '/history' | '/explore' | '/settings' | '/about';
 
 type SidebarUser = Readonly<{
   username: string;
@@ -43,7 +44,8 @@ type NavItem = { to: NavTo; icon: ReactNode; label: string };
 
 const NAV_MAIN: NavItem[] = [
   { to: '/home', icon: <Home size={18} strokeWidth={1.75} />, label: 'Inicio' },
-  { to: '/history', icon: <BookOpen size={18} strokeWidth={1.75} />, label: 'Historial' },
+  { to: '/history', icon: <BookOpen size={18} strokeWidth={1.75} />, label: 'Biblioteca' },
+  { to: '/explore', icon: <Compass size={18} strokeWidth={1.75} />, label: 'Explorar' },
 ];
 
 // Utilidades de soporte, ancladas abajo junto al perfil.

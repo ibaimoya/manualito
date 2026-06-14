@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, redirect, useLocation } from '@tanstack/react-router';
-import { BookOpen, Home, Settings } from 'lucide-react';
+import { BookOpen, Compass, Home, Settings } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { Sidebar } from '@/app/Sidebar';
 import { DesktopTopbar } from '@/app/Topbar';
@@ -89,7 +89,10 @@ function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
           Inicio
         </NavItem>
         <NavItem to="/history" pathname={pathname} icon={<BookOpen size={22} strokeWidth={1.75} />}>
-          Historial
+          Biblioteca
+        </NavItem>
+        <NavItem to="/explore" pathname={pathname} icon={<Compass size={22} strokeWidth={1.75} />}>
+          Explorar
         </NavItem>
         <NavItem
           to="/settings"
@@ -109,7 +112,7 @@ function NavItem({
   icon,
   children,
 }: Readonly<{
-  to: '/home' | '/history' | '/settings';
+  to: '/home' | '/history' | '/explore' | '/settings';
   pathname: string;
   icon: ReactNode;
   children: string;

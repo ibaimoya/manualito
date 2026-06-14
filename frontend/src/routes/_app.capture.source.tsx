@@ -8,7 +8,7 @@ import {
   type ChangeEvent,
   type ReactNode,
 } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Camera,
   ChevronDown,
@@ -17,17 +17,23 @@ import {
   Image as ImageIcon,
   Sparkles,
   Trash2,
-  X,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { GameTypeahead, SelectedGameChip } from '@/features/upload/GameTypeahead';
+import { gameDetailQueryOptions } from '@/features/games/use-games';
 import { api, isAbortApiError, type GameSearchItem } from '@/shared/api/client';
+import type { GameDetail } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/capture/source')({
+  // `gameId` opcional: si entras desde el hub de un juego, llega preseleccionado.
+  validateSearch: (search: Record<string, unknown>): { gameId?: string } => ({
+    gameId: typeof search.gameId === 'string' && search.gameId ? search.gameId : undefined,
+  }),
   component: NewManualScreen,
 });
 
@@ -38,14 +44,44 @@ const MAX_PAGES = 10;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type Mode = 'images' | 'pdf';
-type CreateManualVariables = Readonly<{ game: GameSearchItem; pages: File[]; mode: Mode }>;
+type CreateManualVariables = Readonly<{
+  game: GameSearchItem;
+  pages: File[];
+  mode: Mode;
+  visibility: 'shared' | 'private';
+}>;
+
+/** Reduce el detalle del hub a la forma que consume el paso 1. */
+function toGameSearchItem(detail: GameDetail): GameSearchItem {
+  return {
+    id: detail.id,
+    name: detail.name,
+    bgg_id: detail.bgg_id,
+    year_published: detail.year_published,
+    manuals_count: detail.manuals.length,
+  };
+}
 
 function NewManualScreen() {
   const navigate = useNavigate();
-  const [game, setGame] = useState<GameSearchItem | null>(null);
+  const { gameId } = Route.useSearch();
+  // Juego de origen (si entras desde su hub) preseleccionado; solo valor inicial.
+  const presetDetail = useQuery({
+    ...gameDetailQueryOptions(gameId ?? ''),
+    enabled: Boolean(gameId),
+  });
+  const presetGame = useMemo(
+    () => (presetDetail.data ? toGameSearchItem(presetDetail.data) : null),
+    [presetDetail.data],
+  );
+  // `undefined` ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
+  const [chosenGame, setChosenGame] = useState<GameSearchItem | null | undefined>(undefined);
+  const game = chosenGame === undefined ? presetGame : chosenGame;
   const [pages, setPages] = useState<File[]>([]);
   // Un manual usa imágenes XOR un PDF, nunca ambos.
   const [mode, setMode] = useState<Mode | null>(null);
+  // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
+  const [share, setShare] = useState(true);
 
   const cameraInputId = useId();
   const galleryInputId = useId();
@@ -61,12 +97,22 @@ function NewManualScreen() {
       const signal = abortRef.current.signal;
       if (input.mode === 'pdf') {
         return api.createManual(
-          { title: input.game.name, gameId: input.game.id, pdf: input.pages[0]! },
+          {
+            title: input.game.name,
+            gameId: input.game.id,
+            pdf: input.pages[0]!,
+            visibility: input.visibility,
+          },
           signal,
         );
       }
       return api.createManual(
-        { title: input.game.name, gameId: input.game.id, images: input.pages },
+        {
+          title: input.game.name,
+          gameId: input.game.id,
+          images: input.pages,
+          visibility: input.visibility,
+        },
         signal,
       );
     },
@@ -97,7 +143,7 @@ function NewManualScreen() {
       toast.warning('Añade páginas', { description: 'Usa la cámara, la galería o sube un PDF.' });
       return;
     }
-    mutation.mutate({ game, pages: [...pages], mode });
+    mutation.mutate({ game, pages: [...pages], mode, visibility: share ? 'shared' : 'private' });
   }
 
   function addImages(incoming: File[]): void {
@@ -173,25 +219,15 @@ function NewManualScreen() {
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar
         crumb="Nuevo manual"
-        back={
-          <button
-            type="button"
-            onClick={() => navigate({ to: '/home' }).catch(() => undefined)}
-            className="grid size-10 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-            aria-label="Cancelar y volver al inicio"
-          >
-            <X size={20} strokeWidth={2} />
-          </button>
-        }
       />
 
       <div className="mx-auto grid w-full max-w-6xl flex-1 gap-8 p-5 md:grid-cols-2 md:gap-10 md:p-8">
         <section className="flex flex-col gap-5">
           <StepHeader n={1} title="Elige el juego" done={game !== null} />
           {game ? (
-            <SelectedGameChip game={game} onChange={() => setGame(null)} />
+            <SelectedGameChip game={game} onChange={() => setChosenGame(null)} />
           ) : (
-            <GameTypeahead onSelect={setGame} focusOnMount />
+            <GameTypeahead onSelect={setChosenGame} focusOnMount />
           )}
           <p className="text-sm leading-relaxed text-fg-2">
             Buscamos el juego en BoardGameGeek para asociar el manual a su biblioteca y mejorar las
@@ -283,6 +319,8 @@ function NewManualScreen() {
             </div>
           )}
 
+          <ShareToggle checked={share} onChange={setShare} disabled={busy} />
+
           <Button
             block
             size="lg"
@@ -326,6 +364,66 @@ function StepHeader({ n, title, done }: Readonly<{ n: number; title: string; don
       </span>
       <h2 className="font-display text-lg font-bold tracking-tight text-fg">{title}</h2>
     </div>
+  );
+}
+
+/**
+ * Interruptor «compartir con la comunidad»: toda la tarjeta es el control
+ * (role=switch) para una zona táctil amplia; la pastilla de la derecha es decorativa.
+ */
+function ShareToggle({
+  checked,
+  onChange,
+  disabled,
+}: Readonly<{ checked: boolean; onChange: (next: boolean) => void; disabled: boolean }>) {
+  const helpId = useId();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label="Compartir el manual con la comunidad"
+      aria-describedby={helpId}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'flex w-full items-center gap-3.5 rounded-2xl border bg-surface p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
+        checked ? 'border-primary/40' : 'border-border',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-surface-2',
+      )}
+    >
+      <span
+        className={cn(
+          'grid size-9 shrink-0 place-items-center rounded-xl border transition-colors',
+          checked
+            ? 'border-primary/30 bg-primary-100 text-primary-700'
+            : 'border-border bg-bg text-fg-3',
+        )}
+        aria-hidden="true"
+      >
+        <Users size={18} strokeWidth={2} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-fg">Compartir con la comunidad</span>
+        <span id={helpId} className="mt-0.5 block text-xs leading-relaxed text-fg-3">
+          Ayuda a otros a preguntar sin subir su manual.
+        </span>
+      </span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ease-[var(--ease-mn)]',
+          checked ? 'bg-primary' : 'bg-surface-2',
+        )}
+      >
+        <span
+          className={cn(
+            'inline-block size-5 rounded-full bg-card shadow-sm transition-transform duration-200 ease-[var(--ease-mn)]',
+            checked ? 'translate-x-[22px]' : 'translate-x-0.5',
+          )}
+        />
+      </span>
+    </button>
   );
 }
 
@@ -421,6 +519,7 @@ function PageRow({
           </>
         )}
         <IconButton
+          danger
           label={isPdf ? 'Quitar PDF' : `Quitar página ${index + 1}`}
           disabled={disabled}
           onClick={() => onRemove(index)}
@@ -495,13 +594,20 @@ function IconButton({
   disabled,
   onClick,
   icon,
-}: Readonly<{ label: string; disabled: boolean; onClick: () => void; icon: ReactNode }>) {
+  danger = false,
+}: Readonly<{
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  danger?: boolean;
+}>) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon"
-      className="size-9"
+      className={cn('size-9', danger && 'text-fg-3 hover:bg-error-bg hover:text-error')}
       aria-label={label}
       disabled={disabled}
       onClick={onClick}

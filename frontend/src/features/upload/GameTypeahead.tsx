@@ -1,9 +1,21 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Check, Dice5, Info, RotateCw, Search, WifiOff, X } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import {
+  Check,
+  Dice5,
+  FileText,
+  Info,
+  Loader2,
+  Plus,
+  RotateCw,
+  Search,
+  WifiOff,
+  X,
+} from 'lucide-react';
 import { api, type GameSearchItem } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
+import { toastApiError } from '@/shared/lib/toastApiError';
 
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 250;
@@ -11,6 +23,8 @@ const DEBOUNCE_MS = 250;
 type Props = Readonly<{
   onSelect: (game: GameSearchItem) => void;
   focusOnMount?: boolean;
+  /** En la subida (true) ofrece crear el juego ausente de BGG; al explorar (false), no. */
+  allowCreate?: boolean;
 }>;
 
 type Status = 'idle' | 'typing' | 'loading' | 'results' | 'empty' | 'error';
@@ -20,7 +34,7 @@ type Status = 'idle' | 'typing' | 'loading' | 'results' | 'empty' | 'error';
  * Combobox accesible (WAI-ARIA): flechas para navegar, Enter para elegir,
  * Esc para limpiar. Muestra la atribución BGG que exige su ToU.
  */
-export function GameTypeahead({ onSelect, focusOnMount }: Props) {
+export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Props) {
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -40,6 +54,18 @@ export function GameTypeahead({ onSelect, focusOnMount }: Props) {
     enabled,
     staleTime: 60_000,
     retry: false,
+  });
+
+  // Fallback: si el juego no está en BGG, se crea en la BD y se elige al vuelo.
+  const createMutation = useMutation({
+    mutationFn: (name: string) => api.createGame(name),
+    onSuccess: onSelect,
+    onError: (error) =>
+      toastApiError(error, 'create-game', {
+        title: 'No hemos podido crear el juego',
+        id: 'create-game-error',
+        description: 'Inténtalo de nuevo en un momento.',
+      }),
   });
 
   const games = data?.games ?? [];
@@ -147,6 +173,9 @@ export function GameTypeahead({ onSelect, focusOnMount }: Props) {
           onRetry={() => {
             refetch().catch(() => undefined);
           }}
+          allowCreate={allowCreate}
+          creating={createMutation.isPending}
+          onCreate={() => createMutation.mutate(debounced)}
         />
       ) : null}
     </div>
@@ -176,6 +205,9 @@ function ResultsDropdown({
   onPick,
   onHover,
   onRetry,
+  allowCreate,
+  creating,
+  onCreate,
 }: Readonly<{
   status: Status;
   games: GameSearchItem[];
@@ -185,6 +217,9 @@ function ResultsDropdown({
   onPick: (game: GameSearchItem) => void;
   onHover: (index: number) => void;
   onRetry: () => void;
+  allowCreate: boolean;
+  creating: boolean;
+  onCreate: () => void;
 }>) {
   return (
     <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
@@ -205,7 +240,14 @@ function ResultsDropdown({
             ))
           : null}
 
-        {status === 'empty' ? <EmptyResult /> : null}
+        {status === 'empty' ? (
+          <EmptyResult
+            query={query}
+            allowCreate={allowCreate}
+            creating={creating}
+            onCreate={onCreate}
+          />
+        ) : null}
         {status === 'error' ? <ErrorResult onRetry={onRetry} /> : null}
       </ul>
       <BggAttribution />
@@ -213,16 +255,56 @@ function ResultsDropdown({
   );
 }
 
-function EmptyResult() {
+/**
+ * Sin coincidencias. En la subida se ofrece crear el juego a mano y elegirlo
+ * al vuelo; al explorar solo se sugiere reformular la búsqueda.
+ */
+function EmptyResult({
+  query,
+  allowCreate,
+  creating,
+  onCreate,
+}: Readonly<{ query: string; allowCreate: boolean; creating: boolean; onCreate: () => void }>) {
+  // Acorta el nombre largo para que el botón no desborde; el truncate cubre el resto.
+  const label = query.length > 32 ? `${query.slice(0, 32).trimEnd()}…` : query;
   return (
-    <li className="px-4 py-6 text-center">
+    <li className="px-4 py-5 text-center">
       <span className="mx-auto mb-2.5 grid size-11 place-items-center rounded-full bg-surface text-fg-3">
         <Search size={20} aria-hidden="true" />
       </span>
-      <p className="text-sm font-semibold text-fg">No encontramos ese juego</p>
-      <p className="mt-1 text-xs text-fg-3">
-        Revisa la ortografía o prueba con el nombre original.
-      </p>
+      {allowCreate ? (
+        <>
+          <p className="text-sm font-semibold text-fg">No está en BoardGameGeek</p>
+          <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
+            Añádelo tú y podrás subir su manual igualmente.
+          </p>
+          <button
+            type="button"
+            // mousedown (no click): crea antes de que el input pierda el foco.
+            onMouseDown={(event) => {
+              event.preventDefault();
+              onCreate();
+            }}
+            disabled={creating}
+            aria-busy={creating}
+            className="mx-auto mt-3 inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg bg-primary pl-2.5 pr-3 text-sm font-semibold text-fg-inv transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {creating ? (
+              <Loader2 size={15} strokeWidth={2.25} className="shrink-0 animate-spin" aria-hidden="true" />
+            ) : (
+              <Plus size={15} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+            )}
+            <span className="min-w-0 truncate">Crear «{label}»</span>
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold text-fg">No encontramos ese juego</p>
+          <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
+            Prueba con otro nombre o revisa la ortografía.
+          </p>
+        </>
+      )}
     </li>
   );
 }
@@ -348,6 +430,15 @@ function ResultRow({
         <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
           {highlightMatch(game.name, query, MIN_CHARS)}
         </span>
+        {game.manuals_count > 0 ? (
+          <span
+            className="mono inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-100 px-1.5 py-0.5 text-[10px] font-bold text-primary-700"
+            title={`${game.manuals_count} ${game.manuals_count === 1 ? 'manual compartido' : 'manuales compartidos'}`}
+          >
+            <FileText size={10} strokeWidth={2.5} aria-hidden="true" />
+            {game.manuals_count}
+          </span>
+        ) : null}
         <span className="mono shrink-0 text-xs text-fg-3">{game.year_published ?? 's/f'}</span>
       </button>
     </li>

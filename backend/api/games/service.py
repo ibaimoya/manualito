@@ -21,6 +21,8 @@ from api.games.schemas import (
     GamePoolManualItem,
     GameSearchItem,
     GameSearchResponse,
+    MyGameItem,
+    MyGamesResponse,
 )
 from api.ratings.repository import get_user_rating
 from api.ratings.schemas import RatingResponse
@@ -60,6 +62,40 @@ async def search_game_catalog(
     return GameSearchResponse(
         games=[GameSearchItem.model_validate(row) for row in rows]
     )
+
+
+async def create_manual_game(
+    session: AsyncSession,
+    *,
+    name: str,
+    created_by_user_id: UUID,
+) -> GameSearchItem:
+    """Da de alta un juego ausente de BGG y lo deja listo para elegir."""
+    row = await repository.create_manual_game(
+        session,
+        name=name,
+        name_key=build_game_name_key(name),
+        created_by_user_id=created_by_user_id,
+    )
+    return GameSearchItem(
+        id=row.id,
+        name=row.name,
+        bgg_id=row.bgg_id,
+        year_published=row.year_published,
+        manuals_count=0,
+    )
+
+
+async def list_my_games(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    limit: int,
+    offset: int,
+) -> MyGamesResponse:
+    """Biblioteca del usuario: juegos con los que ha interactuado, por actividad."""
+    rows = await repository.list_my_games(session, user_id=user_id, limit=limit, offset=offset)
+    return MyGamesResponse(games=[MyGameItem.model_validate(row) for row in rows])
 
 
 async def get_game_detail(

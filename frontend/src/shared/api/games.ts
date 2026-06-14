@@ -58,8 +58,31 @@ export interface RateGameInput {
   note?: string;
 }
 
+export interface MyGame {
+  id: string;
+  name: string;
+  bgg_id: number | null;
+  year_published: number | null;
+  manuals_count: number;
+  conversations_count: number;
+  last_activity_at: string;
+}
+
+export interface MyGamesResponse {
+  games: MyGame[];
+}
+
 
 export const gamesApi = {
+  /** GET /api/games/mine — juegos con los que el usuario ha interactuado. */
+  async listMine(signal?: AbortSignal): Promise<MyGamesResponse> {
+    return request<MyGamesResponse>('/games/mine', {
+      method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
   /** GET /api/games/{id} — hub del juego con la vista personal del usuario. */
   async detail(gameId: string, signal?: AbortSignal): Promise<GameDetail> {
     return request<GameDetail>(`/games/${encodeURIComponent(gameId)}`, {

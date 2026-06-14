@@ -1,20 +1,20 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, X } from 'lucide-react';
-import type { ManualSummary } from '@/shared/api/client';
+import { CornerDownLeft, Search, X } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
 
-type Props = Readonly<{ manuals: ManualSummary[] }>;
+export type JumpGame = Readonly<{ id: string; name: string }>;
+
+type Props = Readonly<{ games: ReadonlyArray<JumpGame> }>;
 
 const MAX_RESULTS = 8;
 
 /**
- * Buscador con dropdown (combobox) sobre los juegos ya guardados. Mismo
- * patrón visual que el typeahead de BGG, pero filtra en local y al elegir
- * navega al hub de su juego; sin atribución externa.
+ * Buscador de la pestaña Juegos: filtra tus juegos en local y al elegir salta a
+ * su hub. Combobox accesible (flechas, Enter, Esc), sin red ni atribución.
  */
-export function SavedGameSearch({ manuals }: Props) {
+export function GameJumpSearch({ games }: Props) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -24,16 +24,14 @@ export function SavedGameSearch({ manuals }: Props) {
 
   const matches = useMemo(() => {
     if (term.length === 0) return [];
-    return manuals
-      .filter((m) => (m.title ?? m.game_name).toLowerCase().includes(term))
-      .slice(0, MAX_RESULTS);
-  }, [manuals, term]);
+    return games.filter((g) => g.name.toLowerCase().includes(term)).slice(0, MAX_RESULTS);
+  }, [games, term]);
 
   const open = term.length > 0;
   const activeIndex = matches.length > 0 ? Math.min(highlight, matches.length - 1) : 0;
 
-  function go(manual: ManualSummary): void {
-    navigate({ to: '/game/$gameId', params: { gameId: manual.game_id } }).catch(() => undefined);
+  function go(game: JumpGame): void {
+    navigate({ to: '/game/$gameId', params: { gameId: game.id } }).catch(() => undefined);
   }
 
   function reset(): void {
@@ -62,13 +60,13 @@ export function SavedGameSearch({ manuals }: Props) {
   }
 
   return (
-    <div className="relative md:w-80">
+    <div className="relative w-full md:w-80">
       <div
         className={cn(
           'flex h-11 items-center gap-2.5 border bg-bg px-3.5 transition-colors',
           open
             ? 'rounded-t-2xl border-primary'
-            : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
+            : 'rounded-2xl border-border-strong shadow-xs focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
         <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
@@ -88,7 +86,7 @@ export function SavedGameSearch({ manuals }: Props) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Buscar entre tus juegos…"
-          aria-label="Buscar tus juegos"
+          aria-label="Saltar a un juego"
           className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
         {query.length > 0 ? (
@@ -100,21 +98,28 @@ export function SavedGameSearch({ manuals }: Props) {
           >
             <X size={16} aria-hidden="true" />
           </button>
-        ) : null}
+        ) : (
+          <span
+            className="mono hidden shrink-0 items-center gap-1 text-[10px] text-fg-3 sm:flex"
+            aria-hidden="true"
+          >
+            <CornerDownLeft size={12} /> saltar
+          </span>
+        )}
       </div>
 
       {open ? (
         <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
           <ul id={listId} aria-label="Tus juegos" className="max-h-72 overflow-y-auto">
             {matches.length > 0 ? (
-              matches.map((manual, index) => (
+              matches.map((game, index) => (
                 <ResultRow
-                  key={manual.id}
+                  key={game.id}
                   id={`${listId}-opt-${index}`}
-                  manual={manual}
+                  game={game}
                   query={term}
                   active={index === activeIndex}
-                  onPick={() => go(manual)}
+                  onPick={() => go(game)}
                   onHover={() => setHighlight(index)}
                 />
               ))
@@ -132,20 +137,19 @@ export function SavedGameSearch({ manuals }: Props) {
 
 function ResultRow({
   id,
-  manual,
+  game,
   query,
   active,
   onPick,
   onHover,
 }: Readonly<{
   id: string;
-  manual: ManualSummary;
+  game: JumpGame;
   query: string;
   active: boolean;
   onPick: () => void;
   onHover: () => void;
 }>) {
-  const name = manual.title ?? manual.game_name;
   return (
     <li>
       <button
@@ -162,14 +166,12 @@ function ResultRow({
         )}
       >
         <span className="mono grid size-9 shrink-0 place-items-center rounded-lg bg-primary-100 text-[11px] font-bold text-primary-700">
-          {name.slice(0, 2).toUpperCase()}
+          {game.name.slice(0, 2).toUpperCase()}
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">
-          {highlightMatch(name, query)}
+          {highlightMatch(game.name, query)}
         </span>
-        <span className="mono shrink-0 text-[11px] text-fg-3">{manual.chunks_indexed} frag.</span>
       </button>
     </li>
   );
 }
-

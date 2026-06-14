@@ -118,8 +118,18 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
         <h2 id="home-recent" className="font-display text-base font-bold text-fg md:text-lg">
           Recientes
         </h2>
-        <Link to="/history" className="text-sm font-semibold text-accent">
-          Ver todo
+        <Link
+          to="/history"
+          aria-label="Ver todos tus juegos"
+          className="group/all inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-accent transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+        >
+          <span className="underline-offset-4 group-hover/all:underline">Ver todo</span>
+          <ArrowRight
+            size={15}
+            strokeWidth={2.25}
+            aria-hidden="true"
+            className="transition-[translate] duration-150 ease-[var(--ease-mn)] group-hover/all:translate-x-0.5"
+          />
         </Link>
       </div>
       <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">

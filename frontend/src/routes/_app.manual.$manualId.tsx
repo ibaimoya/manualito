@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { BackLink, ScreenTopBar } from '@/app/Topbar';
+import { ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
@@ -41,6 +41,11 @@ import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 export const Route = createFileRoute('/_app/manual/$manualId')({
+  // `page` opcional: las citas del chat abren el manual en la página citada.
+  validateSearch: (search: Record<string, unknown>): { page?: number } => {
+    const page = Number(search.page);
+    return Number.isInteger(page) && page > 0 ? { page } : {};
+  },
   component: ManualDetailScreen,
 });
 
@@ -78,6 +83,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 function ManualDetailScreen() {
   const { manualId } = Route.useParams();
+  const { page } = Route.useSearch();
   const detail = useQuery(manualDetailQueryOptions(manualId));
 
   if (detail.isPending) {
@@ -106,7 +112,7 @@ function ManualDetailScreen() {
     );
   }
   // key: el estado por manual no debe sobrevivir a un cambio de manual.
-  return <ManualDetailLoaded key={detail.data.id} manual={detail.data} />;
+  return <ManualDetailLoaded key={detail.data.id} manual={detail.data} initialPage={page} />;
 }
 
 function ManualShell({
@@ -123,18 +129,24 @@ function ManualShell({
       <ScreenTopBar
         crumb={crumb}
         trail={trail}
-        back={<BackLink label="Volver al historial" link={linkOptions({ to: '/history' })} />}
       />
       {children}
     </div>
   );
 }
 
-function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse }>) {
+function ManualDetailLoaded({
+  manual,
+  initialPage,
+}: Readonly<{ manual: ManualDetailResponse; initialPage?: number }>) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pages = manual.pages;
-  const [activePage, setActivePage] = useState(pages[0]!.page_number);
+  const [activePage, setActivePage] = useState(() =>
+    initialPage !== undefined && pages.some((item) => item.page_number === initialPage)
+      ? initialPage
+      : pages[0]!.page_number,
+  );
   const [editingPage, setEditingPage] = useState<number | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [reprocessOpen, setReprocessOpen] = useState(false);
@@ -264,8 +276,7 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
   const title = manual.title ?? manual.game_name;
   // Sin esto, el manual titulado como el juego pinta «Monopoly > Monopoly».
   const crumb = title === manual.game_name ? 'Texto extraído' : title;
-  // El detalle no trae source_type; se infiere del origen del texto de las páginas.
-  const sourceIsPdf = pages.some((item) => item.text_source === 'pdf_text');
+  const sourceIsPdf = manual.source_type === 'pdf';
   const activeMatch =
     search.active !== null && search.active.pageNumber === page.page_number
       ? search.active.indexInPage
@@ -280,7 +291,7 @@ function ManualDetailLoaded({ manual }: Readonly<{ manual: ManualDetailResponse 
     <ManualShell
       crumb={crumb}
       trail={[
-        { label: 'Historial', link: linkOptions({ to: '/history' }) },
+        { label: 'Biblioteca', link: linkOptions({ to: '/history' }) },
         {
           label: manual.game_name,
           link: linkOptions({ to: '/game/$gameId', params: { gameId: manual.game_id } }),

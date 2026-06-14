@@ -168,6 +168,14 @@ kbd {
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* Tailwind v4 quitó el `cursor: pointer` por defecto de los botones; lo
+     reponemos para que cualquier control clicable muestre la mano (los `<a>`
+     ya lo traen de nativo). Los deshabilitados conservan su propio cursor. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -354,7 +362,12 @@ input[type='radio'] {
     color: revert !important;
     box-shadow: revert !important;
     border-color: revert !important;
+    /* Tailwind v4 reparte el transform en propiedades propias: hay que revertir
+       las tres, no solo `transform`, o el hover «pegajoso» sobreviviría al tap. */
     transform: revert !important;
+    translate: revert !important;
+    scale: revert !important;
+    rotate: revert !important;
     transition-duration: 0ms !important;
   }
   /* Mantenemos `:active` como feedback de tap inmediato y corto. */

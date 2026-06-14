@@ -22,7 +22,7 @@ function SettingsScreen() {
   function wipeLocalData(): void {
     storage.wipeAll();
     storage.resetOnboarding();
-    void clearApiSwCache();
+    clearApiSwCache().catch(() => undefined);
     toast.success('Datos locales borrados');
     setConfirmingWipe(false);
   }

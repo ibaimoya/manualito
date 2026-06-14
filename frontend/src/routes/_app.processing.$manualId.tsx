@@ -47,8 +47,8 @@ function ProcessingScreen() {
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar crumb={safeName} />
 
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
-        <div className="flex flex-col items-center gap-4 pt-2">
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-6">
+        <div className="flex flex-col items-center gap-4">
           <div className="relative grid h-28 w-28 place-items-center rounded-full bg-primary-100">
             <div
               className={cn(

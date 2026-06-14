@@ -1,4 +1,4 @@
-"""Siembra un catalogo inicial limitado de juegos BGG.
+"""Siembra un catálogo inicial limitado de juegos BGG.
 
 Revision ID: 0007
 Revises: 0006
@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 
 GAMES_TABLE = "games"
 MANUALS_TABLE = "manuals"
-SEED_GAME_LIMIT = 100
+SEED_GAME_LIMIT = 120
 
 BGG_SEED_GAMES: tuple[tuple[int, str, int | None], ...] = (
     (174430, "Gloomhaven", 2017),
@@ -56,15 +56,11 @@ BGG_SEED_GAMES: tuple[tuple[int, str, int | None], ...] = (
     (3076, "Puerto Rico", 2002),
     (31260, "Agricola", 2007),
     (324856, "The Crew: Mission Deep Sea", 2021),
-    (167355, "Nemesis", 2018),
     (256960, "Pax Pamir: Second Edition", 2019),
     (251247, "Barrage", 2019),
     (276025, "Maracaibo", 2019),
     (180263, "The 7th Continent", 2017),
-    (264220, "Tainted Grail: The Fall of Avalon", 2019),
-    (192135, "Too Many Bones", 2017),
     (191189, "Aeon's End", 2016),
-    (205637, "Arkham Horror: The Card Game", 2016),
     (124742, "Android: Netrunner", 2012),
     (28143, "Race for the Galaxy", 2007),
     (164928, "Orleans", 2014),
@@ -91,7 +87,6 @@ BGG_SEED_GAMES: tuple[tuple[int, str, int | None], ...] = (
     (157969, "Sheriff of Nottingham", 2014),
     (40692, "Small World", 2009),
     (41114, "The Resistance", 2009),
-    (188834, "Secret Hitler", 2016),
     (46213, "Telestrations", 2009),
     (70323, "King of Tokyo", 2011),
     (194655, "Santorini", 2016),
@@ -101,19 +96,27 @@ BGG_SEED_GAMES: tuple[tuple[int, str, int | None], ...] = (
     (160477, "Onitama", 2014),
     (624, "Quoridor", 1997),
     (171, "Chess", None),
+    (188, "Go", None),
+    (811, "Rummikub", 1977),
     (181, "Risk", 1959),
+    (2136, "Parchís", None),
+    (2392, "Mastermind", 1971),
+    (2394, "Dominó", None),
+    (2425, "Hundir la flota", 1931),
+    (2452, "Jenga", 1983),
+    (2719, "Conecta 4", 1974),
+    (2785, "La Oca", None),
     (1406, "Monopoly", 1935),
     (1294, "Clue", 1949),
+    (1917, "Stratego", 1946),
+    (2281, "Pictionary", 1985),
     (320, "Scrabble", 1948),
     (2223, "UNO", 1971),
+    (4143, "Quién es quién", 1979),
+    (5894, "Twister", 1966),
+    (5895, "Tragabolas", 1978),
     (284083, "The Crew: The Quest for Planet Nine", 2019),
     (131357, "Coup", 2012),
-    (10547, "Betrayal at House on the Hill", 2004),
-    (150376, "Dead of Winter: A Crossroads Game", 2014),
-    (205059, "Mansions of Madness: Second Edition", 2016),
-    (146021, "Eldritch Horror", 2013),
-    (113924, "Zombicide", 2012),
-    (170216, "Blood Rage", 2015),
     (185343, "Anachrony", 2017),
     (266810, "Paladins of the West Kingdom", 2019),
     (236457, "Architects of the West Kingdom", 2018),

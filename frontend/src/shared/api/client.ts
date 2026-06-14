@@ -46,6 +46,8 @@ export interface ManualSummary {
   title: string | null;
   status: ManualStatus;
   visibility: ManualVisibility;
+  source_type: 'images' | 'pdf';
+  page_count: number;
   language: string | null;
   chunks_indexed: number;
   created_at: string;
@@ -265,6 +267,17 @@ export const api = {
   async searchGames(query: string, signal?: AbortSignal): Promise<GameSearchResponse> {
     return request<GameSearchResponse>(`/games?q=${encodeURIComponent(query)}&limit=5`, {
       method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** POST /api/games — alta de un juego ausente de BGG; lo deja seleccionable. */
+  async createGame(name: string, signal?: AbortSignal): Promise<GameSearchItem> {
+    return request<GameSearchItem>('/games', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+      headers: JSON_HEADERS,
       timeoutMs: TIMEOUT.QUICK,
       signal,
     });

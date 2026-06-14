@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -11,7 +12,7 @@ import {
 import { type ReactNode } from 'react';
 import { DesktopTopbar, ScreenTopBar } from '@/app/Topbar';
 
-function renderInRouter(node: ReactNode) {
+function renderInRouter(node: ReactNode, initialEntries: string[] = ['/home']) {
   const root = createRootRoute({ component: Outlet });
   const home = createRoute({
     getParentRoute: () => root,
@@ -30,7 +31,7 @@ function renderInRouter(node: ReactNode) {
   });
   const router = createRouter({
     routeTree: root.addChildren([home, settings, profile]),
-    history: createMemoryHistory({ initialEntries: ['/home'] }),
+    history: createMemoryHistory({ initialEntries }),
   });
   return render(<RouterProvider router={router} />);
 }
@@ -40,7 +41,7 @@ describe('DesktopTopbar', () => {
     renderInRouter(<DesktopTopbar pathname="/history" />);
     const root = await screen.findByRole('link', { name: 'Inicio' });
     expect(root).toHaveAttribute('href', '/home');
-    expect(screen.getByText('Historial')).toBeInTheDocument();
+    expect(screen.getByText('Biblioteca')).toBeInTheDocument();
   });
 
   it('en la raíz no hay breadcrumb: solo el título «Inicio»', async () => {
@@ -49,6 +50,11 @@ describe('DesktopTopbar', () => {
     expect(
       screen.queryByRole('navigation', { name: 'Ruta de navegación' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('lleva la flecha de atrás, apagada cuando no hay nada detrás', async () => {
+    renderInRouter(<DesktopTopbar pathname="/home" />, ['/home']);
+    expect(await screen.findByRole('button', { name: 'Atrás' })).toBeDisabled();
   });
 });
 
@@ -60,15 +66,25 @@ describe('ScreenTopBar', () => {
     expect(screen.getAllByText('Catan').length).toBeGreaterThan(0);
   });
 
-  it('renderiza las acciones y el control de volver de la pantalla', async () => {
+  it('siempre muestra el botón de atrás y las acciones', async () => {
     renderInRouter(
-      <ScreenTopBar
-        crumb="Catan"
-        back={<button type="button">Volver</button>}
-        actions={<button type="button">Ver texto</button>}
-      />,
+      <ScreenTopBar crumb="Catan" actions={<button type="button">Ver texto</button>} />,
     );
-    expect(await screen.findByRole('button', { name: 'Volver' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Atrás' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver texto' })).toBeInTheDocument();
+  });
+
+  it('sin pila detrás, «Atrás» está apagado (no clicable)', async () => {
+    renderInRouter(<ScreenTopBar crumb="Catan" />, ['/home']);
+    expect(await screen.findByRole('button', { name: 'Atrás' })).toBeDisabled();
+  });
+
+  it('con pila detrás, «Atrás» está activo y vuelve a la pantalla anterior', async () => {
+    const user = userEvent.setup();
+    renderInRouter(<ScreenTopBar crumb="Catan" />, ['/profile', '/home']);
+    const back = await screen.findByRole('button', { name: 'Atrás' });
+    expect(back).toBeEnabled();
+    await user.click(back);
+    expect(await screen.findByText('Perfil')).toBeInTheDocument();
   });
 });

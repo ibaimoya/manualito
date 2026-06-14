@@ -26,6 +26,8 @@ const SAMPLE_MANUAL_SUMMARY = {
   title: 'Catan',
   status: 'active',
   visibility: 'private',
+  source_type: 'pdf',
+  page_count: 8,
   language: 'spa',
   chunks_indexed: 0,
   created_at: '2026-05-26T10:00:00.000Z',

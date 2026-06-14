@@ -742,6 +742,8 @@ def _manual_summary_query(owner_user_id: UUID) -> Select:
             Manual.title,
             Manual.status,
             Manual.visibility,
+            Manual.source_type,
+            Manual.page_count,
             Manual.language,
             Manual.chunks_indexed,
             Manual.created_at,

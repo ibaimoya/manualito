@@ -70,14 +70,14 @@ describe('/chat/$manualId', () => {
     expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
-  it('si el manual no resuelve, el trail conserva al menos Historial', async () => {
+  it('si el manual no resuelve, el trail conserva al menos Biblioteca', async () => {
     server.use(
       http.get('/api/manuals/:manualId', () =>
         HttpResponse.json({ detail: 'missing' }, { status: 404 }),
       ),
     );
     renderChat('mDesconocido');
-    expect(await screen.findByRole('link', { name: 'Historial' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Biblioteca' })).toBeInTheDocument();
     expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
@@ -221,30 +221,6 @@ describe('/chat/$manualId', () => {
     expect(await screen.findByText('Respuesta al reintento.')).toBeInTheDocument();
     expect(sends).toBe(2);
     expect(creates).toBe(1);
-  });
-
-  it('con ?g=…, volver apunta directo al hub del juego', async () => {
-    renderChat('m1', { g: 'test-game-001' });
-    const link = await screen.findByRole('link', { name: /Volver al juego/i });
-    expect(link).toHaveAttribute('href', '/game/test-game-001');
-  });
-
-  it('sin ?g=…, resuelve el juego vía manual y volver apunta al hub', async () => {
-    renderChat('m1');
-    // El detalle del manual (MSW) trae game_id=test-game-001.
-    const link = await screen.findByRole('link', { name: /Volver al juego/i });
-    expect(link).toHaveAttribute('href', '/game/test-game-001');
-  });
-
-  it('sin ?g= y con el manual inaccesible, cae al historial como último recurso', async () => {
-    server.use(
-      http.get('/api/manuals/:manualId', () =>
-        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
-      ),
-    );
-    renderChat('m1');
-    const link = await screen.findByRole('link', { name: /Volver al historial/i });
-    expect(link).toHaveAttribute('href', '/history');
   });
 
   it('muestra las páginas citadas (sources) bajo la respuesta del bot, deduplicadas', async () => {

@@ -8,6 +8,15 @@ export function gameDetailKey(gameId: string) {
   return [...GAMES_KEY, 'detail', gameId] as const;
 }
 
+/** Biblioteca del usuario: juegos con los que ha interactuado, por actividad. */
+export function myGamesQueryOptions() {
+  return queryOptions({
+    queryKey: [...GAMES_KEY, 'mine'] as const,
+    queryFn: ({ signal }) => gamesApi.listMine(signal),
+    staleTime: 30_000,
+  });
+}
+
 /** Hub del juego: meta + valoración propia + pool de manuales. */
 export function gameDetailQueryOptions(gameId: string) {
   return queryOptions({

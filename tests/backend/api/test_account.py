@@ -32,7 +32,9 @@ _FAKE_SESSION = object()
 _USER_ID = uuid4()
 _SESSION_ID = uuid4()
 _NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
-_VALID_PASSWORD = "meeple-azul-91"
+_FAKE_HASH = "hash-value"  # placeholder de hash en fixtures, no es una credencial
+_FAKE_OLD_HASH = "hash-anterior"  # placeholder de hash en fixtures, no es una credencial
+_VALID_CREDENTIAL = "meeple-azul-91"
 
 
 @pytest.fixture(autouse=True)
@@ -179,13 +181,13 @@ def test_change_password_delegates_and_confirms(
 
     response = client.post(
         "/api/me/password",
-        json={"current_password": "la-anterior-123", "new_password": _VALID_PASSWORD},
+        json={"current_password": "la-anterior-123", "new_password": _VALID_CREDENTIAL},
     )
 
     assert response.status_code == 200
     assert response.json()["detail"] == "Contraseña actualizada."
     change_mock.assert_awaited_once()
-    assert change_mock.await_args.kwargs["new_password"] == _VALID_PASSWORD
+    assert change_mock.await_args.kwargs["new_password"] == _VALID_CREDENTIAL
 
 
 def test_change_password_wrong_current_returns_401(
@@ -201,7 +203,7 @@ def test_change_password_wrong_current_returns_401(
 
     response = client.post(
         "/api/me/password",
-        json={"current_password": "equivocada", "new_password": _VALID_PASSWORD},
+        json={"current_password": "equivocada", "new_password": _VALID_CREDENTIAL},
     )
 
     assert response.status_code == 401
@@ -238,7 +240,7 @@ def test_change_password_is_rate_limited(
     responses = [
         client.post(
             "/api/me/password",
-            json={"current_password": "la-anterior-123", "new_password": _VALID_PASSWORD},
+            json={"current_password": "la-anterior-123", "new_password": _VALID_CREDENTIAL},
         )
         for _index in range(6)
     ]
@@ -428,7 +430,7 @@ def test_change_password_service_rejects_wrong_current(monkeypatch):
                 session,
                 auth=_service_auth(user),
                 current_password="equivocada",
-                new_password=_VALID_PASSWORD,
+                new_password=_VALID_CREDENTIAL,
                 ip_address=None,
             )
         )
@@ -466,7 +468,7 @@ def test_change_password_service_revokes_other_sessions(monkeypatch):
             session,
             auth=_service_auth(user),
             current_password="la-anterior-123",
-            new_password=_VALID_PASSWORD,
+            new_password=_VALID_CREDENTIAL,
             ip_address=None,
         )
     )
@@ -553,7 +555,7 @@ def _user(
         email=email,
         username=username,
         username_key=username.casefold(),
-        password_hash="hash-value",
+        password_hash=_FAKE_HASH,
         role="user",
         status="active",
         created_at=_NOW,
@@ -570,7 +572,7 @@ def _service_user(*, email_verified_at: datetime | None = None) -> SimpleNamespa
         email="manualito@example.com",
         username="Manualito",
         username_key="manualito",
-        password_hash="hash-anterior",
+        password_hash=_FAKE_OLD_HASH,
         password_changed_at=None,
         email_verified_at=email_verified_at,
         avatar_color=None,

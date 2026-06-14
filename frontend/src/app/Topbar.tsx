@@ -1,5 +1,11 @@
-import { Link, type LinkOptions } from '@tanstack/react-router';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import {
+  Link,
+  linkOptions,
+  useCanGoBack,
+  useRouter,
+  type LinkOptions,
+} from '@tanstack/react-router';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 
@@ -12,15 +18,22 @@ import { cn } from '@/shared/lib/cn';
 
 // Misma base visual en md+: las dos barras "pegan" al cambiar de pantalla.
 const TOPBAR_CHROME =
-  'sticky top-0 z-30 h-14 items-center gap-4 border-b border-border bg-bg/95 px-4 backdrop-blur md:px-8';
+  'sticky top-0 z-30 h-14 items-center gap-4 border-b border-border bg-bg/95 px-4 backdrop-blur md:pl-5 md:pr-8';
 
 const TITLES: Record<string, string> = {
   '/home': 'Inicio',
-  '/history': 'Historial',
+  '/history': 'Biblioteca',
+  '/explore': 'Explorar',
   '/settings': 'Ajustes',
   '/profile': 'Perfil',
   '/security': 'Cuenta y seguridad',
   '/about': 'Ayuda',
+};
+
+// Tramos intermedios para rutas que cuelgan de otra: Seguridad vive bajo Perfil,
+// así que su ruta es Inicio › Perfil › Cuenta y seguridad.
+const PARENTS: Record<string, readonly CrumbLink[]> = {
+  '/security': [{ label: 'Perfil', link: linkOptions({ to: '/profile' }) }],
 };
 
 // Mismo cuerpo en todos los tramos: con tamaños mezclados los baselines no casan.
@@ -41,9 +54,14 @@ export function DesktopTopbar({
   actions,
 }: Readonly<{ pathname: string; actions?: ReactNode }>) {
   const title = TITLES[pathname] ?? 'Inicio';
+  const parents = PARENTS[pathname] ?? [];
 
   return (
     <div className={cn(TOPBAR_CHROME, 'hidden md:flex')}>
+      <div className="flex shrink-0 items-center gap-3">
+        <BackButton />
+        <span className="h-[22px] w-px bg-border" aria-hidden="true" />
+      </div>
       {/* Sin leading-none: con truncate (overflow hidden) recortaba la j/g/y. */}
       {/* En la raíz no hay breadcrumb (sería «Inicio > Inicio»): solo el título. */}
       {pathname === '/home' ? (
@@ -51,6 +69,14 @@ export function DesktopTopbar({
       ) : (
         <nav aria-label="Ruta de navegación" className="flex min-w-0 flex-1 items-center gap-1.5">
           <HomeCrumb />
+          {parents.map((item) => (
+            <Fragment key={item.label}>
+              <CrumbSeparator />
+              <Link {...item.link} className={cn(CRUMB_LINK_CLASS, 'max-w-44 truncate')}>
+                {item.label}
+              </Link>
+            </Fragment>
+          ))}
           <CrumbSeparator />
           <span aria-current="page" className={CRUMB_CURRENT_CLASS}>
             {title}
@@ -71,16 +97,31 @@ interface CrumbLink {
   link: LinkOptions;
 }
 
-/** Botón «atrás» estándar de las pantallas inmersivas (slot `back`). */
-export function BackLink({ label, link }: Readonly<{ label: string; link: LinkOptions }>) {
+/**
+ * Botón «atrás» del topbar, antes de las migajas. Se apoya en la pila del router
+ * (`history.back`). Si entraste directo (deep-link o recarga) y no hay nada detrás,
+ * se muestra apagado y no clicable: la salida es por las migajas o el menú.
+ */
+export function BackButton() {
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+
   return (
-    <Link
-      {...link}
-      aria-label={label}
-      className="grid size-10 place-items-center rounded-xl text-fg hover:bg-surface"
+    <button
+      type="button"
+      onClick={canGoBack ? () => router.history.back() : undefined}
+      disabled={!canGoBack}
+      aria-label="Atrás"
+      className={cn(
+        'grid size-8 shrink-0 place-items-center rounded-full transition-[background-color,color,translate]',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
+        canGoBack
+          ? 'text-fg-2 hover:bg-surface-2 hover:text-fg active:-translate-x-px'
+          : 'cursor-not-allowed text-fg-3 opacity-40',
+      )}
     >
-      <ArrowLeft size={22} strokeWidth={2} />
-    </Link>
+      <ChevronLeft size={18} strokeWidth={2.25} aria-hidden="true" />
+    </button>
   );
 }
 
@@ -93,18 +134,20 @@ function CrumbSeparator() {
 export function ScreenTopBar({
   crumb,
   trail,
-  back,
   actions,
 }: Readonly<{
   crumb: string;
   /** Tramos navegables entre «Manualito» y la página actual. */
   trail?: readonly CrumbLink[];
-  back?: ReactNode;
   actions?: ReactNode;
 }>) {
   return (
     <header className={cn(TOPBAR_CHROME, 'flex')}>
-      {back ? <div className="shrink-0 md:hidden">{back}</div> : null}
+      <div className="flex shrink-0 items-center gap-3">
+        <BackButton />
+        {/* Divisor entre el botón y las migajas (solo en md, donde hay migajas). */}
+        <span className="hidden h-[22px] w-px bg-border md:block" aria-hidden="true" />
+      </div>
 
       {/* md+: breadcrumb. */}
       <nav

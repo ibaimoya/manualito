@@ -77,7 +77,7 @@ export function MessageComposer({
             submit();
           }
         }}
-        className="scrollbar-slim min-w-0 flex-1 resize-none overflow-hidden bg-transparent py-[9px] text-[15.5px] leading-normal text-fg outline-none placeholder:text-fg-3"
+        className="min-w-0 flex-1 resize-none overflow-hidden bg-transparent py-[9px] text-[15.5px] leading-normal text-fg outline-none placeholder:text-fg-3"
       />
       {near ? (
         <span className="mono shrink-0 text-[11px] tabular-nums text-warning" aria-live="polite">

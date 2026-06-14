@@ -165,7 +165,7 @@ function EditBox({
           disabled={saving}
           spellCheck
           className={cn(
-            'scrollbar-slim h-full w-full resize-none bg-transparent px-7 py-6 outline-none disabled:opacity-60',
+            'h-full w-full resize-none bg-transparent px-7 py-6 outline-none disabled:opacity-60',
             TEXT_BODY,
           )}
         />
@@ -300,7 +300,7 @@ export function PageTextCard({
     );
   } else if (useConfidence) {
     body = (
-      <div ref={scrollRef} className="scrollbar-slim flex h-full flex-col gap-2 overflow-y-auto p-3.5">
+      <div ref={scrollRef} className="flex h-full flex-col gap-2 overflow-y-auto p-3.5">
         {lines.map((line, index) => {
           const meta = line.confidence == null ? null : confidenceTone(line.confidence);
           return (
@@ -322,7 +322,7 @@ export function PageTextCard({
     );
   } else {
     body = (
-      <div ref={scrollRef} className="scrollbar-slim h-full overflow-y-auto px-7 py-6">
+      <div ref={scrollRef} className="h-full overflow-y-auto px-7 py-6">
         <div className="flex flex-col gap-3.5">
           {paragraphs.map((paragraph, index) => (
             <p key={`${index}-${paragraph.slice(0, 24)}`} className={cn(TEXT_BODY, '[overflow-wrap:anywhere]')}>

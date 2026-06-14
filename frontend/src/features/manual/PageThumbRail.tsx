@@ -165,7 +165,7 @@ export function PageThumbRail({
         </div>
       </div>
 
-      <div className="scrollbar-slim flex gap-2 overflow-x-auto pb-1 md:min-h-0 md:flex-1 md:flex-col md:overflow-x-visible md:overflow-y-auto md:pb-2 md:pr-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 md:min-h-0 md:flex-1 md:flex-col md:overflow-x-visible md:overflow-y-auto md:pb-2 md:pr-1">
         {pages.map((page) => (
           <PageButton
             key={page.page_number}

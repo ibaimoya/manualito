@@ -38,7 +38,11 @@ def upgrade() -> None:
                         {ID_COLUMN},
                         row_number() OVER (
                             PARTITION BY {GAME_ID_COLUMN}
-                            ORDER BY generated_at DESC, updated_at DESC, created_at DESC, {ID_COLUMN} DESC
+                            ORDER BY
+                                generated_at DESC,
+                                updated_at DESC,
+                                created_at DESC,
+                                {ID_COLUMN} DESC
                         ) AS row_number
                     FROM {EXPLANATIONS_TABLE}
                 ) AS ranked

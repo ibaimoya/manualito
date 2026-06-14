@@ -362,7 +362,7 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
     tab === 'games'
       ? {
           title: 'Aún no sigues ningún juego',
-          hint: 'Cuando subas el manual de un juego, aparecerá aquí tu estantería. Empieza por tu favorito.',
+          hint: 'Sigue juegos desde Explorar; también empiezas a seguir uno al subir su manual, abrir un chat o valorarlo.',
         }
       : {
           title: 'Aún no has subido manuales',
@@ -383,12 +383,22 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
       </div>
       <h2 className="font-display text-[19px] font-bold text-fg">{copy.title}</h2>
       <p className="max-w-sm text-sm leading-relaxed text-fg-2">{copy.hint}</p>
-      <Button asChild size="lg" className="mt-3.5">
-        <Link to="/capture/source">
-          <Plus size={18} strokeWidth={2} />
-          Subir un manual
-        </Link>
-      </Button>
+      {/* Juegos se nutre de seguir (Explorar); subir manual va solo en Manuales. */}
+      {tab === 'games' ? (
+        <Button asChild size="lg" className="mt-3.5">
+          <Link to="/explore">
+            <Search size={18} strokeWidth={2} />
+            Explorar juegos
+          </Link>
+        </Button>
+      ) : (
+        <Button asChild size="lg" className="mt-3.5">
+          <Link to="/capture/source">
+            <Plus size={18} strokeWidth={2} />
+            Subir un manual
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }

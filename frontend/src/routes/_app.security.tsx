@@ -1,12 +1,11 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, History, Lock, Trash2 } from 'lucide-react';
+import { createFileRoute } from '@tanstack/react-router';
+import { useMutation } from '@tanstack/react-query';
+import { History, Lock } from 'lucide-react';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { dropSessionCaches } from '@/features/auth/auth-queries';
+import { DeleteAccountSection } from '@/features/account/DeleteAccount';
 import { AuthAlert } from '@/features/auth/auth-alert';
 import {
   AuthField,
@@ -14,7 +13,6 @@ import {
   NewPasswordFields,
   PasswordInput,
 } from '@/features/auth/auth-controls';
-import { accountStatsQueryOptions } from '@/features/profile/use-account';
 import { useAuth } from '@/features/auth/use-auth';
 import { accountApi } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
@@ -36,7 +34,7 @@ function SecurityScreen() {
       </header>
       <LastAccessSection lastLoginAt={user.last_login_at} />
       <ChangePasswordSection />
-      <DangerZone username={user.username} />
+      <DeleteAccountSection username={user.username} />
     </div>
   );
 }
@@ -49,7 +47,7 @@ const LAST_ACCESS_DATE = new Intl.DateTimeFormat('es-ES', {
   minute: '2-digit',
 });
 
-/** El login más reciente de la cuenta en cualquier dispositivo (señal de seguridad). */
+/** El login más reciente de la cuenta en cualquier dispositivo. */
 function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | null }>) {
   if (lastLoginAt === null) return null;
   return (
@@ -67,8 +65,7 @@ function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | nul
             {LAST_ACCESS_DATE.format(new Date(lastLoginAt))}
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-fg-3">
-            El inicio de sesión más reciente de tu cuenta. Si no lo reconoces, cambia la
-            contraseña.
+            El inicio de sesión más reciente de tu cuenta. Si no lo reconoces, cambia la contraseña.
           </p>
         </div>
       </Card>
@@ -113,8 +110,7 @@ function ChangePasswordSection() {
   function submit(event: { preventDefault: () => void }): void {
     event.preventDefault();
     setSubmitted(true);
-    const valid =
-      current.length > 0 && password.length >= MIN_PASSWORD && confirm === password;
+    const valid = current.length > 0 && password.length >= MIN_PASSWORD && confirm === password;
     if (valid) change.mutate();
   }
 
@@ -163,75 +159,6 @@ function ChangePasswordSection() {
           </div>
         </form>
       </Card>
-    </section>
-  );
-}
-
-function DangerZone({ username }: Readonly<{ username: string }>) {
-  const qc = useQueryClient();
-  const router = useRouter();
-  const stats = useQuery(accountStatsQueryOptions());
-  const confirmId = useId();
-  const [confirmation, setConfirmation] = useState('');
-  const matches = confirmation.trim().toLowerCase() === username.toLowerCase();
-
-  const remove = useMutation({
-    mutationFn: () => accountApi.deleteAccount(confirmation.trim()),
-    onSuccess: async () => {
-      toast.success('Cuenta eliminada', {
-        id: 'account-delete',
-        description: 'Gracias por probar Manualito.',
-      });
-      await dropSessionCaches(qc);
-      await router.invalidate();
-    },
-    onError: () =>
-      toast.error('No hemos podido eliminar la cuenta', {
-        id: 'account-delete',
-        description: 'Inténtalo de nuevo en un momento.',
-      }),
-  });
-
-  const summary = stats.data
-    ? `tu perfil, tus ${stats.data.games_count} juegos, ${stats.data.conversations_count} conversaciones y ${stats.data.manuals_count} manuales`
-    : 'tu perfil, tus juegos, conversaciones y manuales';
-
-  return (
-    <section aria-label="Eliminar cuenta">
-      <SectionHead eyebrow="Zona de peligro" title="Eliminar cuenta" />
-      <div className="rounded-2xl border border-error bg-error-bg p-5">
-        <div className="flex gap-3">
-          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
-          <p className="text-sm leading-relaxed text-fg">
-            Se borrarán <strong>para siempre</strong> {summary}. Los manuales que compartiste
-            saldrán del pool. No hay vuelta atrás ni copia de seguridad.
-          </p>
-        </div>
-        <div className="mt-4">
-          <label htmlFor={confirmId} className="mb-1.5 block text-sm font-semibold text-fg">
-            Escribe tu usuario (@{username}) para confirmar
-          </label>
-          <Input
-            id={confirmId}
-            preset="username"
-            value={confirmation}
-            onChange={(event) => setConfirmation(event.target.value)}
-            placeholder={username}
-            className="bg-bg"
-          />
-        </div>
-        <div className="mt-4">
-          <Button
-            variant="destructive"
-            disabled={!matches}
-            loading={remove.isPending}
-            onClick={() => remove.mutate()}
-          >
-            <Trash2 size={16} strokeWidth={2} />
-            Eliminar mi cuenta
-          </Button>
-        </div>
-      </div>
     </section>
   );
 }

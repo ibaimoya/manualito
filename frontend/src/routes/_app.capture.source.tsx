@@ -8,7 +8,7 @@ import {
   type ChangeEvent,
   type ReactNode,
 } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Camera,
   ChevronDown,
@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { GameTypeahead, SelectedGameChip } from '@/features/upload/GameTypeahead';
-import { gameDetailQueryOptions } from '@/features/games/use-games';
+import { gameDetailKey, gameDetailQueryOptions, myGamesKey } from '@/features/games/use-games';
 import { api, isAbortApiError, type GameSearchItem } from '@/shared/api/client';
 import type { GameDetail } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
@@ -64,6 +64,7 @@ function toGameSearchItem(detail: GameDetail): GameSearchItem {
 
 function NewManualScreen() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { gameId } = Route.useSearch();
   // Juego de origen (si entras desde su hub) preseleccionado; solo valor inicial.
   const presetDetail = useQuery({
@@ -125,6 +126,9 @@ function NewManualScreen() {
       });
     },
     onSuccess: (data, input) => {
+      // Subir un manual sigue el juego en el backend: refresca detalle y biblioteca.
+      qc.invalidateQueries({ queryKey: gameDetailKey(data.game_id) }).catch(() => undefined);
+      qc.invalidateQueries({ queryKey: myGamesKey }).catch(() => undefined);
       navigate({
         to: '/processing/$manualId',
         params: { manualId: data.manual_id },

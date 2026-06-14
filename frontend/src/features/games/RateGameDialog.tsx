@@ -8,7 +8,7 @@ import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { GameCover } from '@/features/games/GameCover';
 import { RATE_LABELS, RatingStars } from '@/features/games/RatingStars';
-import { gameDetailKey } from '@/features/games/use-games';
+import { gameDetailKey, myGamesKey } from '@/features/games/use-games';
 import { gamesApi, type GameDetail, type GameRating } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
 
@@ -90,6 +90,8 @@ function RateGameForm({
     },
     onSuccess: (data) => {
       applyRating(data);
+      // Valorar sigue el juego en el backend: refresca la biblioteca.
+      qc.invalidateQueries({ queryKey: myGamesKey }).catch(() => undefined);
       onClose();
       toast.success(current ? 'Valoración actualizada' : 'Valoración guardada', {
         id: 'rate-game',

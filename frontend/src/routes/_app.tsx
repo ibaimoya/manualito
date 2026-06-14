@@ -26,7 +26,9 @@ function showsNav(pathname: string): boolean {
 /** Área autenticada: redirige a login si no hay sesión y monta el shell. */
 export const Route = createFileRoute('/_app')({
   beforeLoad: ({ context, location }) => {
-    if (!context.user) {
+    // /privacy es legal y pública: se ve con o sin sesión, pero dentro del shell
+    // (sidebar + breadcrumb). El resto del área exige login.
+    if (!context.user && location.pathname !== '/privacy') {
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }
   },

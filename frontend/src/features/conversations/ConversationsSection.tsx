@@ -97,7 +97,7 @@ function ConversationRow({
 
   return (
     <div className={deleting ? 'opacity-50' : undefined}>
-      <div className="flex items-stretch pr-2">
+      <div className="flex items-stretch gap-1 pr-2.5">
         <Link
           to="/chat/$manualId"
           params={{ manualId }}
@@ -117,13 +117,14 @@ function ConversationRow({
             </span>
           </span>
         </Link>
+        {/* Misma papelera compacta que la biblioteca: 30 px, rounded-lg, tinte al hover. */}
         <button
           type="button"
           onClick={() => setConfirming((v) => !v)}
-          className="grid h-11 w-11 shrink-0 self-center place-items-center rounded-xl text-fg-3 hover:bg-error-bg hover:text-error"
+          className="grid size-[30px] shrink-0 self-center place-items-center rounded-lg text-fg-3 transition-colors hover:bg-error-bg hover:text-error"
           aria-label={`Borrar conversación ${title}`}
         >
-          <Trash2 size={16} strokeWidth={2} />
+          <Trash2 size={15} strokeWidth={2} />
         </button>
       </div>
       {confirming ? (

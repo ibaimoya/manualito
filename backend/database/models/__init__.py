@@ -12,6 +12,7 @@ MODEL_MODULES: tuple[str, ...] = (
     "conversation",
     "rating",
     "explanation",
+    "game_follow",
 )
 
 

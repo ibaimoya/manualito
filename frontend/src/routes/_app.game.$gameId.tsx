@@ -19,6 +19,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ConversationsSection } from '@/features/conversations/ConversationsSection';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
+import { FollowButton } from '@/features/games/FollowButton';
 import { GameCover } from '@/features/games/GameCover';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
@@ -158,8 +159,9 @@ function GameHeader({
             </Badge>
           </Tooltip>
         </div>
-        <div className="mt-2.5 flex flex-wrap items-center">
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
           <RatingStars value={game.my_rating?.score ?? 0} size={26} align="start" onSelect={onRate} />
+          <FollowButton gameId={game.id} following={game.is_following} />
         </div>
       </div>
     </header>
@@ -222,7 +224,10 @@ function ExplanationSection({
   // los huecos pendientes se pintan con spinner. Listo: las 4 secciones están.
   const data = explanation.data;
   const sections = data?.sections ?? {};
-  const busy = data === undefined || data.status === 'generating';
+  // `live` solo cuando se está generando ahora: anima el tecleo en la 1ª vez,
+  // no al revisitar (que llega cacheado como `ready`).
+  const live = data?.status === 'generating';
+  const busy = data === undefined || live;
   const pick = (key: ExplanationSectionKey) => sections[key]?.answer ?? null;
 
   return (
@@ -232,7 +237,7 @@ function ExplanationSection({
       className="space-y-3"
     >
       <ExplanationBlocks
-        gameId={gameId}
+        live={live}
         summary={pick('summary')}
         content={{ setup: pick('setup'), turns: pick('turns'), victory: pick('victory') }}
       />
@@ -376,16 +381,13 @@ function HubComposer({
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div className="mx-auto w-full max-w-4xl">
-        <div
-          className="flex snap-x gap-2 overflow-x-auto pb-2"
-          aria-label="Preguntas sugeridas"
-        >
+        <div className="flex flex-wrap justify-center gap-2 pb-2" aria-label="Preguntas sugeridas">
           {SUGGESTED_QUESTIONS.map((q) => (
             <button
               key={q}
               type="button"
               onClick={() => ask(q)}
-              className="h-8 shrink-0 snap-start whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg hover:bg-surface-2"
+              className="h-8 shrink-0 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg hover:bg-surface-2"
             >
               {q}
             </button>

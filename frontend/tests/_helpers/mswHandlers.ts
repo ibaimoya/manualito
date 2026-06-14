@@ -53,6 +53,7 @@ export const SAMPLE_GAME_DETAIL = {
   playing_time_minutes: 90,
   status: 'active',
   my_rating: null,
+  is_following: false,
   manuals: [
     {
       id: 'test-manual-001',
@@ -205,6 +206,9 @@ export const handlers = [
     });
   }),
   http.delete('/api/games/:gameId/rating', () => new HttpResponse(null, { status: 204 })),
+
+  http.post('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 204 })),
+  http.delete('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 204 })),
 
   http.get('/api/recommendations', () =>
     HttpResponse.json({

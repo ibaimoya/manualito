@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy import CheckConstraint, String, Text
+from sqlalchemy import Boolean, CheckConstraint, String, Text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.base import _NoneName
 
@@ -25,6 +25,8 @@ def test_model_registry_imports_phase_2_tables():
         "manual_chunks",
         "conversations",
         "messages",
+        "game_follows",
+        "game_explanations",
     }.issubset(Base.metadata.tables)
 
 
@@ -56,16 +58,12 @@ def test_users_schema_uses_partial_case_insensitive_email_index():
     email_index = _index(users, "uq_users_email_active")
     assert email_index.unique is True
     assert "lower(users.email)" in _compile(email_index.expressions[0])
-    assert _compile(email_index.dialect_options["postgresql"]["where"]) == (
-        "deleted_at IS NULL"
-    )
+    assert _compile(email_index.dialect_options["postgresql"]["where"]) == ("deleted_at IS NULL")
 
     username_index = _index(users, "uq_users_username_key_active")
     assert username_index.unique is True
     assert _compile(username_index.expressions[0]) == "users.username_key"
-    assert _compile(username_index.dialect_options["postgresql"]["where"]) == (
-        "deleted_at IS NULL"
-    )
+    assert _compile(username_index.dialect_options["postgresql"]["where"]) == ("deleted_at IS NULL")
 
 
 def test_auth_sessions_schema_supports_revocation_and_cleanup():
@@ -269,10 +267,41 @@ def test_uuid_primary_keys_use_postgres_uuidv7_default():
         "manual_chunks",
         "conversations",
         "messages",
+        "game_follows",
+        "game_explanations",
     ):
         id_column = Base.metadata.tables[table_name].c.id
         assert isinstance(id_column.type, postgresql.UUID)
         assert str(id_column.server_default.arg) == "uuidv7()"
+
+
+def test_game_follows_schema_tracks_last_explicit_choice():
+    """game_follows recuerda follow y unfollow por usuario y juego."""
+    import_all_models()
+    follows = Base.metadata.tables["game_follows"]
+
+    assert _single_fk(follows.c.user_id).ondelete == "CASCADE"
+    assert _single_fk(follows.c.game_id).ondelete == "CASCADE"
+    assert isinstance(follows.c.following.type, Boolean)
+    assert str(follows.c.following.server_default.arg) == "true"
+    assert _index(follows, "uq_game_follows_user_game").unique is True
+    assert _index(follows, "ix_game_follows_user_id") is not None
+
+
+def test_game_explanations_schema_is_cached_per_game():
+    """game_explanations guarda una única explicación compartida por juego."""
+    import_all_models()
+    explanations = Base.metadata.tables["game_explanations"]
+
+    assert "user_id" not in explanations.c
+    assert _single_fk(explanations.c.game_id).ondelete == "RESTRICT"
+    assert isinstance(explanations.c.sections.type, postgresql.JSONB)
+    assert explanations.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
+    assert _index(explanations, "uq_game_explanations_game_id").unique is True
+    assert _check_names(explanations) == {
+        "ck_game_explanations_sections_object",
+        "ck_game_explanations_source_fingerprint_length_valid",
+    }
 
 
 def test_conversations_schema_tracks_user_game_and_title():
@@ -287,9 +316,7 @@ def test_conversations_schema_tracks_user_game_and_title():
     assert _index(conversations, "ix_conversations_user_id") is not None
     assert _index(conversations, "ix_conversations_game_id") is not None
     active_index = _index(conversations, "ix_conversations_user_game_updated")
-    assert _compile(active_index.dialect_options["postgresql"]["where"]) == (
-        "deleted_at IS NULL"
-    )
+    assert _compile(active_index.dialect_options["postgresql"]["where"]) == ("deleted_at IS NULL")
 
 
 def test_messages_schema_cascades_from_conversation_and_limits_roles():

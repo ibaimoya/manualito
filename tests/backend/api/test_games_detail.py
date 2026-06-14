@@ -67,6 +67,7 @@ def test_get_game_detail_returns_personal_hub(
     assert body["name"] == "Catan"
     assert body["my_rating"]["score"] == 4
     assert body["manuals"][0]["is_own"] is True
+    assert body["is_following"] is True
     assert body["attribution"] == "Powered by BoardGameGeek."
     detail_mock.assert_awaited_once()
     assert detail_mock.await_args.kwargs["game_id"] == _GAME_ID
@@ -120,6 +121,10 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
         "api.games.service.repository.count_user_game_conversations",
         AsyncMock(return_value=12),
     )
+    monkeypatch.setattr(
+        "api.games.service.repository.is_following",
+        AsyncMock(return_value=True),
+    )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=rating))
     monkeypatch.setattr("api.games.service.fetch_board_game_details", fetch_mock)
 
@@ -139,6 +144,7 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
     assert response.my_rating is not None
     assert response.my_rating.score == 4
     assert response.manuals[0].is_own is True
+    assert response.is_following is True
     fetch_mock.assert_not_called()
 
 
@@ -156,6 +162,10 @@ def test_get_game_detail_without_rating_returns_null(monkeypatch):
         "api.games.service.repository.count_user_game_conversations",
         AsyncMock(return_value=0),
     )
+    monkeypatch.setattr(
+        "api.games.service.repository.is_following",
+        AsyncMock(return_value=False),
+    )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
 
     response = anyio.run(
@@ -171,6 +181,7 @@ def test_get_game_detail_without_rating_returns_null(monkeypatch):
     assert response.my_rating is None
     assert response.manuals == []
     assert response.min_players is None
+    assert response.is_following is False
 
 
 def test_get_game_detail_fills_play_metadata_from_bgg_once(monkeypatch):
@@ -187,6 +198,10 @@ def test_get_game_detail_fills_play_metadata_from_bgg_once(monkeypatch):
     monkeypatch.setattr(
         "api.games.service.repository.count_user_game_conversations",
         AsyncMock(return_value=0),
+    )
+    monkeypatch.setattr(
+        "api.games.service.repository.is_following",
+        AsyncMock(return_value=False),
     )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
     monkeypatch.setattr(
@@ -235,6 +250,10 @@ def test_get_game_detail_survives_bgg_outage(monkeypatch):
         "api.games.service.repository.count_user_game_conversations",
         AsyncMock(return_value=0),
     )
+    monkeypatch.setattr(
+        "api.games.service.repository.is_following",
+        AsyncMock(return_value=False),
+    )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
     monkeypatch.setattr(
         "api.games.service.fetch_board_game_details",
@@ -273,6 +292,10 @@ def test_get_game_detail_skips_write_when_bgg_has_no_data(monkeypatch):
     monkeypatch.setattr(
         "api.games.service.repository.count_user_game_conversations",
         AsyncMock(return_value=0),
+    )
+    monkeypatch.setattr(
+        "api.games.service.repository.is_following",
+        AsyncMock(return_value=False),
     )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
     monkeypatch.setattr(
@@ -323,6 +346,10 @@ def test_get_game_detail_keeps_metadata_when_write_fails(monkeypatch):
     monkeypatch.setattr(
         "api.games.service.repository.count_user_game_conversations",
         AsyncMock(return_value=0),
+    )
+    monkeypatch.setattr(
+        "api.games.service.repository.is_following",
+        AsyncMock(return_value=False),
     )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
     monkeypatch.setattr(
@@ -636,6 +663,7 @@ def _detail_response() -> GameDetailResponse:
             }
         ],
         conversations_count=12,
+        is_following=True,
     )
 
 

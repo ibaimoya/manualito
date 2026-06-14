@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, ChevronRight, Copy, FileText, Plus, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
@@ -14,6 +13,7 @@ import {
 } from '@/features/conversations/use-conversations';
 import { useRetypingTitle, useTypewriter } from '@/features/conversations/use-typewriter';
 import { GameCover } from '@/features/games/GameCover';
+import { gameDetailKey, myGamesKey } from '@/features/games/use-games';
 import { manualDetailQueryOptions } from '@/features/manual/use-manuals';
 import { Meeple } from '@/shared/components/Brand';
 import { Markdown } from '@/shared/components/Markdown';
@@ -26,11 +26,17 @@ import {
 import { toastApiError } from '@/shared/lib/toastApiError';
 
 // q comparte cota con el backend; c reabre conversación; g trae el juego del hub.
-const chatSearchSchema = z.object({
-  q: z.string().min(1).max(QUESTION_MAX).optional().catch(undefined),
-  c: z.string().min(1).optional().catch(undefined),
-  g: z.string().min(1).optional().catch(undefined),
-});
+type ChatSearch = { q?: string; c?: string; g?: string };
+
+// validateSearch tolerante: un parámetro presente pero inválido se ignora (queda undefined).
+function readChatSearch(search: Record<string, unknown>): ChatSearch {
+  const text = (value: unknown, max?: number): string | undefined => {
+    if (typeof value !== 'string' || value.length < 1) return undefined;
+    if (max !== undefined && value.length > max) return undefined;
+    return value;
+  };
+  return { q: text(search.q, QUESTION_MAX), c: text(search.c), g: text(search.g) };
+}
 
 // Tarjetas de la bienvenida: preguntas genéricas válidas para cualquier manual.
 const WELCOME_SUGGESTIONS = [
@@ -43,7 +49,7 @@ const WELCOME_SUGGESTIONS = [
 ];
 
 export const Route = createFileRoute('/_app/chat/$manualId')({
-  validateSearch: chatSearchSchema,
+  validateSearch: readChatSearch,
   component: ChatScreen,
 });
 
@@ -128,6 +134,11 @@ function ChatScreen() {
       qc.invalidateQueries({ queryKey: conversationsKey(data.conversation.game_id) }).catch(
         () => undefined,
       );
+      // Chatear sigue el juego en el backend: refresca detalle (botón) y biblioteca.
+      qc.invalidateQueries({ queryKey: gameDetailKey(data.conversation.game_id) }).catch(
+        () => undefined,
+      );
+      qc.invalidateQueries({ queryKey: myGamesKey }).catch(() => undefined);
       // Fija ?c en la URL (replace): refrescar reabre esta misma conversación.
       navigate({
         to: '/chat/$manualId',
@@ -351,7 +362,12 @@ function ChatWelcome({
                 <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
               </span>
               <span className="flex-1 transition-colors group-hover:text-primary-700">{q}</span>
-              <ChevronRight size={16} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+              <ChevronRight
+                size={16}
+                strokeWidth={2}
+                className="shrink-0 text-fg-3"
+                aria-hidden="true"
+              />
             </button>
           ))}
         </div>

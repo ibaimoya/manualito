@@ -1,12 +1,15 @@
 """Endpoints de valoraciones de juegos."""
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Request, status
+from sqlalchemy.exc import SQLAlchemyError
 
 from api import config
 from api.annotations import DbSession
 from api.auth.dependencies import CsrfProtection, CurrentAuth
+from api.games import repository as games_repository
 from api.games.dependencies import ValidGameId
 from api.rate_limit import limiter
 from api.ratings.repository import delete_user_rating, upsert_user_rating
@@ -14,6 +17,7 @@ from api.ratings.schemas import RateGameRequest, RatingResponse
 from api.responses import GAME_NOT_FOUND_RESPONSE, RATING_NOT_FOUND_RESPONSE
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.put(
@@ -37,6 +41,15 @@ async def rate_game_handler(
         score=payload.score,
         note=payload.note,
     )
+    try:
+        await games_repository.auto_follow_game(
+            session,
+            user_id=auth.user.id,
+            game_id=game_id,
+        )
+    except SQLAlchemyError:
+        await session.rollback()
+        logger.warning("No se pudo auto-seguir el juego tras valorar.", exc_info=True)
     return RatingResponse.model_validate(row)
 
 

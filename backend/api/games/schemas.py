@@ -65,7 +65,7 @@ class MyGamesResponse(StrictModel):
 
 
 class GamePoolManualItem(StrictModel):
-    """Manual del pool visible en el hub del juego."""
+    """Manual visible en el hub del juego."""
 
     id: UUID
     title: str | None
@@ -83,7 +83,7 @@ class ExplanationSection(StrictModel):
 
 
 class GameExplanationResponse(StrictModel):
-    """Explicación cacheada del juego para el usuario actual."""
+    """Explicación cacheada y compartida del juego."""
 
     status: Literal["ready", "generating"]
     sections: dict[str, ExplanationSection] | None
@@ -104,4 +104,5 @@ class GameDetailResponse(StrictModel):
     my_rating: RatingResponse | None
     manuals: list[GamePoolManualItem]
     conversations_count: int = Field(ge=0)
+    is_following: bool
     attribution: str = BGG_ATTRIBUTION

@@ -49,6 +49,8 @@ async def test_create_manual_acepta_imagenes_y_crea_paginas_pending(monkeypatch)
     monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
     create_mock = AsyncMock(return_value=SimpleNamespace(id=_MANUAL_ID))
     monkeypatch.setattr(manual_service, "create_manual_with_pending_pages", create_mock)
+    auto_follow_mock = AsyncMock()
+    monkeypatch.setattr(manual_service.games_repository, "auto_follow_game", auto_follow_mock)
     run_ocr_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
 
@@ -78,6 +80,11 @@ async def test_create_manual_acepta_imagenes_y_crea_paginas_pending(monkeypatch)
     assert create_kwargs["source_type"] == "images"
     assert create_kwargs["page_count"] == 1
     assert create_kwargs["images"][0].storage_key == "manuals/user/manual/page-1.jpg"
+    auto_follow_mock.assert_awaited_once_with(
+        session,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
 
 
 @pytest.mark.anyio

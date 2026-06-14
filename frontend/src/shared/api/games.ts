@@ -3,7 +3,7 @@ import type { AnswerSource } from './client';
 
 /**
  * Cliente del hub de juego: detalle agregado (meta + valoración propia +
- * pool de manuales), explicación cacheada y valoraciones con estrellas.
+ * manuales visibles), explicación cacheada y valoraciones con estrellas.
  */
 
 export interface GameRating {
@@ -34,6 +34,8 @@ export interface GameDetail {
   playing_time_minutes: number | null;
   status: string;
   my_rating: GameRating | null;
+  /** Si el usuario sigue el juego (aparece en su biblioteca). */
+  is_following: boolean;
   manuals: GamePoolManual[];
   conversations_count: number;
   attribution: string;
@@ -72,7 +74,6 @@ export interface MyGamesResponse {
   games: MyGame[];
 }
 
-
 export const gamesApi = {
   /** GET /api/games/mine — juegos con los que el usuario ha interactuado. */
   async listMine(signal?: AbortSignal): Promise<MyGamesResponse> {
@@ -93,8 +94,8 @@ export const gamesApi = {
   },
 
   /**
-   * GET /api/games/{id}/explanation — explicación cacheada; si el pool
-   * cambió, el backend la regenera en esta misma petición (timeout LLM).
+   * GET /api/games/{id}/explanation — explicación cacheada por juego; si el
+   * conjunto de manuales cambió, el backend regenera el siguiente apartado.
    */
   async explanation(gameId: string, signal?: AbortSignal): Promise<GameExplanation> {
     return request<GameExplanation>(`/games/${encodeURIComponent(gameId)}/explanation`, {
@@ -118,6 +119,24 @@ export const gamesApi = {
   /** DELETE /api/games/{id}/rating — quita la valoración propia (204). */
   async removeRating(gameId: string, signal?: AbortSignal): Promise<void> {
     await requestVoid(`/games/${encodeURIComponent(gameId)}/rating`, {
+      method: 'DELETE',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** POST /api/games/{id}/follow — sigue el juego (204). */
+  async follow(gameId: string, signal?: AbortSignal): Promise<void> {
+    await requestVoid(`/games/${encodeURIComponent(gameId)}/follow`, {
+      method: 'POST',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
+
+  /** DELETE /api/games/{id}/follow — deja de seguir el juego (204). */
+  async unfollow(gameId: string, signal?: AbortSignal): Promise<void> {
+    await requestVoid(`/games/${encodeURIComponent(gameId)}/follow`, {
       method: 'DELETE',
       timeoutMs: TIMEOUT.QUICK,
       signal,

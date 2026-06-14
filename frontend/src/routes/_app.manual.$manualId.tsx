@@ -36,7 +36,12 @@ import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import { manualDetailQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
 import { formatLongDate } from '@/shared/lib/relativeDate';
-import { api, ApiError, type ManualDetailPage, type ManualDetailResponse } from '@/shared/api/client';
+import {
+  api,
+  ApiError,
+  type ManualDetailPage,
+  type ManualDetailResponse,
+} from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
 
@@ -101,8 +106,8 @@ function ManualDetailScreen() {
             No hemos podido abrir este manual
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-fg-2">
-            Puede que se haya borrado o que aún se esté procesando. Vuelve al historial e
-            inténtalo desde allí.
+            Puede que se haya borrado o que aún se esté procesando. Vuelve al historial e inténtalo
+            desde allí.
           </p>
           <Button asChild className="mt-5">
             <Link to="/history">Ir al historial</Link>
@@ -126,10 +131,7 @@ function ManualShell({
 }>) {
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <ScreenTopBar
-        crumb={crumb}
-        trail={trail}
-      />
+      <ScreenTopBar crumb={crumb} trail={trail} />
       {children}
     </div>
   );
@@ -319,10 +321,15 @@ function ManualDetailLoaded({
               </h1>
               <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
                 <span className="inline-flex items-center gap-1.5">
-                  <Clock size={13} aria-hidden="true" /> Subido el {formatLongDate(manual.created_at)}
+                  <Clock size={13} aria-hidden="true" /> Subido el{' '}
+                  {formatLongDate(manual.created_at)}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  {sourceIsPdf ? <FileText size={13} aria-hidden="true" /> : <Images size={13} aria-hidden="true" />}{' '}
+                  {sourceIsPdf ? (
+                    <FileText size={13} aria-hidden="true" />
+                  ) : (
+                    <Images size={13} aria-hidden="true" />
+                  )}{' '}
                   {sourceIsPdf ? 'PDF' : 'Fotos'}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
@@ -511,13 +518,13 @@ function ManualDialogs({
             <p className="font-semibold">Esta acción no se puede deshacer.</p>
             <p className="mt-1">
               Se borrará <strong>«{title}»</strong> de {gameName}: sus {pageCount}{' '}
-              {pageCount === 1 ? 'página' : 'páginas'} y su texto extraído. La explicación del
-              juego se regenerará con los manuales restantes.
+              {pageCount === 1 ? 'página' : 'páginas'} y su texto extraído. La explicación del juego
+              se regenerará con los manuales restantes.
             </p>
             {shared ? (
               <p className="mt-2">
-                Es <strong>compartido</strong>: dejará de estar en el pool de {gameName} para otras
-                personas.
+                Es <strong>compartido</strong>: dejará de estar disponible para otras personas en{' '}
+                {gameName}.
               </p>
             ) : null}
           </div>
@@ -725,10 +732,18 @@ function SearchField({
           >
             {position} / {total}
           </span>
-          <SearchMiniButton label="Coincidencia anterior" disabled={total === 0} onClick={() => onStep(-1)}>
+          <SearchMiniButton
+            label="Coincidencia anterior"
+            disabled={total === 0}
+            onClick={() => onStep(-1)}
+          >
             <ChevronLeft size={15} strokeWidth={2} />
           </SearchMiniButton>
-          <SearchMiniButton label="Coincidencia siguiente" disabled={total === 0} onClick={() => onStep(1)}>
+          <SearchMiniButton
+            label="Coincidencia siguiente"
+            disabled={total === 0}
+            onClick={() => onStep(1)}
+          >
             <ChevronRight size={15} strokeWidth={2} />
           </SearchMiniButton>
           <SearchMiniButton label="Limpiar búsqueda" disabled={false} onClick={() => onSearch('')}>

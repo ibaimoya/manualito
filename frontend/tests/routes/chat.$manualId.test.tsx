@@ -48,16 +48,16 @@ function renderChat(manualId: string, search?: { q?: string; c?: string; g?: str
 
 describe('/chat/$manualId · search schema', () => {
   it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
-    const schema = (
+    const validateSearch = (
       ChatRoute as unknown as {
-        options: { validateSearch: { parse: (v: unknown) => Record<string, unknown> } };
+        options: { validateSearch: (v: Record<string, unknown>) => Record<string, unknown> };
       }
     ).options.validateSearch;
-    const result = schema.parse({ q: 'a'.repeat(4001), c: 'conv-001' });
+    const result = validateSearch({ q: 'a'.repeat(4001), c: 'conv-001' });
     expect(result['q']).toBeUndefined();
     expect(result['c']).toBe('conv-001');
     // Una pregunta dentro de la cota pasa intacta.
-    expect(schema.parse({ q: 'a'.repeat(4000) })['q']).toHaveLength(4000);
+    expect(validateSearch({ q: 'a'.repeat(4000) })['q']).toHaveLength(4000);
   });
 });
 

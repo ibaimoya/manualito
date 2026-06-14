@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, status
 
 from api import config
 from api.annotations import DbSession, HttpClient
@@ -23,9 +23,11 @@ from api.games.schemas import (
 )
 from api.games.service import (
     create_manual_game,
+    follow_game,
     get_game_detail,
     list_my_games,
     search_game_catalog,
+    unfollow_game,
 )
 from api.manuals.retrieval.service import generate_game_answer
 from api.manuals.schemas import AnswerResponse, GameQuestionRequest
@@ -107,6 +109,36 @@ async def get_game_detail_handler(
     )
 
 
+@router.post(
+    "/api/games/{game_id}/follow",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=GAME_NOT_FOUND_RESPONSE,
+)
+async def follow_game_handler(
+    auth: CurrentAuth,
+    game_id: ValidGameId,
+    session: DbSession,
+    _csrf: CsrfProtection,
+) -> None:
+    """Sigue un juego por decisión explícita del usuario."""
+    await follow_game(session, user_id=auth.user.id, game_id=game_id)
+
+
+@router.delete(
+    "/api/games/{game_id}/follow",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=GAME_NOT_FOUND_RESPONSE,
+)
+async def unfollow_game_handler(
+    auth: CurrentAuth,
+    game_id: ValidGameId,
+    session: DbSession,
+    _csrf: CsrfProtection,
+) -> None:
+    """Deja de seguir un juego por decisión explícita del usuario."""
+    await unfollow_game(session, user_id=auth.user.id, game_id=game_id)
+
+
 @router.get(
     "/api/games/{game_id}/explanation",
     responses={
@@ -124,7 +156,7 @@ async def get_game_explanation_handler(
     session: DbSession,
     client: HttpClient,
 ) -> GameExplanationResponse:
-    """Sirve la explicación del juego, regenerándola si el pool cambió."""
+    """Sirve la explicación del juego, regenerándola si el conjunto cambió."""
     return await get_game_explanation(
         session,
         auth=auth,
@@ -150,7 +182,7 @@ async def answer_game_question_handler(
     client: HttpClient,
     _csrf: CsrfProtection,
 ) -> AnswerResponse:
-    """Responde usando el pool autorizado de manuales de un juego."""
+    """Responde usando el conjunto autorizado de manuales de un juego."""
     return await generate_game_answer(
         session,
         current_user_id=auth.user.id,

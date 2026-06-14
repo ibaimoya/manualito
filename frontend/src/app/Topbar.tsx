@@ -28,6 +28,7 @@ const TITLES: Record<string, string> = {
   '/profile': 'Perfil',
   '/security': 'Cuenta y seguridad',
   '/about': 'Ayuda',
+  '/privacy': 'Política de privacidad',
 };
 
 // Tramos intermedios para rutas que cuelgan de otra: Seguridad vive bajo Perfil,

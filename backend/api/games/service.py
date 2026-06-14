@@ -46,11 +46,7 @@ async def search_game_catalog(
         return GameSearchResponse(games=[])
 
     rows = await _search_local(session, query=query, query_key=query_key, limit=limit)
-    if (
-        not rows
-        and client is not None
-        and len(query_key) >= config.BGG_EXTERNAL_SEARCH_MIN_LENGTH
-    ):
+    if not rows and client is not None and len(query_key) >= config.BGG_EXTERNAL_SEARCH_MIN_LENGTH:
         await _cache_bgg_results_once(
             session,
             client=client,
@@ -59,9 +55,7 @@ async def search_game_catalog(
         )
         rows = await _search_local(session, query=query, query_key=query_key, limit=limit)
 
-    return GameSearchResponse(
-        games=[GameSearchItem.model_validate(row) for row in rows]
-    )
+    return GameSearchResponse(games=[GameSearchItem.model_validate(row) for row in rows])
 
 
 async def create_manual_game(
@@ -118,6 +112,11 @@ async def get_game_detail(
         user_id=auth.user.id,
         game_id=game_id,
     )
+    is_following = await repository.is_following(
+        session,
+        user_id=auth.user.id,
+        game_id=game_id,
+    )
     rating = await get_user_rating(session, user_id=auth.user.id, game_id=game_id)
     return GameDetailResponse(
         id=game.id,
@@ -131,6 +130,39 @@ async def get_game_detail(
         my_rating=RatingResponse.model_validate(rating) if rating is not None else None,
         manuals=[GamePoolManualItem.model_validate(manual) for manual in manuals],
         conversations_count=conversations_count,
+        is_following=is_following,
+    )
+
+
+async def follow_game(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> None:
+    """Marca un juego como seguido por decisión explícita."""
+    await repository.get_game_for_detail(session, game_id=game_id)
+    await repository.set_game_follow(
+        session,
+        user_id=user_id,
+        game_id=game_id,
+        following=True,
+    )
+
+
+async def unfollow_game(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> None:
+    """Marca un juego como no seguido por decisión explícita."""
+    await repository.get_game_for_detail(session, game_id=game_id)
+    await repository.set_game_follow(
+        session,
+        user_id=user_id,
+        game_id=game_id,
+        following=False,
     )
 
 

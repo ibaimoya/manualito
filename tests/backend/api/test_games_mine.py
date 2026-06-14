@@ -114,7 +114,7 @@ def test_list_my_games_service_maps_rows(monkeypatch):
 
 
 def test_list_my_games_repository_unions_engagement_and_orders_by_activity():
-    """La query une manuales, conversaciones y seguimientos, y ordena por actividad."""
+    """La query usa seguimientos y ordena por actividad."""
 
     class FakeResult:
         def __iter__(self):
@@ -133,7 +133,9 @@ def test_list_my_games_repository_unions_engagement_and_orders_by_activity():
 
     assert rows == []
     compiled = str(session.statement.compile(dialect=postgresql.dialect()))
-    assert "UNION" in compiled
+    assert "JOIN game_follows" in compiled
+    assert "game_follows.user_id =" in compiled
+    assert "game_follows.following IS true" in compiled
     assert "manuals.owner_user_id =" in compiled
     assert "conversations.user_id =" in compiled
     assert "greatest" in compiled.lower()

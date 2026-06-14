@@ -59,6 +59,7 @@ function renderHistory() {
     component: routeComponent(HistoryRoute),
     stubs: {
       '/capture/source': 'SourceScreen',
+      '/explore': 'ExploreScreen',
       '/game/$gameId': 'GameHubScreen',
       '/manual/$manualId': 'ManualEditScreen',
       '/processing/$manualId': 'ProcessingScreen',
@@ -71,12 +72,12 @@ async function goToManuals(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('/history', () => {
-  it('Juegos vacío: estado vacío con CTA al primer upload', async () => {
+  it('Juegos vacío: estado vacío con CTA a Explorar', async () => {
     server.use(NO_GAMES, NO_MANUALS);
     renderHistory();
     expect(await screen.findByText(/Aún no sigues ningún juego/)).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /Subir un manual/i });
-    expect(link).toHaveAttribute('href', '/capture/source');
+    const link = screen.getByRole('link', { name: /Explorar juegos/i });
+    expect(link).toHaveAttribute('href', '/explore');
   });
 
   it('vista Juegos: lista los juegos y enlaza a su hub', async () => {

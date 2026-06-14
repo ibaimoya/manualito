@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.asset import Asset
 from database.models.auth import AuthSession
 from database.models.conversation import Conversation
-from database.models.explanation import GameExplanation
 from database.models.manual import Manual, ManualChunk
 from database.models.rating import Rating
 from database.models.user import User
@@ -69,17 +68,12 @@ async def purge_user_account(
     )
     await session.execute(delete(Rating).where(Rating.user_id == user_id))
     await session.execute(
-        delete(GameExplanation).where(GameExplanation.user_id == user_id)
-    )
-    await session.execute(
         update(AuthSession)
         .where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
         .values(revoked_at=now)
     )
     await session.execute(
-        update(User)
-        .where(User.id == user_id)
-        .values(status="deleted", deleted_at=now)
+        update(User).where(User.id == user_id).values(status="deleted", deleted_at=now)
     )
     return AccountCleanup(chunk_ids_by_manual=chunk_ids_by_manual, storage_keys=storage_keys)
 
@@ -97,9 +91,7 @@ async def get_user_activity_stats(session: AsyncSession, *, user_id: UUID) -> Ro
         ),
         select(Rating.game_id).where(Rating.user_id == user_id),
     ).subquery()
-    games_count = (
-        select(func.count()).select_from(games_with_activity).scalar_subquery()
-    )
+    games_count = select(func.count()).select_from(games_with_activity).scalar_subquery()
     conversations_count = (
         select(func.count(Conversation.id))
         .where(

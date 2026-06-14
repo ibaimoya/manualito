@@ -13,6 +13,7 @@ from common.crypto import sha256_hex
 from database.models.conversation import Conversation
 from database.models.explanation import GameExplanation
 from database.models.game import Game
+from database.models.game_follow import GameFollow
 from database.models.manual import Manual
 
 SIMILARITY_THRESHOLD = 0.1
@@ -117,18 +118,7 @@ async def list_my_games(
     limit: int,
     offset: int,
 ) -> list[Row]:
-    """Juegos con manual o conversacion del usuario, por actividad reciente."""
-    engaged = (
-        select(Manual.game_id.label("game_id"))
-        .where(Manual.owner_user_id == user_id, Manual.deleted_at.is_(None))
-        .union(
-            select(Conversation.game_id).where(
-                Conversation.user_id == user_id,
-                Conversation.deleted_at.is_(None),
-            ),
-        )
-        .subquery()
-    )
+    """Juegos seguidos por el usuario, por actividad reciente."""
     manuals_count = (
         select(func.count(Manual.id))
         .where(
@@ -149,7 +139,7 @@ async def list_my_games(
         .correlate(Game)
         .scalar_subquery()
     )
-    last_activity = func.greatest(
+    manual_activity_at = (
         select(func.max(Manual.updated_at))
         .where(
             Manual.game_id == Game.id,
@@ -157,7 +147,9 @@ async def list_my_games(
             Manual.deleted_at.is_(None),
         )
         .correlate(Game)
-        .scalar_subquery(),
+        .scalar_subquery()
+    )
+    conversation_activity_at = (
         select(func.max(Conversation.updated_at))
         .where(
             Conversation.game_id == Game.id,
@@ -165,7 +157,12 @@ async def list_my_games(
             Conversation.deleted_at.is_(None),
         )
         .correlate(Game)
-        .scalar_subquery(),
+        .scalar_subquery()
+    )
+    last_activity = func.greatest(
+        func.coalesce(manual_activity_at, GameFollow.updated_at),
+        func.coalesce(conversation_activity_at, GameFollow.updated_at),
+        GameFollow.updated_at,
     ).label("last_activity_at")
 
     result = await session.execute(
@@ -178,13 +175,71 @@ async def list_my_games(
             conversations_count.label("conversations_count"),
             last_activity,
         )
-        .join(engaged, engaged.c.game_id == Game.id)
-        .where(Game.deleted_at.is_(None))
+        .join(GameFollow, GameFollow.game_id == Game.id)
+        .where(
+            GameFollow.user_id == user_id,
+            GameFollow.following.is_(True),
+            Game.deleted_at.is_(None),
+        )
         .order_by(last_activity.desc(), Game.name)
         .limit(limit)
         .offset(offset)
     )
     return list(result)
+
+
+async def auto_follow_game(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> None:
+    """Sigue un juego solo si no había una elección explícita previa."""
+    stmt = (
+        insert(GameFollow)
+        .values(user_id=user_id, game_id=game_id, following=True)
+        .on_conflict_do_nothing(
+            index_elements=[GameFollow.user_id, GameFollow.game_id],
+        )
+    )
+    await session.execute(stmt)
+    await session.commit()
+
+
+async def set_game_follow(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+    following: bool,
+) -> None:
+    """Guarda la elección explícita de seguir o dejar de seguir."""
+    stmt = (
+        insert(GameFollow)
+        .values(user_id=user_id, game_id=game_id, following=following)
+        .on_conflict_do_update(
+            index_elements=[GameFollow.user_id, GameFollow.game_id],
+            set_={"following": following, "updated_at": func.now()},
+        )
+    )
+    await session.execute(stmt)
+    await session.commit()
+
+
+async def is_following(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> bool:
+    """Indica si el usuario sigue el juego."""
+    result = await session.execute(
+        select(GameFollow.following).where(
+            GameFollow.user_id == user_id,
+            GameFollow.game_id == game_id,
+        )
+    )
+    return bool(result.scalar_one_or_none())
 
 
 async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> Row:
@@ -216,7 +271,7 @@ async def list_game_pool_manuals(
     game_id: UUID,
     current_user_id: UUID,
 ) -> list[Row]:
-    """Lista manuales del pool visibles para el usuario sin exponer dueños."""
+    """Lista manuales visibles para el usuario sin exponer dueños."""
     result = await session.execute(
         select(
             Manual.id,
@@ -238,16 +293,13 @@ async def get_pool_fingerprint(
     game_id: UUID,
     current_user_id: UUID,
 ) -> str | None:
-    """Huella estable del pool visible; None si no hay manuales que explicar."""
+    """Huella estable de manuales visibles; None si no hay manuales que explicar."""
     result = await session.execute(
         select(Manual.id, Manual.indexed_at)
         .where(*_pool_visibility_filters(game_id, current_user_id))
         .order_by(Manual.id.asc())
     )
-    items = [
-        f"{row.id}:{row.indexed_at.isoformat() if row.indexed_at else ''}"
-        for row in result
-    ]
+    items = [f"{row.id}:{row.indexed_at.isoformat() if row.indexed_at else ''}" for row in result]
     if not items:
         return None
     return sha256_hex("|".join(items))
@@ -256,15 +308,11 @@ async def get_pool_fingerprint(
 async def get_game_explanation(
     session: AsyncSession,
     *,
-    user_id: UUID,
     game_id: UUID,
 ) -> GameExplanation | None:
-    """Carga la explicación cacheada del usuario para un juego."""
+    """Carga la explicación cacheada de un juego."""
     result = await session.execute(
-        select(GameExplanation).where(
-            GameExplanation.user_id == user_id,
-            GameExplanation.game_id == game_id,
-        )
+        select(GameExplanation).where(GameExplanation.game_id == game_id)
     )
     return result.scalar_one_or_none()
 
@@ -272,22 +320,20 @@ async def get_game_explanation(
 async def upsert_game_explanation(
     session: AsyncSession,
     *,
-    user_id: UUID,
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
 ) -> Row:
-    """Guarda la explicación regenerada en una sola sentencia atómica."""
+    """Guarda la explicación del juego en una sola sentencia atómica."""
     stmt = (
         insert(GameExplanation)
         .values(
-            user_id=user_id,
             game_id=game_id,
             sections=sections,
             source_fingerprint=source_fingerprint,
         )
         .on_conflict_do_update(
-            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
+            index_elements=[GameExplanation.game_id],
             set_={
                 "sections": sections,
                 "source_fingerprint": source_fingerprint,
@@ -308,7 +354,7 @@ async def upsert_game_explanation(
 
 
 def _pool_visibility_filters(game_id: UUID, current_user_id: UUID) -> tuple:
-    """Predicado del pool visible: compartidos activos más los propios."""
+    """Predicado de manuales visibles: compartidos activos más los propios."""
     return (
         Manual.game_id == game_id,
         Manual.deleted_at.is_(None),

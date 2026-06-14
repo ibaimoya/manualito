@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as GameRoute } from '@/routes/_app.game.$gameId';
-import { storage } from '@/shared/lib/storage';
 import { SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
@@ -127,23 +126,19 @@ describe('/game/$gameId · refetch fallido con cache', () => {
 });
 
 describe('/game/$gameId · explicación', () => {
-  it('renderiza el resumen y los acordeones cerrados, que se abren al pulsar', async () => {
+  it('cacheado (ready): resumen y acordeones al instante, sin teclear', async () => {
     renderHub();
-    // El resumen se revela letra a letra (animación del chat): espera al texto completo.
-    await waitFor(
-      () => expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
-      { timeout: 3000 },
+    // ready (revisita/cache) ⇒ sin animación: el resumen está en cuanto cargan los datos.
+    // Si re-animara, este getByText síncrono fallaría (texto a medias).
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled(),
     );
-    // Las secciones arrancan cerradas: solo los triggers, sin su contenido.
+    expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /¿Cómo van los turnos\?/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /¿Cómo se gana\?/ })).toBeInTheDocument();
+    // Las secciones arrancan cerradas: solo los triggers, sin su contenido.
     expect(screen.queryByText('Monta el tablero y reparte piezas.')).not.toBeInTheDocument();
-    // Al abrir «Preparación», su contenido aparece (también animado).
     await userEvent.setup().click(screen.getByRole('button', { name: /Preparación/ }));
-    await waitFor(
-      () => expect(screen.getByText('Monta el tablero y reparte piezas.')).toBeInTheDocument(),
-      { timeout: 3000 },
-    );
+    expect(await screen.findByText('Monta el tablero y reparte piezas.')).toBeInTheDocument();
   });
 
   it('estado generating: esqueleto de carga con los acordeones bloqueados', async () => {
@@ -161,17 +156,25 @@ describe('/game/$gameId · explicación', () => {
     expect(screen.getByRole('button', { name: /Preparación/ })).toBeDisabled();
   });
 
-  it('no re-anima el resumen ya visto antes: aparece entero sin teclear', async () => {
-    // Simula una visita anterior: el resumen de este juego ya se tecleó una vez.
-    storage.markExplanationAnimated('test-game-001:summary');
-    renderHub();
-    // Cuando la explicación está lista (acordeón ya habilitado), el resumen está
-    // completo en el mismo render: sin la animación letra a letra (que lo dejaría
-    // a medias). Si re-animara, este getByText síncrono no encontraría el texto.
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled(),
+  it('generando en vivo: teclea el resumen según llega', async () => {
+    server.use(
+      http.get('/api/games/:gameId/explanation', () =>
+        HttpResponse.json({
+          status: 'generating',
+          sections: { summary: { answer: 'Catan va de construir y comerciar.', sources: [] } },
+          generated_at: null,
+        }),
+      ),
     );
-    expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument();
+    renderHub();
+    await screen.findAllByRole('heading', { name: 'Catan' });
+    // En vivo (generating) el resumen se teclea: espera al texto completo de la animación.
+    await waitFor(
+      () => expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
+      { timeout: 3000 },
+    );
+    // Lo que aún se está generando sigue bloqueado.
+    expect(screen.getByRole('button', { name: /Preparación/ })).toBeDisabled();
   });
 
   it('error 404 (sin indexar): aviso con botón de reintentar', async () => {
@@ -182,6 +185,34 @@ describe('/game/$gameId · explicación', () => {
     );
     renderHub();
     expect(await screen.findByRole('button', { name: /Reintentar/i })).toBeInTheDocument();
+  });
+});
+
+describe('/game/$gameId · seguir', () => {
+  it('seguir el juego: «Seguir» → «Siguiendo» y lanza el POST', async () => {
+    let following = false;
+    server.use(
+      http.post('/api/games/:gameId/follow', () => {
+        following = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      // Estatal: tras seguir, el refetch del detalle ya devuelve is_following=true.
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({ ...SAMPLE_GAME_DETAIL, is_following: following }),
+      ),
+    );
+    renderHub();
+    const user = userEvent.setup();
+    const follow = await screen.findByRole('button', { name: 'Seguir este juego' });
+    expect(follow).toHaveAttribute('aria-pressed', 'false');
+    await user.click(follow);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Dejar de seguir este juego' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    );
+    expect(following).toBe(true);
   });
 });
 

@@ -64,7 +64,12 @@ def test_rate_game_upserts_score_and_trimmed_note(
 ):
     """Valorar delega el upsert con la nota recortada y el usuario autenticado."""
     upsert_mock = AsyncMock(return_value=_rating_row(score=4, note="Brilla a 4 jugadores."))
+    auto_follow_mock = AsyncMock()
     monkeypatch.setattr("api.ratings.router.upsert_user_rating", upsert_mock)
+    monkeypatch.setattr(
+        "api.ratings.router.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     response = client.put(
         f"/api/games/{_GAME_ID}/rating",
@@ -77,6 +82,11 @@ def test_rate_game_upserts_score_and_trimmed_note(
     assert upsert_mock.await_args.kwargs["user_id"] == _USER_ID
     assert upsert_mock.await_args.kwargs["game_id"] == _GAME_ID
     assert upsert_mock.await_args.kwargs["note"] == "Brilla a 4 jugadores."
+    auto_follow_mock.assert_awaited_once_with(
+        _FAKE_SESSION,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
 
 
 def test_rate_game_accepts_score_boundaries_without_note(
@@ -86,7 +96,12 @@ def test_rate_game_accepts_score_boundaries_without_note(
 ):
     """Los extremos válidos del score (1 y 5) pasan sin nota."""
     upsert_mock = AsyncMock(side_effect=[_rating_row(score=1), _rating_row(score=5)])
+    auto_follow_mock = AsyncMock()
     monkeypatch.setattr("api.ratings.router.upsert_user_rating", upsert_mock)
+    monkeypatch.setattr(
+        "api.ratings.router.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     low = client.put(f"/api/games/{_GAME_ID}/rating", json={"score": 1})
     high = client.put(f"/api/games/{_GAME_ID}/rating", json={"score": 5})
@@ -94,6 +109,7 @@ def test_rate_game_accepts_score_boundaries_without_note(
     assert low.status_code == 200
     assert high.status_code == 200
     assert upsert_mock.await_args.kwargs["note"] is None
+    assert auto_follow_mock.await_count == 2
 
 
 def test_rate_game_rejects_scores_outside_range(
@@ -149,7 +165,12 @@ def test_rate_game_is_rate_limited(
 ):
     """Valorar comparte el freno de acciones interactivas."""
     upsert_mock = AsyncMock(return_value=_rating_row(score=3))
+    auto_follow_mock = AsyncMock()
     monkeypatch.setattr("api.ratings.router.upsert_user_rating", upsert_mock)
+    monkeypatch.setattr(
+        "api.ratings.router.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     responses = [
         client.put(f"/api/games/{_GAME_ID}/rating", json={"score": 3})
@@ -158,6 +179,7 @@ def test_rate_game_is_rate_limited(
 
     assert responses[-1].status_code == 429
     assert upsert_mock.await_count == 30
+    assert auto_follow_mock.await_count == 30
 
 
 def test_delete_rating_removes_own_row(

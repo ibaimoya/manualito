@@ -80,7 +80,7 @@ describe('/security · cambiar contraseña', () => {
 });
 
 describe('/security · zona de peligro', () => {
-  it('el botón de borrado solo se habilita con el @usuario exacto (sin mayús/minús)', async () => {
+  it('el botón de borrado solo se habilita con el @usuario exacto', async () => {
     renderSecurity();
     const user = userEvent.setup();
     const remove = await screen.findByRole('button', { name: 'Eliminar mi cuenta' });
@@ -105,7 +105,7 @@ describe('/security · zona de peligro', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/Escribe tu usuario/), 'marta');
     await user.click(screen.getByRole('button', { name: 'Eliminar mi cuenta' }));
-    expect(await screen.findByText('Cuenta eliminada')).toBeInTheDocument();
+    expect(await screen.findByText('Cuenta borrada')).toBeInTheDocument();
   });
 
   it('no tiene violaciones de accesibilidad', async () => {

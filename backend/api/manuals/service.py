@@ -27,6 +27,7 @@ from api.exceptions import (
     InternalServiceUnavailableError,
     ManualPageLimitExceededError,
 )
+from api.games import repository as games_repository
 from api.manuals.exceptions import (
     ManualBusyError,
     ManualNotEditableError,
@@ -112,6 +113,15 @@ async def create_manual(
             images=stored_images,
             source_pdf=source_pdf,
         )
+        try:
+            await games_repository.auto_follow_game(
+                session,
+                user_id=auth.user.id,
+                game_id=game_id,
+            )
+        except SQLAlchemyError:
+            await session.rollback()
+            logger.warning("No se pudo auto-seguir el juego tras subir manual.", exc_info=True)
     except (ApiError, OSError, SQLAlchemyError):
         for storage_key in stored_keys:
             await delete_stored_file(storage_key)

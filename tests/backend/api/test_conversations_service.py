@@ -51,6 +51,7 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     append_mock = AsyncMock(
         return_value=_stored_pair(title="¿Y si empato?", sources=source_payload)
     )
+    auto_follow_mock = AsyncMock()
     background_tasks = _background_tasks()
 
     monkeypatch.setattr(
@@ -60,6 +61,10 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     monkeypatch.setattr("api.conversations.service.internal_client.post_json", post_json_mock)
     monkeypatch.setattr("api.conversations.service.generate_game_answer", answer_mock)
     monkeypatch.setattr("api.conversations.service.repository.append_message_pair", append_mock)
+    monkeypatch.setattr(
+        "api.conversations.service.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     response = anyio.run(
         partial(
@@ -87,6 +92,11 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     assert append_mock.await_args.kwargs["conversation_id"] == _CONVERSATION_ID
     assert append_mock.await_args.kwargs["assistant_sources"] == source_payload
     assert append_mock.await_args.kwargs["title"] == "¿Y si empato?"
+    auto_follow_mock.assert_awaited_once_with(
+        session,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
     assert session.rollbacks == 2
     assert len(background_tasks.tasks) == 1
     title_task = background_tasks.tasks[0]
@@ -101,6 +111,7 @@ def test_send_message_skips_condense_without_history(monkeypatch):
     post_json_mock = AsyncMock()
     answer_mock = AsyncMock(return_value=AnswerResponse(answer="Respuesta."))
     append_mock = AsyncMock(return_value=_stored_pair(title="Cómo se gana"))
+    auto_follow_mock = AsyncMock()
     background_tasks = _background_tasks()
 
     monkeypatch.setattr(
@@ -110,6 +121,10 @@ def test_send_message_skips_condense_without_history(monkeypatch):
     monkeypatch.setattr("api.conversations.service.internal_client.post_json", post_json_mock)
     monkeypatch.setattr("api.conversations.service.generate_game_answer", answer_mock)
     monkeypatch.setattr("api.conversations.service.repository.append_message_pair", append_mock)
+    monkeypatch.setattr(
+        "api.conversations.service.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     anyio.run(
         partial(
@@ -126,6 +141,11 @@ def test_send_message_skips_condense_without_history(monkeypatch):
     post_json_mock.assert_not_called()
     assert answer_mock.await_args.kwargs["retrieval_question"] == "Primera pregunta"
     assert append_mock.await_args.kwargs["title"] is None
+    auto_follow_mock.assert_awaited_once_with(
+        session,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
     assert background_tasks.tasks == []
 
 

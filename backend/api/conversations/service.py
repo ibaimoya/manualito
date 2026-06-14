@@ -6,6 +6,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import BackgroundTasks
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import client as internal_client
@@ -20,6 +21,7 @@ from api.conversations.schemas import (
     SendMessageResponse,
 )
 from api.exceptions import InternalServiceError, InternalServiceUnavailableError
+from api.games import repository as games_repository
 from api.games.exceptions import GameUnavailableError
 from api.manuals.retrieval.service import generate_game_answer
 from common.conversation_limits import (
@@ -126,6 +128,15 @@ async def send_message(
         assistant_sources=[source.model_dump(mode="json") for source in answer.sources],
         title=fallback_title,
     )
+    try:
+        await games_repository.auto_follow_game(
+            session,
+            user_id=user_id,
+            game_id=context.game_id,
+        )
+    except SQLAlchemyError:
+        await session.rollback()
+        logger.warning("No se pudo auto-seguir el juego tras enviar mensaje.", exc_info=True)
     response = SendMessageResponse(
         conversation=ConversationResponse.model_validate(stored.conversation),
         user_message=MessageResponse.model_validate(stored.user_message),

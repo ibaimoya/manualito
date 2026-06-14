@@ -110,8 +110,7 @@ def test_delete_account_is_rate_limited(
     monkeypatch.setattr("api.account.router.delete_account", delete_mock)
 
     responses = [
-        client.request("DELETE", "/api/me", json={"username": "Manualito"})
-        for _index in range(4)
+        client.request("DELETE", "/api/me", json={"username": "Manualito"}) for _index in range(4)
     ]
 
     assert responses[-1].status_code == 429
@@ -254,9 +253,7 @@ def test_purge_user_account_soft_deletes_everything_without_commit():
 
     session = FakeSession()
 
-    cleanup = anyio.run(
-        partial(purge_user_account, session, user_id=_USER_ID, now=_NOW)
-    )
+    cleanup = anyio.run(partial(purge_user_account, session, user_id=_USER_ID, now=_NOW))
 
     assert cleanup.chunk_ids_by_manual == {_MANUAL_ID: [chunk_row.id]}
     assert cleanup.storage_keys == ["assets/a.jpg"]
@@ -267,7 +264,7 @@ def test_purge_user_account_soft_deletes_everything_without_commit():
     assert "UPDATE assets SET" in writes
     assert "UPDATE conversations SET" in writes
     assert "DELETE FROM ratings" in writes
-    assert "DELETE FROM game_explanations" in writes
+    assert "game_explanations" not in writes
     assert "UPDATE auth_sessions SET revoked_at" in writes
     assert "UPDATE users SET status" in writes
 

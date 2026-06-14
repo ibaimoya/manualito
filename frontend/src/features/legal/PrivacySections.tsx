@@ -35,7 +35,7 @@ const SECTIONS: ReadonlyArray<{ icon: LucideIcon; h: string; body: string }> = [
   {
     icon: ShieldCheck,
     h: 'Tus derechos',
-    body: 'Puedes consultar y borrar tu información desde Ajustes (borrar el historial o cerrar sesión). Si necesitas algo más, escríbenos.',
+    body: 'Puedes consultar y borrar tu información desde Ajustes (borrar la cuenta o cerrar sesión). Si necesitas algo más, escríbenos.',
   },
   {
     icon: GraduationCap,

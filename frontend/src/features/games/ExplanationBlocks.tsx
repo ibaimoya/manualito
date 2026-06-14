@@ -1,5 +1,5 @@
 import { Flag, RefreshCw, Sparkles, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -9,7 +9,6 @@ import {
 import { Card } from '@/components/ui/card';
 import { useTypewriter } from '@/features/conversations/use-typewriter';
 import { Markdown } from '@/shared/components/Markdown';
-import { storage } from '@/shared/lib/storage';
 
 export type ExplanationBlockKey = 'setup' | 'turns' | 'victory';
 
@@ -42,11 +41,12 @@ const BLOCKS: ReadonlyArray<{
  * cada visita.
  */
 export function ExplanationBlocks({
-  gameId,
+  live,
   summary,
   content,
 }: Readonly<{
-  gameId: string;
+  /** La explicación se está generando ahora mismo: anima el tecleo en vivo. */
+  live: boolean;
   /** Texto del resumen, o null mientras se genera. */
   summary: string | null;
   /** Texto por apartado, o null mientras se genera. */
@@ -58,11 +58,7 @@ export function ExplanationBlocks({
         <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           Resumen rápido
         </p>
-        {summary === null ? (
-          <SummaryShimmer />
-        ) : (
-          <TypedSection text={summary} token={`${gameId}:summary`} />
-        )}
+        {summary === null ? <SummaryShimmer /> : <TypedSection text={summary} live={live} />}
       </Card>
       <Accordion type="multiple" className="space-y-3">
         {BLOCKS.map(({ key, title, icon: Icon, chipClass }) => {
@@ -80,7 +76,7 @@ export function ExplanationBlocks({
               </AccordionTrigger>
               {pending ? null : (
                 <AccordionContent>
-                  <TypedSection text={body} token={`${gameId}:${key}`} />
+                  <TypedSection text={body} live={live} />
                 </AccordionContent>
               )}
             </AccordionItem>
@@ -92,17 +88,13 @@ export function ExplanationBlocks({
 }
 
 /**
- * Markdown revelado letra a letra solo la primera vez que el usuario lo ve
- * (persistido por token). Radix monta el contenido del acordeón al desplegar,
- * así que el resumen se anima al aparecer y cada acordeón al abrirlo por primera
- * vez; al reabrir o revisitar la página, aparece entero.
+ * Markdown revelado letra a letra solo si el apartado aparece mientras la
+ * explicación se genera en vivo. La decisión se captura al montar (cuando llega
+ * el texto o se despliega el acordeón): en vivo teclea; ya cacheado (ready)
+ * aparece entero, así que al revisitar la página nunca se repite la animación.
  */
-function TypedSection({ text, token }: Readonly<{ text: string; token: string }>) {
-  // Lazy initializer: lee el flag una vez al montar, no en cada render.
-  const [animate] = useState(() => !storage.hasExplanationAnimated(token));
-  useEffect(() => {
-    storage.markExplanationAnimated(token);
-  }, [token]);
+function TypedSection({ text, live }: Readonly<{ text: string; live: boolean }>) {
+  const [animate] = useState(live);
   const { shown } = useTypewriter(text, animate);
   return <Markdown className="text-base leading-relaxed text-fg">{shown}</Markdown>;
 }

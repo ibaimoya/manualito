@@ -1,16 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, FileText, LogOut, Moon, Sun, SunMoon, Trash2 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
+import { ChevronRight, FileText, LogOut, Moon, Sun, SunMoon } from 'lucide-react';
+import { type ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
-import { Avatar } from '@/shared/components/Avatar';
+import { DeleteAccountButton } from '@/features/account/DeleteAccount';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
+import { Avatar } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
-import { storage } from '@/shared/lib/storage';
-import { clearApiSwCache } from '@/shared/lib/swCache';
 
 export const Route = createFileRoute('/_app/settings')({
   component: SettingsScreen,
@@ -18,14 +16,6 @@ export const Route = createFileRoute('/_app/settings')({
 
 function SettingsScreen() {
   const theme = useTheme();
-  const [confirmingWipe, setConfirmingWipe] = useState(false);
-  function wipeLocalData(): void {
-    storage.wipeAll();
-    storage.resetOnboarding();
-    clearApiSwCache().catch(() => undefined);
-    toast.success('Datos locales borrados');
-    setConfirmingWipe(false);
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-[var(--m-space-5)] px-[var(--m-space-5)] pb-10 pt-[var(--m-space-4)] md:max-w-3xl md:px-[var(--m-space-8)] md:pt-[var(--m-space-8)]">
@@ -36,7 +26,7 @@ function SettingsScreen() {
       <AccountSection />
 
       <Group title="Apariencia">
-        {/* Hint estático a propósito: un caption que cambia con la selección reflowea. */}
+        {/* Hint estático: un caption que cambia con la selección reflowea. */}
         <Row label="Tema" hint="Claro, oscuro o el del sistema" stacked>
           <SegmentedControl<ThemeMode>
             value={theme.mode}
@@ -62,51 +52,7 @@ function SettingsScreen() {
         </Row>
       </Group>
 
-      <Group title="Privacidad y datos">
-        <Row
-          label="Archivos del manual"
-          hint="Se guardan asociados al manual y se eliminan al borrarlo."
-        >
-          <Badge role="status" ariaLabel="Archivos gestionados por el servidor">
-            <FileText size={12} aria-hidden="true" /> Servidor
-          </Badge>
-        </Row>
-        <Row label="Borrar datos locales">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="text-error hover:bg-error-bg"
-            onClick={() => setConfirmingWipe(true)}
-          >
-            <Trash2 size={14} />
-            Borrar todo
-          </Button>
-        </Row>
-        {confirmingWipe ? (
-          <div
-            role="alertdialog"
-            aria-label="Confirmar borrado de datos locales"
-            className="border-t border-border bg-error-bg p-4"
-          >
-            <p className="text-sm font-semibold text-error">
-              ¿Borrar los datos guardados en este dispositivo?
-            </p>
-            <p className="mt-1 text-xs text-fg-2">
-              Se vacía la caché local y volverás a ver la introducción. Tus manuales y
-              conversaciones siguen en tu cuenta.
-            </p>
-            <div className="mt-3 flex justify-end gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setConfirmingWipe(false)}>
-                Cancelar
-              </Button>
-              <Button size="sm" variant="destructive" onClick={wipeLocalData}>
-                Borrar todo
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Group>
+      <PrivacyDataSection />
 
       <footer className="mt-2 flex justify-center">
         <Link
@@ -159,6 +105,31 @@ function AccountSection() {
           Salir
         </Button>
       </Row>
+    </Group>
+  );
+}
+
+function PrivacyDataSection() {
+  const { user } = useAuth();
+
+  return (
+    <Group title="Privacidad y datos">
+      <Row
+        label="Archivos del manual"
+        hint="Se guardan en el servidor y se eliminan al borrar el manual o la cuenta."
+      >
+        <Badge role="status" ariaLabel="Archivos gestionados por el servidor">
+          <FileText size={12} aria-hidden="true" /> Servidor
+        </Badge>
+      </Row>
+      {user ? (
+        <Row
+          label="Borrar cuenta"
+          hint="Elimina tu perfil, manuales, conversaciones y sesiones asociadas."
+        >
+          <DeleteAccountButton username={user.username} />
+        </Row>
+      ) : null}
     </Group>
   );
 }

@@ -1,17 +1,22 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { Route as SettingsRoute } from '@/routes/_app.settings';
 import type { AuthUser } from '@/shared/api/auth';
-import { storage } from '@/shared/lib/storage';
-import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
+import { renderRoute, routeComponent, TEST_USER } from '@tests/_helpers/renderRoute';
+import { server } from '@tests/_helpers/server';
 
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  server.resetHandlers();
   localStorage.clear();
+  Reflect.deleteProperty(globalThis, 'caches');
   vi.restoreAllMocks();
 });
+afterAll(() => server.close());
 
-function renderSettings(user: AuthUser | null = null) {
+function renderSettings(user: AuthUser | null = TEST_USER) {
   return renderRoute({
     path: '/settings',
     initialEntry: '/settings',
@@ -21,7 +26,7 @@ function renderSettings(user: AuthUser | null = null) {
 }
 
 describe('/settings', () => {
-  it('renderiza las dos secciones principales: Apariencia y Privacidad y datos', async () => {
+  it('renderiza las secciones principales: Apariencia y Privacidad y datos', async () => {
     renderSettings();
     expect(await screen.findByRole('region', { name: /Apariencia/i })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /Privacidad y datos/i })).toBeInTheDocument();
@@ -50,10 +55,11 @@ describe('/settings', () => {
     expect(screen.getByRole('button', { name: /Salir/i })).toBeInTheDocument();
   });
 
-  it('sin sesión en cache no monta la sección de Cuenta', async () => {
-    renderSettings();
+  it('sin sesión en caché no monta la sección de Cuenta ni el borrado de cuenta', async () => {
+    renderSettings(null);
     await screen.findByRole('region', { name: /Apariencia/i });
     expect(screen.queryByRole('region', { name: /Cuenta/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Borrar cuenta/i })).not.toBeInTheDocument();
   });
 
   it('cambia el modo del tema usando el SegmentedControl (light/dark/auto)', async () => {
@@ -91,22 +97,25 @@ describe('/settings', () => {
     ).toBeInTheDocument();
   });
 
-  it('botón "Borrar todo" abre el alertdialog de confirmación', async () => {
+  it('botón "Borrar cuenta" abre el diálogo de confirmación', async () => {
     renderSettings();
     const user = userEvent.setup();
 
-    const buttons = await screen.findAllByRole('button', { name: /Borrar todo/i });
-    await user.click(buttons[0]!);
-    expect(
-      await screen.findByRole('alertdialog', { name: /Confirmar borrado/i }),
-    ).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Borrar cuenta' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Borrar cuenta' });
+    expect(within(dialog).getByText(/Se borrarán/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /definitivamente/i })).toBeDisabled();
   });
 
-  it('confirma el borrado: barre claves legadas, onboarding seen y la caché /api del SW', async () => {
-    // Restos de versiones viejas que el barrido debe limpiar.
-    localStorage.setItem('manualito.result.m1', JSON.stringify({ summary: 's' }));
-    storage.markOnboardingSeen();
-    expect(storage.isOnboardingSeen()).toBe(true);
+  it('confirma el borrado de cuenta usando el backend y limpia la caché de API', async () => {
+    let deleteBody: unknown = null;
+    server.use(
+      http.delete('/api/me', async ({ request }) => {
+        deleteBody = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
     const deleteSpy = vi.fn().mockResolvedValue(true);
     Object.defineProperty(globalThis, 'caches', {
       configurable: true,
@@ -115,32 +124,19 @@ describe('/settings', () => {
 
     renderSettings();
     const user = userEvent.setup();
-    const buttons = await screen.findAllByRole('button', { name: /Borrar todo/i });
-    await user.click(buttons[0]!);
-
-    const allButtons = await screen.findAllByRole('button', { name: /Borrar todo/i });
-    await user.click(allButtons[allButtons.length - 1]!);
-
-    await waitFor(() => {
-      expect(localStorage.getItem('manualito.result.m1')).toBeNull();
-      expect(storage.isOnboardingSeen()).toBe(false);
-      expect(deleteSpy).toHaveBeenCalledWith('api');
+    await user.click(await screen.findByRole('button', { name: 'Borrar cuenta' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Borrar cuenta' });
+    const confirmButton = within(dialog).getByRole('button', {
+      name: 'Borrar cuenta definitivamente',
     });
-    Reflect.deleteProperty(globalThis, 'caches');
-  });
 
-  it('cancela la confirmación → no borra ni cierra los datos', async () => {
-    localStorage.setItem('manualito.result.m1', JSON.stringify({ summary: 's' }));
-    renderSettings();
-    const user = userEvent.setup();
-    await user.click((await screen.findAllByRole('button', { name: /Borrar todo/i }))[0]!);
-    await user.click(await screen.findByRole('button', { name: /Cancelar/i }));
-    expect(localStorage.getItem('manualito.result.m1')).not.toBeNull();
-    await waitFor(() => {
-      expect(
-        screen.queryByRole('alertdialog', { name: /Confirmar borrado/i }),
-      ).not.toBeInTheDocument();
-    });
+    await user.type(within(dialog).getByLabelText(/Escribe tu usuario/i), 'MARTA');
+    expect(confirmButton).toBeEnabled();
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(deleteBody).toEqual({ username: 'MARTA' }));
+    expect(await screen.findByText('Cuenta borrada')).toBeInTheDocument();
+    expect(deleteSpy).toHaveBeenCalledWith('api');
   });
 
   it('el footer enlaza a la política de privacidad', async () => {

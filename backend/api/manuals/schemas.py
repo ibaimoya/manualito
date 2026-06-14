@@ -117,7 +117,7 @@ class AnswerSource(StrictModel):
     manual_id: UUID
     manual_title: str | None
     page: int = Field(ge=1)
-    is_own: bool
+    is_own: bool = False
 
 
 class AnswerResponse(StrictModel):

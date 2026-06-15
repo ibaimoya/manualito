@@ -175,6 +175,7 @@ que editar Dockerfiles ni `compose.yaml`.
 | `.env` | Versiones de app, Python, Node, Nginx, Postgres, ChromaDB, Ollama, Mailpit y tags locales. |
 | `config/backend.env` | URLs internas, modelo de Ollama, límites, cookies, SMTP, ChromaDB y modelos de embeddings. |
 | `config/database.env` | Nombre de base de datos, host, puerto, driver y rutas de secretos. |
+| `config/frontend.env` | Variables públicas de Vite para desarrollo/build del frontend (`VITE_*`). |
 | `secrets/` | Secretos locales usados por Compose para Postgres. |
 
 Si falta alguna variable obligatoria, Compose corta el arranque con un mensaje

@@ -77,6 +77,9 @@ El proxy de Vite (`server.proxy['/api']`) reenvía a `localhost:8000`.  Las
 llamadas del cliente usan URLs relativas (`/api/manuals`, etc.), por lo que
 no hay que tocar nada al pasar a producción detrás de Nginx.
 
+Los valores públicos de desarrollo/build del frontend viven en
+`../config/frontend.env`.
+
 ## Despliegue (Docker Compose)
 
 El servicio `frontend` está añadido a `../compose.yaml` con el mismo

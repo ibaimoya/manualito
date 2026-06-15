@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -8,6 +10,11 @@ import { dirname, resolve } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const frontendEnvPath = resolve(__dirname, '../config/frontend.env');
+
+if (existsSync(frontendEnvPath)) {
+  loadEnvFile(frontendEnvPath);
+}
 
 // https://vite.dev/config/
 export default defineConfig({

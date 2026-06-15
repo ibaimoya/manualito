@@ -19,7 +19,7 @@ from api.games.dependencies import valid_game_id
 from api.main import app
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
-from database.models.constants import USER_MESSAGE_MAX_LENGTH
+from database.models.constants import CONVERSATION_TITLE_MAX_LENGTH, USER_MESSAGE_MAX_LENGTH
 from database.models.conversation import Conversation
 from database.models.user import User
 from database.session import get_db_session
@@ -176,6 +176,102 @@ def test_send_conversation_message_too_long_returns_public_code(
     body = response.json()
     assert body["errors"][0]["field"] == "content"
     assert body["errors"][0]["code"] == "message_too_long"
+
+
+def test_rename_conversation_strips_and_delegates_title(
+    client,
+    monkeypatch,
+    override_auth_conversation_and_db,
+):
+    """Renombrar recorta espacios y delega en el servicio con CSRF validado."""
+    rename_mock = AsyncMock(return_value=_conversation_response())
+    monkeypatch.setattr("api.conversations.router.rename_conversation", rename_mock)
+
+    response = client.patch(
+        f"/api/conversations/{_CONVERSATION_ID}",
+        json={"title": "  Robar con el ladrón  "},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(_CONVERSATION_ID)
+    rename_mock.assert_awaited_once()
+    assert rename_mock.await_args.kwargs["title"] == "Robar con el ladrón"
+    assert rename_mock.await_args.kwargs["conversation_id"] == _CONVERSATION_ID
+
+
+def test_rename_conversation_title_too_long_returns_public_code(
+    client,
+    override_auth_conversation_and_db,
+):
+    """Un título por encima del límite devuelve error estable de formulario."""
+    response = client.patch(
+        f"/api/conversations/{_CONVERSATION_ID}",
+        json={"title": "x" * (CONVERSATION_TITLE_MAX_LENGTH + 1)},
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["errors"][0]["field"] == "title"
+    assert body["errors"][0]["code"] == "title_too_long"
+
+
+def test_rename_conversation_blank_title_returns_required_code(
+    client,
+    override_auth_conversation_and_db,
+):
+    """Un título de solo espacios equivale a no enviar título."""
+    response = client.patch(
+        f"/api/conversations/{_CONVERSATION_ID}",
+        json={"title": "   "},
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["errors"][0]["field"] == "title"
+    assert body["errors"][0]["code"] == "title_required"
+
+
+def test_rename_conversation_not_found_returns_stable_404(
+    client,
+    monkeypatch,
+    override_auth_conversation_and_db,
+):
+    """Renombrar una conversación ajena responde el 404 estable de dominio."""
+    monkeypatch.setattr(
+        "api.conversations.router.rename_conversation",
+        AsyncMock(side_effect=ConversationNotFoundError),
+    )
+
+    response = client.patch(
+        f"/api/conversations/{_CONVERSATION_ID}",
+        json={"title": "Título nuevo"},
+    )
+
+    assert response.status_code == 404
+    assert any(
+        error["code"] == "conversation_not_found" for error in response.json()["errors"]
+    )
+
+
+def test_rename_conversation_is_rate_limited(
+    client,
+    monkeypatch,
+    override_auth_conversation_and_db,
+):
+    """Renombrar comparte el freno de acciones interactivas."""
+    rename_mock = AsyncMock(return_value=_conversation_response())
+    monkeypatch.setattr("api.conversations.router.rename_conversation", rename_mock)
+
+    responses = [
+        client.patch(
+            f"/api/conversations/{_CONVERSATION_ID}",
+            json={"title": "Título"},
+        )
+        for _index in range(31)
+    ]
+
+    assert responses[-1].status_code == 429
+    assert rename_mock.await_count == 30
 
 
 def test_delete_conversation_soft_deletes_owned_conversation(

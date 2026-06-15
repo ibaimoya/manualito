@@ -5,7 +5,13 @@ from typing import Literal
 from pydantic import Field
 
 from common.schemas import StrictModel
-from llm.annotations import Answer, ContextChunks, ConversationTitle, Question
+from llm.annotations import (
+    Answer,
+    ContextChunks,
+    ConversationTitle,
+    ConversationTitleGameName,
+    Question,
+)
 
 
 class ChatHistoryMessage(StrictModel):
@@ -46,6 +52,7 @@ class CondenseQuestionResponse(StrictModel):
 class ConversationTitleRequest(StrictModel):
     """Mensajes de una conversación para generar un título corto."""
 
+    game_name: ConversationTitleGameName
     messages: list[ChatHistoryMessage] = Field(min_length=1, max_length=20)
 
 

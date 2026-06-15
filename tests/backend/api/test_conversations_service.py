@@ -11,10 +11,13 @@ from api.auth.service import AuthenticatedSession
 from api.conversations.schemas import SendMessageRequest
 from api.conversations.service import send_message
 from api.manuals.exceptions import GeneratedAnswerTooLongError
+from api.manuals.schemas import AnswerResponse, AnswerSource
 
 _USER_ID = uuid4()
 _GAME_ID = uuid4()
 _CONVERSATION_ID = uuid4()
+_MANUAL_ID = uuid4()
+_MANUAL_TITLE = "Reglamento base"
 
 
 def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch):
@@ -31,8 +34,25 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     post_json_mock = AsyncMock(
         return_value={"question": "Desempate al llegar a 10 puntos"},
     )
-    answer_mock = AsyncMock(return_value=SimpleNamespace(answer="Gana quien tenga más oro."))
-    append_mock = AsyncMock(return_value=_stored_pair(title="¿Y si empato?"))
+    source_payload = [
+        {"manual_id": str(_MANUAL_ID), "manual_title": _MANUAL_TITLE, "page": 4, "is_own": True}
+    ]
+    answer = AnswerResponse(
+        answer="Gana quien tenga más oro.",
+        sources=[
+            AnswerSource(
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                page=4,
+                is_own=True,
+            )
+        ],
+    )
+    answer_mock = AsyncMock(return_value=answer)
+    append_mock = AsyncMock(
+        return_value=_stored_pair(title="¿Y si empato?", sources=source_payload)
+    )
+    auto_follow_mock = AsyncMock()
     background_tasks = _background_tasks()
 
     monkeypatch.setattr(
@@ -42,6 +62,10 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
     monkeypatch.setattr("api.conversations.service.internal_client.post_json", post_json_mock)
     monkeypatch.setattr("api.conversations.service.generate_game_answer", answer_mock)
     monkeypatch.setattr("api.conversations.service.repository.append_message_pair", append_mock)
+    monkeypatch.setattr(
+        "api.conversations.service.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     response = anyio.run(
         partial(
@@ -57,17 +81,28 @@ def test_send_message_uses_history_aware_retrieval_and_persists_pair(monkeypatch
 
     assert response.conversation.title == "¿Y si empato?"
     assert response.assistant_message.content == "Gana quien tenga más oro."
+    assert response.assistant_message.sources == answer.sources
     assert post_json_mock.await_args.kwargs["url"].endswith("/condense-question")
     answer_kwargs = answer_mock.await_args.kwargs
+    assert answer_kwargs["current_user_id"] == _USER_ID
     assert answer_kwargs["question"] == "¿Y si empato?"
     assert answer_kwargs["retrieval_question"] == "Desempate al llegar a 10 puntos"
     assert answer_kwargs["chat_history"][0]["role"] == "user"
     assert answer_kwargs["top_k"] == 4
     assert append_mock.await_args.kwargs["user_id"] == _USER_ID
     assert append_mock.await_args.kwargs["conversation_id"] == _CONVERSATION_ID
+    assert append_mock.await_args.kwargs["assistant_sources"] == source_payload
     assert append_mock.await_args.kwargs["title"] == "¿Y si empato?"
+    auto_follow_mock.assert_awaited_once_with(
+        session,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
     assert session.rollbacks == 2
     assert len(background_tasks.tasks) == 1
+    title_task = background_tasks.tasks[0]
+    assert title_task[1]["game_name"] == "Catan"
+    assert "answer" not in title_task[1]
 
 
 def test_send_message_skips_condense_without_history(monkeypatch):
@@ -75,8 +110,9 @@ def test_send_message_skips_condense_without_history(monkeypatch):
     session = _session()
     turn_context = _turn_context(title="Cómo se gana", history=[])
     post_json_mock = AsyncMock()
-    answer_mock = AsyncMock(return_value=SimpleNamespace(answer="Respuesta."))
+    answer_mock = AsyncMock(return_value=AnswerResponse(answer="Respuesta."))
     append_mock = AsyncMock(return_value=_stored_pair(title="Cómo se gana"))
+    auto_follow_mock = AsyncMock()
     background_tasks = _background_tasks()
 
     monkeypatch.setattr(
@@ -86,6 +122,10 @@ def test_send_message_skips_condense_without_history(monkeypatch):
     monkeypatch.setattr("api.conversations.service.internal_client.post_json", post_json_mock)
     monkeypatch.setattr("api.conversations.service.generate_game_answer", answer_mock)
     monkeypatch.setattr("api.conversations.service.repository.append_message_pair", append_mock)
+    monkeypatch.setattr(
+        "api.conversations.service.games_repository.auto_follow_game",
+        auto_follow_mock,
+    )
 
     anyio.run(
         partial(
@@ -102,6 +142,11 @@ def test_send_message_skips_condense_without_history(monkeypatch):
     post_json_mock.assert_not_called()
     assert answer_mock.await_args.kwargs["retrieval_question"] == "Primera pregunta"
     assert append_mock.await_args.kwargs["title"] is None
+    auto_follow_mock.assert_awaited_once_with(
+        session,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
     assert background_tasks.tasks == []
 
 
@@ -136,6 +181,38 @@ def test_send_message_propagates_overlong_answer_before_persisting(monkeypatch):
     append_mock.assert_not_called()
 
 
+def test_rename_conversation_delegates_with_owner_id(monkeypatch):
+    """El servicio renombra con el id del usuario autenticado y valida la fila."""
+    rename_mock = AsyncMock(
+        return_value=SimpleNamespace(
+            id=_CONVERSATION_ID,
+            game_id=_GAME_ID,
+            game_name="Catan",
+            title="Robar con el ladrón",
+            created_at="2026-06-02T10:00:00Z",
+            updated_at="2026-06-02T10:01:00Z",
+        )
+    )
+    monkeypatch.setattr(
+        "api.conversations.service.repository.rename_user_conversation",
+        rename_mock,
+    )
+
+    response = anyio.run(
+        partial(
+            conversation_service.rename_conversation,
+            object(),
+            auth=_auth(),
+            conversation_id=_CONVERSATION_ID,
+            title="Robar con el ladrón",
+        )
+    )
+
+    assert response.title == "Robar con el ladrón"
+    assert rename_mock.await_args.kwargs["user_id"] == _USER_ID
+    assert rename_mock.await_args.kwargs["title"] == "Robar con el ladrón"
+
+
 def test_refresh_conversation_title_uses_own_session(monkeypatch):
     """La tarea secundaria no reutiliza la sesión de la request."""
     session = object()
@@ -162,8 +239,8 @@ def test_refresh_conversation_title_uses_own_session(monkeypatch):
             user_id=_USER_ID,
             conversation_id=_CONVERSATION_ID,
             expected_title="Fallback",
+            game_name="Catan",
             question="¿Cómo se gana?",
-            answer="Con 10 puntos.",
             history=[],
             client=object(),
         )
@@ -176,6 +253,11 @@ def test_refresh_conversation_title_uses_own_session(monkeypatch):
         expected_title="Fallback",
         title="Título refinado",
     )
+    title_payload = conversation_service.internal_client.post_json.await_args.kwargs["payload"]
+    assert title_payload == {
+        "game_name": "Catan",
+        "messages": [{"role": "user", "content": "¿Cómo se gana?"}],
+    }
 
 
 def _auth() -> AuthenticatedSession:
@@ -189,6 +271,7 @@ def _turn_context(*, title: str | None, history: list[SimpleNamespace]) -> Simpl
         id=_CONVERSATION_ID,
         user_id=_USER_ID,
         game_id=_GAME_ID,
+        game_name="Catan",
         title=title,
         history=tuple(history),
     )
@@ -233,7 +316,11 @@ def _sessionmaker(session):
     return FakeSessionmaker()
 
 
-def _stored_pair(*, title: str | None) -> SimpleNamespace:
+def _stored_pair(
+    *,
+    title: str | None,
+    sources: list[dict[str, object]] | None = None,
+) -> SimpleNamespace:
     """Construye el resultado persistido que devuelve el repositorio."""
     return SimpleNamespace(
         conversation=SimpleNamespace(
@@ -254,6 +341,7 @@ def _stored_pair(*, title: str | None) -> SimpleNamespace:
             id=uuid4(),
             role="assistant",
             content="Gana quien tenga más oro.",
+            sources=sources or [],
             created_at="2026-06-02T10:01:00Z",
         ),
     )

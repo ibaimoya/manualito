@@ -11,11 +11,9 @@ import { describe, expect, it, vi } from 'vitest';
  */
 vi.mock('@tanstack/react-router', () => {
   const createRouter = vi.fn(() => ({ __router: 'mocked' }));
-  const RouterProvider = ({
-    router,
-  }: {
-    router: { __router: string };
-  }) => <div data-testid="router-provider">{router.__router}</div>;
+  const RouterProvider = ({ router }: { router: { __router: string } }) => (
+    <div data-testid="router-provider">{router.__router}</div>
+  );
   return { createRouter, RouterProvider };
 });
 
@@ -28,10 +26,16 @@ vi.mock('@/routeTree.gen', () => ({
 describe('AppRouter', () => {
   it('renderiza un RouterProvider con el router creado por createRouter', async () => {
     const { render } = await import('@testing-library/react');
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
     const { AppRouter } = await import('@/app/AppRouter');
     const { createRouter } = await import('@tanstack/react-router');
 
-    const { getByTestId } = render(<AppRouter />);
+    const queryClient = new QueryClient();
+    const { getByTestId } = render(
+      <QueryClientProvider client={queryClient}>
+        <AppRouter />
+      </QueryClientProvider>,
+    );
     expect(getByTestId('router-provider').textContent).toBe('mocked');
     expect(createRouter).toHaveBeenCalledTimes(1);
     // Verificamos el contrato esperado: defaultPreload + scrollRestoration.

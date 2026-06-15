@@ -3,7 +3,7 @@ import { cn } from '../lib/cn';
 
 /**
  * Silueta del meeple (token de juego de mesa).  Pieza icónica de la marca.
- * Sin texto, sin color hardcoded — recibe `color` como prop.
+ * Sin texto, sin color hardcoded — recibe "color" como prop.
  */
 export function Meeple({
   size = 32,
@@ -100,10 +100,8 @@ export function Wordmark({
         aria-hidden="true"
         style={{
           color: 'var(--m-primary-500)',
-          fontSize: size * 0.5,
+          fontSize: size * 0.9,
           marginLeft: 1,
-          transform: 'translateY(-0.15em)',
-          display: 'inline-block',
         }}
       >
         .
@@ -114,7 +112,7 @@ export function Wordmark({
 
 /**
  * Lockup horizontal — monograma + wordmark + tagline opcional.
- * `scale` es un multiplicador unitario (1 = base).
+ * "scale" es un multiplicador unitario (1 = base).
  */
 export function LockUp({
   scale = 1,

@@ -10,6 +10,19 @@ x-service-hardening: &service-hardening
     - /tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777
   pids_limit: 256
 
+x-volume-init-hardening: &volume-init-hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add:
+    - CHOWN
+    - FOWNER
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+  pids_limit: 32
+
 x-third-party-hardening: &third-party-hardening
   security_opt:
     - no-new-privileges:true
@@ -56,7 +69,30 @@ services:
         PYTHON_VERSION: ${PYTHON_VERSION:?PYTHON_VERSION no definida}
         PYTHON_VARIANT: ${PYTHON_VARIANT:-}
         VERSION: ${PYTHON_IMAGE_VERSION:?PYTHON_IMAGE_VERSION no definida}
+        APP_UID: ${APP_UID:-65532}
+        APP_GID: ${APP_GID:-65532}
     scale: 0
+    network_mode: none
+
+  asset-storage-init:
+    <<: *volume-init-hardening
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-asset-storage-init
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+    build: *api-build
+    user: "0:0"
+    entrypoint: ["/usr/bin/install"]
+    command:
+      - "-d"
+      - "-o"
+      - "${APP_UID:-65532}"
+      - "-g"
+      - "${APP_GID:-65532}"
+      - "-m"
+      - "0750"
+      - "/app/storage/assets"
+    volumes:
+      - assets-data:/app/storage/assets
+    restart: "no"
     network_mode: none
 
   api:
@@ -73,10 +109,12 @@ services:
       - postgres_user
       - postgres_password
     volumes:
-      - manual-assets-data:/app/storage/manual-assets
+      - assets-data:/app/storage/assets
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
+      asset-storage-init:
+        condition: service_completed_successfully
       database-migrate:
         condition: service_completed_successfully
       ocr:
@@ -174,7 +212,7 @@ services:
     image: chromadb/chroma:${CHROMA_VERSION:?CHROMA_VERSION no definida}
     pids_limit: 256
     volumes:
-      - chromadb-data:/chroma/chroma
+      - chromadb-data:/data
     networks:
       - manualito-net
 
@@ -255,7 +293,6 @@ services:
     build:
       context: ./frontend
       args:
-        APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
         NODE_VARIANT: ${NODE_VARIANT:-}
         NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}
@@ -277,7 +314,7 @@ volumes:
   chromadb-data:
   ollama-data:
   rag-hf-cache:
-  manual-assets-data:
+  assets-data:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
 

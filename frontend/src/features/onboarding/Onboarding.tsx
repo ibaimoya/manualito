@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
-import { flushSync } from 'react-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Check,
@@ -12,6 +11,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { Monogram } from '@/shared/components/Brand';
+import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
 import { storage } from '@/shared/lib/storage';
 import { cn } from '@/shared/lib/cn';
 import styles from './onboarding.module.css';
@@ -38,14 +38,14 @@ const SLIDES: Slide[] = [
     id: 'foto',
     n: 1,
     title: 'Hazle una foto',
-    sub: 'Captura las páginas del manual con la cámara. Da igual el orden — Manualito las cose por ti.',
+    sub: 'Captura las páginas del manual con la cámara. Da igual el orden. Manualito las cose por ti.',
   },
   {
     kind: 'step',
     id: 'procesa',
     n: 2,
     title: 'Lo entiende por ti',
-    sub: 'Leemos el texto, buscamos contexto y generamos una explicación clara — todo en segundos.',
+    sub: 'Leemos el texto, buscamos contexto y generamos una explicación clara en segundos.',
   },
   {
     kind: 'step',
@@ -55,6 +55,9 @@ const SLIDES: Slide[] = [
     sub: 'Resumen, secciones colapsables y un chat para resolver dudas mientras jugáis.',
   },
 ];
+
+// Pasos reales del recorrido (la pantalla final de elección no cuenta).
+const STEP_COUNT = SLIDES.filter((slide) => slide.kind === 'step').length;
 
 const PAGE_LINE_WIDTHS = [
   { id: 'manual-line-1', width: 88 },
@@ -80,86 +83,62 @@ const THUMBNAILS = [
   { id: 'thumb-3', number: 3 },
 ] as const;
 
-const PIPELINE_TOKENS = [
-  { id: 'setup', label: 'Setup' },
-  { id: 'arrow-turn', label: '→' },
-  { id: 'turn', label: 'turno' },
-  { id: 'arrow-win', label: '→' },
-  { id: 'win', label: 'ganar' },
-  { id: 'arrow-points', label: '↦' },
-  { id: 'points', label: '10 PV' },
-] as const;
-
 export function Onboarding() {
   const [index, setIndex] = useState(0);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const navigate = useNavigate();
   const N = SLIDES.length;
-  const heroPlaying = index === 0;
+  const PANELS = N + 1; // las diapositivas + la pantalla de elección final
+  const isChoice = index === N;
+
+  // Ancladas a "visitado": con index, la saliente se vaciaría en pleno deslizamiento.
+  const [visited, setVisited] = useState<ReadonlySet<number>>(() => new Set([0]));
 
   function go(next: number): void {
-    setIndex(Math.max(0, Math.min(N - 1, next)));
+    const clamped = Math.max(0, Math.min(PANELS - 1, next));
+    setIndex(clamped);
+    setVisited((prev) => (prev.has(clamped) ? prev : new Set(prev).add(clamped)));
   }
 
-  // Guard anti-spam: si el usuario pulsa "Empezar"/"Entrar a la app"
-  // varias veces rápido, `document.startViewTransition` se invocaría 2x
-  // y la 2ª transición arranca antes de que la 1ª termine → glitch
-  // visual.  Catálogo bug #5.
+  // Guard anti-spam: dos pulsaciones serían dos view transitions solapadas.
   const enteringRef = useRef(false);
 
-  function enterApp(): void {
+  function enterTo(to: '/register' | '/login'): void {
     if (enteringRef.current) return;
     enteringRef.current = true;
     storage.markOnboardingSeen();
-
-    const navigateNow = () => {
-      navigate({ to: '/home', replace: true }).catch(() => undefined);
-    };
-    const reduced = globalThis.window
-      .matchMedia('(prefers-reduced-motion: reduce)')
-      .matches;
-    const docAny = globalThis.document as Document & {
-      startViewTransition?: (cb: () => void) => {
-        finished: Promise<void>;
-      };
-    };
-
-    if (!reduced && typeof docAny.startViewTransition === 'function') {
-      const transition = docAny.startViewTransition(() => flushSync(navigateNow));
-      // Limpiamos el flag cuando la transición acaba (éxito o cancelación)
-      // para permitir reintentos si el usuario regresa al onboarding.
-      transition.finished.finally(() => {
+    // El router pone el timing de la View Transition; reduced-motion la apaga.
+    const reduced = globalThis.window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    navigate({ to, replace: true, viewTransition: !reduced })
+      .catch(() => undefined)
+      .finally(() => {
         enteringRef.current = false;
       });
-    } else {
-      navigateNow();
-      enteringRef.current = false;
-    }
   }
 
   function next(): void {
-    if (index < N - 1) {
-      go(index + 1);
-      return;
-    }
-    enterApp();
+    if (index < PANELS - 1) go(index + 1);
   }
 
   function skip(): void {
-    enterApp();
+    enterTo('/login');
   }
 
-  // Navegación con teclado.
+  // Teclado en captura: el guard ve el modal de privacidad antes de que Radix lo cierre.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (privacyOpen) return;
       if (e.key === 'ArrowRight') go(index + 1);
       else if (e.key === 'ArrowLeft') go(index - 1);
-      else if (e.key === 'Enter') next();
-      else if (e.key === 'Escape') skip();
+      else if (e.key === 'Enter') {
+        if (isChoice) enterTo('/register');
+        else next();
+      } else if (e.key === 'Escape') skip();
     };
-    globalThis.window.addEventListener('keydown', onKey);
-    return () => globalThis.window.removeEventListener('keydown', onKey);
+    globalThis.window.addEventListener('keydown', onKey, true);
+    return () => globalThis.window.removeEventListener('keydown', onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index]);
+  }, [index, privacyOpen]);
 
   return (
     <div className={styles.root}>
@@ -170,7 +149,12 @@ export function Onboarding() {
       <header className={styles.topbar}>
         <span className={styles.topbarBrand}>
           <Monogram size={32} radius={9} />
-          <span className={styles.topbarName}>Manualito</span>
+          <span className={styles.topbarName}>
+            <span>Manualito</span>
+            <span aria-hidden="true" style={{ color: 'var(--m-primary-500)' }}>
+              .
+            </span>
+          </span>
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className={styles.topbarLink} onClick={skip} type="button">
@@ -179,30 +163,31 @@ export function Onboarding() {
         </div>
       </header>
 
-      <div className={styles.track} style={{ transform: `translateX(${-index * 100}vw)` }}>
+      <div
+        className={styles.track}
+        style={{ width: `${PANELS * 100}vw`, transform: `translateX(${-index * 100}vw)` }}
+      >
         {/* — Slide 0: Hero — */}
         <section className={styles.slide} aria-label="Manualito · presentación">
           <div className={styles.hero}>
-            <span className={cn(styles.eyebrowTop, heroPlaying && styles.isIn)}>
-              UNA APP DE MESA
-            </span>
-            <HeroWordmark playing={heroPlaying} />
-            <p className={cn(styles.tagline, heroPlaying && styles.isIn)}>
+            <span className={cn(styles.eyebrowTop, styles.isIn)}>UNA APP DE MESA</span>
+            <HeroWordmark playing />
+            <p className={cn(styles.tagline, styles.isIn)}>
               Explica cualquier manual de juego de mesa en segundos.
             </p>
             <button
               type="button"
-              className={cn(styles.pill, heroPlaying && styles.isIn)}
+              className={cn(styles.pill, styles.isIn)}
               onClick={next}
-              style={{ '--vt': index === 0 ? 'cta-pill' : 'none' } as CSSProperties}
+              style={{ '--vt': index === 0 ? 'cta-pill' : 'none' }}
             >
               <span>Empezar</span>
               <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                 →
               </span>
             </button>
-            <span className={cn(styles.scrollhint, heroPlaying && styles.isIn)}>
-              Desliza · 3 pasos · 20 s
+            <span className={cn(styles.scrollhint, styles.isIn)}>
+              Desliza · {STEP_COUNT} pasos · 20 s
             </span>
           </div>
         </section>
@@ -210,50 +195,55 @@ export function Onboarding() {
         {/* — Slides 1..3 — */}
         {SLIDES.slice(1).map((s, idx) => {
           const slideIdx = idx + 1;
-          const active = index === slideIdx;
+          const shown = visited.has(slideIdx);
           const isLast = slideIdx === N - 1;
           return (
-            <section
-              key={s.id}
-              className={styles.slide}
-              aria-label={`Paso ${s.n}: ${s.title}`}
-            >
+            <section key={s.id} className={styles.slide} aria-label={`Paso ${s.n}: ${s.title}`}>
               <div className={styles.step}>
                 <div className={styles.stepCopy}>
                   <span className={styles.stepNum}>
                     <span>{String(s.n).padStart(2, '0')}</span>
                     <span>/</span>
-                    <span style={{ opacity: 0.5 }}>03</span>
+                    <span style={{ opacity: 0.5 }}>{String(STEP_COUNT).padStart(2, '0')}</span>
                   </span>
-                  <h2 className={cn(styles.stepTitle, active && styles.isIn)}>{s.title}</h2>
-                  <p className={cn(styles.stepSub, active && styles.isIn)}>{s.sub}</p>
+                  <h2 className={cn(styles.stepTitle, shown && styles.isIn)}>{s.title}</h2>
+                  <p className={cn(styles.stepSub, shown && styles.isIn)}>{s.sub}</p>
                   <button
                     type="button"
-                    className={cn(styles.pill, active && styles.isIn)}
+                    className={cn(styles.pill, shown && styles.isIn)}
                     onClick={next}
-                    style={{
-                      '--vt': isLast && active ? 'cta-pill' : 'none',
-                    } as CSSProperties}
                   >
-                    <span>{isLast ? 'Entrar a la app' : 'Siguiente'}</span>
+                    <span>{isLast ? 'Continuar' : 'Siguiente'}</span>
                     <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                       →
                     </span>
                   </button>
                 </div>
                 <div className={styles.stepArt}>
-                  <StepArt id={s.id} active={active} />
+                  <StepArt id={s.id} shown={shown} />
                 </div>
               </div>
             </section>
           );
         })}
+        {/* — Última diapositiva: elección crear/entrar — */}
+        <section className={styles.slide} aria-label="Crear cuenta o entrar">
+          <AuthChoice
+            shown={visited.has(N)}
+            onRegister={() => enterTo('/register')}
+            onLogin={() => enterTo('/login')}
+            onShowPrivacy={() => setPrivacyOpen(true)}
+          />
+        </section>
       </div>
 
+      <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
+
+      {/* Un punto por panel: las diapositivas y la pantalla de elección final. */}
       <div className={styles.pager} role="tablist" aria-label="Pasos del onboarding">
-        {SLIDES.map((slide, k) => (
+        {Array.from({ length: PANELS }, (_, k) => (
           <button
-            key={slide.id}
+            key={SLIDES[k]?.id ?? 'final'}
             type="button"
             role="tab"
             aria-selected={index === k}
@@ -269,9 +259,53 @@ export function Onboarding() {
   );
 }
 
-function StepArt({ id, active }: Readonly<{ id: Slide['id']; active: boolean }>) {
-  if (id === 'foto') return <StepFoto active={active} />;
-  if (id === 'procesa') return <StepProcesa active={active} />;
+/** Paso final: elegir entre crear cuenta o entrar. */
+function AuthChoice({
+  shown,
+  onRegister,
+  onLogin,
+  onShowPrivacy,
+}: Readonly<{
+  shown: boolean;
+  onRegister: () => void;
+  onLogin: () => void;
+  onShowPrivacy: () => void;
+}>) {
+  return (
+    <div className={cn(styles.choice, shown && styles.isIn)}>
+      <span style={{ filter: 'drop-shadow(0 20px 36px rgba(0, 0, 0, 0.45))' }}>
+        <Monogram size={116} radius={28} />
+      </span>
+      <div>
+        <h1 className={styles.choiceTitle}>
+          Todo listo<span style={{ color: 'var(--m-primary-300)' }}>.</span>
+        </h1>
+        <p className={styles.choiceLead}>
+          Crea tu cuenta para guardar los manuales que aprendas, o entra si ya eres de la casa.
+        </p>
+      </div>
+      <div className={styles.choiceActions}>
+        <button type="button" className={styles.choiceCreate} onClick={onRegister}>
+          Crear cuenta
+        </button>
+        <button type="button" className={styles.choiceGhost} onClick={onLogin}>
+          Ya tengo cuenta
+        </button>
+        <p className={styles.choiceNote}>
+          Al crear una cuenta aceptas la{' '}
+          <button type="button" className={styles.noteLink} onClick={onShowPrivacy}>
+            Política de privacidad
+          </button>
+          {'.'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StepArt({ id, shown }: Readonly<{ id: Slide['id']; shown: boolean }>) {
+  if (id === 'foto') return <StepFoto shown={shown} />;
+  if (id === 'procesa') return <StepProcesa shown={shown} />;
   return <StepEntiende />;
 }
 
@@ -282,7 +316,7 @@ function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
         <span key={id} className={styles.letterMask}>
           <span
             className={cn(styles.letter, playing && styles.letterIn)}
-            style={{ '--i': order } as CSSProperties}
+            style={{ '--i': order }}
           >
             {character}
           </span>
@@ -293,7 +327,7 @@ function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
 }
 
 /* — Slide 1: Foto — viewfinder con página detectada — */
-function StepFoto({ active }: Readonly<{ active: boolean }>) {
+function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
   return (
     <div className={styles.phone} aria-hidden="true">
       <div
@@ -307,7 +341,7 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
         <span className={styles.mono} style={{ opacity: 0.85 }}>
           ● REC
         </span>
-        <span className={styles.mono}>P. 4 / —</span>
+        <span className={styles.mono}>P. 4</span>
       </div>
 
       <div className={styles.viewfinder}>
@@ -320,7 +354,7 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
               color: '#2A211A',
             }}
           >
-            3 · El turno
+            3 · Los turnos
           </div>
           <div style={{ height: 6 }} />
           {PAGE_LINE_WIDTHS.map(({ id, width }) => (
@@ -368,12 +402,12 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
       </div>
 
       <div className={styles.thumbs}>
-        {active &&
+        {shown &&
           THUMBNAILS.map(({ id, number }) => (
             <div
               key={id}
               className={styles.thumb}
-              style={{ '--d': `${number * 200}ms` } as CSSProperties}
+              style={{ '--d': `${number * 200}ms` }}
             >
               <span className={styles.thumbNum}>{number}</span>
             </div>
@@ -384,7 +418,7 @@ function StepFoto({ active }: Readonly<{ active: boolean }>) {
 }
 
 /* — Slide 2: Procesa — pipeline OCR→RAG→LLM — */
-function StepProcesa({ active }: Readonly<{ active: boolean }>) {
+function StepProcesa({ shown }: Readonly<{ shown: boolean }>) {
   const nodes: Array<{ label: string; hint: string; icon: ReactNode }> = [
     {
       label: 'OCR',
@@ -402,55 +436,42 @@ function StepProcesa({ active }: Readonly<{ active: boolean }>) {
       icon: <Sparkles size={26} strokeWidth={1.75} />,
     },
   ];
+  // --g escalona el relevo entre anillos (ciclo de 3.6s en tres tramos).
   return (
-    <div>
-      <div className={styles.pipeline}>
-        {nodes.map((n, i) => (
-          <span key={n.label} style={{ display: 'contents' }}>
+    <div className={styles.pipeline}>
+      {nodes.map((n, i) => (
+        <span key={n.label} style={{ display: 'contents' }}>
+          <div
+            className={styles.node}
+            style={
+              shown
+                ? { '--d': `${i * 280}ms`, '--g': `${i * 1200}ms` }
+                : { animation: 'none', opacity: 0 }
+            }
+          >
+            <div className={styles.nodeRing}>
+              <div className={styles.nodeCore}>{n.icon}</div>
+            </div>
+            <div className={styles.nodeLabel}>
+              <span className={styles.mono}>0{i + 1}</span>
+              <strong>{n.label}</strong>
+              <em>{n.hint}</em>
+            </div>
+          </div>
+          {i < nodes.length - 1 ? (
             <div
-              className={styles.node}
+              className={styles.link}
               style={
-                active
-                  ? ({ '--d': `${i * 280}ms` } as CSSProperties)
+                shown
+                  ? { '--d': `${i * 280 + 140}ms`, '--g': `${i * 1200}ms` }
                   : { animation: 'none', opacity: 0 }
               }
             >
-              <div className={styles.nodeRing}>
-                <div className={styles.nodeCore}>{n.icon}</div>
-              </div>
-              <div className={styles.nodeLabel}>
-                <span className={styles.mono}>0{i + 1}</span>
-                <strong>{n.label}</strong>
-                <em>{n.hint}</em>
-              </div>
+              <span className={styles.linkPulse} />
             </div>
-            {i < nodes.length - 1 ? (
-              <div
-                className={styles.link}
-                style={
-                  active
-                    ? ({ '--d': `${i * 280 + 140}ms` } as CSSProperties)
-                    : { animation: 'none', opacity: 0 }
-                }
-              >
-                <span className={styles.linkPulse} />
-              </div>
-            ) : null}
-          </span>
-        ))}
-      </div>
-      <div className={styles.tokens} aria-hidden="true">
-        {active &&
-          PIPELINE_TOKENS.map(({ id, label }, i) => (
-            <span
-              key={id}
-              className={styles.token}
-              style={{ '--d': `${600 + i * 90}ms` } as CSSProperties}
-            >
-              {label}
-            </span>
-          ))}
-      </div>
+          ) : null}
+        </span>
+      ))}
     </div>
   );
 }
@@ -462,77 +483,47 @@ function StepEntiende() {
       <div className={styles.summary}>
         <span className={styles.eyebrow}>RESUMEN</span>
         <p>
-          Construyes una isla con poblados y ciudades para sumar <strong>10 puntos</strong>.
-          Tiras dados, recibes recursos y comercias.
+          Construyes una isla con poblados y ciudades para sumar <strong>10 puntos</strong>. Tiras
+          dados, recibes recursos y comercias.
         </p>
       </div>
 
-      <div className={cn(styles.acc, styles.accOpen)}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <Flag size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>Preparación</strong>
-            <em>6 pasos</em>
+      {DEMO_BLOCKS.map(({ icon: Icon, title, em, body }) => (
+        <div key={title} className={cn(styles.acc, body ? styles.accOpen : undefined)}>
+          <div className={styles.accHead}>
+            <span className={styles.accIc}>
+              <Icon size={18} />
+            </span>
+            <div className={styles.accTitles}>
+              <strong>{title}</strong>
+              <em>{em}</em>
+            </div>
+            <span className={styles.accChev}>
+              <ChevronDown size={18} />
+            </span>
           </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
+          {body ? <div className={styles.accBody}>{body}</div> : null}
         </div>
-        <div className={styles.accBody}>
-          <ol>
-            <li>Coloca los 19 hexágonos de terreno bocarriba.</li>
-            <li>Reparte los tokens de número en orden alfabético.</li>
-            <li>Cada jugador toma 2 poblados, 2 carreteras y 4 ciudades.</li>
-          </ol>
-        </div>
-      </div>
-
-      <div className={styles.acc}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <RefreshCw size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>El turno</strong>
-            <em>3 fases</em>
-          </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.acc}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <Crown size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>Cómo se gana</strong>
-            <em>10 PV</em>
-          </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.acc}>
-        <div className={styles.accHead}>
-          <span className={styles.accIc}>
-            <Check size={18} />
-          </span>
-          <div className={styles.accTitles}>
-            <strong>Casos especiales</strong>
-            <em>Ladrón · puerto · cartas</em>
-          </div>
-          <span className={styles.accChev}>
-            <ChevronDown size={18} />
-          </span>
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
+
+// Acordeones de mentira de la demo de Catan: solo el primero viene abierto.
+const DEMO_BLOCKS = [
+  {
+    icon: Flag,
+    title: 'Preparación',
+    em: '6 pasos',
+    body: (
+      <ol>
+        <li>Coloca los 19 hexágonos de terreno bocarriba.</li>
+        <li>Reparte los tokens de número en orden alfabético.</li>
+        <li>Cada jugador toma 2 poblados, 2 carreteras y 4 ciudades.</li>
+      </ol>
+    ),
+  },
+  { icon: RefreshCw, title: '¿Cómo van los turnos?', em: '3 fases', body: null },
+  { icon: Crown, title: '¿Cómo se gana?', em: '10 PV', body: null },
+  { icon: Check, title: 'Casos especiales', em: 'Ladrón · puerto · cartas', body: null },
+];

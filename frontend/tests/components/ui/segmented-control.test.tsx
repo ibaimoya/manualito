@@ -6,8 +6,8 @@ import { useState } from 'react';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 
 /**
- * Tests del refactor J1 (catálogo bugs #34, #42): SegmentedControl
- * construido sobre Radix RadioGroup en lugar de buttons manuales.
+ * Tests de SegmentedControl construido sobre Radix RadioGroup en lugar de
+ * buttons manuales.
  *
  * Cubrimos:
  *  - Render con role="radiogroup" + role="radio" semántico.

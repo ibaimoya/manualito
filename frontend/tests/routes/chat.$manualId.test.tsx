@@ -1,22 +1,11 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from '@tanstack/react-router';
 import { http, HttpResponse, delay } from 'msw';
-import { Toaster } from 'sonner';
-import { ThemeProvider } from '@/app/theme';
-import { Route as ChatRoute } from '@/routes/chat.$manualId';
-import { storage } from '@/shared/lib/storage';
+import { Route as ChatRoute } from '@/routes/_app.chat.$manualId';
 import { server } from '@tests/_helpers/server';
-import { failAskManual } from '@tests/_helpers/mswHandlers';
+import { failSendMessage } from '@tests/_helpers/mswHandlers';
+import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
@@ -26,104 +15,104 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function seedManual(manualId: string, name = 'Catan') {
-  storage.upsertManual({
-    manual_id: manualId,
-    name,
-    created_at: '2026-05-26T10:00:00.000Z',
-    last_opened_at: '2026-05-26T10:00:00.000Z',
-    chunks_indexed: 12,
-  });
-  storage.setResult({
-    manual_id: manualId,
-    name,
-    summary: 's',
-    setup: 'a',
-    turn: 'b',
-    win: 'c',
-    created_at: '2026-05-26T10:00:00.000Z',
-  });
-}
+const CONVERSATION = {
+  id: 'conv-001',
+  game_id: 'test-game-001',
+  game_name: 'Catan',
+  title: 'Dudas de preparación',
+  created_at: '2026-05-26T10:00:00.000Z',
+  updated_at: '2026-05-26T10:05:00.000Z',
+};
 
-function renderChat(manualId: string, initialQuestion?: string) {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const root = createRootRoute({ component: Outlet });
-  const chatR = createRoute({
-    getParentRoute: () => root,
+function renderChat(manualId: string, search?: { q?: string; c?: string; g?: string }) {
+  const params = new URLSearchParams();
+  if (search?.q) params.set('q', search.q);
+  if (search?.c) params.set('c', search.c);
+  if (search?.g) params.set('g', search.g);
+  const queryStr = params.size > 0 ? `?${params.toString()}` : '';
+  return renderRoute({
     path: '/chat/$manualId',
+    initialEntry: `/chat/${manualId}${queryStr}`,
+    component: routeComponent(ChatRoute),
     validateSearch: (s) => ({
       q: typeof s.q === 'string' ? s.q : undefined,
+      c: typeof s.c === 'string' ? s.c : undefined,
+      g: typeof s.g === 'string' ? s.g : undefined,
     }),
-    component: (
-      ChatRoute as unknown as { options: { component: React.FC } }
-    ).options.component,
+    stubs: {
+      '/game/$gameId': 'GameScreen',
+      '/history': 'HistoryScreen',
+      '/manual/$manualId': 'ManualScreen',
+    },
   });
-  const resultR = createRoute({
-    getParentRoute: () => root,
-    path: '/result/$manualId',
-    component: () => <div>ResultScreen</div>,
-  });
-  const tree = root.addChildren([chatR, resultR]);
-  const search = initialQuestion ? `?q=${encodeURIComponent(initialQuestion)}` : '';
-  const router = createRouter({
-    routeTree: tree,
-    history: createMemoryHistory({
-      initialEntries: [`/chat/${manualId}${search}`],
-    }),
-  });
-  return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-        <Toaster />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
 }
 
+describe('/chat/$manualId · search schema', () => {
+  it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
+    const validateSearch = (
+      ChatRoute as unknown as {
+        options: { validateSearch: (v: Record<string, unknown>) => Record<string, unknown> };
+      }
+    ).options.validateSearch;
+    const result = validateSearch({ q: 'a'.repeat(4001), c: 'conv-001' });
+    expect(result['q']).toBeUndefined();
+    expect(result['c']).toBe('conv-001');
+    // Una pregunta dentro de la cota pasa intacta.
+    expect(validateSearch({ q: 'a'.repeat(4000) })['q']).toHaveLength(4000);
+  });
+});
+
 describe('/chat/$manualId', () => {
-  it('renderiza el nombre del manual en el header', async () => {
-    seedManual('m1', 'Wingspan');
+  it('el breadcrumb lleva el juego como tramo navegable y «Chat» como página', async () => {
     renderChat('m1');
-    expect(await screen.findByText('Wingspan')).toBeInTheDocument();
+    // El detalle del manual (MSW) resuelve el juego del trail.
+    const gameLink = await screen.findByRole('link', { name: 'Catan' });
+    expect(gameLink).toHaveAttribute('href', '/game/test-game-001');
+    expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
-  it('si no hay manual en local muestra el fallback "Manual"', async () => {
+  it('si el manual no resuelve, el trail conserva al menos Biblioteca', async () => {
+    server.use(
+      http.get('/api/manuals/:manualId', () =>
+        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
+      ),
+    );
     renderChat('mDesconocido');
-    expect(await screen.findByText('Manual')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Biblioteca' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
-  it('empty state cuando no hay mensajes guardados', async () => {
-    seedManual('m1');
+  it('bienvenida cuando se abre un chat nuevo (sin conversación)', async () => {
     renderChat('m1');
+    expect(await screen.findByText(/Pregúntame sobre/)).toBeInTheDocument();
+  });
+
+  it('pulsar una pregunta-tarjeta de la bienvenida la envía', async () => {
+    renderChat('m1');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '¿Cómo se gana?' }));
+    // La pregunta entra como turno y el backend (MSW) responde.
+    expect(await screen.findByText('¿Cómo se gana?')).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it('?c=… reabre la conversación y muestra su historial del servidor', async () => {
+    renderChat('m1', { c: 'conv-001' });
+    // Mensajes de SAMPLE en el handler MSW por defecto.
+    expect(await screen.findByText('¿Cómo se reparten las cartas?')).toBeInTheDocument();
     expect(
-      await screen.findByText(/Empieza con una pregunta sobre el manual/),
+      screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
     ).toBeInTheDocument();
   });
 
-  it('muestra mensajes previos del historial (lazy initializer sin flash)', async () => {
-    seedManual('m1');
-    storage.appendQA('m1', {
-      id: 'qa-1',
-      role: 'user',
-      text: '¿Cuántos jugadores?',
-      ts: '2026-05-26T10:00:00.000Z',
-    });
-    storage.appendQA('m1', {
-      id: 'qa-2',
-      role: 'bot',
-      text: 'De 2 a 5 jugadores.',
-      ts: '2026-05-26T10:00:01.000Z',
-    });
-    renderChat('m1');
-    expect(await screen.findByText('¿Cuántos jugadores?')).toBeInTheDocument();
-    expect(screen.getByText('De 2 a 5 jugadores.')).toBeInTheDocument();
-  });
-
-  it('al enviar una pregunta: aparece el mensaje user + bot tras la respuesta', async () => {
-    seedManual('m1');
+  it('al enviar una pregunta: burbuja optimista + respuesta del backend', async () => {
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -133,24 +122,20 @@ describe('/chat/$manualId', () => {
     // Mensaje del usuario aparece inmediato (optimistic UI).
     expect(await screen.findByText('¿Y empate?')).toBeInTheDocument();
 
-    // Bot responde según el handler MSW por defecto.
+    // El backend (MSW) responde el turno completo.
     await waitFor(
       () => {
         expect(
-          screen.getByText(/Respuesta simulada para: "¿Y empate\?"/),
+          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
         ).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
-
-    // Persistencia: ambos mensajes en localStorage.
-    await waitFor(() => {
-      expect(storage.listQA('m1')).toHaveLength(2);
-    });
+    // La pregunta sigue visible como turno confirmado (no se duplica).
+    expect(screen.getAllByText('¿Y empate?')).toHaveLength(1);
   });
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -161,32 +146,28 @@ describe('/chat/$manualId', () => {
   });
 
   it('si la URL trae ?q=foo, dispara la pregunta automáticamente al montar', async () => {
-    seedManual('m1');
-    renderChat('m1', '¿Cuántos jugadores hay?');
+    renderChat('m1', { q: '¿Cuántos jugadores hay?' });
     // El mensaje del usuario aparece inmediato.
     expect(await screen.findByText('¿Cuántos jugadores hay?')).toBeInTheDocument();
-    // Y la respuesta del bot llega tras la mutation.
+    // Y la respuesta llega tras crear conversación + enviar turno.
     await waitFor(
       () => {
         expect(
-          screen.getByText(/Respuesta simulada para: "¿Cuántos jugadores hay\?"/),
+          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
         ).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
   });
 
-  it('si el LLM falla con 504, muestra toast de error (no rompe la app)', async () => {
-    server.use(failAskManual(504));
-    seedManual('m1');
+  it('si el LLM falla con 504: toast de error y la pregunta vuelve al composer', async () => {
+    server.use(failSendMessage(504));
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
     await user.type(input, 'fail');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
-    // Pregunta del usuario sigue en pantalla.
-    expect(await screen.findByText('fail')).toBeInTheDocument();
     // Toast de error: el mapper traduce 504 → "Tiempo de espera agotado".
     await waitFor(
       () => {
@@ -194,30 +175,119 @@ describe('/chat/$manualId', () => {
       },
       { timeout: 3000 },
     );
+    // El draft se restaura para reintentar sin reescribir.
+    expect(input).toHaveValue('fail');
   });
 
-  it('header tiene enlace "Volver al resumen" hacia /result/$manualId', async () => {
-    seedManual('m1');
+  it('si el primer envío falla, el reintento reutiliza la conversación creada', async () => {
+    let creates = 0;
+    let sends = 0;
+    server.use(
+      http.post('/api/games/:gameId/conversations', () => {
+        creates += 1;
+        return HttpResponse.json(CONVERSATION, { status: 201 });
+      }),
+      http.post('/api/conversations/:conversationId/messages', () => {
+        sends += 1;
+        if (sends === 1) return HttpResponse.json({ detail: 'boom' }, { status: 500 });
+        return HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u-retry',
+            role: 'user',
+            content: 'reintento',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b-retry',
+            role: 'assistant',
+            content: 'Respuesta al reintento.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        });
+      }),
+    );
     renderChat('m1');
-    const link = await screen.findByRole('link', { name: /Volver al resumen/i });
-    expect(link).toHaveAttribute('href', '/result/m1');
+    const user = userEvent.setup();
+    const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await user.type(input, 'reintento');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    // Falla el envío: el draft vuelve al composer para reintentar.
+    await waitFor(() => expect(input).toHaveValue('reintento'), { timeout: 3000 });
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    expect(await screen.findByText('Respuesta al reintento.')).toBeInTheDocument();
+    expect(sends).toBe(2);
+    expect(creates).toBe(1);
   });
 
-  it('badge "Listo" presente en el header del chat', async () => {
-    seedManual('m1');
+  it('cita páginas: las propias enlazan al visor, las de la comunidad no', async () => {
+    server.use(
+      http.post('/api/conversations/:conversationId/messages', () =>
+        HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u1',
+            role: 'user',
+            content: 'madera',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b1',
+            role: 'assistant',
+            content: 'La madera la dan los bosques.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [
+              { manual_id: 'm1', manual_title: 'Catan', page: 4, is_own: true },
+              { manual_id: 'm1', manual_title: 'Catan', page: 4, is_own: true },
+              { manual_id: 'm2', manual_title: 'Catan (comunidad)', page: 7, is_own: false },
+            ],
+          },
+        }),
+      ),
+    );
     renderChat('m1');
-    expect(await screen.findByText('Listo')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'madera');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+    // La página propia (4) se deduplica y enlaza al visor del manual.
+    const own = await screen.findByRole('link', { name: 'Abrir página 4 del manual' });
+    expect(own.getAttribute('href')).toContain('/manual/m1');
+    expect(own.getAttribute('href')).toContain('page=4');
+    expect(screen.getAllByText('Pág. 4')).toHaveLength(1);
+    // La de la comunidad (7) se cita pero NO es un enlace (no puedes abrirla).
+    expect(screen.getByText('Pág. 7')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
   });
 
   it('typing indicator mientras la mutation está en vuelo', async () => {
     // Forzamos un delay alto para ver el indicator.
     server.use(
-      http.post('/api/manuals/:manualId/questions', async () => {
+      http.post('/api/conversations/:conversationId/messages', async () => {
         await delay(500);
-        return HttpResponse.json({ answer: 'tardío' });
+        return HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u1',
+            role: 'user',
+            content: 'tarda',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b1',
+            role: 'assistant',
+            content: 'tardío',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        });
       }),
     );
-    seedManual('m1');
     renderChat('m1');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -228,5 +298,46 @@ describe('/chat/$manualId', () => {
     expect(
       await screen.findByRole('status', { name: /Escribiendo respuesta/i }),
     ).toBeInTheDocument();
+  });
+
+  it('copiar respuesta: escribe el contenido (Markdown) en el portapapeles', async () => {
+    server.use(
+      http.post('/api/conversations/:conversationId/messages', () =>
+        HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'u1',
+            role: 'user',
+            content: 'q',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'b1',
+            role: 'assistant',
+            content: 'Respuesta **copiable**.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        }),
+      ),
+    );
+    renderChat('m1');
+    const user = userEvent.setup();
+    // El mock va después de setup() para que no lo pise el portapapeles de userEvent.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+    await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'q');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    // El botón de copiar aparece cuando la respuesta termina de escribirse.
+    const copyBtn = await screen.findByRole(
+      'button',
+      { name: /Copiar respuesta/i },
+      { timeout: 3000 },
+    );
+    await user.click(copyBtn);
+    expect(writeText).toHaveBeenCalledWith('Respuesta **copiable**.');
   });
 });

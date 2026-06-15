@@ -1,19 +1,24 @@
 from functools import partial
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID
 
 import anyio
 import pytest
 from sqlalchemy.dialects import postgresql
 
+import api.conversations.repository as conversation_repository
 from api.conversations.exceptions import ConversationNotFoundError
 from api.conversations.repository import (
+    append_message_pair,
     get_owned_conversation,
     list_conversation_messages,
     list_game_conversations,
     load_conversation_turn_context,
     load_recent_messages,
+    rename_user_conversation,
     soft_delete_conversation,
+    update_conversation_title,
 )
 from api.games.exceptions import GameUnavailableError
 
@@ -129,6 +134,61 @@ def test_list_conversation_messages_orders_chronologically():
     compiled = _compile(session.statement)
     assert "messages.conversation_id =" in compiled
     assert "messages.created_at ASC" in compiled
+
+
+def test_append_message_pair_persists_sources_only_on_assistant(monkeypatch):
+    """El turno guarda fuentes públicas solo en la respuesta del asistente."""
+    source = {"manual_id": str(_GAME_ID), "manual_title": "Reglamento", "page": 2}
+    conversation = SimpleNamespace(
+        id=_CONVERSATION_ID,
+        user_id=_USER_ID,
+        title=None,
+        updated_at=None,
+    )
+    session = SimpleNamespace(added=[], flushes=0, commits=0)
+
+    def add_all(messages):
+        session.added.extend(messages)
+
+    async def flush():
+        await anyio.lowlevel.checkpoint()
+        session.flushes += 1
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    session.add_all = add_all
+    session.flush = flush
+    session.commit = commit
+    monkeypatch.setattr(
+        conversation_repository,
+        "_get_active_conversation_for_write",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(
+        conversation_repository,
+        "get_conversation_summary",
+        AsyncMock(return_value=SimpleNamespace(id=_CONVERSATION_ID)),
+    )
+
+    stored = anyio.run(
+        partial(
+            append_message_pair,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            user_content="Pregunta",
+            assistant_content="Respuesta",
+            assistant_sources=[source],
+            title="Título",
+        )
+    )
+
+    assert stored.user_message.sources == []
+    assert stored.assistant_message.sources == [source]
+    assert session.flushes == 1
+    assert session.commits == 1
 
 
 def test_load_recent_messages_reverses_descending_slice():
@@ -276,6 +336,117 @@ def test_soft_delete_conversation_marks_owned_row():
     assert session.commits == 1
 
 
+def test_rename_user_conversation_updates_title_without_touching_activity(monkeypatch):
+    """Renombrar guarda el título nuevo sin reordenar por actividad reciente."""
+    conversation = SimpleNamespace(id=_CONVERSATION_ID, title="Viejo", updated_at="antes")
+    summary = SimpleNamespace(id=_CONVERSATION_ID, title="Nuevo")
+    session = SimpleNamespace(commits=0)
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    session.commit = commit
+    monkeypatch.setattr(
+        conversation_repository,
+        "get_owned_conversation",
+        AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(
+        conversation_repository,
+        "get_conversation_summary",
+        AsyncMock(return_value=summary),
+    )
+
+    row = anyio.run(
+        partial(
+            rename_user_conversation,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            title="Nuevo",
+        )
+    )
+
+    assert row is summary
+    assert conversation.title == "Nuevo"
+    assert conversation.updated_at == "antes"
+    assert session.commits == 1
+
+
+def test_update_conversation_title_applies_refinement_over_fallback(monkeypatch):
+    """El título refinado sustituye al fallback cuando nadie lo cambió antes."""
+    conversation = SimpleNamespace(
+        id=_CONVERSATION_ID,
+        title="Fallback inicial",
+        updated_at=None,
+    )
+    session = SimpleNamespace(commits=0)
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    session.commit = commit
+    monkeypatch.setattr(
+        conversation_repository,
+        "_get_active_conversation_for_write",
+        AsyncMock(return_value=conversation),
+    )
+
+    anyio.run(
+        partial(
+            update_conversation_title,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            expected_title="Fallback inicial",
+            title="Título refinado",
+        )
+    )
+
+    assert conversation.title == "Título refinado"
+    assert conversation.updated_at is not None
+    assert session.commits == 1
+
+
+def test_update_conversation_title_discards_when_user_already_renamed(monkeypatch):
+    """El título refinado del LLM pierde contra un rename manual del usuario."""
+    conversation = SimpleNamespace(id=_CONVERSATION_ID, title="Mi título", updated_at=None)
+    session = SimpleNamespace(commits=0, rollbacks=0)
+
+    async def commit():
+        await anyio.lowlevel.checkpoint()
+        session.commits += 1
+
+    async def rollback():
+        await anyio.lowlevel.checkpoint()
+        session.rollbacks += 1
+
+    session.commit = commit
+    session.rollback = rollback
+    monkeypatch.setattr(
+        conversation_repository,
+        "_get_active_conversation_for_write",
+        AsyncMock(return_value=conversation),
+    )
+
+    anyio.run(
+        partial(
+            update_conversation_title,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            expected_title="Fallback inicial",
+            title="Título refinado",
+        )
+    )
+
+    assert conversation.title == "Mi título"
+    assert session.commits == 0
+    assert session.rollbacks == 1
+
+
 def _compile(statement) -> str:
     """Compila SQLAlchemy con dialecto Postgres para inspección estable."""
     return str(statement.compile(dialect=postgresql.dialect()))
@@ -286,6 +457,7 @@ def _conversation_row(conversation, *, game_status: str):
 
     class FakeRow:
         game_deleted_at = None
+        game_name = "Catan"
 
         def __init__(self):
             self.game_status = game_status

@@ -13,6 +13,8 @@ type ModalFrameProps = Readonly<{
   contentClassName?: string;
   dataKind: DialogDataKind;
   handle?: ReactNode;
+  /** Radix enfoca el primer focusable (la X); permite redirigirlo a un campo. */
+  onOpenAutoFocus?: (event: Event) => void;
 }>;
 
 export type ModalHeaderProps = Readonly<{
@@ -47,6 +49,7 @@ export function ModalFrame({
   contentClassName,
   dataKind,
   handle,
+  onOpenAutoFocus,
 }: ModalFrameProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -57,6 +60,7 @@ export function ModalFrame({
         />
         <DialogPrimitive.Content
           {...dataAttributes(dataKind)}
+          onOpenAutoFocus={onOpenAutoFocus}
           className={cn(contentBaseClassName, 'focus:outline-none', contentClassName)}
         >
           {handle}
@@ -87,16 +91,14 @@ export const ModalHeader = forwardRef<
         ) : null}
       </div>
       {onClose ? (
-        <DialogPrimitive.Close asChild>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-          >
-            <X size={20} strokeWidth={2} />
-          </button>
-        </DialogPrimitive.Close>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 hover:bg-surface"
+        >
+          <X size={20} strokeWidth={2} />
+        </button>
       ) : null}
     </header>
   );
@@ -107,42 +109,39 @@ export const ModalBody = ({ children, className }: ModalBodyProps) => (
 );
 
 /**
- * Dialog centrado para desktop (`md+`).
- *
- * Diferencias respecto a `<Sheet>` (móvil):
- *  - Posición: centro de pantalla, no anclado abajo.
- *  - Animación: fade + zoom-in suave (no slide-up).
- *  - Ancho fijo (max-w-md por defecto), no full-width.
- *  - Sin "handle" decorativo (en desktop no aplica gesture táctil).
+ * Dialog centrado para desktop ("md+"): fade + zoom-in, ancho fijo (max-w-md
+ * por defecto). La variante móvil anclada abajo vive en ResponsiveModal.
  */
+
+export const DIALOG_CONTENT_CLASS = cn(
+  'fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-md',
+  '-translate-x-1/2 -translate-y-1/2',
+  'rounded-2xl border border-border bg-card shadow-lg',
+);
+
+export const DIALOG_HEADER_CLASS = 'flex items-start justify-between gap-3 px-5 pb-2 pt-5';
 
 export const Dialog = ({
   open,
   onOpenChange,
   children,
   contentClassName,
+  onOpenAutoFocus,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /**
-   * Clases extra para el panel del Dialog.  Útil para anchuras más
-   * grandes (ej. `max-w-2xl` para visores de texto) o controlar altura
-   * en pantallas con mucho contenido.  Se aplica después del className
-   * por defecto, así sobrescribe.
-   */
+  /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
   contentClassName?: string;
+  onOpenAutoFocus?: (event: Event) => void;
 }>) => (
   <ModalFrame
     open={open}
     onOpenChange={onOpenChange}
-    contentBaseClassName={cn(
-      'fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-md',
-      '-translate-x-1/2 -translate-y-1/2',
-      'rounded-2xl border border-border bg-bg shadow-lg',
-    )}
+    contentBaseClassName={DIALOG_CONTENT_CLASS}
     contentClassName={contentClassName}
     dataKind="dialog"
+    onOpenAutoFocus={onOpenAutoFocus}
   >
     {children}
   </ModalFrame>
@@ -152,13 +151,7 @@ export const DialogHeader = forwardRef<
   ComponentRef<typeof DialogPrimitive.Title>,
   Omit<ModalHeaderProps, 'className'>
 >(function DialogHeader(props, ref) {
-  return (
-    <ModalHeader
-      {...props}
-      ref={ref}
-      className="flex items-start justify-between gap-3 px-5 pb-2 pt-5"
-    />
-  );
+  return <ModalHeader {...props} ref={ref} className={DIALOG_HEADER_CLASS} />;
 });
 
 export const DialogBody = ModalBody;

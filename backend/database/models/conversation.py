@@ -57,10 +57,16 @@ class Message(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    sources: Mapped[list[dict[str, object]]] = mapped_column(
+        postgresql.JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+    )
 
     __table_args__ = (
         CheckConstraint("role IN ('user', 'assistant')", name="role_valid"),
         CheckConstraint("length(btrim(content)) > 0", name="content_not_empty"),
+        CheckConstraint("jsonb_typeof(sources) = 'array'", name="sources_array"),
         CheckConstraint(
             f"length(content) <= {MESSAGE_CONTENT_MAX_LENGTH}",
             name="content_length_valid",

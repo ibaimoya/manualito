@@ -4,7 +4,6 @@ import {
   MEDIA_QUERIES,
   readMediaSnapshot,
   useMediaQuery,
-  useMediaQueryLegacy,
   useNamedMediaQuery,
 } from '@/shared/hooks/useMediaQuery';
 
@@ -95,13 +94,6 @@ describe('useMediaQuery', () => {
     expect(mql.listeners.size).toBe(0);
   });
 
-  it('getServerSnapshot devuelve false (SSR fallback)', () => {
-    // No podemos borrar window en jsdom sin romper React.  Verificamos
-    // el comportamiento equivalente: readMediaSnapshot devuelve false
-    // cuando window no está disponible — esto sí podemos simularlo.
-    // (El test SSR puro vive implícito en el código del hook.)
-    expect(typeof readMediaSnapshot('(min-width: 1px)')).toBe('boolean');
-  });
 });
 
 describe('queries semánticas', () => {
@@ -109,10 +101,6 @@ describe('queries semánticas', () => {
     expect(MEDIA_QUERIES).toEqual({
       desktop: '(min-width: 768px)',
       darkMode: '(prefers-color-scheme: dark)',
-      reducedMotion: '(prefers-reduced-motion: reduce)',
-      hasHover: '(hover: hover)',
-      coarsePointer: '(pointer: coarse)',
-      standalonePwa: '(display-mode: standalone)',
     });
   });
 
@@ -124,15 +112,9 @@ describe('queries semánticas', () => {
     expect(result.current).toBe(false);
   });
 
-  it.each([
-    ['darkMode', MEDIA_QUERIES.darkMode],
-    ['reducedMotion', MEDIA_QUERIES.reducedMotion],
-    ['hasHover', MEDIA_QUERIES.hasHover],
-    ['coarsePointer', MEDIA_QUERIES.coarsePointer],
-    ['standalonePwa', MEDIA_QUERIES.standalonePwa],
-  ] as const)('useNamedMediaQuery("%s") lee %s', (name, query) => {
-    installMatchMedia({ [query]: true });
-    const { result } = renderHook(() => useNamedMediaQuery(name));
+  it('useNamedMediaQuery("darkMode") lee prefers-color-scheme', () => {
+    installMatchMedia({ [MEDIA_QUERIES.darkMode]: true });
+    const { result } = renderHook(() => useNamedMediaQuery('darkMode'));
     expect(result.current).toBe(true);
   });
 });
@@ -142,42 +124,6 @@ describe('readMediaSnapshot', () => {
     installMatchMedia({ '(min-width: 999px)': true });
     expect(readMediaSnapshot('(min-width: 999px)')).toBe(true);
     expect(readMediaSnapshot('(min-width: 1000000px)')).toBe(false);
-  });
-});
-
-describe('useMediaQueryLegacy', () => {
-  it('comportamiento equivalente: lee + reacciona', () => {
-    installMatchMedia({ '(min-width: 500px)': true });
-    const { result } = renderHook(() => useMediaQueryLegacy('(min-width: 500px)'));
-    expect(result.current).toBe(true);
-    trigger('(min-width: 500px)', false);
-    expect(result.current).toBe(false);
-  });
-});
-
-describe('useMediaQuery — fallback legacy (Safari < 14)', () => {
-  it('cuando MediaQueryList no tiene addEventListener, usa addListener/removeListener', () => {
-    // Cubre líneas 56-59 del hook: la rama de Safari < 14 que solo tiene
-    // las APIs antiguas `addListener` / `removeListener` (sin EventTarget).
-    const legacyListeners = new Set<() => void>();
-    const fakeMql = {
-      matches: true,
-      media: '(min-width: 1px)',
-      // addEventListener: undefined → no es function → cae al else
-      addListener: vi.fn((l: () => void) => legacyListeners.add(l)),
-      removeListener: vi.fn((l: () => void) => legacyListeners.delete(l)),
-    };
-    vi.spyOn(window, 'matchMedia').mockImplementation(
-      () => fakeMql as unknown as MediaQueryList,
-    );
-
-    const { unmount } = renderHook(() => useMediaQuery('(min-width: 1px)'));
-    expect(fakeMql.addListener).toHaveBeenCalledTimes(1);
-    expect(legacyListeners.size).toBe(1);
-
-    unmount();
-    expect(fakeMql.removeListener).toHaveBeenCalledTimes(1);
-    expect(legacyListeners.size).toBe(0);
   });
 });
 

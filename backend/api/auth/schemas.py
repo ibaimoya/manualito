@@ -67,6 +67,8 @@ class UserPublic(StrictModel):
     created_at: datetime
     last_login_at: datetime | None
     email_verified_at: datetime | None
+    avatar_color: str | None
+    avatar_figure: str | None
 
 
 class AuthResponse(StrictModel):

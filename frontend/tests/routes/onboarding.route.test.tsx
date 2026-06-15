@@ -54,7 +54,7 @@ describe('/onboarding (route guard)', () => {
   });
 
   it('cuando YA se ha visto → redirige a /home (no debe re-mostrarlo)', async () => {
-    // Catálogo bug #31: el onboarding cinematográfico solo se ve una vez.
+    // El onboarding cinematográfico solo se ve una vez.
     storage.markOnboardingSeen();
     renderOnboarding();
     await waitFor(() => {

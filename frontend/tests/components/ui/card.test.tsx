@@ -42,7 +42,7 @@ describe('Card primitives', () => {
     const node = container.firstElementChild as HTMLDivElement;
     expect(node.tagName).toBe('DIV');
     expect(node.className).toContain('head');
-    expect(node.className).toMatch(/gap-1/);
+    expect(node.className).toContain('gap-[var(--m-space-1)]');
     expect(ref.current).toBe(node);
   });
 
@@ -83,7 +83,7 @@ describe('Card primitives', () => {
     const node = container.firstElementChild as HTMLDivElement;
     expect(node.tagName).toBe('DIV');
     expect(node.className).toContain('body');
-    expect(node.className).toMatch(/p-4/);
+    expect(node.className).toContain('p-[var(--m-space-4)]');
     expect(ref.current).toBe(node);
   });
 

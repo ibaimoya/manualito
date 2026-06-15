@@ -6,6 +6,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import BackgroundTasks
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import client as internal_client
@@ -20,6 +21,7 @@ from api.conversations.schemas import (
     SendMessageResponse,
 )
 from api.exceptions import InternalServiceError, InternalServiceUnavailableError
+from api.games import repository as games_repository
 from api.games.exceptions import GameUnavailableError
 from api.manuals.retrieval.service import generate_game_answer
 from common.conversation_limits import (
@@ -91,10 +93,13 @@ async def send_message(
     background_tasks: BackgroundTasks,
 ) -> SendMessageResponse:
     """Genera y persiste un turno completo de conversación."""
+    # Copia plana ANTES del primer rollback: el rollback expira auth.user y
+    # tocarlo después dispararía un lazy-load síncrono (MissingGreenlet).
+    user_id = auth.user.id
     user_content = payload.content.strip()
     context = await _load_turn_context(
         session,
-        user_id=auth.user.id,
+        user_id=user_id,
         conversation_id=conversation_id,
     )
     history_payload = _history_payload(context.history)
@@ -105,7 +110,7 @@ async def send_message(
     )
     answer = await generate_game_answer(
         session,
-        auth=auth,
+        current_user_id=user_id,
         game_id=context.game_id,
         question=user_content,
         top_k=payload.top_k,
@@ -116,12 +121,22 @@ async def send_message(
     fallback_title = _fallback_title(user_content) if context.title is None else None
     stored = await repository.append_message_pair(
         session,
-        user_id=auth.user.id,
+        user_id=user_id,
         conversation_id=context.id,
         user_content=user_content,
         assistant_content=answer.answer,
+        assistant_sources=[source.model_dump(mode="json") for source in answer.sources],
         title=fallback_title,
     )
+    try:
+        await games_repository.auto_follow_game(
+            session,
+            user_id=user_id,
+            game_id=context.game_id,
+        )
+    except SQLAlchemyError:
+        await session.rollback()
+        logger.warning("No se pudo auto-seguir el juego tras enviar mensaje.", exc_info=True)
     response = SendMessageResponse(
         conversation=ConversationResponse.model_validate(stored.conversation),
         user_message=MessageResponse.model_validate(stored.user_message),
@@ -131,15 +146,32 @@ async def send_message(
     if fallback_title is not None:
         _schedule_title_refresh(
             background_tasks,
-            user_id=auth.user.id,
+            user_id=user_id,
             conversation_id=context.id,
             expected_title=fallback_title,
+            game_name=context.game_name,
             question=user_content,
-            answer=answer.answer,
             history=history_payload,
             client=client,
         )
     return response
+
+
+async def rename_conversation(
+    session: AsyncSession,
+    *,
+    auth: AuthenticatedSession,
+    conversation_id: UUID,
+    title: str,
+) -> ConversationResponse:
+    """Renombra una conversación propia con el título elegido por el usuario."""
+    row = await repository.rename_user_conversation(
+        session,
+        user_id=auth.user.id,
+        conversation_id=conversation_id,
+        title=title,
+    )
+    return ConversationResponse.model_validate(row)
 
 
 async def delete_conversation(
@@ -207,8 +239,8 @@ def _schedule_title_refresh(
     user_id: UUID,
     conversation_id: UUID,
     expected_title: str,
+    game_name: str,
     question: str,
-    answer: str,
     history: Sequence[Mapping[str, str]],
     client: httpx.AsyncClient,
 ) -> None:
@@ -218,8 +250,8 @@ def _schedule_title_refresh(
         user_id=user_id,
         conversation_id=conversation_id,
         expected_title=expected_title,
+        game_name=game_name,
         question=question,
-        answer=answer,
         history=list(history),
         client=client,
     )
@@ -230,8 +262,8 @@ async def _refresh_conversation_title(
     user_id: UUID,
     conversation_id: UUID,
     expected_title: str,
+    game_name: str,
     question: str,
-    answer: str,
     history: Sequence[Mapping[str, str]],
     client: httpx.AsyncClient,
 ) -> None:
@@ -239,8 +271,8 @@ async def _refresh_conversation_title(
     title = await _conversation_title(
         client=client,
         current_title=None,
+        game_name=game_name,
         question=question,
-        answer=answer,
         history=history,
     )
     if title is None or title == expected_title:
@@ -267,8 +299,8 @@ async def _conversation_title(
     *,
     client: httpx.AsyncClient,
     current_title: str | None,
+    game_name: str,
     question: str,
-    answer: str,
     history: Sequence[Mapping[str, str]],
 ) -> str | None:
     """Genera título solo cuando la conversación todavía no lo tiene."""
@@ -278,14 +310,13 @@ async def _conversation_title(
     messages = [
         *history,
         {"role": "user", "content": question},
-        {"role": "assistant", "content": answer},
     ]
     try:
         response = await internal_client.post_json(
             client=client,
             service_name="LLM",
             url=f"{config.LLM_URL}/conversation-title",
-            payload={"messages": messages},
+            payload={"game_name": game_name, "messages": messages},
             unavailable_detail="Servicio LLM no disponible.",
             internal_detail="Error interno al generar el título.",
         )

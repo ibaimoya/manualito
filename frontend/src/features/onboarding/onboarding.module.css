@@ -13,12 +13,11 @@
   isolation: isolate;
 }
 
-/* Track horizontal (4 slides ≈ 400vw). */
+/* Track horizontal: ancho = nº de paneles · 100vw (se fija inline). */
 .track {
   position: absolute;
   inset: 0;
   display: flex;
-  width: 400vw;
   height: 100%;
   transition: transform 900ms cubic-bezier(0.6, 0.05, 0.2, 1);
   will-change: transform;
@@ -41,8 +40,7 @@
     radial-gradient(60% 60% at 18% 28%, #e07a1f 0%, transparent 55%),
     radial-gradient(55% 55% at 82% 18%, #a8431f 0%, transparent 60%),
     radial-gradient(65% 65% at 50% 86%, #2c6e91 0%, transparent 58%),
-    radial-gradient(70% 70% at 92% 78%, #5c2a12 0%, transparent 65%),
-    #14100c;
+    radial-gradient(70% 70% at 92% 78%, #5c2a12 0%, transparent 65%), #14100c;
   filter: blur(40px) saturate(115%);
   animation: meshDrift 22s ease-in-out infinite alternate;
   z-index: -3;
@@ -50,14 +48,24 @@
 
 @keyframes meshDrift {
   0% {
-    background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0 0;
+    background-position:
+      0% 0%,
+      0% 0%,
+      0% 0%,
+      0% 0%,
+      0 0;
     transform: scale(1) rotate(0deg);
   }
   50% {
     transform: scale(1.06) rotate(0.4deg);
   }
   100% {
-    background-position: 14% -10%, -8% 12%, 6% -8%, -10% 6%, 0 0;
+    background-position:
+      14% -10%,
+      -8% 12%,
+      6% -8%,
+      -10% 6%,
+      0 0;
     transform: scale(1.02) rotate(-0.6deg);
   }
 }
@@ -104,47 +112,82 @@
 }
 
 .topbarName {
-  font-family: var(--m-font-display);
+  font-family: var(--m-font-display), sans-serif;
   font-weight: 700;
   font-size: 15px;
   letter-spacing: -0.01em;
 }
 
+/* Pastilla "glass": tinte translúcido sobre el mesh en vez de un marrón
+   opaco, para que se funda con el fondo cinematográfico. El tinte vive en
+   ::before: el fondo real del texto es el mesh oscuro (contraste ~12:1),
+   no el tinte crema al 8 %. */
 .topbarLink {
   pointer-events: auto;
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   height: 36px;
   padding: 0 14px;
   border-radius: 9999px;
-  background: #34251a;
   color: #fff8f0;
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-weight: 600;
   font-size: 12.5px;
   cursor: pointer;
-  border: 1px solid rgba(255, 248, 240, 0.18);
+  border: 1px solid rgba(255, 248, 240, 0.22);
   backdrop-filter: blur(10px);
   text-decoration: none;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
 }
 
-/* — Pager dots (a11y: radio-group) — */
+.topbarLink::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 248, 240, 0.08);
+  transition: background 150ms ease;
+}
+
+.topbarLink:hover {
+  border-color: rgba(255, 248, 240, 0.38);
+}
+
+.topbarLink:hover::before {
+  background: rgba(255, 248, 240, 0.16);
+}
+
+.topbarLink:active {
+  transform: scale(0.96);
+}
+
+/* — Pager (a11y: tablist) — cápsula vidriada; el punto activo se estira en píldora. */
 .pager {
   position: fixed;
-  bottom: 28px;
+  bottom: calc(env(safe-area-inset-bottom) + 28px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  gap: 4px;
   z-index: 10;
   padding: 8px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  background: rgba(15, 9, 4, 0.5);
+  border: 1px solid rgba(255, 248, 240, 0.14);
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
 }
 
 .dotHit {
+  width: 44px;
+  height: 44px;
   border: 0;
+  border-radius: 9999px;
   background: transparent;
-  padding: 8px;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -154,14 +197,14 @@
   display: block;
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: rgba(255, 248, 240, 0.3);
-  transition: background 220ms ease, transform 220ms ease;
+  transition: all 280ms ease;
 }
 
 .dot.isOn {
   background: #fff8f0;
-  transform: scale(1.2);
+  width: 22px;
 }
 
 /* — Hero — */
@@ -177,7 +220,7 @@
 }
 
 .eyebrowTop {
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -194,7 +237,7 @@
 
 .heroWord {
   margin: 0;
-  font-family: var(--m-font-display);
+  font-family: var(--m-font-display), sans-serif;
   font-weight: 800;
   font-size: clamp(64px, 18vw, 180px);
   letter-spacing: -0.035em;
@@ -231,7 +274,7 @@
 }
 
 .tagline {
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-size: 18px;
   line-height: 1.5;
   color: rgba(255, 248, 240, 0.88);
@@ -255,7 +298,7 @@
   border-radius: 9999px;
   background: #fff8f0;
   color: var(--m-primary-700);
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-weight: 700;
   font-size: 16px;
   border: 0;
@@ -263,7 +306,9 @@
   box-shadow: var(--m-shadow-md);
   opacity: 0;
   transform: translateY(12px);
-  transition: all 500ms ease 1300ms, background 150ms ease;
+  transition:
+    all 500ms ease 1300ms,
+    background 150ms ease;
   view-transition-name: var(--vt, none);
 }
 
@@ -277,7 +322,7 @@
 }
 
 .scrollhint {
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -318,7 +363,7 @@
 }
 
 .stepNum {
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), monospace;
   font-size: 12px;
   letter-spacing: 0.2em;
   color: rgba(255, 248, 240, 0.6);
@@ -329,7 +374,7 @@
 
 .stepTitle {
   margin: 0;
-  font-family: var(--m-font-display);
+  font-family: var(--m-font-display), sans-serif;
   font-weight: 800;
   font-size: clamp(34px, 6vw, 56px);
   letter-spacing: -0.025em;
@@ -346,7 +391,7 @@
 }
 
 .stepSub {
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-size: 17px;
   line-height: 1.5;
   color: rgba(255, 248, 240, 0.78);
@@ -374,7 +419,9 @@
   aspect-ratio: 9 / 18;
   background: #14100c;
   border-radius: 32px;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 0 8px rgba(255, 248, 240, 0.08);
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 8px rgba(255, 248, 240, 0.08);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -460,53 +507,70 @@
   }
 }
 
-/* Pipeline (step 2) */
+/* Pipeline (step 2): nodos flotantes conectados por hilos.
+   Los hilos se alinean al centro de los anillos (no del bloque con
+   etiqueta) y el barrido va en relevo: ciclo de 3.6s en tres tramos —
+   brilla OCR, cruza el hilo 1, brilla RAG, cruza el hilo 2, brilla LLM. */
 .pipeline {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px;
-  background: #3d2b1f;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 248, 240, 0.12);
-  backdrop-filter: blur(10px);
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .node {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  width: 112px;
+  /* El icono del anillo hereda este color; el fondo real bajo él es el
+     mesh oscuro, no el tinte translúcido del propio anillo. */
+  color: #fff8f0;
   opacity: 0;
-  transform: translateY(8px);
-  animation: nodeIn 500ms ease forwards;
+  transform: translateY(20px);
+  animation: nodeIn 600ms ease forwards;
   animation-delay: var(--d, 0ms);
 }
 
 .nodeRing {
-  width: 70px;
-  height: 70px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
-  background: rgba(255, 248, 240, 0.08);
-  border: 1px solid rgba(255, 248, 240, 0.2);
+  background: radial-gradient(
+    80% 80% at 50% 30%,
+    rgba(255, 248, 240, 0.16),
+    rgba(255, 248, 240, 0.04)
+  );
+  border: 1px solid rgba(255, 248, 240, 0.16);
+  backdrop-filter: blur(12px);
   display: grid;
   place-items: center;
-  color: var(--m-primary-300);
+  animation: nodeGlow 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--g, 0ms) + 1.2s);
+}
+
+@keyframes nodeGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(224, 122, 31, 0.35);
+  }
+  20%,
+  100% {
+    box-shadow: 0 0 0 12px rgba(224, 122, 31, 0);
+  }
 }
 
 .nodeCore {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: rgba(224, 122, 31, 0.18);
+  background: linear-gradient(180deg, rgba(224, 122, 31, 0.35), rgba(168, 67, 31, 0.35));
+  border: 1px solid rgba(255, 248, 240, 0.22);
   display: grid;
   place-items: center;
 }
 
 .nodeLabel {
-  font-family: var(--m-font-body);
-  font-size: 11px;
-  color: rgba(255, 248, 240, 0.85);
+  font-family: var(--m-font-body), sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -514,46 +578,56 @@
   text-align: center;
 }
 
+.nodeLabel .mono {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 248, 240, 0.5);
+}
+
 .nodeLabel strong {
+  font-family: var(--m-font-display), sans-serif;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 18px;
   color: #fff8f0;
 }
 
 .nodeLabel em {
   font-style: normal;
-  font-size: 10px;
-  color: rgba(255, 248, 240, 0.5);
+  font-size: 12px;
+  color: rgba(255, 248, 240, 0.65);
 }
 
 .mono {
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), monospace;
   font-size: 9px;
   letter-spacing: 0.1em;
-  color: rgba(255, 248, 240, 0.4);
+  color: rgba(255, 248, 240, 0.72);
 }
 
 .link {
-  flex: 1;
-  height: 2px;
-  background: rgba(255, 248, 240, 0.15);
   position: relative;
+  flex: 1;
+  min-width: 24px;
+  height: 2px;
+  /* Centro del anillo: 92/2 − 1px de medio hilo. */
+  margin-top: 45px;
+  background: rgba(255, 248, 240, 0.18);
+  border-radius: 1px;
   overflow: hidden;
   opacity: 0;
-  animation: nodeIn 400ms ease forwards;
+  animation: linkIn 500ms ease forwards;
   animation-delay: var(--d, 0ms);
 }
 
 .linkPulse {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--m-primary-300) 50%,
-    transparent 100%
-  );
-  animation: linkPulse 1.6s ease-in-out infinite;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--m-primary-500), transparent);
+  animation: linkPulse 3.6s linear infinite;
+  animation-delay: calc(var(--g, 0ms) + 1.2s);
 }
 
 @keyframes nodeIn {
@@ -563,34 +637,36 @@
   }
 }
 
+@keyframes linkIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* El barrido ocupa un tercio del ciclo; el resto del tiempo queda fuera
+   del hilo (overflow hidden), a la espera de su turno en el relevo. */
 @keyframes linkPulse {
   0% {
-    transform: translateX(-100%);
+    left: -30%;
+  }
+  33.333% {
+    left: 100%;
   }
   100% {
-    transform: translateX(100%);
+    left: 100%;
   }
 }
 
-.tokens {
-  margin-top: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
-
-.token {
-  font-family: var(--m-font-mono);
-  font-size: 11px;
-  color: #fff8f0;
-  padding: 4px 10px;
-  background: #3d2b1f;
-  border-radius: 9999px;
-  opacity: 0;
-  transform: translateY(4px);
-  animation: nodeIn 400ms ease forwards;
-  animation-delay: var(--d, 0ms);
+@media (max-width: 719px) {
+  .pipeline {
+    transform: scale(0.78);
+    transform-origin: center;
+  }
 }
 
 /* Card stack (step 3) */
@@ -611,7 +687,7 @@
 
 .eyebrow {
   display: inline-block;
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), monospace;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -621,7 +697,7 @@
 
 .summary p {
   margin: 0;
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-size: 13.5px;
   line-height: 1.5;
   color: #fff8f0;
@@ -663,7 +739,7 @@
 }
 
 .accTitles strong {
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-weight: 700;
   font-size: 14px;
   color: #fff8f0;
@@ -671,7 +747,7 @@
 
 .accTitles em {
   font-style: normal;
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), monospace;
   font-size: 10px;
   color: rgba(255, 248, 240, 0.55);
 }
@@ -687,13 +763,126 @@
 .accBody ol {
   margin: 0;
   padding-left: 18px;
-  font-family: var(--m-font-body);
+  font-family: var(--m-font-body), sans-serif;
   font-size: 12.5px;
   line-height: 1.5;
   color: rgba(255, 248, 240, 0.8);
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* — Choice (última diapositiva del carrusel: crear cuenta / entrar) — */
+.choice {
+  margin: auto;
+  width: 100%;
+  max-width: 440px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 600ms ease 200ms,
+    transform 600ms ease 200ms;
+}
+
+.choice.isIn {
+  opacity: 1;
+  transform: none;
+}
+
+.choiceTitle {
+  margin: 0;
+  font-family: var(--m-font-display), sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 7vw, 46px);
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  color: #fff8f0;
+}
+
+.choiceLead {
+  margin: 12px auto 0;
+  max-width: 360px;
+  font-family: var(--m-font-body), sans-serif;
+  font-size: clamp(15px, 4vw, 17px);
+  line-height: 1.5;
+  color: rgba(255, 248, 240, 0.82);
+}
+
+.choiceActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.choiceCreate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  border: 0;
+  border-radius: 9999px;
+  /* Naranja oscurecido para cumplir contraste AA (4.5:1) con el texto crema. */
+  background: #b05410;
+  color: #fff8f0;
+  font-family: var(--m-font-body), sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  cursor: pointer;
+  box-shadow: var(--m-shadow-md);
+  transition: background 150ms ease;
+}
+
+.choiceCreate:hover {
+  background: #9a4a0e;
+}
+
+.choiceGhost {
+  height: 52px;
+  border: 1px solid rgba(255, 248, 240, 0.3);
+  border-radius: 9999px;
+  background: #2b1b12;
+  color: #fff8f0;
+  font-family: var(--m-font-body), sans-serif;
+  font-weight: 600;
+  font-size: 15.5px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 150ms ease;
+}
+
+.choiceGhost:hover {
+  background: #3a2519;
+}
+
+.choiceNote {
+  margin: 4px 0 0;
+  font-family: var(--m-font-body), sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 248, 240, 0.55);
+}
+
+/* Enlace dentro de la nota: botón que abre el modal de privacidad. */
+.noteLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--m-primary-300);
+  cursor: pointer;
+}
+
+.noteLink:hover {
+  text-decoration: underline;
 }
 
 /* — View transitions — */
@@ -715,14 +904,15 @@
   .letterIn,
   .thumb,
   .node,
+  .nodeRing,
   .link,
   .linkPulse,
-  .token,
   .tagline,
   .stepTitle,
   .stepSub,
   .pill,
-  .scrollhint {
+  .scrollhint,
+  .choice {
     animation: none !important;
     transition: opacity 200ms ease !important;
     opacity: 1 !important;

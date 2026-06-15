@@ -14,7 +14,7 @@ from api.auth import passwords as password_helpers
 from api.auth import service
 from api.auth.audit import record_security_event
 from api.auth.cookies import set_auth_cookies
-from api.auth.dependencies import get_current_auth, require_admin, require_csrf
+from api.auth.dependencies import client_ip, get_current_auth, require_admin, require_csrf
 from api.auth.exceptions import (
     AdminRequiredError,
     AuthenticationRequiredError,
@@ -30,7 +30,6 @@ from api.auth.passwords import (
     verify_password,
     verify_password_against_dummy,
 )
-from api.auth.router import _client_ip
 from api.auth.tokens import generate_opaque_token, hash_token, token_matches
 from database.models.audit import AuditLog
 from database.models.auth import AuthSession, EmailVerificationToken, PasswordResetToken
@@ -373,7 +372,7 @@ def test_validate_csrf_token_matches_session_hash(
 
 @pytest.mark.anyio
 async def test_register_user_hashes_password_forces_user_role_and_audits(monkeypatch):
-    """Registro feliz: normaliza email, hashea, rol=user y audita register_ok."""
+    """Registro feliz normaliza, hashea, crea sesión y audita register_ok."""
     monkeypatch.setattr(service, "utc_now", lambda: datetime(2026, 5, 29, tzinfo=UTC))
     fake_session = FakeSession()
 
@@ -391,12 +390,20 @@ async def test_register_user_hashes_password_forces_user_role_and_audits(monkeyp
         for instance in fake_session.added
         if isinstance(instance, EmailVerificationToken)
     )
+    auth_session = next(
+        instance for instance in fake_session.added if isinstance(instance, AuthSession)
+    )
     audit_log = next(i for i in fake_session.added if isinstance(i, AuditLog))
     assert user.email == "user@example.com"
     assert user.username_key == "nora"
     assert user.role == "user"
+    assert user.last_login_at == datetime(2026, 5, 29, tzinfo=UTC)
     assert user.password_hash.startswith("$argon2id$")
     assert verification_token.token_hash == hash_token(result.verification_token)
+    assert auth_session.token_hash == hash_token(result.session_token)
+    assert auth_session.csrf_token_hash == hash_token(result.csrf_token)
+    assert result.session_token not in auth_session.token_hash
+    assert result.csrf_token not in auth_session.csrf_token_hash
     assert audit_log.event_type == "register_ok"
     assert fake_session.commits == 1
 
@@ -904,14 +911,14 @@ def test_client_ip_returns_host_when_request_has_client():
     """Con cliente en el scope, devuelve su IP (la que usan rate limit y auditoria)."""
     request = Request({"type": "http", "client": ("203.0.113.7", 54321)})
 
-    assert _client_ip(request) == "203.0.113.7"
+    assert client_ip(request) == "203.0.113.7"
 
 
 def test_client_ip_returns_none_when_request_has_no_client():
     """Sin info de cliente en el scope devuelve None en vez de reventar."""
     request = Request({"type": "http"})
 
-    assert _client_ip(request) is None
+    assert client_ip(request) is None
 
 
 def _user(password_hash: str = _FAKE_HASH) -> User:

@@ -2,7 +2,11 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_APP_VERSION: string;
+  readonly VITE_MAILPIT_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }
 
 /* @fontsource-variable/* exporta solo CSS — declarar como side-effect import. */

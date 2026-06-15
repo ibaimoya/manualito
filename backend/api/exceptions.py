@@ -25,13 +25,20 @@ from api.manuals.exceptions import (
     GameNotFoundError,
     GameUnavailableError,
     GeneratedAnswerTooLongError,
+    ManualBusyError,
     ManualContextNotFoundError,
+    ManualNotEditableError,
     ManualNotFoundError,
     ManualTooLargeError,
     ManualUploadSelectionError,
 )
+from api.ratings.exceptions import RatingNotFoundError
 from api.schemas import ApiErrorResponse, ApiFieldError
-from database.models.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
+from database.models.constants import (
+    CONVERSATION_TITLE_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+)
 
 INVALID_DATA_DETAIL = "Datos inválidos."
 RATE_LIMITED_DETAIL = "Demasiados intentos. Inténtalo más tarde."
@@ -44,6 +51,10 @@ _MISSING_FIELD_ERRORS = {
     "password": ("password_required", "La contraseña es obligatoria."),
     "content": ("message_required", "El mensaje es obligatorio."),
     "token": ("token_required", "El token es obligatorio."),
+    "title": ("title_required", "El título es obligatorio."),
+    "current_password": ("current_password_required", "La contraseña actual es obligatoria."),
+    "new_password": ("password_required", "La contraseña es obligatoria."),
+    "text": ("text_required", "El texto es obligatorio."),
 }
 
 _TOO_SHORT_FIELD_ERRORS = {
@@ -54,6 +65,13 @@ _TOO_SHORT_FIELD_ERRORS = {
         f"La contraseña debe tener al menos {config.PASSWORD_MIN_LENGTH} caracteres.",
     ),
     "token": ("token_required", "El token es obligatorio."),
+    "title": ("title_required", "El título es obligatorio."),
+    "current_password": ("current_password_required", "La contraseña actual es obligatoria."),
+    "new_password": (
+        "password_too_short",
+        f"La contraseña debe tener al menos {config.PASSWORD_MIN_LENGTH} caracteres.",
+    ),
+    "text": ("text_required", "El texto es obligatorio."),
 }
 
 _TOO_LONG_FIELD_ERRORS = {
@@ -74,6 +92,19 @@ _TOO_LONG_FIELD_ERRORS = {
         "token_too_long",
         "El token es demasiado largo.",
     ),
+    "title": (
+        "title_too_long",
+        f"El título no puede superar {CONVERSATION_TITLE_MAX_LENGTH} caracteres.",
+    ),
+    "current_password": (
+        "password_too_long",
+        f"La contraseña no puede superar {config.PASSWORD_MAX_LENGTH} caracteres.",
+    ),
+    "new_password": (
+        "password_too_long",
+        f"La contraseña no puede superar {config.PASSWORD_MAX_LENGTH} caracteres.",
+    ),
+    "text": ("text_too_long", "El texto es demasiado largo."),
 }
 
 
@@ -252,6 +283,16 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         detail="Manual no encontrado.",
         code="manual_not_found",
     ),
+    ManualBusyError: ErrorResponseConfig(
+        status_code=409,
+        detail="El manual se está procesando. Inténtalo en unos segundos.",
+        code="manual_busy",
+    ),
+    ManualNotEditableError: ErrorResponseConfig(
+        status_code=403,
+        detail="Un manual compartido no se puede editar a mano.",
+        code="manual_not_editable",
+    ),
     ManualContextNotFoundError: ErrorResponseConfig(
         status_code=404,
         detail="No hay contexto disponible para ese juego.",
@@ -266,6 +307,11 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         status_code=404,
         detail="Conversación no encontrada.",
         code="conversation_not_found",
+    ),
+    RatingNotFoundError: ErrorResponseConfig(
+        status_code=404,
+        detail="Valoración no encontrada.",
+        code="rating_not_found",
     ),
 }
 

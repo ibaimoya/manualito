@@ -1,11 +1,6 @@
 /**
- * Traductor de errores HTTP del backend → mensaje UI accionable + severidad.
- *
- * El backend FastAPI mapea sus excepciones dominio a códigos HTTP en
- * `backend/api/exceptions.py`.  Aquí espejamos cada uno con la copy y
- * la sugerencia de acción para el usuario final.
- *
- * Si añades un nuevo código en backend, añade su entrada aquí.
+ * Errores HTTP del backend → mensaje UI accionable. Espejo de
+ * backend/api/exceptions.py: un código nuevo allí necesita su entrada aquí.
  */
 
 export type ApiErrorSeverity = 'warning' | 'error' | 'info';
@@ -37,6 +32,34 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
     message: 'Este manual ya no existe en el servidor.',
     hint: 'Vuelve a la pantalla principal y sube las fotos otra vez.',
     retryable: false,
+    severity: 'warning',
+  },
+  401: {
+    title: 'Sesión caducada',
+    message: 'Tu sesión ha expirado o no has iniciado sesión.',
+    hint: 'Vuelve a entrar para continuar.',
+    retryable: false,
+    severity: 'warning',
+  },
+  403: {
+    title: 'Acción no permitida',
+    message: 'No tienes permiso para esta acción o el token de seguridad caducó.',
+    hint: 'Recarga la página y vuelve a intentarlo.',
+    retryable: true,
+    severity: 'warning',
+  },
+  409: {
+    title: 'Dato no disponible',
+    message: 'Ese dato ya está en uso o no está disponible.',
+    hint: 'Revisa los datos e inténtalo de nuevo.',
+    retryable: false,
+    severity: 'warning',
+  },
+  429: {
+    title: 'Demasiados intentos',
+    message: 'Has hecho demasiadas peticiones en poco tiempo.',
+    hint: 'Espera un momento antes de volver a intentarlo.',
+    retryable: true,
     severity: 'warning',
   },
   413: {
@@ -90,6 +113,80 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
   },
 };
 
+const CODE_OVERRIDES: Record<string, Partial<Omit<ApiErrorView, 'code'>>> = {
+  pdf_too_large: {
+    title: 'PDF demasiado grande',
+    message: 'El PDF puede ocupar como máximo 50 MB.',
+    hint: 'Reduce el PDF o divide el manual en un archivo más pequeño.',
+  },
+  invalid_pdf: {
+    title: 'PDF no válido',
+    message: 'El archivo no es un PDF válido.',
+    hint: 'Exporta el manual de nuevo como PDF y vuelve a intentarlo.',
+  },
+  game_not_found: {
+    title: 'Juego no encontrado',
+    message: 'El juego seleccionado ya no existe en el catálogo.',
+    hint: 'Busca el juego otra vez y vuelve a asociar el manual.',
+    retryable: false,
+  },
+  game_unavailable: {
+    title: 'Juego no disponible',
+    message: 'Este juego ya no está disponible para nuevas preguntas.',
+    hint: 'Vuelve al catálogo y selecciona otro juego.',
+    retryable: false,
+  },
+  manual_context_not_found: {
+    title: 'Sin contexto suficiente',
+    message: 'No hay manuales indexados disponibles para responder sobre ese juego.',
+    hint: 'Espera a que termine el procesamiento o sube un manual válido.',
+  },
+  identity_unavailable: {
+    title: 'Email o usuario no disponible',
+    message: 'Ya existe una cuenta con ese email o nombre de usuario.',
+    hint: 'Inicia sesión o prueba con otro nombre de usuario.',
+    retryable: false,
+  },
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function backendErrorCode(raw: unknown): string | null {
+  if (!isRecord(raw) || !Array.isArray(raw['errors'])) return null;
+  const [first] = raw['errors'];
+  if (!isRecord(first) || typeof first['code'] !== 'string') return null;
+  return first['code'];
+}
+
+function backendErrorMessage(raw: unknown): string | null {
+  if (!isRecord(raw)) return null;
+  if (Array.isArray(raw['errors'])) {
+    const [first] = raw['errors'];
+    if (isRecord(first) && typeof first['message'] === 'string') return first['message'];
+  }
+  return typeof raw['detail'] === 'string' ? raw['detail'] : null;
+}
+
+function mapBackendError(status: number, raw: unknown): ApiErrorView {
+  const code = backendErrorCode(raw);
+  if (code === null) {
+    const fallback = mapHttpStatus(status);
+    const message = backendErrorMessage(raw);
+    return message ? { ...fallback, message } : fallback;
+  }
+
+  const fallback = mapHttpStatus(status, code);
+  const override = CODE_OVERRIDES[code] ?? {};
+  return {
+    ...fallback,
+    ...override,
+    message: override.message ?? backendErrorMessage(raw) ?? fallback.message,
+    code,
+  };
+}
+
 export function mapHttpStatus(status: number, fallbackCode?: string): ApiErrorView {
   const entry = TABLE[status];
   if (entry) return { ...entry, code: `http.${status}` };
@@ -133,28 +230,23 @@ const UNKNOWN_ERROR_VIEW: ApiErrorView = {
   code: 'unknown',
 };
 
-/**
- * Punto de entrada genérico — soporta:
- *  - Response objects (fetch),
- *  - errores con `status` numérico (axios-like),
- *  - TypeError de red,
- *  - cualquier otra cosa.
- */
+/** Status de un error tipo axios ("error.response.status"); null si no aplica. */
+function responseStatus(error: object): number | null {
+  if (!('response' in error)) return null;
+  const res = (error as { response?: { status?: number } }).response;
+  return res && typeof res.status === 'number' ? res.status : null;
+}
+
 export function mapApiError(error: unknown): ApiErrorView {
-  if (error instanceof TypeError) {
-    return NETWORK_ERROR_VIEW;
+  if (error instanceof TypeError) return NETWORK_ERROR_VIEW;
+  if (typeof error !== 'object' || error === null) return UNKNOWN_ERROR_VIEW;
+
+  // ApiError propio: status numérico + cuerpo crudo del backend.
+  if ('status' in error && typeof error.status === 'number') {
+    const raw = 'raw' in error ? error.raw : undefined;
+    return mapBackendError(error.status, raw);
   }
-  if (typeof error === 'object' && error !== null) {
-    const status = 'status' in error ? error.status : undefined;
-    if (typeof status === 'number') {
-      return mapHttpStatus(status);
-    }
-    if ('response' in error) {
-      const res = (error as { response?: { status?: number } }).response;
-      if (res && typeof res.status === 'number') {
-        return mapHttpStatus(res.status);
-      }
-    }
-  }
-  return UNKNOWN_ERROR_VIEW;
+
+  const status = responseStatus(error);
+  return status === null ? UNKNOWN_ERROR_VIEW : mapHttpStatus(status);
 }

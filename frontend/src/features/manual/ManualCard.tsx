@@ -2,54 +2,47 @@ import { Link } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { type ManualRecord } from '@/shared/lib/storage';
+import { type ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { gameColor } from '@/shared/lib/gameColor';
 
 type Props = Readonly<{
-  manual: ManualRecord;
+  manual: ManualSummary;
   /** Texto compacto (relativo en Home, fecha completa en History). */
   meta?: string;
-  /** Badge a la derecha. */
-  badge?: string;
   className?: string;
 }>;
 
 /**
- * Card de manual reutilizable.  Click → navega a su Result.
- * Centraliza el look usado en Home (recientes) e History.
- *
- * Usa **container queries** (`@container`) para adaptar su contenido al
- * ancho del contenedor padre, no del viewport.  Patrón canónico para
- * componentes reutilizables (ver decisión #28 — Principio 3).
- *
- * Reglas:
- *  - Siempre visible: avatar + nombre.
- *  - `@xs` (≥ 240 px): muestra meta (fragmentos · fecha).
- *  - `@sm` (≥ 320 px): muestra Badge "Manual".
- *  - Siempre: chevron al final.
+ * Card de manual reutilizable. Si está indexando, lleva a su pantalla de
+ * procesamiento; si ya está activo, al hub de su juego. Centraliza el look de
+ * Home (recientes) e History y se adapta al contenedor con "@container".
  */
-export function ManualCard({ manual, meta, badge = 'Manual', className }: Props) {
+export function ManualCard({ manual, meta, className }: Props) {
+  const name = manual.title ?? manual.game_name;
+  const indexing = manual.status === 'indexing';
   return (
-    <Link to="/result/$manualId" params={{ manualId: manual.manual_id }} className="@container block">
+    <Link
+      to={indexing ? '/processing/$manualId' : '/game/$gameId'}
+      params={indexing ? { manualId: manual.id } : { gameId: manual.game_id }}
+      search={indexing ? { name } : undefined}
+      className="@container block"
+    >
       <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>
         <div className="flex items-center gap-3">
           <div
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-fg-inv"
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+            style={{ background: gameColor(name), color: '#FFF8F0' }}
             aria-hidden="true"
           >
-            <span className="font-display text-base font-bold uppercase">
-              {manual.name.slice(0, 2)}
-            </span>
+            <span className="font-display text-base font-bold uppercase">{name.slice(0, 2)}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate font-semibold text-fg">{manual.name}</div>
-            <div className="mono hidden text-xs text-fg-3 @xs:block">
-              {manual.chunks_indexed} fragmentos
-              {meta ? ` · ${meta}` : ''}
-            </div>
+            <div className="truncate font-semibold text-fg">{name}</div>
+            {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
-          <Badge size="sm" tone="neutral" className="hidden @sm:inline-flex">
-            {badge}
+          <Badge tone={indexing ? 'primary' : 'neutral'} className="hidden @sm:inline-flex">
+            {indexing ? 'Procesando…' : 'Listo'}
           </Badge>
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />
         </div>

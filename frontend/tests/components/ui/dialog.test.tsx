@@ -43,7 +43,7 @@ describe('Dialog', () => {
     expect(dialog?.querySelector('.h-1.w-10.rounded-full.bg-border-strong')).not.toBeInTheDocument();
   });
 
-  it('boton X dispara onOpenChange(false)', async () => {
+  it('botón X dispara onOpenChange(false)', async () => {
     const user = userEvent.setup();
     const handler = vi.fn();
 

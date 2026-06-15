@@ -47,10 +47,12 @@ class LoginResult:
 
 @dataclass(slots=True)
 class RegistrationResult:
-    """Usuario registrado junto con token crudo para email best-effort."""
+    """Usuario registrado con token de email y tokens de sesión."""
 
     user: User
     verification_token: str
+    session_token: str
+    csrf_token: str
 
 
 @dataclass(slots=True)
@@ -112,6 +114,8 @@ async def register_user(
         now=now,
         lifetime=timedelta(minutes=config.EMAIL_VERIFICATION_TOKEN_MINUTES),
     )
+    user.last_login_at = now
+    session_token, csrf_token = _add_auth_session(session, user=user, now=now)
     record_security_event(
         session,
         event_type="register_ok",
@@ -121,7 +125,12 @@ async def register_user(
     )
     await session.commit()
     await session.refresh(user)
-    return RegistrationResult(user=user, verification_token=verification_token)
+    return RegistrationResult(
+        user=user,
+        verification_token=verification_token,
+        session_token=session_token,
+        csrf_token=csrf_token,
+    )
 
 
 async def login_user(
@@ -148,17 +157,7 @@ async def login_user(
         user.password_hash = updated_hash
     user.last_login_at = now
 
-    session_token = generate_opaque_token()
-    csrf_token = generate_opaque_token()
-    auth_session = AuthSession(
-        user_id=user.id,
-        token_hash=hash_token(session_token),
-        csrf_token_hash=hash_token(csrf_token),
-        created_at=now,
-        last_seen_at=now,
-        expires_at=build_session_expiry(now),
-    )
-    session.add(auth_session)
+    session_token, csrf_token = _add_auth_session(session, user=user, now=now)
     record_security_event(
         session,
         event_type="login_ok",
@@ -240,19 +239,7 @@ async def request_email_verification(
         return None
 
     now = utc_now()
-    await _consume_active_account_tokens(
-        session,
-        EmailVerificationToken,
-        user_id=user.id,
-        now=now,
-    )
-    token = _add_hashed_account_token(
-        session,
-        token_model=EmailVerificationToken,
-        user=user,
-        now=now,
-        lifetime=timedelta(minutes=config.EMAIL_VERIFICATION_TOKEN_MINUTES),
-    )
+    token = await rotate_email_verification_token(session, user=user, now=now)
     record_security_event(
         session,
         event_type="email_verification_requested",
@@ -262,6 +249,28 @@ async def request_email_verification(
     )
     await session.commit()
     return AuthEmailJob(email=user.email, username=user.username, token=token)
+
+
+async def rotate_email_verification_token(
+    session: AsyncSession,
+    *,
+    user: User,
+    now: datetime,
+) -> str:
+    """Invalida tokens de verificación previos y emite el único válido."""
+    await _consume_active_account_tokens(
+        session,
+        EmailVerificationToken,
+        user_id=user.id,
+        now=now,
+    )
+    return _add_hashed_account_token(
+        session,
+        token_model=EmailVerificationToken,
+        user=user,
+        now=now,
+        lifetime=timedelta(minutes=config.EMAIL_VERIFICATION_TOKEN_MINUTES),
+    )
 
 
 async def verify_email_token(
@@ -400,6 +409,8 @@ def to_public_user(user: User) -> UserPublic:
         created_at=user.created_at,
         last_login_at=user.last_login_at,
         email_verified_at=user.email_verified_at,
+        avatar_color=user.avatar_color,
+        avatar_figure=user.avatar_figure,
     )
 
 
@@ -497,6 +508,23 @@ def _add_hashed_account_token(
         )
     )
     return token
+
+
+def _add_auth_session(session: AsyncSession, *, user: User, now: datetime) -> tuple[str, str]:
+    """Persiste una sesión opaca y devuelve los tokens crudos para cookies."""
+    session_token = generate_opaque_token()
+    csrf_token = generate_opaque_token()
+    session.add(
+        AuthSession(
+            user_id=user.id,
+            token_hash=hash_token(session_token),
+            csrf_token_hash=hash_token(csrf_token),
+            created_at=now,
+            last_seen_at=now,
+            expires_at=build_session_expiry(now),
+        )
+    )
+    return session_token, csrf_token
 
 
 async def _record_failed_login(

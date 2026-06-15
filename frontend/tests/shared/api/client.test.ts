@@ -1,10 +1,13 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
 import { ApiError, api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  document.cookie = 'manualito_csrf=; path=/; max-age=0';
+});
 afterAll(() => server.close());
 
 describe('api error helpers', () => {
@@ -57,7 +60,7 @@ describe('api health', () => {
 });
 
 describe('api createManual', () => {
-  it('envia imagenes en FormData y devuelve el contrato 202', async () => {
+  it('envía imágenes en FormData y devuelve el contrato 202', async () => {
     let body = '';
     server.use(
       http.post('/api/manuals', async ({ request }) => {
@@ -167,7 +170,7 @@ describe('api searchGames', () => {
 });
 
 describe('api getManual', () => {
-  it('lee paginas y lineas OCR del detalle de manual', async () => {
+  it('lee páginas y líneas OCR del detalle de manual', async () => {
     server.use(
       http.get('/api/manuals/:id', ({ params }) =>
         HttpResponse.json({
@@ -226,65 +229,6 @@ describe('api getManualProcessing', () => {
   });
 });
 
-describe('api askManual', () => {
-  it('POSTea JSON correcto y devuelve la respuesta', async () => {
-    let body: { question?: string } | undefined;
-    server.use(
-      http.post('/api/manuals/:id/questions', async ({ request, params }) => {
-        body = (await request.json()) as { question: string };
-        return HttpResponse.json({ answer: `Para ${params.id}: ${body.question}` });
-      }),
-    );
-
-    const out = await api.askManual('abc', 'Como gano?');
-    expect(body?.question).toBe('Como gano?');
-    expect(out.answer).toContain('abc');
-  });
-
-  it('encodea correctamente IDs con caracteres especiales', async () => {
-    let receivedUrl: string | undefined;
-    server.use(
-      http.post('/api/manuals/:id/questions', ({ request }) => {
-        receivedUrl = new URL(request.url).pathname;
-        return HttpResponse.json({ answer: 'ok' });
-      }),
-    );
-    await api.askManual('a/b c', 'q');
-    expect(receivedUrl).toBe('/api/manuals/a%2Fb%20c/questions');
-  });
-
-  it('respeta un AbortSignal externo', async () => {
-    server.use(
-      http.post('/api/manuals/:id/questions', async () => {
-        await delay(500);
-        return HttpResponse.json({ answer: 'late' });
-      }),
-    );
-    const ctrl = new AbortController();
-    const promise = api.askManual('m1', 'q', ctrl.signal);
-    setTimeout(() => ctrl.abort(), 20);
-    await expect(promise).rejects.toBeInstanceOf(ApiError);
-  });
-});
-
-describe('api ocr', () => {
-  it('POST /api/ocr con FormData devuelve las lineas extraidas', async () => {
-    let received: string | null = null;
-    server.use(
-      http.post('/api/ocr', ({ request }) => {
-        received = request.headers.get('content-type');
-        return HttpResponse.json({
-          lines: [{ text: 'hola', confidence: 0.9 }],
-        });
-      }),
-    );
-    const file = new File(['x'], 'a.jpg', { type: 'image/jpeg' });
-    const res = await api.ocr(file);
-    expect(received).toMatch(/^multipart\/form-data/);
-    expect(res.lines[0]?.text).toBe('hola');
-  });
-});
-
 describe('api response handling', () => {
   it('cuando la respuesta es text/plain, devuelve texto', async () => {
     server.use(
@@ -321,5 +265,83 @@ describe('isAbortApiError edge cases', () => {
     expect(isAbortApiError('')).toBe(false);
     expect(isAbortApiError({})).toBe(false);
     expect(isAbortApiError(new DOMException('Timeout', 'TimeoutError'))).toBe(false);
+  });
+});
+
+describe('api listManuals', () => {
+  it('lista manuales con paginación opcional', async () => {
+    let receivedUrl = '';
+    server.use(
+      http.get('/api/manuals', ({ request }) => {
+        const url = new URL(request.url);
+        receivedUrl = url.pathname + url.search;
+        return HttpResponse.json({ manuals: [] });
+      }),
+    );
+
+    const res = await api.listManuals({ limit: 25, offset: 50 });
+
+    expect(receivedUrl).toBe('/api/manuals?limit=25&offset=50');
+    expect(res.manuals).toEqual([]);
+  });
+
+  it('sin parámetros no añade query string', async () => {
+    let receivedUrl = '';
+    server.use(
+      http.get('/api/manuals', ({ request }) => {
+        const url = new URL(request.url);
+        receivedUrl = url.pathname + url.search;
+        return HttpResponse.json({ manuals: [] });
+      }),
+    );
+
+    await api.listManuals();
+
+    expect(receivedUrl).toBe('/api/manuals');
+  });
+});
+
+describe('api deleteManual', () => {
+  it('resuelve sin cuerpo ante un 204', async () => {
+    await expect(api.deleteManual('m-1')).resolves.toBeUndefined();
+  });
+});
+
+describe('CSRF injection en el núcleo de transporte', () => {
+  it('añade X-CSRF-Token en mutaciones cuando hay cookie legible', async () => {
+    document.cookie = 'manualito_csrf=abc123; path=/';
+    let header: string | null = null;
+    server.use(
+      http.post('/api/manuals/:manualId/reprocess', ({ request }) => {
+        header = request.headers.get('X-CSRF-Token');
+        return HttpResponse.json({
+          manual_id: 'm-1',
+          status: 'indexing',
+          page_count: 1,
+          completed_pages: 0,
+          failed_pages: 0,
+          pages: [],
+        });
+      }),
+    );
+
+    await api.reprocessManual('m-1');
+
+    expect(header).toBe('abc123');
+  });
+
+  it('no añade X-CSRF-Token en peticiones GET', async () => {
+    document.cookie = 'manualito_csrf=abc123; path=/';
+    let header: string | null = 'unset';
+    server.use(
+      http.get('/api/manuals', ({ request }) => {
+        header = request.headers.get('X-CSRF-Token');
+        return HttpResponse.json({ manuals: [] });
+      }),
+    );
+
+    await api.listManuals();
+
+    expect(header).toBeNull();
   });
 });

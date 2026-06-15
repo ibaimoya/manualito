@@ -1,20 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { loadEnv } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const envDir = resolve(__dirname, '..');
-
-function appVersion(mode: string): string {
-  const version = process.env['APP_VERSION'] ?? loadEnv(mode, envDir, '')['APP_VERSION'];
-  if (!version) {
-    throw new Error('APP_VERSION no definida');
-  }
-  return version;
-}
 
 /**
  * Vitest config — separado de vite.config.ts porque Vite 8 ya no permite
@@ -23,10 +13,7 @@ function appVersion(mode: string): string {
  * Solo carga el plugin de React (no Tailwind, no Router, no PWA).
  * Más rápido en startup y evita generar artefactos al correr tests.
  */
-export default defineConfig(({ mode }) => ({
-  define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion(mode)),
-  },
+export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
@@ -64,4 +51,4 @@ export default defineConfig(({ mode }) => ({
       ],
     },
   },
-}));
+});

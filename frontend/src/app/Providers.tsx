@@ -1,22 +1,26 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster, toast } from 'sonner';
-import { ThemeProvider } from './theme';
+import { ThemeProvider, useTheme } from './theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { handleSessionExpired } from '@/features/auth/session-expired';
 import { onStorageWriteFail } from '@/shared/lib/storage';
 
 type Props = Readonly<{ children: ReactNode }>;
 
 /**
- * Crea un único QueryClient para toda la app.
- * (Equivalente al singleton `httpx.AsyncClient` que el backend gestiona via lifespan).
- *
- * - retry: 1 (los 502/504 ya los re-disparamos manualmente con UX feedback).
- * - staleTime 30s: evita refetch agresivo cuando se navega entre rutas.
+ * Único QueryClient de la app.
+ * - retry: 1 (los 502/504 ya se re-disparan manualmente con UX feedback).
+ * - staleTime 30s: evita refetch agresivo al navegar entre rutas.
  * - networkMode 'always': la PWA puede tener cache aunque la red esté caída.
+ * - onError global: un 401 de sesión caducada echa al login desde cualquier sitio.
  */
 function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const onError = (error: unknown): void => handleSessionExpired(error, client);
+  const client = new QueryClient({
+    queryCache: new QueryCache({ onError }),
+    mutationCache: new MutationCache({ onError }),
     defaultOptions: {
       queries: {
         retry: 1,
@@ -30,20 +34,34 @@ function createQueryClient(): QueryClient {
       },
     },
   });
+  return client;
 }
 
+/** Providers globales. Theme va fuera: el Toaster necesita leer el modo. */
 /**
- * Composición de providers globales.
- * Orden importa: Theme va fuera para que QueryClient y Toaster
- * puedan leer las CSS variables si necesitan.
+ * El Toaster sigue el tema de Ajustes (con "system" ignoraría el modo forzado).
+ * Arriba para no chocar con el composer del chat; máximo 3 toasts a la vez.
  */
+function AppToaster() {
+  const { mode } = useTheme();
+  return (
+    <Toaster
+      position="top-center"
+      richColors
+      closeButton
+      theme={mode === 'auto' ? 'system' : mode}
+      visibleToasts={3}
+      duration={5000}
+      gap={8}
+    />
+  );
+}
+
 export function Providers({ children }: Props) {
-  // useState para garantizar que el cliente se crea UNA sola vez,
-  // incluso con StrictMode doble-render.
+  // useState: un único cliente aunque StrictMode doble el render.
   const [queryClient] = useState(createQueryClient);
 
-  // Suscripción global a fallos de escritura en localStorage — muestra
-  // un toast accionable cuando se llena la cuota.  Catálogo bug #12.
+  // Toast accionable cuando localStorage se queda sin cuota.
   useEffect(
     () =>
       onStorageWriteFail((reason) => {
@@ -51,7 +69,7 @@ export function Providers({ children }: Props) {
           toast.warning('Espacio local agotado', {
             id: 'storage-quota',
             description:
-              'Borra algún manual en Ajustes → Borrar historial para liberar espacio.',
+              'Libera espacio desde Ajustes → Borrar datos locales.',
             duration: 8000,
           });
         } else if (reason === 'denied') {
@@ -69,34 +87,8 @@ export function Providers({ children }: Props) {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        {children}
-        {/*
-          Toaster global — config explícita en lugar de defaults:
-          - position 'top-center': anclaje predecible en móvil; no choca con el
-            sticky composer del chat (que vive abajo).
-          - visibleToasts={3}: cota dura para evitar que una ráfaga de
-            errores (ej. 4 mutations paralelas que fallan) apile 10 toasts
-            que tapan la pantalla.  Sonner colapsa el resto en una pila.
-          - duration por defecto 5000 ms: equilibrio entre tiempo de lectura
-            y no estorbar. Los toasts críticos (storage quota, errores) se
-            sobrescriben puntualmente con duración mayor.
-          - theme="system" + richColors: contraste WCAG AA en light y dark.
-          - gap 8: separación visual entre toasts apilados.
-        */}
-        <Toaster
-          position="top-center"
-          richColors
-          closeButton
-          theme="system"
-          visibleToasts={3}
-          duration={5000}
-          gap={8}
-          toastOptions={{
-            classNames: {
-              toast: 'mn-toast',
-            },
-          }}
-        />
+        <TooltipProvider>{children}</TooltipProvider>
+        <AppToaster />
         {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-right" />}
       </QueryClientProvider>
     </ThemeProvider>

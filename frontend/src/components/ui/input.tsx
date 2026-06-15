@@ -3,32 +3,18 @@ import { cn } from '@/shared/lib/cn';
 
 /**
  * Presets de atributos móviles para casos comunes — evitan que cada
- * callsite tenga que recordar `inputMode + enterKeyHint + spellCheck +
- * autoComplete + autoCapitalize`.
- *
- * Cumple las recomendaciones de:
- *  - https://html.spec.whatwg.org/dev/interaction.html#attr-input-inputmode
- *  - https://makandracards.com/makandra/589282-better-html-forms-type-inputmode-enterkeyhint-autocomplete
- *  - https://css-tricks.com/better-form-inputs-for-better-mobile-user-experiences/
- *
- * Ver decisión catálogo bug #29 (mobile keyboard hints).
+ * callsite tenga que recordar "inputMode + enterKeyHint + spellCheck +
+ * autoComplete + autoCapitalize".
  */
-type InputPreset = 'game-name' | 'search' | 'chat-message' | 'free';
+type InputPreset = 'game-name' | 'search' | 'chat-message' | 'email' | 'username' | 'free';
 
 type PresetConfig = Pick<
   React.InputHTMLAttributes<HTMLInputElement>,
-  | 'type'
-  | 'inputMode'
-  | 'enterKeyHint'
-  | 'spellCheck'
-  | 'autoComplete'
-  | 'autoCapitalize'
+  'type' | 'inputMode' | 'enterKeyHint' | 'spellCheck' | 'autoComplete' | 'autoCapitalize'
 >;
 
 const PRESETS: Record<InputPreset, PresetConfig> = {
-  // Nombre de juego de mesa propio (Catan, Wingspan…): NO spellcheck (los
-  // marca como mal escritos), capitalización de palabras (mayúscula
-  // inicial), enter = "Listo".
+  // Nombre de juego: sin spellcheck (los marca mal), Mayúscula Por Palabra.
   'game-name': {
     type: 'text',
     inputMode: 'text',
@@ -37,8 +23,7 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     autoComplete: 'off',
     autoCapitalize: 'words',
   },
-  // Búsqueda libre: type=search activa la X nativa (con estilo) y abre
-  // el teclado de búsqueda en algunos contextos móviles.
+  // type=search: X nativa y teclado de búsqueda en móvil.
   search: {
     type: 'search',
     inputMode: 'search',
@@ -47,8 +32,7 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     autoComplete: 'off',
     autoCapitalize: 'none',
   },
-  // Mensaje de chat: capitalización de oraciones, spellcheck activo,
-  // enter = "Enviar".
+  // Chat: capitalización de oraciones, spellcheck, enter = enviar.
   'chat-message': {
     type: 'text',
     inputMode: 'text',
@@ -57,15 +41,29 @@ const PRESETS: Record<InputPreset, PresetConfig> = {
     autoComplete: 'off',
     autoCapitalize: 'sentences',
   },
-  // Sin preset (default).
+  // Email de login/registro: teclado de email, sin autocapitalizar.
+  email: {
+    type: 'email',
+    inputMode: 'email',
+    enterKeyHint: 'next',
+    spellCheck: false,
+    autoComplete: 'email',
+    autoCapitalize: 'none',
+  },
+  // Nombre de usuario visible: autocompletar nick, sin spellcheck.
+  username: {
+    type: 'text',
+    inputMode: 'text',
+    enterKeyHint: 'next',
+    spellCheck: false,
+    autoComplete: 'username',
+    autoCapitalize: 'none',
+  },
   free: {},
 };
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  /**
-   * Atributos por defecto para el caso típico.  El callsite puede
-   * sobrescribir cualquier atributo individual si lo necesita.
-   */
+  /** Atributos por defecto del caso típico; cualquiera se puede sobrescribir. */
   preset?: InputPreset;
 }
 
@@ -77,8 +75,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <input
       ref={ref}
-      // El orden importa: el preset va PRIMERO, luego ...props para que
-      // el callsite pueda sobrescribir.
+      // Preset primero: el callsite sobrescribe vía ...props.
       {...presetAttrs}
       type={type ?? presetAttrs.type ?? 'text'}
       className={cn(

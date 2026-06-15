@@ -1,78 +1,31 @@
 import { z } from 'zod';
 
 /**
- * Storage local para caches de UI y preferencias.
+ * Storage local para preferencias de UI.
  *
  * Cada lectura se valida con Zod para tolerar cambios de schema o datos
- * tocados desde DevTools.
+ * tocados desde DevTools. Los datos de manuales viven en el backend; las
+ * claves por manual de versiones viejas solo se conservan para limpiarlas.
  */
 
 const KEY = {
-  manuals: 'manualito.manuals',
-  qa: (manualId: string) => `manualito.qa.${manualId}`,
-  qaIndex: 'manualito.qa-index',
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
-  manualResult: (manualId: string) => `manualito.result.${manualId}`,
-  // Cache opcional para texto original cuando un flujo ya lo tenga resuelto.
-  ocrLines: (manualId: string) => `manualito.ocr.${manualId}`,
 } as const;
+
+// Restos de cuando los manuales y sus respuestas se cacheaban en local.
+const LEGACY_KEY = 'manualito.manuals';
+const LEGACY_PREFIXES = ['manualito.qa.', 'manualito.result.', 'manualito.ocr.'];
 
 /* ============================================================
    Schemas
    ============================================================ */
 
-const IsoDateTimeSchema = z.iso.datetime({ offset: true });
-
-export const ManualRecordSchema = z.object({
-  manual_id: z.string().min(1),
-  name: z.string().min(1).max(120),
-  created_at: IsoDateTimeSchema,
-  last_opened_at: IsoDateTimeSchema,
-  chunks_indexed: z.number().int().nonnegative(),
-});
-export type ManualRecord = z.infer<typeof ManualRecordSchema>;
-
-const ManualsListSchema = z.array(ManualRecordSchema);
-
-export const QAMessageSchema = z.object({
-  id: z.string().min(1),
-  role: z.enum(['user', 'bot', 'system']),
-  text: z.string(),
-  ts: IsoDateTimeSchema,
-});
-export type QAMessage = z.infer<typeof QAMessageSchema>;
-const QAListSchema = z.array(QAMessageSchema);
-
-/** Shape local para texto OCR cacheado por el frontend. */
-export const OcrLineSchema = z.object({
-  text: z.string(),
-  confidence: z.number().min(0).max(1).nullable(),
-});
-export type OcrLine = z.infer<typeof OcrLineSchema>;
-const OcrLinesSchema = z.array(OcrLineSchema);
-
-export const ManualResultSchema = z.object({
-  manual_id: z.string().min(1),
-  name: z.string().min(1),
-  summary: z.string(),
-  setup: z.string(),
-  turn: z.string(),
-  win: z.string(),
-  /** Last filled "casos especiales" — opcional, se rellena bajo demanda. */
-  special: z.string().optional(),
-  created_at: IsoDateTimeSchema,
-});
-export type ManualResult = z.infer<typeof ManualResultSchema>;
-
-export const SettingsSchema = z.object({
-  mode: z.enum(['light', 'dark', 'auto']).default('auto'),
-  density: z.enum(['compact', 'comfy']).default('comfy'),
+const SettingsSchema = z.object({
+  mode: z.enum(['light', 'dark', 'auto']).default('light'),
   accent: z.enum(['amber', 'blue']).default('amber'),
-  responseDetail: z.enum(['short', 'medium', 'long']).default('medium'),
 });
-// z.infer da el tipo INPUT (campos opcionales); z.output da el OUTPUT (campos requeridos
-// porque los defaults llenan los huecos). Para uso runtime queremos el output.
+// z.output: los defaults rellenan huecos y el tipo runtime va completo.
 export type Settings = z.output<typeof SettingsSchema>;
 const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
 
@@ -106,12 +59,8 @@ function safeRead<S extends z.ZodTypeAny>(
 }
 
 /**
- * Listener global de fallos de escritura — UI (capture/chat/home) puede
- * suscribirse para mostrar un toast "Espacio local agotado" cuando la
- * quota se haya agotado.  Catálogo bug #12.
- *
- * Implementado como pub/sub minimal sin librería extra; el wrapper lo
- * dispara en cada fallo y la UI decide cómo notificar.
+ * Pub/sub mínimo de fallos de escritura: el wrapper avisa y la UI decide
+ * cómo notificar (p. ej. el toast de cuota agotada de Providers).
  */
 type WriteFailReason = 'quota' | 'unknown' | 'denied';
 type WriteFailListener = (reason: WriteFailReason, key: string) => void;
@@ -167,68 +116,6 @@ function safeRemove(key: string): void {
    ============================================================ */
 
 export const storage = {
-  /* Manuales recientes */
-  listManuals(): ManualRecord[] {
-    return safeRead(KEY.manuals, ManualsListSchema, [] as ManualRecord[]);
-  },
-  upsertManual(record: ManualRecord): void {
-    const existing = storage.listManuals();
-    const filtered = existing.filter((m) => m.manual_id !== record.manual_id);
-    const next: ManualRecord[] = [record, ...filtered].slice(0, 100);
-    safeWrite(KEY.manuals, next);
-  },
-  touchManual(manualId: string): void {
-    const existing = storage.listManuals();
-    const idx = existing.findIndex((m) => m.manual_id === manualId);
-    if (idx < 0) return;
-    const item = existing[idx];
-    if (!item) return;
-    const updated: ManualRecord = { ...item, last_opened_at: new Date().toISOString() };
-    const next: ManualRecord[] = [updated, ...existing.filter((_, i) => i !== idx)];
-    safeWrite(KEY.manuals, next);
-  },
-  removeManual(manualId: string): void {
-    const next = storage.listManuals().filter((m) => m.manual_id !== manualId);
-    safeWrite(KEY.manuals, next);
-    safeRemove(KEY.qa(manualId));
-    safeRemove(KEY.manualResult(manualId));
-    safeRemove(KEY.ocrLines(manualId));
-  },
-
-  /* Resultado pre-generado de un manual (las 4 respuestas iniciales) */
-  getResult(manualId: string): ManualResult | null {
-    const fallback = null as ManualResult | null;
-    const value = safeRead(
-      KEY.manualResult(manualId),
-      ManualResultSchema.nullable(),
-      fallback,
-    );
-    return value;
-  },
-  setResult(result: ManualResult): void {
-    safeWrite(KEY.manualResult(result.manual_id), result);
-  },
-
-  /* Texto OCR cacheado cuando algun flujo lo proporciona. */
-  getOcrLines(manualId: string): OcrLine[] {
-    return safeRead(KEY.ocrLines(manualId), OcrLinesSchema, [] as OcrLine[]);
-  },
-  setOcrLines(manualId: string, lines: OcrLine[]): void {
-    safeWrite(KEY.ocrLines(manualId), lines);
-  },
-
-  /* Historial Q&A por manual */
-  listQA(manualId: string): QAMessage[] {
-    return safeRead(KEY.qa(manualId), QAListSchema, [] as QAMessage[]);
-  },
-  appendQA(manualId: string, msg: QAMessage): void {
-    const next = [...storage.listQA(manualId), msg];
-    safeWrite(KEY.qa(manualId), next);
-  },
-  clearQA(manualId: string): void {
-    safeRemove(KEY.qa(manualId));
-  },
-
   /* Preferencias */
   readSettings(): Settings {
     return safeRead(KEY.settings, SettingsSchema, DEFAULT_SETTINGS);
@@ -260,15 +147,19 @@ export const storage = {
     safeRemove(KEY.onboardingSeen);
   },
 
-  /* Wipe total (botón "borrar historial" en settings) */
+  /* Barrido de claves legadas (botón "Borrar datos locales" en settings) */
   wipeAll(): void {
-    const manuals = storage.listManuals();
-    for (const m of manuals) {
-      safeRemove(KEY.qa(m.manual_id));
-      safeRemove(KEY.manualResult(m.manual_id));
-      safeRemove(KEY.ocrLines(m.manual_id));
+    const localStorage = getLocalStorage();
+    if (!localStorage) return;
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key === null) continue;
+      if (key === LEGACY_KEY || LEGACY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        doomed.push(key);
+      }
     }
-    safeRemove(KEY.manuals);
+    for (const key of doomed) safeRemove(key);
   },
 };
 

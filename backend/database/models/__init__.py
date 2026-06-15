@@ -10,6 +10,9 @@ MODEL_MODULES: tuple[str, ...] = (
     "game",
     "manual",
     "conversation",
+    "rating",
+    "explanation",
+    "game_follow",
 )
 
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Request, Response, status
 from api import config
 from api.annotations import DbSession
 from api.auth.cookies import clear_auth_cookies, set_auth_cookies
-from api.auth.dependencies import CsrfProtection, CurrentAuth
+from api.auth.dependencies import CsrfProtection, CurrentAuth, client_ip
 from api.auth.emails import schedule_password_reset_email, schedule_verification_email
 from api.auth.schemas import (
     AuthMessageResponse,
@@ -49,17 +49,18 @@ CREDENTIAL_RESET_DONE_DETAIL = "Contraseña actualizada."
 @limiter.limit("5/minute")
 async def register_handler(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     payload: RegisterRequest,
     session: DbSession,
-) -> UserPublic:
-    """Registra un usuario normal sin permitir escalada de rol."""
+) -> AuthResponse:
+    """Registra un usuario normal, crea sesión y evita escalada de rol."""
     result = await register_user(
         session,
         email=str(payload.email),
         username=payload.username,
         password=payload.password,
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     schedule_verification_email(
         background_tasks,
@@ -67,7 +68,12 @@ async def register_handler(
         username=result.user.username,
         token=result.verification_token,
     )
-    return to_public_user(result.user)
+    return _auth_response_with_cookies(
+        response,
+        user=to_public_user(result.user),
+        session_token=result.session_token,
+        csrf_token=result.csrf_token,
+    )
 
 
 @router.post("/api/auth/login")
@@ -83,14 +89,14 @@ async def login_handler(
         session,
         identifier=payload.identifier,
         password=payload.password,
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
-    set_auth_cookies(
+    return _auth_response_with_cookies(
         response,
+        user=to_public_user(result.user),
         session_token=result.session_token,
         csrf_token=result.csrf_token,
     )
-    return AuthResponse(user=to_public_user(result.user), csrf_token=result.csrf_token)
 
 
 @router.get("/api/me")
@@ -108,7 +114,7 @@ async def logout_handler(
     _csrf: CsrfProtection,
 ) -> None:
     """Revoca la sesión actual y limpia las cookies de auth."""
-    await logout_session(session, auth=auth, ip_address=_client_ip(request))
+    await logout_session(session, auth=auth, ip_address=client_ip(request))
     clear_auth_cookies(response)
 
 
@@ -120,7 +126,7 @@ async def verify_email_handler(
     session: DbSession,
 ) -> AuthMessageResponse:
     """Verifica el email de forma soft mediante token opaco."""
-    await verify_email_token(session, token=payload.token, ip_address=_client_ip(request))
+    await verify_email_token(session, token=payload.token, ip_address=client_ip(request))
     return AuthMessageResponse(detail=EMAIL_VERIFIED_DETAIL)
 
 
@@ -136,7 +142,7 @@ async def resend_verification_email_handler(
     email_job = await request_email_verification(
         session,
         email=str(payload.email),
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     if email_job is not None:
         schedule_verification_email(
@@ -160,7 +166,7 @@ async def forgot_password_handler(
     email_job = await request_password_reset(
         session,
         email=str(payload.email),
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     if email_job is not None:
         schedule_password_reset_email(
@@ -184,16 +190,22 @@ async def reset_password_handler(
         session,
         token=payload.token,
         password=payload.password,
-        ip_address=_client_ip(request),
+        ip_address=client_ip(request),
     )
     return AuthMessageResponse(detail=CREDENTIAL_RESET_DONE_DETAIL)
 
 
-def _client_ip(request: Request) -> str | None:
-    """IP real del cliente tras el proxy.
-
-    uvicorn (--proxy-headers) reescribe request.client.host desde
-    X-Forwarded-For, asi que aquí ya es la IP del cliente, no la de nginx.
-    """
-    client = request.client
-    return client.host if client else None
+def _auth_response_with_cookies(
+    response: Response,
+    *,
+    user: UserPublic,
+    session_token: str,
+    csrf_token: str,
+) -> AuthResponse:
+    """Emite cookies de sesión y devuelve el contrato público de auth."""
+    set_auth_cookies(
+        response,
+        session_token=session_token,
+        csrf_token=csrf_token,
+    )
+    return AuthResponse(user=user, csrf_token=csrf_token)

@@ -21,6 +21,7 @@ def test_api_settings_parses_environment_types(monkeypatch):
     monkeypatch.setenv("SMTP_STARTTLS", "true")
     monkeypatch.setenv("EMAIL_VERIFICATION_TOKEN_MINUTES", "60")
     monkeypatch.setenv("PASSWORD_RESET_TOKEN_MINUTES", "15")
+    monkeypatch.setenv("ASSET_STORAGE_DIR", "/tmp/manualito-assets")
 
     settings = ApiSettings()
 
@@ -35,6 +36,7 @@ def test_api_settings_parses_environment_types(monkeypatch):
     assert settings.smtp_starttls is True
     assert settings.email_verification_token_minutes == 60
     assert settings.password_reset_token_minutes == 15
+    assert settings.asset_storage_dir == "/tmp/manualito-assets"
 
 
 def test_cookie_names_keep_host_prefix_only_when_secure():

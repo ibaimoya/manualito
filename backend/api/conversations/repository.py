@@ -1,5 +1,6 @@
 """Consultas SQL de conversaciones y mensajes."""
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -29,6 +30,7 @@ class ConversationTurnContext:
     id: UUID
     user_id: UUID
     game_id: UUID
+    game_name: str
     title: str | None
     history: tuple[MessageSnapshot, ...]
 
@@ -121,6 +123,7 @@ async def load_conversation_turn_context(
         id=conversation.conversation.id,
         user_id=conversation.conversation.user_id,
         game_id=conversation.conversation.game_id,
+        game_name=conversation.game_name,
         title=conversation.conversation.title,
         history=tuple(
             MessageSnapshot(message.role, message.content) for message in history
@@ -188,6 +191,7 @@ async def append_message_pair(
     conversation_id: UUID,
     user_content: str,
     assistant_content: str,
+    assistant_sources: Sequence[Mapping[str, object]],
     title: str | None,
 ) -> StoredMessagePair:
     """Guarda usuario y asistente en un commit corto tras el LLM."""
@@ -200,11 +204,13 @@ async def append_message_pair(
         conversation_id=conversation.id,
         role="user",
         content=user_content,
+        sources=[],
     )
     assistant_message = Message(
         conversation_id=conversation.id,
         role="assistant",
         content=assistant_content,
+        sources=list(assistant_sources),
     )
     if conversation.title is None and title is not None:
         conversation.title = title
@@ -221,6 +227,28 @@ async def append_message_pair(
             user_id=conversation.user_id,
             conversation_id=conversation.id,
         ),
+    )
+
+
+async def rename_user_conversation(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    title: str,
+) -> Row:
+    """Renombra una conversación propia sin alterar su actividad reciente."""
+    conversation = await get_owned_conversation(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+    )
+    conversation.title = title
+    await session.commit()
+    return await get_conversation_summary(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
     )
 
 
@@ -289,6 +317,7 @@ class _ConversationWithGameState:
     """Resultado interno para distinguir 404 de juego no disponible."""
 
     conversation: Conversation
+    game_name: str
     game_status: str
     game_deleted_at: datetime | None
 
@@ -303,6 +332,7 @@ async def _get_owned_conversation_with_game_state(
     result = await session.execute(
         select(
             Conversation,
+            Game.name.label("game_name"),
             Game.status.label("game_status"),
             Game.deleted_at.label("game_deleted_at"),
         )
@@ -318,6 +348,7 @@ async def _get_owned_conversation_with_game_state(
         raise ConversationNotFoundError
     return _ConversationWithGameState(
         conversation=row[0],
+        game_name=row.game_name,
         game_status=row.game_status,
         game_deleted_at=row.game_deleted_at,
     )

@@ -1,14 +1,24 @@
 """Schemas públicos de manuales y preguntas por juego."""
 
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, StringConstraints
 
 from api.annotations import Answer, ChunksIndexed, Question
 from api.schemas import StrictModel
 
 GAME_QUESTION_TOP_K_MAX = 10
+MANUAL_PAGE_TEXT_MAX_LENGTH = 20_000
+PageText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MANUAL_PAGE_TEXT_MAX_LENGTH,
+    ),
+]
 
 
 class ManualCreatedResponse(StrictModel):
@@ -31,6 +41,8 @@ class ManualSummaryResponse(StrictModel):
     title: str | None
     status: str
     visibility: str
+    source_type: str
+    page_count: int
     language: str | None
     chunks_indexed: ChunksIndexed
     created_at: datetime
@@ -86,6 +98,12 @@ class ManualProcessingResponse(StrictModel):
     pages: list[ManualProcessingPageResponse]
 
 
+class EditPageTextRequest(StrictModel):
+    """Texto corregido a mano para una página de manual propio."""
+
+    text: PageText
+
+
 class GameQuestionRequest(StrictModel):
     """Pregunta dirigida al pool de manuales de un juego."""
 
@@ -93,7 +111,17 @@ class GameQuestionRequest(StrictModel):
     top_k: int = Field(default=3, ge=1, le=GAME_QUESTION_TOP_K_MAX)
 
 
+class AnswerSource(StrictModel):
+    """Fuente pública usada para construir una respuesta RAG."""
+
+    manual_id: UUID
+    manual_title: str | None
+    page: int = Field(ge=1)
+    is_own: bool = False
+
+
 class AnswerResponse(StrictModel):
     """Respuesta generada a partir de chunks autorizados."""
 
     answer: Answer
+    sources: list[AnswerSource] = Field(default_factory=list)

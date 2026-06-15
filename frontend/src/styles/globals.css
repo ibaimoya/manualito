@@ -7,56 +7,57 @@
 @import './tokens.css';
 
 /* @theme inline → expone los CSS vars de la marca como utilidades de Tailwind v4.
-   Esto permite escribir `bg-primary`, `text-text-2`, `border-border-strong`, etc.
-   Mantenemos el namespace `--m-*` y duplicamos en `--color-*` / `--font-*` / etc. */
+   Esto permite escribir "bg-primary", "text-text-2", "border-border-strong", etc.
+   Mantenemos el namespace "--m-*" y duplicamos en "--color-*" / "--font-*" / etc. */
 @theme inline {
   /* Colores marca */
-  --color-primary:       var(--m-primary-500);
-  --color-primary-50:    var(--m-primary-50);
-  --color-primary-100:   var(--m-primary-100);
-  --color-primary-300:   var(--m-primary-300);
-  --color-primary-500:   var(--m-primary-500);
-  --color-primary-600:   var(--m-primary-600);
-  --color-primary-700:   var(--m-primary-700);
-  --color-primary-900:   var(--m-primary-900);
+  --color-primary: var(--m-primary-500);
+  --color-primary-50: var(--m-primary-50);
+  --color-primary-100: var(--m-primary-100);
+  --color-primary-300: var(--m-primary-300);
+  --color-primary-500: var(--m-primary-500);
+  --color-primary-600: var(--m-primary-600);
+  --color-primary-700: var(--m-primary-700);
+  --color-primary-900: var(--m-primary-900);
 
-  --color-accent:        var(--m-accent-500);
-  --color-accent-100:    var(--m-accent-100);
-  --color-accent-300:    var(--m-accent-300);
-  --color-accent-500:    var(--m-accent-500);
+  --color-accent: var(--m-accent-500);
+  --color-accent-100: var(--m-accent-100);
+  --color-accent-300: var(--m-accent-300);
+  --color-accent-500: var(--m-accent-500);
 
   /* Superficies y texto */
-  --color-bg:            var(--m-bg);
-  --color-surface:       var(--m-surface);
-  --color-surface-2:     var(--m-surface-2);
-  --color-border:        var(--m-border);
+  --color-bg: var(--m-bg);
+  --color-card: var(--m-card);
+  --color-surface: var(--m-surface);
+  --color-surface-2: var(--m-surface-2);
+  --color-border: var(--m-border);
   --color-border-strong: var(--m-border-strong);
-  --color-fg:            var(--m-text);
-  --color-fg-2:          var(--m-text-2);
-  --color-fg-3:          var(--m-text-3);
-  --color-fg-inv:        var(--m-text-inv);
+  --color-fg: var(--m-text);
+  --color-fg-2: var(--m-text-2);
+  --color-fg-3: var(--m-text-3);
+  --color-fg-inv: var(--m-text-inv);
 
   /* Estados */
-  --color-success:       var(--m-success);
-  --color-success-bg:    var(--m-success-bg);
-  --color-error:         var(--m-error);
-  --color-error-bg:      var(--m-error-bg);
-  --color-warning:       var(--m-warning);
-  --color-warning-bg:    var(--m-warning-bg);
-  --color-info:          var(--m-info);
-  --color-info-bg:       var(--m-info-bg);
+  --color-success: var(--m-success);
+  --color-success-bg: var(--m-success-bg);
+  --color-error: var(--m-error);
+  --color-error-bg: var(--m-error-bg);
+  --color-warning: var(--m-warning);
+  --color-warning-bg: var(--m-warning-bg);
+  --color-info: var(--m-info);
+  --color-info-bg: var(--m-info-bg);
 
   /* Tipografía */
   --font-display: var(--m-font-display);
-  --font-body:    var(--m-font-body);
-  --font-sans:    var(--m-font-body);
-  --font-mono:    var(--m-font-mono);
+  --font-body: var(--m-font-body);
+  --font-sans: var(--m-font-body);
+  --font-mono: var(--m-font-mono);
 
   /* Radios */
-  --radius-sm:   var(--m-r-sm);
-  --radius-md:   var(--m-r-md);
-  --radius-lg:   var(--m-r-lg);
-  --radius-xl:   var(--m-r-xl);
+  --radius-sm: var(--m-r-sm);
+  --radius-md: var(--m-r-md);
+  --radius-lg: var(--m-r-lg);
+  --radius-xl: var(--m-r-xl);
   --radius-full: var(--m-r-full);
 
   /* Sombras */
@@ -80,37 +81,66 @@ body,
   min-height: 100dvh;
 }
 
-/* scrollbar-gutter: stable — reserva SIEMPRE el espacio del scrollbar.
-   Cuando un Sheet/Dialog activa scroll-lock (overflow:hidden), el
-   scrollbar desaparece y el contenido saltaría ~15 px a la derecha.
-   Con `stable`, el hueco se mantiene → cero salto.  Catálogo bug #28. */
-html {
-  scrollbar-gutter: stable;
+/* Barra de scroll fina e integrada en toda la app, sin reservar hueco: sin
+   barra el contenido llega al borde; con barra queda fina y pegada al borde. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--m-border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--m-border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--m-text-3);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Chrome dibuja una X nativa en <input type="search"> que choca con
    nuestros iconos personalizados.  Quitamos la X nativa para mantener
-   el diseño consistente.  Catálogo bug #41. */
+   el diseño consistente. */
 input[type='search']::-webkit-search-cancel-button,
 input[type='search']::-webkit-search-decoration {
   -webkit-appearance: none;
   appearance: none;
 }
 
+/* Oculta el icono nativo de "mostrar contraseña" (Edge/Chromium): duplica el nuestro. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
+
 body {
-  font-family: var(--m-font-body);
+  overflow: hidden;
+  font-family: var(--m-font-body), system-ui, sans-serif;
   color: var(--m-text);
   background: var(--m-bg);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'ss01' on, 'cv11' on;
+  font-feature-settings:
+    'ss01' on,
+    'cv11' on;
   text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--m-font-display);
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--m-font-display), system-ui, sans-serif;
   letter-spacing: -0.015em;
 }
 
@@ -118,85 +148,164 @@ h1, h2, h3, h4, h5, h6 {
 code,
 pre,
 kbd {
-  font-family: var(--m-font-mono);
+  font-family: var(--m-font-mono), ui-monospace, monospace;
   font-feature-settings: 'zero' on;
 }
 
-/* Focus ring común — buena a11y por defecto */
-:focus-visible {
-  outline: 2px solid var(--m-primary-500);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Focus ring común — buena a11y por defecto. En @layer base: fuera de capa
+   ganaría a las utilities y se sumaría a los anillos propios de cada componente. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--m-primary-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Tailwind v4 quitó el "cursor: pointer" por defecto de los botones; lo
+     reponemos para que cualquier control clicable muestre la mano (los "<a>"
+     ya lo traen de nativo). Los deshabilitados conservan su propio cursor. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────
    Animaciones globales (reusadas en varias pantallas)
    ────────────────────────────────────────────────────────────── */
-@keyframes mn-spin     { to { transform: rotate(360deg); } }
-@keyframes mn-shimmer  {
-  0%   { background-position:  200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes mn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
-@keyframes mn-indeterminate {
-  0%   { left: -40%; }
-  100% { left: 100%; }
+@keyframes mn-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 @keyframes mn-dot {
-  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-  40%           { transform: scale(1);   opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-/* — OcrTextViewer (visor de texto OCR en /result y /extract) — */
-.ocr-body--plain,
-.ocr-body--lines {
-  animation: ocr-fade-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+/* — Accordion (Radix): anima la altura al plegar/desplegar — */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
 }
-@keyframes ocr-fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-/* Stagger fade-in para vista "Por líneas":  50 ms entre líneas,
-   capado por --i (max 16) → la animación completa ≤ 800 ms. */
-.ocr-line {
-  opacity: 0;
-  animation: ocr-line-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--i, 0) * 50ms);
-}
-@keyframes ocr-line-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 
 /* — Sheet (bottom sheet modal) animations — */
-@keyframes mn-fade-in  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes mn-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mn-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes mn-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 @keyframes mn-slide-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0);    }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 @keyframes mn-slide-down {
-  from { transform: translateY(0);    }
-  to   { transform: translateY(100%); }
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
 }
 
-[data-mn-overlay][data-state='open']  { animation: mn-fade-in  200ms ease-out forwards; }
-[data-mn-overlay][data-state='closed']{ animation: mn-fade-out 150ms ease-in  forwards; }
-[data-mn-sheet][data-state='open']    { animation: mn-slide-up   240ms var(--m-easing) forwards; }
-[data-mn-sheet][data-state='closed']  { animation: mn-slide-down 200ms var(--m-easing) forwards; }
+[data-mn-overlay][data-state='open'] {
+  animation: mn-fade-in 200ms ease-out forwards;
+}
+[data-mn-overlay][data-state='closed'] {
+  animation: mn-fade-out 150ms ease-in forwards;
+}
+[data-mn-sheet][data-state='open'] {
+  animation: mn-slide-up 240ms var(--m-easing) forwards;
+}
+[data-mn-sheet][data-state='closed'] {
+  animation: mn-slide-down 200ms var(--m-easing) forwards;
+}
 
-/* — Dialog (modal centrado para desktop) — */
+/* — Dialog (modal centrado para desktop) —
+   El centrado vive en la propiedad "translate" (utilidades -translate-x/y-1/2
+   de Tailwind v4), independiente de "transform". El keyframe solo anima
+   scale + opacity: si incluyera translate(-50%,-50%) se SUMARÍA al centrado
+   y, con fill forwards, el modal quedaría media altura por encima del centro
+   de forma permanente. */
 @keyframes mn-zoom-in {
-  from { transform: translate(-50%, -50%) scale(0.96); opacity: 0; }
-  to   { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 @keyframes mn-zoom-out {
-  from { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
-  to   { transform: translate(-50%, -50%) scale(0.96); opacity: 0; }
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.96);
+    opacity: 0;
+  }
 }
-[data-mn-dialog-overlay][data-state='open']  { animation: mn-fade-in  180ms ease-out forwards; }
-[data-mn-dialog-overlay][data-state='closed']{ animation: mn-fade-out 140ms ease-in  forwards; }
-[data-mn-dialog][data-state='open']   { animation: mn-zoom-in  200ms var(--m-easing) forwards; }
-[data-mn-dialog][data-state='closed'] { animation: mn-zoom-out 160ms var(--m-easing) forwards; }
+[data-mn-dialog-overlay][data-state='open'] {
+  animation: mn-fade-in 180ms ease-out forwards;
+}
+[data-mn-dialog-overlay][data-state='closed'] {
+  animation: mn-fade-out 140ms ease-in forwards;
+}
+[data-mn-dialog][data-state='open'] {
+  animation: mn-zoom-in 200ms var(--m-easing) forwards;
+}
+[data-mn-dialog][data-state='closed'] {
+  animation: mn-zoom-out 160ms var(--m-easing) forwards;
+}
+[data-mn-menu][data-state='open'] {
+  animation: mn-zoom-in 140ms var(--m-easing);
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+}
 
 /* Respeta prefers-reduced-motion para todas las animaciones globales */
 @media (prefers-reduced-motion: reduce) {
@@ -222,7 +331,7 @@ input[type='radio'] {
 /* — Capacidad de input: pointer & hover (decisión #28 — Principio 2) —
    Detectamos la CAPACIDAD del dispositivo, no el dispositivo (anti UA-sniff).
 
-   Touch real (`pointer: coarse`): garantizamos área mínima 44×44 px
+   Touch real ("pointer: coarse"): garantizamos área mínima 44×44 px
    en todos los botones e icon-buttons.  Cumple WCAG 2.2 SC 2.5.8 sin
    tener que enumerar tamaños en cada componente. */
 @media (pointer: coarse) {
@@ -235,30 +344,33 @@ input[type='radio'] {
 
 /* Hover states activos SOLO cuando puede hacerse hover real.
    En táctil puro el navegador simula hover tras el primer tap, lo que
-   produce "sticky hover" desagradable.  En `(hover: none)` neutralizamos
+   produce "sticky hover" desagradable.  En "(hover: none)" neutralizamos
    los efectos visuales más comunes para que ni siquiera se apliquen al
    tap (no solo la duración).  Ver Motion docs:
-   https://motion.dev/docs/react-hover-animation
-   y catálogo bug #1 en notimportant/errores-tipicos-encontrados-frontend.md. */
+   https://motion.dev/docs/react-hover-animation */
 @media (hover: none), (pointer: coarse) {
   *:hover {
     background-color: revert !important;
     color: revert !important;
     box-shadow: revert !important;
     border-color: revert !important;
+    /* Tailwind v4 reparte el transform en propiedades propias: hay que revertir
+       las tres, no solo "transform", o el hover pegajoso sobreviviría al tap. */
     transform: revert !important;
+    translate: revert !important;
+    scale: revert !important;
+    rotate: revert !important;
     transition-duration: 0ms !important;
   }
-  /* Mantenemos `:active` como feedback de tap inmediato y corto. */
+  /* Mantenemos ":active" como feedback de tap inmediato y corto. */
   *:active {
     transition-duration: 80ms !important;
   }
 }
 
-/* Refuerzo: para `prefers-reduced-motion`, neutralizamos transition
+/* Refuerzo: para "prefers-reduced-motion", neutralizamos transition
    shorthand además de duration, y eliminamos transforms iniciales de
-   Sheet/Dialog para que aparezcan/desaparezcan sin slide ni zoom.
-   Catálogo bugs #11 y #15. */
+   Sheet/Dialog para que aparezcan/desaparezcan sin slide ni zoom. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -270,4 +382,102 @@ input[type='radio'] {
     animation: none !important;
     transform: none !important;
   }
+}
+
+/* — Markdown del LLM ("<Markdown>"): compacto, hereda el color del contenedor. */
+.md {
+  /* El LLM puede soltar palabras/URLs sin espacios más anchas que la tarjeta. */
+  overflow-wrap: break-word;
+}
+.md > :first-child {
+  margin-top: 0;
+}
+.md > :last-child {
+  margin-bottom: 0;
+}
+.md p {
+  margin: 0.5em 0;
+  line-height: 1.6;
+}
+.md ul,
+.md ol {
+  margin: 0.5em 0;
+  padding-left: 1.3em;
+}
+.md ul {
+  list-style: disc;
+}
+.md ol {
+  list-style: decimal;
+}
+.md li {
+  margin: 0.15em 0;
+}
+.md strong {
+  font-weight: 700;
+}
+.md em {
+  font-style: italic;
+}
+.md a {
+  color: var(--m-accent-500);
+  text-decoration: underline;
+}
+.md code {
+  font-family: var(--m-font-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+  background: var(--m-surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.md pre {
+  margin: 0.5em 0;
+  padding: 0.75em;
+  background: var(--m-surface-2);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.md pre code {
+  padding: 0;
+  background: none;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  font-family: var(--m-font-display), system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.75em 0 0.35em;
+}
+.md h1 {
+  font-size: 1.25em;
+}
+.md h2 {
+  font-size: 1.15em;
+}
+.md h3 {
+  font-size: 1.05em;
+}
+.md blockquote {
+  margin: 0.5em 0;
+  padding-left: 0.75em;
+  border-left: 3px solid var(--m-border-strong);
+  color: var(--m-text-2);
+}
+.md table {
+  margin: 0.5em 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.md th,
+.md td {
+  border: 1px solid var(--m-border);
+  padding: 0.3em 0.6em;
+  text-align: left;
+}
+.md hr {
+  margin: 0.75em 0;
+  border: 0;
+  border-top: 1px solid var(--m-border);
 }

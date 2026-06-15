@@ -75,6 +75,24 @@ describe('Providers', () => {
     });
   });
 
+  it('el Toaster sigue el tema de la app, no el del SO', async () => {
+    localStorage.setItem(
+      'manualito.settings',
+      JSON.stringify({ mode: 'dark', accent: 'amber' }),
+    );
+    render(
+      <Providers>
+        <p>x</p>
+      </Providers>,
+    );
+    toast('tema oscuro');
+    await waitFor(() => {
+      expect(screen.getByText('tema oscuro')).toBeInTheDocument();
+    });
+    const toaster = document.querySelector('[data-sonner-toaster]');
+    expect(toaster).toHaveAttribute('data-sonner-theme', 'dark');
+  });
+
   it('cuota llena → muestra toast "Espacio local agotado" con descripción accionable', async () => {
     // El listener del Providers se ejecuta tras montar.  Simulamos un fallo
     // de escritura "quota" parchando Storage.prototype.setItem (vi.spyOn no
@@ -88,13 +106,7 @@ describe('Providers', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     failNextSetItemWith('QuotaExceededError');
-    storage.upsertManual({
-      manual_id: 'x',
-      name: 'X',
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 1,
-    });
+    storage.writeSettings({ mode: 'dark', accent: 'amber' });
 
     await waitFor(() => {
       expect(screen.getByText(/Espacio local agotado/)).toBeInTheDocument();
@@ -111,13 +123,7 @@ describe('Providers', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     failNextSetItemWith('SecurityError');
-    storage.upsertManual({
-      manual_id: 'y',
-      name: 'Y',
-      created_at: '2026-05-26T10:00:00.000Z',
-      last_opened_at: '2026-05-26T10:00:00.000Z',
-      chunks_indexed: 1,
-    });
+    storage.writeSettings({ mode: 'dark', accent: 'amber' });
 
     await waitFor(() => {
       expect(

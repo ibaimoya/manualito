@@ -22,6 +22,7 @@ _MANUAL_ID = uuid4()
 _CHUNK_ID = uuid4()
 _DUPLICATE_CHUNK_ID = uuid4()
 _UNIQUE_CHUNK_ID = uuid4()
+_MANUAL_TITLE = "Reglamento base"
 _INDEXED_AT = "2026-05-31T10:00:00+00:00"
 _OCR_LINES = [{"text": "Regla uno. Regla dos.", "confidence": 0.9}]
 
@@ -48,6 +49,8 @@ async def test_create_manual_acepta_imagenes_y_crea_paginas_pending(monkeypatch)
     monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
     create_mock = AsyncMock(return_value=SimpleNamespace(id=_MANUAL_ID))
     monkeypatch.setattr(manual_service, "create_manual_with_pending_pages", create_mock)
+    auto_follow_mock = AsyncMock()
+    monkeypatch.setattr(manual_service.games_repository, "auto_follow_game", auto_follow_mock)
     run_ocr_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
 
@@ -77,6 +80,11 @@ async def test_create_manual_acepta_imagenes_y_crea_paginas_pending(monkeypatch)
     assert create_kwargs["source_type"] == "images"
     assert create_kwargs["page_count"] == 1
     assert create_kwargs["images"][0].storage_key == "manuals/user/manual/page-1.jpg"
+    auto_follow_mock.assert_awaited_once_with(
+        session,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+    )
 
 
 @pytest.mark.anyio
@@ -573,16 +581,28 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
                 id=_CHUNK_ID,
                 text="Texto A",
                 content_hash="same-hash",
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                source_page=1,
+                is_own=True,
             ),
             AuthorizedChunk(
                 id=_DUPLICATE_CHUNK_ID,
                 text="Texto duplicado",
                 content_hash="same-hash",
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                source_page=1,
+                is_own=True,
             ),
             AuthorizedChunk(
                 id=_UNIQUE_CHUNK_ID,
                 text="Texto B",
                 content_hash="unique-hash",
+                manual_id=_MANUAL_ID,
+                manual_title=_MANUAL_TITLE,
+                source_page=2,
+                is_own=False,
             ),
         ]
     )
@@ -592,14 +612,20 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
 
     result = await retrieval_service.generate_game_answer(
         session,
-        auth=_auth(),
+        current_user_id=_USER_ID,
         game_id=_GAME_ID,
         question="¿Cómo se gana?",
         top_k=2,
         client=object(),
     )
 
-    assert result == AnswerResponse(answer="Se gana con 10 puntos.")
+    assert result == AnswerResponse(
+        answer="Se gana con 10 puntos.",
+        sources=[
+            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 1, "is_own": True},
+            {"manual_id": _MANUAL_ID, "manual_title": _MANUAL_TITLE, "page": 2, "is_own": False},
+        ],
+    )
     rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["game_id"] == str(_GAME_ID)
@@ -628,14 +654,24 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
         retrieval_service,
         "load_authorized_chunks",
         AsyncMock(
-            return_value=[AuthorizedChunk(id=_CHUNK_ID, text="Texto A", content_hash="hash")]
+            return_value=[
+                AuthorizedChunk(
+                    id=_CHUNK_ID,
+                    text="Texto A",
+                    content_hash="hash",
+                    manual_id=_MANUAL_ID,
+                    manual_title=None,
+                    source_page=1,
+                    is_own=True,
+                )
+            ]
         ),
     )
 
     with pytest.raises(GeneratedAnswerTooLongError):
         await retrieval_service.generate_game_answer(
             _session(),
-            auth=_auth(),
+            current_user_id=_USER_ID,
             game_id=_GAME_ID,
             question="¿Cómo se gana?",
             top_k=3,
@@ -655,7 +691,7 @@ async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
     with pytest.raises(InternalServiceError):
         await retrieval_service.generate_game_answer(
             _session(),
-            auth=_auth(),
+            current_user_id=_USER_ID,
             game_id=_GAME_ID,
             question="¿Cómo se gana?",
             top_k=3,

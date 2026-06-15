@@ -4,15 +4,21 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.manuals.exceptions import ManualContextNotFoundError, ManualNotFoundError
+from api.manuals.exceptions import (
+    ManualBusyError,
+    ManualContextNotFoundError,
+    ManualNotFoundError,
+)
 from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
 from database.models.asset import Asset
 from database.models.game import Game
 from database.models.manual import Manual, ManualChunk, ManualPage
+
+REPROCESSABLE_MANUAL_STATUSES = ("active", "pending_review", "failed")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +55,10 @@ class AuthorizedChunk:
     id: UUID
     text: str
     content_hash: str
+    manual_id: UUID
+    manual_title: str | None
+    source_page: int
+    is_own: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -311,6 +321,170 @@ async def attach_page_image_asset(
     await session.commit()
 
 
+async def begin_manual_reprocessing(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+    page_number: int | None,
+) -> list[UUID]:
+    """Reclama un manual quieto para reindexar y devuelve chunks obsoletos.
+
+    El UPDATE condicional sobre el estado es la barrera frente a peticiones
+    concurrentes: solo una pasa el manual a 'indexing'; el resto recibe 409.
+    """
+    claim = await session.execute(
+        update(Manual)
+        .where(
+            Manual.id == manual_id,
+            Manual.owner_user_id == owner_user_id,
+            Manual.deleted_at.is_(None),
+            Manual.status.in_(REPROCESSABLE_MANUAL_STATUSES),
+        )
+        .values(status="indexing")
+        .returning(Manual.id)
+    )
+    if claim.scalar_one_or_none() is None:
+        await session.rollback()
+        status_result = await session.execute(
+            select(Manual.status).where(
+                Manual.id == manual_id,
+                Manual.owner_user_id == owner_user_id,
+                Manual.deleted_at.is_(None),
+            )
+        )
+        if status_result.scalar_one_or_none() is None:
+            raise ManualNotFoundError
+        raise ManualBusyError
+
+    page_id: UUID | None = None
+    if page_number is not None:
+        page_result = await session.execute(
+            select(ManualPage.id).where(
+                ManualPage.manual_id == manual_id,
+                ManualPage.page_number == page_number,
+            )
+        )
+        page_id = page_result.scalar_one_or_none()
+        if page_id is None:
+            await session.rollback()
+            raise ManualNotFoundError
+
+    pages_update = update(ManualPage).where(ManualPage.manual_id == manual_id)
+    stale_chunks_query = select(ManualChunk.id).where(ManualChunk.manual_id == manual_id)
+    if page_id is not None:
+        pages_update = pages_update.where(ManualPage.page_number == page_number)
+        stale_chunks_query = select(ManualChunk.id).where(ManualChunk.page_id == page_id)
+    await session.execute(pages_update.values(ocr_status="pending"))
+    stale_result = await session.execute(stale_chunks_query)
+    stale_chunk_ids = list(stale_result.scalars())
+    await session.commit()
+    return stale_chunk_ids
+
+
+async def get_page_for_edit(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+    page_number: int,
+) -> Row:
+    """Carga manual propio y página con ownership embebido en la query."""
+    result = await session.execute(
+        select(
+            Manual.id,
+            Manual.game_id,
+            Manual.owner_user_id,
+            Manual.language,
+            Manual.status,
+            Manual.visibility,
+            ManualPage.id.label("page_id"),
+        )
+        .join(ManualPage, ManualPage.manual_id == Manual.id)
+        .where(
+            Manual.id == manual_id,
+            Manual.owner_user_id == owner_user_id,
+            Manual.deleted_at.is_(None),
+            ManualPage.page_number == page_number,
+        )
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise ManualNotFoundError
+    return row
+
+
+async def list_page_chunk_ids(session: AsyncSession, *, page_id: UUID) -> list[UUID]:
+    """Lista los chunks actuales de una página para limpiarlos de Chroma."""
+    result = await session.execute(
+        select(ManualChunk.id).where(ManualChunk.page_id == page_id)
+    )
+    return list(result.scalars())
+
+
+async def list_page_chunks_for_ingest(
+    session: AsyncSession,
+    *,
+    page_id: UUID,
+) -> list[ManualChunk]:
+    """Carga los chunks persistidos de una página en orden para RAG."""
+    result = await session.execute(
+        select(ManualChunk)
+        .where(ManualChunk.page_id == page_id)
+        .order_by(ManualChunk.chunk_index.asc())
+    )
+    return list(result.scalars())
+
+
+async def get_manual_page_row(session: AsyncSession, *, page_id: UUID) -> Row:
+    """Relee los campos públicos de una página tras editarla."""
+    result = await session.execute(
+        select(
+            ManualPage.page_number,
+            ManualPage.ocr_status,
+            ManualPage.text_source,
+            ManualPage.text_quality,
+            ManualPage.ocr_confidence_mean,
+            ManualPage.ocr_lines,
+        ).where(ManualPage.id == page_id)
+    )
+    return result.one()
+
+
+async def mark_page_chunks_indexed(
+    session: AsyncSession,
+    *,
+    manual_id: UUID,
+    chunk_ids: set[UUID],
+    embedding_model: str | None,
+    indexed_at: datetime | None,
+) -> None:
+    """Sincroniza chunks de una página y recalcula el estado del manual."""
+    if chunk_ids:
+        result = await session.execute(
+            select(ManualChunk).where(
+                ManualChunk.manual_id == manual_id,
+                ManualChunk.id.in_(chunk_ids),
+            )
+        )
+        for chunk in result.scalars():
+            chunk.embedding_model = embedding_model
+            chunk.indexed_at = indexed_at
+
+    manual = await session.get(Manual, manual_id)
+    if manual is None:
+        raise ManualContextNotFoundError
+
+    total_result = await session.execute(
+        select(func.count(ManualChunk.id)).where(ManualChunk.manual_id == manual_id)
+    )
+    manual.chunks_indexed = int(total_result.scalar_one())
+    manual.status = await resolve_manual_processed_status(session, manual_id=manual_id)
+    if indexed_at is not None:
+        manual.indexed_at = indexed_at
+    await session.commit()
+
+
 async def next_chunk_index(session: AsyncSession, *, manual_id: UUID) -> int:
     """Devuelve el siguiente índice global de chunk para un manual."""
     result = await session.execute(
@@ -513,6 +687,10 @@ async def load_authorized_chunks(
             id=row.id,
             text=row.text,
             content_hash=row.content_hash,
+            manual_id=row.manual_id,
+            manual_title=row.manual_title,
+            source_page=row.source_page,
+            is_own=bool(row.is_own),
         )
         for row in result
     }
@@ -533,6 +711,10 @@ def _authorized_chunks_query(
             ManualChunk.id,
             ManualChunk.text,
             ManualChunk.content_hash,
+            ManualChunk.manual_id,
+            Manual.title.label("manual_title"),
+            ManualChunk.source_page,
+            (Manual.owner_user_id == current_user_id).label("is_own"),
         )
         .join(Manual, Manual.id == ManualChunk.manual_id)
         .where(
@@ -563,6 +745,8 @@ def _manual_summary_query(owner_user_id: UUID) -> Select:
             Manual.title,
             Manual.status,
             Manual.visibility,
+            Manual.source_type,
+            Manual.page_count,
             Manual.language,
             Manual.chunks_indexed,
             Manual.created_at,

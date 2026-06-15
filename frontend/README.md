@@ -43,7 +43,7 @@ src/
     lib/                    cn(), storage (zod)
   components/ui/            primitivos shadcn-style (Button, Card, …)
   styles/                   tokens.css + globals.css
-  test/                     setup, MSW handlers, server, render helper
+tests/                      espejo de src/ (setup, MSW handlers, suites)
 ```
 
 ## Scripts
@@ -77,6 +77,9 @@ El proxy de Vite (`server.proxy['/api']`) reenvía a `localhost:8000`.  Las
 llamadas del cliente usan URLs relativas (`/api/manuals`, etc.), por lo que
 no hay que tocar nada al pasar a producción detrás de Nginx.
 
+Los valores públicos de desarrollo/build del frontend viven en
+`../config/frontend.env`.
+
 ## Despliegue (Docker Compose)
 
 El servicio `frontend` está añadido a `../compose.yaml` con el mismo
@@ -100,25 +103,22 @@ pnpm test            # Vitest run
 pnpm test:coverage   # con cobertura V8 (HTML + lcov)
 ```
 
-A día de hoy: **85 tests, 13 ficheros**, cobertura 88.84% statements en las
-piezas testeadas (storage, theme, API client, error mapper, hooks, primitivos
-UI).  Los tests de pantallas completas usan `renderWithProviders` y MSW para
-mockear las llamadas a `/api/*` sin levantar Docker.
+La suite cubre storage, theme, cliente API, error mapper, hooks, primitivos UI
+y las pantallas completas.  MSW mockea las llamadas a `/api/*` sin levantar
+Docker, y `jest-axe` valida accesibilidad en los componentes críticos.
 
-## Estados que aún se mockean en cliente
+## Estado local (`localStorage`)
 
-Hasta que el backend implemente los endpoints correspondientes, el frontend
-mantiene en `localStorage`:
-
-| Slot | Contenido | Cuando exista en backend |
+| Slot | Contenido | Estado |
 |---|---|---|
-| `manualito.manuals` | Lista de manuales recientes | `GET /api/manuals` |
-| `manualito.qa.{id}` | Historial de Q&A por manual | `GET/POST /api/manuals/{id}/conversations` |
-| `manualito.settings` | Tema, densidad, acento | `GET/PUT /api/users/me/preferences` |
-| `manualito.onboarding.seen` | Flag onboarding visto | (puede ser solo cliente) |
+| `manualito.manuals` | Manuales recientes (nombre/fechas para headers) | cache de `GET /api/manuals` |
+| `manualito.result.{id}` | Resumen + secciones generadas en `/processing` | pendiente de endpoint de lectura |
+| `manualito.ocr.{id}` | Texto OCR para el visor | cache opcional del detalle del manual |
+| `manualito.settings` | Tema, acento, detalle de respuesta | `GET/PUT /api/users/me/preferences` no existe |
+| `manualito.onboarding.seen` | Flag de onboarding visto | solo cliente |
 
-Lista completa de gaps y contratos esperados en
-[`BACKEND_TODO.md`](BACKEND_TODO.md).
+El historial de Q&A ya no vive aquí: las conversaciones las persiste el
+backend (`/api/games/{id}/conversations`).
 
 ## Accesibilidad
 

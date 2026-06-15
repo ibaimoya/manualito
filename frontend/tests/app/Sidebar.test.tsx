@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -9,6 +10,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { Sidebar } from '@/app/Sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 /**
  * Sidebar solo se renderiza en desktop (Tailwind `hidden md:flex`).
@@ -16,11 +18,14 @@ import { Sidebar } from '@/app/Sidebar';
  * con las 3 rutas (`/home`, `/history`, `/settings`) para que los Links
  * no exploten.
  */
-function renderSidebar(pathname: string) {
+function renderSidebar(
+  pathname: string,
+  opts: { collapsed?: boolean; onToggle?: () => void } = {},
+) {
   const root = createRootRoute({
     component: () => (
       <>
-        <Sidebar pathname={pathname} />
+        <Sidebar pathname={pathname} collapsed={opts.collapsed} onToggle={opts.onToggle} />
         <Outlet />
       </>
     ),
@@ -36,22 +41,27 @@ function renderSidebar(pathname: string) {
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: [pathname] }),
   });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <TooltipProvider>
+      <RouterProvider router={router} />
+    </TooltipProvider>,
+  );
 }
 
 describe('Sidebar (desktop)', () => {
-  it('renderiza los 3 enlaces de navegación con labels exactos', async () => {
+  it('renderiza los enlaces de navegación con labels exactos', async () => {
     renderSidebar('/home');
     // Usar nombre exacto para no colisionar con el LockUp ("Manualito · ir al inicio")
     expect(await screen.findByRole('link', { name: 'Inicio' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Historial' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Biblioteca' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
   });
 
   it('marca el item activo con aria-current="page" según el pathname', async () => {
     renderSidebar('/history');
-    const historial = await screen.findByRole('link', { name: 'Historial' });
-    expect(historial).toHaveAttribute('aria-current', 'page');
+    const biblioteca = await screen.findByRole('link', { name: 'Biblioteca' });
+    expect(biblioteca).toHaveAttribute('aria-current', 'page');
     expect(
       screen.getByRole('link', { name: 'Inicio' }),
     ).not.toHaveAttribute('aria-current');
@@ -91,10 +101,20 @@ describe('Sidebar (desktop)', () => {
     ).toBeInTheDocument();
   });
 
-  it('footer muestra la versión + stack para identificar el build', async () => {
-    renderSidebar('/home');
-    expect(await screen.findByText(/v 0\.1\.0/)).toBeInTheDocument();
-    expect(screen.getByText(/phi4/)).toBeInTheDocument();
-    expect(screen.getByText(/ChromaDB/)).toBeInTheDocument();
+  it('expandida: el botón de plegado expone "Contraer menú" y dispara onToggle', async () => {
+    const onToggle = vi.fn();
+    renderSidebar('/home', { onToggle });
+    const toggle = await screen.findByRole('button', { name: 'Contraer menú' });
+    await userEvent.click(toggle);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('plegada: solo iconos pero conserva nombres accesibles', async () => {
+    renderSidebar('/home', { collapsed: true });
+    // Los enlaces siguen siendo accesibles por su nombre (label en sr-only).
+    expect(await screen.findByRole('link', { name: 'Inicio' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ajustes' })).toBeInTheDocument();
+    // El toggle ahora ofrece expandir.
+    expect(screen.getByRole('button', { name: 'Expandir menú' })).toBeInTheDocument();
   });
 });

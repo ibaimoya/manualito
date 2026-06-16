@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 from billiard.exceptions import SoftTimeLimitExceeded
+from celery.exceptions import Retry
 
 import api.worker.tasks.conversations as conversation_tasks
 import api.worker.tasks.games as game_tasks
@@ -66,6 +67,105 @@ def test_game_task_marks_explanation_failed_when_lock_wait_expires(monkeypatch):
     )
 
     fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+
+
+def test_game_task_completes_without_retry_when_generation_finishes(monkeypatch):
+    """Una explicación completada no debe marcar error ni reencolar la task."""
+    generate_mock = AsyncMock(return_value=True)
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(game_tasks.explanations, "generate_game_explanation", generate_mock)
+    monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
+    monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+
+    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID))
+
+    generate_mock.assert_awaited_once_with(_USER_ID, _GAME_ID)
+    fail_mock.assert_not_awaited()
+    retry_mock.assert_not_called()
+
+
+def test_game_task_retries_external_errors_with_separate_counter(monkeypatch):
+    """Los fallos externos reintentan sin consumir el contador de lock ocupado."""
+    monkeypatch.setattr(
+        game_tasks.explanations,
+        "generate_game_explanation",
+        AsyncMock(side_effect=ConnectionError("llm caído")),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
+    monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+
+    with pytest.raises(Retry):
+        game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), 7, 1)
+
+    fail_mock.assert_not_awaited()
+    retry_mock.assert_called_once()
+    assert retry_mock.call_args.kwargs["countdown"] == 10
+    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), 7, 2)
+
+
+def test_game_task_fails_explanation_when_external_retries_are_exhausted(monkeypatch):
+    """Al agotar errores externos, la explicación queda failed y no se reintenta."""
+    monkeypatch.setattr(
+        game_tasks.explanations,
+        "generate_game_explanation",
+        AsyncMock(side_effect=TimeoutError("timeout llm")),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
+    monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+
+    game_tasks.generate_game_explanation_task.run(
+        str(_USER_ID),
+        str(_GAME_ID),
+        3,
+        game_tasks.EXTERNAL_ERROR_MAX_RETRIES,
+    )
+
+    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    retry_mock.assert_not_called()
+
+
+def test_game_task_marks_explanation_failed_on_soft_timeout(monkeypatch):
+    """Un soft timeout de GPU no deja la explicación bloqueada en generating."""
+    monkeypatch.setattr(
+        game_tasks.explanations,
+        "generate_game_explanation",
+        AsyncMock(side_effect=SoftTimeLimitExceeded()),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
+    monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+
+    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID))
+
+    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    retry_mock.assert_not_called()
+
+
+def test_game_task_retries_when_gpu_lock_is_temporarily_busy(monkeypatch):
+    """Si el lock sigue ocupado pero no agotado, reencola sin tocar errores externos."""
+    monkeypatch.setattr(
+        game_tasks.explanations,
+        "generate_game_explanation",
+        AsyncMock(return_value=False),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
+    monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+
+    with pytest.raises(Retry):
+        game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), 4, 1)
+
+    fail_mock.assert_not_awaited()
+    retry_mock.assert_called_once()
+    assert retry_mock.call_args.kwargs["countdown"] == game_tasks.LOCK_BUSY_RETRY_SECONDS
+    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), 5, 1)
 
 
 def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):

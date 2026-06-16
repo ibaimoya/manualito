@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import anyio
@@ -13,7 +13,6 @@ from sqlalchemy.dialects import postgresql
 import api.manuals.service as manual_service
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
-from api.exceptions import InternalServiceUnavailableError
 from api.main import app
 from api.manuals.exceptions import (
     ManualBusyError,
@@ -22,7 +21,7 @@ from api.manuals.exceptions import (
 )
 from api.manuals.repository import get_page_for_edit, mark_page_chunks_indexed
 from api.manuals.schemas import MANUAL_PAGE_TEXT_MAX_LENGTH, ManualPageResponse
-from api.manuals.service import PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL, edit_page_text
+from api.manuals.service import PageEditResult, edit_page_text, sync_page_rag
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
 from database.models.user import User
@@ -75,8 +74,13 @@ def test_edit_page_text_strips_and_returns_updated_page(
     override_auth_and_db,
 ):
     """Editar una página delega el texto recortado y devuelve su estado nuevo."""
-    edit_mock = AsyncMock(return_value=_page_response())
+    old_chunk_id = uuid4()
+    edit_mock = AsyncMock(
+        return_value=_page_edit_result(stale_chunk_ids=[old_chunk_id])
+    )
+    delay_mock = MagicMock()
     monkeypatch.setattr("api.manuals.router.edit_page_text", edit_mock)
+    monkeypatch.setattr("api.manuals.router.sync_page_rag_task.delay", delay_mock)
 
     response = client.put(
         f"/api/manuals/{_MANUAL_ID}/pages/3/text",
@@ -88,6 +92,11 @@ def test_edit_page_text_strips_and_returns_updated_page(
     edit_mock.assert_awaited_once()
     assert edit_mock.await_args.kwargs["text"] == "El ladrón se mueve al sacar un 7."
     assert edit_mock.await_args.kwargs["page_number"] == 3
+    delay_mock.assert_called_once_with(
+        str(_MANUAL_ID),
+        str(_PAGE_ID),
+        [str(old_chunk_id)],
+    )
 
 
 def test_edit_page_text_busy_manual_returns_409(
@@ -171,21 +180,11 @@ def test_edit_page_text_validates_text_bounds(
     assert bad_page.status_code == 422
 
 
-def test_edit_page_text_service_replaces_and_reindexes(monkeypatch):
-    """La edición reemplaza la página, limpia Chroma e ingesta lo nuevo."""
+def test_edit_page_text_service_replaces_and_returns_sync_payload(monkeypatch):
+    """La edición reemplaza la página y devuelve lo necesario para Celery."""
     session = _service_session()
     old_chunk_id = uuid4()
-    chunk = SimpleNamespace(
-        id=UUID(_INGEST_RESPONSE["chunk_ids"][0]),
-        text="El ladrón se mueve al sacar un 7.",
-        chunk_index=4,
-        source_page=3,
-        content_hash="f" * 64,
-    )
     replace_mock = AsyncMock()
-    delete_mock = AsyncMock()
-    ingest_mock = AsyncMock(return_value=_INGEST_RESPONSE)
-    mark_mock = AsyncMock()
     events: list[str] = []
     _patch_lock(monkeypatch, session)
     monkeypatch.setattr(
@@ -199,14 +198,6 @@ def test_edit_page_text_service_replaces_and_reindexes(monkeypatch):
         AsyncMock(return_value=[old_chunk_id]),
     )
     monkeypatch.setattr(manual_service, "_replace_page_text", replace_mock)
-    monkeypatch.setattr(manual_service, "delete_chunks_from_rag", delete_mock)
-    monkeypatch.setattr(
-        manual_service,
-        "list_page_chunks_for_ingest",
-        AsyncMock(return_value=[chunk]),
-    )
-    monkeypatch.setattr(manual_service, "_index_manual_in_rag", ingest_mock)
-    monkeypatch.setattr(manual_service, "mark_page_chunks_indexed", mark_mock)
     monkeypatch.setattr(
         manual_service,
         "get_manual_page_row",
@@ -225,24 +216,20 @@ def test_edit_page_text_service_replaces_and_reindexes(monkeypatch):
             manual_id=_MANUAL_ID,
             page_number=3,
             text="El ladrón se mueve al sacar un 7.",
-            client=object(),
             ip_address="203.0.113.7",
         )
     )
 
-    assert isinstance(response, ManualPageResponse)
-    assert response.text_source == "user_edit"
+    assert isinstance(response, PageEditResult)
+    assert response.response.text_source == "user_edit"
+    assert response.page_id == _PAGE_ID
+    assert response.stale_chunk_ids == [old_chunk_id]
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["text_source"] == "user_edit"
     assert replace_kwargs["confidence_mean"] is None
     assert replace_kwargs["lines"] == [
         {"text": "El ladrón se mueve al sacar un 7.", "confidence": None}
     ]
-    delete_mock.assert_awaited_once()
-    assert delete_mock.await_args.kwargs["chunk_ids"] == [old_chunk_id]
-    mark_kwargs = mark_mock.await_args.kwargs
-    assert mark_kwargs["chunk_ids"] == {UUID(_INGEST_RESPONSE["chunk_ids"][0])}
-    assert mark_kwargs["embedding_model"] == _INGEST_RESPONSE["embedding_model"]
     assert events == ["manual_page_edited"]
     assert session.commits == 1
 
@@ -266,7 +253,6 @@ def test_edit_page_text_service_rejects_concurrent_processing(monkeypatch):
                 manual_id=_MANUAL_ID,
                 page_number=1,
                 text="Texto",
-                client=object(),
                 ip_address=None,
             )
         )
@@ -292,7 +278,6 @@ def test_edit_page_text_service_rejects_indexing_manual(monkeypatch):
                 manual_id=_MANUAL_ID,
                 page_number=1,
                 text="Texto",
-                client=object(),
                 ip_address=None,
             )
         )
@@ -318,7 +303,6 @@ def test_edit_page_text_service_rejects_shared_manual(monkeypatch):
                 manual_id=_MANUAL_ID,
                 page_number=1,
                 text="Texto",
-                client=object(),
                 ip_address=None,
             )
         )
@@ -326,99 +310,70 @@ def test_edit_page_text_service_rejects_shared_manual(monkeypatch):
     replace_mock.assert_not_called()
 
 
-def test_edit_page_text_service_keeps_text_when_rag_fails(monkeypatch):
-    """Si RAG cae tras guardar, el error explica que el texto ya está en BD."""
+def test_sync_page_rag_cleans_old_chunks_and_ingests_new_ones(monkeypatch):
+    """La task de sincronización limpia Chroma e ingesta los chunks vigentes."""
     session = _service_session()
+    old_chunk_id = uuid4()
+    chunk = SimpleNamespace(
+        id=UUID(_INGEST_RESPONSE["chunk_ids"][0]),
+        text="El ladrón se mueve al sacar un 7.",
+        chunk_index=4,
+        source_page=3,
+        content_hash="f" * 64,
+    )
+    delete_mock = AsyncMock()
+    ingest_mock = AsyncMock(return_value=_INGEST_RESPONSE)
     mark_mock = AsyncMock()
-    _patch_lock(monkeypatch, session)
+    _patch_sessionmaker(monkeypatch, session)
     monkeypatch.setattr(
         manual_service,
-        "get_page_for_edit",
+        "get_manual_for_processing",
         AsyncMock(return_value=_page_context()),
     )
-    monkeypatch.setattr(manual_service, "list_page_chunk_ids", AsyncMock(return_value=[]))
-    monkeypatch.setattr(manual_service, "_replace_page_text", AsyncMock())
-    monkeypatch.setattr(manual_service, "delete_chunks_from_rag", AsyncMock())
     monkeypatch.setattr(
         manual_service,
         "list_page_chunks_for_ingest",
-        AsyncMock(return_value=[SimpleNamespace(id=uuid4())]),
+        AsyncMock(return_value=[chunk]),
     )
-    monkeypatch.setattr(
-        manual_service,
-        "_index_manual_in_rag",
-        AsyncMock(side_effect=InternalServiceUnavailableError("RAG caído")),
-    )
+    monkeypatch.setattr(manual_service, "delete_chunks_from_rag", delete_mock)
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", ingest_mock)
     monkeypatch.setattr(manual_service, "mark_page_chunks_indexed", mark_mock)
-    monkeypatch.setattr(
-        manual_service,
-        "record_security_event",
-        lambda _session, **_kwargs: None,
-    )
 
-    with pytest.raises(InternalServiceUnavailableError) as excinfo:
-        anyio.run(
-            partial(
-                edit_page_text,
-                auth=_auth(),
-                manual_id=_MANUAL_ID,
-                page_number=1,
-                text="Texto corregido",
-                client=object(),
-                ip_address=None,
-            )
-        )
+    anyio.run(partial(sync_page_rag, _MANUAL_ID, _PAGE_ID, [old_chunk_id]))
 
-    assert excinfo.value.detail == PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL
-    assert session.commits == 1
-    mark_mock.assert_not_called()
+    assert delete_mock.await_args.kwargs["chunk_ids"] == [old_chunk_id]
+    assert ingest_mock.await_args.kwargs["manual"].id == _MANUAL_ID
+    assert ingest_mock.await_args.kwargs["chunks"] == [chunk]
+    mark_kwargs = mark_mock.await_args.kwargs
+    assert mark_kwargs["chunk_ids"] == {UUID(_INGEST_RESPONSE["chunk_ids"][0])}
+    assert mark_kwargs["embedding_model"] == _INGEST_RESPONSE["embedding_model"]
 
 
-def test_edit_page_text_service_skips_ingest_for_empty_text(monkeypatch):
-    """Un texto que normaliza a vacío no llama a RAG y recalcula estado."""
+def test_sync_page_rag_skips_ingest_for_empty_text(monkeypatch):
+    """Si una página queda sin chunks, la task solo limpia y recalcula estado."""
     session = _service_session()
+    old_chunk_id = uuid4()
+    delete_mock = AsyncMock()
     ingest_mock = AsyncMock()
     mark_mock = AsyncMock()
-    _patch_lock(monkeypatch, session)
+    _patch_sessionmaker(monkeypatch, session)
     monkeypatch.setattr(
         manual_service,
-        "get_page_for_edit",
+        "get_manual_for_processing",
         AsyncMock(return_value=_page_context()),
     )
-    monkeypatch.setattr(manual_service, "list_page_chunk_ids", AsyncMock(return_value=[]))
-    monkeypatch.setattr(manual_service, "_replace_page_text", AsyncMock())
-    monkeypatch.setattr(manual_service, "delete_chunks_from_rag", AsyncMock())
     monkeypatch.setattr(
         manual_service,
         "list_page_chunks_for_ingest",
         AsyncMock(return_value=[]),
     )
+    monkeypatch.setattr(manual_service, "delete_chunks_from_rag", delete_mock)
     monkeypatch.setattr(manual_service, "_index_manual_in_rag", ingest_mock)
     monkeypatch.setattr(manual_service, "mark_page_chunks_indexed", mark_mock)
-    monkeypatch.setattr(
-        manual_service,
-        "get_manual_page_row",
-        AsyncMock(return_value=_page_row(text_quality="empty", lines=[])),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "record_security_event",
-        lambda _session, **_kwargs: None,
-    )
 
-    response = anyio.run(
-        partial(
-            edit_page_text,
-            auth=_auth(),
-            manual_id=_MANUAL_ID,
-            page_number=1,
-            text="...",
-            client=object(),
-            ip_address=None,
-        )
-    )
+    anyio.run(partial(sync_page_rag, _MANUAL_ID, _PAGE_ID, [old_chunk_id]))
 
-    assert response.text_quality == "empty"
+    assert delete_mock.await_args.kwargs["chunk_ids"] == [old_chunk_id]
     ingest_mock.assert_not_called()
     assert mark_mock.await_args.kwargs["chunk_ids"] == set()
     assert mark_mock.await_args.kwargs["indexed_at"] is None
@@ -518,6 +473,23 @@ def _patch_lock(monkeypatch, session) -> None:
     monkeypatch.setattr(manual_service, "manual_lock", fake_lock)
 
 
+def _patch_sessionmaker(monkeypatch, session) -> None:
+    """Sustituye el sessionmaker real por una sesión falsa en contexto."""
+
+    class FakeSessionContext:
+        async def __aenter__(self):
+            return session
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeSessionmaker:
+        def __call__(self):
+            return FakeSessionContext()
+
+    monkeypatch.setattr(manual_service, "get_sessionmaker", lambda: FakeSessionmaker())
+
+
 def _auth() -> AuthenticatedSession:
     """Construye una sesión autenticada mínima para el servicio."""
     return SimpleNamespace(user=SimpleNamespace(id=_USER_ID))
@@ -599,6 +571,15 @@ def _page_row(
 def _page_response() -> ManualPageResponse:
     """Construye la respuesta pública estable de la página editada."""
     return ManualPageResponse.model_validate(_page_row())
+
+
+def _page_edit_result(*, stale_chunk_ids: list[UUID] | None = None) -> PageEditResult:
+    """Construye el resultado interno de editar una página."""
+    return PageEditResult(
+        response=_page_response(),
+        page_id=_PAGE_ID,
+        stale_chunk_ids=[] if stale_chunk_ids is None else stale_chunk_ids,
+    )
 
 
 def _compile(statement) -> str:

@@ -35,7 +35,7 @@ function mountApp(path: string) {
       page('/capture', 'capture'),
       page('/processing', 'processing'),
       page('/game/$gameId', 'game'),
-      page('/chat/$manualId', 'chat'),
+      page('/chat/$gameId', 'chat'),
     ]),
   ]);
   const router = createRouter({
@@ -71,7 +71,7 @@ describe('_app shell', () => {
     ['/capture', 'capture'],
     ['/processing', 'processing'],
     ['/game/g1', 'game'],
-    ['/chat/m1', 'chat'],
+    ['/chat/g1', 'chat'],
   ])('oculta la navegación principal en %s (ruta inmersiva)', async (path, label) => {
     mountApp(path);
     await screen.findByTestId(`page-${label}`);

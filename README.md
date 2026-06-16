@@ -174,9 +174,17 @@ que editar Dockerfiles ni `compose.yaml`.
 | --- | --- |
 | `.env` | Versiones de app, Python, Node, Nginx, Postgres, ChromaDB, Ollama, Mailpit y tags locales. |
 | `config/backend.env` | URLs internas, modelo de Ollama, límites, cookies, SMTP, ChromaDB y modelos de embeddings. |
+| `config/celery.env` | Host de Redis, bases de datos de broker/resultados y tiempos de visibilidad/expiración de Celery. |
 | `config/database.env` | Nombre de base de datos, host, puerto, driver y rutas de secretos. |
 | `config/frontend.env` | Variables públicas de Vite para desarrollo/build del frontend (`VITE_*`). |
-| `secrets/` | Secretos locales usados por Compose para Postgres. |
+| `secrets/` | Secretos locales usados por Compose para Postgres, Redis y Flower. |
+
+El servicio `llm` puede precargar el modelo de Ollama al arrancar con
+`OLLAMA_PRELOAD_ON_STARTUP=true`. La carga usa la API oficial de Ollama con una
+petición sin prompt, de forma que la primera pregunta no paga el coste de mover
+el modelo a RAM/VRAM. `OLLAMA_KEEP_ALIVE` controla cuánto tiempo se mantiene
+cargado tras cada uso; en desarrollo queda en `30m` para equilibrar latencia y
+uso de VRAM.
 
 Si falta alguna variable obligatoria, Compose corta el arranque con un mensaje
 explícito, por ejemplo `UV_VERSION no definida`. La versión de `pnpm` vive en

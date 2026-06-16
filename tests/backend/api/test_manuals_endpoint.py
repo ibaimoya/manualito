@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -73,9 +73,9 @@ def test_create_manual_orquesta_servicio_persistente(
             page_count=1,
         )
     )
-    run_process_mock = AsyncMock()
+    delay_mock = MagicMock()
     monkeypatch.setattr("api.manuals.router.create_manual", create_manual_mock)
-    monkeypatch.setattr("api.manuals.router.process_manual", run_process_mock)
+    monkeypatch.setattr("api.manuals.router.process_manual_task.delay", delay_mock)
 
     response = client.post(
         "/api/manuals",
@@ -107,7 +107,7 @@ def test_create_manual_orquesta_servicio_persistente(
     assert kwargs["language"] == "es"
     assert kwargs["images"][0].filename == "manual.jpg"
     assert kwargs["pdf"] is None
-    run_process_mock.assert_awaited_once_with(_MANUAL_ID)
+    delay_mock.assert_called_once_with(str(_MANUAL_ID))
 
 
 def test_list_manuals_devuelve_manuales_propios(
@@ -268,7 +268,7 @@ def test_create_manual_usa_visibilidad_privada_por_defecto(
         )
     )
     monkeypatch.setattr("api.manuals.router.create_manual", create_manual_mock)
-    monkeypatch.setattr("api.manuals.router.process_manual", AsyncMock())
+    monkeypatch.setattr("api.manuals.router.process_manual_task.delay", MagicMock())
 
     response = client.post(
         "/api/manuals",
@@ -324,15 +324,19 @@ def test_delete_manual_borra_recursos_derivados(
     monkeypatch,
     override_auth_and_db,
 ):
-    """El endpoint de borrado requiere auth/CSRF y delega en el servicio."""
-    delete_mock = AsyncMock()
+    """El endpoint de borrado delega y encola la limpieza de RAG."""
+    chunk_id = uuid4()
+    delete_mock = AsyncMock(return_value=[chunk_id])
+    delay_mock = MagicMock()
     monkeypatch.setattr("api.manuals.router.delete_manual", delete_mock)
+    monkeypatch.setattr("api.manuals.router.delete_chunks_from_rag_task.delay", delay_mock)
 
     response = client.delete(f"/api/manuals/{_MANUAL_ID}")
 
     assert response.status_code == 204
     assert response.content == b""
     delete_mock.assert_awaited_once()
+    delay_mock.assert_called_once_with(str(_MANUAL_ID), [str(chunk_id)])
 
 
 def test_delete_manual_ajeno_o_borrado_devuelve_404(

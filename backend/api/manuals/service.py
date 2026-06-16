@@ -1,12 +1,13 @@
 """Casos de uso de manuales persistidos."""
 
 import logging
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import PurePath
 from uuid import UUID
 
 import httpx
-from fastapi import BackgroundTasks, UploadFile
+from fastapi import UploadFile
 from sqlalchemy.engine import Row
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +25,6 @@ from api.auth.service import AuthenticatedSession
 from api.exceptions import (
     ApiError,
     InternalServiceError,
-    InternalServiceUnavailableError,
     ManualPageLimitExceededError,
 )
 from api.games import repository as games_repository
@@ -42,20 +42,23 @@ from api.manuals.repository import (
     StoredManualPdf,
     attach_page_image_asset,
     begin_manual_reprocessing,
+    claim_page_for_processing,
     create_manual_with_pending_pages,
     get_asset_for_processing,
     get_manual_for_processing,
     get_manual_page_row,
     get_page_for_edit,
+    get_page_for_processing,
     list_manual_chunks_for_ingest,
     list_page_chunk_ids,
     list_page_chunks_for_ingest,
-    list_pages_for_processing,
+    list_pending_page_ids_for_processing,
+    manual_has_unfinished_pages,
     mark_manual_failed,
     mark_manual_indexed,
     mark_page_chunks_indexed,
     mark_page_failed,
-    next_chunk_index,
+    mark_stale_processing_pages_failed,
     replace_page_result,
     resolve_manual_processed_status,
     soft_delete_user_manual,
@@ -70,12 +73,18 @@ from common.manual_text.normalizer import normalize_ocr_lines
 from database.session import get_sessionmaker
 
 RAG_INDEX_INTERNAL_DETAIL = "Error interno al indexar el manual."
-PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL = (
-    "El texto se guardó, pero el índice no se pudo actualizar. "
-    "Re-procesa el manual para sincronizarlo."
-)
+MANUAL_CHUNK_INDEX_PAGE_STRIDE = 1_000_000
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class PageEditResult:
+    """Resultado de editar una página y trabajo RAG derivado."""
+
+    response: ManualPageResponse
+    page_id: UUID
+    stale_chunk_ids: list[UUID]
 
 
 async def create_manual(
@@ -205,31 +214,68 @@ def _parse_rag_ingest_response(response: dict) -> tuple[set[UUID], str, datetime
     )
 
 
-async def process_manual(manual_id: UUID) -> None:
-    """Procesa páginas pendientes con recursos propios."""
-    try:
-        async with manual_lock(manual_id) as session:
-            if session is None:
-                logger.info(
-                    "Manual '%s' ya está siendo procesado.",
-                    safe_for_log(str(manual_id)),
-                )
-                return
-            async with httpx.AsyncClient() as client:
-                await _process_manual_locked(session=session, client=client, manual_id=manual_id)
-    except ApiError:
-        raise
-    except Exception:
-        logger.exception(
-            "No se pudo procesar manual '%s'.",
-            safe_for_log(str(manual_id)),
+async def process_manual(manual_id: UUID) -> list[UUID]:
+    """Devuelve las páginas pendientes que debe procesar Celery."""
+    async with get_sessionmaker()() as session:
+        return await list_pending_page_ids_for_processing(session, manual_id=manual_id)
+
+
+async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
+    """Procesa una página reclamada de forma idempotente."""
+    async with get_sessionmaker()() as session:
+        claimed = await claim_page_for_processing(
+            session,
+            manual_id=manual_id,
+            page_id=page_id,
         )
-        await _mark_manual_failed_safely(manual_id)
-        raise
+        if not claimed:
+            return
+
+        manual = await get_manual_for_processing(session, manual_id=manual_id)
+        if manual is None or manual.status != "indexing":
+            return
+
+        page = await get_page_for_processing(
+            session,
+            manual_id=manual_id,
+            page_id=page_id,
+        )
+        if page is None:
+            return
+
+        source_pdf_content = None
+        if manual.source_type == "pdf":
+            source_pdf_content = await _read_source_pdf(session, manual)
+
+        async with httpx.AsyncClient() as client:
+            if manual.source_type == "pdf" and page.storage_key is None:
+                await _process_pdf_page(
+                    session=session,
+                    client=client,
+                    manual=manual,
+                    page=page,
+                    pdf_content=source_pdf_content,
+                )
+            else:
+                await _process_image_page(
+                    session=session,
+                    client=client,
+                    manual_id=manual_id,
+                    page=page,
+                )
 
 
-async def _mark_manual_failed_safely(manual_id: UUID) -> None:
-    """Marca el manual como fallido sin tapar el error original."""
+async def fail_manual_page(manual_id: UUID, page_id: UUID) -> None:
+    """Marca una página como fallida cuando Celery corta la ejecución."""
+    async with get_sessionmaker()() as session:
+        manual = await get_manual_for_processing(session, manual_id=manual_id)
+        if manual is None or manual.status != "indexing":
+            return
+        await mark_page_failed(session, page_id=page_id)
+
+
+async def fail_manual(manual_id: UUID) -> None:
+    """Marca el manual como fallido sin ocultar el error de la tarea."""
     try:
         async with get_sessionmaker()() as session:
             await mark_manual_failed(session, manual_id=manual_id)
@@ -241,45 +287,37 @@ async def _mark_manual_failed_safely(manual_id: UUID) -> None:
         )
 
 
-async def _process_manual_locked(
+async def finalize_manual(manual_id: UUID) -> None:
+    """Cierra un manual solo cuando ya no quedan páginas en ejecución."""
+    async with manual_lock(manual_id) as session:
+        if session is None:
+            logger.info(
+                "Manual '%s' ya está finalizándose.",
+                safe_for_log(str(manual_id)),
+            )
+            return
+        manual = await get_manual_for_processing(session, manual_id=manual_id)
+        if manual is None or manual.status != "indexing":
+            return
+        if await manual_has_unfinished_pages(session, manual_id=manual_id):
+            return
+        async with httpx.AsyncClient() as client:
+            await _finalize_manual_locked(session=session, client=client, manual=manual)
+
+
+async def _finalize_manual_locked(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual_id: UUID,
+    manual,
 ) -> None:
-    """Ejecuta el procesamiento con lock y recursos ya adquiridos."""
-    manual = await get_manual_for_processing(session, manual_id=manual_id)
-    if manual is None or manual.status != "indexing":
-        return
-
-    source_pdf_content = None
-    if manual.source_type == "pdf":
-        source_pdf_content = await _read_source_pdf(session, manual)
-    for page in await list_pages_for_processing(session, manual_id=manual_id):
-        if page.ocr_status == "completed":
-            continue
-        if manual.source_type == "pdf" and page.storage_key is None:
-            await _process_pdf_page(
-                session=session,
-                client=client,
-                manual=manual,
-                page=page,
-                pdf_content=source_pdf_content,
-            )
-        else:
-            await _process_image_page(
-                session=session,
-                client=client,
-                manual_id=manual_id,
-                page=page,
-            )
-
-    final_status = await resolve_manual_processed_status(session, manual_id=manual_id)
+    """Indexa los chunks persistidos y actualiza el estado final del manual."""
+    final_status = await resolve_manual_processed_status(session, manual_id=manual.id)
     if final_status == "failed":
-        await mark_manual_failed(session, manual_id=manual_id)
+        await mark_manual_failed(session, manual_id=manual.id)
         return
 
-    chunks = await list_manual_chunks_for_ingest(session, manual_id=manual_id)
+    chunks = await list_manual_chunks_for_ingest(session, manual_id=manual.id)
     try:
         chunk_ids, embedding_model, indexed_at = _parse_rag_ingest_response(
             await _index_manual_in_rag(
@@ -289,14 +327,14 @@ async def _process_manual_locked(
             )
         )
     except ApiError:
-        await mark_manual_failed(session, manual_id=manual_id)
+        await mark_manual_failed(session, manual_id=manual.id)
         raise
     except (KeyError, TypeError, ValueError) as ingest_err:
-        await mark_manual_failed(session, manual_id=manual_id)
+        await mark_manual_failed(session, manual_id=manual.id)
         raise InternalServiceError(RAG_INDEX_INTERNAL_DETAIL) from ingest_err
     await mark_manual_indexed(
         session,
-        manual_id=manual_id,
+        manual_id=manual.id,
         chunk_ids=chunk_ids,
         embedding_model=embedding_model,
         indexed_at=indexed_at,
@@ -415,19 +453,17 @@ async def reprocess_manual(
     auth: AuthenticatedSession,
     manual_id: UUID,
     page_number: int | None,
-    background_tasks: BackgroundTasks,
-) -> None:
-    """Reclama un manual quieto y agenda su reindexado en segundo plano."""
-    stale_chunk_ids = await begin_manual_reprocessing(
+) -> list[UUID]:
+    """Reclama un manual quieto y devuelve chunks obsoletos para limpiar."""
+    return await begin_manual_reprocessing(
         session,
         owner_user_id=auth.user.id,
         manual_id=manual_id,
         page_number=page_number,
     )
-    background_tasks.add_task(_run_reprocess, manual_id, stale_chunk_ids)
 
 
-async def _run_reprocess(manual_id: UUID, stale_chunk_ids: list[UUID]) -> None:
+async def run_reprocess(manual_id: UUID, stale_chunk_ids: list[UUID]) -> list[UUID]:
     """Limpia el índice obsoleto y relanza el pipeline de procesamiento."""
     async with httpx.AsyncClient() as client:
         await delete_chunks_from_rag(
@@ -435,7 +471,7 @@ async def _run_reprocess(manual_id: UUID, stale_chunk_ids: list[UUID]) -> None:
             manual_id=manual_id,
             chunk_ids=stale_chunk_ids,
         )
-    await process_manual(manual_id)
+    return await process_manual(manual_id)
 
 
 async def edit_page_text(
@@ -444,16 +480,14 @@ async def edit_page_text(
     manual_id: UUID,
     page_number: int,
     text: str,
-    client: httpx.AsyncClient,
     ip_address: str | None,
-) -> ManualPageResponse:
-    """Sustituye a mano el texto de una página privada y la reindexa."""
+) -> PageEditResult:
+    """Sustituye a mano el texto de una página privada y la deja lista para reindexar."""
     async with manual_lock(manual_id) as session:
         if session is None:
             raise ManualBusyError
         return await _edit_page_text_locked(
             session=session,
-            client=client,
             auth=auth,
             manual_id=manual_id,
             page_number=page_number,
@@ -465,13 +499,12 @@ async def edit_page_text(
 async def _edit_page_text_locked(
     *,
     session: AsyncSession,
-    client: httpx.AsyncClient,
     auth: AuthenticatedSession,
     manual_id: UUID,
     page_number: int,
     text: str,
     ip_address: str | None,
-) -> ManualPageResponse:
+) -> PageEditResult:
     """Aplica la edición con el lock del manual ya adquirido."""
     context = await get_page_for_edit(
         session,
@@ -505,32 +538,12 @@ async def _edit_page_text_locked(
     await session.commit()
 
     # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
-    await delete_chunks_from_rag(client=client, manual_id=manual_id, chunk_ids=old_chunk_ids)
-    chunks = await list_page_chunks_for_ingest(session, page_id=context.page_id)
-    chunk_ids: set[UUID] = set()
-    embedding_model = None
-    indexed_at = None
-    if chunks:
-        try:
-            chunk_ids, embedding_model, indexed_at = _parse_rag_ingest_response(
-                await _index_manual_in_rag(client=client, manual=context, chunks=chunks)
-            )
-        except ApiError as rag_error:
-            raise InternalServiceUnavailableError(PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL) from (
-                rag_error
-            )
-        except (KeyError, TypeError, ValueError) as ingest_error:
-            raise InternalServiceError(PAGE_TEXT_SAVED_INDEX_PENDING_DETAIL) from ingest_error
-    await mark_page_chunks_indexed(
-        session,
-        manual_id=manual_id,
-        chunk_ids=chunk_ids,
-        embedding_model=embedding_model,
-        indexed_at=indexed_at,
-    )
-
     row = await get_manual_page_row(session, page_id=context.page_id)
-    return ManualPageResponse.model_validate(row)
+    return PageEditResult(
+        response=ManualPageResponse.model_validate(row),
+        page_id=context.page_id,
+        stale_chunk_ids=old_chunk_ids,
+    )
 
 
 async def delete_manual(
@@ -538,9 +551,8 @@ async def delete_manual(
     *,
     auth: AuthenticatedSession,
     manual_id: UUID,
-    client: httpx.AsyncClient,
-) -> None:
-    """Borra un manual propio de Postgres y limpia recursos derivados."""
+) -> list[UUID]:
+    """Borra un manual propio de Postgres y devuelve chunks derivados para limpiar."""
     deleted = await soft_delete_user_manual(
         session,
         owner_user_id=auth.user.id,
@@ -552,11 +564,7 @@ async def delete_manual(
                 "No se pudo borrar un fichero físico del manual '%s'.",
                 safe_for_log(str(manual_id)),
             )
-    await delete_chunks_from_rag(
-        client=client,
-        manual_id=deleted.manual_id,
-        chunk_ids=deleted.chunk_ids,
-    )
+    return deleted.chunk_ids
 
 
 async def _read_source_pdf(session: AsyncSession, manual) -> bytes | None:
@@ -609,11 +617,9 @@ async def _replace_page_text(
     confidence_mean: float | None,
 ) -> None:
     """Reemplaza texto y chunks de una página de forma idempotente."""
-    start_index = await next_chunk_index(session, manual_id=manual_id)
     chunks = _prepare_page_chunks(
         lines,
         source_page=page_number,
-        start_index=start_index,
     )
     await replace_page_result(
         session,
@@ -631,11 +637,11 @@ def _prepare_page_chunks(
     ocr_lines: list[dict[str, object]],
     *,
     source_page: int,
-    start_index: int,
 ) -> list[PreparedChunk]:
     """Normaliza una página OCR y genera chunks persistibles."""
     text = normalize_ocr_lines(ocr_lines)
     chunks = chunk_text(text)
+    start_index = (source_page - 1) * MANUAL_CHUNK_INDEX_PAGE_STRIDE
     return [
         PreparedChunk(
             text=chunk,
@@ -739,3 +745,51 @@ async def delete_chunks_from_rag(
             safe_for_log(str(manual_id)),
             exc_info=True,
         )
+
+
+async def delete_chunks_from_rag_by_ids(manual_id: UUID, chunk_ids: list[UUID]) -> None:
+    """Limpia chunks de RAG desde una task sin compartir cliente HTTP."""
+    async with httpx.AsyncClient() as client:
+        await delete_chunks_from_rag(
+            client=client,
+            manual_id=manual_id,
+            chunk_ids=chunk_ids,
+        )
+
+
+async def sync_page_rag(manual_id: UUID, page_id: UUID, stale_chunk_ids: list[UUID]) -> None:
+    """Sincroniza en Chroma los chunks derivados de una página editada."""
+    async with get_sessionmaker()() as session:
+        manual = await get_manual_for_processing(session, manual_id=manual_id)
+        if manual is None:
+            return
+        chunks = await list_page_chunks_for_ingest(session, page_id=page_id)
+        chunk_ids: set[UUID] = set()
+        embedding_model = None
+        indexed_at = None
+        async with httpx.AsyncClient() as client:
+            await delete_chunks_from_rag(
+                client=client,
+                manual_id=manual_id,
+                chunk_ids=stale_chunk_ids,
+            )
+            if chunks:
+                chunk_ids, embedding_model, indexed_at = _parse_rag_ingest_response(
+                    await _index_manual_in_rag(client=client, manual=manual, chunks=chunks)
+                )
+        await mark_page_chunks_indexed(
+            session,
+            manual_id=manual_id,
+            chunk_ids=chunk_ids,
+            embedding_model=embedding_model,
+            indexed_at=indexed_at,
+        )
+
+
+async def recover_stale_manual_pages() -> list[UUID]:
+    """Marca como fallidas las páginas abandonadas en processing."""
+    cutoff = datetime.now(UTC) - timedelta(
+        seconds=config.CELERY_MANUAL_PAGE_HARD_TIME_LIMIT + 300
+    )
+    async with get_sessionmaker()() as session:
+        return await mark_stale_processing_pages_failed(session, cutoff=cutoff)

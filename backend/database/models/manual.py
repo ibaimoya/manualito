@@ -145,7 +145,7 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("page_number > 0", name="page_number_positive"),
         CheckConstraint("jsonb_typeof(ocr_lines) = 'array'", name="ocr_lines_array"),
         CheckConstraint(
-            "ocr_status IN ('pending', 'completed', 'failed')",
+            "ocr_status IN ('pending', 'processing', 'completed', 'failed')",
             name="ocr_status_valid",
         ),
         CheckConstraint(

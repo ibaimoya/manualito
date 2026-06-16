@@ -1,7 +1,7 @@
 """Schemas públicos de manuales y preguntas por juego."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import Field, StringConstraints
@@ -11,6 +11,7 @@ from api.schemas import StrictModel
 
 GAME_QUESTION_TOP_K_MAX = 10
 MANUAL_PAGE_TEXT_MAX_LENGTH = 20_000
+ManualOcrStatus = Literal["pending", "processing", "completed", "failed"]
 PageText = Annotated[
     str,
     StringConstraints(
@@ -66,7 +67,7 @@ class ManualPageResponse(StrictModel):
     """Página OCR de un manual propio."""
 
     page_number: int
-    ocr_status: str
+    ocr_status: ManualOcrStatus
     text_source: str
     text_quality: str | None
     ocr_confidence_mean: float | None
@@ -83,7 +84,7 @@ class ManualProcessingPageResponse(StrictModel):
     """Estado ligero de una página durante el procesamiento."""
 
     page_number: int
-    ocr_status: str
+    ocr_status: ManualOcrStatus
     text_quality: str | None
 
 

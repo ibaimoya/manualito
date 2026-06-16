@@ -1,4 +1,5 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { api, type ManualSummary } from '@/shared/api/client';
 
 /** Raíz de las claves de cache de manuales (lista + detalle). */
@@ -11,7 +12,30 @@ export function manualsQueryOptions() {
     queryKey: LIST_KEY,
     queryFn: async ({ signal }) => (await api.listManuals(undefined, signal)).manuals,
     staleTime: 30_000,
+    // Mientras haya un manual indexándose, re-sondea para que las ruletas
+    // contextuales (portadas, tarjetas) aparezcan y se apaguen solas.
+    refetchInterval: (query) =>
+      query.state.data?.some((manual) => manual.status === 'indexing') ? 2_000 : false,
   });
+}
+
+/**
+ * Conjunto de manuales/juegos del usuario con un manual indexándose ahora.
+ * Alimenta las ruletas contextuales en cualquier pantalla que muestre el juego.
+ */
+export function useProcessingManuals() {
+  const { data } = useQuery(manualsQueryOptions());
+  return useMemo(() => {
+    const manualIds = new Set<string>();
+    const gameIds = new Set<string>();
+    for (const manual of data ?? []) {
+      if (manual.status === 'indexing') {
+        manualIds.add(manual.id);
+        gameIds.add(manual.game_id);
+      }
+    }
+    return { manualIds, gameIds };
+  }, [data]);
 }
 
 /** Detalle de un manual con páginas + OCR ("GET /api/manuals/{id}"). */
@@ -46,6 +70,11 @@ export function useDeleteManual() {
     onError: (_err, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(LIST_KEY, ctx.previous);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: LIST_KEY }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: LIST_KEY }).catch(() => undefined);
+      // Borrar un manual cambia el pool del juego: refresca detalle, biblioteca
+      // y explicación (si no, el hub muestra el manual borrado hasta recargar).
+      qc.invalidateQueries({ queryKey: ['games'] }).catch(() => undefined);
+    },
   });
 }

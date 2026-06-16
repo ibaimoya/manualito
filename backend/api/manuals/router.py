@@ -3,20 +3,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    File,
-    Form,
-    Path,
-    Query,
-    Request,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, File, Form, Path, Query, Request, UploadFile, status
 
 from api import config
-from api.annotations import DbSession, HttpClient
+from api.annotations import DbSession
 from api.auth.dependencies import CsrfProtection, CurrentAuth, client_ip
 from api.games.dependencies import ValidGameFormId
 from api.manuals.repository import (
@@ -34,13 +24,7 @@ from api.manuals.schemas import (
     ManualProcessingResponse,
     ManualSummaryResponse,
 )
-from api.manuals.service import (
-    create_manual,
-    delete_manual,
-    edit_page_text,
-    process_manual,
-    reprocess_manual,
-)
+from api.manuals.service import create_manual, delete_manual, edit_page_text, reprocess_manual
 from api.rate_limit import limiter
 from api.responses import (
     GAME_NOT_FOUND_RESPONSE,
@@ -51,6 +35,12 @@ from api.responses import (
     MANUAL_BUSY_RESPONSE,
     MANUAL_NOT_EDITABLE_RESPONSE,
     MANUAL_NOT_FOUND_RESPONSE,
+)
+from api.worker.tasks.manuals import (
+    delete_chunks_from_rag_task,
+    process_manual_task,
+    reprocess_manual_task,
+    sync_page_rag_task,
 )
 
 router = APIRouter()
@@ -128,18 +118,17 @@ async def reprocess_manual_handler(
     request: Request,
     auth: CurrentAuth,
     manual_id: UUID,
-    background_tasks: BackgroundTasks,
     session: DbSession,
     _csrf: CsrfProtection,
 ) -> ManualProcessingResponse:
     """Reindexa un manual quieto de principio a fin."""
-    await reprocess_manual(
+    stale_chunk_ids = await reprocess_manual(
         session,
         auth=auth,
         manual_id=manual_id,
         page_number=None,
-        background_tasks=background_tasks,
     )
+    reprocess_manual_task.delay(str(manual_id), [str(chunk_id) for chunk_id in stale_chunk_ids])
     return await _processing_response(session, auth=auth, manual_id=manual_id)
 
 
@@ -157,18 +146,17 @@ async def reprocess_manual_page_handler(
     auth: CurrentAuth,
     manual_id: UUID,
     page_number: ManualPageNumber,
-    background_tasks: BackgroundTasks,
     session: DbSession,
     _csrf: CsrfProtection,
 ) -> ManualProcessingResponse:
     """Reindexa una sola página, típicamente leída con baja confianza."""
-    await reprocess_manual(
+    stale_chunk_ids = await reprocess_manual(
         session,
         auth=auth,
         manual_id=manual_id,
         page_number=page_number,
-        background_tasks=background_tasks,
     )
+    reprocess_manual_task.delay(str(manual_id), [str(chunk_id) for chunk_id in stale_chunk_ids])
     return await _processing_response(session, auth=auth, manual_id=manual_id)
 
 
@@ -186,7 +174,6 @@ async def reprocess_manual_page_handler(
 async def create_manual_handler(
     auth: CurrentAuth,
     game_id: ValidGameFormId,
-    background_tasks: BackgroundTasks,
     session: DbSession,
     _csrf: CsrfProtection,
     title: ManualTitle = None,
@@ -195,7 +182,7 @@ async def create_manual_handler(
     images: ManualImagesUpload = None,
     pdf: ManualPdfUpload = None,
 ) -> ManualCreatedResponse:
-    """Acepta un manual y dispara su procesamiento en segundo plano."""
+    """Acepta un manual y encola su procesamiento."""
     result = await create_manual(
         session,
         auth=auth,
@@ -206,7 +193,7 @@ async def create_manual_handler(
         images=images,
         pdf=pdf,
     )
-    background_tasks.add_task(process_manual, result.manual_id)
+    process_manual_task.delay(str(result.manual_id))
     return result
 
 
@@ -227,18 +214,22 @@ async def edit_manual_page_text_handler(
     manual_id: UUID,
     page_number: ManualPageNumber,
     payload: EditPageTextRequest,
-    client: HttpClient,
     _csrf: CsrfProtection,
 ) -> ManualPageResponse:
     """Corrige a mano el texto de una página de un manual privado."""
-    return await edit_page_text(
+    result = await edit_page_text(
         auth=auth,
         manual_id=manual_id,
         page_number=page_number,
         text=payload.text,
-        client=client,
         ip_address=client_ip(request),
     )
+    sync_page_rag_task.delay(
+        str(manual_id),
+        str(result.page_id),
+        [str(chunk_id) for chunk_id in result.stale_chunk_ids],
+    )
+    return result.response
 
 
 @router.delete(
@@ -250,11 +241,11 @@ async def delete_manual_handler(
     manual_id: UUID,
     session: DbSession,
     auth: CurrentAuth,
-    client: HttpClient,
     _csrf: CsrfProtection,
 ) -> None:
-    """Borra un manual propio y sus recursos derivados."""
-    await delete_manual(session, auth=auth, manual_id=manual_id, client=client)
+    """Borra un manual propio y encola la limpieza de recursos derivados."""
+    chunk_ids = await delete_manual(session, auth=auth, manual_id=manual_id)
+    delete_chunks_from_rag_task.delay(str(manual_id), [str(chunk_id) for chunk_id in chunk_ids])
 
 
 async def _processing_response(

@@ -2,18 +2,20 @@
 
 ARG PYTHON_BASE_TAG
 ARG UV_VERSION
+ARG UV_EXTRA_GROUPS=""
 
 # Stage: uv.
 FROM ghcr.io/astral-sh/uv:${UV_VERSION:?UV_VERSION_no_definida} AS uv
 
 # Stage: dependencias.
 FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS deps
+ARG UV_EXTRA_GROUPS=""
 
 # Instala uv (https://docs.astral.sh/uv/) solo en el stage de dependencias.
 COPY --link --from=uv /uv /uvx /usr/local/bin/
 COPY --link --chown=0:0 --chmod=0644 pyproject.toml uv.lock /app/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project --no-default-groups --no-build --only-group api
+    uv sync --locked --no-install-project --no-default-groups --no-build --only-group api ${UV_EXTRA_GROUPS}
 
 # Stage: runtime.
 FROM python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG_no_definida} AS runtime

@@ -3,10 +3,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from api import config
-from api.annotations import DbSession, HttpClient
+from api.annotations import DbSession
 from api.auth.dependencies import CsrfProtection, CurrentAuth
 from api.conversations.dependencies import valid_conversation
 from api.conversations.schemas import (
@@ -38,6 +38,10 @@ from api.responses import (
     GENERATED_ANSWER_TOO_LONG_RESPONSE,
     INTERNAL_ERROR_RESPONSE,
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
+)
+from api.worker.tasks.conversations import (
+    generate_chat_reply_task,
+    refresh_conversation_title_task,
 )
 
 router = APIRouter()
@@ -131,19 +135,31 @@ async def send_conversation_message_handler(
     conversation_id: UUID,
     payload: SendMessageRequest,
     session: DbSession,
-    client: HttpClient,
-    background_tasks: BackgroundTasks,
     _csrf: CsrfProtection,
 ) -> SendMessageResponse:
-    """Envía un mensaje, genera respuesta y persiste el turno completo."""
-    return await send_message(
+    """Envía un mensaje y deja la respuesta en generación."""
+    user_id = auth.user.id
+    outcome = await send_message(
         session,
         auth=auth,
         conversation_id=conversation_id,
         payload=payload,
-        client=client,
-        background_tasks=background_tasks,
     )
+    generate_chat_reply_task.delay(
+        str(user_id),
+        str(conversation_id),
+        str(outcome.response.user_message.id),
+        str(outcome.response.assistant_message.id),
+        payload.top_k,
+    )
+    if outcome.title_job is not None:
+        refresh_conversation_title_task.delay(
+            str(outcome.title_job.user_id),
+            str(outcome.title_job.conversation_id),
+            str(outcome.title_job.user_message_id),
+            outcome.title_job.expected_title,
+        )
+    return outcome.response
 
 
 @router.patch(

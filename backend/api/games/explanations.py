@@ -1,21 +1,25 @@
-"""Explicación cacheada de un juego, generada apartado a apartado por huella."""
+"""Explicación cacheada de un juego, generada por Celery."""
 
+from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api import config
 from api.auth.service import AuthenticatedSession
+from api.exceptions import InternalServiceError, InternalServiceUnavailableError
 from api.games import repository
 from api.games.schemas import GameExplanationResponse
 from api.locks import advisory_session_lock
 from api.manuals.exceptions import ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
 from database.models.explanation import GameExplanation
+from database.session import get_sessionmaker
 
 EXPLANATION_TOP_K = 5
-# Orden de prioridad: el resumen primero y luego los apartados de los acordeones.
+# Orden de generación: el resumen primero y después los acordeones.
 EXPLANATION_QUESTIONS = {
     "summary": "Resume en dos frases de qué va este juego.",
     "setup": "Explica la preparación inicial del juego paso a paso.",
@@ -24,19 +28,29 @@ EXPLANATION_QUESTIONS = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class GameExplanationJob:
+    """Trabajo opaco para generar la explicación de un juego."""
+
+    user_id: UUID
+    game_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class GameExplanationOutcome:
+    """Respuesta HTTP y trabajo opcional de generación."""
+
+    response: GameExplanationResponse
+    job: GameExplanationJob | None
+
+
 async def get_game_explanation(
     session: AsyncSession,
     *,
     auth: AuthenticatedSession,
     game_id: UUID,
-    client: httpx.AsyncClient,
-) -> GameExplanationResponse:
-    """Devuelve la explicación, generando el siguiente apartado que falte.
-
-    La huella del conjunto visible se compara al leer: añadir, borrar, editar o
-    reprocesar un manual la cambia, así que la caché compartida del juego se
-    invalida sola y se regenera desde el resumen sin enganches en escrituras.
-    """
+) -> GameExplanationOutcome:
+    """Devuelve el estado de explicación y encola generación si falta."""
     user_id = auth.user.id
     await repository.get_game_for_detail(session, game_id=game_id)
     fingerprint = await repository.get_pool_fingerprint(
@@ -48,25 +62,29 @@ async def get_game_explanation(
         raise ManualContextNotFoundError
 
     cached = await repository.get_game_explanation(session, game_id=game_id)
-    if _is_complete(cached, fingerprint):
-        return _ready_response(cached)
+    if _is_ready(cached, fingerprint):
+        return GameExplanationOutcome(response=_ready_response(cached), job=None)
+    if _is_failed(cached, fingerprint):
+        return GameExplanationOutcome(response=_failed_response(cached), job=None)
 
-    # Suelta la transacción de lectura antes de la generación lenta.
-    await session.rollback()
-    return await _generate_next_section(user_id=user_id, game_id=game_id, client=client)
+    sections = _sections_for(cached, fingerprint)
+    row = await repository.mark_game_explanation_generating(
+        session,
+        game_id=game_id,
+        sections=sections,
+        source_fingerprint=fingerprint,
+    )
+    return GameExplanationOutcome(
+        response=_generating_response(row),
+        job=GameExplanationJob(user_id=user_id, game_id=game_id),
+    )
 
 
-async def _generate_next_section(
-    *,
-    user_id: UUID,
-    game_id: UUID,
-    client: httpx.AsyncClient,
-) -> GameExplanationResponse:
-    """Genera el siguiente apartado pendiente bajo lock para evitar estampidas."""
-    lock_key = f"game-explanation:{game_id}"
-    async with advisory_session_lock(lock_key) as session:
+async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
+    """Genera todos los apartados pendientes bajo lock por juego."""
+    async with advisory_session_lock(f"game-explanation:{game_id}") as session:
         if session is None:
-            return GameExplanationResponse(status="generating", sections=None, generated_at=None)
+            return False
 
         fingerprint = await repository.get_pool_fingerprint(
             session,
@@ -74,45 +92,95 @@ async def _generate_next_section(
             current_user_id=user_id,
         )
         if fingerprint is None:
-            return GameExplanationResponse(status="generating", sections=None, generated_at=None)
+            return True
 
         cached = await repository.get_game_explanation(session, game_id=game_id)
-        if _is_complete(cached, fingerprint):
-            return _ready_response(cached)
+        if _is_ready(cached, fingerprint):
+            return True
 
         sections = _sections_for(cached, fingerprint)
-        next_key, *rest = [key for key in EXPLANATION_QUESTIONS if key not in sections]
-        answer = await generate_game_answer(
+        try:
+            async with httpx.AsyncClient(timeout=config.INTERNAL_JSON_TIMEOUT) as client:
+                for key in EXPLANATION_QUESTIONS:
+                    if key in sections:
+                        continue
+                    answer = await generate_game_answer(
+                        session,
+                        current_user_id=user_id,
+                        game_id=game_id,
+                        question=EXPLANATION_QUESTIONS[key],
+                        top_k=EXPLANATION_TOP_K,
+                        client=client,
+                    )
+                    sections[key] = {
+                        "answer": answer.answer,
+                        "sources": [
+                            source.model_dump(mode="json") for source in answer.sources
+                        ],
+                    }
+                    if key != "victory":
+                        await repository.mark_game_explanation_generating(
+                            session,
+                            game_id=game_id,
+                            sections=sections,
+                            source_fingerprint=fingerprint,
+                        )
+            await repository.upsert_game_explanation(
+                session,
+                game_id=game_id,
+                sections=sections,
+                source_fingerprint=fingerprint,
+            )
+            return True
+        except (ManualContextNotFoundError, InternalServiceError, InternalServiceUnavailableError):
+            await repository.mark_game_explanation_failed(
+                session,
+                game_id=game_id,
+                sections=sections,
+                source_fingerprint=fingerprint,
+                error_code="generation_failed",
+            )
+            return True
+
+
+async def fail_game_explanation(user_id: UUID, game_id: UUID, error_code: str) -> None:
+    """Marca una explicación como fallida cuando el task agota reintentos."""
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as session:
+        fingerprint = await repository.get_pool_fingerprint(
             session,
-            current_user_id=user_id,
             game_id=game_id,
-            question=EXPLANATION_QUESTIONS[next_key],
-            top_k=EXPLANATION_TOP_K,
-            client=client,
+            current_user_id=user_id,
         )
-        sections[next_key] = {
-            "answer": answer.answer,
-            "sources": [source.model_dump(mode="json") for source in answer.sources],
-        }
-        row = await repository.upsert_game_explanation(
+        if fingerprint is None:
+            return
+        cached = await repository.get_game_explanation(session, game_id=game_id)
+        sections = _sections_for(cached, fingerprint)
+        await repository.mark_game_explanation_failed(
             session,
             game_id=game_id,
             sections=sections,
             source_fingerprint=fingerprint,
+            error_code=error_code,
         )
-        if rest:
-            return GameExplanationResponse(
-                status="generating", sections=sections, generated_at=None
-            )
-        return _ready_response(row)
 
 
-def _is_complete(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
-    """True si la caché vale para esta huella y tiene ya los cuatro apartados."""
+def _is_ready(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
+    """True si la caché vale para esta huella y tiene los cuatro apartados."""
     return (
         explanation is not None
         and explanation.source_fingerprint == fingerprint
+        and getattr(explanation, "status", "ready") == "ready"
         and all(key in explanation.sections for key in EXPLANATION_QUESTIONS)
+    )
+
+
+def _is_failed(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
+    """True si el último intento para esta huella acabó en error."""
+    return (
+        explanation is not None
+        and explanation.source_fingerprint == fingerprint
+        and getattr(explanation, "status", "ready") == "failed"
     )
 
 
@@ -129,4 +197,25 @@ def _ready_response(explanation: GameExplanation | Row) -> GameExplanationRespon
         status="ready",
         sections=explanation.sections,
         generated_at=explanation.generated_at,
+    )
+
+
+def _generating_response(explanation: GameExplanation | Row) -> GameExplanationResponse:
+    """Devuelve el estado intermedio mientras el worker completa apartados."""
+    sections = dict(explanation.sections)
+    return GameExplanationResponse(
+        status="generating",
+        sections=sections or None,
+        generated_at=None,
+    )
+
+
+def _failed_response(explanation: GameExplanation | Row) -> GameExplanationResponse:
+    """Devuelve el último fallo conocido de generación."""
+    sections = dict(explanation.sections)
+    return GameExplanationResponse(
+        status="failed",
+        sections=sections or None,
+        generated_at=None,
+        error_code=getattr(explanation, "error_code", None) or "generation_failed",
     )

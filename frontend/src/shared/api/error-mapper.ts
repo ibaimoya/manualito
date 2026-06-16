@@ -64,7 +64,7 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
   },
   413: {
     title: 'Foto demasiado grande',
-    message: 'La foto pesa más de 20 MB.',
+    message: 'La foto pesa más de 30 MB.',
     hint: 'Hazla con menos resolución o usa un editor para reducirla.',
     retryable: true,
     severity: 'warning',
@@ -116,7 +116,7 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
 const CODE_OVERRIDES: Record<string, Partial<Omit<ApiErrorView, 'code'>>> = {
   pdf_too_large: {
     title: 'PDF demasiado grande',
-    message: 'El PDF puede ocupar como máximo 50 MB.',
+    message: 'El PDF puede ocupar como máximo 200 MB.',
     hint: 'Reduce el PDF o divide el manual en un archivo más pequeño.',
   },
   invalid_pdf: {
@@ -134,6 +134,13 @@ const CODE_OVERRIDES: Record<string, Partial<Omit<ApiErrorView, 'code'>>> = {
     title: 'Juego no disponible',
     message: 'Este juego ya no está disponible para nuevas preguntas.',
     hint: 'Vuelve al catálogo y selecciona otro juego.',
+    retryable: false,
+  },
+  no_manual_sources: {
+    title: 'Fuente no disponible',
+    message:
+      'Una fuente que usaste ya no está disponible, así que no se pueden hacer nuevas preguntas en esta conversación.',
+    hint: 'Sube de nuevo el manual del juego para volver a preguntar.',
     retryable: false,
   },
   manual_context_not_found: {

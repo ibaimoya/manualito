@@ -43,6 +43,9 @@ class ConversationResponse(StrictModel):
     title: str | None
     created_at: datetime
     updated_at: datetime
+    # True mientras el worker genera la respuesta (hay un asistente pendiente);
+    # alimenta la ruleta de "generando" en la lista, sin entrar al chat.
+    has_pending_reply: bool = False
 
 
 class ConversationListResponse(StrictModel):
@@ -56,9 +59,11 @@ class MessageResponse(StrictModel):
 
     id: UUID
     role: Literal["user", "assistant"]
+    status: Literal["pending", "completed", "failed"] = "completed"
     content: str
     created_at: datetime
     sources: list[AnswerSource] = Field(default_factory=list)
+    error_code: str | None = None
 
 
 class MessageListResponse(StrictModel):

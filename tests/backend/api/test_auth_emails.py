@@ -12,7 +12,7 @@ async def test_send_email_safely_swallows_smtp_errors(monkeypatch):
     send_mock = AsyncMock(side_effect=aiosmtplib.SMTPException("smtp down"))
     monkeypatch.setattr(emails, "send_email", send_mock)
 
-    await emails._send_email_safely(
+    await emails.send_email_safely(
         to_email="user@example.com",
         subject="Asunto",
         text_body="Contenido",

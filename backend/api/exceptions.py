@@ -20,7 +20,7 @@ from api.auth.exceptions import (
     InvalidEmailVerificationTokenError,
     InvalidPasswordResetTokenError,
 )
-from api.conversations.exceptions import ConversationNotFoundError
+from api.conversations.exceptions import ConversationNotFoundError, NoManualSourcesError
 from api.manuals.exceptions import (
     GameNotFoundError,
     GameUnavailableError,
@@ -44,6 +44,12 @@ INVALID_DATA_DETAIL = "Datos inválidos."
 RATE_LIMITED_DETAIL = "Demasiados intentos. Inténtalo más tarde."
 NOT_FOUND_DETAIL = "Recurso no encontrado."
 METHOD_NOT_ALLOWED_DETAIL = "Método no permitido."
+_MB = 1024 * 1024
+
+
+def _format_megabytes(byte_count: int) -> str:
+    """Expresa límites configurados en MB para mensajes públicos."""
+    return str(byte_count // _MB)
 
 _MISSING_FIELD_ERRORS = {
     "email": ("email_required", "El email es obligatorio."),
@@ -188,7 +194,7 @@ def validation_exception_handler(_request: Request, _exc: Exception) -> JSONResp
 _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
     ImageTooLargeError: ErrorResponseConfig(
         status_code=413,
-        detail="La imagen no puede superar 20 MB.",
+        detail=f"La imagen no puede superar {_format_megabytes(config.MAX_IMAGE_SIZE)} MB.",
         code="image_too_large",
     ),
     InvalidImageError: ErrorResponseConfig(
@@ -198,7 +204,7 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
     ),
     PdfTooLargeError: ErrorResponseConfig(
         status_code=413,
-        detail="El PDF no puede superar 50 MB.",
+        detail=f"El PDF no puede superar {_format_megabytes(config.MAX_MANUAL_PDF_SIZE)} MB.",
         code="pdf_too_large",
     ),
     InvalidPdfError: ErrorResponseConfig(
@@ -307,6 +313,11 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         status_code=404,
         detail="Conversación no encontrada.",
         code="conversation_not_found",
+    ),
+    NoManualSourcesError: ErrorResponseConfig(
+        status_code=409,
+        detail="Una fuente que usaste ya no está disponible.",
+        code="no_manual_sources",
     ),
     RatingNotFoundError: ErrorResponseConfig(
         status_code=404,

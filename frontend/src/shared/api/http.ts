@@ -14,8 +14,8 @@ export const TIMEOUT = {
   QUICK: 30_000,
   /** Registro/login (hash Argon2id). */
   AUTH: 60_000,
-  /** Subidas multipart (hasta 10 imágenes o PDF de 50 MB). */
-  UPLOAD: 180_000,
+  /** Subidas multipart (hasta 30 imágenes o PDF de 200 MB). */
+  UPLOAD: 600_000,
   /** Generación con el LLM. */
   LLM: 300_000,
 } as const;

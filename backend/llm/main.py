@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from common.logging import configure_logging, install_health_log_filter
 from llm import dependencies
-from llm.client import warn_if_model_missing
+from llm.client import prepare_model_on_startup
 from llm.exceptions import register_exception_handlers
 from llm.router import router
 
@@ -19,12 +19,11 @@ async def lifespan(_app: FastAPI):
 
     Crea un único ``httpx.AsyncClient`` con timeout por defecto y pooling de
     conexiones para todas las llamadas a Ollama. Además, verifica al arrancar
-    si el modelo configurado (``OLLAMA_MODEL``) está disponible, emitiendo
-    un warning si no, sin detener el servicio, para facilitar el
-    diagnóstico desde ``docker compose logs llm``.
+    si el modelo configurado (``OLLAMA_MODEL``) está disponible y lo precarga
+    cuando ``OLLAMA_PRELOAD_ON_STARTUP`` está activo.
     """
     await dependencies.start_http_client()
-    await warn_if_model_missing(dependencies.get_http_client())
+    await prepare_model_on_startup(dependencies.get_http_client())
     try:
         yield
     finally:

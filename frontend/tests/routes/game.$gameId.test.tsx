@@ -24,7 +24,7 @@ function renderHub() {
       '/history': 'Historial stub',
       '/home': 'Home stub',
       '/manual/$manualId': 'Manual stub',
-      '/chat/$manualId': 'Chat stub',
+      '/chat/$gameId': 'Chat stub',
       '/conversations/$gameId': 'Conversaciones stub',
       '/capture/source': 'Captura stub',
     },

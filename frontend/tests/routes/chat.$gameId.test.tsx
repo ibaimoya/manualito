@@ -2,9 +2,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse, delay } from 'msw';
-import { Route as ChatRoute } from '@/routes/_app.chat.$manualId';
+import { Route as ChatRoute } from '@/routes/_app.chat.$gameId';
 import { server } from '@tests/_helpers/server';
-import { failSendMessage } from '@tests/_helpers/mswHandlers';
+import { failSendMessage, SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
@@ -24,20 +24,24 @@ const CONVERSATION = {
   updated_at: '2026-05-26T10:05:00.000Z',
 };
 
-function renderChat(manualId: string, search?: { q?: string; c?: string; g?: string }) {
+function gameWithoutManuals() {
+  return http.get('/api/games/:gameId', () =>
+    HttpResponse.json({ ...SAMPLE_GAME_DETAIL, manuals: [] }),
+  );
+}
+
+function renderChat(gameId: string, search?: { q?: string; c?: string }) {
   const params = new URLSearchParams();
   if (search?.q) params.set('q', search.q);
   if (search?.c) params.set('c', search.c);
-  if (search?.g) params.set('g', search.g);
   const queryStr = params.size > 0 ? `?${params.toString()}` : '';
   return renderRoute({
-    path: '/chat/$manualId',
-    initialEntry: `/chat/${manualId}${queryStr}`,
+    path: '/chat/$gameId',
+    initialEntry: `/chat/${gameId}${queryStr}`,
     component: routeComponent(ChatRoute),
     validateSearch: (s) => ({
       q: typeof s.q === 'string' ? s.q : undefined,
       c: typeof s.c === 'string' ? s.c : undefined,
-      g: typeof s.g === 'string' ? s.g : undefined,
     }),
     stubs: {
       '/game/$gameId': 'GameScreen',
@@ -47,7 +51,7 @@ function renderChat(manualId: string, search?: { q?: string; c?: string; g?: str
   });
 }
 
-describe('/chat/$manualId · search schema', () => {
+describe('/chat/$gameId · search schema', () => {
   it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
     const validateSearch = (
       ChatRoute as unknown as {
@@ -62,49 +66,53 @@ describe('/chat/$manualId · search schema', () => {
   });
 });
 
-describe('/chat/$manualId', () => {
+describe('/chat/$gameId', () => {
   it('el breadcrumb lleva el juego como tramo navegable y «Chat» como página', async () => {
-    renderChat('m1');
-    // El detalle del manual (MSW) resuelve el juego del trail.
+    renderChat('test-game-001');
+    // El detalle del juego (MSW) resuelve el nombre del trail.
     const gameLink = await screen.findByRole('link', { name: 'Catan' });
     expect(gameLink).toHaveAttribute('href', '/game/test-game-001');
     expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
   });
 
-  it('si el manual no resuelve, el trail conserva al menos Biblioteca', async () => {
-    server.use(
-      http.get('/api/manuals/:manualId', () =>
-        HttpResponse.json({ detail: 'missing' }, { status: 404 }),
-      ),
-    );
-    renderChat('mDesconocido');
-    expect(await screen.findByRole('link', { name: 'Biblioteca' })).toBeInTheDocument();
-    expect((await screen.findAllByText('Chat')).length).toBeGreaterThan(0);
+  it('sin manuales: se puede leer la conversación pero no preguntar', async () => {
+    server.use(gameWithoutManuals());
+    renderChat('test-game-001', { c: 'conv-001' });
+
+    // El historial sigue siendo accesible (solo lectura).
+    expect(
+      await screen.findByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
+    ).toBeInTheDocument();
+    // El composer queda deshabilitado con el aviso de fuente no disponible.
+    expect(
+      await screen.findByText(/Una fuente que usaste ya no está disponible/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Escribe tu pregunta/i)).toBeDisabled();
   });
 
   it('bienvenida cuando se abre un chat nuevo (sin conversación)', async () => {
-    renderChat('m1');
+    renderChat('test-game-001');
     expect(await screen.findByText(/Pregúntame sobre/)).toBeInTheDocument();
   });
 
   it('pulsar una pregunta-tarjeta de la bienvenida la envía', async () => {
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '¿Cómo se gana?' }));
-    // La pregunta entra como turno y el backend (MSW) responde.
-    expect(await screen.findByText('¿Cómo se gana?')).toBeInTheDocument();
+
+    // El click sale de la bienvenida y pinta la respuesta del turno.
     await waitFor(
       () => {
         expect(
-          screen.getByText('Cada jugador recibe dos asentamientos y dos carreteras.'),
-        ).toBeInTheDocument();
+          screen.getAllByText('Cada jugador recibe dos asentamientos y dos carreteras.').length,
+        ).toBeGreaterThan(0);
       },
       { timeout: 3000 },
     );
   });
 
   it('?c=… reabre la conversación y muestra su historial del servidor', async () => {
-    renderChat('m1', { c: 'conv-001' });
+    renderChat('test-game-001', { c: 'conv-001' });
     // Mensajes de SAMPLE en el handler MSW por defecto.
     expect(await screen.findByText('¿Cómo se reparten las cartas?')).toBeInTheDocument();
     expect(
@@ -113,9 +121,10 @@ describe('/chat/$manualId', () => {
   });
 
   it('al enviar una pregunta: burbuja optimista + respuesta del backend', async () => {
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, '¿Y empate?');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
@@ -136,9 +145,10 @@ describe('/chat/$manualId', () => {
   });
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, '   ');
     const send = screen.getByRole('button', { name: /Enviar pregunta/i });
     // El botón debe estar disabled (draft.trim().length === 0).
@@ -146,7 +156,7 @@ describe('/chat/$manualId', () => {
   });
 
   it('si la URL trae ?q=foo, dispara la pregunta automáticamente al montar', async () => {
-    renderChat('m1', { q: '¿Cuántos jugadores hay?' });
+    renderChat('test-game-001', { q: '¿Cuántos jugadores hay?' });
     // El mensaje del usuario aparece inmediato.
     expect(await screen.findByText('¿Cuántos jugadores hay?')).toBeInTheDocument();
     // Y la respuesta llega tras crear conversación + enviar turno.
@@ -162,9 +172,10 @@ describe('/chat/$manualId', () => {
 
   it('si el LLM falla con 504: toast de error y la pregunta vuelve al composer', async () => {
     server.use(failSendMessage(504));
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, 'fail');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
@@ -209,9 +220,10 @@ describe('/chat/$manualId', () => {
         });
       }),
     );
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, 'reintento');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
@@ -224,7 +236,18 @@ describe('/chat/$manualId', () => {
     expect(creates).toBe(1);
   });
 
-  it('cita páginas: las propias enlazan al visor, las de la comunidad no', async () => {
+  it('cita páginas: la propia viva enlaza; la borrada y la de comunidad no', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+
     server.use(
       http.post('/api/conversations/:conversationId/messages', () =>
         HttpResponse.json({
@@ -241,27 +264,33 @@ describe('/chat/$manualId', () => {
             role: 'assistant',
             content: 'La madera la dan los bosques.',
             created_at: '2026-05-26T10:06:05.000Z',
+            // test-manual-001 sigue en el pool (propio); m-borrado ya no; el otro es de comunidad.
             sources: [
-              { manual_id: 'm1', manual_title: 'Catan', page: 4, is_own: true },
-              { manual_id: 'm1', manual_title: 'Catan', page: 4, is_own: true },
-              { manual_id: 'm2', manual_title: 'Catan (comunidad)', page: 7, is_own: false },
+              { manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 4, is_own: true },
+              { manual_id: 'm-borrado', manual_title: 'Viejo', page: 7, is_own: true },
+              { manual_id: 'test-manual-002', manual_title: 'Comunidad', page: 9, is_own: false },
             ],
           },
         }),
       ),
     );
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
-    await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'madera');
+    const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
+    await user.type(input, 'madera');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
-    // La página propia (4) se deduplica y enlaza al visor del manual.
+
+    // La página propia y viva (4) enlaza al visor del manual.
     const own = await screen.findByRole('link', { name: 'Abrir página 4 del manual' });
-    expect(own.getAttribute('href')).toContain('/manual/m1');
+    expect(own.getAttribute('href')).toContain('/manual/test-manual-001');
     expect(own.getAttribute('href')).toContain('page=4');
-    expect(screen.getAllByText('Pág. 4')).toHaveLength(1);
-    // La de la comunidad (7) se cita pero NO es un enlace (no puedes abrirla).
+    // La fuente propia ya borrada (7) se cita pero NO enlaza.
     expect(screen.getByText('Pág. 7')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
+    // La de la comunidad (9) tampoco es un enlace.
+    expect(screen.getByText('Pág. 9')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /página 9/i })).toBeNull();
   });
 
   it('typing indicator mientras la mutation está en vuelo', async () => {
@@ -288,9 +317,10 @@ describe('/chat/$manualId', () => {
         });
       }),
     );
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, 'tarda');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
@@ -322,22 +352,21 @@ describe('/chat/$manualId', () => {
         }),
       ),
     );
-    renderChat('m1');
+    renderChat('test-game-001');
     const user = userEvent.setup();
     // El mock va después de setup() para que no lo pise el portapapeles de userEvent.
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
 
-    await user.type(await screen.findByLabelText(/Escribe tu pregunta/i), 'q');
+    const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
+    await user.type(input, 'q');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
     // El botón de copiar aparece cuando la respuesta termina de escribirse.
-    const copyBtn = await screen.findByRole(
-      'button',
-      { name: /Copiar respuesta/i },
-      { timeout: 3000 },
-    );
-    await user.click(copyBtn);
+    await screen.findByText(/copiable/i, undefined, { timeout: 3000 });
+    const copyButtons = await screen.findAllByRole('button', { name: /Copiar respuesta/i });
+    await user.click(copyButtons.at(-1)!);
     expect(writeText).toHaveBeenCalledWith('Respuesta **copiable**.');
   });
 });

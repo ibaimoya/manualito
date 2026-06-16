@@ -1,6 +1,6 @@
 """Endpoints de registro, login, sesión y recuperación de cuenta."""
 
-from fastapi import APIRouter, BackgroundTasks, Request, Response, status
+from fastapi import APIRouter, Request, Response, status
 
 from api import config
 from api.annotations import DbSession
@@ -50,7 +50,6 @@ CREDENTIAL_RESET_DONE_DETAIL = "Contraseña actualizada."
 async def register_handler(
     request: Request,
     response: Response,
-    background_tasks: BackgroundTasks,
     payload: RegisterRequest,
     session: DbSession,
 ) -> AuthResponse:
@@ -63,7 +62,6 @@ async def register_handler(
         ip_address=client_ip(request),
     )
     schedule_verification_email(
-        background_tasks,
         to_email=result.user.email,
         username=result.user.username,
         token=result.verification_token,
@@ -134,7 +132,6 @@ async def verify_email_handler(
 @limiter.limit(config.AUTH_EMAIL_RESEND_RATE_LIMIT)
 async def resend_verification_email_handler(
     request: Request,
-    background_tasks: BackgroundTasks,
     payload: ResendVerificationEmailRequest,
     session: DbSession,
 ) -> AuthMessageResponse:
@@ -146,7 +143,6 @@ async def resend_verification_email_handler(
     )
     if email_job is not None:
         schedule_verification_email(
-            background_tasks,
             to_email=email_job.email,
             username=email_job.username,
             token=email_job.token,
@@ -158,7 +154,6 @@ async def resend_verification_email_handler(
 @limiter.limit(config.AUTH_PASSWORD_FORGOT_RATE_LIMIT)
 async def forgot_password_handler(
     request: Request,
-    background_tasks: BackgroundTasks,
     payload: ForgotPasswordRequest,
     session: DbSession,
 ) -> AuthMessageResponse:
@@ -170,7 +165,6 @@ async def forgot_password_handler(
     )
     if email_job is not None:
         schedule_password_reset_email(
-            background_tasks,
             to_email=email_job.email,
             username=email_job.username,
             token=email_job.token,

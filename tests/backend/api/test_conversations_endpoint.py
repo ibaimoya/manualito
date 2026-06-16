@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Literal
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -15,6 +15,7 @@ from api.conversations.schemas import (
     MessageResponse,
     SendMessageResponse,
 )
+from api.conversations.service import SendMessageOutcome
 from api.games.dependencies import valid_game_id
 from api.main import app
 from api.rate_limit import limiter
@@ -148,8 +149,15 @@ def test_send_conversation_message_persists_turn(
     override_auth_conversation_and_db,
 ):
     """Enviar mensaje delega el turno completo en el servicio."""
-    send_mock = AsyncMock(return_value=_send_message_response())
+    send_mock = AsyncMock(
+        return_value=SendMessageOutcome(response=_send_message_response(), title_job=None)
+    )
+    delay_mock = MagicMock()
     monkeypatch.setattr("api.conversations.router.send_message", send_mock)
+    monkeypatch.setattr(
+        "api.conversations.router.generate_chat_reply_task.delay",
+        delay_mock,
+    )
 
     response = client.post(
         f"/api/conversations/{_CONVERSATION_ID}/messages",
@@ -158,8 +166,42 @@ def test_send_conversation_message_persists_turn(
 
     assert response.status_code == 200
     assert response.json()["assistant_message"]["role"] == "assistant"
+    assert response.json()["assistant_message"]["status"] == "pending"
     send_mock.assert_awaited_once()
     assert send_mock.await_args.kwargs["payload"].content == "¿Y si empato?"
+    delay_mock.assert_called_once()
+
+
+def test_send_conversation_message_no_relee_usuario_tras_el_servicio(
+    client,
+    monkeypatch,
+    override_auth_conversation_and_db,
+):
+    """El router copia el user_id antes de que un rollback expire el ORM."""
+    user = _ExpiringUser(_USER_ID)
+    app.dependency_overrides[get_current_auth] = lambda: _auth_session(user=user)
+
+    def send_side_effect(*_args, **kwargs):
+        kwargs["auth"].user.expire()
+        return SendMessageOutcome(response=_send_message_response(), title_job=None)
+
+    delay_mock = MagicMock()
+    monkeypatch.setattr(
+        "api.conversations.router.send_message",
+        AsyncMock(side_effect=send_side_effect),
+    )
+    monkeypatch.setattr(
+        "api.conversations.router.generate_chat_reply_task.delay",
+        delay_mock,
+    )
+
+    response = client.post(
+        f"/api/conversations/{_CONVERSATION_ID}/messages",
+        json={"content": "¿Y si empato?", "top_k": 4},
+    )
+
+    assert response.status_code == 200
+    assert delay_mock.call_args.args[0] == str(_USER_ID)
 
 
 def test_send_conversation_message_too_long_returns_public_code(
@@ -313,10 +355,10 @@ def test_conversation_not_found_returns_stable_404(
     )
 
 
-def _auth_session() -> AuthenticatedSession:
+def _auth_session(user=None) -> AuthenticatedSession:
     """Construye una sesión autenticada para overrides de FastAPI."""
     return AuthenticatedSession(
-        user=_user(),
+        user=user or _user(),
         auth_session=AuthSession(
             user_id=_USER_ID,
             token_hash=_FAKE_SESSION_HASH,
@@ -342,6 +384,23 @@ def _user() -> User:
         last_login_at=None,
         password_changed_at=_NOW,
     )
+
+
+class _ExpiringUser:
+    """Usuario fake que reproduce un ORM expirado tras rollback."""
+
+    def __init__(self, user_id):
+        self._id = user_id
+        self._expired = False
+
+    @property
+    def id(self):
+        if self._expired:
+            raise AssertionError("El router no debe releer auth.user.id tras el servicio.")
+        return self._id
+
+    def expire(self) -> None:
+        self._expired = True
 
 
 def _conversation() -> Conversation:
@@ -373,6 +432,7 @@ def _message_response(role: Literal["user", "assistant"], content: str) -> Messa
     return MessageResponse(
         id=_USER_MESSAGE_ID if role == "user" else _ASSISTANT_MESSAGE_ID,
         role=role,
+        status="completed" if role == "user" else "pending",
         content=content,
         created_at=_NOW,
     )

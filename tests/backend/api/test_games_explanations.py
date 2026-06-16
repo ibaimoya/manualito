@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import anyio
@@ -13,6 +13,7 @@ from sqlalchemy.dialects import postgresql
 import api.games.explanations as explanations_module
 from api.auth.dependencies import get_current_auth
 from api.auth.service import AuthenticatedSession
+from api.exceptions import InternalServiceUnavailableError
 from api.games.explanations import EXPLANATION_QUESTIONS, get_game_explanation
 from api.games.repository import get_pool_fingerprint, upsert_game_explanation
 from api.main import app
@@ -28,7 +29,7 @@ _USER_ID = uuid4()
 _GAME_ID = UUID("018fd000-0000-7000-8000-000000000061")
 _MANUAL_ID = UUID("018fd000-0000-7000-8000-000000000062")
 _NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
-_FAKE_HASH = "hash-value"  # placeholder de hash en fixtures, no es una credencial
+_FAKE_HASH = "hash-value"
 _FINGERPRINT = "a" * 64
 _SECTIONS = {
     "summary": {"answer": "Construyes una isla.", "sources": []},
@@ -62,30 +63,36 @@ def override_auth_and_db():
         app.dependency_overrides.pop(get_current_auth, None)
 
 
-def test_explanation_endpoint_returns_ready_payload(
+def test_explanation_endpoint_returns_payload_and_enqueues_job(
     client,
     monkeypatch,
     override_auth_and_db,
 ):
-    """El endpoint sirve las secciones cacheadas con su fecha de generación."""
+    """El endpoint devuelve el estado y encola si el servicio lo pide."""
     explanation_mock = AsyncMock(
-        return_value=explanations_module.GameExplanationResponse(
-            status="ready",
-            sections=_SECTIONS,
-            generated_at=_NOW,
+        return_value=explanations_module.GameExplanationOutcome(
+            response=explanations_module.GameExplanationResponse(
+                status="generating",
+                sections=None,
+                generated_at=None,
+            ),
+            job=explanations_module.GameExplanationJob(user_id=_USER_ID, game_id=_GAME_ID),
         )
     )
+    delay_mock = MagicMock()
     monkeypatch.setattr("api.games.router.get_game_explanation", explanation_mock)
+    monkeypatch.setattr(
+        "api.games.router.generate_game_explanation_task.delay",
+        delay_mock,
+    )
 
     response = client.get(f"/api/games/{_GAME_ID}/explanation")
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "ready"
-    assert body["sections"]["victory"]["answer"] == "Llega a 10 puntos."
+    assert body["status"] == "generating"
     explanation_mock.assert_awaited_once()
-    assert "client" in explanation_mock.await_args.kwargs
-    assert "background_tasks" not in explanation_mock.await_args.kwargs
+    delay_mock.assert_called_once_with(str(_USER_ID), str(_GAME_ID))
 
 
 def test_explanation_endpoint_without_manuals_returns_stable_404(
@@ -105,257 +112,151 @@ def test_explanation_endpoint_without_manuals_returns_stable_404(
     assert any(error["code"] == "manual_context_not_found" for error in response.json()["errors"])
 
 
-def test_explanation_cache_hit_skips_generation(monkeypatch):
-    """Con la huella intacta se sirve la caché del juego sin tocar el LLM."""
+def test_explanation_cache_hit_skips_job(monkeypatch):
+    """Con la huella intacta se sirve la caché lista del juego."""
     session = _read_session()
-    generate_mock = AsyncMock()
-    get_cached_mock = AsyncMock(return_value=_cached_explanation())
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_game_for_detail",
-        AsyncMock(return_value=SimpleNamespace(id=_GAME_ID)),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_pool_fingerprint",
-        AsyncMock(return_value=_FINGERPRINT),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_game_explanation",
-        get_cached_mock,
-    )
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
+    cached = _cached_explanation(status="ready")
+    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=cached)
 
-    response = anyio.run(
+    outcome = anyio.run(
         partial(
             get_game_explanation,
             session,
             auth=_auth(),
             game_id=_GAME_ID,
-            client=object(),
         )
     )
 
-    assert response.status == "ready"
-    assert response.generated_at == _NOW
-    get_cached_mock.assert_awaited_once_with(session, game_id=_GAME_ID)
-    generate_mock.assert_not_called()
-    assert session.rollbacks == 0
+    assert outcome.response.status == "ready"
+    assert outcome.response.generated_at == _NOW
+    assert outcome.job is None
 
 
-def test_first_poll_generates_only_the_summary_for_the_game(monkeypatch):
-    """Sin caché previa la primera petición genera solo el resumen y avisa."""
+def test_explanation_missing_cache_marks_generating_and_returns_job(monkeypatch):
+    """Sin caché se persiste generating y se devuelve trabajo Celery."""
     session = _read_session()
-    lock_keys: list[str] = []
-    _patch_lock(monkeypatch, object(), keys=lock_keys)
-    generate_mock = AsyncMock(
-        return_value=AnswerResponse(
-            answer="Construyes una isla.",
-            sources=[AnswerSource(manual_id=_MANUAL_ID, manual_title="Base", page=2, is_own=True)],
-        )
+    mark_mock = AsyncMock(return_value=_partial_explanation(status="generating"))
+    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=None)
+    monkeypatch.setattr(
+        explanations_module.repository,
+        "mark_game_explanation_generating",
+        mark_mock,
     )
-    upsert_mock = AsyncMock(return_value=_partial_explanation("summary"))
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, explanations=[None, None])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-    monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
 
-    response = _run_get(session)
-
-    assert response.status == "generating"
-    assert list(response.sections) == ["summary"]
-    assert response.sections["summary"].sources[0].page == 2
-    assert lock_keys == [f"game-explanation:{_GAME_ID}"]
-    generate_mock.assert_awaited_once()
-    assert generate_mock.await_args.kwargs["question"] == EXPLANATION_QUESTIONS["summary"]
-    assert session.rollbacks == 1
-    assert upsert_mock.await_args.kwargs["game_id"] == _GAME_ID
-    assert upsert_mock.await_args.kwargs["source_fingerprint"] == _FINGERPRINT
-    assert "user_id" not in upsert_mock.await_args.kwargs
-    assert set(upsert_mock.await_args.kwargs["sections"]) == {"summary"}
-
-
-def test_partial_cache_generates_next_section_in_order(monkeypatch):
-    """Con el resumen ya cacheado, la siguiente petición genera la preparación."""
-    session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock(
-        return_value=AnswerResponse(answer="Coloca los hexágonos.", sources=[])
+    outcome = anyio.run(
+        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
     )
-    upsert_mock = AsyncMock(return_value=_partial_explanation("summary", "setup"))
-    cached = _partial_explanation("summary")
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, explanations=[cached, cached])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-    monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
 
-    response = _run_get(session)
-
-    assert response.status == "generating"
-    assert list(response.sections) == ["summary", "setup"]
-    generate_mock.assert_awaited_once()
-    assert generate_mock.await_args.kwargs["question"] == EXPLANATION_QUESTIONS["setup"]
-    assert set(upsert_mock.await_args.kwargs["sections"]) == {"summary", "setup"}
-    assert "user_id" not in upsert_mock.await_args.kwargs
-
-
-def test_last_section_completes_and_returns_ready(monkeypatch):
-    """Al generar el cuarto apartado la explicación pasa a estado listo."""
-    session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock(return_value=AnswerResponse(answer="Llega a 10 puntos.", sources=[]))
-    upsert_mock = AsyncMock(
-        return_value=SimpleNamespace(
-            sections=_SECTIONS, source_fingerprint=_FINGERPRINT, generated_at=_NOW
-        )
+    assert outcome.response.status == "generating"
+    assert outcome.job == explanations_module.GameExplanationJob(
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
     )
-    cached = _partial_explanation("summary", "setup", "turns")
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, explanations=[cached, cached])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-    monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
-
-    response = _run_get(session)
-
-    assert response.status == "ready"
-    assert response.generated_at == _NOW
-    assert response.sections["victory"].answer == "Llega a 10 puntos."
-    generate_mock.assert_awaited_once()
-    assert generate_mock.await_args.kwargs["question"] == EXPLANATION_QUESTIONS["victory"]
+    mark_mock.assert_awaited_once()
+    assert mark_mock.await_args.kwargs["sections"] == {}
 
 
-def test_changed_fingerprint_restarts_from_summary(monkeypatch):
-    """Una huella distinta descarta la caché parcial y reempieza por el resumen."""
+def test_failed_cache_returns_failed_without_requeue(monkeypatch):
+    """Un fallo persistido se expone y no crea más trabajos automáticamente."""
     session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock(return_value=AnswerResponse(answer="Otro juego.", sources=[]))
-    upsert_mock = AsyncMock(return_value=_partial_explanation("summary", fingerprint="b" * 64))
-    stale = _partial_explanation("summary", "setup")
-    _patch_repo(monkeypatch, fingerprint="b" * 64, explanations=[stale, stale])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-    monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
-
-    response = _run_get(session)
-
-    assert response.status == "generating"
-    assert list(response.sections) == ["summary"]
-    assert generate_mock.await_args.kwargs["question"] == EXPLANATION_QUESTIONS["summary"]
-    assert upsert_mock.await_args.kwargs["source_fingerprint"] == "b" * 64
-    assert set(upsert_mock.await_args.kwargs["sections"]) == {"summary"}
-
-
-def test_visible_manuals_change_during_lock_uses_fresh_fingerprint(monkeypatch):
-    """Si los manuales cambian mientras se espera el lock, manda la huella nueva."""
-    session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock(return_value=AnswerResponse(answer="Otro juego.", sources=[]))
-    upsert_mock = AsyncMock(return_value=_partial_explanation("summary", fingerprint="c" * 64))
-    stale = _partial_explanation("summary", "setup")
-    _patch_repo(monkeypatch, fingerprint=[_FINGERPRINT, "c" * 64], explanations=[stale, stale])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-    monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
-
-    response = _run_get(session)
-
-    assert response.status == "generating"
-    assert list(response.sections) == ["summary"]
-    assert generate_mock.await_args.kwargs["question"] == EXPLANATION_QUESTIONS["summary"]
-    assert upsert_mock.await_args.kwargs["source_fingerprint"] == "c" * 64
-
-
-def test_lock_winner_continues_from_fresh_partial(monkeypatch):
-    """La primera lectura ve None y, bajo lock, un parcial fresco: sigue por setup."""
-    session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock(
-        return_value=AnswerResponse(answer="Coloca los hexágonos.", sources=[])
-    )
-    upsert_mock = AsyncMock(return_value=_partial_explanation("summary", "setup"))
     _patch_repo(
         monkeypatch,
         fingerprint=_FINGERPRINT,
-        explanations=[None, _partial_explanation("summary")],
+        cached=_partial_explanation(status="failed", error_code="generation_failed"),
+    )
+
+    outcome = anyio.run(
+        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
+    )
+
+    assert outcome.response.status == "failed"
+    assert outcome.response.error_code == "generation_failed"
+    assert outcome.job is None
+
+
+def test_worker_generates_all_sections_under_lock(monkeypatch):
+    """El worker completa todos los apartados pendientes en una sola tarea."""
+    lock_session = object()
+    generate_mock = AsyncMock(
+        side_effect=[
+            AnswerResponse(
+                answer="Construyes una isla.",
+                sources=[
+                    AnswerSource(
+                        manual_id=_MANUAL_ID,
+                        manual_title="Base",
+                        page=2,
+                        is_own=True,
+                    )
+                ],
+            ),
+            AnswerResponse(answer="Coloca los hexágonos.", sources=[]),
+            AnswerResponse(answer="Tira, comercia y construye.", sources=[]),
+            AnswerResponse(answer="Llega a 10 puntos.", sources=[]),
+        ]
+    )
+    generating_mock = AsyncMock(return_value=_partial_explanation(status="generating"))
+    upsert_mock = AsyncMock(return_value=_cached_explanation(status="ready"))
+    _patch_worker_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=None)
+    monkeypatch.setattr(
+        explanations_module,
+        "advisory_session_lock",
+        _fake_lock_factory(lock_session),
     )
     monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
+    monkeypatch.setattr(
+        explanations_module.repository,
+        "mark_game_explanation_generating",
+        generating_mock,
+    )
     monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
 
-    response = _run_get(session)
+    completed = anyio.run(
+        partial(explanations_module.generate_game_explanation, _USER_ID, _GAME_ID)
+    )
 
-    assert response.status == "generating"
-    assert list(response.sections) == ["summary", "setup"]
-    assert generate_mock.await_args.kwargs["question"] == EXPLANATION_QUESTIONS["setup"]
-
-
-def test_visible_manuals_emptied_during_lock_reports_generating(monkeypatch):
-    """Si no quedan manuales durante la espera del lock, se informa 'generating'."""
-    session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock()
-    _patch_repo(monkeypatch, fingerprint=[_FINGERPRINT, None], explanations=[None])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-
-    response = _run_get(session)
-
-    assert response.status == "generating"
-    assert response.sections is None
-    generate_mock.assert_not_called()
+    assert completed is True
+    assert generate_mock.await_count == 4
+    assert [
+        call.kwargs["question"] for call in generate_mock.await_args_list
+    ] == list(EXPLANATION_QUESTIONS.values())
+    assert upsert_mock.await_args.kwargs["sections"]["summary"]["sources"][0]["page"] == 2
 
 
-def test_explanation_stampede_loser_reports_generating(monkeypatch):
-    """La segunda pestaña no duplica la generación: recibe 'generating'."""
-    session = _read_session()
+def test_worker_returns_false_when_lock_is_busy(monkeypatch):
+    """Si otro worker tiene el lock, Celery reintentará más tarde."""
+    monkeypatch.setattr(explanations_module, "advisory_session_lock", _fake_lock_factory(None))
 
-    @asynccontextmanager
-    async def busy_lock(_key):
-        yield None
+    completed = anyio.run(
+        partial(explanations_module.generate_game_explanation, _USER_ID, _GAME_ID)
+    )
 
-    generate_mock = AsyncMock()
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, explanations=[None])
-    monkeypatch.setattr(explanations_module, "advisory_session_lock", busy_lock)
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-
-    response = _run_get(session)
-
-    assert response.status == "generating"
-    assert response.sections is None
-    generate_mock.assert_not_called()
+    assert completed is False
 
 
-def test_explanation_lock_winner_reuses_fresh_game_cache(monkeypatch):
-    """Si otro proceso terminó mientras esperábamos, no se regenera de nuevo."""
-    session = _read_session()
-    _patch_lock(monkeypatch, object())
-    generate_mock = AsyncMock()
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, explanations=[None, _cached_explanation()])
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-
-    response = _run_get(session)
-
-    assert response.status == "ready"
-    generate_mock.assert_not_called()
-
-
-def test_explanation_without_visible_manuals_raises_context_404(monkeypatch):
-    """Sin manuales visibles no genera nada y responde contexto no encontrado."""
+def test_worker_marks_failed_on_internal_service_error(monkeypatch):
+    """Un error esperado de LLM deja estado failed estable."""
+    fail_mock = AsyncMock()
+    _patch_worker_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=None)
+    monkeypatch.setattr(explanations_module, "advisory_session_lock", _fake_lock_factory(object()))
     monkeypatch.setattr(
-        explanations_module.repository,
-        "get_game_for_detail",
-        AsyncMock(return_value=SimpleNamespace(id=_GAME_ID)),
+        explanations_module,
+        "generate_game_answer",
+        AsyncMock(side_effect=InternalServiceUnavailableError("LLM no disponible.")),
     )
     monkeypatch.setattr(
         explanations_module.repository,
-        "get_pool_fingerprint",
-        AsyncMock(return_value=None),
+        "mark_game_explanation_failed",
+        fail_mock,
     )
 
-    with pytest.raises(ManualContextNotFoundError):
-        anyio.run(
-            partial(
-                get_game_explanation,
-                _read_session(),
-                auth=_auth(),
-                game_id=_GAME_ID,
-                client=object(),
-            )
-        )
+    completed = anyio.run(
+        partial(explanations_module.generate_game_explanation, _USER_ID, _GAME_ID)
+    )
+
+    assert completed is True
+    fail_mock.assert_awaited_once()
+    assert fail_mock.await_args.kwargs["error_code"] == "generation_failed"
 
 
 def test_get_pool_fingerprint_hashes_visible_manuals_in_stable_order():
@@ -390,61 +291,13 @@ def test_get_pool_fingerprint_hashes_visible_manuals_in_stable_order():
     assert "ORDER BY manuals.id ASC" in compiled
 
 
-def test_get_pool_fingerprint_returns_none_for_empty_manual_set():
-    """Sin manuales visibles no hay huella que comparar."""
-
-    class FakeSession:
-        async def execute(self, _statement):
-            await anyio.lowlevel.checkpoint()
-            return []
-
-    fingerprint = anyio.run(
-        partial(
-            get_pool_fingerprint,
-            FakeSession(),
-            game_id=_GAME_ID,
-            current_user_id=_USER_ID,
-        )
-    )
-
-    assert fingerprint is None
-
-
-def test_get_game_explanation_repository_filters_by_game_only():
-    """La caché de explicaciones se busca por juego, sin usuario."""
-    cached = object()
-
-    class FakeResult:
-        def scalar_one_or_none(self):
-            return cached
-
-    class FakeSession:
-        async def execute(self, statement):
-            await anyio.lowlevel.checkpoint()
-            self.statement = statement
-            return FakeResult()
-
-    session = FakeSession()
-
-    explanation = anyio.run(
-        partial(
-            explanations_module.repository.get_game_explanation,
-            session,
-            game_id=_GAME_ID,
-        )
-    )
-
-    assert explanation is cached
-    compiled = _compile(session.statement)
-    assert "game_explanations.game_id =" in compiled
-    assert "game_explanations.user_id" not in compiled
-
-
-def test_upsert_game_explanation_compiles_to_atomic_game_conflict_update():
-    """El upsert por juego reemplaza secciones y huella de una vez."""
+def test_upsert_game_explanation_marks_ready_atomically():
+    """El upsert por juego reemplaza secciones, huella y estado de una vez."""
     row = SimpleNamespace(
         sections=_SECTIONS,
         source_fingerprint=_FINGERPRINT,
+        status="ready",
+        error_code=None,
         generated_at=_NOW,
     )
 
@@ -482,29 +335,12 @@ def test_upsert_game_explanation_compiles_to_atomic_game_conflict_update():
     compiled = _compile(session.statement)
     assert "INSERT INTO game_explanations" in compiled
     assert "ON CONFLICT (game_id) DO UPDATE" in compiled
-    assert "user_id" not in compiled
+    assert "status" in compiled
     assert "RETURNING" in compiled
 
 
-def _patch_lock(monkeypatch, lock_session, *, keys: list[str] | None = None) -> None:
-    """Sustituye el advisory lock por una sesión falsa ya adquirida."""
-
-    @asynccontextmanager
-    async def fake_lock(key):
-        if keys is not None:
-            keys.append(key)
-        yield lock_session
-
-    monkeypatch.setattr(explanations_module, "advisory_session_lock", fake_lock)
-
-
-def _patch_repo(monkeypatch, *, fingerprint, explanations) -> None:
-    """Fija juego, huella(s) de manuales y la secuencia de lecturas de caché."""
-    fingerprint_mock = (
-        AsyncMock(side_effect=fingerprint)
-        if isinstance(fingerprint, list)
-        else AsyncMock(return_value=fingerprint)
-    )
+def _patch_repo(monkeypatch, *, fingerprint: str | None, cached) -> None:
+    """Fija juego, huella y caché para el servicio HTTP."""
     monkeypatch.setattr(
         explanations_module.repository,
         "get_game_for_detail",
@@ -513,20 +349,37 @@ def _patch_repo(monkeypatch, *, fingerprint, explanations) -> None:
     monkeypatch.setattr(
         explanations_module.repository,
         "get_pool_fingerprint",
-        fingerprint_mock,
+        AsyncMock(return_value=fingerprint),
     )
     monkeypatch.setattr(
         explanations_module.repository,
         "get_game_explanation",
-        AsyncMock(side_effect=explanations),
+        AsyncMock(return_value=cached),
     )
 
 
-def _run_get(session):
-    """Ejecuta el servicio con auth y cliente falsos sobre la sesión dada."""
-    return anyio.run(
-        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID, client=object())
+def _patch_worker_repo(monkeypatch, *, fingerprint: str | None, cached) -> None:
+    """Fija huella y caché para el worker."""
+    monkeypatch.setattr(
+        explanations_module.repository,
+        "get_pool_fingerprint",
+        AsyncMock(return_value=fingerprint),
     )
+    monkeypatch.setattr(
+        explanations_module.repository,
+        "get_game_explanation",
+        AsyncMock(return_value=cached),
+    )
+
+
+def _fake_lock_factory(lock_session):
+    """Sustituye el advisory lock por una sesión falsa."""
+
+    @asynccontextmanager
+    async def fake_lock(_key):
+        yield lock_session
+
+    return fake_lock
 
 
 def _auth() -> AuthenticatedSession:
@@ -572,20 +425,29 @@ def _read_session() -> SimpleNamespace:
     return session
 
 
-def _cached_explanation() -> SimpleNamespace:
+def _cached_explanation(*, status: str) -> SimpleNamespace:
     """Construye la explicación cacheada completa que devuelve el repositorio."""
     return SimpleNamespace(
         sections=_SECTIONS,
         source_fingerprint=_FINGERPRINT,
+        status=status,
+        error_code=None,
         generated_at=_NOW,
     )
 
 
-def _partial_explanation(*keys: str, fingerprint: str = _FINGERPRINT) -> SimpleNamespace:
-    """Construye una caché con solo los apartados indicados."""
+def _partial_explanation(
+    *,
+    status: str,
+    error_code: str | None = None,
+    fingerprint: str = _FINGERPRINT,
+) -> SimpleNamespace:
+    """Construye una caché parcial de explicación."""
     return SimpleNamespace(
-        sections={key: _SECTIONS[key] for key in keys},
+        sections={"summary": _SECTIONS["summary"]} if status != "generating" else {},
         source_fingerprint=fingerprint,
+        status=status,
+        error_code=error_code,
         generated_at=None,
     )
 

@@ -5,6 +5,7 @@ x-service-hardening: &service-hardening
     - no-new-privileges:true
   cap_drop:
     - ALL
+  restart: unless-stopped
   read_only: true
   tmpfs:
     - /tmp:rw,noexec,nosuid,nodev,size=128m,mode=1777
@@ -26,6 +27,7 @@ x-volume-init-hardening: &volume-init-hardening
 x-third-party-hardening: &third-party-hardening
   security_opt:
     - no-new-privileges:true
+  restart: unless-stopped
 
 x-api-build: &api-build
   context: .
@@ -36,6 +38,16 @@ x-api-build: &api-build
     PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
     UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
 
+x-flower-build: &flower-build
+  context: .
+  dockerfile: backend/api/Dockerfile
+  additional_contexts:
+    - "python-base:${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}=service:python-base"
+  args:
+    PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
+    UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
+    UV_EXTRA_GROUPS: "--only-group monitoring"
+
 x-database-build: &database-build
   context: .
   dockerfile: backend/database/Dockerfile
@@ -45,12 +57,31 @@ x-database-build: &database-build
     PYTHON_BASE_TAG: ${PYTHON_BASE_TAG:?PYTHON_BASE_TAG no definida}
     UV_VERSION: ${UV_VERSION:?UV_VERSION no definida}
 
+x-celery-base: &celery-base
+  <<: *service-hardening
+  env_file:
+    - ./config/backend.env
+    - ./config/celery.env
+    - ./config/database.env
+  environment:
+    APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
+    REDIS_PASSWORD_FILE: /run/secrets/redis_password
+  image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+  build: *api-build
+  secrets:
+    - postgres_user
+    - postgres_password
+    - redis_password
+  networks:
+    - manualito-net
+
 # Variante para nginx
 x-service-hardening-nginx: &service-hardening-nginx
   security_opt:
     - no-new-privileges:true
   cap_drop:
     - ALL
+  restart: unless-stopped
   read_only: true
   tmpfs:
     - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777,uid=1001,gid=1001
@@ -100,14 +131,17 @@ services:
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-api
     env_file:
       - ./config/backend.env
+      - ./config/celery.env
       - ./config/database.env
     environment:
       APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
     image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
     secrets:
       - postgres_user
       - postgres_password
+      - redis_password
     volumes:
       - assets-data:/app/storage/assets
     ports:
@@ -125,6 +159,154 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - manualito-net
+
+  celery-worker-manuals:
+    <<: *celery-base
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-worker-manuals
+    command:
+      - celery
+      - -A
+      - api.worker.celery:celery_app
+      - worker
+      - -Q
+      - manuals,rag
+      - --concurrency=2
+      - --events
+      - --hostname=manuals@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A api.worker.celery:celery_app inspect ping -d manuals@$$HOSTNAME --timeout=5 | grep -q OK"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    volumes:
+      - assets-data:/app/storage/assets
+    depends_on:
+      database-migrate:
+        condition: service_completed_successfully
+      ocr:
+        condition: service_healthy
+      rag:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker-gpu:
+    <<: *celery-base
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-worker-gpu
+    command:
+      - celery
+      - -A
+      - api.worker.celery:celery_app
+      - worker
+      - -Q
+      - gpu
+      - --concurrency=1
+      - --events
+      - --hostname=gpu@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A api.worker.celery:celery_app inspect ping -d gpu@$$HOSTNAME --timeout=5 | grep -q OK"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    volumes:
+      - assets-data:/app/storage/assets
+    depends_on:
+      database-migrate:
+        condition: service_completed_successfully
+      rag:
+        condition: service_healthy
+      llm:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-worker-mail:
+    <<: *celery-base
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-worker-mail
+    command:
+      - celery
+      - -A
+      - api.worker.celery:celery_app
+      - worker
+      - -Q
+      - mail,maintenance
+      - --concurrency=4
+      - --events
+      - --hostname=mail@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A api.worker.celery:celery_app inspect ping -d mail@$$HOSTNAME --timeout=5 | grep -q OK"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      database-migrate:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    <<: *celery-base
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-beat
+    command:
+      - celery
+      - -A
+      - api.worker.celery:celery_app
+      - beat
+      - --schedule=/tmp/celerybeat-schedule
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; os.kill(1, 0)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      database-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  flower:
+    <<: *service-hardening
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-flower
+    env_file:
+      - ./config/backend.env
+      - ./config/celery.env
+    environment:
+      APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-flower:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+    build: *flower-build
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        celery -A api.worker.celery:celery_app flower
+        --address=0.0.0.0
+        --port=5555
+        --basic-auth="$$(cat /run/secrets/flower_basic_auth)"
+        --persistent=false
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import base64, pathlib, urllib.request; token=base64.b64encode(pathlib.Path('/run/secrets/flower_basic_auth').read_bytes().strip()).decode(); req=urllib.request.Request('http://127.0.0.1:5555', headers={'Authorization': 'Basic ' + token}); urllib.request.urlopen(req, timeout=3).read()\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    secrets:
+      - redis_password
+      - flower_basic_auth
+    ports:
+      - "127.0.0.1:5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - manualito-net
 
@@ -163,6 +345,44 @@ services:
       start_period: 10s
     volumes:
       - database-data:/var/lib/postgresql
+    networks:
+      - manualito-net
+
+  redis:
+    <<: *third-party-hardening
+    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-redis
+    image: redis:${REDIS_VERSION:?REDIS_VERSION no definida}${REDIS_VARIANT:+-${REDIS_VARIANT}}
+    user: "0:0"
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    pids_limit: 128
+    secrets:
+      - redis_password
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        set -eu;
+        chown -R redis:redis /data;
+        password="$$(cat /run/secrets/redis_password)";
+        umask 077;
+        printf '%s\n' 'appendonly yes' 'dir /data' "requirepass $$password" > /tmp/redis.conf;
+        chown redis:redis /tmp/redis.conf;
+        exec su redis -s /bin/sh -c "mkdir -p /data/appendonlydir; exec redis-server /tmp/redis.conf"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis_password)\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - redis-data:/data
     networks:
       - manualito-net
 
@@ -317,9 +537,14 @@ volumes:
   assets-data:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
+  redis-data:
 
 secrets:
   postgres_user:
     file: ./secrets/postgres_user.txt
   postgres_password:
     file: ./secrets/postgres_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  flower_basic_auth:
+    file: ./secrets/flower_basic_auth.txt

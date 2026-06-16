@@ -37,10 +37,14 @@ export const Route = createFileRoute('/_app/capture/source')({
   component: NewManualScreen,
 });
 
-const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const MAX_PDF_BYTES = 50 * 1024 * 1024;
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
-const MAX_PAGES = 10;
+const MB = 1024 * 1024;
+const MAX_IMAGE_MB = 30;
+const MAX_PDF_MB = 200;
+const MAX_TOTAL_MB = 200;
+const MAX_IMAGE_BYTES = MAX_IMAGE_MB * MB;
+const MAX_PDF_BYTES = MAX_PDF_MB * MB;
+const MAX_TOTAL_BYTES = MAX_TOTAL_MB * MB;
+const MAX_PAGES = 30;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type Mode = 'images' | 'pdf';
@@ -161,7 +165,9 @@ function NewManualScreen() {
       toast.warning('Formato no soportado', { description: 'Usa JPG, PNG o WebP.' });
     }
     if (valid.some((file) => file.size > MAX_IMAGE_BYTES)) {
-      toast.warning('Imagen demasiado grande', { description: 'Cada imagen puede ocupar 20 MB.' });
+      toast.warning('Imagen demasiado grande', {
+        description: `Cada imagen puede ocupar ${MAX_IMAGE_MB} MB.`,
+      });
       return;
     }
     const next = [...pages, ...valid];
@@ -173,7 +179,7 @@ function NewManualScreen() {
     }
     if (next.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_BYTES) {
       toast.warning('Archivo demasiado grande', {
-        description: 'El total no puede superar 50 MB.',
+        description: `El total no puede superar ${MAX_TOTAL_MB} MB.`,
       });
       return;
     }
@@ -188,7 +194,9 @@ function NewManualScreen() {
       return;
     }
     if (file.size > MAX_PDF_BYTES) {
-      toast.warning('PDF demasiado grande', { description: 'El PDF puede ocupar 50 MB.' });
+      toast.warning('PDF demasiado grande', {
+        description: `El PDF puede ocupar ${MAX_PDF_MB} MB.`,
+      });
       return;
     }
     setPages([file]);
@@ -221,9 +229,7 @@ function NewManualScreen() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <ScreenTopBar
-        crumb="Nuevo manual"
-      />
+      <ScreenTopBar crumb="Nuevo manual" />
 
       <div className="mx-auto grid w-full max-w-6xl flex-1 gap-8 p-5 md:grid-cols-2 md:gap-10 md:p-8">
         <section className="flex flex-col gap-5">

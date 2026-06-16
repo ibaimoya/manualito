@@ -21,6 +21,7 @@ import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { FollowButton } from '@/features/games/FollowButton';
 import { GameCover } from '@/features/games/GameCover';
+import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
 import {
@@ -70,7 +71,7 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   const [rateOpen, setRateOpen] = useState(false);
   // Estrella pulsada en la cabecera: se precarga en el diálogo, no se guarda.
   const [presetScore, setPresetScore] = useState<number | null>(null);
-  const ownManual = game.manuals.find((manual) => manual.is_own) ?? game.manuals[0];
+  const canAsk = game.manuals.length > 0;
   const totalPages = game.manuals.reduce((sum, manual) => sum + manual.page_count, 0);
 
   function openRating(score?: number): void {
@@ -83,9 +84,9 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
       <div className="flex-1">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-5 md:px-6 md:py-8">
           <GameHeader game={game} onRate={openRating} />
-          <ExplanationSection gameId={game.id} hasManuals={game.manuals.length > 0} />
-          {ownManual ? (
-            <ConversationsSection manualId={ownManual.id} gameId={game.id} showViewAll />
+          <ExplanationSection gameId={game.id} hasManuals={canAsk} />
+          {canAsk || game.conversations_count > 0 ? (
+            <ConversationsSection gameId={game.id} canAsk={canAsk} showViewAll />
           ) : null}
           <ManualsSection game={game} />
           {game.manuals.length > 0 ? (
@@ -101,7 +102,7 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
         </div>
       </div>
 
-      <HubComposer game={game} chatManualId={ownManual?.id ?? null} />
+      <HubComposer game={game} />
 
       <RateGameDialog
         open={rateOpen}
@@ -131,9 +132,10 @@ function GameHeader({
 }: Readonly<{ game: GameDetail; onRate: (score?: number) => void }>) {
   const players = playersLabel(game);
   const yearSuffix = game.year_published === null ? '' : ` · ${game.year_published}`;
+  const { gameIds } = useProcessingManuals();
   return (
     <header className="flex items-center gap-5 md:gap-6">
-      <GameCover name={game.name} size={120} />
+      <GameCover name={game.name} size={120} processing={gameIds.has(game.id)} />
       <div className="min-w-0 flex-1">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           Juego de mesa{yearSuffix}
@@ -224,6 +226,26 @@ function ExplanationSection({
   // los huecos pendientes se pintan con spinner. Listo: las 4 secciones están.
   const data = explanation.data;
   const sections = data?.sections ?? {};
+  if (data?.status === 'failed' && Object.keys(sections).length === 0) {
+    return (
+      <Card className="border-error/30 bg-error-bg p-5">
+        <p className="text-sm leading-relaxed text-fg">
+          No hemos podido generar la explicación. Tus manuales y conversaciones están a salvo.
+        </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          onClick={() => {
+            explanation.refetch().catch(() => undefined);
+          }}
+        >
+          <RotateCw size={14} strokeWidth={2} />
+          Reintentar
+        </Button>
+      </Card>
+    );
+  }
   // "live" solo cuando se está generando ahora: anima el tecleo en la 1ª vez,
   // no al revisitar (que llega cacheado como "ready").
   const live = data?.status === 'generating';
@@ -356,24 +378,22 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   return <Card className="flex items-center gap-3.5 p-3.5 opacity-90">{body}</Card>;
 }
 
-function HubComposer({
-  game,
-  chatManualId,
-}: Readonly<{ game: GameDetail; chatManualId: string | null }>) {
+function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
   const navigate = useNavigate();
   const [question, setQuestion] = useState('');
+  const canAsk = game.manuals.length > 0;
 
   function ask(q: string): void {
     const trimmed = q.trim();
-    if (trimmed.length === 0 || chatManualId === null) return;
+    if (trimmed.length === 0 || !canAsk) return;
     navigate({
-      to: '/chat/$manualId',
-      params: { manualId: chatManualId },
-      search: { q: trimmed, g: game.id },
+      to: '/chat/$gameId',
+      params: { gameId: game.id },
+      search: { q: trimmed },
     }).catch(() => undefined);
   }
 
-  if (chatManualId === null) return null;
+  if (!canAsk) return null;
 
   return (
     <div

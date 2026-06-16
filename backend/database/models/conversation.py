@@ -56,20 +56,51 @@ class Message(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
     )
     role: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'completed'"),
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     sources: Mapped[list[dict[str, object]]] = mapped_column(
         postgresql.JSONB,
         nullable=False,
         server_default=text("'[]'::jsonb"),
     )
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    reply_to_message_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("messages.id", ondelete="SET NULL"),
+    )
 
     __table_args__ = (
         CheckConstraint("role IN ('user', 'assistant')", name="role_valid"),
-        CheckConstraint("length(btrim(content)) > 0", name="content_not_empty"),
+        CheckConstraint(
+            "status IN ('pending', 'completed', 'failed')",
+            name="status_valid",
+        ),
+        CheckConstraint(
+            "role = 'assistant' OR status = 'completed'",
+            name="user_messages_completed",
+        ),
+        CheckConstraint(
+            "role = 'assistant' OR reply_to_message_id IS NULL",
+            name="reply_only_for_assistant",
+        ),
+        CheckConstraint(
+            "(role = 'assistant' AND status IN ('pending', 'failed')) "
+            "OR length(btrim(content)) > 0",
+            name="content_required_when_completed",
+        ),
+        CheckConstraint(
+            "error_code IS NULL OR status = 'failed'",
+            name="error_code_only_when_failed",
+        ),
         CheckConstraint("jsonb_typeof(sources) = 'array'", name="sources_array"),
         CheckConstraint(
             f"length(content) <= {MESSAGE_CONTENT_MAX_LENGTH}",
             name="content_length_valid",
         ),
         Index("ix_messages_conversation_created", conversation_id, "created_at", "id"),
+        Index("ix_messages_reply_to_message_id", reply_to_message_id),
     )

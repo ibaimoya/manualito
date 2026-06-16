@@ -25,7 +25,8 @@ import { Meeple } from '@/shared/components/Brand';
 import { GameCover } from '@/features/games/GameCover';
 import { GameJumpSearch } from '@/features/games/GameJumpSearch';
 import { myGamesQueryOptions } from '@/features/games/use-games';
-import { manualsQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
+import { manualsQueryOptions, useDeleteManual, useProcessingManuals } from '@/features/manual/use-manuals';
+import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
 import { type MyGame, type MyGamesResponse } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
@@ -163,11 +164,13 @@ function ManualsView({
 
 // ── Tarjeta de juego — estantería (portada arriba) ──────────────────────────
 function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
+  const { gameIds } = useProcessingManuals();
+  const processing = gameIds.has(game.id);
   return (
     <Link
       to="/game/$gameId"
       params={{ gameId: game.id }}
-      aria-label={`Abrir ${game.name}`}
+      aria-label={`Abrir ${game.name}${processing ? ' (procesando un manual)' : ''}`}
       className={cn(
         'group flex flex-col overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-xs',
         'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
@@ -177,7 +180,7 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
     >
       <div className="flex justify-center px-5 pt-5">
         <div className="transition-[rotate,scale] duration-150 ease-[var(--ease-mn)] group-hover:-rotate-2 group-hover:scale-[1.02]">
-          <GameCover name={game.name} size={132} radius={16} />
+          <GameCover name={game.name} size={132} radius={16} processing={processing} />
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-[18px] pb-[18px] pt-4">
@@ -240,7 +243,7 @@ function ManualDocCard({
         'hover:-translate-y-px hover:border-border-strong hover:shadow-sm',
       )}
     >
-      <ManualThumb pdf={isPdf} />
+      <ManualThumb pdf={isPdf} processing={indexing} />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={st.tone} icon={st.icon}>
@@ -305,7 +308,7 @@ function ManualDocCard({
 }
 
 /** Miniatura de hoja con el formato (PDF/fotos) en una esquina. */
-function ManualThumb({ pdf }: Readonly<{ pdf: boolean }>) {
+function ManualThumb({ pdf, processing = false }: Readonly<{ pdf: boolean; processing?: boolean }>) {
   return (
     <span
       aria-hidden="true"
@@ -322,6 +325,11 @@ function ManualThumb({ pdf }: Readonly<{ pdf: boolean }>) {
       >
         {pdf ? <FileText size={12} /> : <ImageIcon size={12} />}
       </span>
+      {processing ? (
+        <span className="absolute -bottom-[7px] -right-[7px] grid size-6 place-items-center rounded-full bg-black/60 shadow-sm ring-2 ring-card">
+          <Spinner size={11} className="text-white" />
+        </span>
+      ) : null}
     </span>
   );
 }

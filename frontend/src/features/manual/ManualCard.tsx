@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import { type ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { gameColor } from '@/shared/lib/gameColor';
@@ -31,11 +32,16 @@ export function ManualCard({ manual, meta, className }: Props) {
       <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>
         <div className="flex items-center gap-3">
           <div
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+            className="relative grid h-12 w-12 shrink-0 place-items-center rounded-xl"
             style={{ background: gameColor(name), color: '#FFF8F0' }}
             aria-hidden="true"
           >
             <span className="font-display text-base font-bold uppercase">{name.slice(0, 2)}</span>
+            {indexing ? (
+              <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full bg-black/55 ring-2 ring-card">
+                <Spinner size={10} className="text-white" />
+              </span>
+            ) : null}
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold text-fg">{name}</div>

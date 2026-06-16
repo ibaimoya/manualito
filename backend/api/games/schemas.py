@@ -85,9 +85,10 @@ class ExplanationSection(StrictModel):
 class GameExplanationResponse(StrictModel):
     """Explicación cacheada y compartida del juego."""
 
-    status: Literal["ready", "generating"]
+    status: Literal["ready", "generating", "failed"]
     sections: dict[str, ExplanationSection] | None
     generated_at: datetime | None
+    error_code: str | None = None
 
 
 class GameDetailResponse(StrictModel):

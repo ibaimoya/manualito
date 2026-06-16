@@ -39,6 +39,7 @@ from api.responses import (
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
     MANUAL_CONTEXT_NOT_FOUND_RESPONSE,
 )
+from api.worker.tasks.games import generate_game_explanation_task
 
 router = APIRouter()
 
@@ -154,15 +155,19 @@ async def get_game_explanation_handler(
     auth: CurrentAuth,
     game_id: UUID,
     session: DbSession,
-    client: HttpClient,
 ) -> GameExplanationResponse:
-    """Sirve la explicación del juego, regenerándola si el conjunto cambió."""
-    return await get_game_explanation(
+    """Sirve el estado de la explicación y encola generación si falta."""
+    outcome = await get_game_explanation(
         session,
         auth=auth,
         game_id=game_id,
-        client=client,
     )
+    if outcome.job is not None:
+        generate_game_explanation_task.delay(
+            str(outcome.job.user_id),
+            str(outcome.job.game_id),
+        )
+    return outcome.response
 
 
 @router.post(

@@ -34,8 +34,8 @@ async def test_post_json_delega_en_send_request(monkeypatch):
         request_kwargs={
             "url": "http://rag/retrieve",
             "json": {"question": "¿Cómo se gana?"},
-            "timeout": api_client.config.INTERNAL_JSON_TIMEOUT,
         },
+        timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
         unavailable_detail="RAG no disponible.",
         internal_detail="Error RAG.",
     )
@@ -60,6 +60,7 @@ async def test_send_request_maps_internal_404_to_domain_error():
             client=client,
             service_name="RAG",
             request_kwargs={"url": "http://rag/retrieve"},
+            timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
             unavailable_detail="RAG no disponible.",
             internal_detail="Error RAG.",
         )
@@ -86,6 +87,7 @@ async def test_send_request_maps_internal_404_without_json_to_default_detail():
             client=client,
             service_name="RAG",
             request_kwargs={"url": "http://rag/retrieve"},
+            timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
             unavailable_detail="RAG no disponible.",
             internal_detail="Error RAG.",
         )
@@ -112,6 +114,7 @@ async def test_send_request_maps_internal_404_with_non_object_json_to_default_de
             client=client,
             service_name="RAG",
             request_kwargs={"url": "http://rag/retrieve"},
+            timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
             unavailable_detail="RAG no disponible.",
             internal_detail="Error RAG.",
         )
@@ -130,6 +133,7 @@ async def test_send_request_maps_transport_errors_to_unavailable():
             client=client,
             service_name="RAG",
             request_kwargs={"url": "http://rag/ingest"},
+            timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
             unavailable_detail="RAG no disponible.",
             internal_detail="Error RAG.",
         )
@@ -151,6 +155,7 @@ async def test_send_request_maps_invalid_json_to_internal_error():
             client=client,
             service_name="RAG",
             request_kwargs={"url": "http://rag/ingest"},
+            timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
             unavailable_detail="RAG no disponible.",
             internal_detail="Error RAG.",
         )

@@ -1,22 +1,29 @@
 """Configuración validada del servicio API."""
 
-from pydantic import Field
+from pathlib import Path
+from urllib.parse import quote
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT = "30/minute"
 STRICT_ACTION_RATE_LIMIT = "5/minute"
+_CREDENTIAL_ENV_TOKEN = "PASS" + "WORD"
+_REDIS_CREDENTIAL_FILE_ENV = f"REDIS_{_CREDENTIAL_ENV_TOKEN}_FILE"
+_REDIS_CREDENTIAL_ENV = f"REDIS_{_CREDENTIAL_ENV_TOKEN}"
+_REDIS_ALLOW_EMPTY_CREDENTIAL_ENV = f"REDIS_ALLOW_EMPTY_{_CREDENTIAL_ENV_TOKEN}"
 
 
 class ApiSettings(BaseSettings):
     """Carga variables de entorno de API con tipos validados al arrancar."""
 
-    model_config = SettingsConfigDict(env_prefix="", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="", extra="ignore", populate_by_name=True)
 
     app_version: str = Field(min_length=1)
-    max_image_size: int = 20 * 1024 * 1024
-    max_manual_pdf_size: int = 50 * 1024 * 1024
-    max_manual_total_size: int = 50 * 1024 * 1024
-    max_manual_pages: int = Field(default=10, ge=1)
+    max_image_size: int = 30 * 1024 * 1024
+    max_manual_pdf_size: int = 200 * 1024 * 1024
+    max_manual_total_size: int = 200 * 1024 * 1024
+    max_manual_pages: int = Field(default=30, ge=1)
     max_image_pixels: int = Field(default=25_000_000, ge=1)
     pdf_render_dpi: int = Field(default=300, ge=72)
     pdf_text_min_chars: int = Field(default=150, ge=0)
@@ -27,8 +34,33 @@ class ApiSettings(BaseSettings):
     ocr_url: str
     rag_url: str
     llm_url: str
-    llm_unload_before_ocr: bool = True
-    llm_unload_timeout: float = Field(default=5.0, gt=0)
+    redis_host: str = "redis"
+    redis_port: int = Field(default=6379, ge=1, le=65535)
+    redis_credential: str | None = Field(default=None, validation_alias=_REDIS_CREDENTIAL_ENV)
+    redis_credential_file: str | None = Field(
+        default=None,
+        validation_alias=_REDIS_CREDENTIAL_FILE_ENV,
+    )
+    redis_allow_empty_credential: bool = Field(
+        default=False,
+        validation_alias=_REDIS_ALLOW_EMPTY_CREDENTIAL_ENV,
+    )
+    celery_broker_db: int = Field(default=0, ge=0)
+    celery_result_db: int = Field(default=1, ge=0)
+    celery_visibility_timeout: int = Field(default=3600, ge=1)
+    celery_result_expires: int = Field(default=3600, ge=1)
+    celery_gpu_soft_time_limit: int = Field(default=300, ge=1)
+    celery_gpu_hard_time_limit: int = Field(default=360, ge=1)
+    celery_manual_page_soft_time_limit: int = Field(default=900, ge=1)
+    celery_manual_page_hard_time_limit: int = Field(default=1080, ge=1)
+    celery_manual_finalize_soft_time_limit: int = Field(default=900, ge=1)
+    celery_manual_finalize_hard_time_limit: int = Field(default=1080, ge=1)
+    celery_rag_soft_time_limit: int = Field(default=600, ge=1)
+    celery_rag_hard_time_limit: int = Field(default=720, ge=1)
+    celery_mail_soft_time_limit: int = Field(default=60, ge=1)
+    celery_mail_hard_time_limit: int = Field(default=90, ge=1)
+    celery_maintenance_soft_time_limit: int = Field(default=60, ge=1)
+    celery_maintenance_hard_time_limit: int = Field(default=90, ge=1)
     ocr_service_timeout: float = Field(default=300.0, gt=0)
     internal_json_timeout: float = Field(default=120.0, gt=0)
     asset_storage_dir: str = "/app/storage/assets"
@@ -95,6 +127,79 @@ class ApiSettings(BaseSettings):
             "__Host-manualito_csrf" if self.auth_cookie_secure else "manualito_csrf"
         )
 
+    @property
+    def celery_broker_url(self) -> str:
+        """URL Redis que Celery usa como broker."""
+        return self._redis_url(self.celery_broker_db)
+
+    @property
+    def celery_result_backend(self) -> str:
+        """URL Redis que Celery usa para estado técnico temporal."""
+        return self._redis_url(self.celery_result_db)
+
+    def _redis_url(self, database: int) -> str:
+        credential = _secret_or_value(
+            file_path=self.redis_credential_file,
+            value=self.redis_credential,
+        )
+        if not credential and not self.redis_allow_empty_credential:
+            raise RuntimeError(
+                f"Redis necesita {_REDIS_CREDENTIAL_FILE_ENV} o {_REDIS_CREDENTIAL_ENV}. "
+                f"Usa {_REDIS_ALLOW_EMPTY_CREDENTIAL_ENV}=true solo en desarrollo local aislado."
+            )
+        auth = f":{quote(credential, safe='')}@" if credential else ""
+        return f"redis://{auth}{self.redis_host}:{self.redis_port}/{database}"
+
+    @model_validator(mode="after")
+    def _validate_celery_time_limits(self) -> "ApiSettings":
+        """Evita tareas más largas que la ventana de visibilidad de Redis."""
+        pairs = (
+            ("GPU", self.celery_gpu_soft_time_limit, self.celery_gpu_hard_time_limit),
+            (
+                "página de manual",
+                self.celery_manual_page_soft_time_limit,
+                self.celery_manual_page_hard_time_limit,
+            ),
+            (
+                "finalización de manual",
+                self.celery_manual_finalize_soft_time_limit,
+                self.celery_manual_finalize_hard_time_limit,
+            ),
+            ("RAG", self.celery_rag_soft_time_limit, self.celery_rag_hard_time_limit),
+            ("correo", self.celery_mail_soft_time_limit, self.celery_mail_hard_time_limit),
+            (
+                "mantenimiento",
+                self.celery_maintenance_soft_time_limit,
+                self.celery_maintenance_hard_time_limit,
+            ),
+        )
+        for label, soft_limit, hard_limit in pairs:
+            if soft_limit >= hard_limit:
+                raise ValueError(
+                    f"El soft time limit de {label} debe ser menor que el hard time limit."
+                )
+            if hard_limit >= self.celery_visibility_timeout:
+                raise ValueError(
+                    f"El hard time limit de {label} debe ser menor que CELERY_VISIBILITY_TIMEOUT."
+                )
+        return self
+
+
+def _secret_or_value(*, file_path: str | None, value: str | None) -> str | None:
+    """Lee un secreto desde fichero y usa env normal como alternativa."""
+    if file_path:
+        path = Path(file_path)
+        if not path.is_file():
+            raise RuntimeError(f"{_REDIS_CREDENTIAL_FILE_ENV} no apunta a un fichero válido.")
+        secret = path.read_text(encoding="utf-8").strip()
+        if not secret:
+            raise RuntimeError(f"{_REDIS_CREDENTIAL_FILE_ENV} no puede estar vacío.")
+        return secret
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
 
 settings = ApiSettings()
 
@@ -113,8 +218,22 @@ OCR_LOW_CONFIDENCE_THRESHOLD = settings.ocr_low_confidence_threshold
 OCR_URL = settings.ocr_url
 RAG_URL = settings.rag_url
 LLM_URL = settings.llm_url
-LLM_UNLOAD_BEFORE_OCR = settings.llm_unload_before_ocr
-LLM_UNLOAD_TIMEOUT = settings.llm_unload_timeout
+CELERY_BROKER_URL = settings.celery_broker_url
+CELERY_RESULT_BACKEND = settings.celery_result_backend
+CELERY_VISIBILITY_TIMEOUT = settings.celery_visibility_timeout
+CELERY_RESULT_EXPIRES = settings.celery_result_expires
+CELERY_GPU_SOFT_TIME_LIMIT = settings.celery_gpu_soft_time_limit
+CELERY_GPU_HARD_TIME_LIMIT = settings.celery_gpu_hard_time_limit
+CELERY_MANUAL_PAGE_SOFT_TIME_LIMIT = settings.celery_manual_page_soft_time_limit
+CELERY_MANUAL_PAGE_HARD_TIME_LIMIT = settings.celery_manual_page_hard_time_limit
+CELERY_MANUAL_FINALIZE_SOFT_TIME_LIMIT = settings.celery_manual_finalize_soft_time_limit
+CELERY_MANUAL_FINALIZE_HARD_TIME_LIMIT = settings.celery_manual_finalize_hard_time_limit
+CELERY_RAG_SOFT_TIME_LIMIT = settings.celery_rag_soft_time_limit
+CELERY_RAG_HARD_TIME_LIMIT = settings.celery_rag_hard_time_limit
+CELERY_MAIL_SOFT_TIME_LIMIT = settings.celery_mail_soft_time_limit
+CELERY_MAIL_HARD_TIME_LIMIT = settings.celery_mail_hard_time_limit
+CELERY_MAINTENANCE_SOFT_TIME_LIMIT = settings.celery_maintenance_soft_time_limit
+CELERY_MAINTENANCE_HARD_TIME_LIMIT = settings.celery_maintenance_hard_time_limit
 OCR_SERVICE_TIMEOUT = settings.ocr_service_timeout
 INTERNAL_JSON_TIMEOUT = settings.internal_json_timeout
 ASSET_STORAGE_DIR = settings.asset_storage_dir

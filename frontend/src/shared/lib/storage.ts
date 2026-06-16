@@ -11,6 +11,7 @@ import { z } from 'zod';
 const KEY = {
   settings: 'manualito.settings',
   onboardingSeen: 'manualito.onboarding.seen',
+  conversationsSeen: 'manualito.conversations.seen',
 } as const;
 
 // Restos de cuando los manuales y sus respuestas se cacheaban en local.
@@ -28,6 +29,11 @@ const SettingsSchema = z.object({
 // z.output: los defaults rellenan huecos y el tipo runtime va completo.
 export type Settings = z.output<typeof SettingsSchema>;
 const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
+
+// Marca de lectura por conversación: el último "updated_at" que el usuario vio
+// al abrir el chat. Si el de la lista es más nuevo, hay respuesta sin leer.
+const ConversationsSeenSchema = z.record(z.string(), z.string());
+type ConversationsSeen = z.output<typeof ConversationsSeenSchema>;
 
 /* ============================================================
    Low-level safe accessors
@@ -145,6 +151,16 @@ export const storage = {
   },
   resetOnboarding(): void {
     safeRemove(KEY.onboardingSeen);
+  },
+
+  /* Marca de lectura de conversaciones (punto de "sin leer") */
+  readConversationsSeen(): ConversationsSeen {
+    return safeRead(KEY.conversationsSeen, ConversationsSeenSchema, {});
+  },
+  markConversationSeen(conversationId: string, updatedAt: string): void {
+    const seen = safeRead(KEY.conversationsSeen, ConversationsSeenSchema, {});
+    if (seen[conversationId] === updatedAt) return;
+    safeWrite(KEY.conversationsSeen, { ...seen, [conversationId]: updatedAt });
   },
 
   /* Barrido de claves legadas (botón "Borrar datos locales" en settings) */

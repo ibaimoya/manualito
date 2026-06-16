@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import anyio
@@ -8,8 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import api.manuals.retrieval.service as retrieval_service
 import api.manuals.service as manual_service
-from api.exceptions import InternalServiceError, InternalServiceUnavailableError
-from api.manuals.exceptions import GeneratedAnswerTooLongError
+from api.exceptions import InternalServiceError, ManualPageLimitExceededError
+from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualTooLargeError
 from api.manuals.repository import AuthorizedChunk, DeletedManualAssets
 from api.manuals.schemas import GAME_QUESTION_TOP_K_MAX, AnswerResponse
 from api.manuals.validation import ValidatedManualImage
@@ -36,7 +36,7 @@ def test_retrieval_top_k_limits_keep_api_and_rag_in_sync():
 
 @pytest.mark.anyio
 async def test_create_manual_acepta_imagenes_y_crea_paginas_pending(monkeypatch):
-    """El caso de uso deja el trabajo pesado para el procesador background."""
+    """El caso de uso deja el trabajo pesado para el procesador en segundo plano."""
     session = object()
     image = SimpleNamespace(filename="manual.jpg")
     validated_image = _validated_image()
@@ -124,123 +124,181 @@ async def test_create_manual_borra_fichero_si_falla_postgres(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_process_manual_procesa_paginas_e_indexa_chunks(monkeypatch):
-    """El background reabre sus recursos y actualiza DB antes de llamar a RAG."""
+@pytest.mark.parametrize(
+    ("page_count", "accepted"),
+    [(29, True), (30, True), (31, False)],
+    ids=["29_paginas", "30_paginas", "31_paginas"],
+)
+async def test_store_images_page_count_bva(monkeypatch, page_count, accepted):
+    """BVA de páginas por imágenes: se aceptan 30 y se rechazan 31."""
+    monkeypatch.setattr(manual_service.config, "MAX_MANUAL_PAGES", 30)
+    validate_mock = AsyncMock(return_value=_validated_image())
+    save_mock = AsyncMock(side_effect=[f"page-{index}.jpg" for index in range(page_count)])
+    monkeypatch.setattr(manual_service, "validate_manual_image", validate_mock)
+    monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
+    images = [SimpleNamespace(filename=f"page-{index}.jpg") for index in range(page_count)]
+
+    if accepted:
+        stored = await manual_service._store_images(owner_user_id=_USER_ID, images=images)
+        assert len(stored) == page_count
+        assert validate_mock.await_count == page_count
+        assert save_mock.await_count == page_count
+    else:
+        with pytest.raises(ManualPageLimitExceededError):
+            await manual_service._store_images(owner_user_id=_USER_ID, images=images)
+        validate_mock.assert_not_awaited()
+        save_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("total_size", "accepted"),
+    [(9, True), (10, True), (11, False)],
+    ids=["limite_menos_1", "limite_exacto", "limite_mas_1"],
+)
+async def test_store_images_total_size_bva(monkeypatch, total_size, accepted):
+    """BVA del tamaño total de imágenes: el agregado corta en límite + 1."""
+    monkeypatch.setattr(manual_service.config, "MAX_MANUAL_TOTAL_SIZE", 10)
+    validate_mock = AsyncMock(return_value=_validated_image(content=b"x" * total_size))
+    save_mock = AsyncMock(return_value="page-1.jpg")
+    monkeypatch.setattr(manual_service, "validate_manual_image", validate_mock)
+    monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
+
+    if accepted:
+        stored = await manual_service._store_images(
+            owner_user_id=_USER_ID,
+            images=[SimpleNamespace(filename="page-1.jpg")],
+        )
+        assert len(stored) == 1
+        save_mock.assert_awaited_once()
+    else:
+        with pytest.raises(ManualTooLargeError):
+            await manual_service._store_images(
+                owner_user_id=_USER_ID,
+                images=[SimpleNamespace(filename="page-1.jpg")],
+            )
+        save_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("pdf_size", "accepted"),
+    [(9, True), (10, True), (11, False)],
+    ids=["limite_menos_1", "limite_exacto", "limite_mas_1"],
+)
+async def test_store_pdf_total_size_bva(monkeypatch, pdf_size, accepted):
+    """BVA del tamaño total para PDF ya validado antes de persistirlo."""
+    validated_pdf = SimpleNamespace(content=b"x" * pdf_size, page_count=1)
+    monkeypatch.setattr(manual_service.config, "MAX_MANUAL_TOTAL_SIZE", 10)
+    monkeypatch.setattr(
+        manual_service,
+        "validate_manual_pdf",
+        AsyncMock(return_value=validated_pdf),
+    )
+    save_mock = AsyncMock(return_value="manual.pdf")
+    monkeypatch.setattr(manual_service, "save_manual_pdf", save_mock)
+
+    if accepted:
+        stored_images, source_pdf, source_type, page_count = await manual_service._store_upload(
+            owner_user_id=_USER_ID,
+            images=None,
+            pdf=SimpleNamespace(filename="manual.pdf"),
+        )
+        assert stored_images == []
+        assert source_pdf is not None
+        assert source_type == "pdf"
+        assert page_count == 1
+        save_mock.assert_awaited_once()
+    else:
+        with pytest.raises(ManualTooLargeError):
+            await manual_service._store_upload(
+                owner_user_id=_USER_ID,
+                images=None,
+                pdf=SimpleNamespace(filename="manual.pdf"),
+            )
+        save_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_process_manual_devuelve_paginas_pending_para_celery(monkeypatch):
+    """El orquestador solo lista páginas pendientes y no hace OCR en el request."""
+    session = object()
+    page_id = uuid4()
+    _patch_sessionmaker(monkeypatch, session=session)
+    list_mock = AsyncMock(return_value=[page_id])
+    monkeypatch.setattr(manual_service, "list_pending_page_ids_for_processing", list_mock)
+
+    result = await manual_service.process_manual(_MANUAL_ID)
+
+    assert result == [page_id]
+    list_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+
+
+@pytest.mark.anyio
+async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
+    """Una task de página reclama pending -> processing y persiste OCR/chunks."""
     session = object()
     client = object()
-    manual = SimpleNamespace(
-        id=_MANUAL_ID,
-        game_id=_GAME_ID,
-        owner_user_id=_USER_ID,
-        language="es",
-        status="indexing",
-        source_type="images",
-        source_asset_id=None,
-    )
-    page = SimpleNamespace(
-        id=uuid4(),
-        page_number=1,
-        ocr_status="pending",
-        storage_key="manuals/user/manual/page-1.jpg",
-        mime_type="image/jpeg",
-        width=10,
-        height=10,
-        sha256="f" * 64,
-    )
-    chunk = SimpleNamespace(
-        id=_CHUNK_ID,
-        text="Regla uno. Regla dos.",
-        chunk_index=0,
-        source_page=1,
-        content_hash="a" * 64,
-    )
-    _patch_process_resources(monkeypatch, session=session, client=client)
-    monkeypatch.setattr(
-        manual_service,
-        "get_manual_for_processing",
-        AsyncMock(return_value=manual),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "list_pages_for_processing",
-        AsyncMock(return_value=[page]),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "read_stored_file",
-        AsyncMock(return_value=b"image-bytes"),
-    )
+    page_id = uuid4()
+    manual = _manual(source_type="images")
+    page = _image_page(page_id=page_id, page_number=1)
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_http_client(monkeypatch, client=client)
+    claim_mock = AsyncMock(return_value=True)
+    monkeypatch.setattr(manual_service, "claim_page_for_processing", claim_mock)
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
+    monkeypatch.setattr(manual_service, "get_page_for_processing", AsyncMock(return_value=page))
+    monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"image-bytes"))
     monkeypatch.setattr(manual_service, "run_ocr", AsyncMock(return_value=_OCR_LINES))
-    monkeypatch.setattr(manual_service, "next_chunk_index", AsyncMock(return_value=0))
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
-    monkeypatch.setattr(
-        manual_service,
-        "resolve_manual_processed_status",
-        AsyncMock(return_value="active"),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "list_manual_chunks_for_ingest",
-        AsyncMock(return_value=[chunk]),
-    )
-    monkeypatch.setattr(
-        manual_service.internal_client,
-        "post_json",
-        AsyncMock(
-            return_value={
-                "chunks_indexed": 1,
-                "embedding_model": "test-model",
-                "indexed_at": _INDEXED_AT,
-                "chunk_ids": [str(_CHUNK_ID)],
-            }
-        ),
-    )
-    mark_indexed_mock = AsyncMock()
-    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_indexed_mock)
 
-    await manual_service.process_manual(_MANUAL_ID)
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
 
+    claim_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID, page_id=page_id)
     replace_mock.assert_awaited_once()
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["text_source"] == "ocr"
     assert replace_kwargs["text_quality"] == "ok"
     assert replace_kwargs["chunks"][0].source_page == 1
-    mark_indexed_mock.assert_awaited_once()
-    assert mark_indexed_mock.await_args.kwargs["status"] == "active"
+    assert replace_kwargs["chunks"][0].chunk_index == 0
 
 
 @pytest.mark.anyio
-async def test_process_manual_hace_rollback_antes_de_marcar_pagina_fallida(monkeypatch):
-    """Tras un fallo SQL, la sesion debe limpiarse antes de seguir usandola."""
-    events: list[str] = []
-    session = SimpleNamespace(rollback=AsyncMock(side_effect=lambda: events.append("rollback")))
-    manual = SimpleNamespace(
-        id=_MANUAL_ID,
-        game_id=_GAME_ID,
-        owner_user_id=_USER_ID,
-        language="es",
-        status="indexing",
-        source_type="images",
-        source_asset_id=None,
-    )
-    page = SimpleNamespace(
-        id=uuid4(),
-        page_number=1,
-        ocr_status="pending",
-        storage_key="manuals/user/manual/page-1.jpg",
-        mime_type="image/jpeg",
-        width=10,
-        height=10,
-        sha256="f" * 64,
-    )
+async def test_process_manual_page_no_toca_nada_si_no_reclama(monkeypatch):
+    """Si otro worker ya ganó la página, esta task queda en no-op idempotente."""
+    session = object()
+    _patch_sessionmaker(monkeypatch, session=session)
+    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=False))
+    get_manual_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_manual_mock)
 
-    _patch_process_resources(monkeypatch, session=session, client=object())
-    monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
-    monkeypatch.setattr(manual_service, "list_pages_for_processing", AsyncMock(return_value=[page]))
+    await manual_service.process_manual_page(_MANUAL_ID, uuid4())
+
+    get_manual_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_process_manual_page_hace_rollback_antes_de_marcar_pagina_fallida(monkeypatch):
+    """Tras un fallo SQL, la sesión debe limpiarse antes de seguir usándola."""
+    events: list[str] = []
+    page_id = uuid4()
+    session = SimpleNamespace(rollback=AsyncMock(side_effect=lambda: events.append("rollback")))
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_http_client(monkeypatch, client=object())
+    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        manual_service,
+        "get_manual_for_processing",
+        AsyncMock(return_value=_manual(source_type="images")),
+    )
+    monkeypatch.setattr(
+        manual_service,
+        "get_page_for_processing",
+        AsyncMock(return_value=_image_page(page_id=page_id, page_number=1)),
+    )
     monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"image-bytes"))
     monkeypatch.setattr(manual_service, "run_ocr", AsyncMock(return_value=_OCR_LINES))
-    monkeypatch.setattr(manual_service, "next_chunk_index", AsyncMock(return_value=0))
     monkeypatch.setattr(
         manual_service,
         "replace_page_result",
@@ -251,56 +309,47 @@ async def test_process_manual_hace_rollback_antes_de_marcar_pagina_fallida(monke
         "mark_page_failed",
         AsyncMock(side_effect=lambda *_args, **_kwargs: events.append("mark_page_failed")),
     )
-    monkeypatch.setattr(
-        manual_service,
-        "resolve_manual_processed_status",
-        AsyncMock(return_value="failed"),
-    )
-    monkeypatch.setattr(manual_service, "mark_manual_failed", AsyncMock())
 
-    await manual_service.process_manual(_MANUAL_ID)
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
 
     assert events == ["rollback", "mark_page_failed"]
 
 
 @pytest.mark.anyio
-async def test_process_manual_no_hace_nada_si_otro_worker_tiene_el_lock(monkeypatch):
-    """Si otro proceso reclama el manual, esta ejecucion sale sin tocar recursos."""
-    monkeypatch.setattr(manual_service, "manual_lock", lambda _manual_id: _AsyncContext(None))
-    get_manual_mock = AsyncMock()
-    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_manual_mock)
-    async_client_mock = MagicMock()
-    monkeypatch.setattr(manual_service.httpx, "AsyncClient", async_client_mock)
-
-    await manual_service.process_manual(_MANUAL_ID)
-
-    get_manual_mock.assert_not_awaited()
-    async_client_mock.assert_not_called()
-
-
-@pytest.mark.anyio
-async def test_process_manual_marca_failed_si_falla_el_background(monkeypatch):
-    """Un fallo no controlado no deja el manual bloqueado en indexing."""
-    _patch_process_resources(monkeypatch, session=object(), client=object())
+async def test_finalize_manual_no_cierra_si_quedan_paginas_abiertas(monkeypatch):
+    """El finalizador es idempotente y espera a pending/processing."""
+    session = object()
+    _patch_process_resources(monkeypatch, session=session, client=object())
     monkeypatch.setattr(
         manual_service,
         "get_manual_for_processing",
-        AsyncMock(side_effect=RuntimeError("fallo inesperado")),
+        AsyncMock(return_value=_manual(source_type="images")),
     )
-    mark_failed_mock = AsyncMock()
-    monkeypatch.setattr(manual_service, "_mark_manual_failed_safely", mark_failed_mock)
+    monkeypatch.setattr(manual_service, "manual_has_unfinished_pages", AsyncMock(return_value=True))
+    resolve_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "resolve_manual_processed_status", resolve_mock)
 
-    with pytest.raises(RuntimeError, match="fallo inesperado"):
-        await manual_service.process_manual(_MANUAL_ID)
+    await manual_service.finalize_manual(_MANUAL_ID)
 
-    mark_failed_mock.assert_awaited_once_with(_MANUAL_ID)
+    resolve_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_finalize_manual_no_hace_nada_si_otro_worker_tiene_el_lock(monkeypatch):
+    """Si otro proceso está cerrando el manual, esta ejecución sale limpia."""
+    monkeypatch.setattr(manual_service, "manual_lock", lambda _manual_id: _AsyncContext(None))
+    get_manual_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_manual_mock)
+
+    await manual_service.finalize_manual(_MANUAL_ID)
+
+    get_manual_mock.assert_not_awaited()
 
 
 @pytest.mark.anyio
 async def test_replace_page_text_marks_empty_pages_without_text_source(monkeypatch):
-    """Si no hay texto util, la pagina queda completed/empty pero sin fuente."""
+    """Si no hay texto útil, la página queda completed/empty pero sin fuente."""
     replace_mock = AsyncMock()
-    monkeypatch.setattr(manual_service, "next_chunk_index", AsyncMock(return_value=0))
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
 
     await manual_service._replace_page_text(
@@ -319,83 +368,61 @@ async def test_replace_page_text_marks_empty_pages_without_text_source(monkeypat
 
 
 @pytest.mark.anyio
-async def test_process_manual_usa_texto_pdf_aprovechable_sin_ocr(monkeypatch):
-    """Una pagina PDF con texto bueno no se degrada pasandola por OCR."""
+async def test_replace_page_text_usa_indices_estables_por_pagina(monkeypatch):
+    """Cada página tiene un rango propio de chunk_index para evitar carreras."""
+    replace_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
+
+    await manual_service._replace_page_text(
+        object(),
+        manual_id=_MANUAL_ID,
+        page_id=uuid4(),
+        page_number=2,
+        lines=_OCR_LINES,
+        text_source="ocr",
+        confidence_mean=0.9,
+    )
+
+    assert replace_mock.await_args.kwargs["chunks"][0].chunk_index == (
+        manual_service.MANUAL_CHUNK_INDEX_PAGE_STRIDE
+    )
+
+
+@pytest.mark.anyio
+async def test_process_manual_page_usa_texto_pdf_aprovechable_sin_ocr(monkeypatch):
+    """Una página PDF con texto bueno no se degrada pasándola por OCR."""
     session = object()
     client = object()
+    page_id = uuid4()
     source_asset_id = uuid4()
-    manual = SimpleNamespace(
-        id=_MANUAL_ID,
-        game_id=_GAME_ID,
-        owner_user_id=_USER_ID,
-        language="es",
-        status="indexing",
-        source_type="pdf",
-        source_asset_id=source_asset_id,
-    )
-    page = SimpleNamespace(
-        id=uuid4(),
-        page_number=1,
-        ocr_status="pending",
-        storage_key=None,
-        mime_type=None,
-        width=None,
-        height=None,
-        sha256=None,
-    )
+    manual = _manual(source_type="pdf", source_asset_id=source_asset_id)
     text = " ".join(f"regla-{index}" for index in range(40))
-    chunk = SimpleNamespace(
-        id=_CHUNK_ID,
-        text=text,
-        chunk_index=0,
-        source_page=1,
-        content_hash="a" * 64,
-    )
-    _patch_process_resources(monkeypatch, session=session, client=client)
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_http_client(monkeypatch, client=client)
+    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=True))
     monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
+    monkeypatch.setattr(
+        manual_service,
+        "get_page_for_processing",
+        AsyncMock(return_value=_pdf_page(page_id=page_id, page_number=1)),
+    )
     monkeypatch.setattr(
         manual_service,
         "get_asset_for_processing",
         AsyncMock(return_value="manuals/user/manual/source.pdf"),
     )
     monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"%PDF-"))
-    monkeypatch.setattr(manual_service, "list_pages_for_processing", AsyncMock(return_value=[page]))
     monkeypatch.setattr(manual_service, "extract_pdf_page_text", AsyncMock(return_value=text))
     monkeypatch.setattr(manual_service, "pdf_text_is_usable", lambda value: value == text)
     run_ocr_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
     render_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "render_pdf_page", render_mock)
-    monkeypatch.setattr(manual_service, "next_chunk_index", AsyncMock(return_value=0))
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
-    monkeypatch.setattr(
-        manual_service,
-        "resolve_manual_processed_status",
-        AsyncMock(return_value="active"),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "list_manual_chunks_for_ingest",
-        AsyncMock(return_value=[chunk]),
-    )
-    monkeypatch.setattr(
-        manual_service.internal_client,
-        "post_json",
-        AsyncMock(
-            return_value={
-                "chunks_indexed": 1,
-                "embedding_model": "test-model",
-                "indexed_at": _INDEXED_AT,
-                "chunk_ids": [str(_CHUNK_ID)],
-            }
-        ),
-    )
-    monkeypatch.setattr(manual_service, "mark_manual_indexed", AsyncMock())
 
-    await manual_service.process_manual(_MANUAL_ID)
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
 
-    replace_mock.assert_awaited_once()
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["ocr_lines"] == [{"text": text, "confidence": None}]
     assert replace_kwargs["text_source"] == "pdf_text"
@@ -405,47 +432,31 @@ async def test_process_manual_usa_texto_pdf_aprovechable_sin_ocr(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_process_manual_renderiza_pdf_si_el_texto_no_es_aprovechable(monkeypatch):
-    """Una pagina PDF sin texto bueno se renderiza y sigue el OCR normal."""
+async def test_process_manual_page_renderiza_pdf_si_el_texto_no_es_aprovechable(monkeypatch):
+    """Una página PDF sin texto bueno se renderiza y sigue el OCR normal."""
     session = object()
     client = object()
-    source_asset_id = uuid4()
-    manual = SimpleNamespace(
-        id=_MANUAL_ID,
-        game_id=_GAME_ID,
-        owner_user_id=_USER_ID,
-        language="es",
-        status="indexing",
-        source_type="pdf",
-        source_asset_id=source_asset_id,
-    )
-    page = SimpleNamespace(
-        id=uuid4(),
-        page_number=2,
-        ocr_status="pending",
-        storage_key=None,
-        mime_type=None,
-        width=None,
-        height=None,
-        sha256=None,
-    )
+    page_id = uuid4()
     image = _validated_image()
-    chunk = SimpleNamespace(
-        id=_CHUNK_ID,
-        text="Regla uno. Regla dos.",
-        chunk_index=0,
-        source_page=2,
-        content_hash="a" * 64,
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_http_client(monkeypatch, client=client)
+    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        manual_service,
+        "get_manual_for_processing",
+        AsyncMock(return_value=_manual(source_type="pdf", source_asset_id=uuid4())),
     )
-    _patch_process_resources(monkeypatch, session=session, client=client)
-    monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
+    monkeypatch.setattr(
+        manual_service,
+        "get_page_for_processing",
+        AsyncMock(return_value=_pdf_page(page_id=page_id, page_number=2)),
+    )
     monkeypatch.setattr(
         manual_service,
         "get_asset_for_processing",
         AsyncMock(return_value="manuals/user/manual/source.pdf"),
     )
     monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"%PDF-"))
-    monkeypatch.setattr(manual_service, "list_pages_for_processing", AsyncMock(return_value=[page]))
     monkeypatch.setattr(manual_service, "extract_pdf_page_text", AsyncMock(return_value=""))
     monkeypatch.setattr(manual_service, "pdf_text_is_usable", lambda _value: False)
     monkeypatch.setattr(manual_service, "render_pdf_page", AsyncMock(return_value=image))
@@ -454,65 +465,34 @@ async def test_process_manual_renderiza_pdf_si_el_texto_no_es_aprovechable(monke
     attach_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "attach_page_image_asset", attach_mock)
     monkeypatch.setattr(manual_service, "run_ocr", AsyncMock(return_value=_OCR_LINES))
-    monkeypatch.setattr(manual_service, "next_chunk_index", AsyncMock(return_value=0))
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
-    monkeypatch.setattr(
-        manual_service,
-        "resolve_manual_processed_status",
-        AsyncMock(return_value="active"),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "list_manual_chunks_for_ingest",
-        AsyncMock(return_value=[chunk]),
-    )
-    monkeypatch.setattr(
-        manual_service.internal_client,
-        "post_json",
-        AsyncMock(
-            return_value={
-                "chunks_indexed": 1,
-                "embedding_model": "test-model",
-                "indexed_at": _INDEXED_AT,
-                "chunk_ids": [str(_CHUNK_ID)],
-            }
-        ),
-    )
-    monkeypatch.setattr(manual_service, "mark_manual_indexed", AsyncMock())
 
-    await manual_service.process_manual(_MANUAL_ID)
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
 
     save_mock.assert_awaited_once_with(image, owner_user_id=_USER_ID, page_number=2)
     attach_mock.assert_awaited_once()
     assert attach_mock.await_args.kwargs["storage_key"] == "manuals/user/manual/page-2.jpg"
-    replace_mock.assert_awaited_once()
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["text_source"] == "ocr"
     assert replace_kwargs["chunks"][0].source_page == 2
 
 
 @pytest.mark.anyio
-async def test_process_manual_marca_failed_si_rag_responde_payload_invalido(monkeypatch):
+async def test_finalize_manual_marca_failed_si_rag_responde_payload_invalido(monkeypatch):
     """Un fallo de indexado deja el manual marcado para reintento."""
     session = object()
     _patch_process_resources(monkeypatch, session=session, client=object())
     monkeypatch.setattr(
         manual_service,
         "get_manual_for_processing",
-        AsyncMock(
-            return_value=SimpleNamespace(
-                id=_MANUAL_ID,
-                game_id=_GAME_ID,
-                owner_user_id=_USER_ID,
-                language=None,
-                status="indexing",
-                source_type="images",
-                source_asset_id=None,
-            )
-        ),
+        AsyncMock(return_value=_manual(source_type="images", language=None)),
     )
-    monkeypatch.setattr(manual_service, "list_pages_for_processing", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        manual_service,
+        "manual_has_unfinished_pages",
+        AsyncMock(return_value=False),
+    )
     monkeypatch.setattr(
         manual_service,
         "resolve_manual_processed_status",
@@ -542,9 +522,25 @@ async def test_process_manual_marca_failed_si_rag_responde_payload_invalido(monk
     monkeypatch.setattr(manual_service, "mark_manual_failed", mark_failed_mock)
 
     with pytest.raises(InternalServiceError):
-        await manual_service.process_manual(_MANUAL_ID)
+        await manual_service.finalize_manual(_MANUAL_ID)
 
     mark_failed_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+
+
+@pytest.mark.anyio
+async def test_recover_stale_manual_pages_usa_cutoff_del_hard_limit(monkeypatch):
+    """El sweeper falla páginas abandonadas con margen sobre el hard limit."""
+    session = object()
+    _patch_sessionmaker(monkeypatch, session=session)
+    mark_mock = AsyncMock(return_value=[_MANUAL_ID])
+    monkeypatch.setattr(manual_service, "mark_stale_processing_pages_failed", mark_mock)
+
+    result = await manual_service.recover_stale_manual_pages()
+
+    assert result == [_MANUAL_ID]
+    cutoff = mark_mock.await_args.kwargs["cutoff"]
+    assert cutoff.tzinfo is not None
+    assert cutoff < manual_service.datetime.now(manual_service.UTC)
 
 
 @pytest.mark.anyio
@@ -701,26 +697,22 @@ async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
 
 @pytest.mark.anyio
 async def test_delete_manual_soft_deletes_then_cleans_rag_and_files(monkeypatch):
-    """El borrado confirma Postgres antes de limpiar índice y storage."""
+    """El borrado confirma Postgres, limpia storage y devuelve chunks derivados."""
     deleted = DeletedManualAssets(
         manual_id=_MANUAL_ID,
         chunk_ids=[_CHUNK_ID],
         storage_keys=["manuals/user/manual/page-1.jpg"],
     )
     soft_delete_mock = AsyncMock(return_value=deleted)
-    post_json_mock = AsyncMock(return_value={"status": "deleted", "chunks_deleted": 1})
     delete_file_mock = AsyncMock(return_value=True)
     monkeypatch.setattr(manual_service, "soft_delete_user_manual", soft_delete_mock)
-    monkeypatch.setattr(manual_service.internal_client, "post_json", post_json_mock)
     monkeypatch.setattr(manual_service, "delete_stored_file", delete_file_mock)
     session = object()
-    client = object()
 
-    await manual_service.delete_manual(
+    chunk_ids = await manual_service.delete_manual(
         session,
         auth=_auth(),
         manual_id=_MANUAL_ID,
-        client=client,
     )
 
     soft_delete_mock.assert_awaited_once_with(
@@ -728,17 +720,13 @@ async def test_delete_manual_soft_deletes_then_cleans_rag_and_files(monkeypatch)
         owner_user_id=_USER_ID,
         manual_id=_MANUAL_ID,
     )
-    post_json_mock.assert_awaited_once()
-    assert post_json_mock.await_args.kwargs["payload"] == {
-        "manual_id": str(_MANUAL_ID),
-        "chunk_ids": [str(_CHUNK_ID)],
-    }
+    assert chunk_ids == [_CHUNK_ID]
     delete_file_mock.assert_awaited_once_with("manuals/user/manual/page-1.jpg")
 
 
 @pytest.mark.anyio
-async def test_delete_manual_continues_when_rag_cleanup_fails(monkeypatch):
-    """Un fallo limpiando Chroma no impide borrar el fichero ya no activo."""
+async def test_delete_manual_continues_when_file_cleanup_fails(monkeypatch):
+    """Un fallo borrando storage no deshace el borrado lógico ya confirmado."""
     deleted = DeletedManualAssets(
         manual_id=_MANUAL_ID,
         chunk_ids=[_CHUNK_ID],
@@ -749,21 +737,16 @@ async def test_delete_manual_continues_when_rag_cleanup_fails(monkeypatch):
         "soft_delete_user_manual",
         AsyncMock(return_value=deleted),
     )
-    monkeypatch.setattr(
-        manual_service.internal_client,
-        "post_json",
-        AsyncMock(side_effect=InternalServiceUnavailableError("RAG no disponible.")),
-    )
     delete_file_mock = AsyncMock(return_value=False)
     monkeypatch.setattr(manual_service, "delete_stored_file", delete_file_mock)
 
-    await manual_service.delete_manual(
+    chunk_ids = await manual_service.delete_manual(
         object(),
         auth=_auth(),
         manual_id=_MANUAL_ID,
-        client=object(),
     )
 
+    assert chunk_ids == [_CHUNK_ID]
     delete_file_mock.assert_awaited_once_with("manuals/user/manual/page-1.jpg")
 
 
@@ -796,19 +779,71 @@ class _AsyncContext:
 
 
 def _patch_process_resources(monkeypatch, *, session, client) -> None:
-    """Inyecta recursos propios del procesador background."""
+    """Inyecta recursos propios del procesador en segundo plano."""
     monkeypatch.setattr(manual_service, "manual_lock", lambda _manual_id: _AsyncContext(session))
-    monkeypatch.setattr(
-        manual_service.httpx,
-        "AsyncClient",
-        lambda: _AsyncContext(client),
+    _patch_http_client(monkeypatch, client=client)
+
+
+def _patch_sessionmaker(monkeypatch, *, session) -> None:
+    """Inyecta una sesión fake para servicios que abren su propia unidad de trabajo."""
+    monkeypatch.setattr(manual_service, "get_sessionmaker", lambda: lambda: _AsyncContext(session))
+
+
+def _patch_http_client(monkeypatch, *, client) -> None:
+    """Inyecta un cliente HTTP fake para servicios que llaman a OCR/RAG."""
+    monkeypatch.setattr(manual_service.httpx, "AsyncClient", lambda: _AsyncContext(client))
+
+
+def _manual(
+    *,
+    source_type: str,
+    source_asset_id=None,
+    language: str | None = "es",
+):
+    """Construye un manual mínimo para el pipeline de procesamiento."""
+    return SimpleNamespace(
+        id=_MANUAL_ID,
+        game_id=_GAME_ID,
+        owner_user_id=_USER_ID,
+        language=language,
+        status="indexing",
+        source_type=source_type,
+        source_asset_id=source_asset_id,
     )
 
 
-def _validated_image() -> ValidatedManualImage:
+def _image_page(*, page_id, page_number: int):
+    """Construye una página con imagen ya persistida en storage."""
+    return SimpleNamespace(
+        id=page_id,
+        page_number=page_number,
+        ocr_status="processing",
+        storage_key=f"manuals/user/manual/page-{page_number}.jpg",
+        mime_type="image/jpeg",
+        width=10,
+        height=10,
+        sha256="f" * 64,
+    )
+
+
+def _pdf_page(*, page_id, page_number: int):
+    """Construye una página PDF aún sin imagen renderizada."""
+    return SimpleNamespace(
+        id=page_id,
+        page_number=page_number,
+        ocr_status="processing",
+        storage_key=None,
+        mime_type=None,
+        width=None,
+        height=None,
+        sha256=None,
+    )
+
+
+def _validated_image(*, content: bytes = b"image-bytes") -> ValidatedManualImage:
     """Devuelve una imagen validada mínima para el servicio."""
     return ValidatedManualImage(
-        content=b"image-bytes",
+        content=content,
         mime_type="image/jpeg",
         extension=".jpg",
         width=10,

@@ -24,6 +24,7 @@ import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { GameTypeahead, SelectedGameChip } from '@/features/upload/GameTypeahead';
 import { gameDetailKey, gameDetailQueryOptions, myGamesKey } from '@/features/games/use-games';
+import { manualsKey } from '@/features/manual/use-manuals';
 import { api, isAbortApiError, type GameSearchItem } from '@/shared/api/client';
 import type { GameDetail } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
@@ -133,6 +134,9 @@ function NewManualScreen() {
       // Subir un manual sigue el juego en el backend: refresca detalle y biblioteca.
       qc.invalidateQueries({ queryKey: gameDetailKey(data.game_id) }).catch(() => undefined);
       qc.invalidateQueries({ queryKey: myGamesKey }).catch(() => undefined);
+      // Y la lista de manuales: alimenta las ruletas contextuales (portada/tarjeta),
+      // que si no, no se enteran de que el nuevo manual está indexándose.
+      qc.invalidateQueries({ queryKey: manualsKey }).catch(() => undefined);
       navigate({
         to: '/processing/$manualId',
         params: { manualId: data.manual_id },

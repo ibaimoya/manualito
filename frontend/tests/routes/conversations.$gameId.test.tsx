@@ -39,7 +39,7 @@ describe('/conversations/$gameId', () => {
     );
   });
 
-  it('una conversación generando muestra la ruleta de estado en su fila', async () => {
+  it('una conversación generando muestra «Manualito está respondiendo» en su fila', async () => {
     server.use(
       http.get('/api/games/:gameId/conversations', () =>
         HttpResponse.json({
@@ -58,9 +58,7 @@ describe('/conversations/$gameId', () => {
       ),
     );
     renderConversations();
-    expect(
-      await screen.findByRole('status', { name: /Generando respuesta/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Manualito está respondiendo/i)).toBeInTheDocument();
   });
 
   it('respuesta nueva sin abrir muestra el punto de sin leer; vista no', async () => {

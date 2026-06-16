@@ -1,8 +1,6 @@
 import { MessagesSquare } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/shared/lib/cn';
 
-type ConversationActivityState = 'idle' | 'pending' | 'unread';
 type ConversationActivitySize = 'sm' | 'md';
 type ConversationActivityTone = 'primary' | 'accent';
 
@@ -16,12 +14,17 @@ const TONE_CLASS: Record<ConversationActivityTone, string> = {
   accent: 'bg-accent-100 text-accent',
 };
 
-function activityState(hasPendingReply: boolean, unread: boolean): ConversationActivityState {
-  if (hasPendingReply) return 'pending';
-  if (unread) return 'unread';
-  return 'idle';
-}
+/** Color del halo que late bajo el glifo mientras se responde, según el tono. */
+const TONE_HALO: Record<ConversationActivityTone, string> = {
+  primary: 'rgba(246, 149, 59, 0.20)',
+  accent: 'rgba(124, 192, 232, 0.20)',
+};
 
+/**
+ * Glifo de la conversación. Mientras se responde late con un halo (sin ruleta:
+ * el cometa del borde y el texto de la fila ya cuentan que está en curso); con
+ * respuesta sin leer muestra un punto. "unread" y "hasPendingReply" se excluyen.
+ */
 export function ConversationActivityIcon({
   hasPendingReply,
   unread,
@@ -35,36 +38,25 @@ export function ConversationActivityIcon({
   tone?: ConversationActivityTone;
   className?: string;
 }>) {
-  const state = activityState(hasPendingReply, unread);
   const iconSize = size === 'sm' ? 16 : 18;
-  const spinnerSize = size === 'sm' ? 10 : 11;
-  const pendingBadgeSize = size === 'sm' ? 'size-5' : 'size-[22px]';
   const unreadBadgeSize = size === 'sm' ? 'size-2.5' : 'size-3';
 
+  // Respondiendo: el texto de la fila ya lo anuncia, así que el glifo es decorativo.
   return (
     <span
-      aria-hidden={state === 'idle' ? 'true' : undefined}
-      aria-label={state === 'unread' ? 'Respuesta sin leer' : undefined}
+      aria-hidden={unread ? undefined : 'true'}
+      aria-label={unread ? 'Respuesta sin leer' : undefined}
+      style={hasPendingReply ? { '--proc-halo': TONE_HALO[tone] } : undefined}
       className={cn(
         'relative grid shrink-0 place-items-center rounded-xl',
         SIZE_CLASS[size],
         TONE_CLASS[tone],
+        hasPendingReply && 'proc-glyph-pulse',
         className,
       )}
     >
       <MessagesSquare size={iconSize} strokeWidth={size === 'sm' ? 2 : 1.9} aria-hidden="true" />
-      {state === 'pending' ? (
-        <output
-          aria-label="Generando respuesta"
-          className={cn(
-            'absolute -bottom-1 -right-1 grid place-items-center rounded-full bg-black/55 ring-2 ring-card',
-            pendingBadgeSize,
-          )}
-        >
-          <Spinner size={spinnerSize} className="text-white" />
-        </output>
-      ) : null}
-      {state === 'unread' ? (
+      {unread && !hasPendingReply ? (
         <span
           aria-hidden="true"
           className={cn(
@@ -73,6 +65,23 @@ export function ConversationActivityIcon({
           )}
         />
       ) : null}
+    </span>
+  );
+}
+
+/**
+ * «Manualito está respondiendo» con sus puntitos. Reemplaza la fecha en la fila
+ * mientras se genera la respuesta; compartida por la banda del hub y la lista.
+ */
+export function AnsweringLine() {
+  return (
+    <span className="flex items-center gap-2 text-[13px] font-semibold text-primary-700">
+      <span>Manualito está respondiendo</span>
+      <span className="proc-dots" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="proc-tinydot" style={{ animationDelay: `${i * 0.16}s` }} />
+        ))}
+      </span>
     </span>
   );
 }

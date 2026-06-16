@@ -32,22 +32,21 @@ export function ManualCard({ manual, meta, className }: Props) {
       <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>
         <div className="flex items-center gap-3">
           <div
-            className="relative grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
             style={{ background: gameColor(name), color: '#FFF8F0' }}
             aria-hidden="true"
           >
             <span className="font-display text-base font-bold uppercase">{name.slice(0, 2)}</span>
-            {indexing ? (
-              <span className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full bg-black/55 ring-2 ring-card">
-                <Spinner size={10} className="text-white" />
-              </span>
-            ) : null}
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold text-fg">{name}</div>
             {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
-          <Badge tone={indexing ? 'primary' : 'neutral'} className="hidden @sm:inline-flex">
+          <Badge
+            tone={indexing ? 'primary' : 'neutral'}
+            icon={indexing ? <Spinner size={10} /> : undefined}
+            className="hidden @sm:inline-flex"
+          >
             {indexing ? 'Procesando…' : 'Listo'}
           </Badge>
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />

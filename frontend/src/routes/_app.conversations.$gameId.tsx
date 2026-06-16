@@ -14,7 +14,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { ConversationActivityIcon } from '@/features/conversations/ConversationActivityIcon';
+import {
+  AnsweringLine,
+  ConversationActivityIcon,
+} from '@/features/conversations/ConversationActivityIcon';
 import { GameCover } from '@/features/games/GameCover';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { gameDetailQueryOptions } from '@/features/games/use-games';
@@ -165,6 +168,7 @@ function ConversationCard({
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const title = conversation.title ?? 'Conversación sin título';
+  const pending = conversation.has_pending_reply;
 
   function openChat(): void {
     navigate({
@@ -191,19 +195,20 @@ function ConversationCard({
   return (
     <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
       <Card
+        style={pending ? { borderColor: 'transparent', '--proc-radius': '21px' } : undefined}
         className={cn(
           'relative flex items-start gap-3 p-3.5',
           'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-          'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
+          !pending && 'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
           'active:translate-y-0 active:shadow-xs',
         )}
       >
         <ConversationActivityIcon
-          hasPendingReply={conversation.has_pending_reply}
+          hasPendingReply={pending}
           unread={unread}
           size="md"
           tone="accent"
-          className="transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
+          className="relative z-[1] transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
         />
         {/* Botón principal: su ::after se estira sobre toda la card, así que se
             abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
@@ -211,7 +216,7 @@ function ConversationCard({
           type="button"
           onClick={openChat}
           className={cn(
-            'min-w-0 flex-1 cursor-pointer text-left',
+            'relative z-[1] min-w-0 flex-1 cursor-pointer text-left',
             "after:absolute after:inset-0 after:rounded-2xl after:content-['']",
             'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
           )}
@@ -220,13 +225,21 @@ function ConversationCard({
             <span className="min-w-0 flex-1 truncate font-display text-[15px] font-bold text-fg">
               {title}
             </span>
-            <span className="mono shrink-0 text-[11px] text-fg-3">
-              {formatRelative(conversation.updated_at)}
+            {pending ? null : (
+              <span className="mono shrink-0 text-[11px] text-fg-3">
+                {formatRelative(conversation.updated_at)}
+              </span>
+            )}
+          </span>
+          {pending ? (
+            <span className="mt-1 block">
+              <AnsweringLine />
             </span>
-          </span>
-          <span className="mt-0.5 block text-xs text-fg-3">
-            abierta el {formatShortDate(conversation.created_at)}
-          </span>
+          ) : (
+            <span className="mt-0.5 block text-xs text-fg-3">
+              abierta el {formatShortDate(conversation.created_at)}
+            </span>
+          )}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -253,6 +266,7 @@ function ConversationCard({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {pending ? <span className="proc-border" aria-hidden="true" /> : null}
       </Card>
 
       <RenameDialog

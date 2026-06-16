@@ -34,7 +34,7 @@ import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
 import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
-import { manualDetailQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
+import { manualDetailQueryOptions, manualsKey, useDeleteManual } from '@/features/manual/use-manuals';
 import { formatLongDate } from '@/shared/lib/relativeDate';
 import {
   api,
@@ -213,6 +213,9 @@ function ManualDetailLoaded({
     onSuccess: () => {
       setReprocessOpen(false);
       qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
+      // Reprocesar vuelve a poner el manual en "indexing": refresca la lista para
+      // que las ruletas contextuales de la biblioteca vuelvan a encenderse.
+      qc.invalidateQueries({ queryKey: manualsKey }).catch(() => undefined);
     },
     onError: (error) => {
       setReprocessOpen(false);

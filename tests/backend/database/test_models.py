@@ -220,6 +220,7 @@ def test_manual_pages_schema_embeds_ocr_lines_as_jsonb_array():
         "ck_manual_pages_text_quality_valid",
         "ck_manual_pages_ocr_confidence_mean_valid",
     }
+    assert "processing" in _compile(_check(pages, "ck_manual_pages_ocr_status_valid").sqltext)
 
     assert _index(pages, "ix_manual_pages_manual_id") is not None
     assert _index(pages, "ix_manual_pages_image_asset_id") is not None
@@ -296,11 +297,15 @@ def test_game_explanations_schema_is_cached_per_game():
     assert "user_id" not in explanations.c
     assert _single_fk(explanations.c.game_id).ondelete == "RESTRICT"
     assert isinstance(explanations.c.sections.type, postgresql.JSONB)
+    assert explanations.c.status.type.length == 16
+    assert explanations.c.error_code.nullable is True
     assert explanations.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
     assert _index(explanations, "uq_game_explanations_game_id").unique is True
     assert _check_names(explanations) == {
+        "ck_game_explanations_error_code_only_when_failed",
         "ck_game_explanations_sections_object",
         "ck_game_explanations_source_fingerprint_length_valid",
+        "ck_game_explanations_status_valid",
     }
 
 
@@ -325,16 +330,24 @@ def test_messages_schema_cascades_from_conversation_and_limits_roles():
     messages = Base.metadata.tables["messages"]
 
     assert _single_fk(messages.c.conversation_id).ondelete == "CASCADE"
+    assert _single_fk(messages.c.reply_to_message_id).ondelete == "SET NULL"
     assert isinstance(messages.c.content.type, Text)
     assert isinstance(messages.c.sources.type, postgresql.JSONB)
+    assert messages.c.status.type.length == 16
+    assert messages.c.error_code.type.length == 64
     assert str(messages.c.sources.server_default.arg) == "'[]'::jsonb"
     assert _check_names(messages) >= {
+        "ck_messages_content_required_when_completed",
+        "ck_messages_error_code_only_when_failed",
         "ck_messages_role_valid",
-        "ck_messages_content_not_empty",
+        "ck_messages_reply_only_for_assistant",
+        "ck_messages_status_valid",
+        "ck_messages_user_messages_completed",
         "ck_messages_content_length_valid",
         "ck_messages_sources_array",
     }
     assert _index(messages, "ix_messages_conversation_created") is not None
+    assert _index(messages, "ix_messages_reply_to_message_id") is not None
 
 
 def _index(table, name: str):

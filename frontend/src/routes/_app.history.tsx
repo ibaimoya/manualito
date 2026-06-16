@@ -25,7 +25,13 @@ import { Meeple } from '@/shared/components/Brand';
 import { GameCover } from '@/features/games/GameCover';
 import { GameJumpSearch } from '@/features/games/GameJumpSearch';
 import { myGamesQueryOptions } from '@/features/games/use-games';
-import { manualsQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
+import {
+  manualsQueryOptions,
+  useDeleteManual,
+  useManualProgress,
+  useProcessingManuals,
+} from '@/features/manual/use-manuals';
+import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
 import { type MyGame, type MyGamesResponse } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
@@ -163,11 +169,14 @@ function ManualsView({
 
 // ── Tarjeta de juego — estantería (portada arriba) ──────────────────────────
 function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
+  const { gameIds, processingByGame } = useProcessingManuals();
+  const processing = gameIds.has(game.id);
+  const progress = useManualProgress(processingByGame.get(game.id));
   return (
     <Link
       to="/game/$gameId"
       params={{ gameId: game.id }}
-      aria-label={`Abrir ${game.name}`}
+      aria-label={`Abrir ${game.name}${processing ? ' (procesando un manual)' : ''}`}
       className={cn(
         'group flex flex-col overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-xs',
         'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
@@ -177,7 +186,7 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
     >
       <div className="flex justify-center px-5 pt-5">
         <div className="transition-[rotate,scale] duration-150 ease-[var(--ease-mn)] group-hover:-rotate-2 group-hover:scale-[1.02]">
-          <GameCover name={game.name} size={132} radius={16} />
+          <GameCover name={game.name} size={132} radius={16} processing={processing} />
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-[18px] pb-[18px] pt-4">
@@ -189,20 +198,42 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
             <span className="mono shrink-0 text-[11px] text-fg-3">{game.year_published}</span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[13px] text-fg-2">
-          <span className="inline-flex items-center gap-[5px]">
-            <ScrollText size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
-            {game.manuals_count} {game.manuals_count === 1 ? 'manual' : 'manuales'}
-          </span>
-          <Dot />
-          <span className="inline-flex items-center gap-[5px]">
-            <Sparkles size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
-            {game.conversations_count} {game.conversations_count === 1 ? 'chat' : 'chats'}
-          </span>
-        </div>
-        <div className="mono mt-1.5 text-[10.5px] uppercase tracking-[0.08em] text-fg-3">
-          Actividad · {formatRelative(game.last_activity_at)}
-        </div>
+        {processing ? (
+          <div className="mt-1 flex flex-col gap-[7px]">
+            <div className="flex items-center gap-2">
+              <Spinner size={14} className="text-primary" />
+              <span className="min-w-0 flex-1 text-[13px] font-semibold text-fg" aria-live="polite">
+                Leyendo el manual
+              </span>
+              <span className="mono text-[11px] font-bold tabular-nums text-primary-700">
+                {progress?.pct ?? 0}%
+              </span>
+            </div>
+            <ProgressBar pct={progress?.pct ?? 0} />
+            <span className="mono text-[10.5px] tracking-[0.06em] text-fg-3">
+              {progress
+                ? `PÁGINA ${progress.page} DE ${progress.total} · DISPONIBLE EN UNOS SEGUNDOS`
+                : 'DISPONIBLE EN UNOS SEGUNDOS'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[13px] text-fg-2">
+              <span className="inline-flex items-center gap-[5px]">
+                <ScrollText size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
+                {game.manuals_count} {game.manuals_count === 1 ? 'manual' : 'manuales'}
+              </span>
+              <Dot />
+              <span className="inline-flex items-center gap-[5px]">
+                <Sparkles size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
+                {game.conversations_count} {game.conversations_count === 1 ? 'chat' : 'chats'}
+              </span>
+            </div>
+            <div className="mono mt-1.5 text-[10.5px] uppercase tracking-[0.08em] text-fg-3">
+              Actividad · {formatRelative(game.last_activity_at)}
+            </div>
+          </>
+        )}
       </div>
     </Link>
   );
@@ -216,6 +247,7 @@ function ManualDocCard({
   const [confirming, setConfirming] = useState(false);
   const st = manualStatusView(manual.status);
   const indexing = manual.status === 'indexing';
+  const progress = useManualProgress(indexing ? manual.id : undefined);
   const isPdf = manual.source_type === 'pdf';
   const name = manual.title ?? manual.game_name;
 
@@ -240,10 +272,10 @@ function ManualDocCard({
         'hover:-translate-y-px hover:border-border-strong hover:shadow-sm',
       )}
     >
-      <ManualThumb pdf={isPdf} />
+      <ManualThumb pdf={isPdf} processing={indexing} />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge tone={st.tone} icon={st.icon}>
+          <Badge tone={st.tone} icon={indexing ? <Spinner size={11} /> : st.icon}>
             {st.label}
           </Badge>
           <Badge
@@ -263,14 +295,31 @@ function ManualDocCard({
           {name}
         </Link>
         <div className="mt-px text-xs text-fg-3">Manual de {manual.game_name}</div>
-        <div className="mono mt-auto flex flex-wrap items-center gap-2 pt-[9px] text-[10.5px] tracking-[0.04em] text-fg-3">
-          {meta.map((node, i) => (
-            <Fragment key={node.key}>
-              {i > 0 ? <Dot /> : null}
-              {node}
-            </Fragment>
-          ))}
-        </div>
+        {indexing ? (
+          <div className="mt-auto pt-[10px]">
+            <div className="mb-[5px] flex items-center justify-between">
+              <span
+                className="mono text-[10.5px] font-semibold tracking-[0.04em] text-fg-2"
+                aria-live="polite"
+              >
+                LEYENDO PÁGINA {progress?.page ?? 1} DE {manual.page_count}
+              </span>
+              <span className="mono text-[10.5px] font-bold tabular-nums text-primary-700">
+                {progress?.pct ?? 0}%
+              </span>
+            </div>
+            <ProgressBar pct={progress?.pct ?? 0} />
+          </div>
+        ) : (
+          <div className="mono mt-auto flex flex-wrap items-center gap-2 pt-[9px] text-[10.5px] tracking-[0.04em] text-fg-3">
+            {meta.map((node, i) => (
+              <Fragment key={node.key}>
+                {i > 0 ? <Dot /> : null}
+                {node}
+              </Fragment>
+            ))}
+          </div>
+        )}
       </div>
 
       <button
@@ -304,19 +353,24 @@ function ManualDocCard({
   );
 }
 
-/** Miniatura de hoja con el formato (PDF/fotos) en una esquina. */
-function ManualThumb({ pdf }: Readonly<{ pdf: boolean }>) {
+/** Miniatura de hoja con el formato (PDF/fotos) en una esquina. Indexándose,
+ *  un barrido recorre la hoja (el sello de formato queda fuera del recorte). */
+function ManualThumb({ pdf, processing = false }: Readonly<{ pdf: boolean; processing?: boolean }>) {
   return (
-    <span
-      aria-hidden="true"
-      className="relative flex h-[66px] w-[52px] shrink-0 flex-col gap-1 self-start rounded-[9px] border border-border-strong bg-surface px-[9px] pb-[9px] pt-[11px] shadow-xs"
-    >
-      {[88, 64, 80, 54].map((w) => (
-        <span key={w} className="h-[2.5px] rounded-sm bg-border-strong" style={{ width: `${w}%` }} />
-      ))}
+    <span aria-hidden="true" className="relative h-[66px] w-[52px] shrink-0 self-start">
+      <span className="absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-[9px] border border-border-strong bg-surface px-[9px] pb-[9px] pt-[11px] shadow-xs">
+        {[88, 64, 80, 54].map((w) => (
+          <span
+            key={w}
+            className="h-[2.5px] rounded-sm bg-border-strong"
+            style={{ width: `${w}%` }}
+          />
+        ))}
+        {processing ? <span className="proc-scan" /> : null}
+      </span>
       <span
         className={cn(
-          'absolute -right-[7px] -top-[7px] grid size-6 place-items-center rounded-[7px] text-fg-inv shadow-sm',
+          'absolute -right-[7px] -top-[7px] z-[1] grid size-6 place-items-center rounded-[7px] text-fg-inv shadow-sm',
           pdf ? 'bg-primary' : 'bg-accent',
         )}
       >
@@ -460,6 +514,20 @@ function Dot() {
   );
 }
 
+/** Barra de progreso de indexado, relleno degradado. Decorativa: el progreso
+ *  real lo anuncia el texto "LEYENDO PÁGINA X DE Y · %" (con aria-live) al lado,
+ *  así que la barra es solo visual y no duplica el rol progressbar. */
+function ProgressBar({ pct }: Readonly<{ pct: number }>) {
+  return (
+    <div aria-hidden="true" className="h-[5px] overflow-hidden rounded-full bg-surface-2">
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-500 transition-[width] duration-[120ms] ease-linear"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
 function manualStatusView(
   status: ManualStatus,
 ): { tone: 'success' | 'warning' | 'error' | 'neutral'; label: string; icon: ReactNode } {
@@ -471,7 +539,9 @@ function manualStatusView(
     case 'failed':
       return { tone: 'error', label: 'Error', icon: <AlertTriangle /> };
     case 'pending_review':
-      return { tone: 'warning', label: 'En revisión', icon: <Clock /> };
+      // OCR dudoso en alguna página (fallo o baja confianza): no es moderación,
+      // avisa de que conviene repasar el texto. Ámbar + triángulo = "algo pasa".
+      return { tone: 'warning', label: 'Revisar', icon: <AlertTriangle /> };
     default:
       return { tone: 'neutral', label: 'Oculto', icon: <Clock /> };
   }

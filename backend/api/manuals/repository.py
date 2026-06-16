@@ -253,12 +253,33 @@ async def get_manual_for_processing(
     return manual
 
 
-async def list_pages_for_processing(
+async def list_pending_page_ids_for_processing(
     session: AsyncSession,
     *,
     manual_id: UUID,
-) -> list[Row]:
-    """Lista páginas en orden con asset de imagen si ya existe."""
+) -> list[UUID]:
+    """Lista páginas pendientes de un manual que sigue en procesamiento."""
+    result = await session.execute(
+        select(ManualPage.id)
+        .join(Manual, Manual.id == ManualPage.manual_id)
+        .where(
+            Manual.id == manual_id,
+            Manual.status == "indexing",
+            Manual.deleted_at.is_(None),
+            ManualPage.ocr_status == "pending",
+        )
+        .order_by(ManualPage.page_number.asc())
+    )
+    return list(result.scalars())
+
+
+async def get_page_for_processing(
+    session: AsyncSession,
+    *,
+    manual_id: UUID,
+    page_id: UUID,
+) -> Row | None:
+    """Carga una página concreta con su asset de imagen si ya existe."""
     result = await session.execute(
         select(
             ManualPage.id,
@@ -271,10 +292,84 @@ async def list_pages_for_processing(
             Asset.sha256,
         )
         .outerjoin(Asset, ManualPage.image_asset_id == Asset.id)
-        .where(ManualPage.manual_id == manual_id)
-        .order_by(ManualPage.page_number.asc())
+        .where(
+            ManualPage.id == page_id,
+            ManualPage.manual_id == manual_id,
+        )
     )
-    return list(result)
+    return result.one_or_none()
+
+
+async def claim_page_for_processing(
+    session: AsyncSession,
+    *,
+    manual_id: UUID,
+    page_id: UUID,
+) -> bool:
+    """Pasa una página pendiente a processing sin pisar otros workers."""
+    result = await session.execute(
+        update(ManualPage)
+        .where(
+            ManualPage.id == page_id,
+            ManualPage.manual_id == manual_id,
+            ManualPage.ocr_status == "pending",
+            ManualPage.manual_id.in_(
+                select(Manual.id).where(
+                    Manual.id == manual_id,
+                    Manual.status == "indexing",
+                    Manual.deleted_at.is_(None),
+                )
+            ),
+        )
+        .values(ocr_status="processing")
+        .returning(ManualPage.id)
+    )
+    claimed = result.scalar_one_or_none() is not None
+    await session.commit()
+    return claimed
+
+
+async def manual_has_unfinished_pages(
+    session: AsyncSession,
+    *,
+    manual_id: UUID,
+) -> bool:
+    """Indica si quedan páginas pendientes o en ejecución."""
+    result = await session.execute(
+        select(ManualPage.id)
+        .where(
+            ManualPage.manual_id == manual_id,
+            ManualPage.ocr_status.in_(("pending", "processing")),
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def mark_stale_processing_pages_failed(
+    session: AsyncSession,
+    *,
+    cutoff: datetime,
+) -> list[UUID]:
+    """Falla páginas processing antiguas y devuelve manuales afectados."""
+    result = await session.execute(
+        update(ManualPage)
+        .where(
+            ManualPage.ocr_status == "processing",
+            ManualPage.updated_at < cutoff,
+            ManualPage.manual_id.in_(
+                select(Manual.id).where(
+                    Manual.status == "indexing",
+                    Manual.deleted_at.is_(None),
+                )
+            ),
+        )
+        .values(ocr_status="failed")
+        .returning(ManualPage.manual_id)
+    )
+    manual_ids = list(dict.fromkeys(result.scalars()))
+    await session.commit()
+    return manual_ids
 
 
 async def get_asset_for_processing(
@@ -485,16 +580,6 @@ async def mark_page_chunks_indexed(
     await session.commit()
 
 
-async def next_chunk_index(session: AsyncSession, *, manual_id: UUID) -> int:
-    """Devuelve el siguiente índice global de chunk para un manual."""
-    result = await session.execute(
-        select(func.coalesce(func.max(ManualChunk.chunk_index) + 1, 0)).where(
-            ManualChunk.manual_id == manual_id
-        )
-    )
-    return int(result.scalar_one())
-
-
 async def replace_page_result(
     session: AsyncSession,
     *,
@@ -572,6 +657,8 @@ async def resolve_manual_processed_status(
         )
     )
     for row in result:
+        if row.ocr_status in {"pending", "processing"}:
+            return "indexing"
         if row.ocr_status == "failed" or row.text_quality == "low_confidence":
             return "pending_review"
     return "active"

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import httpx
@@ -31,44 +32,18 @@ async def call_ocr_service(
     Returns:
         list[dict]: Líneas OCR devueltas por el servicio interno.
     """
-    await request_llm_unload_if_idle(client)
-
     response = await send_request(
         client=client,
         service_name="OCR",
         request_kwargs={
             "url": f"{config.OCR_URL}/extract",
             "files": {"image": (filename, content, content_type)},
-            "timeout": config.OCR_SERVICE_TIMEOUT,
         },
+        timeout_seconds=config.OCR_SERVICE_TIMEOUT,
         unavailable_detail="Servicio OCR no disponible.",
         internal_detail="Error interno al procesar la imagen con OCR.",
     )
     return response["lines"]
-
-
-async def request_llm_unload_if_idle(client: httpx.AsyncClient) -> None:
-    """
-    Pide al servicio LLM liberar VRAM antes de OCR si Ollama está ocioso.
-
-    Es una optimización best-effort: cualquier fallo se registra y el OCR
-    continúa, porque descargar el modelo no forma parte del resultado funcional.
-    """
-    if not config.LLM_UNLOAD_BEFORE_OCR:
-        return
-
-    try:
-        response = await client.post(
-            url=f"{config.LLM_URL}/unload-if-idle",
-            timeout=config.LLM_UNLOAD_TIMEOUT,
-        )
-        response.raise_for_status()
-        logger.info("Liberación LLM antes de OCR solicitada: %s", response.json())
-    except (httpx.HTTPError, ValueError):
-        logger.warning(
-            "No se pudo solicitar la liberación del LLM antes de OCR.",
-            exc_info=True,
-        )
 
 
 async def post_json(
@@ -100,8 +75,8 @@ async def post_json(
         request_kwargs={
             "url": url,
             "json": payload,
-            "timeout": config.INTERNAL_JSON_TIMEOUT,
         },
+        timeout_seconds=config.INTERNAL_JSON_TIMEOUT,
         unavailable_detail=unavailable_detail,
         internal_detail=internal_detail,
     )
@@ -112,6 +87,7 @@ async def send_request(
     client: httpx.AsyncClient,
     service_name: str,
     request_kwargs: dict,
+    timeout_seconds: float,
     unavailable_detail: str,
     internal_detail: str,
 ) -> dict:
@@ -122,6 +98,7 @@ async def send_request(
         client (httpx.AsyncClient): Cliente HTTP compartido (connection pooling).
         service_name (str): Nombre lógico del servicio.
         request_kwargs (dict): Argumentos a pasar a ``httpx.AsyncClient.post``.
+        timeout_seconds (float): Límite máximo del bloque de petición.
         unavailable_detail (str): Mensaje para errores de conexión.
         internal_detail (str): Mensaje para errores HTTP del servicio.
 
@@ -134,9 +111,10 @@ async def send_request(
         InternalServiceError: Para el resto de errores internos.
     """
     try:
-        response = await client.post(**request_kwargs)
+        async with asyncio.timeout(timeout_seconds):
+            response = await client.post(**request_kwargs)
         response.raise_for_status()
-    except httpx.RequestError:
+    except (TimeoutError, httpx.RequestError):
         logger.error("No se pudo conectar con el servicio %s.", service_name)
         raise InternalServiceUnavailableError(unavailable_detail) from None
     except httpx.HTTPStatusError as http_err:

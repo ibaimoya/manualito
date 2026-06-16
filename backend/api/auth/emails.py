@@ -4,24 +4,22 @@ import logging
 from urllib.parse import urlencode
 
 import aiosmtplib
-from fastapi import BackgroundTasks
 
 from api import config
 from api.mail.client import send_email
+from api.worker.tasks.mail import enqueue_email
 
 logger = logging.getLogger(__name__)
 
 
 def schedule_verification_email(
-    background_tasks: BackgroundTasks,
     *,
     to_email: str,
     username: str,
     token: str,
 ) -> None:
-    """Agenda el email de verificación sin bloquear la respuesta HTTP."""
-    background_tasks.add_task(
-        _send_email_safely,
+    """Encola el email de verificación sin bloquear la respuesta HTTP."""
+    enqueue_email(
         to_email=to_email,
         subject="Verifica tu email en Manualito",
         text_body=_verification_email_body(username=username, token=token),
@@ -29,22 +27,20 @@ def schedule_verification_email(
 
 
 def schedule_password_reset_email(
-    background_tasks: BackgroundTasks,
     *,
     to_email: str,
     username: str,
     token: str,
 ) -> None:
-    """Agenda el email de reset sin exponer el token fuera del task."""
-    background_tasks.add_task(
-        _send_email_safely,
+    """Encola el email de reset ocultando su contenido en eventos Celery."""
+    enqueue_email(
         to_email=to_email,
         subject="Restablece tu contraseña en Manualito",
         text_body=_password_reset_email_body(username=username, token=token),
     )
 
 
-async def _send_email_safely(*, to_email: str, subject: str, text_body: str) -> None:
+async def send_email_safely(*, to_email: str, subject: str, text_body: str) -> None:
     """Envía email best-effort y registra fallos sin tokens ni URLs."""
     try:
         await send_email(to_email=to_email, subject=subject, text_body=text_body)

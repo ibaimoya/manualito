@@ -10,10 +10,11 @@ from sqlalchemy.dialects import postgresql
 import api.conversations.repository as conversation_repository
 from api.conversations.exceptions import ConversationNotFoundError
 from api.conversations.repository import (
-    append_message_pair,
+    append_pending_message_pair,
     get_owned_conversation,
     list_conversation_messages,
     list_game_conversations,
+    load_conversation_title_context,
     load_conversation_turn_context,
     load_recent_messages,
     rename_user_conversation,
@@ -25,6 +26,7 @@ from api.games.exceptions import GameUnavailableError
 _USER_ID = UUID("018fd000-0000-7000-8000-000000000010")
 _GAME_ID = UUID("018fd000-0000-7000-8000-000000000011")
 _CONVERSATION_ID = UUID("018fd000-0000-7000-8000-000000000012")
+_USER_MESSAGE_ID = UUID("018fd000-0000-7000-8000-000000000013")
 
 
 def test_get_owned_conversation_embeds_ownership_in_query():
@@ -107,6 +109,10 @@ def test_list_game_conversations_orders_by_recent_activity():
     assert "conversations.user_id =" in compiled
     assert "conversations.game_id =" in compiled
     assert "conversations.updated_at DESC" in compiled
+    # La ruleta de "generando" sale de un EXISTS correlacionado de asistente pendiente.
+    assert "has_pending_reply" in compiled
+    assert "EXISTS (SELECT" in compiled
+    assert "messages.conversation_id = conversations.id" in compiled
 
 
 def test_list_conversation_messages_orders_chronologically():
@@ -136,9 +142,8 @@ def test_list_conversation_messages_orders_chronologically():
     assert "messages.created_at ASC" in compiled
 
 
-def test_append_message_pair_persists_sources_only_on_assistant(monkeypatch):
-    """El turno guarda fuentes públicas solo en la respuesta del asistente."""
-    source = {"manual_id": str(_GAME_ID), "manual_title": "Reglamento", "page": 2}
+def test_append_pending_message_pair_persists_placeholder(monkeypatch):
+    """El turno inicial guarda usuario completado y asistente pendiente."""
     conversation = SimpleNamespace(
         id=_CONVERSATION_ID,
         user_id=_USER_ID,
@@ -147,8 +152,8 @@ def test_append_message_pair_persists_sources_only_on_assistant(monkeypatch):
     )
     session = SimpleNamespace(added=[], flushes=0, commits=0)
 
-    def add_all(messages):
-        session.added.extend(messages)
+    def add(message):
+        session.added.append(message)
 
     async def flush():
         await anyio.lowlevel.checkpoint()
@@ -158,7 +163,7 @@ def test_append_message_pair_persists_sources_only_on_assistant(monkeypatch):
         await anyio.lowlevel.checkpoint()
         session.commits += 1
 
-    session.add_all = add_all
+    session.add = add
     session.flush = flush
     session.commit = commit
     monkeypatch.setattr(
@@ -174,20 +179,21 @@ def test_append_message_pair_persists_sources_only_on_assistant(monkeypatch):
 
     stored = anyio.run(
         partial(
-            append_message_pair,
+            append_pending_message_pair,
             session,
             user_id=_USER_ID,
             conversation_id=_CONVERSATION_ID,
             user_content="Pregunta",
-            assistant_content="Respuesta",
-            assistant_sources=[source],
             title="Título",
         )
     )
 
     assert stored.user_message.sources == []
-    assert stored.assistant_message.sources == [source]
-    assert session.flushes == 1
+    assert stored.user_message.status == "completed"
+    assert stored.assistant_message.sources == []
+    assert stored.assistant_message.status == "pending"
+    assert stored.assistant_message.content == ""
+    assert session.flushes == 2
     assert session.commits == 1
 
 
@@ -268,6 +274,65 @@ def test_load_conversation_turn_context_returns_snapshot_and_history():
     compiled = _compile(session.statements[0])
     assert "JOIN games ON games.id = conversations.game_id" in compiled
     assert "conversations.user_id =" in compiled
+
+
+def test_load_conversation_title_context_reads_message_from_postgres():
+    """El worker de título solo necesita IDs en Celery y lee contenido de Postgres."""
+    conversation = SimpleNamespace(
+        id=_CONVERSATION_ID,
+        user_id=_USER_ID,
+        game_id=_GAME_ID,
+        title="Fallback",
+    )
+    user_message = SimpleNamespace(
+        id=_USER_MESSAGE_ID,
+        role="user",
+        content="¿Cómo se gana?",
+        created_at=None,
+    )
+    previous_message = SimpleNamespace(role="assistant", content="Con puntos.")
+
+    class ConversationResult:
+        def one_or_none(self):
+            return _conversation_row(conversation, game_status="active")
+
+    class UserMessageResult:
+        def scalar_one_or_none(self):
+            return user_message
+
+    class HistoryResult:
+        def scalars(self):
+            return [previous_message]
+
+    class FakeSession:
+        def __init__(self):
+            self.statements = []
+
+        async def execute(self, statement):
+            await anyio.lowlevel.checkpoint()
+            self.statements.append(statement)
+            results = (ConversationResult(), UserMessageResult(), HistoryResult())
+            return results[len(self.statements) - 1]
+
+    session = FakeSession()
+
+    context = anyio.run(
+        partial(
+            load_conversation_title_context,
+            session,
+            user_id=_USER_ID,
+            conversation_id=_CONVERSATION_ID,
+            user_message_id=_USER_MESSAGE_ID,
+            history_limit=5,
+        )
+    )
+
+    assert context.game_name == "Catan"
+    assert context.question == "¿Cómo se gana?"
+    assert context.history[0].content == "Con puntos."
+    compiled = _compile(session.statements[1])
+    assert "messages.role =" in compiled
+    assert "messages.status =" in compiled
 
 
 def test_load_conversation_turn_context_rejects_hidden_game():

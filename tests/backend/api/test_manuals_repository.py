@@ -13,15 +13,18 @@ from api.manuals.repository import (
     _authorized_chunks_query,
     _manual_summary_query,
     attach_page_image_asset,
+    claim_page_for_processing,
     create_manual_with_pending_pages,
     get_asset_for_processing,
     get_user_manual_detail,
     get_user_manual_processing_status,
+    list_pending_page_ids_for_processing,
     list_user_manuals,
     load_authorized_chunks,
+    manual_has_unfinished_pages,
     mark_manual_failed,
     mark_manual_indexed,
-    next_chunk_index,
+    mark_stale_processing_pages_failed,
     resolve_manual_processed_status,
     soft_delete_user_manual,
 )
@@ -405,7 +408,7 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
 
 @pytest.mark.anyio
 async def test_get_asset_for_processing_returns_active_storage_key():
-    """El procesador background solo necesita el storage_key del asset fuente."""
+    """El procesador en segundo plano solo necesita el storage_key del asset fuente."""
     session = _FakeSession(execute_results=[_ScalarOneResult("manuals/user/source.pdf")])
 
     storage_key = await get_asset_for_processing(session, asset_id=uuid4())
@@ -415,14 +418,65 @@ async def test_get_asset_for_processing_returns_active_storage_key():
 
 
 @pytest.mark.anyio
-async def test_next_chunk_index_uses_highest_existing_index():
-    """El siguiente indice no depende de contar filas tras reintentos."""
-    session = _FakeSession(execute_results=[_ScalarOneResult(5)])
+async def test_list_pending_page_ids_filters_indexing_manuals():
+    """El orquestador solo lista páginas pendientes de manuales activos."""
+    page_id = uuid4()
+    session = _FakeSession(execute_results=[_ScalarsResult([page_id])])
 
-    result = await next_chunk_index(session, manual_id=_MANUAL_ID)
+    result = await list_pending_page_ids_for_processing(session, manual_id=_MANUAL_ID)
 
-    assert result == 5
-    assert session.executed
+    assert result == [page_id]
+    compiled = _compile(session.executed[0])
+    assert "manuals.status =" in compiled
+    assert "manual_pages.ocr_status =" in compiled
+
+
+@pytest.mark.anyio
+async def test_claim_page_for_processing_is_conditional_update():
+    """El cambio pending -> processing es la barrera anti-carrera por página."""
+    page_id = uuid4()
+    session = _FakeSession(execute_results=[_ScalarOneResult(page_id)])
+
+    claimed = await claim_page_for_processing(
+        session,
+        manual_id=_MANUAL_ID,
+        page_id=page_id,
+    )
+
+    assert claimed is True
+    assert session.commits == 1
+    compiled = _compile(session.executed[0])
+    assert "UPDATE manual_pages" in compiled
+    assert "manual_pages.ocr_status =" in compiled
+    assert "RETURNING manual_pages.id" in compiled
+
+
+@pytest.mark.anyio
+async def test_manual_has_unfinished_pages_checks_pending_and_processing():
+    """El finalizador espera tanto páginas pendientes como páginas en curso."""
+    session = _FakeSession(execute_results=[_ScalarOneResult(uuid4())])
+
+    assert await manual_has_unfinished_pages(session, manual_id=_MANUAL_ID) is True
+
+    compiled = _compile(session.executed[0])
+    assert "manual_pages.ocr_status IN" in compiled
+
+
+@pytest.mark.anyio
+async def test_mark_stale_processing_pages_failed_returns_affected_manuals():
+    """El sweeper falla páginas antiguas y despierta sus manuales."""
+    session = _FakeSession(execute_results=[_ScalarsResult([_MANUAL_ID, _MANUAL_ID])])
+
+    result = await mark_stale_processing_pages_failed(
+        session,
+        cutoff=_INDEXED_AT,
+    )
+
+    assert result == [_MANUAL_ID]
+    assert session.commits == 1
+    compiled = _compile(session.executed[0])
+    assert "UPDATE manual_pages" in compiled
+    assert "manual_pages.updated_at <" in compiled
 
 
 @pytest.mark.anyio
@@ -451,6 +505,21 @@ async def test_resolve_manual_processed_status_marks_review_for_partial_issues()
     status = await resolve_manual_processed_status(session, manual_id=_MANUAL_ID)
 
     assert status == "pending_review"
+
+
+@pytest.mark.anyio
+async def test_resolve_manual_processed_status_keeps_processing_open():
+    """Si aún hay una página en curso, el manual no puede cerrarse como activo."""
+    session = _FakeSession(
+        execute_results=[
+            _ScalarOneResult(_CHUNK_ID),
+            [SimpleNamespace(ocr_status="processing", text_quality=None)],
+        ],
+    )
+
+    status = await resolve_manual_processed_status(session, manual_id=_MANUAL_ID)
+
+    assert status == "indexing"
 
 
 @pytest.mark.anyio
@@ -660,3 +729,8 @@ def _assign_id(entity) -> None:
 def _first_added(session: _FakeSession, model):
     """Recupera la primera entidad añadida de un tipo concreto."""
     return next(entity for entity in session.added if isinstance(entity, model))
+
+
+def _compile(statement) -> str:
+    """Compila SQLAlchemy con dialecto Postgres para inspección estable."""
+    return str(statement.compile(dialect=postgresql.dialect()))

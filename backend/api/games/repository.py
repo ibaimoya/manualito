@@ -287,6 +287,19 @@ async def list_game_pool_manuals(
     return list(result)
 
 
+async def game_pool_has_manuals(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    current_user_id: UUID,
+) -> bool:
+    """Indica si el juego conserva algún manual citable por el usuario."""
+    result = await session.execute(
+        select(Manual.id).where(*_pool_visibility_filters(game_id, current_user_id)).limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def get_pool_fingerprint(
     session: AsyncSession,
     *,
@@ -331,12 +344,16 @@ async def upsert_game_explanation(
             game_id=game_id,
             sections=sections,
             source_fingerprint=source_fingerprint,
+            status="ready",
+            error_code=None,
         )
         .on_conflict_do_update(
             index_elements=[GameExplanation.game_id],
             set_={
                 "sections": sections,
                 "source_fingerprint": source_fingerprint,
+                "status": "ready",
+                "error_code": None,
                 "generated_at": func.now(),
                 "updated_at": func.now(),
             },
@@ -344,6 +361,8 @@ async def upsert_game_explanation(
         .returning(
             GameExplanation.sections,
             GameExplanation.source_fingerprint,
+            GameExplanation.status,
+            GameExplanation.error_code,
             GameExplanation.generated_at,
         )
     )
@@ -351,6 +370,80 @@ async def upsert_game_explanation(
     row = result.one()
     await session.commit()
     return row
+
+
+async def mark_game_explanation_generating(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    sections: dict[str, object],
+    source_fingerprint: str,
+) -> Row:
+    """Guarda que la explicación se está generando para una huella."""
+    stmt = (
+        insert(GameExplanation)
+        .values(
+            game_id=game_id,
+            sections=sections,
+            source_fingerprint=source_fingerprint,
+            status="generating",
+            error_code=None,
+        )
+        .on_conflict_do_update(
+            index_elements=[GameExplanation.game_id],
+            set_={
+                "sections": sections,
+                "source_fingerprint": source_fingerprint,
+                "status": "generating",
+                "error_code": None,
+                "updated_at": func.now(),
+            },
+        )
+        .returning(
+            GameExplanation.sections,
+            GameExplanation.source_fingerprint,
+            GameExplanation.status,
+            GameExplanation.error_code,
+            GameExplanation.generated_at,
+        )
+    )
+    result = await session.execute(stmt)
+    row = result.one()
+    await session.commit()
+    return row
+
+
+async def mark_game_explanation_failed(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    sections: dict[str, object],
+    source_fingerprint: str,
+    error_code: str,
+) -> None:
+    """Marca la explicación como fallida sin perder apartados parciales."""
+    stmt = (
+        insert(GameExplanation)
+        .values(
+            game_id=game_id,
+            sections=sections,
+            source_fingerprint=source_fingerprint,
+            status="failed",
+            error_code=error_code,
+        )
+        .on_conflict_do_update(
+            index_elements=[GameExplanation.game_id],
+            set_={
+                "sections": sections,
+                "source_fingerprint": source_fingerprint,
+                "status": "failed",
+                "error_code": error_code,
+                "updated_at": func.now(),
+            },
+        )
+    )
+    await session.execute(stmt)
+    await session.commit()
 
 
 def _pool_visibility_filters(game_id: UUID, current_user_id: UUID) -> tuple:

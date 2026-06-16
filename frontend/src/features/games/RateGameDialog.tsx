@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { GameCover } from '@/features/games/GameCover';
+import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RATE_LABELS, RatingStars } from '@/features/games/RatingStars';
 import { gameDetailKey, myGamesKey } from '@/features/games/use-games';
 import { gamesApi, type GameDetail, type GameRating } from '@/shared/api/games';
@@ -72,6 +73,7 @@ function RateGameForm({
 }>) {
   const qc = useQueryClient();
   const noteId = useId();
+  const { gameIds } = useProcessingManuals();
   const [score, setScore] = useState(initialScore ?? current?.score ?? 0);
   const [note, setNote] = useState(current?.note ?? '');
 
@@ -130,7 +132,7 @@ function RateGameForm({
       }}
       className="flex flex-col items-center text-center"
     >
-      <GameCover name={gameName} size={64} />
+      <GameCover name={gameName} size={64} processing={gameIds.has(gameId)} />
       <div className="mt-4 flex items-center gap-1">
         {/* Hueco simétrico a la goma: las estrellas quedan centradas. */}
         <span aria-hidden="true" className="size-9 shrink-0" />

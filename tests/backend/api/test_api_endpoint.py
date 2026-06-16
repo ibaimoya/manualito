@@ -11,7 +11,7 @@ from api.exceptions import ImageTooLargeError, InvalidImageError
 from api.manuals.validation import validate_manual_image
 
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
-MAX_IMAGE_SIZE = 20 * 1024 * 1024
+MAX_IMAGE_SIZE = 30 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -55,9 +55,8 @@ def _configure_ocr_success(mock_client: AsyncMock, result=None):
     if result is None:
         result = FAKE_OCR_RESULT
 
-    unload_response = _mock_response({"status": "idle", "unloaded": True})
     ocr_response = _mock_response({"lines": result})
-    mock_client.post.side_effect = [unload_response, ocr_response]
+    mock_client.post.return_value = ocr_response
 
 
 def _assert_error(response, *, code: str) -> None:
@@ -114,50 +113,11 @@ def test_valid_image_formats(
     assert response.json()["lines"] == FAKE_OCR_RESULT
 
 
-def test_ocr_requests_llm_unload_before_ocr(client, valid_jpeg_bytes, override_http_client):
-    """Antes de llamar a OCR, el gateway solicita liberar VRAM al servicio LLM."""
+def test_ocr_calls_only_ocr_service(client, valid_jpeg_bytes, override_http_client):
+    """El gateway de OCR no toca Ollama: solo llama al servicio OCR."""
     _configure_ocr_success(override_http_client)
 
     response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
-
-    assert response.status_code == 200
-    assert override_http_client.post.call_args_list[0].kwargs["url"].endswith(
-        "/unload-if-idle"
-    )
-    assert override_http_client.post.call_args_list[1].kwargs["url"].endswith(
-        "/extract"
-    )
-
-
-def test_ocr_continues_when_llm_unload_response_is_not_json(
-    client,
-    valid_jpeg_bytes,
-    override_http_client,
-):
-    """La liberación previa del LLM es best-effort y no bloquea el OCR."""
-    unload_response = _mock_response({"status": "idle"})
-    unload_response.json.side_effect = ValueError("invalid json")
-    ocr_response = _mock_response({"lines": FAKE_OCR_RESULT})
-    override_http_client.post.side_effect = [unload_response, ocr_response]
-
-    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
-
-    assert response.status_code == 200
-    assert response.json()["lines"] == FAKE_OCR_RESULT
-    assert override_http_client.post.call_count == 2
-
-
-def test_ocr_skips_llm_unload_when_feature_flag_is_disabled(
-    client,
-    valid_jpeg_bytes,
-    override_http_client,
-):
-    """Si se desactiva la liberación previa, el gateway llama solo al OCR."""
-    ocr_response = _mock_response({"lines": FAKE_OCR_RESULT})
-    override_http_client.post.return_value = ocr_response
-
-    with patch("api.client.config.LLM_UNLOAD_BEFORE_OCR", False):
-        response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
 
     assert response.status_code == 200
     assert response.json()["lines"] == FAKE_OCR_RESULT
@@ -221,22 +181,22 @@ def test_invalid_image_content(client, data, filename, mime):
 
 
 # ---------------------------------------------------------------------------
-# Análisis de Valores Límite (BVA) — tamaño de imagen (límite: 20 MB)
-#   19.9 MB -> Válido  (justo por debajo del límite).
-#   20.0 MB -> Válido  (exactamente en el límite).
-#   20.0 MB + 1 byte -> Inválido, 413 (justo por encima del límite).
+# Análisis de Valores Límite (BVA) — tamaño de imagen (límite: 30 MB)
+#   29.9 MB -> Válido  (justo por debajo del límite).
+#   30.0 MB -> Válido  (exactamente en el límite).
+#   30.0 MB + 1 byte -> Inválido, 413 (justo por encima del límite).
 #
 # Para los casos que deben pasar el chequeo de tamaño se mockea PIL y el
 # cliente HTTP, aislando así el test de la lógica de tamaño pura.
 # El caso 413 no llega siquiera a PIL, por lo que no necesita mock.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("size,expected_status", [
-    (int(19.9 * 1024 * 1024), 200),   # justo por debajo -> aceptado.
-    (20 * 1024 * 1024,         200),   # exacto 20 MB -> aceptado.
-    (20 * 1024 * 1024 + 1,     413),   # justo por encima -> rechazado.
-], ids=["19.9mb", "20mb_exacto", "20mb_mas_1_byte"])
+    (int(29.9 * 1024 * 1024), 200),   # justo por debajo -> aceptado.
+    (30 * 1024 * 1024,         200),   # exacto 30 MB -> aceptado.
+    (30 * 1024 * 1024 + 1,     413),   # justo por encima -> rechazado.
+], ids=["29.9mb", "30mb_exacto", "30mb_mas_1_byte"])
 def test_size_boundary(client, size, expected_status, override_http_client):
-    """Imágenes en el límite de 20 MB: <=20 MB pasan, >20 MB 413."""
+    """Imágenes en el límite de 30 MB: <=30 MB pasan, >30 MB 413."""
     data = b"\x00" * size
 
     if expected_status == 200:

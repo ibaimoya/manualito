@@ -1,9 +1,8 @@
 import httpx
 
 from common.http_client import HttpClientState
-from llm import config
 
-_http_client_state = HttpClientState(timeout=config.OLLAMA_TIMEOUT)
+_http_client_state = HttpClientState(timeout=None)
 
 
 async def start_http_client() -> None:

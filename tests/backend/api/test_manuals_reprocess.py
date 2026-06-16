@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import anyio
@@ -15,7 +15,7 @@ from api.auth.service import AuthenticatedSession
 from api.main import app
 from api.manuals.exceptions import ManualBusyError, ManualNotFoundError
 from api.manuals.repository import begin_manual_reprocessing
-from api.manuals.service import _run_reprocess, reprocess_manual
+from api.manuals.service import reprocess_manual, run_reprocess
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
 from database.models.user import User
@@ -61,8 +61,11 @@ def test_reprocess_manual_returns_202_with_polling_state(
     override_auth_and_db,
 ):
     """Reprocesar acepta el trabajo y devuelve el estado para el polling."""
-    reprocess_mock = AsyncMock()
+    stale_ids = [uuid4()]
+    reprocess_mock = AsyncMock(return_value=stale_ids)
+    delay_mock = MagicMock()
     monkeypatch.setattr("api.manuals.router.reprocess_manual", reprocess_mock)
+    monkeypatch.setattr("api.manuals.router.reprocess_manual_task.delay", delay_mock)
     monkeypatch.setattr(
         "api.manuals.router.get_user_manual_processing_status",
         AsyncMock(return_value=_processing_rows()),
@@ -76,6 +79,7 @@ def test_reprocess_manual_returns_202_with_polling_state(
     assert body["completed_pages"] == 0
     reprocess_mock.assert_awaited_once()
     assert reprocess_mock.await_args.kwargs["page_number"] is None
+    delay_mock.assert_called_once_with(str(_MANUAL_ID), [str(stale_ids[0])])
 
 
 def test_reprocess_single_page_passes_page_number(
@@ -84,8 +88,9 @@ def test_reprocess_single_page_passes_page_number(
     override_auth_and_db,
 ):
     """La variante por página acota el trabajo a esa página."""
-    reprocess_mock = AsyncMock()
+    reprocess_mock = AsyncMock(return_value=[])
     monkeypatch.setattr("api.manuals.router.reprocess_manual", reprocess_mock)
+    monkeypatch.setattr("api.manuals.router.reprocess_manual_task.delay", MagicMock())
     monkeypatch.setattr(
         "api.manuals.router.get_user_manual_processing_status",
         AsyncMock(return_value=_processing_rows()),
@@ -137,7 +142,8 @@ def test_reprocess_is_rate_limited(
     override_auth_and_db,
 ):
     """Reprocesar es caro (OCR + embeddings) y tiene freno agresivo."""
-    monkeypatch.setattr("api.manuals.router.reprocess_manual", AsyncMock())
+    monkeypatch.setattr("api.manuals.router.reprocess_manual", AsyncMock(return_value=[]))
+    monkeypatch.setattr("api.manuals.router.reprocess_manual_task.delay", MagicMock())
     monkeypatch.setattr(
         "api.manuals.router.get_user_manual_processing_status",
         AsyncMock(return_value=_processing_rows()),
@@ -149,41 +155,40 @@ def test_reprocess_is_rate_limited(
 
 
 def test_reprocess_service_claims_and_schedules_pipeline(monkeypatch):
-    """El servicio reclama el manual y agenda limpieza + pipeline existente."""
+    """El servicio reclama el manual y devuelve los chunks que limpiará Celery."""
     stale_ids = [uuid4(), uuid4()]
     begin_mock = AsyncMock(return_value=stale_ids)
     monkeypatch.setattr(manual_service, "begin_manual_reprocessing", begin_mock)
-    scheduled: list[tuple] = []
-    background_tasks = SimpleNamespace(
-        add_task=lambda task, *args: scheduled.append((task, args))
-    )
 
-    anyio.run(
+    result = anyio.run(
         partial(
             reprocess_manual,
             _FAKE_SESSION,
             auth=SimpleNamespace(user=SimpleNamespace(id=_USER_ID)),
             manual_id=_MANUAL_ID,
             page_number=None,
-            background_tasks=background_tasks,
         )
     )
 
     assert begin_mock.await_args.kwargs["owner_user_id"] == _USER_ID
-    assert scheduled == [(_run_reprocess, (_MANUAL_ID, stale_ids))]
+    assert result == stale_ids
 
 
-def test_run_reprocess_cleans_stale_chunks_before_pipeline(monkeypatch):
+def test_reprocess_cleans_stale_chunks_before_pipeline(monkeypatch):
     """La tarea borra los chunks obsoletos de Chroma y relanza el pipeline."""
     order: list[str] = []
+    page_id = uuid4()
     delete_mock = AsyncMock(side_effect=lambda **_kwargs: order.append("delete"))
-    process_mock = AsyncMock(side_effect=lambda _manual_id: order.append("process"))
+    process_mock = AsyncMock(
+        side_effect=lambda _manual_id: order.append("process") or [page_id]
+    )
     monkeypatch.setattr(manual_service, "delete_chunks_from_rag", delete_mock)
     monkeypatch.setattr(manual_service, "process_manual", process_mock)
 
     stale_ids = [uuid4()]
-    anyio.run(partial(_run_reprocess, _MANUAL_ID, stale_ids))
+    result = anyio.run(partial(run_reprocess, _MANUAL_ID, stale_ids))
 
+    assert result == [page_id]
     assert order == ["delete", "process"]
     assert delete_mock.await_args.kwargs["chunk_ids"] == stale_ids
     process_mock.assert_awaited_once_with(_MANUAL_ID)

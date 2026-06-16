@@ -23,7 +23,7 @@ function renderConversations() {
       '/history': 'Historial stub',
       '/home': 'Home stub',
       '/game/$gameId': 'Juego stub',
-      '/chat/$manualId': 'Chat stub',
+      '/chat/$gameId': 'Chat stub',
     },
   });
 }
@@ -35,8 +35,57 @@ describe('/conversations/$gameId', () => {
     expect(screen.getByText('1 guardada')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Nueva conversación/ })).toHaveAttribute(
       'href',
-      '/chat/test-manual-001?g=test-game-001',
+      '/chat/test-game-001',
     );
+  });
+
+  it('una conversación generando muestra «Manualito está respondiendo» en su fila', async () => {
+    server.use(
+      http.get('/api/games/:gameId/conversations', () =>
+        HttpResponse.json({
+          conversations: [
+            {
+              id: 'conv-001',
+              game_id: 'test-game-001',
+              game_name: 'Catan',
+              title: 'Generando ahora',
+              created_at: '2026-05-26T10:00:00.000Z',
+              updated_at: '2026-05-26T10:05:00.000Z',
+              has_pending_reply: true,
+            },
+          ],
+        }),
+      ),
+    );
+    renderConversations();
+    expect(await screen.findByText(/Manualito está respondiendo/i)).toBeInTheDocument();
+  });
+
+  it('respuesta nueva sin abrir muestra el punto de sin leer; vista no', async () => {
+    // Vista en un updated_at anterior → la conversación actual es más nueva.
+    localStorage.setItem(
+      'manualito.conversations.seen',
+      JSON.stringify({ 'conv-001': '2026-05-26T10:00:00.000Z' }),
+    );
+    server.use(
+      http.get('/api/games/:gameId/conversations', () =>
+        HttpResponse.json({
+          conversations: [
+            {
+              id: 'conv-001',
+              game_id: 'test-game-001',
+              game_name: 'Catan',
+              title: 'Respuesta nueva',
+              created_at: '2026-05-26T10:00:00.000Z',
+              updated_at: '2026-05-26T11:00:00.000Z',
+              has_pending_reply: false,
+            },
+          ],
+        }),
+      ),
+    );
+    renderConversations();
+    expect(await screen.findByLabelText(/Respuesta sin leer/i)).toBeInTheDocument();
   });
 
   it('el filtro acota la lista y muestra "X de N" en el contador', async () => {

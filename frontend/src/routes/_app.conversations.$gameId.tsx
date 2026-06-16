@@ -1,15 +1,6 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  BookOpen,
-  MessagesSquare,
-  MoreVertical,
-  Pencil,
-  Plus,
-  Search,
-  Sparkles,
-  Trash2,
-} from 'lucide-react';
+import { BookOpen, MoreVertical, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -23,11 +14,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import {
+  AnsweringLine,
+  ConversationActivityIcon,
+} from '@/features/conversations/ConversationActivityIcon';
 import { GameCover } from '@/features/games/GameCover';
+import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { gameDetailQueryOptions } from '@/features/games/use-games';
 import {
   conversationsKey,
   conversationsQueryOptions,
+  useConversationsRead,
 } from '@/features/conversations/use-conversations';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
@@ -53,8 +50,9 @@ function ConversationsScreen() {
   const [filter, setFilter] = useState('');
 
   const gameName = game.data?.name ?? 'Juego';
-  const chatManualId =
-    game.data?.manuals.find((manual) => manual.is_own)?.id ?? game.data?.manuals[0]?.id ?? null;
+  const canAsk = (game.data?.manuals.length ?? 0) > 0;
+  const { gameIds } = useProcessingManuals();
+  const { isUnread } = useConversationsRead();
 
   const all = useMemo(() => conversations.data ?? [], [conversations.data]);
   const needle = filter.trim().toLowerCase();
@@ -82,7 +80,7 @@ function ConversationsScreen() {
 
       <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-28 pt-5 md:px-6">
         <header className="mb-4 flex items-center gap-3.5">
-          <GameCover name={gameName} size={44} radius={12} />
+          <GameCover name={gameName} size={44} radius={12} processing={gameIds.has(gameId)} />
           <div className="min-w-0 flex-1">
             <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
               {gameName} · Pregunta y repregunta
@@ -121,7 +119,7 @@ function ConversationsScreen() {
         ) : null}
 
         {conversations.isSuccess && all.length === 0 ? (
-          <EmptyState gameName={gameName} gameId={gameId} chatManualId={chatManualId} />
+          <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
         ) : null}
 
         {conversations.isSuccess && all.length > 0 && visible.length === 0 ? (
@@ -134,16 +132,16 @@ function ConversationsScreen() {
               key={conversation.id}
               conversation={conversation}
               gameId={gameId}
-              chatManualId={chatManualId}
+              unread={isUnread(conversation)}
             />
           ))}
         </ul>
 
-        {chatManualId === null || all.length === 0 ? null : (
+        {!canAsk || all.length === 0 ? null : (
           <Link
-            to="/chat/$manualId"
-            params={{ manualId: chatManualId }}
-            search={{ g: gameId }}
+            to="/chat/$gameId"
+            params={{ gameId }}
+            search={{}}
             className="fixed bottom-6 right-5 z-10 inline-flex items-center gap-2 rounded-full bg-primary px-5 font-body text-[15px] font-bold text-fg-inv shadow-lg transition-transform hover:scale-[1.03] md:right-10"
             style={{ height: 52 }}
           >
@@ -159,24 +157,24 @@ function ConversationsScreen() {
 function ConversationCard({
   conversation,
   gameId,
-  chatManualId,
+  unread,
 }: Readonly<{
   conversation: ConversationSummary;
   gameId: string;
-  chatManualId: string | null;
+  unread: boolean;
 }>) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const title = conversation.title ?? 'Conversación sin título';
+  const pending = conversation.has_pending_reply;
 
   function openChat(): void {
-    if (chatManualId === null) return;
     navigate({
-      to: '/chat/$manualId',
-      params: { manualId: chatManualId },
-      search: { c: conversation.id, g: gameId },
+      to: '/chat/$gameId',
+      params: { gameId },
+      search: { c: conversation.id },
     }).catch(() => undefined);
   }
 
@@ -197,26 +195,28 @@ function ConversationCard({
   return (
     <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
       <Card
+        style={pending ? { borderColor: 'transparent', '--proc-radius': '21px' } : undefined}
         className={cn(
           'relative flex items-start gap-3 p-3.5',
           'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-          'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
+          !pending && 'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
           'active:translate-y-0 active:shadow-xs',
         )}
       >
-        <span
-          aria-hidden="true"
-          className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-100 text-accent transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
-        >
-          <MessagesSquare size={18} strokeWidth={1.9} />
-        </span>
+        <ConversationActivityIcon
+          hasPendingReply={pending}
+          unread={unread}
+          size="md"
+          tone="accent"
+          className="relative z-[1] transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
+        />
         {/* Botón principal: su ::after se estira sobre toda la card, así que se
             abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
         <button
           type="button"
           onClick={openChat}
           className={cn(
-            'min-w-0 flex-1 cursor-pointer text-left',
+            'relative z-[1] min-w-0 flex-1 cursor-pointer text-left',
             "after:absolute after:inset-0 after:rounded-2xl after:content-['']",
             'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
           )}
@@ -225,13 +225,21 @@ function ConversationCard({
             <span className="min-w-0 flex-1 truncate font-display text-[15px] font-bold text-fg">
               {title}
             </span>
-            <span className="mono shrink-0 text-[11px] text-fg-3">
-              {formatRelative(conversation.updated_at)}
+            {pending ? null : (
+              <span className="mono shrink-0 text-[11px] text-fg-3">
+                {formatRelative(conversation.updated_at)}
+              </span>
+            )}
+          </span>
+          {pending ? (
+            <span className="mt-1 block">
+              <AnsweringLine />
             </span>
-          </span>
-          <span className="mt-0.5 block text-xs text-fg-3">
-            abierta el {formatShortDate(conversation.created_at)}
-          </span>
+          ) : (
+            <span className="mt-0.5 block text-xs text-fg-3">
+              abierta el {formatShortDate(conversation.created_at)}
+            </span>
+          )}
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -258,6 +266,7 @@ function ConversationCard({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {pending ? <span className="proc-border" aria-hidden="true" /> : null}
       </Card>
 
       <RenameDialog
@@ -412,8 +421,8 @@ function RenameForm({
 function EmptyState({
   gameName,
   gameId,
-  chatManualId,
-}: Readonly<{ gameName: string; gameId: string; chatManualId: string | null }>) {
+  canAsk,
+}: Readonly<{ gameName: string; gameId: string; canAsk: boolean }>) {
   return (
     <div className="rounded-2xl border-[1.5px] border-dashed border-border-strong bg-surface px-6 py-11 text-center">
       <h2 className="font-display text-lg font-bold text-fg">Aún no has preguntado nada</h2>
@@ -421,14 +430,14 @@ function EmptyState({
         Cuando preguntes algo sobre {gameName}, guardaremos aquí la conversación con un título corto
         para que la retomes cuando quieras.
       </p>
-      {chatManualId === null ? null : (
+      {canAsk ? (
         <Button asChild className="mt-4">
-          <Link to="/chat/$manualId" params={{ manualId: chatManualId }} search={{ g: gameId }}>
+          <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
             <Plus size={16} strokeWidth={2} />
             Nueva conversación
           </Link>
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

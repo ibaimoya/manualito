@@ -41,6 +41,7 @@ const SAMPLE_CONVERSATION = {
   title: 'Dudas de preparación',
   created_at: '2026-05-26T10:00:00.000Z',
   updated_at: '2026-05-26T10:05:00.000Z',
+  has_pending_reply: false,
 };
 
 export const SAMPLE_GAME_DETAIL = {
@@ -117,6 +118,7 @@ const SAMPLE_MANUAL_PAGES = [
 const SAMPLE_USER_MESSAGE = {
   id: 'msg-user-001',
   role: 'user',
+  status: 'completed',
   content: '¿Cómo se reparten las cartas?',
   created_at: '2026-05-26T10:04:00.000Z',
   sources: [],
@@ -125,6 +127,7 @@ const SAMPLE_USER_MESSAGE = {
 const SAMPLE_ASSISTANT_MESSAGE = {
   id: 'msg-bot-001',
   role: 'assistant',
+  status: 'completed',
   content: 'Cada jugador recibe dos asentamientos y dos carreteras.',
   created_at: '2026-05-26T10:04:05.000Z',
   sources: [],

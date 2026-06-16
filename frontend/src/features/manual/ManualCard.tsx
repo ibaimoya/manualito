@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Spinner } from '@/components/ui/spinner';
 import { type ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { gameColor } from '@/shared/lib/gameColor';
@@ -41,7 +42,11 @@ export function ManualCard({ manual, meta, className }: Props) {
             <div className="truncate font-semibold text-fg">{name}</div>
             {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
-          <Badge tone={indexing ? 'primary' : 'neutral'} className="hidden @sm:inline-flex">
+          <Badge
+            tone={indexing ? 'primary' : 'neutral'}
+            icon={indexing ? <Spinner size={10} /> : undefined}
+            className="hidden @sm:inline-flex"
+          >
             {indexing ? 'Procesando…' : 'Listo'}
           </Badge>
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />

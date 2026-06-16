@@ -9,13 +9,11 @@ from llm.schemas import (
     ConversationTitleResponse,
     GenerateRequest,
     GenerateResponse,
-    UnloadIfIdleResponse,
 )
 from llm.service import (
     condense_question,
     generate_answer,
     generate_conversation_title,
-    unload_if_idle,
 )
 
 router = APIRouter()
@@ -25,19 +23,6 @@ router = APIRouter()
 async def health() -> HealthResponse:
     """Comprueba que el servicio LLM está disponible."""
     return HealthResponse()
-
-
-@router.post("/unload-if-idle", response_model_exclude_none=True)
-async def unload_if_idle_endpoint(client: HttpClient) -> UnloadIfIdleResponse:
-    """
-    Descarga el modelo de Ollama si no hay generación activa.
-
-    Lo usa el gateway antes de un OCR potencialmente pesado para liberar VRAM
-    a PaddleOCR GPU. Es deliberadamente best-effort: si Ollama no responde, no
-    debe romper el flujo de OCR.
-    """
-    payload = await unload_if_idle(client)
-    return UnloadIfIdleResponse(**payload)
 
 
 @router.post(

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, exists, func, or_, select
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,8 +36,30 @@ class ConversationTurnContext:
 
 
 @dataclass(frozen=True, slots=True)
+class PendingReplyContext:
+    """Datos necesarios para completar una respuesta pendiente."""
+
+    id: UUID
+    user_id: UUID
+    game_id: UUID
+    game_name: str
+    title: str | None
+    user_message_content: str
+    history: tuple[MessageSnapshot, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ConversationTitleContext:
+    """Datos mínimos para refinar el título fuera de la petición HTTP."""
+
+    game_name: str
+    question: str
+    history: tuple[MessageSnapshot, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class StoredMessagePair:
-    """Mensajes creados en un turno completo."""
+    """Mensajes creados en un turno de conversación."""
 
     user_message: Message
     assistant_message: Message
@@ -178,23 +200,22 @@ async def load_recent_messages(
     result = await session.execute(
         select(Message)
         .where(Message.conversation_id == conversation_id)
+        .where(Message.status == "completed")
         .order_by(Message.created_at.desc(), Message.id.desc())
         .limit(limit)
     )
     return list(reversed(list(result.scalars())))
 
 
-async def append_message_pair(
+async def append_pending_message_pair(
     session: AsyncSession,
     *,
     user_id: UUID,
     conversation_id: UUID,
     user_content: str,
-    assistant_content: str,
-    assistant_sources: Sequence[Mapping[str, object]],
     title: str | None,
 ) -> StoredMessagePair:
-    """Guarda usuario y asistente en un commit corto tras el LLM."""
+    """Guarda el mensaje del usuario y un asistente pendiente."""
     conversation = await _get_active_conversation_for_write(
         session,
         user_id=user_id,
@@ -205,18 +226,24 @@ async def append_message_pair(
         role="user",
         content=user_content,
         sources=[],
+        status="completed",
     )
+    session.add(user_message)
+    await session.flush()
+
     assistant_message = Message(
         conversation_id=conversation.id,
         role="assistant",
-        content=assistant_content,
-        sources=list(assistant_sources),
+        content="",
+        sources=[],
+        status="pending",
+        reply_to_message_id=user_message.id,
     )
     if conversation.title is None and title is not None:
         conversation.title = title
     conversation.updated_at = func.now()
 
-    session.add_all([user_message, assistant_message])
+    session.add(assistant_message)
     await session.flush()
     await session.commit()
     return StoredMessagePair(
@@ -228,6 +255,198 @@ async def append_message_pair(
             conversation_id=conversation.id,
         ),
     )
+
+
+async def load_pending_reply_context(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    user_message_id: UUID,
+    assistant_message_id: UUID,
+    history_limit: int,
+) -> PendingReplyContext | None:
+    """Carga un turno pendiente y su historial anterior completado."""
+    conversation = await _get_owned_conversation_with_game_state(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+    )
+    _ensure_game_available(conversation.game_status, conversation.game_deleted_at)
+
+    result = await session.execute(
+        select(Message)
+        .where(
+            Message.id.in_([user_message_id, assistant_message_id]),
+            Message.conversation_id == conversation_id,
+        )
+        .order_by(Message.created_at.asc(), Message.id.asc())
+    )
+    messages_by_id = {message.id: message for message in result.scalars()}
+    user_message = messages_by_id.get(user_message_id)
+    assistant_message = messages_by_id.get(assistant_message_id)
+    if (
+        user_message is None
+        or assistant_message is None
+        or user_message.role != "user"
+        or assistant_message.role != "assistant"
+        or assistant_message.reply_to_message_id != user_message.id
+    ):
+        raise ConversationNotFoundError
+    if assistant_message.status == "completed":
+        return None
+    if assistant_message.status == "failed":
+        return None
+
+    history = await load_recent_messages_before(
+        session,
+        conversation_id=conversation_id,
+        before_message=user_message,
+        limit=history_limit,
+    )
+    return PendingReplyContext(
+        id=conversation.conversation.id,
+        user_id=conversation.conversation.user_id,
+        game_id=conversation.conversation.game_id,
+        game_name=conversation.game_name,
+        title=conversation.conversation.title,
+        user_message_content=user_message.content,
+        history=tuple(
+            MessageSnapshot(message.role, message.content) for message in history
+        ),
+    )
+
+
+async def load_conversation_title_context(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    user_message_id: UUID,
+    history_limit: int,
+) -> ConversationTitleContext:
+    """Carga el mensaje que disparó el título sin poner contenido en Celery."""
+    conversation = await _get_owned_conversation_with_game_state(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+    )
+    _ensure_game_available(conversation.game_status, conversation.game_deleted_at)
+
+    result = await session.execute(
+        select(Message).where(
+            Message.id == user_message_id,
+            Message.conversation_id == conversation_id,
+            Message.role == "user",
+            Message.status == "completed",
+        )
+    )
+    user_message = result.scalar_one_or_none()
+    if user_message is None:
+        raise ConversationNotFoundError
+
+    history = await load_recent_messages_before(
+        session,
+        conversation_id=conversation_id,
+        before_message=user_message,
+        limit=history_limit,
+    )
+    return ConversationTitleContext(
+        game_name=conversation.game_name,
+        question=user_message.content,
+        history=tuple(
+            MessageSnapshot(message.role, message.content) for message in history
+        ),
+    )
+
+
+async def load_recent_messages_before(
+    session: AsyncSession,
+    *,
+    conversation_id: UUID,
+    before_message: Message,
+    limit: int,
+) -> list[Message]:
+    """Carga historial completado anterior a un mensaje concreto."""
+    if limit <= 0:
+        return []
+
+    before_clause = Message.id != before_message.id
+    if before_message.created_at is not None:
+        before_clause = or_(
+            Message.created_at < before_message.created_at,
+            and_(
+                Message.created_at == before_message.created_at,
+                Message.id < before_message.id,
+            ),
+        )
+
+    result = await session.execute(
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.status == "completed",
+            before_clause,
+        )
+        .order_by(Message.created_at.desc(), Message.id.desc())
+        .limit(limit)
+    )
+    return list(reversed(list(result.scalars())))
+
+
+async def complete_assistant_message(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    assistant_message_id: UUID,
+    content: str,
+    sources: Sequence[Mapping[str, object]],
+) -> None:
+    """Marca una respuesta pendiente como completada."""
+    row = await _get_writable_assistant_message(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        assistant_message_id=assistant_message_id,
+    )
+    if row.message.status == "completed":
+        await session.rollback()
+        return
+    row.message.content = content
+    row.message.sources = list(sources)
+    row.message.status = "completed"
+    row.message.error_code = None
+    row.message.updated_at = func.now()
+    row.conversation.updated_at = func.now()
+    await session.commit()
+
+
+async def fail_assistant_message(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    assistant_message_id: UUID,
+    error_code: str,
+) -> None:
+    """Marca una respuesta pendiente como fallida con código público estable."""
+    row = await _get_writable_assistant_message(
+        session,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        assistant_message_id=assistant_message_id,
+    )
+    if row.message.status == "completed":
+        await session.rollback()
+        return
+    row.message.content = ""
+    row.message.sources = []
+    row.message.status = "failed"
+    row.message.error_code = error_code
+    row.message.updated_at = func.now()
+    row.conversation.updated_at = func.now()
+    await session.commit()
 
 
 async def rename_user_conversation(
@@ -302,6 +521,13 @@ def _conversation_summary_query(user_id: UUID) -> Select:
             Conversation.title,
             Conversation.created_at,
             Conversation.updated_at,
+            exists()
+            .where(
+                Message.conversation_id == Conversation.id,
+                Message.role == "assistant",
+                Message.status == "pending",
+            )
+            .label("has_pending_reply"),
         )
         .join(Game, Game.id == Conversation.game_id)
         .where(
@@ -320,6 +546,14 @@ class _ConversationWithGameState:
     game_name: str
     game_status: str
     game_deleted_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class _WritableAssistantMessage:
+    """Mensaje de asistente con su conversación ya validada."""
+
+    message: Message
+    conversation: Conversation
 
 
 async def _get_owned_conversation_with_game_state(
@@ -368,6 +602,34 @@ async def _get_active_conversation_for_write(
     )
     _ensure_game_available(conversation.game_status, conversation.game_deleted_at)
     return conversation.conversation
+
+
+async def _get_writable_assistant_message(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    assistant_message_id: UUID,
+) -> _WritableAssistantMessage:
+    """Carga una respuesta de asistente propia para completar o fallar."""
+    result = await session.execute(
+        select(Message, Conversation)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .join(Game, Game.id == Conversation.game_id)
+        .where(
+            Message.id == assistant_message_id,
+            Message.conversation_id == conversation_id,
+            Message.role == "assistant",
+            Conversation.user_id == user_id,
+            Conversation.deleted_at.is_(None),
+            Game.status == "active",
+            Game.deleted_at.is_(None),
+        )
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise ConversationNotFoundError
+    return _WritableAssistantMessage(message=row[0], conversation=row[1])
 
 
 def _ensure_game_available(game_status: str, game_deleted_at: datetime | None) -> None:

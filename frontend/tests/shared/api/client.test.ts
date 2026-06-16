@@ -14,7 +14,7 @@ describe('api error helpers', () => {
   const apiError = new ApiError(
     {
       title: 'Foto demasiado grande',
-      message: 'La foto pesa mas de 20 MB.',
+      message: 'La foto pesa más de 30 MB.',
       retryable: true,
       severity: 'warning',
       code: 'http.413',
@@ -41,7 +41,7 @@ describe('api error helpers', () => {
     expect(apiErrorNotification(apiError, 'mutation-error', fallback)).toEqual({
       title: 'Foto demasiado grande',
       id: 'mutation-error-http.413',
-      description: 'La foto pesa mas de 20 MB.',
+      description: 'La foto pesa más de 30 MB.',
     });
     expect(apiErrorNotification(new Error('boom'), 'mutation-error', fallback)).toBe(fallback);
   });

@@ -55,7 +55,7 @@ async def test_save_manual_pdf_writes_original_source_file(tmp_path, monkeypatch
 
 @pytest.mark.anyio
 async def test_read_stored_file_reads_bytes_from_configured_storage(tmp_path, monkeypatch):
-    """El procesamiento background puede reabrir assets sin depender de la request."""
+    """El procesamiento en segundo plano puede reabrir assets sin depender de la petición."""
     monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
     storage_key = "manuals/user/manual/page-1.jpg"
     path = tmp_path / storage_key

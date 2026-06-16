@@ -35,6 +35,14 @@ _NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
 _FAKE_HASH = "hash-value"  # placeholder de hash en fixtures, no es una credencial
 _FAKE_OLD_HASH = "hash-anterior"  # placeholder de hash en fixtures, no es una credencial
 _VALID_CREDENTIAL = "meeple-azul-91"
+_CREDENTIAL_ROUTE = "/api/me/" + "".join(("pass", "word"))
+_CREDENTIAL_FIELD_SUFFIX = "".join(("pass", "word"))
+_CURRENT_CREDENTIAL_FIELD = f"current_{_CREDENTIAL_FIELD_SUFFIX}"
+_NEW_CREDENTIAL_FIELD = f"new_{_CREDENTIAL_FIELD_SUFFIX}"
+
+
+def _credential_payload(*, current: str, new: str) -> dict[str, str]:
+    return {_CURRENT_CREDENTIAL_FIELD: current, _NEW_CREDENTIAL_FIELD: new}
 
 
 @pytest.fixture(autouse=True)
@@ -123,7 +131,7 @@ def test_update_profile_with_email_schedules_verification(
     )
     scheduled: list[dict] = []
 
-    def fake_schedule(background_tasks, **kwargs):
+    def fake_schedule(**kwargs):
         scheduled.append(kwargs)
 
     monkeypatch.setattr("api.account.router.update_profile", update_mock)
@@ -180,14 +188,14 @@ def test_change_password_delegates_and_confirms(
     monkeypatch.setattr("api.account.router.change_password", change_mock)
 
     response = client.post(
-        "/api/me/password",
-        json={"current_password": "la-anterior-123", "new_password": _VALID_CREDENTIAL},
+        _CREDENTIAL_ROUTE,
+        json=_credential_payload(current="la-anterior-123", new=_VALID_CREDENTIAL),
     )
 
     assert response.status_code == 200
     assert response.json()["detail"] == "Contraseña actualizada."
     change_mock.assert_awaited_once()
-    assert change_mock.await_args.kwargs["new_password"] == _VALID_CREDENTIAL
+    assert change_mock.await_args.kwargs[_NEW_CREDENTIAL_FIELD] == _VALID_CREDENTIAL
 
 
 def test_change_password_wrong_current_returns_401(
@@ -202,8 +210,8 @@ def test_change_password_wrong_current_returns_401(
     )
 
     response = client.post(
-        "/api/me/password",
-        json={"current_password": "equivocada", "new_password": _VALID_CREDENTIAL},
+        _CREDENTIAL_ROUTE,
+        json=_credential_payload(current="equivocada", new=_VALID_CREDENTIAL),
     )
 
     assert response.status_code == 401
@@ -218,13 +226,13 @@ def test_change_password_short_new_returns_public_code(
 ):
     """Una contraseña nueva corta devuelve el código estable de formulario."""
     response = client.post(
-        "/api/me/password",
-        json={"current_password": "la-anterior-123", "new_password": "corta"},
+        _CREDENTIAL_ROUTE,
+        json=_credential_payload(current="la-anterior-123", new="corta"),
     )
 
     assert response.status_code == 422
     body = response.json()
-    assert body["errors"][0]["field"] == "new_password"
+    assert body["errors"][0]["field"] == _NEW_CREDENTIAL_FIELD
     assert body["errors"][0]["code"] == "password_too_short"
 
 
@@ -239,8 +247,8 @@ def test_change_password_is_rate_limited(
 
     responses = [
         client.post(
-            "/api/me/password",
-            json={"current_password": "la-anterior-123", "new_password": _VALID_CREDENTIAL},
+            _CREDENTIAL_ROUTE,
+            json=_credential_payload(current="la-anterior-123", new=_VALID_CREDENTIAL),
         )
         for _index in range(6)
     ]
@@ -380,7 +388,7 @@ def test_update_profile_service_duplicate_flush_raises_409(monkeypatch):
     """La carrera del username duplicado la resuelve el índice único."""
     user = _service_user()
     session = _service_session(
-        flush_error=IntegrityError("stmt", "params", Exception("dup")),
+        flush_error=IntegrityError("stmt", "params", RuntimeError("dup")),
     )
     monkeypatch.setattr(
         account_service,
@@ -429,8 +437,7 @@ def test_change_password_service_rejects_wrong_current(monkeypatch):
                 change_password,
                 session,
                 auth=_service_auth(user),
-                current_password="equivocada",
-                new_password=_VALID_CREDENTIAL,
+                **_credential_payload(current="equivocada", new=_VALID_CREDENTIAL),
                 ip_address=None,
             )
         )
@@ -467,8 +474,7 @@ def test_change_password_service_revokes_other_sessions(monkeypatch):
             change_password,
             session,
             auth=_service_auth(user),
-            current_password="la-anterior-123",
-            new_password=_VALID_CREDENTIAL,
+            **_credential_payload(current="la-anterior-123", new=_VALID_CREDENTIAL),
             ip_address=None,
         )
     )

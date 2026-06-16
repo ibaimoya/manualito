@@ -91,7 +91,7 @@ export interface RecommendationsResponse {
 
 export interface ManualDetailPage {
   page_number: number;
-  ocr_status: 'pending' | 'completed' | 'failed';
+  ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
   text_source: 'none' | 'ocr' | 'pdf_text' | 'user_edit';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
   ocr_confidence_mean: number | null;
@@ -105,7 +105,7 @@ export interface ManualDetailResponse extends ManualSummary {
 
 export interface ManualProcessingPage {
   page_number: number;
-  ocr_status: 'pending' | 'completed' | 'failed';
+  ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
 }
 

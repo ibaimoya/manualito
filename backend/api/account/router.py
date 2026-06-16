@@ -1,6 +1,6 @@
 """Endpoints de cuenta y perfil del usuario autenticado."""
 
-from fastapi import APIRouter, BackgroundTasks, Request, Response, status
+from fastapi import APIRouter, Request, Response, status
 
 from api import config
 from api.account.schemas import (
@@ -45,7 +45,6 @@ async def me_stats_handler(
 @limiter.limit(config.ACCOUNT_UPDATE_RATE_LIMIT)
 async def update_profile_handler(
     request: Request,
-    background_tasks: BackgroundTasks,
     payload: UpdateProfileRequest,
     session: DbSession,
     auth: CurrentAuth,
@@ -63,7 +62,6 @@ async def update_profile_handler(
     )
     if result.email_job is not None:
         schedule_verification_email(
-            background_tasks,
             to_email=result.email_job.email,
             username=result.email_job.username,
             token=result.email_job.token,

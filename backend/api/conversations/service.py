@@ -2,10 +2,10 @@
 
 import logging
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
-from fastapi import BackgroundTasks
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ from api import client as internal_client
 from api import config
 from api.auth.service import AuthenticatedSession
 from api.conversations import repository
-from api.conversations.exceptions import ConversationNotFoundError
+from api.conversations.exceptions import ConversationNotFoundError, NoManualSourcesError
 from api.conversations.schemas import (
     ConversationResponse,
     MessageResponse,
@@ -23,13 +23,31 @@ from api.conversations.schemas import (
 from api.exceptions import InternalServiceError, InternalServiceUnavailableError
 from api.games import repository as games_repository
 from api.games.exceptions import GameUnavailableError
+from api.locks import advisory_session_lock
+from api.manuals.exceptions import GeneratedAnswerTooLongError
 from api.manuals.retrieval.service import generate_game_answer
-from common.conversation_limits import (
-    CONVERSATION_TITLE_MAX_LENGTH,
-)
+from common.conversation_limits import CONVERSATION_TITLE_MAX_LENGTH
 from database.session import get_sessionmaker
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ConversationTitleJob:
+    """Datos opacos para refinar el título de una conversación."""
+
+    user_id: UUID
+    conversation_id: UUID
+    user_message_id: UUID
+    expected_title: str
+
+
+@dataclass(frozen=True, slots=True)
+class SendMessageOutcome:
+    """Respuesta HTTP y trabajo opcional derivado del turno."""
+
+    response: SendMessageResponse
+    title_job: ConversationTitleJob | None
 
 
 async def create_conversation(
@@ -89,11 +107,9 @@ async def send_message(
     auth: AuthenticatedSession,
     conversation_id: UUID,
     payload: SendMessageRequest,
-    client: httpx.AsyncClient,
-    background_tasks: BackgroundTasks,
-) -> SendMessageResponse:
-    """Genera y persiste un turno completo de conversación."""
-    # Copia plana ANTES del primer rollback: el rollback expira auth.user y
+) -> SendMessageOutcome:
+    """Persiste un turno pendiente y deja la generación al worker GPU."""
+    # Copia plana antes del primer rollback: el rollback expira auth.user y
     # tocarlo después dispararía un lazy-load síncrono (MissingGreenlet).
     user_id = auth.user.id
     user_content = payload.content.strip()
@@ -102,30 +118,13 @@ async def send_message(
         user_id=user_id,
         conversation_id=conversation_id,
     )
-    history_payload = _history_payload(context.history)
-    retrieval_question = await _build_retrieval_question(
-        client=client,
-        question=user_content,
-        history=history_payload,
-    )
-    answer = await generate_game_answer(
-        session,
-        current_user_id=user_id,
-        game_id=context.game_id,
-        question=user_content,
-        top_k=payload.top_k,
-        client=client,
-        chat_history=history_payload,
-        retrieval_question=retrieval_question,
-    )
+    await _ensure_game_has_sources(session, user_id=user_id, game_id=context.game_id)
     fallback_title = _fallback_title(user_content) if context.title is None else None
-    stored = await repository.append_message_pair(
+    stored = await repository.append_pending_message_pair(
         session,
         user_id=user_id,
         conversation_id=context.id,
         user_content=user_content,
-        assistant_content=answer.answer,
-        assistant_sources=[source.model_dump(mode="json") for source in answer.sources],
         title=fallback_title,
     )
     try:
@@ -143,18 +142,111 @@ async def send_message(
         assistant_message=MessageResponse.model_validate(stored.assistant_message),
     )
     await session.rollback()
-    if fallback_title is not None:
-        _schedule_title_refresh(
-            background_tasks,
+    title_job = (
+        ConversationTitleJob(
             user_id=user_id,
             conversation_id=context.id,
+            user_message_id=stored.user_message.id,
             expected_title=fallback_title,
-            game_name=context.game_name,
-            question=user_content,
-            history=history_payload,
-            client=client,
         )
-    return response
+        if fallback_title is not None
+        else None
+    )
+    return SendMessageOutcome(response=response, title_job=title_job)
+
+
+async def generate_pending_reply(
+    user_id: UUID,
+    conversation_id: UUID,
+    user_message_id: UUID,
+    assistant_message_id: UUID,
+    top_k: int,
+) -> bool:
+    """Completa una respuesta pendiente bajo lock por conversación."""
+    async with advisory_session_lock(f"conversation:{conversation_id}") as session:
+        if session is None:
+            return False
+
+        try:
+            context = await repository.load_pending_reply_context(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                user_message_id=user_message_id,
+                assistant_message_id=assistant_message_id,
+                history_limit=config.CONVERSATION_HISTORY_MESSAGES,
+            )
+            if context is None:
+                return True
+            history_payload = _history_payload(context.history)
+            async with httpx.AsyncClient(timeout=config.INTERNAL_JSON_TIMEOUT) as client:
+                retrieval_question = await _build_retrieval_question(
+                    client=client,
+                    question=context.user_message_content,
+                    history=history_payload,
+                )
+                answer = await generate_game_answer(
+                    session,
+                    current_user_id=user_id,
+                    game_id=context.game_id,
+                    question=context.user_message_content,
+                    top_k=top_k,
+                    client=client,
+                    chat_history=history_payload,
+                    retrieval_question=retrieval_question,
+                )
+            await repository.complete_assistant_message(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                assistant_message_id=assistant_message_id,
+                content=answer.answer,
+                sources=[source.model_dump(mode="json") for source in answer.sources],
+            )
+            return True
+        except (ConversationNotFoundError, GameUnavailableError):
+            logger.info(
+                "Respuesta descartada porque la conversación ya no admite cambios: %s.",
+                conversation_id,
+            )
+            return True
+        except GeneratedAnswerTooLongError:
+            await _fail_pending_reply(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                assistant_message_id=assistant_message_id,
+                error_code="answer_too_long",
+            )
+            return True
+        except (InternalServiceError, InternalServiceUnavailableError):
+            logger.warning("No se pudo generar una respuesta de chat.", exc_info=True)
+            await _fail_pending_reply(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                assistant_message_id=assistant_message_id,
+                error_code="generation_failed",
+            )
+            return True
+
+
+async def fail_pending_reply(
+    user_id: UUID,
+    conversation_id: UUID,
+    assistant_message_id: UUID,
+    error_code: str,
+) -> None:
+    """Marca un mensaje provisional de asistente como fallido desde Celery."""
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as session:
+        await _fail_pending_reply(
+            session,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            assistant_message_id=assistant_message_id,
+            error_code=error_code,
+        )
 
 
 async def rename_conversation(
@@ -206,6 +298,25 @@ async def _load_turn_context(
         await session.rollback()
 
 
+async def _ensure_game_has_sources(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> None:
+    """Bloquea preguntar si el juego ya no tiene manuales que citar."""
+    try:
+        has_sources = await games_repository.game_pool_has_manuals(
+            session,
+            game_id=game_id,
+            current_user_id=user_id,
+        )
+    finally:
+        await session.rollback()
+    if not has_sources:
+        raise NoManualSourcesError
+
+
 async def _build_retrieval_question(
     *,
     client: httpx.AsyncClient,
@@ -233,52 +344,43 @@ async def _build_retrieval_question(
     return condensed or question
 
 
-def _schedule_title_refresh(
-    background_tasks: BackgroundTasks,
-    *,
+async def refresh_conversation_title(
     user_id: UUID,
     conversation_id: UUID,
+    user_message_id: UUID,
     expected_title: str,
-    game_name: str,
-    question: str,
-    history: Sequence[Mapping[str, str]],
-    client: httpx.AsyncClient,
-) -> None:
-    """Agenda el título refinado fuera del camino crítico del turno."""
-    background_tasks.add_task(
-        _refresh_conversation_title,
-        user_id=user_id,
-        conversation_id=conversation_id,
-        expected_title=expected_title,
-        game_name=game_name,
-        question=question,
-        history=list(history),
-        client=client,
-    )
-
-
-async def _refresh_conversation_title(
-    *,
-    user_id: UUID,
-    conversation_id: UUID,
-    expected_title: str,
-    game_name: str,
-    question: str,
-    history: Sequence[Mapping[str, str]],
-    client: httpx.AsyncClient,
 ) -> None:
     """Refina el título con sesión propia y sin bloquear la respuesta."""
-    title = await _conversation_title(
-        client=client,
-        current_title=None,
-        game_name=game_name,
-        question=question,
-        history=history,
-    )
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as session:
+        try:
+            context = await repository.load_conversation_title_context(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                user_message_id=user_message_id,
+                history_limit=config.CONVERSATION_HISTORY_MESSAGES,
+            )
+        except (ConversationNotFoundError, GameUnavailableError):
+            logger.info(
+                "Título descartado porque la conversación ya no admite cambios: %s.",
+                conversation_id,
+            )
+            return
+        finally:
+            await session.rollback()
+
+    async with httpx.AsyncClient(timeout=config.INTERNAL_JSON_TIMEOUT) as client:
+        title = await _conversation_title(
+            client=client,
+            current_title=None,
+            game_name=context.game_name,
+            question=context.question,
+            history=_history_payload(context.history),
+        )
     if title is None or title == expected_title:
         return
 
-    sessionmaker = get_sessionmaker()
     async with sessionmaker() as session:
         try:
             await repository.update_conversation_title(
@@ -325,6 +427,29 @@ async def _conversation_title(
         return _fallback_title(question)
 
     return _clean_title(str(response.get("title", ""))) or _fallback_title(question)
+
+
+async def _fail_pending_reply(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    conversation_id: UUID,
+    assistant_message_id: UUID,
+    error_code: str,
+) -> None:
+    try:
+        await repository.fail_assistant_message(
+            session,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            assistant_message_id=assistant_message_id,
+            error_code=error_code,
+        )
+    except (ConversationNotFoundError, GameUnavailableError):
+        logger.info(
+            "No se pudo marcar como fallida una respuesta ya obsoleta: %s.",
+            assistant_message_id,
+        )
 
 
 def _history_payload(

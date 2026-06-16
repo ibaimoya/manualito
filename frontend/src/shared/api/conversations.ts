@@ -19,6 +19,8 @@ export interface ConversationSummary {
   title: string | null;
   created_at: string;
   updated_at: string;
+  /** El worker está generando la respuesta ahora (asistente pendiente). */
+  has_pending_reply: boolean;
 }
 
 export interface ConversationListResponse {
@@ -28,9 +30,11 @@ export interface ConversationListResponse {
 export interface ConversationMessage {
   id: string;
   role: MessageRole;
+  status: 'pending' | 'completed' | 'failed';
   content: string;
   created_at: string;
   sources: AnswerSource[];
+  error_code?: string | null;
 }
 
 export interface MessageListResponse {
@@ -86,8 +90,8 @@ export const conversationsApi = {
   },
 
   /**
-   * POST /api/conversations/{id}/messages — envía una pregunta, genera la
-   * respuesta y devuelve el turno completo. Usa timeout LLM.
+   * POST /api/conversations/{id}/messages — guarda la pregunta y devuelve el
+   * placeholder de respuesta que el frontend sigue por polling.
    */
   async sendMessage(
     conversationId: string,
@@ -103,7 +107,7 @@ export const conversationsApi = {
         method: 'POST',
         body: JSON.stringify(body),
         headers: JSON_HEADERS,
-        timeoutMs: TIMEOUT.LLM,
+        timeoutMs: TIMEOUT.QUICK,
         signal,
       },
     );

@@ -34,7 +34,7 @@ import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
 import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
-import { manualDetailQueryOptions, useDeleteManual } from '@/features/manual/use-manuals';
+import { manualDetailQueryOptions, manualsKey, useDeleteManual } from '@/features/manual/use-manuals';
 import { formatLongDate } from '@/shared/lib/relativeDate';
 import {
   api,
@@ -67,7 +67,7 @@ function editErrorToast(error: unknown): void {
   if (error instanceof ApiError && (error.status === 502 || error.status === 500)) {
     toast.warning('Texto guardado, índice pendiente', {
       id: 'page-edit-error',
-      description: 'Tu texto ya está guardado; re-procesa el manual para sincronizar la IA.',
+      description: 'Tu texto ya está guardado; reprocesa el manual para sincronizar la IA.',
     });
     return;
   }
@@ -213,6 +213,9 @@ function ManualDetailLoaded({
     onSuccess: () => {
       setReprocessOpen(false);
       qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
+      // Reprocesar vuelve a poner el manual en "indexing": refresca la lista para
+      // que las ruletas contextuales de la biblioteca vuelvan a encenderse.
+      qc.invalidateQueries({ queryKey: manualsKey }).catch(() => undefined);
     },
     onError: (error) => {
       setReprocessOpen(false);
@@ -220,7 +223,7 @@ function ManualDetailLoaded({
         toast.error('El manual ya se está procesando', { id: 'reprocess-error' });
         return;
       }
-      toast.error('No hemos podido re-procesar el manual', {
+      toast.error('No hemos podido reprocesar el manual', {
         id: 'reprocess-error',
         description: 'Inténtalo de nuevo en un momento.',
       });
@@ -433,7 +436,7 @@ function ManualDetailLoaded({
   );
 }
 
-/** Los tres diálogos de confirmación del detalle (guardar edición, re-procesar, eliminar). */
+/** Los tres diálogos de confirmación del detalle (guardar edición, reprocesar, eliminar). */
 function ManualDialogs({
   pageNumber,
   pageCount,
@@ -492,7 +495,7 @@ function ManualDialogs({
 
       <Dialog open={reprocessOpen} onOpenChange={onReprocessOpenChange}>
         <DialogHeader
-          title="Re-procesar manual"
+          title="Reprocesar manual"
           description="Volveremos a leer todas las páginas con OCR y a indexar el texto. La explicación del juego se regenerará."
           onClose={() => onReprocessOpenChange(false)}
         />
@@ -502,7 +505,7 @@ function ManualDialogs({
           </Button>
           <Button loading={reprocessing} onClick={onReprocessConfirm}>
             <RotateCw size={16} strokeWidth={2} />
-            Re-procesar
+            Reprocesar
           </Button>
         </DialogBody>
       </Dialog>
@@ -559,12 +562,11 @@ function ManualActionsMenu({
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem disabled={busy} onSelect={onReprocess}>
           <RotateCw size={16} strokeWidth={2} />
-          Re-procesar todo
+          Reprocesar todo
         </DropdownMenuItem>
         <hr className="my-1 border-t border-border" />
         <DropdownMenuItem danger onSelect={onDelete}>
-          {/* Ajuste óptico: el cuerpo de la papelera pesa abajo (centro de masa ~0.5px
-              más bajo que los demás iconos del menú); la subimos para alinearla. */}
+          {/* Ajuste óptico */}
           <Trash2 size={16} strokeWidth={2} className="-translate-y-[0.5px]" />
           Eliminar manual
         </DropdownMenuItem>
@@ -582,7 +584,7 @@ function ReprocessBanner({
       <output className="flex items-center gap-3 rounded-2xl border border-primary bg-primary-50 p-3.5">
         <Loader2 size={20} className="shrink-0 animate-spin text-primary" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-bold text-fg">Re-procesando el manual…</p>
+          <p className="text-[13.5px] font-bold text-fg">Reprocesando el manual…</p>
           <div className="mt-1.5">
             <Progress value={pct} />
           </div>

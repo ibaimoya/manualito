@@ -78,7 +78,7 @@ describe('/manual/$manualId · lectura', () => {
     expect(screen.getByText('97%')).toBeInTheDocument();
   });
 
-  it('la página poco clara muestra el aviso con re-proceso puntual', async () => {
+  it('la página poco clara muestra el aviso con reproceso puntual', async () => {
     renderManual();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Página 2 · Poco clara' }));
@@ -196,13 +196,13 @@ describe('/manual/$manualId · edición de texto', () => {
 });
 
 describe('/manual/$manualId · acciones de cabecera', () => {
-  it('re-procesar pide confirmación y lanza el POST al confirmar', async () => {
+  it('reprocesar pide confirmación y lanza el POST al confirmar', async () => {
     renderManual();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Acciones' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Re-procesar todo/ }));
-    const dialog = await screen.findByRole('dialog', { name: 'Re-procesar manual' });
-    await user.click(within(dialog).getByRole('button', { name: 'Re-procesar' }));
+    await user.click(await screen.findByRole('menuitem', { name: /Reprocesar todo/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Reprocesar manual' });
+    await user.click(within(dialog).getByRole('button', { name: 'Reprocesar' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

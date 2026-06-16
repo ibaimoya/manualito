@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, func, text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,12 @@ class GameExplanation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(SHA256_HEX_LENGTH),
         nullable=False,
     )
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default=text("'ready'"),
+    )
+    error_code: Mapped[str | None] = mapped_column(String(64))
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -35,6 +41,14 @@ class GameExplanation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint("jsonb_typeof(sections) = 'object'", name="sections_object"),
+        CheckConstraint(
+            "status IN ('ready', 'generating', 'failed')",
+            name="status_valid",
+        ),
+        CheckConstraint(
+            "error_code IS NULL OR status = 'failed'",
+            name="error_code_only_when_failed",
+        ),
         CheckConstraint(
             f"length(source_fingerprint) = {SHA256_HEX_LENGTH}",
             name="source_fingerprint_length_valid",

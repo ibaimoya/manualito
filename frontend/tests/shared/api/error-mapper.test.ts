@@ -73,8 +73,10 @@ describe('error-mapper · mapApiError', () => {
     const v = mapApiError({
       status: 413,
       raw: {
-        detail: 'El PDF no puede superar 50 MB.',
-        errors: [{ field: null, code: 'pdf_too_large', message: 'El PDF no puede superar 50 MB.' }],
+        detail: 'El PDF no puede superar 200 MB.',
+        errors: [
+          { field: null, code: 'pdf_too_large', message: 'El PDF no puede superar 200 MB.' },
+        ],
       },
     });
 

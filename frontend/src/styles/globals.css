@@ -199,6 +199,142 @@ kbd {
   }
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Procesado en segundo plano — feedback "en curso" fuera de pantalla:
+   una conversación respondiéndose y un manual indexándose. Sobre los
+   tokens --m-* (siguen tema claro/oscuro). El spinner reusa <Spinner>.
+   ────────────────────────────────────────────────────────────── */
+
+/* Puntitos de «Manualito está respondiendo» */
+.proc-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 0;
+}
+.proc-tinydot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--m-primary-500);
+  animation: proc-bounce 1.1s ease-in-out infinite;
+}
+@keyframes proc-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* Glifo de la conversación que late mientras se responde (halo según tono) */
+.proc-glyph-pulse {
+  animation: proc-halo 1.4s ease-in-out infinite;
+}
+@keyframes proc-halo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 5px var(--proc-halo, rgba(246, 149, 59, 0.18));
+  }
+}
+
+/* Cometa que recorre el borde de la fila respondiéndose (conic-gradient
+   enmascarado a solo-borde). inset:-1px + radio 1px mayor que la caja lo
+   pega a la arista sin separación; --proc-radius = radio de la caja + 1. */
+@property --proc-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 360deg;
+}
+.proc-border {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--proc-radius, 17px);
+  padding: 2.5px;
+  pointer-events: none;
+  z-index: 0;
+  background: conic-gradient(
+    from var(--proc-angle),
+    transparent 262deg,
+    var(--m-primary-300) 292deg,
+    var(--m-primary-500) 312deg,
+    var(--m-primary-300) 332deg,
+    transparent 362deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: proc-angle 2.6s linear infinite;
+}
+@keyframes proc-angle {
+  to {
+    --proc-angle: 0deg;
+  }
+}
+
+/* Línea de escaneo recorriendo la portada del juego (sin velo, no la tapa) */
+.proc-coverscan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(246, 149, 59, 0),
+    rgba(246, 149, 59, 0.42),
+    rgba(246, 149, 59, 0)
+  );
+  mix-blend-mode: screen;
+  animation: proc-scanmove 2.1s ease-in-out infinite;
+}
+/* Barrido de escaneo sobre la miniatura del manual */
+.proc-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 36%;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(246, 149, 59, 0),
+    rgba(246, 149, 59, 0.5),
+    rgba(246, 149, 59, 0)
+  );
+  animation: proc-scanmove 1.8s ease-in-out infinite;
+}
+@keyframes proc-scanmove {
+  0% {
+    top: -36%;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+/* Sin movimiento: el cometa queda como borde ámbar estático y los
+   barridos se ocultan (el bloque global ya congela las duraciones). */
+@media (prefers-reduced-motion: reduce) {
+  .proc-scan,
+  .proc-coverscan {
+    display: none;
+  }
+  .proc-border {
+    background: none;
+    box-shadow: inset 0 0 0 1.6px var(--m-primary-500);
+  }
+}
+
 /* — Accordion (Radix): anima la altura al plegar/desplegar — */
 @keyframes accordion-down {
   from {

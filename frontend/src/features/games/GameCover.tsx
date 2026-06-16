@@ -5,13 +5,15 @@ import { gameTone } from '@/shared/lib/gameColor';
  * Portada generada a partir del nombre del juego (no hay imágenes reales):
  * gradiente determinista del MISMO tono que badges y cards (gameTone),
  * inicial gigante recortada en la esquina y la ficha de la marca arriba.
+ * Con "processing" una línea de escaneo recorre la portada (manual indexándose).
  */
 
 export function GameCover({
   name,
   size = 120,
   radius,
-}: Readonly<{ name: string; size?: number; radius?: number }>) {
+  processing = false,
+}: Readonly<{ name: string; size?: number; radius?: number; processing?: boolean }>) {
   const tone = gameTone(name);
   return (
     <div
@@ -41,6 +43,7 @@ export function GameCover({
       <span className="absolute opacity-90" style={{ left: size * 0.11, top: size * 0.11 }}>
         <Meeple size={size * 0.24} color="#FFF8F0" />
       </span>
+      {processing ? <span className="proc-coverscan" aria-hidden="true" /> : null}
     </div>
   );
 }

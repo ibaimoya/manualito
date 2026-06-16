@@ -251,7 +251,7 @@ export function PageTextCard({
   editing: boolean;
   /** Colorea cada línea según su confianza OCR. */
   showConfidence: boolean;
-  /** El manual está re-procesándose: edición deshabilitada. */
+  /** El manual está reprocesándose: edición deshabilitada. */
   busy: boolean;
   saving: boolean;
   reprocessing: boolean;

@@ -50,9 +50,10 @@ export type ExplanationSectionKey = 'summary' | 'setup' | 'turns' | 'victory';
 
 export interface GameExplanation {
   /** "generating" ⇒ otra petición la está generando; reintentar en breve. */
-  status: 'ready' | 'generating';
+  status: 'ready' | 'generating' | 'failed';
   sections: Partial<Record<ExplanationSectionKey, ExplanationSection>> | null;
   generated_at: string | null;
+  error_code?: string | null;
 }
 
 export interface RateGameInput {

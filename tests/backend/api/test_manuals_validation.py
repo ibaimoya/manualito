@@ -13,6 +13,22 @@ from api.exceptions import (
 from api.manuals import validation as manual_validation
 
 
+class _FakePdfDocument:
+    """PDFium fake para probar tamaños sin depender de un PDF real grande."""
+
+    def __init__(self, _content: bytes) -> None:
+        self.page_count = 1
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc, _tb):
+        return False
+
+    def __len__(self) -> int:
+        return self.page_count
+
+
 @pytest.mark.anyio
 async def test_validate_manual_pdf_accepts_pdf_and_counts_pages():
     """La validacion PDF confirma firma real y cuenta paginas con PDFium."""
@@ -64,6 +80,45 @@ async def test_validate_manual_pdf_rejects_too_large_file(monkeypatch):
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("page_count", "accepted"),
+    [(29, True), (30, True), (31, False)],
+    ids=["29_paginas", "30_paginas", "31_paginas"],
+)
+async def test_validate_manual_pdf_page_count_bva(monkeypatch, page_count, accepted):
+    """BVA del número de páginas: el límite acepta 30 y rechaza 31."""
+    monkeypatch.setattr(manual_validation.config, "MAX_MANUAL_PAGES", 30)
+    upload = _upload_file(_pdf_bytes(page_count=page_count), "manual.pdf", "application/pdf")
+
+    if accepted:
+        result = await manual_validation.validate_manual_pdf(upload)
+        assert result.page_count == page_count
+    else:
+        with pytest.raises(ManualPageLimitExceededError):
+            await manual_validation.validate_manual_pdf(upload)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("size", "accepted"),
+    [(9, True), (10, True), (11, False)],
+    ids=["limite_menos_1", "limite_exacto", "limite_mas_1"],
+)
+async def test_validate_manual_pdf_size_bva(monkeypatch, size, accepted):
+    """BVA del tamaño de PDF: corta justo por encima del límite configurado."""
+    monkeypatch.setattr(manual_validation.config, "MAX_MANUAL_PDF_SIZE", 10)
+    monkeypatch.setattr(manual_validation.pdfium, "PdfDocument", _FakePdfDocument)
+    upload = _upload_file(b"%PDF-" + b"x" * (size - len(b"%PDF-")), "manual.pdf", "application/pdf")
+
+    if accepted:
+        result = await manual_validation.validate_manual_pdf(upload)
+        assert result.page_count == 1
+    else:
+        with pytest.raises(PdfTooLargeError):
+            await manual_validation.validate_manual_pdf(upload)
+
+
+@pytest.mark.anyio
 async def test_validate_manual_pdf_rejects_too_many_pages(monkeypatch):
     """El limite de paginas se aplica tras contar el PDF en backend."""
     monkeypatch.setattr(manual_validation.config, "MAX_MANUAL_PAGES", 1)
@@ -83,6 +138,42 @@ def test_validate_manual_image_rejects_decompression_bomb(monkeypatch):
 
     with pytest.raises(InvalidImageError):
         manual_validation._validate_manual_image_content(b"image", "image/jpeg")
+
+
+@pytest.mark.parametrize(
+    ("size", "accepted"),
+    [((60_000_000, 1), True), ((60_000_001, 1), False)],
+    ids=["limite_exacto", "limite_mas_1"],
+)
+def test_validate_manual_image_pixel_count_bva(monkeypatch, size, accepted):
+    """BVA del límite de píxeles: acepta el límite configurado y corta por encima."""
+    monkeypatch.setattr(manual_validation.config, "MAX_IMAGE_PIXELS", 60_000_000)
+    monkeypatch.setattr(manual_validation.Image, "open", lambda _content: _FakeImage(size))
+
+    if accepted:
+        result = manual_validation._validate_manual_image_content(b"image", "image/jpeg")
+        assert result.width * result.height == 60_000_000
+    else:
+        with pytest.raises(InvalidImageError):
+            manual_validation._validate_manual_image_content(b"image", "image/jpeg")
+
+
+class _FakeImage:
+    """Imagen falsa para probar dimensiones sin reservar decenas de megapíxeles."""
+
+    format = "JPEG"
+
+    def __init__(self, size: tuple[int, int]) -> None:
+        self.size = size
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc, _tb):
+        return False
+
+    def verify(self) -> None:
+        return None
 
 
 def _upload_file(data: bytes, filename: str, content_type: str) -> UploadFile:

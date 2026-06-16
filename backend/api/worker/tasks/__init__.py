@@ -1,0 +1,1 @@
+"""Tasks Celery de Manualito."""

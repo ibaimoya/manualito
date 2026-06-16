@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import anyio
+import httpx
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -232,6 +233,28 @@ async def test_process_manual_devuelve_paginas_pending_para_celery(monkeypatch):
 
     assert result == [page_id]
     list_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+
+
+def test_internal_http_client_usa_timeout_configurado(monkeypatch):
+    """El worker no debe caer en el timeout HTTPX por defecto de 5 segundos."""
+    captured: dict[str, httpx.Timeout] = {}
+
+    def fake_async_client(*, timeout: httpx.Timeout):
+        captured["timeout"] = timeout
+        return _AsyncContext(object())
+
+    monkeypatch.setattr(manual_service.config, "OCR_SERVICE_TIMEOUT", 300.0)
+    monkeypatch.setattr(manual_service.config, "INTERNAL_JSON_TIMEOUT", 120.0)
+    monkeypatch.setattr(manual_service.httpx, "AsyncClient", fake_async_client)
+
+    manual_service._internal_http_client()
+
+    assert captured["timeout"].as_dict() == {
+        "connect": 10.0,
+        "read": 300.0,
+        "write": 300.0,
+        "pool": 300.0,
+    }
 
 
 @pytest.mark.anyio
@@ -791,7 +814,11 @@ def _patch_sessionmaker(monkeypatch, *, session) -> None:
 
 def _patch_http_client(monkeypatch, *, client) -> None:
     """Inyecta un cliente HTTP fake para servicios que llaman a OCR/RAG."""
-    monkeypatch.setattr(manual_service.httpx, "AsyncClient", lambda: _AsyncContext(client))
+    monkeypatch.setattr(
+        manual_service.httpx,
+        "AsyncClient",
+        lambda **_kwargs: _AsyncContext(client),
+    )
 
 
 def _manual(

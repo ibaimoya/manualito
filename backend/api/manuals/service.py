@@ -78,6 +78,17 @@ MANUAL_CHUNK_INDEX_PAGE_STRIDE = 1_000_000
 logger = logging.getLogger(__name__)
 
 
+def _internal_http_timeout() -> httpx.Timeout:
+    """Timeout HTTP suficientemente amplio para OCR/RAG, sin caer en el default de 5 s."""
+    request_timeout = max(config.OCR_SERVICE_TIMEOUT, config.INTERNAL_JSON_TIMEOUT)
+    return httpx.Timeout(request_timeout, connect=min(10.0, request_timeout))
+
+
+def _internal_http_client() -> httpx.AsyncClient:
+    """Cliente para servicios internos usados por tasks de manuales."""
+    return httpx.AsyncClient(timeout=_internal_http_timeout())
+
+
 @dataclass(frozen=True, slots=True)
 class PageEditResult:
     """Resultado de editar una página y trabajo RAG derivado."""
@@ -247,7 +258,7 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
         if manual.source_type == "pdf":
             source_pdf_content = await _read_source_pdf(session, manual)
 
-        async with httpx.AsyncClient() as client:
+        async with _internal_http_client() as client:
             if manual.source_type == "pdf" and page.storage_key is None:
                 await _process_pdf_page(
                     session=session,
@@ -301,7 +312,7 @@ async def finalize_manual(manual_id: UUID) -> None:
             return
         if await manual_has_unfinished_pages(session, manual_id=manual_id):
             return
-        async with httpx.AsyncClient() as client:
+        async with _internal_http_client() as client:
             await _finalize_manual_locked(session=session, client=client, manual=manual)
 
 
@@ -465,7 +476,7 @@ async def reprocess_manual(
 
 async def run_reprocess(manual_id: UUID, stale_chunk_ids: list[UUID]) -> list[UUID]:
     """Limpia el índice obsoleto y relanza el pipeline de procesamiento."""
-    async with httpx.AsyncClient() as client:
+    async with _internal_http_client() as client:
         await delete_chunks_from_rag(
             client=client,
             manual_id=manual_id,
@@ -749,7 +760,7 @@ async def delete_chunks_from_rag(
 
 async def delete_chunks_from_rag_by_ids(manual_id: UUID, chunk_ids: list[UUID]) -> None:
     """Limpia chunks de RAG desde una task sin compartir cliente HTTP."""
-    async with httpx.AsyncClient() as client:
+    async with _internal_http_client() as client:
         await delete_chunks_from_rag(
             client=client,
             manual_id=manual_id,
@@ -767,7 +778,7 @@ async def sync_page_rag(manual_id: UUID, page_id: UUID, stale_chunk_ids: list[UU
         chunk_ids: set[UUID] = set()
         embedding_model = None
         indexed_at = None
-        async with httpx.AsyncClient() as client:
+        async with _internal_http_client() as client:
             await delete_chunks_from_rag(
                 client=client,
                 manual_id=manual_id,

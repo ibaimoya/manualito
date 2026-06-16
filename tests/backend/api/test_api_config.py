@@ -58,6 +58,7 @@ def test_upload_limits_are_generous_by_default(monkeypatch):
     monkeypatch.delenv("MAX_MANUAL_PDF_SIZE", raising=False)
     monkeypatch.delenv("MAX_MANUAL_TOTAL_SIZE", raising=False)
     monkeypatch.delenv("MAX_MANUAL_PAGES", raising=False)
+    monkeypatch.delenv("MAX_IMAGE_PIXELS", raising=False)
 
     settings = ApiSettings(
         ocr_url="http://ocr:8000",
@@ -70,6 +71,7 @@ def test_upload_limits_are_generous_by_default(monkeypatch):
     assert settings.max_manual_pdf_size == 200 * 1024 * 1024
     assert settings.max_manual_total_size == 200 * 1024 * 1024
     assert settings.max_manual_pages == 30
+    assert settings.max_image_pixels == 60_000_000
 
 
 def test_redis_credential_is_required_by_default(monkeypatch):

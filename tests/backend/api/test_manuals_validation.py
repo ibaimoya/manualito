@@ -140,6 +140,42 @@ def test_validate_manual_image_rejects_decompression_bomb(monkeypatch):
         manual_validation._validate_manual_image_content(b"image", "image/jpeg")
 
 
+@pytest.mark.parametrize(
+    ("size", "accepted"),
+    [((60_000_000, 1), True), ((60_000_001, 1), False)],
+    ids=["limite_exacto", "limite_mas_1"],
+)
+def test_validate_manual_image_pixel_count_bva(monkeypatch, size, accepted):
+    """BVA del límite de píxeles: acepta el límite configurado y corta por encima."""
+    monkeypatch.setattr(manual_validation.config, "MAX_IMAGE_PIXELS", 60_000_000)
+    monkeypatch.setattr(manual_validation.Image, "open", lambda _content: _FakeImage(size))
+
+    if accepted:
+        result = manual_validation._validate_manual_image_content(b"image", "image/jpeg")
+        assert result.width * result.height == 60_000_000
+    else:
+        with pytest.raises(InvalidImageError):
+            manual_validation._validate_manual_image_content(b"image", "image/jpeg")
+
+
+class _FakeImage:
+    """Imagen falsa para probar dimensiones sin reservar decenas de megapíxeles."""
+
+    format = "JPEG"
+
+    def __init__(self, size: tuple[int, int]) -> None:
+        self.size = size
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc, _tb):
+        return False
+
+    def verify(self) -> None:
+        return None
+
+
 def _upload_file(data: bytes, filename: str, content_type: str) -> UploadFile:
     return UploadFile(
         file=BytesIO(data),

@@ -24,7 +24,7 @@ class ApiSettings(BaseSettings):
     max_manual_pdf_size: int = 200 * 1024 * 1024
     max_manual_total_size: int = 200 * 1024 * 1024
     max_manual_pages: int = Field(default=30, ge=1)
-    max_image_pixels: int = Field(default=25_000_000, ge=1)
+    max_image_pixels: int = Field(default=60_000_000, ge=1)
     pdf_render_dpi: int = Field(default=300, ge=72)
     pdf_text_min_chars: int = Field(default=150, ge=0)
     pdf_text_min_words: int = Field(default=25, ge=0)

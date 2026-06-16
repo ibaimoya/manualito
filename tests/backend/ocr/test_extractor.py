@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,6 +12,11 @@ def _paddle_cpu_engine_with_result(predict_result):
     engine._ocr = Mock()
     engine._ocr.predict.return_value = predict_result
     return engine
+
+
+@contextmanager
+def _preprocessed_path(_image_path, _preprocessor):
+    yield "preprocessed/path.jpg"
 
 
 # ---------------------------------------------------------------------------
@@ -52,8 +58,10 @@ def _paddle_cpu_engine_with_result(predict_result):
 def test_paddle_cpu_engine_extract_text_results(predict_result, expected):
     """Transforma el output del OCR Paddle CPU en lista normalizada."""
     engine = _paddle_cpu_engine_with_result(predict_result)
-    result = engine.extract_text("fake/path.jpg")
+    with patch("ocr.engines.paddle.cpu.engine.preprocessed_image_path", _preprocessed_path):
+        result = engine.extract_text("fake/path.jpg")
     assert result == expected
+    engine._ocr.predict.assert_called_once_with("preprocessed/path.jpg")
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +86,8 @@ def test_paddle_cpu_engine_confidence_rounding(raw_score, expected_confidence):
     """El score se redondea a exactamente 4 decimales."""
     predict_result = [{"rec_texts": ["texto"], "rec_scores": [raw_score]}]
     engine = _paddle_cpu_engine_with_result(predict_result)
-    result = engine.extract_text("fake/path.jpg")
+    with patch("ocr.engines.paddle.cpu.engine.preprocessed_image_path", _preprocessed_path):
+        result = engine.extract_text("fake/path.jpg")
     assert result[0]["confidence"] == expected_confidence
 
 
@@ -92,7 +101,10 @@ def test_paddle_cpu_engine_propagates_exception():
     engine._ocr = Mock()
     engine._ocr.predict.side_effect = RuntimeError("fallo del modelo")
 
-    with pytest.raises(RuntimeError, match="fallo del modelo"):
+    with (
+        patch("ocr.engines.paddle.cpu.engine.preprocessed_image_path", _preprocessed_path),
+        pytest.raises(RuntimeError, match="fallo del modelo"),
+    ):
         engine.extract_text("fake/path.jpg")
 
 

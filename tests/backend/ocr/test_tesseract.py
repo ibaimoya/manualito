@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
@@ -28,6 +29,11 @@ def _tesseract_data(
         "par_num": [1] * len(text),
         "line_num": line_num,
     }
+
+
+@contextmanager
+def _preprocessed_path(_image_path, _preprocessor):
+    yield "preprocessed/path.jpg"
 
 
 def test_tesseract_engine_name():
@@ -82,6 +88,9 @@ def test_tesseract_engine_extract_text_groups_words_by_line():
     )
 
     with patch(
+        "ocr.engines.tesseract.engine.preprocessed_image_path",
+        _preprocessed_path,
+    ), patch(
         "ocr.engines.tesseract.engine.pytesseract.image_to_data",
         return_value=tesseract_result,
     ) as image_to_data:
@@ -92,7 +101,7 @@ def test_tesseract_engine_extract_text_groups_words_by_line():
         {"text": "Turno final", "confidence": 0.75},
     ]
     image_to_data.assert_called_once_with(
-        "fake/path.jpg",
+        "preprocessed/path.jpg",
         lang="spa",
         output_type=Output.DICT,
         timeout=TESSERACT_TIMEOUT_SECONDS,
@@ -109,6 +118,9 @@ def test_tesseract_engine_filters_empty_and_invalid_entries():
     )
 
     with patch(
+        "ocr.engines.tesseract.engine.preprocessed_image_path",
+        _preprocessed_path,
+    ), patch(
         "ocr.engines.tesseract.engine.pytesseract.image_to_data",
         return_value=tesseract_result,
     ):
@@ -122,6 +134,9 @@ def test_tesseract_engine_propagates_exception():
     engine = _engine_without_init()
 
     with patch(
+        "ocr.engines.tesseract.engine.preprocessed_image_path",
+        _preprocessed_path,
+    ), patch(
         "ocr.engines.tesseract.engine.pytesseract.image_to_data",
         side_effect=RuntimeError("fallo del modelo"),
     ), pytest.raises(RuntimeError, match="fallo del modelo"):

@@ -1,4 +1,5 @@
 import sys
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,6 +12,11 @@ def _fake_paddle(*, cuda_enabled: bool, gpu_count: int):
     paddle.is_compiled_with_cuda.return_value = cuda_enabled
     paddle.device.cuda.device_count.return_value = gpu_count
     return paddle
+
+
+@contextmanager
+def _preprocessed_path(_image_path, _preprocessor):
+    yield "preprocessed/path.jpg"
 
 
 def test_paddle_gpu_engine_name():
@@ -68,6 +74,8 @@ def test_paddle_gpu_engine_extract_text_results():
         {"rec_texts": ["Reglas"], "rec_scores": [0.98765]},
     ]
 
-    result = engine.extract_text("fake/path.jpg")
+    with patch("ocr.engines.paddle.gpu.engine.preprocessed_image_path", _preprocessed_path):
+        result = engine.extract_text("fake/path.jpg")
 
     assert result == [{"text": "Reglas", "confidence": 0.9877}]
+    engine._ocr.predict.assert_called_once_with("preprocessed/path.jpg")

@@ -4,6 +4,8 @@ from paddleocr import PaddleOCR
 
 from ocr.engines.common import OcrLine, log_ocr_result
 from ocr.engines.paddle.common import normalize_paddle_result
+from ocr.engines.paddle.preprocessing import preprocess_for_paddle
+from ocr.engines.preprocessing import preprocessed_image_path
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ class PaddleCpuOcrEngine:
     def extract_text(self, image_path: str) -> list[OcrLine]:
         """Extrae líneas OCR normalizadas con PaddleOCR CPU."""
         logger.info("Iniciando OCR sobre: %s", image_path)
-        lines = normalize_paddle_result(self._ocr.predict(image_path))
+        with preprocessed_image_path(image_path, preprocess_for_paddle) as processed_path:
+            lines = normalize_paddle_result(self._ocr.predict(processed_path))
         log_ocr_result(logger, image_path, lines)
         return lines

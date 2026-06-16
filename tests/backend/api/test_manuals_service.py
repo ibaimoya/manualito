@@ -272,7 +272,8 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
     monkeypatch.setattr(manual_service, "get_page_for_processing", AsyncMock(return_value=page))
     monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"image-bytes"))
-    monkeypatch.setattr(manual_service, "run_ocr", AsyncMock(return_value=_OCR_LINES))
+    run_ocr_mock = AsyncMock(return_value=_OCR_LINES)
+    monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
 
@@ -285,6 +286,11 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     assert replace_kwargs["text_quality"] == "ok"
     assert replace_kwargs["chunks"][0].source_page == 1
     assert replace_kwargs["chunks"][0].chunk_index == 0
+    ocr_image = run_ocr_mock.await_args.kwargs["image"]
+    assert ocr_image.content == b"image-bytes"
+    assert ocr_image.sha256 == page.sha256
+    assert ocr_image.width == page.width
+    assert ocr_image.height == page.height
 
 
 @pytest.mark.anyio
@@ -487,7 +493,8 @@ async def test_process_manual_page_renderiza_pdf_si_el_texto_no_es_aprovechable(
     monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
     attach_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "attach_page_image_asset", attach_mock)
-    monkeypatch.setattr(manual_service, "run_ocr", AsyncMock(return_value=_OCR_LINES))
+    run_ocr_mock = AsyncMock(return_value=_OCR_LINES)
+    monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
 
@@ -496,6 +503,8 @@ async def test_process_manual_page_renderiza_pdf_si_el_texto_no_es_aprovechable(
     save_mock.assert_awaited_once_with(image, owner_user_id=_USER_ID, page_number=2)
     attach_mock.assert_awaited_once()
     assert attach_mock.await_args.kwargs["storage_key"] == "manuals/user/manual/page-2.jpg"
+    assert attach_mock.await_args.kwargs["image"] is image
+    assert run_ocr_mock.await_args.kwargs["image"] is image
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["text_source"] == "ocr"
     assert replace_kwargs["chunks"][0].source_page == 2

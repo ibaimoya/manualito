@@ -1259,6 +1259,7 @@ monitoring = [
 ocr = [
     { name = "fastapi" },
     { name = "numpy" },
+    { name = "opencv-contrib-python" },
     { name = "pillow" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1294,6 +1295,7 @@ test = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "numpy" },
+    { name = "opencv-contrib-python" },
     { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pwdlib", extra = ["argon2"] },
@@ -1352,11 +1354,12 @@ monitoring = [{ name = "flower", specifier = "==2.0.1" }]
 ocr = [
     { name = "fastapi", specifier = "==0.136.3" },
     { name = "numpy", specifier = "==2.3.5" },
+    { name = "opencv-contrib-python", specifier = "==4.10.0.84" },
     { name = "pillow", specifier = "==12.2.0" },
     { name = "python-multipart", specifier = "==0.0.31" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
-ocr-paddle = [{ name = "paddleocr", specifier = "==3.6.0" }]
+ocr-paddle = [{ name = "paddleocr", specifier = "==3.7.0" }]
 ocr-paddle-cpu = [{ name = "paddlepaddle", specifier = "==3.3.1", index = "https://www.paddlepaddle.org.cn/packages/stable/cpu/" }]
 ocr-paddle-gpu = [{ name = "paddlepaddle-gpu", specifier = "==3.3.1", index = "https://www.paddlepaddle.org.cn/packages/stable/cu118/" }]
 ocr-tesseract = [{ name = "pytesseract", specifier = "==0.3.13" }]
@@ -1378,6 +1381,7 @@ test = [
     { name = "fastapi", specifier = "==0.136.3" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "numpy", specifier = "==2.3.5" },
+    { name = "opencv-contrib-python", specifier = "==4.10.0.84" },
     { name = "pillow", specifier = "==12.2.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
     { name = "pwdlib", extras = ["argon2"], specifier = "==0.3.0" },
@@ -1905,7 +1909,7 @@ wheels = [
 
 [[package]]
 name = "paddleocr"
-version = "3.6.0"
+version = "3.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1914,9 +1918,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/3a/35fda076d50ac10b22011c3f8faccf3ef5535ee73993a4a536dd320320cf/paddleocr-3.6.0.tar.gz", hash = "sha256:fc3805825ad9177e12e8334888060007e127b65faf41924441a325919aa3c4ff", size = 3017623, upload-time = "2026-05-28T11:43:32.095Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/97/b1/9454e886afa925067ce51de2e513d146524645888de299d51ddc1caa3100/paddleocr-3.7.0.tar.gz", hash = "sha256:9b81eb62cf37e590d4873e60262ff56f968ff9de6ce1f565749760ceb1c422e2", size = 3082862, upload-time = "2026-06-11T12:09:52.545Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/3f/eb7ac20377feb9a7bea99d06d6524fba11087caef01a553ab36dd53413d7/paddleocr-3.6.0-py3-none-any.whl", hash = "sha256:76a03d260a2b5f7f3f1af017fbdc0cae3ccb2a538d40ba898a3a791711c34c33", size = 142861, upload-time = "2026-05-28T11:43:29.473Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/79/2ade66cf72074a3d2a013e2ba1f256d6116fec797b908fc1b4f9c320d8c4/paddleocr-3.7.0-py3-none-any.whl", hash = "sha256:c0f0a81ad4112727f30c6fcf986ac0ef6a120d31ee0991a01fae0357ee32d338", size = 146750, upload-time = "2026-06-11T12:09:51.204Z" },
 ]
 
 [[package]]
@@ -1974,7 +1978,7 @@ wheels = [
 
 [[package]]
 name = "paddlex"
-version = "3.6.1"
+version = "3.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aistudio-sdk" },
@@ -1996,9 +2000,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "ujson" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/13/f1/edc31b1bba2adc5fc1a3e025293ac19e0bfd65b9a828101c0e969026678f/paddlex-3.6.1.tar.gz", hash = "sha256:4c6bdbd81a9fcef6b55c887272b71ba7ef8193bc257762341393420a492fabd7", size = 4315100, upload-time = "2026-05-27T14:25:16.003Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/35/8d/c464333de1d60a6c81bbebbef9ed318e4681142d8ce46a70da71ab8c1ee8/paddlex-3.7.1.tar.gz", hash = "sha256:50beaff21eeef5e205d3a9bb636511c55d30470f9611275ad26e77510f77de0e", size = 4395688, upload-time = "2026-06-11T10:41:46.042Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/96/4752963dd2a585f4d1f69a2a9f2190fa68661b1bfd178e542cdf394a6e9b/paddlex-3.6.1-py3-none-any.whl", hash = "sha256:a6008bba66703aaf2cfe75185210535c839f87052f9be45501aedb4b02258498", size = 2190597, upload-time = "2026-05-27T14:25:04.492Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/6b/880d521082088b3f794166ee261e823035be6bc3dc78b2b4da0de7e6e015/paddlex-3.7.1-py3-none-any.whl", hash = "sha256:4af4d9d18a99f2b907041dcb558a73b9b170cac945a7028498cc91d0ea1dbdbf", size = 2220975, upload-time = "2026-06-11T10:41:43.921Z" },
 ]
 
 [package.optional-dependencies]

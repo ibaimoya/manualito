@@ -361,12 +361,19 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
 
     pages = [entity for entity in session.added if isinstance(entity, ManualPage)]
     assets = [entity for entity in session.added if isinstance(entity, Asset)]
+    expected_image = _validated_image()
+    assert len(assets) == 2
     assert manual.source_type == "images"
     assert manual.page_count == 2
     assert [asset.storage_key for asset in assets] == [
         "manuals/user/manual/page-1.jpg",
         "manuals/user/manual/page-2.jpg",
     ]
+    assert all(asset.kind == "manual_page_image" for asset in assets)
+    assert all(asset.byte_size == len(expected_image.content) for asset in assets)
+    assert all(asset.sha256 == expected_image.sha256 for asset in assets)
+    assert all(asset.width == expected_image.width for asset in assets)
+    assert all(asset.height == expected_image.height for asset in assets)
     assert [page.page_number for page in pages] == [1, 2]
     assert [page.ocr_status for page in pages] == ["pending", "pending"]
     assert [page.text_source for page in pages] == ["none", "none"]
@@ -396,11 +403,16 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
 
     source_asset = _first_added(session, Asset)
     pages = [entity for entity in session.added if isinstance(entity, ManualPage)]
+    expected_pdf = _validated_pdf()
     assert manual.source_type == "pdf"
     assert manual.page_count == 2
     assert manual.source_asset_id == source_asset.id
     assert source_asset.kind == "manual_source_pdf"
     assert source_asset.storage_key == "manuals/user/manual/source.pdf"
+    assert source_asset.byte_size == len(expected_pdf.content)
+    assert source_asset.sha256 == expected_pdf.sha256
+    assert source_asset.width is None
+    assert source_asset.height is None
     assert [page.page_number for page in pages] == [1, 2]
     assert [page.image_asset_id for page in pages] == [None, None]
     assert session.commits == 1
@@ -537,9 +549,14 @@ async def test_attach_page_image_asset_persists_rendered_pdf_page():
     )
 
     asset = _first_added(session, Asset)
+    expected_image = _validated_image()
     assert asset.owner_user_id == _OWNER_USER_ID
     assert asset.kind == "manual_page_image"
     assert asset.storage_key == "manuals/user/manual/page-1.jpg"
+    assert asset.byte_size == len(expected_image.content)
+    assert asset.sha256 == expected_image.sha256
+    assert asset.width == expected_image.width
+    assert asset.height == expected_image.height
     assert page.image_asset_id == asset.id
     assert session.commits == 1
 

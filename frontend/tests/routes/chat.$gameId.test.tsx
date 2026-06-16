@@ -121,6 +121,36 @@ describe('/chat/$gameId', () => {
   });
 
   it('al enviar una pregunta: burbuja optimista + respuesta del backend', async () => {
+    let releaseBackend!: () => void;
+    const backendReady = new Promise<void>((resolve) => {
+      releaseBackend = resolve;
+    });
+    server.use(
+      http.post('/api/conversations/:conversationId/messages', async ({ request }) => {
+        const body = (await request.json()) as { content?: string };
+        await backendReady;
+        return HttpResponse.json({
+          conversation: CONVERSATION,
+          user_message: {
+            id: 'msg-user-optimistic',
+            role: 'user',
+            status: 'completed',
+            content: body.content ?? '',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            id: 'msg-bot-optimistic',
+            role: 'assistant',
+            status: 'completed',
+            content: 'Cada jugador recibe dos asentamientos y dos carreteras.',
+            created_at: '2026-05-26T10:06:05.000Z',
+            sources: [],
+          },
+        });
+      }),
+    );
+
     renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
@@ -132,6 +162,7 @@ describe('/chat/$gameId', () => {
     expect(await screen.findByText('¿Y empate?')).toBeInTheDocument();
 
     // El backend (MSW) responde el turno completo.
+    releaseBackend();
     await waitFor(
       () => {
         expect(

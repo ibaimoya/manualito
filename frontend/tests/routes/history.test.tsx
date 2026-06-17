@@ -20,6 +20,7 @@ function manual(id: string, name: string) {
     visibility: 'private',
     source_type: 'pdf',
     page_count: 8,
+    duplicate_page_count: 0,
     language: 'spa',
     chunks_indexed: 10,
     created_at: '2026-05-26T10:00:00.000Z',
@@ -117,6 +118,19 @@ describe('/history', () => {
     expect(await screen.findByText('Catan')).toBeInTheDocument();
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
     expect(screen.getByText('Parchís')).toBeInTheDocument();
+  });
+
+  it('en Manuales, un manual con páginas duplicadas muestra el aviso ámbar', async () => {
+    server.use(
+      NO_GAMES,
+      http.get('/api/manuals', () =>
+        HttpResponse.json({ manuals: [{ ...manual('m1', 'Catan'), duplicate_page_count: 1 }] }),
+      ),
+    );
+    renderHistory();
+    const user = userEvent.setup();
+    await goToManuals(user);
+    expect(await screen.findByText('1 página duplicada')).toBeInTheDocument();
   });
 
   it('en Manuales, el filtro acota la lista por nombre', async () => {

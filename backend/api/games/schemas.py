@@ -71,6 +71,7 @@ class GamePoolManualItem(StrictModel):
     title: str | None
     source_type: str
     page_count: int = Field(ge=1)
+    duplicate_page_count: int = Field(default=0, ge=0)
     created_at: datetime
     is_own: bool
 

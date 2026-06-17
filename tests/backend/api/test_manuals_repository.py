@@ -30,6 +30,7 @@ from api.manuals.repository import (
     resolve_manual_processed_status,
     soft_delete_user_manual,
 )
+from api.manuals.schemas import ManualSummaryResponse
 from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
 from database.models.asset import Asset
 from database.models.manual import ManualPage
@@ -140,6 +141,7 @@ async def test_list_user_manuals_maps_explicit_rows():
     assert manuals[0].title == "Manual base"
     assert manuals[0].source_type == "images"
     assert manuals[0].page_count == 2
+    assert manuals[0].duplicate_page_count == 1
     assert manuals[0].chunks_indexed == 2
 
 
@@ -149,6 +151,15 @@ def test_manual_summary_query_selects_public_upload_metadata():
 
     assert "manuals.source_type" in compiled
     assert "manuals.page_count" in compiled
+    assert "source_reused_from_page_id" in compiled
+    assert "duplicate_page_count" in compiled
+
+
+def test_manual_summary_row_preserves_duplicate_page_count():
+    """Una fila de resumen propaga el conteo de páginas duplicadas a la respuesta."""
+    summary = ManualSummaryResponse.model_validate(_manual_row(title="Manual base"))
+
+    assert summary.duplicate_page_count == 1
 
 
 @pytest.mark.anyio
@@ -856,6 +867,7 @@ def _manual_row(*, title: str | None):
         visibility="private",
         source_type="images",
         page_count=2,
+        duplicate_page_count=1,
         language="es",
         chunks_indexed=2,
         created_at=_INDEXED_AT,

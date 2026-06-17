@@ -233,6 +233,23 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
     expect(screen.getByText(/14 páginas/)).toBeInTheDocument();
   });
 
+  it('un manual del pool con páginas duplicadas avisa en su tarjeta', async () => {
+    server.use(
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({
+          ...SAMPLE_GAME_DETAIL,
+          manuals: [
+            { ...SAMPLE_GAME_DETAIL.manuals[0], duplicate_page_count: 1 },
+            SAMPLE_GAME_DETAIL.manuals[1],
+          ],
+        }),
+      ),
+    );
+    renderHub();
+    const region = await screen.findByRole('region', { name: /Manuales/ });
+    expect(within(region).getByText('1 página duplicada')).toBeInTheDocument();
+  });
+
   it('las conversaciones muestran "Ver todas (N)" hacia la pantalla del juego', async () => {
     renderHub();
     const link = await screen.findByRole('link', { name: /Ver todas \(1\)/ });

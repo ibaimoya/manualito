@@ -14,7 +14,7 @@ from database.models.conversation import Conversation
 from database.models.explanation import GameExplanation
 from database.models.game import Game
 from database.models.game_follow import GameFollow
-from database.models.manual import Manual
+from database.models.manual import Manual, ManualPage
 
 SIMILARITY_THRESHOLD = 0.1
 
@@ -280,6 +280,14 @@ async def list_game_pool_manuals(
             Manual.page_count,
             Manual.created_at,
             (Manual.owner_user_id == current_user_id).label("is_own"),
+            select(func.count())
+            .select_from(ManualPage)
+            .where(
+                ManualPage.manual_id == Manual.id,
+                ManualPage.source_reused_from_page_id.is_not(None),
+            )
+            .scalar_subquery()
+            .label("duplicate_page_count"),
         )
         .where(*_pool_visibility_filters(game_id, current_user_id))
         .order_by(Manual.created_at.desc(), Manual.id.desc())

@@ -133,6 +133,7 @@ def test_list_manuals_devuelve_manuales_propios(
                 "visibility": "private",
                 "source_type": "images",
                 "page_count": 1,
+                "duplicate_page_count": 0,
                 "language": "es",
                 "chunks_indexed": 1,
                 "created_at": "2026-05-31T10:00:00Z",

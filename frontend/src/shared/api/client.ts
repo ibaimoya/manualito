@@ -52,6 +52,8 @@ export interface ManualSummary {
   visibility: ManualVisibility;
   source_type: 'images' | 'pdf';
   page_count: number;
+  /** Páginas idénticas a otras ya subidas: copiadas, no reprocesadas ni contadas. */
+  duplicate_page_count: number;
   language: string | null;
   chunks_indexed: number;
   created_at: string;

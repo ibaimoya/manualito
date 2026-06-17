@@ -918,6 +918,14 @@ def _manual_summary_query(owner_user_id: UUID) -> Select:
             Manual.chunks_indexed,
             Manual.created_at,
             Manual.indexed_at,
+            select(func.count())
+            .select_from(ManualPage)
+            .where(
+                ManualPage.manual_id == Manual.id,
+                ManualPage.source_reused_from_page_id.is_not(None),
+            )
+            .scalar_subquery()
+            .label("duplicate_page_count"),
         )
         .join(Game, Game.id == Manual.game_id)
         .where(

@@ -700,7 +700,7 @@ function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
     <Tooltip content={st.tip}>
       <Badge
         tone={st.tone}
-        icon={<st.Icon strokeWidth={2.2} />}
+        icon={<st.Icon strokeWidth={2.2} className={st.key === 'processing' ? 'animate-spin' : undefined} />}
         tabIndex={0}
         role="status"
         aria-label={`Estado de lectura: ${st.label}`}

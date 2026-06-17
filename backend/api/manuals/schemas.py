@@ -45,6 +45,7 @@ class ManualSummaryResponse(StrictModel):
     visibility: str
     source_type: str
     page_count: int
+    duplicate_page_count: int = Field(default=0, ge=0)
     language: str | None
     chunks_indexed: ChunksIndexed
     created_at: datetime

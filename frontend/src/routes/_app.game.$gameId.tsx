@@ -21,6 +21,7 @@ import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { FollowButton } from '@/features/games/FollowButton';
 import { GameCover } from '@/features/games/GameCover';
+import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
@@ -342,6 +343,11 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
           {manual.page_count} {manual.page_count === 1 ? 'página' : 'páginas'} ·{' '}
           {formatShortDate(manual.created_at)}
         </p>
+        {manual.duplicate_page_count > 0 ? (
+          <div className="mt-1.5">
+            <DuplicatePagesBadge count={manual.duplicate_page_count} />
+          </div>
+        ) : null}
         {manual.is_own ? (
           <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent">
             <ScanText size={13} strokeWidth={2} aria-hidden="true" />

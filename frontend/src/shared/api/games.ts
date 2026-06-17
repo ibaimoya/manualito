@@ -19,6 +19,8 @@ export interface GamePoolManual {
   title: string | null;
   source_type: 'images' | 'pdf';
   page_count: number;
+  /** Páginas duplicadas de otras ya subidas: no se reprocesan ni cuentan. */
+  duplicate_page_count: number;
   created_at: string;
   /** Solo los manuales propios pueden abrirse en detalle y editarse. */
   is_own: boolean;

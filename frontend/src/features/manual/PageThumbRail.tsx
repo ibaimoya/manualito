@@ -101,11 +101,12 @@ function PageButton({
         </span>
       ) : null}
 
-      {/* estado: icono suelto (móvil) / punto redondo (escritorio) */}
+      {/* estado: icono suelto (móvil) / punto redondo (escritorio); el de
+          "Procesando" gira para que se note que el trabajo sigue en curso. */}
       <st.Icon
         size={12}
         strokeWidth={2.3}
-        className={cn('md:hidden', STATUS_FG_CLASS[st.tone])}
+        className={cn('md:hidden', STATUS_FG_CLASS[st.tone], st.key === 'processing' && 'animate-spin')}
         aria-hidden="true"
       />
       <span
@@ -114,7 +115,12 @@ function PageButton({
           STATUS_TONE_CLASS[st.tone],
         )}
       >
-        <st.Icon size={13} strokeWidth={2.4} aria-hidden="true" />
+        <st.Icon
+          size={13}
+          strokeWidth={2.4}
+          className={cn(st.key === 'processing' && 'animate-spin')}
+          aria-hidden="true"
+        />
       </span>
 
       {hits > 0 ? (

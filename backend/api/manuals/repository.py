@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, case, delete, func, or_, select, update
+from sqlalchemy import Select, and_, case, delete, func, or_, select, update
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -83,6 +83,18 @@ class ManualDetailRow:
     def __getattr__(self, name: str) -> object:
         """Permite a Pydantic leer campos del resumen con from_attributes."""
         return getattr(self.summary, name)
+
+
+@dataclass(frozen=True, slots=True)
+class ManualPageImageAsset:
+    """Asset de imagen autorizado para visualizar una página."""
+
+    storage_key: str
+    mime_type: str
+    byte_size: int
+    sha256: str
+    width: int | None
+    height: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -269,7 +281,18 @@ async def get_user_manual_detail(
             ManualPage.text_quality,
             ManualPage.ocr_confidence_mean,
             ManualPage.ocr_lines,
+            Asset.id.is_not(None).label("image_available"),
+            Asset.width.label("image_width"),
+            Asset.height.label("image_height"),
             _manual_page_dedup_status(),
+        )
+        .outerjoin(
+            Asset,
+            and_(
+                ManualPage.image_asset_id == Asset.id,
+                Asset.kind == "manual_page_image",
+                Asset.deleted_at.is_(None),
+            ),
         )
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
@@ -309,6 +332,47 @@ async def get_user_manual_processing_status(
         .order_by(ManualPage.page_number.asc())
     )
     return manual, list(pages_result)
+
+
+async def get_user_manual_page_image_asset(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+    page_number: int,
+) -> ManualPageImageAsset | None:
+    """Carga la imagen de una página propia sin exponer storage interno."""
+    result = await session.execute(
+        select(
+            Asset.storage_key,
+            Asset.mime_type,
+            Asset.byte_size,
+            Asset.sha256,
+            Asset.width,
+            Asset.height,
+        )
+        .join(ManualPage, ManualPage.image_asset_id == Asset.id)
+        .join(Manual, Manual.id == ManualPage.manual_id)
+        .where(
+            Manual.id == manual_id,
+            Manual.owner_user_id == owner_user_id,
+            Manual.deleted_at.is_(None),
+            ManualPage.page_number == page_number,
+            Asset.kind == "manual_page_image",
+            Asset.deleted_at.is_(None),
+        )
+    )
+    row = result.one_or_none()
+    if row is None:
+        return None
+    return ManualPageImageAsset(
+        storage_key=row.storage_key,
+        mime_type=row.mime_type,
+        byte_size=row.byte_size,
+        sha256=row.sha256,
+        width=row.width,
+        height=row.height,
+    )
 
 
 async def get_manual_for_processing(
@@ -618,8 +682,20 @@ async def get_manual_page_row(session: AsyncSession, *, page_id: UUID) -> Row:
             ManualPage.text_quality,
             ManualPage.ocr_confidence_mean,
             ManualPage.ocr_lines,
+            Asset.id.is_not(None).label("image_available"),
+            Asset.width.label("image_width"),
+            Asset.height.label("image_height"),
             _manual_page_dedup_status(),
-        ).where(ManualPage.id == page_id)
+        )
+        .outerjoin(
+            Asset,
+            and_(
+                ManualPage.image_asset_id == Asset.id,
+                Asset.kind == "manual_page_image",
+                Asset.deleted_at.is_(None),
+            ),
+        )
+        .where(ManualPage.id == page_id)
     )
     return result.one()
 

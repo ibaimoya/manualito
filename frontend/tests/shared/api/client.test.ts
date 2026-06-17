@@ -191,6 +191,9 @@ describe('api getManual', () => {
               text_source: 'ocr',
               text_quality: 'ok',
               dedup_status: 'reused',
+              image_available: true,
+              image_width: 800,
+              image_height: 1200,
               ocr_confidence_mean: 0.88,
               ocr_lines: [{ text: 'Reglas', confidence: 0.88 }],
             },
@@ -203,6 +206,7 @@ describe('api getManual', () => {
 
     expect(result.pages[0]?.ocr_lines[0]?.text).toBe('Reglas');
     expect(result.pages[0]?.dedup_status).toBe('reused');
+    expect(api.manualPageImageUrl('m-1', 1)).toBe('/api/manuals/m-1/pages/1/image');
   });
 });
 

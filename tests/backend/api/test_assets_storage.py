@@ -65,6 +65,14 @@ async def test_read_stored_file_reads_bytes_from_configured_storage(tmp_path, mo
     assert await asset_storage.read_stored_file(storage_key) == b"image-bytes"
 
 
+def test_stored_file_path_rejects_path_traversal(tmp_path, monkeypatch):
+    """El endpoint de visualización no puede resolver rutas fuera del storage."""
+    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
+
+    with pytest.raises(ValueError):
+        asset_storage.stored_file_path("../secret.jpg")
+
+
 @pytest.mark.anyio
 async def test_delete_stored_file_removes_file_and_ignores_missing(tmp_path, monkeypatch):
     """El borrado explícito limpia el fichero físico y es idempotente."""

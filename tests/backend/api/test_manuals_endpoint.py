@@ -185,6 +185,9 @@ def test_get_manual_devuelve_detalle_con_paginas(
                 text_source="ocr",
                 text_quality="ok",
                 dedup_status="none",
+                image_available=True,
+                image_width=800,
+                image_height=1200,
                 ocr_confidence_mean=0.9,
                 ocr_lines=_OCR_LINES,
             )
@@ -207,6 +210,9 @@ def test_get_manual_devuelve_detalle_con_paginas(
             "text_source": "ocr",
             "text_quality": "ok",
             "dedup_status": "none",
+            "image_available": True,
+            "image_width": 800,
+            "image_height": 1200,
             "ocr_confidence_mean": 0.9,
             "ocr_lines": _OCR_LINES,
         }
@@ -263,6 +269,62 @@ def test_get_manual_processing_devuelve_estado_ligero(
         owner_user_id=_USER_ID,
         manual_id=_MANUAL_ID,
     )
+
+
+def test_get_manual_page_image_devuelve_fichero_privado(
+    client,
+    tmp_path,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """El visor carga la imagen de una página propia sin exponer storage_key."""
+    storage_key = "manuals/user/manual/page-1.jpg"
+    image_path = tmp_path / storage_key
+    image_path.parent.mkdir(parents=True)
+    image_path.write_bytes(b"image-bytes")
+    monkeypatch.setattr("api.assets.storage.config.ASSET_STORAGE_DIR", str(tmp_path))
+    get_mock = AsyncMock(
+        return_value=SimpleNamespace(
+            storage_key=storage_key,
+            mime_type="image/jpeg",
+            byte_size=11,
+            sha256="a" * 64,
+            width=800,
+            height=1200,
+        )
+    )
+    monkeypatch.setattr("api.manuals.router.get_user_manual_page_image_asset", get_mock)
+
+    response = client.get(f"/api/manuals/{_MANUAL_ID}/pages/1/image")
+
+    assert response.status_code == 200
+    assert response.content == b"image-bytes"
+    assert response.headers["content-type"] == "image/jpeg"
+    assert response.headers["cache-control"] == "private, max-age=300, must-revalidate"
+    assert response.headers["content-disposition"].startswith("inline;")
+    get_mock.assert_awaited_once_with(
+        _FAKE_SESSION,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=1,
+    )
+
+
+def test_get_manual_page_image_sin_asset_devuelve_404(
+    client,
+    monkeypatch,
+    override_auth_and_db,
+):
+    """Una página sin imagen disponible usa el mismo 404 que un manual inexistente."""
+    monkeypatch.setattr(
+        "api.manuals.router.get_user_manual_page_image_asset",
+        AsyncMock(return_value=None),
+    )
+
+    response = client.get(f"/api/manuals/{_MANUAL_ID}/pages/1/image")
+
+    assert response.status_code == 404
+    _assert_error(response.json(), code="manual_not_found")
 
 
 def test_create_manual_usa_visibilidad_privada_por_defecto(

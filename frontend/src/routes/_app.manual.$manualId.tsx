@@ -224,6 +224,7 @@ function ManualDetailLoaded({
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [reprocessOpen, setReprocessOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [imageOpen, setImageOpen] = useState(false);
   const [showConfidence, setShowConfidence] = useState(false);
   const search = usePageSearch(pages);
   const detailKey = manualDetailQueryOptions(manual.id).queryKey;
@@ -398,6 +399,7 @@ function ManualDetailLoaded({
             </div>
             <ManualActionsMenu
               busy={busy}
+              onViewImage={() => setImageOpen(true)}
               onReprocess={() => setReprocessOpen(true)}
               onDelete={() => setDeleteOpen(true)}
             />
@@ -467,6 +469,17 @@ function ManualDetailLoaded({
           </div>
         </div>
       </div>
+
+      <ManualImageDialog
+        open={imageOpen}
+        onOpenChange={setImageOpen}
+        manualId={manual.id}
+        title={title}
+        page={page}
+        pageCount={pages.length}
+        onPrev={() => goToPage(page.page_number - 1)}
+        onNext={() => goToPage(page.page_number + 1)}
+      />
 
       <ManualDialogs
         pageNumber={page.page_number}
@@ -603,9 +616,15 @@ function ManualDialogs({
 
 function ManualActionsMenu({
   busy,
+  onViewImage,
   onReprocess,
   onDelete,
-}: Readonly<{ busy: boolean; onReprocess: () => void; onDelete: () => void }>) {
+}: Readonly<{
+  busy: boolean;
+  onViewImage: () => void;
+  onReprocess: () => void;
+  onDelete: () => void;
+}>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -615,6 +634,11 @@ function ManualActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onSelect={onViewImage}>
+          <Images size={16} strokeWidth={2} />
+          Ver imagen
+        </DropdownMenuItem>
+        <hr className="my-1 border-t border-border" />
         <DropdownMenuItem disabled={busy} onSelect={onReprocess}>
           <RotateCw size={16} strokeWidth={2} />
           Reprocesar todo
@@ -627,6 +651,91 @@ function ManualActionsMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function ManualImageDialog({
+  open,
+  onOpenChange,
+  manualId,
+  title,
+  page,
+  pageCount,
+  onPrev,
+  onNext,
+}: Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  manualId: string;
+  title: string;
+  page: ManualDetailPage;
+  pageCount: number;
+  onPrev: () => void;
+  onNext: () => void;
+}>) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = api.manualPageImageUrl(manualId, page.page_number);
+  const showImage = page.image_available && !imageFailed;
+  const imageStyle =
+    page.image_width && page.image_height
+      ? { aspectRatio: `${page.image_width} / ${page.image_height}` }
+      : undefined;
+
+  useEffect(() => {
+    if (open) setImageFailed(false);
+  }, [open, imageUrl]);
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      contentClassName="max-w-5xl overflow-hidden bg-bg"
+    >
+      <DialogHeader
+        title="Imagen de la página"
+        description={`Página ${page.page_number} de ${pageCount} · ${title}`}
+        onClose={() => onOpenChange(false)}
+      />
+      <DialogBody className="px-4 pb-4 pt-0">
+        <div className="mb-3 flex justify-center">
+          <PageNav
+            pageNumber={page.page_number}
+            total={pageCount}
+            onPrev={onPrev}
+            onNext={onNext}
+          />
+        </div>
+        <div className="grid min-h-[420px] overflow-hidden rounded-2xl border border-border bg-surface">
+          {showImage ? (
+            <img
+              src={imageUrl}
+              alt={`Página ${page.page_number} de ${title}`}
+              width={page.image_width ?? undefined}
+              height={page.image_height ?? undefined}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImageFailed(true)}
+              className="max-h-[72vh] w-full place-self-center object-contain"
+              style={imageStyle}
+            />
+          ) : (
+            <div className="grid place-items-center px-6 py-16 text-center">
+              <div>
+                <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-warning-bg text-warning">
+                  <Images size={22} strokeWidth={2.2} aria-hidden="true" />
+                </span>
+                <p className="mt-4 font-display text-base font-bold text-fg">
+                  La imagen todavía no está disponible
+                </p>
+                <p className="mt-2 max-w-sm text-sm leading-relaxed text-fg-2">
+                  Esta página puede seguir procesándose o no tener un render guardado todavía.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogBody>
+    </Dialog>
   );
 }
 

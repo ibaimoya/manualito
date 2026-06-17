@@ -73,6 +73,9 @@ class ManualPageResponse(StrictModel):
     text_source: str
     text_quality: str | None
     dedup_status: ManualDedupStatus
+    image_available: bool = False
+    image_width: int | None = None
+    image_height: int | None = None
     ocr_confidence_mean: float | None
     ocr_lines: list[ManualTextLine]
 

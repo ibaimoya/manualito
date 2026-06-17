@@ -99,6 +99,9 @@ export interface ManualDetailPage {
   text_source: 'none' | 'ocr' | 'pdf_text' | 'user_edit';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
   dedup_status: ManualDedupStatus;
+  image_available: boolean;
+  image_width: number | null;
+  image_height: number | null;
   ocr_confidence_mean: number | null;
   ocr_lines: OcrLine[];
 }
@@ -199,6 +202,11 @@ export const api = {
       timeoutMs: TIMEOUT.QUICK,
       signal,
     });
+  },
+
+  /** URL autenticada de la imagen de una página de manual propio. */
+  manualPageImageUrl(manualId: string, pageNumber: number): string {
+    return `/api/manuals/${encodeURIComponent(manualId)}/pages/${pageNumber}/image`;
   },
 
   /** GET /api/manuals/{id}/processing — progreso ligero para polling. */

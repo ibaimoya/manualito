@@ -18,6 +18,7 @@ from api.manuals.repository import (
     find_reusable_page_result,
     get_asset_for_processing,
     get_user_manual_detail,
+    get_user_manual_page_image_asset,
     get_user_manual_processing_status,
     list_pending_page_ids_for_processing,
     list_user_manuals,
@@ -173,6 +174,9 @@ async def test_get_user_manual_detail_loads_pages_in_order():
             text_quality="ok",
             ocr_confidence_mean=0.9,
             ocr_lines=[{"text": "A"}],
+            image_available=True,
+            image_width=800,
+            image_height=1200,
         ),
         SimpleNamespace(
             page_number=2,
@@ -181,6 +185,9 @@ async def test_get_user_manual_detail_loads_pages_in_order():
             text_quality="ok",
             ocr_confidence_mean=None,
             ocr_lines=[{"text": "B"}],
+            image_available=False,
+            image_width=None,
+            image_height=None,
         ),
     ]
     session = _FakeSession(
@@ -200,8 +207,11 @@ async def test_get_user_manual_detail_loads_pages_in_order():
     assert detail.pages[0].page_number == 1
     assert detail.pages[0].text_source == "ocr"
     assert detail.pages[0].ocr_lines == [{"text": "A"}]
+    assert detail.pages[0].image_available is True
+    assert detail.pages[0].image_width == 800
     assert detail.pages[1].page_number == 2
     assert "source_reused_from_page_id IS NOT NULL" in _compile(session.executed[1])
+    assert "assets.kind =" in _compile(session.executed[1])
 
 
 @pytest.mark.anyio
@@ -548,6 +558,53 @@ async def test_get_asset_for_processing_returns_active_storage_key():
 
     assert storage_key == "manuals/user/source.pdf"
     assert session.executed
+
+
+@pytest.mark.anyio
+async def test_get_user_manual_page_image_asset_filters_by_owner_and_page():
+    """El visor solo puede cargar imágenes activas de páginas propias."""
+    row = SimpleNamespace(
+        storage_key="manuals/user/manual/page-1.jpg",
+        mime_type="image/jpeg",
+        byte_size=123,
+        sha256="a" * 64,
+        width=800,
+        height=1200,
+    )
+    session = _FakeSession(execute_results=[_OneOrNoneResult(row)])
+
+    asset = await get_user_manual_page_image_asset(
+        session,
+        owner_user_id=_OWNER_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=1,
+    )
+
+    assert asset is not None
+    assert asset.storage_key == row.storage_key
+    assert asset.mime_type == "image/jpeg"
+    assert asset.width == 800
+    assert asset.height == 1200
+    compiled = _compile(session.executed[0])
+    assert "manuals.owner_user_id =" in compiled
+    assert "manual_pages.page_number =" in compiled
+    assert "assets.kind =" in compiled
+    assert "assets.deleted_at IS NULL" in compiled
+
+
+@pytest.mark.anyio
+async def test_get_user_manual_page_image_asset_returns_none_without_active_image():
+    """Una página sin imagen disponible no expone ningún storage_key."""
+    session = _FakeSession(execute_results=[_OneOrNoneResult(None)])
+
+    asset = await get_user_manual_page_image_asset(
+        session,
+        owner_user_id=_OWNER_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=1,
+    )
+
+    assert asset is None
 
 
 @pytest.mark.anyio

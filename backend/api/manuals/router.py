@@ -4,13 +4,17 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, Path, Query, Request, UploadFile, status
+from fastapi.responses import FileResponse
 
 from api import config
 from api.annotations import DbSession
+from api.assets.storage import stored_file_path
 from api.auth.dependencies import CsrfProtection, CurrentAuth, client_ip
 from api.games.dependencies import ValidGameFormId
+from api.manuals.exceptions import ManualNotFoundError
 from api.manuals.repository import (
     get_user_manual_detail,
+    get_user_manual_page_image_asset,
     get_user_manual_processing_status,
     list_user_manuals,
 )
@@ -104,6 +108,45 @@ async def get_manual_processing_handler(
 ) -> ManualProcessingResponse:
     """Devuelve progreso ligero para consultas periódicas."""
     return await _processing_response(session, auth=auth, manual_id=manual_id)
+
+
+@router.get(
+    "/api/manuals/{manual_id}/pages/{page_number}/image",
+    responses=MANUAL_NOT_FOUND_RESPONSE,
+)
+async def get_manual_page_image_handler(
+    manual_id: UUID,
+    page_number: ManualPageNumber,
+    session: DbSession,
+    auth: CurrentAuth,
+) -> FileResponse:
+    """Devuelve la imagen original o renderizada de una página propia."""
+    asset = await get_user_manual_page_image_asset(
+        session,
+        owner_user_id=auth.user.id,
+        manual_id=manual_id,
+        page_number=page_number,
+    )
+    if asset is None:
+        raise ManualNotFoundError
+
+    try:
+        image_path = stored_file_path(asset.storage_key)
+    except ValueError as exc:
+        raise ManualNotFoundError from exc
+    if not image_path.is_file():
+        raise ManualNotFoundError
+
+    return FileResponse(
+        image_path,
+        media_type=asset.mime_type,
+        filename=f"manual-{manual_id}-pagina-{page_number}{image_path.suffix}",
+        content_disposition_type="inline",
+        headers={
+            "Cache-Control": "private, max-age=300, must-revalidate",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post(

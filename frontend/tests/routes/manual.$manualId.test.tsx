@@ -91,6 +91,9 @@ describe('/manual/$manualId · lectura', () => {
       text_source: 'ocr',
       text_quality: 'ok',
       dedup_status: 'reused',
+      image_available: true,
+      image_width: 800,
+      image_height: 1200,
       ocr_confidence_mean: 0.94,
       ocr_lines: [{ text: 'PREPARACIÓN del juego.', confidence: 0.94 }],
     };
@@ -149,6 +152,9 @@ describe('/manual/$manualId · edición de texto', () => {
           text_source: 'user_edit',
           text_quality: 'ok',
           dedup_status: 'none',
+          image_available: true,
+          image_width: 800,
+          image_height: 1200,
           ocr_confidence_mean: null,
           ocr_lines: body.text.split('\n').map((text) => ({ text, confidence: null })),
         };
@@ -175,6 +181,9 @@ describe('/manual/$manualId · edición de texto', () => {
               text_source: 'ocr',
               text_quality: 'ok',
               dedup_status: 'none',
+              image_available: true,
+              image_width: 800,
+              image_height: 1200,
               ocr_confidence_mean: 0.94,
               ocr_lines: [{ text: 'PREPARACIÓN original.', confidence: 0.94 }],
             },
@@ -249,6 +258,20 @@ describe('/manual/$manualId · edición de texto', () => {
 });
 
 describe('/manual/$manualId · acciones de cabecera', () => {
+  it('abre la imagen de la página activa desde Acciones', async () => {
+    renderManual(2);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Acciones' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Ver imagen' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Imagen de la página' });
+    expect(dialog).toHaveTextContent('Página 2 / 2');
+    expect(within(dialog).getByRole('img', { name: 'Página 2 de Catan' })).toHaveAttribute(
+      'src',
+      '/api/manuals/test-manual-001/pages/2/image',
+    );
+  });
+
   it('reprocesar pide confirmación y lanza el POST al confirmar', async () => {
     renderManual();
     const user = userEvent.setup();

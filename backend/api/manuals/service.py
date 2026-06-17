@@ -25,6 +25,7 @@ from api.auth.service import AuthenticatedSession
 from api.exceptions import (
     ApiError,
     InternalServiceError,
+    InvalidPdfError,
     ManualPageLimitExceededError,
 )
 from api.games import repository as games_repository
@@ -296,7 +297,7 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
             source_pdf_content = await _read_source_pdf(session, manual)
 
         async with _internal_http_client() as client:
-            if manual.source_type == "pdf" and page.storage_key is None:
+            if manual.source_type == "pdf":
                 await _process_pdf_page(
                     session=session,
                     client=client,
@@ -396,6 +397,7 @@ async def _process_image_page(
     client: httpx.AsyncClient,
     manual: Row,
     page: Row,
+    source_fingerprint_kind: str = "image",
 ) -> None:
     """Procesa una página que ya tiene imagen en storage."""
     if page.storage_key is None or page.mime_type is None:
@@ -408,7 +410,7 @@ async def _process_image_page(
             manual=manual,
             page=page,
             source_fingerprint=page.sha256,
-            source_fingerprint_kind="image",
+            source_fingerprint_kind=source_fingerprint_kind,
         ):
             return
 
@@ -426,7 +428,7 @@ async def _process_image_page(
             manual=manual,
             page=page,
             source_fingerprint=image.sha256,
-            source_fingerprint_kind="image",
+            source_fingerprint_kind=source_fingerprint_kind,
         ):
             return
 
@@ -437,7 +439,7 @@ async def _process_image_page(
             page_id=page.id,
             page_number=page.page_number,
             image=image,
-            source_fingerprint_kind="image",
+            source_fingerprint_kind=source_fingerprint_kind,
         )
     except (ApiError, OSError, SQLAlchemyError):
         await session.rollback()
@@ -466,6 +468,12 @@ async def _process_pdf_page(
     try:
         text = await extract_pdf_page_text(pdf_content, page_number=page.page_number)
         if pdf_text_is_usable(text):
+            await _ensure_pdf_page_image_asset(
+                session=session,
+                manual=manual,
+                page=page,
+                pdf_content=pdf_content,
+            )
             await _replace_page_text(
                 session,
                 manual_id=manual.id,
@@ -474,6 +482,16 @@ async def _process_pdf_page(
                 lines=[{"text": text, "confidence": None}],
                 text_source="pdf_text",
                 confidence_mean=None,
+            )
+            return
+
+        if page.storage_key is not None:
+            await _process_image_page(
+                session=session,
+                client=client,
+                manual=manual,
+                page=page,
+                source_fingerprint_kind="pdf_render",
             )
             return
 
@@ -514,7 +532,7 @@ async def _process_pdf_page(
             image=image,
             source_fingerprint_kind="pdf_render",
         )
-    except (ApiError, OSError, SQLAlchemyError):
+    except (ApiError, InvalidPdfError, OSError, SQLAlchemyError):
         await session.rollback()
         logger.warning(
             "No se pudo procesar página PDF %d del manual '%s'.",
@@ -523,6 +541,46 @@ async def _process_pdf_page(
             exc_info=True,
         )
         await mark_page_failed(session, page_id=page.id)
+
+
+async def _ensure_pdf_page_image_asset(
+    *,
+    session: AsyncSession,
+    manual,
+    page: Row,
+    pdf_content: bytes,
+) -> None:
+    """Guarda un render de PDF para el visor sin forzar OCR si ya hay texto."""
+    if page.storage_key is not None:
+        return
+
+    try:
+        image = await render_pdf_page(pdf_content, page_number=page.page_number)
+        storage_key = await save_manual_image(
+            image,
+            owner_user_id=manual.owner_user_id,
+            page_number=page.page_number,
+        )
+        try:
+            await attach_page_image_asset(
+                session,
+                owner_user_id=manual.owner_user_id,
+                page_id=page.id,
+                image=image,
+                storage_key=storage_key,
+                source_fingerprint_kind="pdf_render",
+            )
+        except SQLAlchemyError:
+            await delete_stored_file(storage_key)
+            raise
+    except (InvalidPdfError, OSError, SQLAlchemyError):
+        await session.rollback()
+        logger.warning(
+            "No se pudo guardar imagen para visualizar la página PDF %d del manual '%s'.",
+            page.page_number,
+            safe_for_log(str(manual.id)),
+            exc_info=True,
+        )
 
 
 async def reprocess_manual(

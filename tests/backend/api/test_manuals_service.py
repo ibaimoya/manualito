@@ -535,8 +535,13 @@ async def test_process_manual_page_usa_texto_pdf_aprovechable_sin_ocr(monkeypatc
     monkeypatch.setattr(manual_service, "pdf_text_is_usable", lambda value: value == text)
     run_ocr_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
-    render_mock = AsyncMock()
+    image = _validated_image()
+    render_mock = AsyncMock(return_value=image)
     monkeypatch.setattr(manual_service, "render_pdf_page", render_mock)
+    save_mock = AsyncMock(return_value="manuals/user/manual/page-1.jpg")
+    monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
+    attach_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "attach_page_image_asset", attach_mock)
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
 
@@ -547,7 +552,56 @@ async def test_process_manual_page_usa_texto_pdf_aprovechable_sin_ocr(monkeypatc
     assert replace_kwargs["text_source"] == "pdf_text"
     assert replace_kwargs["ocr_confidence_mean"] is None
     run_ocr_mock.assert_not_awaited()
+    render_mock.assert_awaited_once_with(b"%PDF-", page_number=1)
+    save_mock.assert_awaited_once_with(image, owner_user_id=_USER_ID, page_number=1)
+    attach_mock.assert_awaited_once()
+    assert attach_mock.await_args.kwargs["source_fingerprint_kind"] == "pdf_render"
+
+
+@pytest.mark.anyio
+async def test_process_manual_page_pdf_con_render_sigue_prefiriendo_texto_embebido(monkeypatch):
+    """Reprocesar un PDF ya renderizado no degrada texto embebido a OCR."""
+    session = object()
+    client = object()
+    page_id = uuid4()
+    text = " ".join(f"regla-{index}" for index in range(40))
+    page = SimpleNamespace(
+        id=page_id,
+        page_number=1,
+        ocr_status="processing",
+        storage_key="manuals/user/manual/page-1.jpg",
+        mime_type="image/jpeg",
+        width=10,
+        height=10,
+        sha256="f" * 64,
+    )
+    _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=client,
+        manual=_manual(source_type="pdf", source_asset_id=uuid4()),
+        page=page,
+    )
+    monkeypatch.setattr(
+        manual_service,
+        "get_asset_for_processing",
+        AsyncMock(return_value="manuals/user/manual/source.pdf"),
+    )
+    monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"%PDF-"))
+    monkeypatch.setattr(manual_service, "extract_pdf_page_text", AsyncMock(return_value=text))
+    monkeypatch.setattr(manual_service, "pdf_text_is_usable", lambda value: value == text)
+    run_ocr_mock = AsyncMock()
+    render_mock = AsyncMock()
+    replace_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
+    monkeypatch.setattr(manual_service, "render_pdf_page", render_mock)
+    monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
+
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
+
+    run_ocr_mock.assert_not_awaited()
     render_mock.assert_not_awaited()
+    assert replace_mock.await_args.kwargs["text_source"] == "pdf_text"
 
 
 @pytest.mark.anyio

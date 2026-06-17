@@ -344,6 +344,9 @@ def test_begin_reprocessing_single_page_scopes_reset_and_chunks():
 
     pages_reset = _compile(statements[2])
     assert "manual_pages.page_number =" in pages_reset
+    assert "image_asset_id" not in pages_reset
+    assert "ocr_lines" not in pages_reset
+    assert "text_source" not in pages_reset
     stale_query = _compile(statements[3])
     assert "manual_chunks.page_id =" in stale_query
 

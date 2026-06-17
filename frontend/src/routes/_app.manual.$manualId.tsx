@@ -158,17 +158,23 @@ function ManualDetailLoaded({
   const detailKey = manualDetailQueryOptions(manual.id).queryKey;
 
   const page = pages.find((item) => item.page_number === activePage) ?? pages[0]!;
-  const busy = manual.status === 'indexing';
-  const editable = manual.visibility === 'private' && !busy;
+  // El detalle solo se refresca por invalidación y puede quedarse atrás (caché del
+  // SW, red lenta); /processing se sondea, así que es la verdad viva del estado.
+  // Mientras el detalle diga "indexing" sondeamos, pero el banner se apaga en
+  // cuanto /processing confirma el fin, sin esperar a que el detalle se actualice.
+  const detailIndexing = manual.status === 'indexing';
   const editing = editingPage === page.page_number;
 
   const processing = useQuery({
     queryKey: ['manuals', 'processing', manual.id],
     queryFn: ({ signal }) => api.getManualProcessing(manual.id, signal),
-    enabled: busy,
+    enabled: detailIndexing,
     refetchInterval: PROCESSING_POLL_MS,
   });
-  const processingDone = busy && processing.data != null && processing.data.status !== 'indexing';
+  const processingDone =
+    detailIndexing && processing.data != null && processing.data.status !== 'indexing';
+  const busy = detailIndexing && !processingDone;
+  const editable = manual.visibility === 'private' && !busy;
   useEffect(() => {
     if (processingDone) {
       qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);

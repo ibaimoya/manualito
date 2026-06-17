@@ -271,7 +271,8 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     monkeypatch.setattr(manual_service, "claim_page_for_processing", claim_mock)
     monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
     monkeypatch.setattr(manual_service, "get_page_for_processing", AsyncMock(return_value=page))
-    monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"image-bytes"))
+    read_stored_file_mock = AsyncMock(return_value=b"image-bytes")
+    monkeypatch.setattr(manual_service, "read_stored_file", read_stored_file_mock)
     run_ocr_mock = AsyncMock(return_value=_OCR_LINES)
     monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
     replace_mock = AsyncMock()
@@ -286,6 +287,9 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     assert replace_kwargs["text_quality"] == "ok"
     assert replace_kwargs["chunks"][0].source_page == 1
     assert replace_kwargs["chunks"][0].chunk_index == 0
+    read_stored_file_mock.assert_awaited_once_with(page.storage_key)
+    assert run_ocr_mock.await_args.kwargs["filename"] == "page-1.jpg"
+    assert run_ocr_mock.await_args.kwargs["client"] is client
     ocr_image = run_ocr_mock.await_args.kwargs["image"]
     assert ocr_image.content == b"image-bytes"
     assert ocr_image.sha256 == page.sha256

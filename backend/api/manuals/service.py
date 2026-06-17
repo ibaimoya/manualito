@@ -44,6 +44,7 @@ from api.manuals.repository import (
     begin_manual_reprocessing,
     claim_page_for_processing,
     create_manual_with_pending_pages,
+    find_reusable_page_result,
     get_asset_for_processing,
     get_manual_for_processing,
     get_manual_page_row,
@@ -271,7 +272,7 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
                 await _process_image_page(
                     session=session,
                     client=client,
-                    manual_id=manual_id,
+                    manual=manual,
                     page=page,
                 )
 
@@ -357,7 +358,7 @@ async def _process_image_page(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual_id: UUID,
+    manual: Row,
     page: Row,
 ) -> None:
     """Procesa una página que ya tiene imagen en storage."""
@@ -366,6 +367,15 @@ async def _process_image_page(
         return
 
     try:
+        if page.sha256 is not None and await _reuse_page_result(
+            session,
+            manual=manual,
+            page=page,
+            source_fingerprint=page.sha256,
+            source_fingerprint_kind="image",
+        ):
+            return
+
         content = await read_stored_file(page.storage_key)
         image = ValidatedManualImage(
             content=content,
@@ -375,20 +385,30 @@ async def _process_image_page(
             height=page.height or 1,
             sha256=page.sha256 or sha256_hex(content),
         )
+        if page.sha256 is None and await _reuse_page_result(
+            session,
+            manual=manual,
+            page=page,
+            source_fingerprint=image.sha256,
+            source_fingerprint_kind="image",
+        ):
+            return
+
         await _process_validated_image_page(
             session=session,
             client=client,
-            manual_id=manual_id,
+            manual_id=manual.id,
             page_id=page.id,
             page_number=page.page_number,
             image=image,
+            source_fingerprint_kind="image",
         )
     except (ApiError, OSError, SQLAlchemyError):
         await session.rollback()
         logger.warning(
             "No se pudo procesar página %d del manual '%s'.",
             page.page_number,
-            safe_for_log(str(manual_id)),
+            safe_for_log(str(manual.id)),
             exc_info=True,
         )
         await mark_page_failed(session, page_id=page.id)
@@ -422,6 +442,15 @@ async def _process_pdf_page(
             return
 
         image = await render_pdf_page(pdf_content, page_number=page.page_number)
+        if await _reuse_page_result(
+            session,
+            manual=manual,
+            page=page,
+            source_fingerprint=image.sha256,
+            source_fingerprint_kind="pdf_render",
+        ):
+            return
+
         storage_key = await save_manual_image(
             image,
             owner_user_id=manual.owner_user_id,
@@ -434,6 +463,7 @@ async def _process_pdf_page(
                 page_id=page.id,
                 image=image,
                 storage_key=storage_key,
+                source_fingerprint_kind="pdf_render",
             )
         except SQLAlchemyError:
             await delete_stored_file(storage_key)
@@ -446,6 +476,7 @@ async def _process_pdf_page(
             page_id=page.id,
             page_number=page.page_number,
             image=image,
+            source_fingerprint_kind="pdf_render",
         )
     except (ApiError, OSError, SQLAlchemyError):
         await session.rollback()
@@ -599,6 +630,7 @@ async def _process_validated_image_page(
     page_id: UUID,
     page_number: int,
     image: ValidatedManualImage,
+    source_fingerprint_kind: str | None = None,
 ) -> None:
     """Ejecuta OCR sobre una imagen validada y guarda sus chunks."""
     ocr_lines = await run_ocr(
@@ -614,7 +646,51 @@ async def _process_validated_image_page(
         lines=ocr_lines,
         text_source="ocr",
         confidence_mean=_ocr_confidence_mean(ocr_lines),
+        source_fingerprint=image.sha256 if source_fingerprint_kind is not None else None,
+        source_fingerprint_kind=source_fingerprint_kind,
     )
+
+
+async def _reuse_page_result(
+    session: AsyncSession,
+    *,
+    manual: Row,
+    page: Row,
+    source_fingerprint: str,
+    source_fingerprint_kind: str,
+) -> bool:
+    """Copia una página canónica y evita repetir OCR sobre el mismo origen."""
+    reusable = await find_reusable_page_result(
+        session,
+        owner_user_id=manual.owner_user_id,
+        game_id=manual.game_id,
+        source_fingerprint=source_fingerprint,
+    )
+    if reusable is None:
+        return False
+
+    await replace_page_result(
+        session,
+        manual_id=manual.id,
+        page_id=page.id,
+        ocr_lines=reusable.ocr_lines,
+        text_source=reusable.text_source,
+        text_quality=reusable.text_quality or "empty",
+        ocr_confidence_mean=reusable.ocr_confidence_mean,
+        chunks=_prepare_text_chunks(
+            reusable.chunk_texts,
+            source_page=page.page_number,
+        ),
+        source_fingerprint=source_fingerprint,
+        source_fingerprint_kind=source_fingerprint_kind,
+        source_reused_from_page_id=reusable.page_id,
+    )
+    logger.info(
+        "Página %d del manual '%s' reutilizada desde una huella canónica.",
+        page.page_number,
+        safe_for_log(str(manual.id)),
+    )
+    return True
 
 
 async def _replace_page_text(
@@ -626,6 +702,8 @@ async def _replace_page_text(
     lines: list[dict[str, object]],
     text_source: str,
     confidence_mean: float | None,
+    source_fingerprint: str | None = None,
+    source_fingerprint_kind: str | None = None,
 ) -> None:
     """Reemplaza texto y chunks de una página de forma idempotente."""
     chunks = _prepare_page_chunks(
@@ -641,6 +719,8 @@ async def _replace_page_text(
         text_quality=_text_quality(chunks, confidence_mean),
         ocr_confidence_mean=confidence_mean,
         chunks=chunks,
+        source_fingerprint=source_fingerprint,
+        source_fingerprint_kind=source_fingerprint_kind,
     )
 
 
@@ -651,7 +731,15 @@ def _prepare_page_chunks(
 ) -> list[PreparedChunk]:
     """Normaliza una página OCR y genera chunks persistibles."""
     text = normalize_ocr_lines(ocr_lines)
-    chunks = chunk_text(text)
+    return _prepare_text_chunks(chunk_text(text), source_page=source_page)
+
+
+def _prepare_text_chunks(
+    chunks: list[str],
+    *,
+    source_page: int,
+) -> list[PreparedChunk]:
+    """Convierte textos de chunk en filas persistibles con índice estable."""
     start_index = (source_page - 1) * MANUAL_CHUNK_INDEX_PAGE_STRIDE
     return [
         PreparedChunk(
@@ -688,10 +776,7 @@ def _text_quality(chunks: list[PreparedChunk], confidence_mean: float | None) ->
     """Clasifica el texto extraído sin mezclarlo con fallo técnico."""
     if not chunks:
         return "empty"
-    if (
-        confidence_mean is not None
-        and confidence_mean < config.OCR_LOW_CONFIDENCE_THRESHOLD
-    ):
+    if confidence_mean is not None and confidence_mean < config.OCR_LOW_CONFIDENCE_THRESHOLD:
         return "low_confidence"
     return "ok"
 
@@ -799,8 +884,6 @@ async def sync_page_rag(manual_id: UUID, page_id: UUID, stale_chunk_ids: list[UU
 
 async def recover_stale_manual_pages() -> list[UUID]:
     """Marca como fallidas las páginas abandonadas en processing."""
-    cutoff = datetime.now(UTC) - timedelta(
-        seconds=config.CELERY_MANUAL_PAGE_HARD_TIME_LIMIT + 300
-    )
+    cutoff = datetime.now(UTC) - timedelta(seconds=config.CELERY_MANUAL_PAGE_HARD_TIME_LIMIT + 300)
     async with get_sessionmaker()() as session:
         return await mark_stale_processing_pages_failed(session, cutoff=cutoff)

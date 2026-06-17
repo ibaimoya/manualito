@@ -179,9 +179,7 @@ def test_reprocess_cleans_stale_chunks_before_pipeline(monkeypatch):
     order: list[str] = []
     page_id = uuid4()
     delete_mock = AsyncMock(side_effect=lambda **_kwargs: order.append("delete"))
-    process_mock = AsyncMock(
-        side_effect=lambda _manual_id: order.append("process") or [page_id]
-    )
+    process_mock = AsyncMock(side_effect=lambda _manual_id: order.append("process") or [page_id])
     monkeypatch.setattr(manual_service, "delete_chunks_from_rag", delete_mock)
     monkeypatch.setattr(manual_service, "process_manual", process_mock)
 
@@ -237,6 +235,7 @@ def test_begin_reprocessing_claim_is_a_conditional_update():
     pages_reset = _compile(statements[1])
     assert "UPDATE manual_pages" in pages_reset
     assert "manual_pages.page_number" not in pages_reset
+    assert "source_reused_from_page_id" in pages_reset
 
 
 def test_begin_reprocessing_busy_when_already_indexing():
@@ -344,6 +343,7 @@ def test_begin_reprocessing_single_page_scopes_reset_and_chunks():
 
     pages_reset = _compile(statements[2])
     assert "manual_pages.page_number =" in pages_reset
+    assert "source_reused_from_page_id" in pages_reset
     assert "image_asset_id" not in pages_reset
     assert "ocr_lines" not in pages_reset
     assert "text_source" not in pages_reset
@@ -422,8 +422,12 @@ def _processing_rows() -> tuple[SimpleNamespace, list[SimpleNamespace]]:
     """Construye el estado de procesamiento recién reclamado."""
     manual = SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)
     pages = [
-        SimpleNamespace(page_number=1, ocr_status="pending", text_quality=None),
-        SimpleNamespace(page_number=2, ocr_status="pending", text_quality=None),
+        SimpleNamespace(
+            page_number=1, ocr_status="pending", text_quality=None, dedup_status="none"
+        ),
+        SimpleNamespace(
+            page_number=2, ocr_status="pending", text_quality=None, dedup_status="none"
+        ),
     ]
     return manual, pages
 

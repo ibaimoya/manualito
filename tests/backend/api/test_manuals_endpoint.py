@@ -183,6 +183,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
                 ocr_status="completed",
                 text_source="ocr",
                 text_quality="ok",
+                dedup_status="none",
                 ocr_confidence_mean=0.9,
                 ocr_lines=_OCR_LINES,
             )
@@ -204,6 +205,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
             "ocr_status": "completed",
             "text_source": "ocr",
             "text_quality": "ok",
+            "dedup_status": "none",
             "ocr_confidence_mean": 0.9,
             "ocr_lines": _OCR_LINES,
         }
@@ -223,8 +225,10 @@ def test_get_manual_processing_devuelve_estado_ligero(
     """El progreso no arrastra las líneas OCR completas."""
     manual = SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)
     pages = [
-        SimpleNamespace(page_number=1, ocr_status="completed", text_quality="ok"),
-        SimpleNamespace(page_number=2, ocr_status="failed", text_quality=None),
+        SimpleNamespace(
+            page_number=1, ocr_status="completed", text_quality="ok", dedup_status="reused"
+        ),
+        SimpleNamespace(page_number=2, ocr_status="failed", text_quality=None, dedup_status="none"),
     ]
     get_mock = AsyncMock(return_value=(manual, pages))
     monkeypatch.setattr("api.manuals.router.get_user_manual_processing_status", get_mock)
@@ -239,8 +243,18 @@ def test_get_manual_processing_devuelve_estado_ligero(
         "completed_pages": 1,
         "failed_pages": 1,
         "pages": [
-            {"page_number": 1, "ocr_status": "completed", "text_quality": "ok"},
-            {"page_number": 2, "ocr_status": "failed", "text_quality": None},
+            {
+                "page_number": 1,
+                "ocr_status": "completed",
+                "text_quality": "ok",
+                "dedup_status": "reused",
+            },
+            {
+                "page_number": 2,
+                "ocr_status": "failed",
+                "text_quality": None,
+                "dedup_status": "none",
+            },
         ],
     }
     get_mock.assert_awaited_once_with(
@@ -409,9 +423,7 @@ def test_question_game_devuelve_502_si_llm_no_esta_disponible(
     """El fallo de servicio interno conserva el envelope común de API."""
     monkeypatch.setattr(
         "api.games.router.generate_game_answer",
-        AsyncMock(
-            side_effect=InternalServiceUnavailableError("Servicio LLM no disponible.")
-        ),
+        AsyncMock(side_effect=InternalServiceUnavailableError("Servicio LLM no disponible.")),
     )
 
     response = client.post(

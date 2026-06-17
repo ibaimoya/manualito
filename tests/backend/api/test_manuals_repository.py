@@ -15,6 +15,7 @@ from api.manuals.repository import (
     attach_page_image_asset,
     claim_page_for_processing,
     create_manual_with_pending_pages,
+    find_reusable_page_result,
     get_asset_for_processing,
     get_user_manual_detail,
     get_user_manual_processing_status,
@@ -25,6 +26,7 @@ from api.manuals.repository import (
     mark_manual_failed,
     mark_manual_indexed,
     mark_stale_processing_pages_failed,
+    replace_page_result,
     resolve_manual_processed_status,
     soft_delete_user_manual,
 )
@@ -143,9 +145,7 @@ async def test_list_user_manuals_maps_explicit_rows():
 
 def test_manual_summary_query_selects_public_upload_metadata():
     """El resumen selecciona metadatos de origen para lista y detalle."""
-    compiled = str(
-        _manual_summary_query(_OWNER_USER_ID).compile(dialect=postgresql.dialect())
-    )
+    compiled = str(_manual_summary_query(_OWNER_USER_ID).compile(dialect=postgresql.dialect()))
 
     assert "manuals.source_type" in compiled
     assert "manuals.page_count" in compiled
@@ -190,6 +190,7 @@ async def test_get_user_manual_detail_loads_pages_in_order():
     assert detail.pages[0].text_source == "ocr"
     assert detail.pages[0].ocr_lines == [{"text": "A"}]
     assert detail.pages[1].page_number == 2
+    assert "source_reused_from_page_id IS NOT NULL" in _compile(session.executed[1])
 
 
 @pytest.mark.anyio
@@ -214,9 +215,7 @@ async def test_get_user_manual_processing_status_loads_lightweight_progress():
     ]
     session = _FakeSession(
         execute_results=[
-            _OneOrNoneResult(
-                SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)
-            ),
+            _OneOrNoneResult(SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)),
             pages,
         ],
     )
@@ -231,6 +230,7 @@ async def test_get_user_manual_processing_status_loads_lightweight_progress():
     assert manual.status == "indexing"
     assert manual.page_count == 2
     assert loaded_pages == pages
+    assert "source_reused_from_page_id IS NOT NULL" in _compile(session.executed[1])
 
 
 @pytest.mark.anyio
@@ -375,6 +375,9 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
     assert all(asset.width == expected_image.width for asset in assets)
     assert all(asset.height == expected_image.height for asset in assets)
     assert [page.page_number for page in pages] == [1, 2]
+    assert all(page.source_fingerprint == expected_image.sha256 for page in pages)
+    assert all(page.source_fingerprint_kind == "image" for page in pages)
+    assert all(page.source_reused_from_page_id is None for page in pages)
     assert [page.ocr_status for page in pages] == ["pending", "pending"]
     assert [page.text_source for page in pages] == ["none", "none"]
     assert session.commits == 1
@@ -415,7 +418,106 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
     assert source_asset.height is None
     assert [page.page_number for page in pages] == [1, 2]
     assert [page.image_asset_id for page in pages] == [None, None]
+    assert [page.source_fingerprint for page in pages] == [None, None]
+    assert [page.source_fingerprint_kind for page in pages] == [None, None]
+    assert [page.source_reused_from_page_id for page in pages] == [None, None]
     assert session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_find_reusable_page_result_loads_visible_completed_page_and_chunks():
+    """EP1 página canónica visible completada: se reutilizan texto y chunks."""
+    page = SimpleNamespace(
+        id=uuid4(),
+        ocr_lines=[{"text": "Regla uno.", "confidence": 0.9}],
+        text_source="ocr",
+        text_quality="ok",
+        ocr_confidence_mean=0.9,
+    )
+    session = _FakeSession(
+        execute_results=[
+            _OneOrNoneResult(page),
+            _ScalarsResult(["Regla uno.", "Regla dos."]),
+        ],
+    )
+
+    result = await find_reusable_page_result(
+        session,
+        owner_user_id=_OWNER_USER_ID,
+        game_id=_GAME_ID,
+        source_fingerprint="a" * 64,
+    )
+
+    assert result is not None
+    assert result.page_id == page.id
+    assert result.ocr_lines == page.ocr_lines
+    assert result.text_source == "ocr"
+    assert result.text_quality == "ok"
+    assert result.ocr_confidence_mean == pytest.approx(0.9)
+    assert result.chunk_texts == ["Regla uno.", "Regla dos."]
+    compiled = _compile(session.executed[0])
+    assert "manuals.deleted_at IS NULL" in compiled
+    assert "manual_pages.source_fingerprint =" in compiled
+    assert "manual_pages.ocr_status =" in compiled
+    assert "manual_pages.text_quality IN" in compiled
+    assert "manuals.owner_user_id =" in compiled
+    assert "manuals.visibility =" in compiled
+    assert "manuals.status =" in compiled
+
+
+@pytest.mark.anyio
+async def test_find_reusable_page_result_returns_none_for_new_page_source():
+    """EP2 página no vista: no hay texto canónico que copiar."""
+    session = _FakeSession(execute_results=[_OneOrNoneResult(None)])
+
+    result = await find_reusable_page_result(
+        session,
+        owner_user_id=_OWNER_USER_ID,
+        game_id=_GAME_ID,
+        source_fingerprint="b" * 64,
+    )
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_replace_page_result_marks_and_clears_reused_source():
+    """El resultado persistido conserva si se ha copiado de otra página."""
+    reused_from_page_id = uuid4()
+    page = SimpleNamespace(source_reused_from_page_id=None)
+    session = _FakeSession(
+        get_result=page,
+        execute_results=[_ScalarOneResult(None), _ScalarOneResult(None)],
+    )
+
+    await replace_page_result(
+        session,
+        manual_id=_MANUAL_ID,
+        page_id=uuid4(),
+        ocr_lines=[{"text": "Regla reutilizada.", "confidence": 0.8}],
+        text_source="ocr",
+        text_quality="ok",
+        ocr_confidence_mean=0.8,
+        chunks=[],
+        source_fingerprint="a" * 64,
+        source_fingerprint_kind="image",
+        source_reused_from_page_id=reused_from_page_id,
+    )
+
+    assert page.source_reused_from_page_id == reused_from_page_id
+
+    await replace_page_result(
+        session,
+        manual_id=_MANUAL_ID,
+        page_id=uuid4(),
+        ocr_lines=[{"text": "Texto nuevo.", "confidence": 0.9}],
+        text_source="ocr",
+        text_quality="ok",
+        ocr_confidence_mean=0.9,
+        chunks=[],
+    )
+
+    assert page.source_reused_from_page_id is None
 
 
 @pytest.mark.anyio
@@ -559,6 +661,26 @@ async def test_attach_page_image_asset_persists_rendered_pdf_page():
     assert asset.height == expected_image.height
     assert page.image_asset_id == asset.id
     assert session.commits == 1
+
+
+@pytest.mark.anyio
+async def test_attach_page_image_asset_can_store_render_fingerprint():
+    """Una página PDF renderizada guarda huella para evitar OCR repetido."""
+    page = SimpleNamespace(image_asset_id=None, source_fingerprint=None)
+    image = _validated_image()
+    session = _FakeSession(get_result=page)
+
+    await attach_page_image_asset(
+        session,
+        owner_user_id=_OWNER_USER_ID,
+        page_id=uuid4(),
+        image=image,
+        storage_key="manuals/user/manual/page-1.jpg",
+        source_fingerprint_kind="pdf_render",
+    )
+
+    assert page.source_fingerprint == image.sha256
+    assert page.source_fingerprint_kind == "pdf_render"
 
 
 @pytest.mark.anyio

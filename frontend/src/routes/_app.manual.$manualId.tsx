@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Copy,
   FileText,
   Files,
   Images,
@@ -86,6 +87,79 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
+/** Página inicial: la citada por el chat si existe en el manual; si no, la primera. */
+function resolveInitialPage(
+  pages: readonly ManualDetailPage[],
+  initialPage: number | undefined,
+): number {
+  if (initialPage !== undefined && pages.some((item) => item.page_number === initialPage)) {
+    return initialPage;
+  }
+  return pages[0]!.page_number;
+}
+
+/** Atajos ← → para cambiar de página (no mientras se edita ni desde un input). */
+function usePageArrowKeys(
+  active: boolean,
+  pageNumber: number,
+  pageCount: number,
+  onGo: (pageNumber: number) => void,
+): void {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent): void {
+      if (!active || isTypingTarget(event.target)) return;
+      if (event.key === 'ArrowLeft') onGo(pageNumber - 1);
+      else if (event.key === 'ArrowRight') onGo(pageNumber + 1);
+    }
+    globalThis.window.addEventListener('keydown', onKey);
+    return () => globalThis.window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, pageNumber, pageCount]);
+}
+
+/** Fila de metadatos de la cabecera: fecha, formato, nº de páginas y duplicadas. */
+function ManualMetaRow({
+  createdAt,
+  sourceIsPdf,
+  pageCount,
+  duplicateCount,
+}: Readonly<{
+  createdAt: string;
+  sourceIsPdf: boolean;
+  pageCount: number;
+  duplicateCount: number;
+}>) {
+  return (
+    <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
+      <span className="inline-flex items-center gap-1.5">
+        <Clock size={13} aria-hidden="true" /> Subido el{' '}
+        {formatLongDate(createdAt)}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        {sourceIsPdf ? (
+          <FileText size={13} aria-hidden="true" />
+        ) : (
+          <Images size={13} aria-hidden="true" />
+        )}{' '}
+        {sourceIsPdf ? 'PDF' : 'Fotos'}
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Files size={13} aria-hidden="true" /> {pageCount}{' '}
+        {pageCount === 1 ? 'página' : 'páginas'}
+      </span>
+      {duplicateCount > 0 ? (
+        <span
+          className="inline-flex cursor-help items-center gap-1.5 text-warning"
+          title={`${duplicateCount} ${duplicateCount === 1 ? 'página duplicada que no se procesa' : 'páginas duplicadas que no se procesan'}.`}
+        >
+          <Copy size={13} aria-hidden="true" /> {duplicateCount}{' '}
+          {duplicateCount === 1 ? 'duplicada' : 'duplicadas'}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function ManualDetailScreen() {
   const { manualId } = Route.useParams();
   const { page } = Route.useSearch();
@@ -144,11 +218,8 @@ function ManualDetailLoaded({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pages = manual.pages;
-  const [activePage, setActivePage] = useState(() =>
-    initialPage !== undefined && pages.some((item) => item.page_number === initialPage)
-      ? initialPage
-      : pages[0]!.page_number,
-  );
+  const duplicateCount = pages.filter((item) => item.dedup_status === 'reused').length;
+  const [activePage, setActivePage] = useState(() => resolveInitialPage(pages, initialPage));
   const [editingPage, setEditingPage] = useState<number | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [reprocessOpen, setReprocessOpen] = useState(false);
@@ -272,17 +343,7 @@ function ManualDetailLoaded({
     if (match) goToPage(match.pageNumber);
   }
 
-  // Atajos ← → para cambiar de página (no mientras se edita ni desde un input).
-  useEffect(() => {
-    function onKey(event: KeyboardEvent): void {
-      if (editingPage !== null || isTypingTarget(event.target)) return;
-      if (event.key === 'ArrowLeft') goToPage(page.page_number - 1);
-      else if (event.key === 'ArrowRight') goToPage(page.page_number + 1);
-    }
-    globalThis.window.addEventListener('keydown', onKey);
-    return () => globalThis.window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingPage, page.page_number, pages.length]);
+  usePageArrowKeys(editingPage === null, page.page_number, pages.length, goToPage);
 
   const title = manual.title ?? manual.game_name;
   // Sin esto, el manual titulado como el juego pinta "Monopoly > Monopoly".
@@ -328,24 +389,12 @@ function ManualDetailLoaded({
               <h1 className="truncate font-display text-xl font-extrabold tracking-tight text-fg">
                 {title}
               </h1>
-              <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock size={13} aria-hidden="true" /> Subido el{' '}
-                  {formatLongDate(manual.created_at)}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  {sourceIsPdf ? (
-                    <FileText size={13} aria-hidden="true" />
-                  ) : (
-                    <Images size={13} aria-hidden="true" />
-                  )}{' '}
-                  {sourceIsPdf ? 'PDF' : 'Fotos'}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Files size={13} aria-hidden="true" /> {pages.length}{' '}
-                  {pages.length === 1 ? 'página' : 'páginas'}
-                </span>
-              </div>
+              <ManualMetaRow
+                createdAt={manual.created_at}
+                sourceIsPdf={sourceIsPdf}
+                pageCount={pages.length}
+                duplicateCount={duplicateCount}
+              />
             </div>
             <ManualActionsMenu
               busy={busy}

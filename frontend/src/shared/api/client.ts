@@ -31,6 +31,8 @@ export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' |
 
 export type ManualVisibility = 'private' | 'shared';
 
+export type ManualDedupStatus = 'none' | 'reused';
+
 export interface ManualCreatedResponse {
   manual_id: string;
   game_id: string;
@@ -94,6 +96,7 @@ export interface ManualDetailPage {
   ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
   text_source: 'none' | 'ocr' | 'pdf_text' | 'user_edit';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
+  dedup_status: ManualDedupStatus;
   ocr_confidence_mean: number | null;
   ocr_lines: OcrLine[];
 }
@@ -107,6 +110,7 @@ export interface ManualProcessingPage {
   page_number: number;
   ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
+  dedup_status: ManualDedupStatus;
 }
 
 export interface ManualProcessingResponse {
@@ -242,10 +246,7 @@ export const api = {
   },
 
   /** POST /api/manuals/{id}/reprocess — reindexa el manual entero (202). */
-  async reprocessManual(
-    manualId: string,
-    signal?: AbortSignal,
-  ): Promise<ManualProcessingResponse> {
+  async reprocessManual(manualId: string, signal?: AbortSignal): Promise<ManualProcessingResponse> {
     return request<ManualProcessingResponse>(`/manuals/${encodeURIComponent(manualId)}/reprocess`, {
       method: 'POST',
       timeoutMs: TIMEOUT.QUICK,

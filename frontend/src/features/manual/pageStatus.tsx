@@ -1,8 +1,8 @@
-import { AlertTriangle, Check, LoaderCircle, Pencil, X, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Check, Copy, LoaderCircle, Pencil, X, type LucideIcon } from 'lucide-react';
 import type { ManualDetailPage } from '@/shared/api/client';
 
 /** Estado de lectura de una página (fuente única para rail, chip y cajón). */
-export type PageStatusKey = 'ok' | 'low' | 'edited' | 'processing' | 'failed';
+export type PageStatusKey = 'ok' | 'low' | 'edited' | 'duplicate' | 'processing' | 'failed';
 export type PageStatusTone = 'success' | 'warning' | 'accent' | 'error';
 
 export interface PageStatusMeta {
@@ -42,6 +42,14 @@ const META: Record<PageStatusKey, PageStatusMeta> = {
     tone: 'accent',
     tip: 'Corregiste el texto de esta página a mano.',
   },
+  duplicate: {
+    key: 'duplicate',
+    label: 'Duplicada',
+    short: 'Duplicada',
+    Icon: Copy,
+    tone: 'warning',
+    tip: 'Esta página es idéntica a otra que ya habías subido. No se vuelve a leer porque no aporta nada nuevo, así que esta copia no cuenta para la explicación.',
+  },
   processing: {
     key: 'processing',
     label: 'Procesando',
@@ -63,6 +71,9 @@ const META: Record<PageStatusKey, PageStatusMeta> = {
 export function pageStatus(page: ManualDetailPage): PageStatusMeta {
   if (page.ocr_status === 'pending' || page.ocr_status === 'processing') return META.processing;
   if (page.ocr_status === 'failed') return META.failed;
+  // Reutilizada de otra página idéntica: prima sobre la calidad del texto copiado,
+  // porque lo relevante es que esta copia no se procesa ni cuenta para la explicación.
+  if (page.dedup_status === 'reused') return META.duplicate;
   if (page.text_source === 'user_edit') return META.edited;
   if (page.text_quality === 'low_confidence') return META.low;
   return META.ok;
@@ -88,6 +99,7 @@ export const PAGE_STATUS_LEGEND: readonly PageStatusMeta[] = [
   META.ok,
   META.low,
   META.edited,
+  META.duplicate,
   META.processing,
   META.failed,
 ];

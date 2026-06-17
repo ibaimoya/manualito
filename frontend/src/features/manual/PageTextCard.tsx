@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Pencil, RotateCw, Upload } from 'lucide-react';
+import { Copy, Pencil, RotateCw, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ManualDetailPage } from '@/shared/api/client';
 import {
@@ -359,6 +359,18 @@ export function PageTextCard({
           <Pencil size={13} strokeWidth={2} aria-hidden="true" />
           Corregiste esta página a mano · el texto ya no procede del OCR.
         </p>
+      ) : null}
+      {st.key === 'duplicate' ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-warning bg-warning-bg p-3.5">
+          <Copy size={16} strokeWidth={2.2} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[13.5px] font-semibold text-fg">Página duplicada</p>
+            <p className="mt-0.5 text-[13.5px] leading-relaxed text-fg-2">
+              Es idéntica a otra página que ya habías subido. Como no aporta nada nuevo, no se vuelve
+              a leer ni cuenta para la explicación.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {useConfidence ? <ConfidenceLegend /> : null}

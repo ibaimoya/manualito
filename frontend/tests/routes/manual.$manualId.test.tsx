@@ -40,9 +40,7 @@ describe('/manual/$manualId · lectura', () => {
     expect(
       within(rail).getByRole('button', { name: 'Página 1 · Escaneado correctamente' }),
     ).toBeInTheDocument();
-    expect(
-      within(rail).getByRole('button', { name: 'Página 2 · Poco clara' }),
-    ).toBeInTheDocument();
+    expect(within(rail).getByRole('button', { name: 'Página 2 · Poco clara' })).toBeInTheDocument();
     expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
   });
 
@@ -85,6 +83,57 @@ describe('/manual/$manualId · lectura', () => {
     expect(await screen.findByText(/El OCR no está seguro de esta página/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Releer esta página/ })).toBeInTheDocument();
   });
+
+  it('una página duplicada figura como «Duplicada» y avisa de que no se procesa', async () => {
+    const dupPage = {
+      page_number: 2,
+      ocr_status: 'completed',
+      text_source: 'ocr',
+      text_quality: 'ok',
+      dedup_status: 'reused',
+      ocr_confidence_mean: 0.94,
+      ocr_lines: [{ text: 'PREPARACIÓN del juego.', confidence: 0.94 }],
+    };
+    server.use(
+      http.get('/api/manuals/:manualId', ({ params }) =>
+        HttpResponse.json({
+          id: params.manualId,
+          game_id: 'test-game-001',
+          game_name: 'Catan',
+          title: 'Catan',
+          status: 'active',
+          visibility: 'private',
+          source_type: 'pdf',
+          page_count: 2,
+          language: 'spa',
+          chunks_indexed: 2,
+          created_at: '2026-05-26T10:00:00.000Z',
+          indexed_at: '2026-05-26T10:00:10.000Z',
+          pages: [{ ...dupPage, page_number: 1, dedup_status: 'none' }, dupPage],
+        }),
+      ),
+    );
+    renderRoute({
+      path: '/manual/$manualId',
+      initialEntry: '/manual/test-manual-001?page=2',
+      component: routeComponent(ManualRoute),
+      validateSearch: (s) => {
+        const n = Number(s.page);
+        return Number.isInteger(n) && n > 0 ? { page: n } : {};
+      },
+      stubs: { '/history': 'Historial stub', '/home': 'Home stub', '/game/$gameId': 'Juego stub' },
+    });
+    // Cabecera: contador de duplicadas.
+    expect(await screen.findByText(/1 duplicada/)).toBeInTheDocument();
+    // Carril: la página 2 figura como duplicada.
+    const rail = screen.getByRole('navigation', { name: 'Páginas del manual' });
+    expect(within(rail).getByRole('button', { name: 'Página 2 · Duplicada' })).toBeInTheDocument();
+    // Aviso en el visor con el mensaje acordado.
+    expect(screen.getByText('Página duplicada')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Como no aporta nada nuevo, no se vuelve a leer ni cuenta para la explicación/),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('/manual/$manualId · edición de texto', () => {
@@ -99,6 +148,7 @@ describe('/manual/$manualId · edición de texto', () => {
           ocr_status: 'completed',
           text_source: 'user_edit',
           text_quality: 'ok',
+          dedup_status: 'none',
           ocr_confidence_mean: null,
           ocr_lines: body.text.split('\n').map((text) => ({ text, confidence: null })),
         };
@@ -124,6 +174,7 @@ describe('/manual/$manualId · edición de texto', () => {
               ocr_status: 'completed',
               text_source: 'ocr',
               text_quality: 'ok',
+              dedup_status: 'none',
               ocr_confidence_mean: 0.94,
               ocr_lines: [{ text: 'PREPARACIÓN original.', confidence: 0.94 }],
             },
@@ -165,7 +216,9 @@ describe('/manual/$manualId · edición de texto', () => {
     renderManual();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Editar texto' }));
-    expect(await screen.findByRole('textbox', { name: 'Texto de la página 1' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('textbox', { name: 'Texto de la página 1' }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Página siguiente' }));
     await user.click(screen.getByRole('button', { name: 'Página anterior' }));

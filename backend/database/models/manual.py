@@ -121,6 +121,12 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         postgresql.UUID(as_uuid=True),
         ForeignKey("assets.id", ondelete=ON_DELETE_SET_NULL),
     )
+    source_fingerprint: Mapped[str | None] = mapped_column(String(SHA256_HEX_LENGTH))
+    source_fingerprint_kind: Mapped[str | None] = mapped_column(String(32))
+    source_reused_from_page_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("manual_pages.id", ondelete=ON_DELETE_SET_NULL),
+    )
     ocr_lines: Mapped[list[dict[str, object]]] = mapped_column(
         postgresql.JSONB,
         nullable=False,
@@ -143,6 +149,16 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint("page_number > 0", name="page_number_positive"),
+        CheckConstraint(
+            f"source_fingerprint IS NULL OR length(source_fingerprint) = {SHA256_HEX_LENGTH}",
+            name="source_fingerprint_length_valid",
+        ),
+        CheckConstraint(
+            "(source_fingerprint IS NULL AND source_fingerprint_kind IS NULL) OR "
+            "(source_fingerprint IS NOT NULL AND source_fingerprint_kind IN "
+            "('image', 'pdf_render'))",
+            name="source_fingerprint_kind_valid",
+        ),
         CheckConstraint("jsonb_typeof(ocr_lines) = 'array'", name="ocr_lines_array"),
         CheckConstraint(
             "ocr_status IN ('pending', 'processing', 'completed', 'failed')",
@@ -163,6 +179,8 @@ class ManualPage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         Index("ix_manual_pages_manual_id", manual_id),
         Index("ix_manual_pages_image_asset_id", image_asset_id),
+        Index("ix_manual_pages_source_fingerprint", source_fingerprint),
+        Index("ix_manual_pages_source_reused_from_page_id", source_reused_from_page_id),
         Index("uq_manual_pages_manual_page_number", manual_id, page_number, unique=True),
     )
 

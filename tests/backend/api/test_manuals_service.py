@@ -189,7 +189,7 @@ async def test_store_images_total_size_bva(monkeypatch, total_size, accepted):
 )
 async def test_store_pdf_total_size_bva(monkeypatch, pdf_size, accepted):
     """BVA del tamaño total para PDF ya validado antes de persistirlo."""
-    validated_pdf = SimpleNamespace(content=b"x" * pdf_size, page_count=1)
+    validated_pdf = SimpleNamespace(content=b"x" * pdf_size, page_count=1, sha256="e" * 64)
     monkeypatch.setattr(manual_service.config, "MAX_MANUAL_TOTAL_SIZE", 10)
     monkeypatch.setattr(
         manual_service,
@@ -265,12 +265,14 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     page_id = uuid4()
     manual = _manual(source_type="images")
     page = _image_page(page_id=page_id, page_number=1)
-    _patch_sessionmaker(monkeypatch, session=session)
-    _patch_http_client(monkeypatch, client=client)
-    claim_mock = AsyncMock(return_value=True)
-    monkeypatch.setattr(manual_service, "claim_page_for_processing", claim_mock)
-    monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
-    monkeypatch.setattr(manual_service, "get_page_for_processing", AsyncMock(return_value=page))
+    claim_mock = _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=client,
+        manual=manual,
+        page=page,
+    )
+    _patch_no_reusable_page(monkeypatch)
     read_stored_file_mock = AsyncMock(return_value=b"image-bytes")
     monkeypatch.setattr(manual_service, "read_stored_file", read_stored_file_mock)
     run_ocr_mock = AsyncMock(return_value=_OCR_LINES)
@@ -285,6 +287,8 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["text_source"] == "ocr"
     assert replace_kwargs["text_quality"] == "ok"
+    assert replace_kwargs["source_fingerprint"] == page.sha256
+    assert replace_kwargs["source_fingerprint_kind"] == "image"
     assert replace_kwargs["chunks"][0].source_page == 1
     assert replace_kwargs["chunks"][0].chunk_index == 0
     read_stored_file_mock.assert_awaited_once_with(page.storage_key)
@@ -295,6 +299,46 @@ async def test_process_manual_page_reclama_pagina_y_ejecuta_ocr(monkeypatch):
     assert ocr_image.sha256 == page.sha256
     assert ocr_image.width == page.width
     assert ocr_image.height == page.height
+
+
+@pytest.mark.anyio
+async def test_process_manual_page_reutiliza_imagen_canonica_sin_importar_orden(monkeypatch):
+    """EP3 misma foto en otra posición: la huella de página evita repetir OCR."""
+    session = object()
+    page_id = uuid4()
+    reusable = _reusable_page_result()
+    _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=object(),
+        manual=_manual(source_type="images"),
+        page=_image_page(page_id=page_id, page_number=2),
+    )
+    reuse_mock = AsyncMock(return_value=reusable)
+    monkeypatch.setattr(manual_service, "find_reusable_page_result", reuse_mock)
+    read_mock = AsyncMock()
+    run_ocr_mock = AsyncMock()
+    replace_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "read_stored_file", read_mock)
+    monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
+    monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
+
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
+
+    reuse_mock.assert_awaited_once_with(
+        session,
+        owner_user_id=_USER_ID,
+        game_id=_GAME_ID,
+        source_fingerprint="f" * 64,
+    )
+    read_mock.assert_not_awaited()
+    run_ocr_mock.assert_not_awaited()
+    replace_kwargs = replace_mock.await_args.kwargs
+    assert replace_kwargs["page_id"] == page_id
+    assert replace_kwargs["source_fingerprint"] == "f" * 64
+    assert replace_kwargs["source_fingerprint_kind"] == "image"
+    assert replace_kwargs["source_reused_from_page_id"] == reusable.page_id
+    assert replace_kwargs["chunks"][0].source_page == 2
 
 
 @pytest.mark.anyio
@@ -317,19 +361,14 @@ async def test_process_manual_page_hace_rollback_antes_de_marcar_pagina_fallida(
     events: list[str] = []
     page_id = uuid4()
     session = SimpleNamespace(rollback=AsyncMock(side_effect=lambda: events.append("rollback")))
-    _patch_sessionmaker(monkeypatch, session=session)
-    _patch_http_client(monkeypatch, client=object())
-    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=True))
-    monkeypatch.setattr(
-        manual_service,
-        "get_manual_for_processing",
-        AsyncMock(return_value=_manual(source_type="images")),
+    _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=object(),
+        manual=_manual(source_type="images"),
+        page=_image_page(page_id=page_id, page_number=1),
     )
-    monkeypatch.setattr(
-        manual_service,
-        "get_page_for_processing",
-        AsyncMock(return_value=_image_page(page_id=page_id, page_number=1)),
-    )
+    _patch_no_reusable_page(monkeypatch)
     monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"image-bytes"))
     monkeypatch.setattr(manual_service, "run_ocr", AsyncMock(return_value=_OCR_LINES))
     monkeypatch.setattr(
@@ -430,14 +469,12 @@ async def test_process_manual_page_usa_texto_pdf_aprovechable_sin_ocr(monkeypatc
     source_asset_id = uuid4()
     manual = _manual(source_type="pdf", source_asset_id=source_asset_id)
     text = " ".join(f"regla-{index}" for index in range(40))
-    _patch_sessionmaker(monkeypatch, session=session)
-    _patch_http_client(monkeypatch, client=client)
-    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=True))
-    monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
-    monkeypatch.setattr(
-        manual_service,
-        "get_page_for_processing",
-        AsyncMock(return_value=_pdf_page(page_id=page_id, page_number=1)),
+    _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=client,
+        manual=manual,
+        page=_pdf_page(page_id=page_id, page_number=1),
     )
     monkeypatch.setattr(
         manual_service,
@@ -471,18 +508,12 @@ async def test_process_manual_page_renderiza_pdf_si_el_texto_no_es_aprovechable(
     client = object()
     page_id = uuid4()
     image = _validated_image()
-    _patch_sessionmaker(monkeypatch, session=session)
-    _patch_http_client(monkeypatch, client=client)
-    monkeypatch.setattr(manual_service, "claim_page_for_processing", AsyncMock(return_value=True))
-    monkeypatch.setattr(
-        manual_service,
-        "get_manual_for_processing",
-        AsyncMock(return_value=_manual(source_type="pdf", source_asset_id=uuid4())),
-    )
-    monkeypatch.setattr(
-        manual_service,
-        "get_page_for_processing",
-        AsyncMock(return_value=_pdf_page(page_id=page_id, page_number=2)),
+    _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=client,
+        manual=_manual(source_type="pdf", source_asset_id=uuid4()),
+        page=_pdf_page(page_id=page_id, page_number=2),
     )
     monkeypatch.setattr(
         manual_service,
@@ -493,6 +524,7 @@ async def test_process_manual_page_renderiza_pdf_si_el_texto_no_es_aprovechable(
     monkeypatch.setattr(manual_service, "extract_pdf_page_text", AsyncMock(return_value=""))
     monkeypatch.setattr(manual_service, "pdf_text_is_usable", lambda _value: False)
     monkeypatch.setattr(manual_service, "render_pdf_page", AsyncMock(return_value=image))
+    _patch_no_reusable_page(monkeypatch)
     save_mock = AsyncMock(return_value="manuals/user/manual/page-2.jpg")
     monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
     attach_mock = AsyncMock()
@@ -508,9 +540,67 @@ async def test_process_manual_page_renderiza_pdf_si_el_texto_no_es_aprovechable(
     attach_mock.assert_awaited_once()
     assert attach_mock.await_args.kwargs["storage_key"] == "manuals/user/manual/page-2.jpg"
     assert attach_mock.await_args.kwargs["image"] is image
+    assert attach_mock.await_args.kwargs["source_fingerprint_kind"] == "pdf_render"
     assert run_ocr_mock.await_args.kwargs["image"] is image
     replace_kwargs = replace_mock.await_args.kwargs
     assert replace_kwargs["text_source"] == "ocr"
+    assert replace_kwargs["chunks"][0].source_page == 2
+
+
+@pytest.mark.anyio
+async def test_process_manual_page_reutiliza_pdf_renderizado_canonico(monkeypatch):
+    """EP3 PDF renderizado repetido: copia resultado y no llama a OCR."""
+    session = object()
+    client = object()
+    page_id = uuid4()
+    image = _validated_image()
+    reusable = _reusable_page_result()
+    _patch_claimed_page(
+        monkeypatch,
+        session=session,
+        client=client,
+        manual=_manual(source_type="pdf", source_asset_id=uuid4()),
+        page=_pdf_page(page_id=page_id, page_number=2),
+    )
+    monkeypatch.setattr(
+        manual_service,
+        "get_asset_for_processing",
+        AsyncMock(return_value="manuals/user/manual/source.pdf"),
+    )
+    monkeypatch.setattr(manual_service, "read_stored_file", AsyncMock(return_value=b"%PDF-"))
+    monkeypatch.setattr(manual_service, "extract_pdf_page_text", AsyncMock(return_value=""))
+    monkeypatch.setattr(manual_service, "pdf_text_is_usable", lambda _value: False)
+    monkeypatch.setattr(manual_service, "render_pdf_page", AsyncMock(return_value=image))
+    reuse_mock = AsyncMock(return_value=reusable)
+    monkeypatch.setattr(manual_service, "find_reusable_page_result", reuse_mock)
+    save_mock = AsyncMock()
+    attach_mock = AsyncMock()
+    run_ocr_mock = AsyncMock()
+    replace_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "save_manual_image", save_mock)
+    monkeypatch.setattr(manual_service, "attach_page_image_asset", attach_mock)
+    monkeypatch.setattr(manual_service, "run_ocr", run_ocr_mock)
+    monkeypatch.setattr(manual_service, "replace_page_result", replace_mock)
+
+    await manual_service.process_manual_page(_MANUAL_ID, page_id)
+
+    reuse_mock.assert_awaited_once_with(
+        session,
+        owner_user_id=_USER_ID,
+        game_id=_GAME_ID,
+        source_fingerprint=image.sha256,
+    )
+    save_mock.assert_not_awaited()
+    attach_mock.assert_not_awaited()
+    run_ocr_mock.assert_not_awaited()
+    replace_kwargs = replace_mock.await_args.kwargs
+    assert replace_kwargs["ocr_lines"] == reusable.ocr_lines
+    assert replace_kwargs["text_source"] == "ocr"
+    assert replace_kwargs["text_quality"] == "ok"
+    assert replace_kwargs["source_fingerprint"] == image.sha256
+    assert replace_kwargs["source_fingerprint_kind"] == "pdf_render"
+    assert replace_kwargs["source_reused_from_page_id"] == reusable.page_id
+    assert replace_kwargs["chunks"][0].text == "Regla reutilizada."
     assert replace_kwargs["chunks"][0].source_page == 2
 
 
@@ -834,6 +924,26 @@ def _patch_http_client(monkeypatch, *, client) -> None:
     )
 
 
+def _patch_claimed_page(monkeypatch, *, session, client, manual, page):
+    """Prepara una task de página ya reclamada para centrar cada test en su rama."""
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_http_client(monkeypatch, client=client)
+    claim_mock = AsyncMock(return_value=True)
+    monkeypatch.setattr(manual_service, "claim_page_for_processing", claim_mock)
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", AsyncMock(return_value=manual))
+    monkeypatch.setattr(manual_service, "get_page_for_processing", AsyncMock(return_value=page))
+    return claim_mock
+
+
+def _patch_no_reusable_page(monkeypatch) -> None:
+    """Fuerza la ruta normal de OCR cuando no hay página canónica previa."""
+    monkeypatch.setattr(
+        manual_service,
+        "find_reusable_page_result",
+        AsyncMock(return_value=None),
+    )
+
+
 def _manual(
     *,
     source_type: str,
@@ -877,6 +987,18 @@ def _pdf_page(*, page_id, page_number: int):
         width=None,
         height=None,
         sha256=None,
+    )
+
+
+def _reusable_page_result():
+    """Construye una página canónica encontrada por huella."""
+    return SimpleNamespace(
+        page_id=uuid4(),
+        ocr_lines=[{"text": "Regla reutilizada.", "confidence": 0.8}],
+        text_source="ocr",
+        text_quality="ok",
+        ocr_confidence_mean=0.8,
+        chunk_texts=["Regla reutilizada."],
     )
 
 

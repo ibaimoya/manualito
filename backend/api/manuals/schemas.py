@@ -12,6 +12,7 @@ from api.schemas import StrictModel
 GAME_QUESTION_TOP_K_MAX = 10
 MANUAL_PAGE_TEXT_MAX_LENGTH = 20_000
 ManualOcrStatus = Literal["pending", "processing", "completed", "failed"]
+ManualDedupStatus = Literal["none", "reused"]
 PageText = Annotated[
     str,
     StringConstraints(
@@ -70,6 +71,7 @@ class ManualPageResponse(StrictModel):
     ocr_status: ManualOcrStatus
     text_source: str
     text_quality: str | None
+    dedup_status: ManualDedupStatus
     ocr_confidence_mean: float | None
     ocr_lines: list[ManualTextLine]
 
@@ -86,6 +88,7 @@ class ManualProcessingPageResponse(StrictModel):
     page_number: int
     ocr_status: ManualOcrStatus
     text_quality: str | None
+    dedup_status: ManualDedupStatus
 
 
 class ManualProcessingResponse(StrictModel):

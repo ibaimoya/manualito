@@ -665,6 +665,7 @@ async def _reuse_page_result(
         owner_user_id=manual.owner_user_id,
         game_id=manual.game_id,
         source_fingerprint=source_fingerprint,
+        exclude_page_id=page.id,
     )
     if reusable is None:
         return False

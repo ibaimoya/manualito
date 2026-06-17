@@ -183,9 +183,10 @@ async def find_reusable_page_result(
     owner_user_id: UUID,
     game_id: UUID,
     source_fingerprint: str,
+    exclude_page_id: UUID | None = None,
 ) -> ReusablePageResult | None:
     """Busca una página ya OCR-eada que pueda reutilizarse con seguridad."""
-    page_result = await session.execute(
+    page_query = (
         select(
             ManualPage.id,
             ManualPage.ocr_lines,
@@ -198,6 +199,7 @@ async def find_reusable_page_result(
             Manual.game_id == game_id,
             Manual.deleted_at.is_(None),
             ManualPage.source_fingerprint == source_fingerprint,
+            ManualPage.source_reused_from_page_id.is_(None),
             ManualPage.ocr_status == "completed",
             ManualPage.text_quality.in_(("ok", "empty")),
             or_(
@@ -208,6 +210,10 @@ async def find_reusable_page_result(
         .order_by(ManualPage.updated_at.desc())
         .limit(1)
     )
+    if exclude_page_id is not None:
+        page_query = page_query.where(ManualPage.id != exclude_page_id)
+
+    page_result = await session.execute(page_query)
     page = page_result.one_or_none()
     if page is None:
         return None

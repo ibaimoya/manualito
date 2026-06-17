@@ -330,6 +330,7 @@ async def test_process_manual_page_reutiliza_imagen_canonica_sin_importar_orden(
         owner_user_id=_USER_ID,
         game_id=_GAME_ID,
         source_fingerprint="f" * 64,
+        exclude_page_id=page_id,
     )
     read_mock.assert_not_awaited()
     run_ocr_mock.assert_not_awaited()
@@ -589,6 +590,7 @@ async def test_process_manual_page_reutiliza_pdf_renderizado_canonico(monkeypatc
         owner_user_id=_USER_ID,
         game_id=_GAME_ID,
         source_fingerprint=image.sha256,
+        exclude_page_id=page_id,
     )
     save_mock.assert_not_awaited()
     attach_mock.assert_not_awaited()

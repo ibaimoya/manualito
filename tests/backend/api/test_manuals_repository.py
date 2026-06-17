@@ -427,6 +427,7 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
 @pytest.mark.anyio
 async def test_find_reusable_page_result_loads_visible_completed_page_and_chunks():
     """EP1 página canónica visible completada: se reutilizan texto y chunks."""
+    current_page_id = uuid4()
     page = SimpleNamespace(
         id=uuid4(),
         ocr_lines=[{"text": "Regla uno.", "confidence": 0.9}],
@@ -446,6 +447,7 @@ async def test_find_reusable_page_result_loads_visible_completed_page_and_chunks
         owner_user_id=_OWNER_USER_ID,
         game_id=_GAME_ID,
         source_fingerprint="a" * 64,
+        exclude_page_id=current_page_id,
     )
 
     assert result is not None
@@ -458,6 +460,8 @@ async def test_find_reusable_page_result_loads_visible_completed_page_and_chunks
     compiled = _compile(session.executed[0])
     assert "manuals.deleted_at IS NULL" in compiled
     assert "manual_pages.source_fingerprint =" in compiled
+    assert "manual_pages.source_reused_from_page_id IS NULL" in compiled
+    assert "manual_pages.id !=" in compiled
     assert "manual_pages.ocr_status =" in compiled
     assert "manual_pages.text_quality IN" in compiled
     assert "manuals.owner_user_id =" in compiled

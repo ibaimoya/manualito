@@ -61,6 +61,7 @@ x-celery-base: &celery-base
   <<: *service-hardening
   env_file:
     - ./config/backend.env
+    - ./config/ocr.env
     - ./config/celery.env
     - ./config/database.env
   environment:
@@ -131,6 +132,7 @@ services:
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-api
     env_file:
       - ./config/backend.env
+      - ./config/ocr.env
       - ./config/celery.env
       - ./config/database.env
     environment:
@@ -391,6 +393,7 @@ services:
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr
     env_file:
       - ./config/backend.env
+      - ./config/ocr.env
     image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:cpu
     build:
       context: .

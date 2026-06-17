@@ -104,6 +104,7 @@ async def create_manual_with_pending_pages(
     language: str | None,
     source_type: str,
     page_count: int,
+    source_fingerprint: str,
     images: list[StoredManualImage],
     source_pdf: StoredManualPdf | None = None,
 ) -> Manual:
@@ -114,6 +115,7 @@ async def create_manual_with_pending_pages(
         title=title,
         source_type=source_type,
         page_count=page_count,
+        source_fingerprint=source_fingerprint,
         status="indexing",
         language=language,
         visibility=visibility,

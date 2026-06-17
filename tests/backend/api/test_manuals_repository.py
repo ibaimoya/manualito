@@ -356,6 +356,7 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
         language="es",
         source_type="images",
         page_count=2,
+        source_fingerprint="a" * 64,
         images=[
             StoredManualImage(
                 page_number=1,
@@ -376,6 +377,7 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
     assert len(assets) == 2
     assert manual.source_type == "images"
     assert manual.page_count == 2
+    assert manual.source_fingerprint == "a" * 64
     assert [asset.storage_key for asset in assets] == [
         "manuals/user/manual/page-1.jpg",
         "manuals/user/manual/page-2.jpg",
@@ -408,6 +410,7 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
         language=None,
         source_type="pdf",
         page_count=2,
+        source_fingerprint="b" * 64,
         images=[],
         source_pdf=StoredManualPdf(
             pdf=_validated_pdf(),
@@ -420,6 +423,7 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
     expected_pdf = _validated_pdf()
     assert manual.source_type == "pdf"
     assert manual.page_count == 2
+    assert manual.source_fingerprint == "b" * 64
     assert manual.source_asset_id == source_asset.id
     assert source_asset.kind == "manual_source_pdf"
     assert source_asset.storage_key == "manuals/user/manual/source.pdf"

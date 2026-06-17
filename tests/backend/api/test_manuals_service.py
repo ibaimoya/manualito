@@ -5,12 +5,16 @@ from uuid import uuid4
 import anyio
 import httpx
 import pytest
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 import api.manuals.retrieval.service as retrieval_service
 import api.manuals.service as manual_service
 from api.exceptions import InternalServiceError, ManualPageLimitExceededError
-from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualTooLargeError
+from api.manuals.exceptions import (
+    GeneratedAnswerTooLongError,
+    ManualDuplicateError,
+    ManualTooLargeError,
+)
 from api.manuals.repository import AuthorizedChunk, DeletedManualAssets
 from api.manuals.schemas import GAME_QUESTION_TOP_K_MAX, AnswerResponse
 from api.manuals.validation import ValidatedManualImage
@@ -80,6 +84,7 @@ async def test_create_manual_acepta_imagenes_y_crea_paginas_pending(monkeypatch)
     assert create_kwargs["language"] == "es"
     assert create_kwargs["source_type"] == "images"
     assert create_kwargs["page_count"] == 1
+    assert len(create_kwargs["source_fingerprint"]) == 64
     assert create_kwargs["images"][0].storage_key == "manuals/user/manual/page-1.jpg"
     auto_follow_mock.assert_awaited_once_with(
         session,
@@ -121,6 +126,49 @@ async def test_create_manual_borra_fichero_si_falla_postgres(monkeypatch):
             pdf=None,
         )
 
+    delete_mock.assert_awaited_once_with("manuals/user/manual/page-1.jpg")
+
+
+@pytest.mark.anyio
+async def test_create_manual_devuelve_conflicto_si_el_manual_ya_existe(monkeypatch):
+    """El índice único de Postgres evita dobles subidas concurrentes del mismo manual."""
+    session = SimpleNamespace(rollback=AsyncMock())
+    monkeypatch.setattr(
+        manual_service,
+        "validate_manual_image",
+        AsyncMock(return_value=_validated_image()),
+    )
+    monkeypatch.setattr(
+        manual_service,
+        "save_manual_image",
+        AsyncMock(return_value="manuals/user/manual/page-1.jpg"),
+    )
+    duplicate_error = IntegrityError(
+        "INSERT INTO manuals",
+        {},
+        _PgUniqueViolationError(manual_service.MANUAL_SOURCE_FINGERPRINT_UNIQUE_INDEX),
+    )
+    monkeypatch.setattr(
+        manual_service,
+        "create_manual_with_pending_pages",
+        AsyncMock(side_effect=duplicate_error),
+    )
+    delete_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "delete_stored_file", delete_mock)
+
+    with pytest.raises(ManualDuplicateError):
+        await manual_service.create_manual(
+            session,
+            auth=_auth(),
+            game_id=_GAME_ID,
+            title=None,
+            visibility="private",
+            language=None,
+            images=[SimpleNamespace(filename="manual.jpg")],
+            pdf=None,
+        )
+
+    session.rollback.assert_awaited_once()
     delete_mock.assert_awaited_once_with("manuals/user/manual/page-1.jpg")
 
 
@@ -904,6 +952,12 @@ class _AsyncContext:
 
     async def __aexit__(self, _exc_type, _exc, _tb):
         return False
+
+
+class _PgUniqueViolationError(Exception):
+    def __init__(self, constraint_name: str) -> None:
+        super().__init__(constraint_name)
+        self.diag = SimpleNamespace(constraint_name=constraint_name)
 
 
 def _patch_process_resources(monkeypatch, *, session, client) -> None:

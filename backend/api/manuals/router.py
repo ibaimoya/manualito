@@ -33,6 +33,7 @@ from api.responses import (
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
     INVALID_IMAGE_RESPONSE,
     MANUAL_BUSY_RESPONSE,
+    MANUAL_DUPLICATE_RESPONSE,
     MANUAL_NOT_EDITABLE_RESPONSE,
     MANUAL_NOT_FOUND_RESPONSE,
 )
@@ -169,6 +170,7 @@ async def reprocess_manual_page_handler(
         **INVALID_IMAGE_RESPONSE,
         **INTERNAL_ERROR_RESPONSE,
         **INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
+        **MANUAL_DUPLICATE_RESPONSE,
     },
 )
 async def create_manual_handler(

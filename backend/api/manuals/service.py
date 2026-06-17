@@ -9,7 +9,7 @@ from uuid import UUID
 import httpx
 from fastapi import UploadFile
 from sqlalchemy.engine import Row
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import client as internal_client
@@ -30,6 +30,7 @@ from api.exceptions import (
 from api.games import repository as games_repository
 from api.manuals.exceptions import (
     ManualBusyError,
+    ManualDuplicateError,
     ManualNotEditableError,
     ManualTooLargeError,
     ManualUploadSelectionError,
@@ -75,6 +76,7 @@ from database.session import get_sessionmaker
 
 RAG_INDEX_INTERNAL_DETAIL = "Error interno al indexar el manual."
 MANUAL_CHUNK_INDEX_PAGE_STRIDE = 1_000_000
+MANUAL_SOURCE_FINGERPRINT_UNIQUE_INDEX = "uq_manuals_live_source_fingerprint"
 
 logger = logging.getLogger(__name__)
 
@@ -121,19 +123,31 @@ async def create_manual(
         stored_keys.extend(item.storage_key for item in stored_images)
         if source_pdf is not None:
             stored_keys.append(source_pdf.storage_key)
-
-        manual = await create_manual_with_pending_pages(
-            session,
-            owner_user_id=auth.user.id,
-            game_id=game_id,
-            title=(title or "").strip() or None,
-            visibility=visibility,
-            language=(language or "").strip() or None,
+        source_fingerprint = _manual_source_fingerprint(
             source_type=source_type,
-            page_count=page_count,
             images=stored_images,
             source_pdf=source_pdf,
         )
+
+        try:
+            manual = await create_manual_with_pending_pages(
+                session,
+                owner_user_id=auth.user.id,
+                game_id=game_id,
+                title=(title or "").strip() or None,
+                visibility=visibility,
+                language=(language or "").strip() or None,
+                source_type=source_type,
+                page_count=page_count,
+                source_fingerprint=source_fingerprint,
+                images=stored_images,
+                source_pdf=source_pdf,
+            )
+        except IntegrityError as exc:
+            await session.rollback()
+            if _is_duplicate_manual_error(exc):
+                raise ManualDuplicateError from exc
+            raise
         try:
             await games_repository.auto_follow_game(
                 session,
@@ -143,7 +157,7 @@ async def create_manual(
         except SQLAlchemyError:
             await session.rollback()
             logger.warning("No se pudo auto-seguir el juego tras subir manual.", exc_info=True)
-    except (ApiError, OSError, SQLAlchemyError):
+    except (ApiError, OSError, SQLAlchemyError, ManualDuplicateError):
         for storage_key in stored_keys:
             await delete_stored_file(storage_key)
         raise
@@ -214,6 +228,28 @@ async def _store_images(
             await delete_stored_file(item.storage_key)
         raise
     return stored
+
+
+def _manual_source_fingerprint(
+    *,
+    source_type: str,
+    images: list[StoredManualImage],
+    source_pdf: StoredManualPdf | None,
+) -> str:
+    """Huella estable del origen completo del manual para deduplicar subidas."""
+    if source_type == "pdf":
+        if source_pdf is None:
+            raise ValueError("Un manual PDF necesita asset fuente.")
+        return sha256_hex(f"pdf\n{source_pdf.pdf.sha256}")
+    return sha256_hex("images\n" + "\n".join(item.image.sha256 for item in images))
+
+
+def _is_duplicate_manual_error(exc: IntegrityError) -> bool:
+    """Detecta la violación del índice único de manual completo."""
+    constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+    return constraint == MANUAL_SOURCE_FINGERPRINT_UNIQUE_INDEX or (
+        MANUAL_SOURCE_FINGERPRINT_UNIQUE_INDEX in str(exc.orig)
+    )
 
 
 def _parse_rag_ingest_response(response: dict) -> tuple[set[UUID], str, datetime]:

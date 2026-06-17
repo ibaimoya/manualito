@@ -181,6 +181,7 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
     assert _single_fk(manuals.c.source_asset_id).ondelete == "SET NULL"
     assert str(manuals.c.source_type.server_default.arg) == "'images'"
     assert str(manuals.c.page_count.server_default.arg) == "1"
+    assert manuals.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
     assert str(manuals.c.status.server_default.arg) == "'indexing'"
     assert str(manuals.c.visibility.server_default.arg) == "'private'"
     assert str(manuals.c.chunks_indexed.server_default.arg) == "0"
@@ -188,6 +189,7 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
         "ck_manuals_title_valid",
         "ck_manuals_source_type_valid",
         "ck_manuals_page_count_positive",
+        "ck_manuals_source_fingerprint_length_valid",
         "ck_manuals_status_valid",
         "ck_manuals_language_not_empty",
         "ck_manuals_visibility_valid",
@@ -197,6 +199,11 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
     assert _index(manuals, "ix_manuals_owner_user_id") is not None
     assert _index(manuals, "ix_manuals_game_id") is not None
     assert _index(manuals, "ix_manuals_source_asset_id") is not None
+    fingerprint_index = _index(manuals, "uq_manuals_live_source_fingerprint")
+    assert fingerprint_index.unique is True
+    assert _compile(fingerprint_index.dialect_options["postgresql"]["where"]) == (
+        "deleted_at IS NULL AND source_fingerprint IS NOT NULL"
+    )
     shared_index = _index(manuals, "ix_manuals_game_shared_active")
     assert _compile(shared_index.dialect_options["postgresql"]["where"]) == (
         "visibility = 'shared' AND status = 'active' AND deleted_at IS NULL"
@@ -355,18 +362,19 @@ def test_game_follows_schema_tracks_last_explicit_choice():
     assert _index(follows, "ix_game_follows_user_id") is not None
 
 
-def test_game_explanations_schema_is_cached_per_game():
-    """game_explanations guarda una única explicación compartida por juego."""
+def test_game_explanations_schema_is_cached_per_user_and_game():
+    """game_explanations guarda una explicación por usuario y juego."""
     import_all_models()
     explanations = Base.metadata.tables["game_explanations"]
 
-    assert "user_id" not in explanations.c
+    assert _single_fk(explanations.c.user_id).ondelete == "CASCADE"
     assert _single_fk(explanations.c.game_id).ondelete == "RESTRICT"
     assert isinstance(explanations.c.sections.type, postgresql.JSONB)
     assert explanations.c.status.type.length == 16
     assert explanations.c.error_code.nullable is True
     assert explanations.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
-    assert _index(explanations, "uq_game_explanations_game_id").unique is True
+    assert _index(explanations, "uq_game_explanations_user_game").unique is True
+    assert _index(explanations, "ix_game_explanations_game_id") is not None
     assert _check_names(explanations) == {
         "ck_game_explanations_error_code_only_when_failed",
         "ck_game_explanations_sections_object",

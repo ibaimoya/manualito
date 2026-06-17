@@ -1,4 +1,4 @@
-"""Modelo de explicaciones de juego cacheadas por juego."""
+"""Modelo de explicaciones de juego cacheadas por usuario y juego."""
 
 from datetime import datetime
 from uuid import UUID
@@ -13,10 +13,15 @@ from database.models.constants import SHA256_HEX_LENGTH
 
 
 class GameExplanation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Explicación generada para un juego a partir de sus manuales visibles."""
+    """Explicación generada para un juego a partir de los manuales visibles del usuario."""
 
     __tablename__ = "game_explanations"
 
+    user_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     game_id: Mapped[UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
         ForeignKey("games.id", ondelete="RESTRICT"),
@@ -53,5 +58,6 @@ class GameExplanation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             f"length(source_fingerprint) = {SHA256_HEX_LENGTH}",
             name="source_fingerprint_length_valid",
         ),
-        Index("uq_game_explanations_game_id", game_id, unique=True),
+        Index("uq_game_explanations_user_game", user_id, game_id, unique=True),
+        Index("ix_game_explanations_game_id", game_id),
     )

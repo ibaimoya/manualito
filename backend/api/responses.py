@@ -18,6 +18,7 @@ IMAGE_TOO_LARGE_RESPONSE = {
 INVALID_IMAGE_RESPONSE = {415: {"description": "El archivo no es una imagen válida."}}
 INTERNAL_ERROR_RESPONSE = {500: {"description": "Error interno del gateway."}}
 MANUAL_NOT_FOUND_RESPONSE = {404: {"description": "Manual no encontrado."}}
+MANUAL_DUPLICATE_RESPONSE = {409: {"description": "Este manual ya está en tu biblioteca."}}
 MANUAL_BUSY_RESPONSE = {
     409: {"description": "El manual se está procesando. Inténtalo en unos segundos."}
 }

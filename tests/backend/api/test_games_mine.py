@@ -138,6 +138,7 @@ def test_list_my_games_repository_unions_engagement_and_orders_by_activity():
     assert "game_follows.following IS true" in compiled
     assert "manuals.owner_user_id =" in compiled
     assert "conversations.user_id =" in compiled
+    assert "OR" in compiled
     assert "greatest" in compiled.lower()
     assert "ORDER BY" in compiled.upper()
     assert "LIMIT" in compiled.upper()

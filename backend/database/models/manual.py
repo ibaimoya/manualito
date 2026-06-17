@@ -58,6 +58,7 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         nullable=False,
         server_default=text("1"),
     )
+    source_fingerprint: Mapped[str | None] = mapped_column(String(SHA256_HEX_LENGTH))
     status: Mapped[str] = mapped_column(
         String(24),
         nullable=False,
@@ -84,6 +85,10 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint("source_type IN ('images', 'pdf')", name="source_type_valid"),
         CheckConstraint("page_count > 0", name="page_count_positive"),
         CheckConstraint(
+            f"source_fingerprint IS NULL OR length(source_fingerprint) = {SHA256_HEX_LENGTH}",
+            name="source_fingerprint_length_valid",
+        ),
+        CheckConstraint(
             "status IN ('indexing', 'active', 'pending_review', 'hidden', 'failed')",
             name="status_valid",
         ),
@@ -96,6 +101,14 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         Index("ix_manuals_owner_user_id", owner_user_id),
         Index("ix_manuals_game_id", game_id),
         Index("ix_manuals_source_asset_id", source_asset_id),
+        Index(
+            "uq_manuals_live_source_fingerprint",
+            owner_user_id,
+            game_id,
+            source_fingerprint,
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL AND source_fingerprint IS NOT NULL"),
+        ),
         Index(
             "ix_manuals_game_shared_active",
             game_id,

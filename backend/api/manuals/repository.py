@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Select, delete, func, or_, select, update
+from sqlalchemy import Select, and_, case, delete, func, or_, select, update
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -62,6 +62,18 @@ class AuthorizedChunk:
 
 
 @dataclass(frozen=True, slots=True)
+class ReusablePageResult:
+    """Texto y chunks de una página canónica reutilizable."""
+
+    page_id: UUID
+    ocr_lines: list[dict[str, object]]
+    text_source: str
+    text_quality: str | None
+    ocr_confidence_mean: float | None
+    chunk_texts: list[str]
+
+
+@dataclass(frozen=True, slots=True)
 class ManualDetailRow:
     """Detalle completo de manual propio."""
 
@@ -71,6 +83,18 @@ class ManualDetailRow:
     def __getattr__(self, name: str) -> object:
         """Permite a Pydantic leer campos del resumen con from_attributes."""
         return getattr(self.summary, name)
+
+
+@dataclass(frozen=True, slots=True)
+class ManualPageImageAsset:
+    """Asset de imagen autorizado para visualizar una página."""
+
+    storage_key: str
+    mime_type: str
+    byte_size: int
+    sha256: str
+    width: int | None
+    height: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +116,7 @@ async def create_manual_with_pending_pages(
     language: str | None,
     source_type: str,
     page_count: int,
+    source_fingerprint: str,
     images: list[StoredManualImage],
     source_pdf: StoredManualPdf | None = None,
 ) -> Manual:
@@ -102,6 +127,7 @@ async def create_manual_with_pending_pages(
         title=title,
         source_type=source_type,
         page_count=page_count,
+        source_fingerprint=source_fingerprint,
         status="indexing",
         language=language,
         visibility=visibility,
@@ -143,6 +169,8 @@ async def create_manual_with_pending_pages(
                 manual_id=manual.id,
                 page_number=item.page_number,
                 image_asset_id=asset.id,
+                source_fingerprint=item.image.sha256,
+                source_fingerprint_kind="image",
                 ocr_status="pending",
                 text_source="none",
             )
@@ -163,6 +191,62 @@ async def create_manual_with_pending_pages(
     return manual
 
 
+async def find_reusable_page_result(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    game_id: UUID,
+    source_fingerprint: str,
+    exclude_page_id: UUID | None = None,
+) -> ReusablePageResult | None:
+    """Busca una página ya OCR-eada que pueda reutilizarse con seguridad."""
+    page_query = (
+        select(
+            ManualPage.id,
+            ManualPage.ocr_lines,
+            ManualPage.text_source,
+            ManualPage.text_quality,
+            ManualPage.ocr_confidence_mean,
+        )
+        .join(Manual, Manual.id == ManualPage.manual_id)
+        .where(
+            Manual.game_id == game_id,
+            Manual.deleted_at.is_(None),
+            ManualPage.source_fingerprint == source_fingerprint,
+            ManualPage.source_reused_from_page_id.is_(None),
+            ManualPage.ocr_status == "completed",
+            ManualPage.text_quality.in_(("ok", "empty")),
+            or_(
+                Manual.owner_user_id == owner_user_id,
+                ((Manual.visibility == "shared") & (Manual.status == "active")),
+            ),
+        )
+        .order_by(ManualPage.updated_at.desc())
+        .limit(1)
+    )
+    if exclude_page_id is not None:
+        page_query = page_query.where(ManualPage.id != exclude_page_id)
+
+    page_result = await session.execute(page_query)
+    page = page_result.one_or_none()
+    if page is None:
+        return None
+
+    chunks_result = await session.execute(
+        select(ManualChunk.text)
+        .where(ManualChunk.page_id == page.id)
+        .order_by(ManualChunk.chunk_index.asc())
+    )
+    return ReusablePageResult(
+        page_id=page.id,
+        ocr_lines=page.ocr_lines,
+        text_source=page.text_source,
+        text_quality=page.text_quality,
+        ocr_confidence_mean=page.ocr_confidence_mean,
+        chunk_texts=list(chunks_result.scalars()),
+    )
+
+
 async def list_user_manuals(
     session: AsyncSession,
     *,
@@ -171,11 +255,7 @@ async def list_user_manuals(
     offset: int,
 ) -> list[Row]:
     """Lista manuales propios sin cargar relaciones perezosas."""
-    result = await session.execute(
-        _manual_summary_query(owner_user_id)
-        .limit(limit)
-        .offset(offset)
-    )
+    result = await session.execute(_manual_summary_query(owner_user_id).limit(limit).offset(offset))
     return list(result)
 
 
@@ -201,6 +281,18 @@ async def get_user_manual_detail(
             ManualPage.text_quality,
             ManualPage.ocr_confidence_mean,
             ManualPage.ocr_lines,
+            Asset.id.is_not(None).label("image_available"),
+            Asset.width.label("image_width"),
+            Asset.height.label("image_height"),
+            _manual_page_dedup_status(),
+        )
+        .outerjoin(
+            Asset,
+            and_(
+                ManualPage.image_asset_id == Asset.id,
+                Asset.kind == "manual_page_image",
+                Asset.deleted_at.is_(None),
+            ),
         )
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
@@ -234,11 +326,53 @@ async def get_user_manual_processing_status(
             ManualPage.page_number,
             ManualPage.ocr_status,
             ManualPage.text_quality,
+            _manual_page_dedup_status(),
         )
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
     )
     return manual, list(pages_result)
+
+
+async def get_user_manual_page_image_asset(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+    page_number: int,
+) -> ManualPageImageAsset | None:
+    """Carga la imagen de una página propia sin exponer storage interno."""
+    result = await session.execute(
+        select(
+            Asset.storage_key,
+            Asset.mime_type,
+            Asset.byte_size,
+            Asset.sha256,
+            Asset.width,
+            Asset.height,
+        )
+        .join(ManualPage, ManualPage.image_asset_id == Asset.id)
+        .join(Manual, Manual.id == ManualPage.manual_id)
+        .where(
+            Manual.id == manual_id,
+            Manual.owner_user_id == owner_user_id,
+            Manual.deleted_at.is_(None),
+            ManualPage.page_number == page_number,
+            Asset.kind == "manual_page_image",
+            Asset.deleted_at.is_(None),
+        )
+    )
+    row = result.one_or_none()
+    if row is None:
+        return None
+    return ManualPageImageAsset(
+        storage_key=row.storage_key,
+        mime_type=row.mime_type,
+        byte_size=row.byte_size,
+        sha256=row.sha256,
+        width=row.width,
+        height=row.height,
+    )
 
 
 async def get_manual_for_processing(
@@ -394,6 +528,7 @@ async def attach_page_image_asset(
     page_id: UUID,
     image: ValidatedManualImage,
     storage_key: str,
+    source_fingerprint_kind: str | None = None,
 ) -> None:
     """Asocia a una página PDF la imagen renderizada para OCR/reintentos."""
     page = await session.get(ManualPage, page_id)
@@ -413,6 +548,9 @@ async def attach_page_image_asset(
     session.add(asset)
     await session.flush()
     page.image_asset_id = asset.id
+    if source_fingerprint_kind is not None:
+        page.source_fingerprint = image.sha256
+        page.source_fingerprint_kind = source_fingerprint_kind
     await session.commit()
 
 
@@ -470,7 +608,12 @@ async def begin_manual_reprocessing(
     if page_id is not None:
         pages_update = pages_update.where(ManualPage.page_number == page_number)
         stale_chunks_query = select(ManualChunk.id).where(ManualChunk.page_id == page_id)
-    await session.execute(pages_update.values(ocr_status="pending"))
+    await session.execute(
+        pages_update.values(
+            ocr_status="pending",
+            source_reused_from_page_id=None,
+        )
+    )
     stale_result = await session.execute(stale_chunks_query)
     stale_chunk_ids = list(stale_result.scalars())
     await session.commit()
@@ -511,9 +654,7 @@ async def get_page_for_edit(
 
 async def list_page_chunk_ids(session: AsyncSession, *, page_id: UUID) -> list[UUID]:
     """Lista los chunks actuales de una página para limpiarlos de Chroma."""
-    result = await session.execute(
-        select(ManualChunk.id).where(ManualChunk.page_id == page_id)
-    )
+    result = await session.execute(select(ManualChunk.id).where(ManualChunk.page_id == page_id))
     return list(result.scalars())
 
 
@@ -541,7 +682,20 @@ async def get_manual_page_row(session: AsyncSession, *, page_id: UUID) -> Row:
             ManualPage.text_quality,
             ManualPage.ocr_confidence_mean,
             ManualPage.ocr_lines,
-        ).where(ManualPage.id == page_id)
+            Asset.id.is_not(None).label("image_available"),
+            Asset.width.label("image_width"),
+            Asset.height.label("image_height"),
+            _manual_page_dedup_status(),
+        )
+        .outerjoin(
+            Asset,
+            and_(
+                ManualPage.image_asset_id == Asset.id,
+                Asset.kind == "manual_page_image",
+                Asset.deleted_at.is_(None),
+            ),
+        )
+        .where(ManualPage.id == page_id)
     )
     return result.one()
 
@@ -590,6 +744,9 @@ async def replace_page_result(
     text_quality: str,
     ocr_confidence_mean: float | None,
     chunks: list[PreparedChunk],
+    source_fingerprint: str | None = None,
+    source_fingerprint_kind: str | None = None,
+    source_reused_from_page_id: UUID | None = None,
 ) -> None:
     """Guarda resultado de una página sin duplicar chunks en reintentos."""
     page = await session.get(ManualPage, page_id)
@@ -602,6 +759,10 @@ async def replace_page_result(
     page.text_source = text_source
     page.text_quality = text_quality
     page.ocr_confidence_mean = ocr_confidence_mean
+    page.source_reused_from_page_id = source_reused_from_page_id
+    if source_fingerprint is not None:
+        page.source_fingerprint = source_fingerprint
+        page.source_fingerprint_kind = source_fingerprint_kind
     session.add_all(
         ManualChunk(
             manual_id=manual_id,
@@ -809,10 +970,7 @@ def _authorized_chunks_query(
             Manual.game_id == game_id,
             Manual.deleted_at.is_(None),
             or_(
-                (
-                    (Manual.visibility == "shared")
-                    & (Manual.status == "active")
-                ),
+                ((Manual.visibility == "shared") & (Manual.status == "active")),
                 (
                     (Manual.owner_user_id == current_user_id)
                     & (Manual.status.in_(("active", "pending_review")))
@@ -838,6 +996,14 @@ def _manual_summary_query(owner_user_id: UUID) -> Select:
             Manual.chunks_indexed,
             Manual.created_at,
             Manual.indexed_at,
+            select(func.count())
+            .select_from(ManualPage)
+            .where(
+                ManualPage.manual_id == Manual.id,
+                ManualPage.source_reused_from_page_id.is_not(None),
+            )
+            .scalar_subquery()
+            .label("duplicate_page_count"),
         )
         .join(Game, Game.id == Manual.game_id)
         .where(
@@ -846,3 +1012,11 @@ def _manual_summary_query(owner_user_id: UUID) -> Select:
         )
         .order_by(Manual.created_at.desc(), Manual.id.desc())
     )
+
+
+def _manual_page_dedup_status():
+    """Expone si una página ha reutilizado OCR sin filtrar IDs internos."""
+    return case(
+        (ManualPage.source_reused_from_page_id.is_not(None), "reused"),
+        else_="none",
+    ).label("dedup_status")

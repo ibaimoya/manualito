@@ -1,3 +1,7 @@
+import importlib.util
+from pathlib import Path
+from types import SimpleNamespace
+
 import pytest
 from sqlalchemy import Boolean, CheckConstraint, String, Text
 from sqlalchemy.dialects import postgresql
@@ -177,6 +181,7 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
     assert _single_fk(manuals.c.source_asset_id).ondelete == "SET NULL"
     assert str(manuals.c.source_type.server_default.arg) == "'images'"
     assert str(manuals.c.page_count.server_default.arg) == "1"
+    assert manuals.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
     assert str(manuals.c.status.server_default.arg) == "'indexing'"
     assert str(manuals.c.visibility.server_default.arg) == "'private'"
     assert str(manuals.c.chunks_indexed.server_default.arg) == "0"
@@ -184,6 +189,7 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
         "ck_manuals_title_valid",
         "ck_manuals_source_type_valid",
         "ck_manuals_page_count_positive",
+        "ck_manuals_source_fingerprint_length_valid",
         "ck_manuals_status_valid",
         "ck_manuals_language_not_empty",
         "ck_manuals_visibility_valid",
@@ -193,6 +199,11 @@ def test_manuals_schema_tracks_owner_game_visibility_and_index_status():
     assert _index(manuals, "ix_manuals_owner_user_id") is not None
     assert _index(manuals, "ix_manuals_game_id") is not None
     assert _index(manuals, "ix_manuals_source_asset_id") is not None
+    fingerprint_index = _index(manuals, "uq_manuals_live_source_fingerprint")
+    assert fingerprint_index.unique is True
+    assert _compile(fingerprint_index.dialect_options["postgresql"]["where"]) == (
+        "deleted_at IS NULL AND source_fingerprint IS NOT NULL"
+    )
     shared_index = _index(manuals, "ix_manuals_game_shared_active")
     assert _compile(shared_index.dialect_options["postgresql"]["where"]) == (
         "visibility = 'shared' AND status = 'active' AND deleted_at IS NULL"
@@ -206,6 +217,9 @@ def test_manual_pages_schema_embeds_ocr_lines_as_jsonb_array():
 
     assert _single_fk(pages.c.manual_id).ondelete == "CASCADE"
     assert _single_fk(pages.c.image_asset_id).ondelete == "SET NULL"
+    assert _single_fk(pages.c.source_reused_from_page_id).ondelete == "SET NULL"
+    assert pages.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
+    assert pages.c.source_fingerprint_kind.type.length == 32
     assert isinstance(pages.c.ocr_lines.type, postgresql.JSONB)
     assert str(pages.c.ocr_lines.server_default.arg) == "'[]'::jsonb"
     assert str(pages.c.ocr_status.server_default.arg) == "'pending'"
@@ -214,6 +228,8 @@ def test_manual_pages_schema_embeds_ocr_lines_as_jsonb_array():
     assert pages.c.ocr_confidence_mean.nullable is True
     assert _check_names(pages) >= {
         "ck_manual_pages_page_number_positive",
+        "ck_manual_pages_source_fingerprint_length_valid",
+        "ck_manual_pages_source_fingerprint_kind_valid",
         "ck_manual_pages_ocr_lines_array",
         "ck_manual_pages_ocr_status_valid",
         "ck_manual_pages_text_source_valid",
@@ -221,10 +237,67 @@ def test_manual_pages_schema_embeds_ocr_lines_as_jsonb_array():
         "ck_manual_pages_ocr_confidence_mean_valid",
     }
     assert "processing" in _compile(_check(pages, "ck_manual_pages_ocr_status_valid").sqltext)
+    kind_check = _check(pages, "ck_manual_pages_source_fingerprint_kind_valid")
+    assert "pdf_render" in str(kind_check.sqltext)
 
     assert _index(pages, "ix_manual_pages_manual_id") is not None
     assert _index(pages, "ix_manual_pages_image_asset_id") is not None
+    assert _index(pages, "ix_manual_pages_source_fingerprint") is not None
+    assert _index(pages, "ix_manual_pages_source_reused_from_page_id") is not None
     assert _index(pages, "uq_manual_pages_manual_page_number").unique is True
+
+
+def test_manual_page_fingerprint_migration_is_page_scoped(monkeypatch):
+    """La migración de huellas añade solo columnas e índices de manual_pages."""
+    migration = _load_migration("0023_manual_page_source_fingerprints.py")
+    calls = []
+
+    def record(name):
+        def recorder(*args, **kwargs):
+            calls.append((name, args, kwargs))
+
+        return recorder
+
+    fake_op = SimpleNamespace(
+        f=lambda name: name,
+        add_column=record("add_column"),
+        create_check_constraint=record("create_check_constraint"),
+        create_foreign_key=record("create_foreign_key"),
+        create_index=record("create_index"),
+    )
+    monkeypatch.setattr(migration, "op", fake_op)
+
+    migration.upgrade()
+
+    assert [args[0] for name, args, _ in calls if name == "add_column"] == [
+        "manual_pages",
+        "manual_pages",
+        "manual_pages",
+    ]
+    assert [args[1] for name, args, _ in calls if name == "create_check_constraint"] == [
+        "manual_pages",
+        "manual_pages",
+    ]
+    assert [args[1] for name, args, _ in calls if name == "create_index"] == [
+        "manual_pages",
+        "manual_pages",
+    ]
+    assert any(
+        args[1:4] == ("manual_pages", "manual_pages", ["source_reused_from_page_id"])
+        and kwargs["ondelete"] == "SET NULL"
+        for name, args, kwargs in calls
+        if name == "create_foreign_key"
+    )
+    assert any(
+        args[0] == "ix_manual_pages_source_fingerprint"
+        for name, args, _ in calls
+        if name == "create_index"
+    )
+    assert any(
+        args[0] == "ix_manual_pages_source_reused_from_page_id"
+        for name, args, _ in calls
+        if name == "create_index"
+    )
 
 
 def test_manual_chunks_schema_is_chroma_source_of_truth():
@@ -289,18 +362,19 @@ def test_game_follows_schema_tracks_last_explicit_choice():
     assert _index(follows, "ix_game_follows_user_id") is not None
 
 
-def test_game_explanations_schema_is_cached_per_game():
-    """game_explanations guarda una única explicación compartida por juego."""
+def test_game_explanations_schema_is_cached_per_user_and_game():
+    """game_explanations guarda una explicación por usuario y juego."""
     import_all_models()
     explanations = Base.metadata.tables["game_explanations"]
 
-    assert "user_id" not in explanations.c
+    assert _single_fk(explanations.c.user_id).ondelete == "CASCADE"
     assert _single_fk(explanations.c.game_id).ondelete == "RESTRICT"
     assert isinstance(explanations.c.sections.type, postgresql.JSONB)
     assert explanations.c.status.type.length == 16
     assert explanations.c.error_code.nullable is True
     assert explanations.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
-    assert _index(explanations, "uq_game_explanations_game_id").unique is True
+    assert _index(explanations, "uq_game_explanations_user_game").unique is True
+    assert _index(explanations, "ix_game_explanations_game_id") is not None
     assert _check_names(explanations) == {
         "ck_game_explanations_error_code_only_when_failed",
         "ck_game_explanations_sections_object",
@@ -383,3 +457,21 @@ def _single_fk(column):
 def _compile(expression) -> str:
     """Compila expresiones SQL con el dialecto Postgres."""
     return str(expression.compile(dialect=postgresql.dialect()))
+
+
+def _load_migration(filename: str):
+    """Carga una migración Alembic concreta sin registrarla como paquete."""
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "backend"
+        / "database"
+        / "alembic"
+        / "versions"
+        / filename
+    )
+    spec = importlib.util.spec_from_file_location(filename.removesuffix(".py"), path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

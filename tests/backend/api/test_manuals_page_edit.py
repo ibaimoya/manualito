@@ -75,9 +75,7 @@ def test_edit_page_text_strips_and_returns_updated_page(
 ):
     """Editar una página delega el texto recortado y devuelve su estado nuevo."""
     old_chunk_id = uuid4()
-    edit_mock = AsyncMock(
-        return_value=_page_edit_result(stale_chunk_ids=[old_chunk_id])
-    )
+    edit_mock = AsyncMock(return_value=_page_edit_result(stale_chunk_ids=[old_chunk_id]))
     delay_mock = MagicMock()
     monkeypatch.setattr("api.manuals.router.edit_page_text", edit_mock)
     monkeypatch.setattr("api.manuals.router.sync_page_rag_task.delay", delay_mock)
@@ -136,9 +134,7 @@ def test_edit_page_text_shared_manual_returns_403(
     )
 
     assert response.status_code == 403
-    assert any(
-        error["code"] == "manual_not_editable" for error in response.json()["errors"]
-    )
+    assert any(error["code"] == "manual_not_editable" for error in response.json()["errors"])
 
 
 def test_edit_page_text_missing_manual_returns_stable_404(
@@ -563,6 +559,7 @@ def _page_row(
         ocr_status="completed",
         text_source="user_edit",
         text_quality=text_quality,
+        dedup_status="none",
         ocr_confidence_mean=None,
         ocr_lines=default_lines if lines is None else lines,
     )

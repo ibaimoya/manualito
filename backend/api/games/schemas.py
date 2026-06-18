@@ -47,7 +47,7 @@ class CreateGameRequest(StrictModel):
 
 
 class MyGameItem(StrictModel):
-    """Juego de la biblioteca del usuario (con el que ha interactuado)."""
+    """Juego de la biblioteca del usuario."""
 
     id: UUID
     name: str = Field(max_length=GAME_NAME_MAX_LENGTH)
@@ -59,7 +59,7 @@ class MyGameItem(StrictModel):
 
 
 class MyGamesResponse(StrictModel):
-    """Biblioteca del usuario: juegos por actividad reciente."""
+    """Biblioteca del usuario: juegos seguidos."""
 
     games: list[MyGameItem]
 
@@ -71,6 +71,7 @@ class GamePoolManualItem(StrictModel):
     title: str | None
     source_type: str
     page_count: int = Field(ge=1)
+    duplicate_page_count: int = Field(default=0, ge=0)
     created_at: datetime
     is_own: bool
 

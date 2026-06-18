@@ -27,6 +27,7 @@ from api.manuals.exceptions import (
     GeneratedAnswerTooLongError,
     ManualBusyError,
     ManualContextNotFoundError,
+    ManualDuplicateError,
     ManualNotEditableError,
     ManualNotFoundError,
     ManualTooLargeError,
@@ -288,6 +289,11 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         status_code=404,
         detail="Manual no encontrado.",
         code="manual_not_found",
+    ),
+    ManualDuplicateError: ErrorResponseConfig(
+        status_code=409,
+        detail="Este manual ya está en tu biblioteca.",
+        code="manual_duplicate",
     ),
     ManualBusyError: ErrorResponseConfig(
         status_code=409,

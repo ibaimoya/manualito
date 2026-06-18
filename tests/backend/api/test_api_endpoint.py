@@ -125,6 +125,31 @@ def test_ocr_calls_only_ocr_service(client, valid_jpeg_bytes, override_http_clie
     assert override_http_client.post.call_args.kwargs["url"].endswith("/extract")
 
 
+def test_ocr_gateway_postprocesses_service_lines(
+    client,
+    valid_jpeg_bytes,
+    override_http_client,
+):
+    """El gateway limpia ruido OCR antes de exponer o guardar las líneas."""
+    _configure_ocr_success(
+        override_http_client,
+        result=[
+            {"text": "x", "confidence": 0.12},
+            {"text": " :: ", "confidence": 0.80},
+            {"text": " Preparación\tinicial ", "confidence": 0.92},
+            {"text": "7", "confidence": 0.10},
+        ],
+    )
+
+    response = _post_image_json(client, valid_jpeg_bytes, "img.jpg", "image/jpeg")
+
+    assert response.status_code == 200
+    assert response.json()["lines"] == [
+        {"text": "Preparación inicial", "confidence": 0.92},
+        {"text": "7", "confidence": 0.10},
+    ]
+
+
 def test_ocr_log_sanitizes_uploaded_filename(
     valid_jpeg_bytes,
     override_http_client,

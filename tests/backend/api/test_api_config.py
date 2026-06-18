@@ -29,6 +29,11 @@ def test_api_settings_parses_environment_types(monkeypatch, tmp_path):
     monkeypatch.setenv("CONVERSATION_CREATE_RATE_LIMIT", "12/minute")
     monkeypatch.setenv("CONVERSATION_MESSAGE_RATE_LIMIT", "45/minute")
     monkeypatch.setenv("PDF_TEXT_MIN_ALNUM_RATIO", "0.7")
+    monkeypatch.setenv("OCR_POSTPROCESS_LOW_CONFIDENCE_LINE", "0.25")
+    monkeypatch.setenv("OCR_POSTPROCESS_SHORT_TEXT_MAX_ALNUM", "2")
+    monkeypatch.setenv("OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS", "3")
+    monkeypatch.setenv("OCR_POSTPROCESS_SYMBOL_NOISE_RATIO", "0.5")
+    monkeypatch.setenv("OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP", "1")
     monkeypatch.setenv("SMTP_PORT", "2525")
     monkeypatch.setenv("SMTP_STARTTLS", "true")
     monkeypatch.setenv("EMAIL_VERIFICATION_TOKEN_MINUTES", "60")
@@ -45,6 +50,11 @@ def test_api_settings_parses_environment_types(monkeypatch, tmp_path):
     assert settings.conversation_create_rate_limit == "12/minute"
     assert settings.conversation_message_rate_limit == "45/minute"
     assert settings.pdf_text_min_alnum_ratio == pytest.approx(0.7)
+    assert settings.ocr_postprocess_low_confidence_line == pytest.approx(0.25)
+    assert settings.ocr_postprocess_short_text_max_alnum == 2
+    assert settings.ocr_postprocess_very_short_text_max_chars == 3
+    assert settings.ocr_postprocess_symbol_noise_ratio == pytest.approx(0.5)
+    assert settings.ocr_postprocess_min_alnum_to_keep == 1
     assert settings.smtp_port == 2525
     assert settings.smtp_starttls is True
     assert settings.email_verification_token_minutes == 60
@@ -72,6 +82,28 @@ def test_upload_limits_are_generous_by_default(monkeypatch):
     assert settings.max_manual_total_size == 200 * 1024 * 1024
     assert settings.max_manual_pages == 30
     assert settings.max_image_pixels == 60_000_000
+
+
+def test_ocr_postprocess_defaults_match_ocr_env(monkeypatch):
+    """Los umbrales OCR tienen defaults seguros aunque falte el env externo."""
+    monkeypatch.delenv("OCR_POSTPROCESS_LOW_CONFIDENCE_LINE", raising=False)
+    monkeypatch.delenv("OCR_POSTPROCESS_SHORT_TEXT_MAX_ALNUM", raising=False)
+    monkeypatch.delenv("OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS", raising=False)
+    monkeypatch.delenv("OCR_POSTPROCESS_SYMBOL_NOISE_RATIO", raising=False)
+    monkeypatch.delenv("OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP", raising=False)
+
+    settings = ApiSettings(
+        ocr_url="http://ocr:8000",
+        rag_url="http://rag:8000",
+        llm_url="http://llm:8000",
+        app_version="0.1.0",
+    )
+
+    assert settings.ocr_postprocess_low_confidence_line == pytest.approx(0.35)
+    assert settings.ocr_postprocess_short_text_max_alnum == 3
+    assert settings.ocr_postprocess_very_short_text_max_chars == 4
+    assert settings.ocr_postprocess_symbol_noise_ratio == pytest.approx(0.60)
+    assert settings.ocr_postprocess_min_alnum_to_keep == 1
 
 
 def test_redis_credential_is_required_by_default(monkeypatch):

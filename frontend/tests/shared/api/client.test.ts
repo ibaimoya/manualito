@@ -190,6 +190,10 @@ describe('api getManual', () => {
               ocr_status: 'completed',
               text_source: 'ocr',
               text_quality: 'ok',
+              dedup_status: 'reused',
+              image_available: true,
+              image_width: 800,
+              image_height: 1200,
               ocr_confidence_mean: 0.88,
               ocr_lines: [{ text: 'Reglas', confidence: 0.88 }],
             },
@@ -201,6 +205,8 @@ describe('api getManual', () => {
     const result = await api.getManual('m-1');
 
     expect(result.pages[0]?.ocr_lines[0]?.text).toBe('Reglas');
+    expect(result.pages[0]?.dedup_status).toBe('reused');
+    expect(api.manualPageImageUrl('m-1', 1)).toBe('/api/manuals/m-1/pages/1/image');
   });
 });
 
@@ -215,8 +221,8 @@ describe('api getManualProcessing', () => {
           completed_pages: 1,
           failed_pages: 0,
           pages: [
-            { page_number: 1, ocr_status: 'completed', text_quality: 'ok' },
-            { page_number: 2, ocr_status: 'pending', text_quality: null },
+            { page_number: 1, ocr_status: 'completed', text_quality: 'ok', dedup_status: 'reused' },
+            { page_number: 2, ocr_status: 'pending', text_quality: null, dedup_status: 'none' },
           ],
         }),
       ),
@@ -226,6 +232,7 @@ describe('api getManualProcessing', () => {
 
     expect(result.completed_pages).toBe(1);
     expect(result.pages).toHaveLength(2);
+    expect(result.pages[0]?.dedup_status).toBe('reused');
   });
 });
 

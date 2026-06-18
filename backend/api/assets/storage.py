@@ -72,6 +72,11 @@ async def read_stored_file(storage_key: str) -> bytes:
     return await anyio.to_thread.run_sync(_read_stored_file, storage_key)
 
 
+def stored_file_path(storage_key: str) -> Path:
+    """Resuelve un asset dentro del storage local sin permitir escapes."""
+    return _storage_path(storage_key)
+
+
 async def delete_stored_file(storage_key: str) -> bool:
     """Borra un fichero físico si todavía existe."""
     return await anyio.to_thread.run_sync(_delete_stored_file, storage_key)
@@ -111,5 +116,8 @@ def _storage_key(
 
 def _storage_path(storage_key: str) -> Path:
     """Resuelve el storage_key dentro del directorio configurado."""
-    root = Path(config.ASSET_STORAGE_DIR)
-    return root / storage_key
+    root = Path(config.ASSET_STORAGE_DIR).resolve()
+    path = (root / storage_key).resolve()
+    if path != root and root not in path.parents:
+        raise ValueError("storage_key fuera del directorio de assets")
+    return path

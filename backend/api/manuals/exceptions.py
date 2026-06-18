@@ -8,6 +8,7 @@ __all__ = [
     "GeneratedAnswerTooLongError",
     "ManualBusyError",
     "ManualContextNotFoundError",
+    "ManualDuplicateError",
     "ManualNotEditableError",
     "ManualNotFoundError",
     "ManualTooLargeError",
@@ -34,6 +35,10 @@ class ManualNotFoundError(ManualsError):
 
 class ManualContextNotFoundError(ManualsError):
     """No hay chunks autorizados para responder la pregunta."""
+
+
+class ManualDuplicateError(ManualsError):
+    """El usuario ya tiene ese manual para el mismo juego."""
 
 
 class ManualBusyError(ManualsError):

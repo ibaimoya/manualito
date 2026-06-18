@@ -148,6 +148,12 @@ const CODE_OVERRIDES: Record<string, Partial<Omit<ApiErrorView, 'code'>>> = {
     message: 'No hay manuales indexados disponibles para responder sobre ese juego.',
     hint: 'Espera a que termine el procesamiento o sube un manual válido.',
   },
+  manual_duplicate: {
+    title: 'Manual duplicado',
+    message: 'Ese manual ya está en tu biblioteca para este juego.',
+    hint: 'Abre el manual existente o sube una versión distinta.',
+    retryable: false,
+  },
   identity_unavailable: {
     title: 'Email o usuario no disponible',
     message: 'Ya existe una cuenta con ese email o nombre de usuario.',

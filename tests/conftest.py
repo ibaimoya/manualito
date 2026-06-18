@@ -26,6 +26,7 @@ def _load_backend_env() -> None:
     _load_env_file(_root / ".env")
     for env_path in (
         config_dir / "backend.env",
+        config_dir / "ocr.env",
         config_dir / "celery.env",
         config_dir / "database.env",
     ):

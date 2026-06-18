@@ -32,7 +32,7 @@ from api.exceptions import (
     validation_exception_handler,
 )
 from api.games.exceptions import GameUnavailableError
-from api.manuals.exceptions import GeneratedAnswerTooLongError
+from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualDuplicateError
 
 
 def test_api_exceptions_inherit_from_api_error():
@@ -145,6 +145,7 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
             "internal_service_error",
         ),
         (GameUnavailableError(), 409, "game_unavailable"),
+        (ManualDuplicateError(), 409, "manual_duplicate"),
         (GeneratedAnswerTooLongError(), 502, "generated_answer_too_long"),
         (
             InvalidEmailVerificationTokenError(),

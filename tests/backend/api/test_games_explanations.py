@@ -153,7 +153,32 @@ def test_explanation_missing_cache_marks_generating_and_returns_job(monkeypatch)
         game_id=_GAME_ID,
     )
     mark_mock.assert_awaited_once()
+    assert mark_mock.await_args.kwargs["user_id"] == _USER_ID
     assert mark_mock.await_args.kwargs["sections"] == {}
+
+
+def test_fresh_generating_cache_does_not_requeue(monkeypatch):
+    """El polling reutiliza un generating reciente sin crear otra task."""
+    session = _read_session()
+    mark_mock = AsyncMock()
+    _patch_repo(
+        monkeypatch,
+        fingerprint=_FINGERPRINT,
+        cached=_partial_explanation(status="generating", updated_at=datetime.now(UTC)),
+    )
+    monkeypatch.setattr(
+        explanations_module.repository,
+        "mark_game_explanation_generating",
+        mark_mock,
+    )
+
+    outcome = anyio.run(
+        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
+    )
+
+    assert outcome.response.status == "generating"
+    assert outcome.job is None
+    mark_mock.assert_not_awaited()
 
 
 def test_failed_cache_returns_failed_without_requeue(monkeypatch):
@@ -220,6 +245,8 @@ def test_worker_generates_all_sections_under_lock(monkeypatch):
     assert [
         call.kwargs["question"] for call in generate_mock.await_args_list
     ] == list(EXPLANATION_QUESTIONS.values())
+    assert generating_mock.await_args.kwargs["user_id"] == _USER_ID
+    assert upsert_mock.await_args.kwargs["user_id"] == _USER_ID
     assert upsert_mock.await_args.kwargs["sections"]["summary"]["sources"][0]["page"] == 2
 
 
@@ -256,6 +283,7 @@ def test_worker_marks_failed_on_internal_service_error(monkeypatch):
 
     assert completed is True
     fail_mock.assert_awaited_once()
+    assert fail_mock.await_args.kwargs["user_id"] == _USER_ID
     assert fail_mock.await_args.kwargs["error_code"] == "generation_failed"
 
 
@@ -324,6 +352,7 @@ def test_upsert_game_explanation_marks_ready_atomically():
         partial(
             upsert_game_explanation,
             session,
+            user_id=_USER_ID,
             game_id=_GAME_ID,
             sections=_SECTIONS,
             source_fingerprint=_FINGERPRINT,
@@ -334,7 +363,7 @@ def test_upsert_game_explanation_marks_ready_atomically():
     assert session.commits == 1
     compiled = _compile(session.statement)
     assert "INSERT INTO game_explanations" in compiled
-    assert "ON CONFLICT (game_id) DO UPDATE" in compiled
+    assert "ON CONFLICT (user_id, game_id) DO UPDATE" in compiled
     assert "status" in compiled
     assert "RETURNING" in compiled
 
@@ -441,6 +470,7 @@ def _partial_explanation(
     status: str,
     error_code: str | None = None,
     fingerprint: str = _FINGERPRINT,
+    updated_at: datetime | None = None,
 ) -> SimpleNamespace:
     """Construye una caché parcial de explicación."""
     return SimpleNamespace(
@@ -449,6 +479,7 @@ def _partial_explanation(
         status=status,
         error_code=error_code,
         generated_at=None,
+        updated_at=updated_at,
     )
 
 

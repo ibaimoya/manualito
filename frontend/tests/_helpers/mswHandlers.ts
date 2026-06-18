@@ -28,6 +28,7 @@ const SAMPLE_MANUAL_SUMMARY = {
   visibility: 'private',
   source_type: 'pdf',
   page_count: 8,
+  duplicate_page_count: 0,
   language: 'spa',
   chunks_indexed: 0,
   created_at: '2026-05-26T10:00:00.000Z',
@@ -61,6 +62,7 @@ export const SAMPLE_GAME_DETAIL = {
       title: 'Reglas base',
       source_type: 'images',
       page_count: 2,
+      duplicate_page_count: 0,
       created_at: '2026-05-26T10:00:00.000Z',
       is_own: true,
     },
@@ -69,6 +71,7 @@ export const SAMPLE_GAME_DETAIL = {
       title: 'Expansión',
       source_type: 'pdf',
       page_count: 12,
+      duplicate_page_count: 0,
       created_at: '2026-04-02T10:00:00.000Z',
       is_own: false,
     },
@@ -99,6 +102,10 @@ const SAMPLE_MANUAL_PAGES = [
     ocr_status: 'completed',
     text_source: 'ocr',
     text_quality: 'ok',
+    dedup_status: 'none',
+    image_available: true,
+    image_width: 800,
+    image_height: 1200,
     ocr_confidence_mean: 0.94,
     ocr_lines: [
       { text: 'PREPARACIÓN', confidence: 0.97 },
@@ -110,6 +117,10 @@ const SAMPLE_MANUAL_PAGES = [
     ocr_status: 'completed',
     text_source: 'ocr',
     text_quality: 'low_confidence',
+    dedup_status: 'none',
+    image_available: true,
+    image_width: 800,
+    image_height: 1200,
     ocr_confidence_mean: 0.55,
     ocr_lines: [{ text: 'EL LADRÓN bloquea la casilla donde está.', confidence: 0.55 }],
   },
@@ -216,9 +227,27 @@ export const handlers = [
   http.get('/api/recommendations', () =>
     HttpResponse.json({
       recommendations: [
-        { id: 'rec-1', name: 'Carcassonne', bgg_id: 822, year_published: 2000, reason: 'Porque tienes Catan' },
-        { id: 'rec-2', name: 'Ticket to Ride', bgg_id: 9209, year_published: 2004, reason: 'Familiar y de rutas' },
-        { id: 'rec-3', name: 'Azul', bgg_id: 230802, year_published: 2017, reason: 'Estrategia ligera muy valorada' },
+        {
+          id: 'rec-1',
+          name: 'Carcassonne',
+          bgg_id: 822,
+          year_published: 2000,
+          reason: 'Porque tienes Catan',
+        },
+        {
+          id: 'rec-2',
+          name: 'Ticket to Ride',
+          bgg_id: 9209,
+          year_published: 2004,
+          reason: 'Familiar y de rutas',
+        },
+        {
+          id: 'rec-3',
+          name: 'Azul',
+          bgg_id: 230802,
+          year_published: 2017,
+          reason: 'Estrategia ligera muy valorada',
+        },
       ],
       attribution: 'Game data provided by BoardGameGeek.',
     }),
@@ -250,7 +279,9 @@ export const handlers = [
       page_count: 1,
       completed_pages: 1,
       failed_pages: 0,
-      pages: [{ page_number: 1, ocr_status: 'completed', text_quality: 'ok' }],
+      pages: [
+        { page_number: 1, ocr_status: 'completed', text_quality: 'ok', dedup_status: 'none' },
+      ],
     });
   }),
 
@@ -271,6 +302,10 @@ export const handlers = [
       ocr_status: 'completed',
       text_source: 'user_edit',
       text_quality: 'ok',
+      dedup_status: 'none',
+      image_available: true,
+      image_width: 800,
+      image_height: 1200,
       ocr_confidence_mean: null,
       ocr_lines: body.text.split('\n').map((text) => ({ text, confidence: null })),
     });
@@ -285,8 +320,8 @@ export const handlers = [
         completed_pages: 0,
         failed_pages: 0,
         pages: [
-          { page_number: 1, ocr_status: 'pending', text_quality: null },
-          { page_number: 2, ocr_status: 'pending', text_quality: null },
+          { page_number: 1, ocr_status: 'pending', text_quality: null, dedup_status: 'none' },
+          { page_number: 2, ocr_status: 'pending', text_quality: null, dedup_status: 'none' },
         ],
       },
       { status: 202 },
@@ -302,8 +337,8 @@ export const handlers = [
         completed_pages: 1,
         failed_pages: 0,
         pages: [
-          { page_number: 1, ocr_status: 'completed', text_quality: 'ok' },
-          { page_number: 2, ocr_status: 'pending', text_quality: null },
+          { page_number: 1, ocr_status: 'completed', text_quality: 'ok', dedup_status: 'none' },
+          { page_number: 2, ocr_status: 'pending', text_quality: null, dedup_status: 'none' },
         ],
       },
       { status: 202 },
@@ -338,7 +373,11 @@ export const handlers = [
   }),
   http.patch('/api/conversations/:conversationId', async ({ request, params }) => {
     const body = (await request.json()) as { title: string };
-    return HttpResponse.json({ ...SAMPLE_CONVERSATION, id: params.conversationId, title: body.title });
+    return HttpResponse.json({
+      ...SAMPLE_CONVERSATION,
+      id: params.conversationId,
+      title: body.title,
+    });
   }),
   http.delete('/api/conversations/:conversationId', () => new HttpResponse(null, { status: 204 })),
 ];

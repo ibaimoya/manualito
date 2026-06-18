@@ -14,7 +14,7 @@ from database.models.conversation import Conversation
 from database.models.explanation import GameExplanation
 from database.models.game import Game
 from database.models.game_follow import GameFollow
-from database.models.manual import Manual
+from database.models.manual import Manual, ManualPage
 
 SIMILARITY_THRESHOLD = 0.1
 
@@ -118,7 +118,7 @@ async def list_my_games(
     limit: int,
     offset: int,
 ) -> list[Row]:
-    """Juegos seguidos por el usuario, por actividad reciente."""
+    """Juegos seguidos por el usuario, por actividad reciente o seguimiento."""
     manuals_count = (
         select(func.count(Manual.id))
         .where(
@@ -280,6 +280,14 @@ async def list_game_pool_manuals(
             Manual.page_count,
             Manual.created_at,
             (Manual.owner_user_id == current_user_id).label("is_own"),
+            select(func.count())
+            .select_from(ManualPage)
+            .where(
+                ManualPage.manual_id == Manual.id,
+                ManualPage.source_reused_from_page_id.is_not(None),
+            )
+            .scalar_subquery()
+            .label("duplicate_page_count"),
         )
         .where(*_pool_visibility_filters(game_id, current_user_id))
         .order_by(Manual.created_at.desc(), Manual.id.desc())
@@ -321,11 +329,15 @@ async def get_pool_fingerprint(
 async def get_game_explanation(
     session: AsyncSession,
     *,
+    user_id: UUID,
     game_id: UUID,
 ) -> GameExplanation | None:
-    """Carga la explicación cacheada de un juego."""
+    """Carga la explicación cacheada de un juego para un usuario."""
     result = await session.execute(
-        select(GameExplanation).where(GameExplanation.game_id == game_id)
+        select(GameExplanation).where(
+            GameExplanation.user_id == user_id,
+            GameExplanation.game_id == game_id,
+        )
     )
     return result.scalar_one_or_none()
 
@@ -333,14 +345,16 @@ async def get_game_explanation(
 async def upsert_game_explanation(
     session: AsyncSession,
     *,
+    user_id: UUID,
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
 ) -> Row:
-    """Guarda la explicación del juego en una sola sentencia atómica."""
+    """Guarda la explicación del usuario en una sola sentencia atómica."""
     stmt = (
         insert(GameExplanation)
         .values(
+            user_id=user_id,
             game_id=game_id,
             sections=sections,
             source_fingerprint=source_fingerprint,
@@ -348,7 +362,7 @@ async def upsert_game_explanation(
             error_code=None,
         )
         .on_conflict_do_update(
-            index_elements=[GameExplanation.game_id],
+            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
             set_={
                 "sections": sections,
                 "source_fingerprint": source_fingerprint,
@@ -364,6 +378,7 @@ async def upsert_game_explanation(
             GameExplanation.status,
             GameExplanation.error_code,
             GameExplanation.generated_at,
+            GameExplanation.updated_at,
         )
     )
     result = await session.execute(stmt)
@@ -375,14 +390,16 @@ async def upsert_game_explanation(
 async def mark_game_explanation_generating(
     session: AsyncSession,
     *,
+    user_id: UUID,
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
 ) -> Row:
-    """Guarda que la explicación se está generando para una huella."""
+    """Guarda que la explicación del usuario se está generando para una huella."""
     stmt = (
         insert(GameExplanation)
         .values(
+            user_id=user_id,
             game_id=game_id,
             sections=sections,
             source_fingerprint=source_fingerprint,
@@ -390,7 +407,7 @@ async def mark_game_explanation_generating(
             error_code=None,
         )
         .on_conflict_do_update(
-            index_elements=[GameExplanation.game_id],
+            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
             set_={
                 "sections": sections,
                 "source_fingerprint": source_fingerprint,
@@ -405,6 +422,7 @@ async def mark_game_explanation_generating(
             GameExplanation.status,
             GameExplanation.error_code,
             GameExplanation.generated_at,
+            GameExplanation.updated_at,
         )
     )
     result = await session.execute(stmt)
@@ -416,6 +434,7 @@ async def mark_game_explanation_generating(
 async def mark_game_explanation_failed(
     session: AsyncSession,
     *,
+    user_id: UUID,
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
@@ -425,6 +444,7 @@ async def mark_game_explanation_failed(
     stmt = (
         insert(GameExplanation)
         .values(
+            user_id=user_id,
             game_id=game_id,
             sections=sections,
             source_fingerprint=source_fingerprint,
@@ -432,7 +452,7 @@ async def mark_game_explanation_failed(
             error_code=error_code,
         )
         .on_conflict_do_update(
-            index_elements=[GameExplanation.game_id],
+            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
             set_={
                 "sections": sections,
                 "source_fingerprint": source_fingerprint,

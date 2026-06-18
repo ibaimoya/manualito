@@ -4,7 +4,9 @@ import pytesseract
 from pytesseract import Output
 
 from ocr.engines.common import OcrLine, log_ocr_result
+from ocr.engines.preprocessing import preprocessed_image_path
 from ocr.engines.tesseract.normalizer import normalize_tesseract_result
+from ocr.engines.tesseract.preprocessing import preprocess_for_tesseract
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +28,13 @@ class TesseractOcrEngine:
     def extract_text(self, image_path: str) -> list[OcrLine]:
         """Extrae líneas OCR normalizadas con Tesseract."""
         logger.info("Iniciando OCR sobre: %s", image_path)
-        result = pytesseract.image_to_data(
-            image_path,
-            lang=self._lang,
-            output_type=Output.DICT,
-            timeout=TESSERACT_TIMEOUT_SECONDS,
-        )
+        with preprocessed_image_path(image_path, preprocess_for_tesseract) as processed_path:
+            result = pytesseract.image_to_data(
+                processed_path,
+                lang=self._lang,
+                output_type=Output.DICT,
+                timeout=TESSERACT_TIMEOUT_SECONDS,
+            )
         lines = normalize_tesseract_result(result)
         log_ocr_result(logger, image_path, lines)
         return lines

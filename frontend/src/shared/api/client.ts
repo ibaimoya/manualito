@@ -31,6 +31,8 @@ export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' |
 
 export type ManualVisibility = 'private' | 'shared';
 
+export type ManualDedupStatus = 'none' | 'reused';
+
 export interface ManualCreatedResponse {
   manual_id: string;
   game_id: string;
@@ -50,6 +52,8 @@ export interface ManualSummary {
   visibility: ManualVisibility;
   source_type: 'images' | 'pdf';
   page_count: number;
+  /** Páginas idénticas a otras ya subidas: copiadas, no reprocesadas ni contadas. */
+  duplicate_page_count: number;
   language: string | null;
   chunks_indexed: number;
   created_at: string;
@@ -94,6 +98,10 @@ export interface ManualDetailPage {
   ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
   text_source: 'none' | 'ocr' | 'pdf_text' | 'user_edit';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
+  dedup_status: ManualDedupStatus;
+  image_available: boolean;
+  image_width: number | null;
+  image_height: number | null;
   ocr_confidence_mean: number | null;
   ocr_lines: OcrLine[];
 }
@@ -107,6 +115,7 @@ export interface ManualProcessingPage {
   page_number: number;
   ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
   text_quality: 'ok' | 'empty' | 'low_confidence' | null;
+  dedup_status: ManualDedupStatus;
 }
 
 export interface ManualProcessingResponse {
@@ -195,6 +204,11 @@ export const api = {
     });
   },
 
+  /** URL autenticada de la imagen de una página de manual propio. */
+  manualPageImageUrl(manualId: string, pageNumber: number): string {
+    return `/api/manuals/${encodeURIComponent(manualId)}/pages/${pageNumber}/image`;
+  },
+
   /** GET /api/manuals/{id}/processing — progreso ligero para polling. */
   async getManualProcessing(
     manualId: string,
@@ -242,10 +256,7 @@ export const api = {
   },
 
   /** POST /api/manuals/{id}/reprocess — reindexa el manual entero (202). */
-  async reprocessManual(
-    manualId: string,
-    signal?: AbortSignal,
-  ): Promise<ManualProcessingResponse> {
+  async reprocessManual(manualId: string, signal?: AbortSignal): Promise<ManualProcessingResponse> {
     return request<ManualProcessingResponse>(`/manuals/${encodeURIComponent(manualId)}/reprocess`, {
       method: 'POST',
       timeoutMs: TIMEOUT.QUICK,

@@ -47,9 +47,7 @@ describe('/game/$gameId · cabecera', () => {
   it('sin valoración muestra solo el grupo de estrellas (sin CTA de texto)', async () => {
     renderHub();
     expect(await screen.findByRole('group', { name: 'Puntúa este juego' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '5 estrellas — Es una locura' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '5 estrellas — Es una locura' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Puntúa este juego' })).not.toBeInTheDocument();
   });
 
@@ -130,9 +128,7 @@ describe('/game/$gameId · explicación', () => {
     renderHub();
     // ready (revisita/cache) ⇒ sin animación: el resumen está en cuanto cargan los datos.
     // Si re-animara, este getByText síncrono fallaría (texto a medias).
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled());
     expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /¿Cómo van los turnos\?/ })).toBeInTheDocument();
     // Las secciones arrancan cerradas: solo los triggers, sin su contenido.
@@ -156,7 +152,7 @@ describe('/game/$gameId · explicación', () => {
     expect(screen.getByRole('button', { name: /Preparación/ })).toBeDisabled();
   });
 
-  it('generando en vivo: teclea el resumen según llega', async () => {
+  it('generating con resumen ya recibido: muestra el texto sin repetir tecleo', async () => {
     server.use(
       http.get('/api/games/:gameId/explanation', () =>
         HttpResponse.json({
@@ -168,10 +164,8 @@ describe('/game/$gameId · explicación', () => {
     );
     renderHub();
     await screen.findAllByRole('heading', { name: 'Catan' });
-    // En vivo (generating) el resumen se teclea: espera al texto completo de la animación.
-    await waitFor(
-      () => expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
-      { timeout: 3000 },
+    await waitFor(() =>
+      expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
     );
     // Lo que aún se está generando sigue bloqueado.
     expect(screen.getByRole('button', { name: /Preparación/ })).toBeDisabled();
@@ -231,6 +225,23 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
     renderHub();
     expect(await screen.findByText(/Explicación generada de 2 manuales/)).toBeInTheDocument();
     expect(screen.getByText(/14 páginas/)).toBeInTheDocument();
+  });
+
+  it('un manual del pool con páginas duplicadas avisa en su tarjeta', async () => {
+    server.use(
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({
+          ...SAMPLE_GAME_DETAIL,
+          manuals: [
+            { ...SAMPLE_GAME_DETAIL.manuals[0], duplicate_page_count: 1 },
+            SAMPLE_GAME_DETAIL.manuals[1],
+          ],
+        }),
+      ),
+    );
+    renderHub();
+    const region = await screen.findByRole('region', { name: /Manuales/ });
+    expect(within(region).getByText('1 página duplicada')).toBeInTheDocument();
   });
 
   it('las conversaciones muestran "Ver todas (N)" hacia la pantalla del juego', async () => {

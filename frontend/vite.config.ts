@@ -72,14 +72,13 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
+            // /api es estado vivo (procesado de manuales, biblioteca, chats). Con
+            // NetworkFirst el SW servía una respuesta cacheada ante cualquier
+            // timeout de red: tras reprocesar, devolvía un "indexing" viejo y las
+            // animaciones de "Procesando" se quedaban pegadas aunque el backend ya
+            // hubiera terminado. Siempre a red, nunca desde caché.
             urlPattern: /^https?:\/\/[^/]+\/api\/.*$/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api',
-              networkTimeoutSeconds: 8,
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            handler: 'NetworkOnly',
           },
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|webp|woff2)$/i,

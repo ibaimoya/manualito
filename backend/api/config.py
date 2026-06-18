@@ -31,6 +31,11 @@ class ApiSettings(BaseSettings):
     pdf_text_max_bad_char_ratio: float = Field(default=0.02, ge=0, le=1)
     pdf_text_min_alnum_ratio: float = Field(default=0.45, ge=0, le=1)
     ocr_low_confidence_threshold: float = Field(default=0.60, ge=0, le=1)
+    ocr_postprocess_low_confidence_line: float = Field(default=0.35, ge=0, le=1)
+    ocr_postprocess_short_text_max_alnum: int = Field(default=3, ge=0)
+    ocr_postprocess_very_short_text_max_chars: int = Field(default=4, ge=0)
+    ocr_postprocess_symbol_noise_ratio: float = Field(default=0.60, ge=0, le=1)
+    ocr_postprocess_min_alnum_to_keep: int = Field(default=1, ge=0)
     ocr_url: str
     rag_url: str
     llm_url: str
@@ -215,6 +220,11 @@ PDF_TEXT_MIN_WORDS = settings.pdf_text_min_words
 PDF_TEXT_MAX_BAD_CHAR_RATIO = settings.pdf_text_max_bad_char_ratio
 PDF_TEXT_MIN_ALNUM_RATIO = settings.pdf_text_min_alnum_ratio
 OCR_LOW_CONFIDENCE_THRESHOLD = settings.ocr_low_confidence_threshold
+OCR_POSTPROCESS_LOW_CONFIDENCE_LINE = settings.ocr_postprocess_low_confidence_line
+OCR_POSTPROCESS_SHORT_TEXT_MAX_ALNUM = settings.ocr_postprocess_short_text_max_alnum
+OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS = settings.ocr_postprocess_very_short_text_max_chars
+OCR_POSTPROCESS_SYMBOL_NOISE_RATIO = settings.ocr_postprocess_symbol_noise_ratio
+OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP = settings.ocr_postprocess_min_alnum_to_keep
 OCR_URL = settings.ocr_url
 RAG_URL = settings.rag_url
 LLM_URL = settings.llm_url

@@ -31,6 +31,7 @@ import {
   useManualProgress,
   useProcessingManuals,
 } from '@/features/manual/use-manuals';
+import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
 import { type MyGame, type MyGamesResponse } from '@/shared/api/games';
@@ -295,6 +296,11 @@ function ManualDocCard({
           {name}
         </Link>
         <div className="mt-px text-xs text-fg-3">Manual de {manual.game_name}</div>
+        {manual.duplicate_page_count > 0 ? (
+          <div className="mt-2">
+            <DuplicatePagesBadge count={manual.duplicate_page_count} openHint />
+          </div>
+        ) : null}
         {indexing ? (
           <div className="mt-auto pt-[10px]">
             <div className="mb-[5px] flex items-center justify-between">

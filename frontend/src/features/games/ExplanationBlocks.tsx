@@ -1,5 +1,4 @@
 import { Flag, RefreshCw, Sparkles, type LucideIcon } from 'lucide-react';
-import { useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -7,7 +6,6 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
-import { useTypewriter } from '@/features/conversations/use-typewriter';
 import { Markdown } from '@/shared/components/Markdown';
 
 export type ExplanationBlockKey = 'setup' | 'turns' | 'victory';
@@ -36,17 +34,12 @@ const BLOCKS: ReadonlyArray<{
 /**
  * Resumen + acordeones de la explicación del juego. Cada apartado llega por
  * separado (primero el resumen): mientras falta se pinta su hueco con spinner y
- * bloqueado, así la estructura final no salta cuando llega el resto. El texto se
- * teclea (animación del chat) solo la primera vez que el usuario lo ve, no en
- * cada visita.
+ * bloqueado, así la estructura final no salta cuando llega el resto.
  */
 export function ExplanationBlocks({
-  live,
   summary,
   content,
 }: Readonly<{
-  /** La explicación se está generando ahora mismo: anima el tecleo en vivo. */
-  live: boolean;
   /** Texto del resumen, o null mientras se genera. */
   summary: string | null;
   /** Texto por apartado, o null mientras se genera. */
@@ -58,7 +51,11 @@ export function ExplanationBlocks({
         <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           Resumen rápido
         </p>
-        {summary === null ? <SummaryShimmer /> : <TypedSection text={summary} live={live} />}
+        {summary === null ? (
+          <SummaryShimmer />
+        ) : (
+          <Markdown className="text-base leading-relaxed text-fg">{summary}</Markdown>
+        )}
       </Card>
       <Accordion type="multiple" className="space-y-3">
         {BLOCKS.map(({ key, title, icon: Icon, chipClass }) => {
@@ -76,7 +73,7 @@ export function ExplanationBlocks({
               </AccordionTrigger>
               {pending ? null : (
                 <AccordionContent>
-                  <TypedSection text={body} live={live} />
+                  <Markdown className="text-base leading-relaxed text-fg">{body}</Markdown>
                 </AccordionContent>
               )}
             </AccordionItem>
@@ -85,18 +82,6 @@ export function ExplanationBlocks({
       </Accordion>
     </>
   );
-}
-
-/**
- * Markdown revelado letra a letra solo si el apartado aparece mientras la
- * explicación se genera en vivo. La decisión se captura al montar (cuando llega
- * el texto o se despliega el acordeón): en vivo teclea; ya cacheado (ready)
- * aparece entero, así que al revisitar la página nunca se repite la animación.
- */
-function TypedSection({ text, live }: Readonly<{ text: string; live: boolean }>) {
-  const [animate] = useState(live);
-  const { shown } = useTypewriter(text, animate);
-  return <Markdown className="text-base leading-relaxed text-fg">{shown}</Markdown>;
 }
 
 function SummaryShimmer() {

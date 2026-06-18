@@ -39,6 +39,16 @@ function PaperThumb({ failed, active }: Readonly<{ failed: boolean; active: bool
   );
 }
 
+/** Borde/fondo del botón de página por estado; la activa prima, luego la duplicada
+ *  (discontinuo), si no el normal. El grosor `border-2` es constante en el callsite. */
+function pageButtonSurface(active: boolean, isDup: boolean): string {
+  if (active) return 'border-primary bg-primary-50';
+  if (isDup) {
+    return 'border-dashed border-border-strong bg-card md:shadow-xs md:hover:-translate-y-px md:hover:shadow-sm';
+  }
+  return 'border-border bg-card md:shadow-xs md:hover:-translate-y-px md:hover:border-border-strong md:hover:shadow-sm';
+}
+
 function PageButton({
   page,
   active,
@@ -46,6 +56,7 @@ function PageButton({
   onSelect,
 }: Readonly<{ page: ManualDetailPage; active: boolean; hits: number; onSelect: () => void }>) {
   const st = pageStatus(page);
+  const isDup = st.key === 'duplicate';
   const hitsLabel = hits > 0 ? `, ${hits} coincidencias` : '';
   return (
     <button
@@ -60,9 +71,7 @@ function PageButton({
         // móvil: chip vertical · escritorio: fila completa
         'h-[58px] w-[46px] flex-col items-center justify-center gap-1 rounded-xl',
         'md:h-auto md:w-full md:flex-row md:items-center md:justify-start md:gap-3 md:rounded-2xl md:p-2',
-        active
-          ? 'border-primary bg-primary-50'
-          : 'border-border bg-card md:shadow-xs md:hover:-translate-y-px md:hover:border-border-strong md:hover:shadow-sm',
+        pageButtonSurface(active, isDup),
       )}
     >
       <PaperThumb failed={st.key === 'failed'} active={active} />
@@ -92,11 +101,12 @@ function PageButton({
         </span>
       ) : null}
 
-      {/* estado: icono suelto (móvil) / punto redondo (escritorio) */}
+      {/* estado: icono suelto (móvil) / punto redondo (escritorio); el de
+          "Procesando" gira para que se note que el trabajo sigue en curso. */}
       <st.Icon
         size={12}
         strokeWidth={2.3}
-        className={cn('md:hidden', STATUS_FG_CLASS[st.tone])}
+        className={cn('md:hidden', STATUS_FG_CLASS[st.tone], st.key === 'processing' && 'animate-spin')}
         aria-hidden="true"
       />
       <span
@@ -105,7 +115,12 @@ function PageButton({
           STATUS_TONE_CLASS[st.tone],
         )}
       >
-        <st.Icon size={13} strokeWidth={2.4} aria-hidden="true" />
+        <st.Icon
+          size={13}
+          strokeWidth={2.4}
+          className={cn(st.key === 'processing' && 'animate-spin')}
+          aria-hidden="true"
+        />
       </span>
 
       {hits > 0 ? (
@@ -118,20 +133,25 @@ function PageButton({
 }
 
 function Legend() {
+  // Dos columnas alineadas: con 6 estados, el wrap libre quedaba descuadrado.
+  // Cada celda lleva su icono en un punto de color del mismo tono que el chip.
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
       {PAGE_STATUS_LEGEND.map((st) => (
         <span
           key={st.key}
-          className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-semibold text-fg-3"
+          className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-fg-2"
         >
-          <st.Icon
-            size={12}
-            strokeWidth={2.2}
-            className={cn('shrink-0', STATUS_FG_CLASS[st.tone])}
+          <span
+            className={cn(
+              'grid size-[18px] shrink-0 place-items-center rounded-md',
+              STATUS_TONE_CLASS[st.tone],
+            )}
             aria-hidden="true"
-          />
-          {st.short}
+          >
+            <st.Icon size={11} strokeWidth={2.4} />
+          </span>
+          <span className="truncate">{st.short}</span>
         </span>
       ))}
     </div>

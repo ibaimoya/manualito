@@ -1,6 +1,7 @@
 """Explicación cacheada de un juego, generada por Celery."""
 
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import httpx
@@ -19,6 +20,7 @@ from database.models.explanation import GameExplanation
 from database.session import get_sessionmaker
 
 EXPLANATION_TOP_K = 5
+GENERATION_STALE_AFTER = timedelta(seconds=config.CELERY_GPU_HARD_TIME_LIMIT + 30)
 # Orden de generación: el resumen primero y después los acordeones.
 EXPLANATION_QUESTIONS = {
     "summary": "Resume en dos frases de qué va este juego.",
@@ -61,15 +63,18 @@ async def get_game_explanation(
     if fingerprint is None:
         raise ManualContextNotFoundError
 
-    cached = await repository.get_game_explanation(session, game_id=game_id)
+    cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
     if _is_ready(cached, fingerprint):
         return GameExplanationOutcome(response=_ready_response(cached), job=None)
     if _is_failed(cached, fingerprint):
         return GameExplanationOutcome(response=_failed_response(cached), job=None)
+    if _is_generating_fresh(cached, fingerprint):
+        return GameExplanationOutcome(response=_generating_response(cached), job=None)
 
     sections = _sections_for(cached, fingerprint)
     row = await repository.mark_game_explanation_generating(
         session,
+        user_id=user_id,
         game_id=game_id,
         sections=sections,
         source_fingerprint=fingerprint,
@@ -82,7 +87,7 @@ async def get_game_explanation(
 
 async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
     """Genera todos los apartados pendientes bajo lock por juego."""
-    async with advisory_session_lock(f"game-explanation:{game_id}") as session:
+    async with advisory_session_lock(f"game-explanation:{user_id}:{game_id}") as session:
         if session is None:
             return False
 
@@ -94,7 +99,7 @@ async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
         if fingerprint is None:
             return True
 
-        cached = await repository.get_game_explanation(session, game_id=game_id)
+        cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
         if _is_ready(cached, fingerprint):
             return True
 
@@ -121,12 +126,14 @@ async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
                     if key != "victory":
                         await repository.mark_game_explanation_generating(
                             session,
+                            user_id=user_id,
                             game_id=game_id,
                             sections=sections,
                             source_fingerprint=fingerprint,
                         )
             await repository.upsert_game_explanation(
                 session,
+                user_id=user_id,
                 game_id=game_id,
                 sections=sections,
                 source_fingerprint=fingerprint,
@@ -135,6 +142,7 @@ async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
         except (ManualContextNotFoundError, InternalServiceError, InternalServiceUnavailableError):
             await repository.mark_game_explanation_failed(
                 session,
+                user_id=user_id,
                 game_id=game_id,
                 sections=sections,
                 source_fingerprint=fingerprint,
@@ -154,10 +162,11 @@ async def fail_game_explanation(user_id: UUID, game_id: UUID, error_code: str) -
         )
         if fingerprint is None:
             return
-        cached = await repository.get_game_explanation(session, game_id=game_id)
+        cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
         sections = _sections_for(cached, fingerprint)
         await repository.mark_game_explanation_failed(
             session,
+            user_id=user_id,
             game_id=game_id,
             sections=sections,
             source_fingerprint=fingerprint,
@@ -181,6 +190,21 @@ def _is_failed(explanation: GameExplanation | Row | None, fingerprint: str) -> b
         explanation is not None
         and explanation.source_fingerprint == fingerprint
         and getattr(explanation, "status", "ready") == "failed"
+    )
+
+
+def _is_generating_fresh(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
+    """True si ya hay una generación reciente y el polling no debe reencolar."""
+    if (
+        explanation is None
+        or explanation.source_fingerprint != fingerprint
+        or getattr(explanation, "status", "ready") != "generating"
+    ):
+        return False
+    updated_at = getattr(explanation, "updated_at", None)
+    return (
+        isinstance(updated_at, datetime)
+        and datetime.now(UTC) - updated_at < GENERATION_STALE_AFTER
     )
 
 

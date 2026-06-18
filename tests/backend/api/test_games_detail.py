@@ -98,6 +98,7 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
         title="Edición clásica",
         source_type="pdf",
         page_count=7,
+        duplicate_page_count=2,
         created_at=_NOW,
         is_own=True,
     )
@@ -144,6 +145,7 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
     assert response.my_rating is not None
     assert response.my_rating.score == 4
     assert response.manuals[0].is_own is True
+    assert response.manuals[0].duplicate_page_count == 2
     assert response.is_following is True
     fetch_mock.assert_not_called()
 
@@ -450,6 +452,8 @@ def test_list_game_pool_manuals_mirrors_retrieval_visibility():
     assert "manuals.owner_user_id = " in compiled
     assert "is_own" in compiled
     assert "manuals.deleted_at IS NULL" in compiled
+    assert "source_reused_from_page_id" in compiled
+    assert "duplicate_page_count" in compiled
 
 
 def test_count_user_game_conversations_filters_deleted():

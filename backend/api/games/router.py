@@ -87,7 +87,7 @@ async def list_my_games_handler(
     limit: MyGamesLimit = 50,
     offset: MyGamesOffset = 0,
 ) -> MyGamesResponse:
-    """Lista los juegos con los que el usuario ha interactuado, por actividad reciente."""
+    """Lista los juegos seguidos por el usuario, por actividad o seguimiento reciente."""
     return await list_my_games(session, user_id=auth.user.id, limit=limit, offset=offset)
 
 

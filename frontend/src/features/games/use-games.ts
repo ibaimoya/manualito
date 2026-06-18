@@ -67,7 +67,7 @@ export function gameExplanationQueryOptions(gameId: string) {
   return queryOptions({
     queryKey: [...GAMES_KEY, 'explanation', gameId] as const,
     queryFn: ({ signal }) => gamesApi.explanation(gameId, signal),
-    staleTime: 60_000,
+    staleTime: (query) => (query.state.data?.status === 'ready' ? 60_000 : 0),
     refetchInterval: (query) => (query.state.data?.status === 'generating' ? 2_500 : false),
   });
 }

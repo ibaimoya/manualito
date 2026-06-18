@@ -25,10 +25,7 @@ import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
-import {
-  gameDetailQueryOptions,
-  gameExplanationQueryOptions,
-} from '@/features/games/use-games';
+import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
 import {
   type ExplanationSectionKey,
@@ -163,7 +160,12 @@ function GameHeader({
           </Tooltip>
         </div>
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <RatingStars value={game.my_rating?.score ?? 0} size={26} align="start" onSelect={onRate} />
+          <RatingStars
+            value={game.my_rating?.score ?? 0}
+            size={26}
+            align="start"
+            onSelect={onRate}
+          />
           <FollowButton gameId={game.id} following={game.is_following} />
         </div>
       </div>
@@ -247,8 +249,6 @@ function ExplanationSection({
       </Card>
     );
   }
-  // "live" solo cuando se está generando ahora: anima el tecleo en la 1ª vez,
-  // no al revisitar (que llega cacheado como "ready").
   const live = data?.status === 'generating';
   const busy = data === undefined || live;
   const pick = (key: ExplanationSectionKey) => sections[key]?.answer ?? null;
@@ -260,7 +260,6 @@ function ExplanationSection({
       className="space-y-3"
     >
       <ExplanationBlocks
-        live={live}
         summary={pick('summary')}
         content={{ setup: pick('setup'), turns: pick('turns'), victory: pick('victory') }}
       />
@@ -333,7 +332,8 @@ function ManualThumb({ color, stacked }: Readonly<{ color: string; stacked: bool
 }
 
 function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
-  const label = manual.title ?? (manual.source_type === 'pdf' ? 'Manual en PDF' : 'Manual en fotos');
+  const label =
+    manual.title ?? (manual.source_type === 'pdf' ? 'Manual en PDF' : 'Manual en fotos');
   const body = (
     <>
       <ManualThumb color={gameColor(label)} stacked={manual.page_count > 1} />

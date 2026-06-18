@@ -78,7 +78,7 @@ export interface MyGamesResponse {
 }
 
 export const gamesApi = {
-  /** GET /api/games/mine — juegos con los que el usuario ha interactuado. */
+  /** GET /api/games/mine — juegos seguidos en la biblioteca del usuario. */
   async listMine(signal?: AbortSignal): Promise<MyGamesResponse> {
     return request<MyGamesResponse>('/games/mine', {
       method: 'GET',

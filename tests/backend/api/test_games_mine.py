@@ -113,8 +113,8 @@ def test_list_my_games_service_maps_rows(monkeypatch):
     assert repo_mock.await_args.kwargs == {"user_id": _USER_ID, "limit": 20, "offset": 5}
 
 
-def test_list_my_games_repository_unions_engagement_and_orders_by_activity():
-    """La query usa seguimientos y ordena por actividad."""
+def test_list_my_games_repository_lists_followed_games_and_orders_by_activity():
+    """La query usa seguimientos y ordena por actividad o fecha de seguimiento."""
 
     class FakeResult:
         def __iter__(self):
@@ -138,7 +138,7 @@ def test_list_my_games_repository_unions_engagement_and_orders_by_activity():
     assert "game_follows.following IS true" in compiled
     assert "manuals.owner_user_id =" in compiled
     assert "conversations.user_id =" in compiled
-    assert "OR" in compiled
+    assert " OR " not in compiled.upper()
     assert "greatest" in compiled.lower()
     assert "ORDER BY" in compiled.upper()
     assert "LIMIT" in compiled.upper()

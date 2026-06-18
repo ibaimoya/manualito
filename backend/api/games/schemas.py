@@ -47,7 +47,7 @@ class CreateGameRequest(StrictModel):
 
 
 class MyGameItem(StrictModel):
-    """Juego de la biblioteca del usuario (con el que ha interactuado)."""
+    """Juego de la biblioteca del usuario."""
 
     id: UUID
     name: str = Field(max_length=GAME_NAME_MAX_LENGTH)
@@ -59,7 +59,7 @@ class MyGameItem(StrictModel):
 
 
 class MyGamesResponse(StrictModel):
-    """Biblioteca del usuario: juegos por actividad reciente."""
+    """Biblioteca del usuario: juegos seguidos."""
 
     games: list[MyGameItem]
 

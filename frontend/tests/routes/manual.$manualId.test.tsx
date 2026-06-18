@@ -33,6 +33,41 @@ function renderManual(page?: number) {
   });
 }
 
+function mockSinglePageManual(page: Record<string, unknown>) {
+  server.use(
+    http.get('/api/manuals/:manualId', ({ params }) =>
+      HttpResponse.json({
+        id: params.manualId,
+        game_id: 'test-game-001',
+        game_name: 'Catan',
+        title: 'Catan',
+        status: 'active',
+        visibility: 'private',
+        source_type: 'images',
+        page_count: 1,
+        language: 'spa',
+        chunks_indexed: 0,
+        created_at: '2026-05-26T10:00:00.000Z',
+        indexed_at: null,
+        pages: [
+          {
+            page_number: 1,
+            text_source: 'none',
+            text_quality: null,
+            dedup_status: 'none',
+            image_available: true,
+            image_width: 800,
+            image_height: 1200,
+            ocr_confidence_mean: null,
+            ocr_lines: [],
+            ...page,
+          },
+        ],
+      }),
+    ),
+  );
+}
+
 describe('/manual/$manualId · lectura', () => {
   it('muestra el carril de páginas con su estado y el texto de la activa', async () => {
     renderManual();
@@ -81,6 +116,7 @@ describe('/manual/$manualId · lectura', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Página 2 · Poco clara' }));
     expect(await screen.findByText(/El OCR no está seguro de esta página/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar texto' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Releer esta página/ })).toBeInTheDocument();
   });
 
@@ -133,6 +169,7 @@ describe('/manual/$manualId · lectura', () => {
     expect(within(rail).getByRole('button', { name: 'Página 2 · Duplicada' })).toBeInTheDocument();
     // Aviso en el visor con el mensaje acordado.
     expect(screen.getByText('Página duplicada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar texto' })).toBeInTheDocument();
     expect(
       screen.getByText(
         /Como no aporta nada nuevo, no se vuelve a leer ni cuenta para la explicación/,
@@ -142,6 +179,37 @@ describe('/manual/$manualId · lectura', () => {
 });
 
 describe('/manual/$manualId · edición de texto', () => {
+  it('permite escribir texto a mano si la lectura de la página falló', async () => {
+    mockSinglePageManual({ ocr_status: 'failed' });
+    renderRoute({
+      path: '/manual/$manualId',
+      initialEntry: '/manual/test-manual-001',
+      component: routeComponent(ManualRoute),
+      stubs: { '/history': 'Historial stub', '/home': 'Home stub', '/game/$gameId': 'Juego stub' },
+    });
+
+    const user = userEvent.setup();
+    expect(await screen.findByText('No pudimos leer esta página')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Editar texto' }));
+    expect(
+      await screen.findByRole('textbox', { name: 'Texto de la página 1' }),
+    ).toBeInTheDocument();
+  });
+
+  it('no permite editar una página que sigue procesándose', async () => {
+    mockSinglePageManual({ ocr_status: 'processing' });
+    renderRoute({
+      path: '/manual/$manualId',
+      initialEntry: '/manual/test-manual-001',
+      component: routeComponent(ManualRoute),
+      stubs: { '/history': 'Historial stub', '/home': 'Home stub', '/game/$gameId': 'Juego stub' },
+    });
+
+    expect(await screen.findByText('Procesando')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar texto' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Confianza por línea/ })).not.toBeInTheDocument();
+  });
+
   it('editar → confirmar → guarda y marca la página como editada a mano', async () => {
     // PUT estatal: la invalidación posterior debe devolver la página editada.
     let edited: Record<string, unknown> | null = null;

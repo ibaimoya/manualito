@@ -28,14 +28,18 @@ function manual(id: string, name: string) {
   };
 }
 
-function libraryGame(id: string, name: string) {
+function libraryGame(
+  id: string,
+  name: string,
+  counts: { manuals?: number; conversations?: number } = {},
+) {
   return {
     id,
     name,
     bgg_id: null,
     year_published: null,
-    manuals_count: 1,
-    conversations_count: 0,
+    manuals_count: counts.manuals ?? 1,
+    conversations_count: counts.conversations ?? 0,
     last_activity_at: '2026-05-26T10:00:00.000Z',
   };
 }
@@ -87,6 +91,22 @@ describe('/history', () => {
     const catan = await screen.findByRole('link', { name: /Abrir Catan/i });
     expect(catan).toHaveAttribute('href', '/game/g1');
     expect(screen.getByRole('link', { name: /Abrir Wingspan/i })).toBeInTheDocument();
+  });
+
+  it('vista Juegos: muestra juegos seguidos aunque no tengan manuales ni chats', async () => {
+    server.use(
+      http.get('/api/games/mine', () =>
+        HttpResponse.json({
+          games: [libraryGame('empty-game', 'Terraforming Mars', { manuals: 0 })],
+        }),
+      ),
+      NO_MANUALS,
+    );
+    renderHistory();
+    const game = await screen.findByRole('link', { name: /Abrir Terraforming Mars/i });
+    expect(game).toHaveAttribute('href', '/game/empty-game');
+    expect(within(game).getByText('0 manuales')).toBeInTheDocument();
+    expect(within(game).getByText('0 chats')).toBeInTheDocument();
   });
 
   it('vista Juegos: el buscador sugiere y salta al hub del juego', async () => {

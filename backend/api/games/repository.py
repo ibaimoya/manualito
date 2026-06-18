@@ -118,7 +118,7 @@ async def list_my_games(
     limit: int,
     offset: int,
 ) -> list[Row]:
-    """Juegos seguidos por el usuario, por actividad reciente."""
+    """Juegos seguidos por el usuario, por actividad reciente o seguimiento."""
     manuals_count = (
         select(func.count(Manual.id))
         .where(
@@ -180,7 +180,6 @@ async def list_my_games(
             GameFollow.user_id == user_id,
             GameFollow.following.is_(True),
             Game.deleted_at.is_(None),
-            or_(manuals_count > 0, conversations_count > 0),
         )
         .order_by(last_activity.desc(), Game.name)
         .limit(limit)

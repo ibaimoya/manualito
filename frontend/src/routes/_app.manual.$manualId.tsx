@@ -377,8 +377,10 @@ function ManualDetailLoaded({
     search.active !== null && search.active.pageNumber === page.page_number
       ? search.active.indexInPage
       : null;
-  const isFailed = pageStatus(page).key === 'failed';
-  const canEdit = editable && !isFailed;
+  const currentPageStatus = pageStatus(page);
+  const isFailed = currentPageStatus.key === 'failed';
+  const isProcessingPage = currentPageStatus.key === 'processing';
+  const canEdit = editable && !isProcessingPage;
   // El modo confianza solo aplica si la página trae confianzas por línea (no
   // ocurre en páginas editadas a mano, cuyo texto no procede del OCR).
   const hasConfidence = page.ocr_lines.some((line) => line.confidence != null);
@@ -454,7 +456,7 @@ function ManualDetailLoaded({
                   onStep={jumpToMatch}
                 />
                 <div className="flex shrink-0 items-center gap-2">
-                  {!editing && !isFailed ? (
+                  {!editing && !isFailed && !isProcessingPage ? (
                     <ConfidenceToggle
                       pressed={showConfidence}
                       disabled={!hasConfidence}

@@ -87,7 +87,7 @@ async def list_my_games(
     limit: int,
     offset: int,
 ) -> MyGamesResponse:
-    """Biblioteca del usuario: juegos con los que ha interactuado, por actividad."""
+    """Biblioteca del usuario: juegos seguidos, por actividad o seguimiento reciente."""
     rows = await repository.list_my_games(session, user_id=user_id, limit=limit, offset=offset)
     return MyGamesResponse(games=[MyGameItem.model_validate(row) for row in rows])
 

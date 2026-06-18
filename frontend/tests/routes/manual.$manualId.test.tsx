@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
@@ -134,7 +134,9 @@ describe('/manual/$manualId · lectura', () => {
     // Aviso en el visor con el mensaje acordado.
     expect(screen.getByText('Página duplicada')).toBeInTheDocument();
     expect(
-      screen.getByText(/Como no aporta nada nuevo, no se vuelve a leer ni cuenta para la explicación/),
+      screen.getByText(
+        /Como no aporta nada nuevo, no se vuelve a leer ni cuenta para la explicación/,
+      ),
     ).toBeInTheDocument();
   });
 });
@@ -270,6 +272,45 @@ describe('/manual/$manualId · acciones de cabecera', () => {
       'src',
       '/api/manuals/test-manual-001/pages/2/image',
     );
+    const zoom = within(dialog).getByLabelText('Zoom de imagen');
+    expect(zoom).toHaveTextContent('Zoom');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Acercar imagen' }));
+    expect(zoom).toHaveTextContent('125%');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Restablecer zoom' }));
+    expect(zoom).toHaveTextContent('Zoom');
+
+    const viewport = screen.getByTestId('manual-image-viewport');
+    expect(viewport).toHaveAttribute('type', 'button');
+    expect(viewport).toHaveAccessibleName('Ampliar imagen del manual');
+    expect(viewport).toHaveClass(
+      'scrollbar-none',
+      'h-[clamp(420px,72vh,720px)]',
+      'overscroll-contain',
+    );
+
+    fireEvent.keyDown(viewport, { key: 'Enter' });
+    expect(zoom).toHaveTextContent('125%');
+    expect(viewport).toHaveAccessibleName('Restablecer zoom de la imagen');
+
+    fireEvent.keyDown(viewport, { key: ' ' });
+    expect(zoom).toHaveTextContent('Zoom');
+    expect(viewport).toHaveAccessibleName('Ampliar imagen del manual');
+
+    fireEvent.doubleClick(viewport, { clientX: 260, clientY: 280 });
+    expect(zoom).toHaveTextContent('125%');
+
+    viewport.scrollLeft = 100;
+    viewport.scrollTop = 80;
+    fireEvent.pointerDown(viewport, { pointerId: 1, button: 0, clientX: 300, clientY: 300 });
+    fireEvent.pointerMove(viewport, { pointerId: 1, clientX: 260, clientY: 240 });
+    expect(viewport.scrollLeft).toBe(140);
+    expect(viewport.scrollTop).toBe(140);
+    fireEvent.pointerUp(viewport, { pointerId: 1 });
+
+    fireEvent.doubleClick(viewport, { clientX: 260, clientY: 280 });
+    expect(zoom).toHaveTextContent('Zoom');
   });
 
   it('reprocesar pide confirmación y lanza el POST al confirmar', async () => {

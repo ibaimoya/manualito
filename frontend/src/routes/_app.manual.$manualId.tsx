@@ -11,13 +11,24 @@ import {
   Images,
   Layers,
   Loader2,
+  Maximize2,
   Pencil,
   RotateCw,
   Search,
   Trash2,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
@@ -33,9 +44,23 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
+import {
+  imagePointRatio,
+  imageZoomWidth,
+  imageZoomLabel,
+  MAX_IMAGE_ZOOM,
+  nextImageZoom,
+  previousImageZoom,
+  scrollDeltaForImagePoint,
+  type ImageZoom,
+} from '@/features/manual/imageZoom';
 import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
-import { manualDetailQueryOptions, manualsKey, useDeleteManual } from '@/features/manual/use-manuals';
+import {
+  manualDetailQueryOptions,
+  manualsKey,
+  useDeleteManual,
+} from '@/features/manual/use-manuals';
 import { formatLongDate } from '@/shared/lib/relativeDate';
 import {
   api,
@@ -111,8 +136,8 @@ function usePageArrowKeys(
       if (event.key === 'ArrowLeft') onGo(pageNumber - 1);
       else if (event.key === 'ArrowRight') onGo(pageNumber + 1);
     }
-    globalThis.window.addEventListener('keydown', onKey);
-    return () => globalThis.window.removeEventListener('keydown', onKey);
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, pageNumber, pageCount]);
 }
@@ -132,8 +157,7 @@ function ManualMetaRow({
   return (
     <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
       <span className="inline-flex items-center gap-1.5">
-        <Clock size={13} aria-hidden="true" /> Subido el{' '}
-        {formatLongDate(createdAt)}
+        <Clock size={13} aria-hidden="true" /> Subido el {formatLongDate(createdAt)}
       </span>
       <span className="inline-flex items-center gap-1.5">
         {sourceIsPdf ? (
@@ -144,8 +168,7 @@ function ManualMetaRow({
         {sourceIsPdf ? 'PDF' : 'Fotos'}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <Files size={13} aria-hidden="true" /> {pageCount}{' '}
-        {pageCount === 1 ? 'página' : 'páginas'}
+        <Files size={13} aria-hidden="true" /> {pageCount} {pageCount === 1 ? 'página' : 'páginas'}
       </span>
       {duplicateCount > 0 ? (
         <span
@@ -654,6 +677,14 @@ function ManualActionsMenu({
   );
 }
 
+type ImageDragState = Readonly<{
+  pointerId: number;
+  startX: number;
+  startY: number;
+  scrollLeft: number;
+  scrollTop: number;
+}>;
+
 function ManualImageDialog({
   open,
   onOpenChange,
@@ -673,17 +704,7 @@ function ManualImageDialog({
   onPrev: () => void;
   onNext: () => void;
 }>) {
-  const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = api.manualPageImageUrl(manualId, page.page_number);
-  const showImage = page.image_available && !imageFailed;
-  const imageStyle =
-    page.image_width && page.image_height
-      ? { aspectRatio: `${page.image_width} / ${page.image_height}` }
-      : undefined;
-
-  useEffect(() => {
-    if (open) setImageFailed(false);
-  }, [open, imageUrl]);
 
   return (
     <Dialog
@@ -697,17 +718,213 @@ function ManualImageDialog({
         onClose={() => onOpenChange(false)}
       />
       <DialogBody className="px-4 pb-4 pt-0">
-        <div className="mb-3 flex justify-center">
-          <PageNav
-            pageNumber={page.page_number}
-            total={pageCount}
+        {open ? (
+          <ManualImageViewer
+            key={imageUrl}
+            imageUrl={imageUrl}
+            title={title}
+            page={page}
+            pageCount={pageCount}
             onPrev={onPrev}
             onNext={onNext}
           />
-        </div>
-        <div className="grid min-h-[420px] overflow-hidden rounded-2xl border border-border bg-surface">
-          {showImage ? (
+        ) : null}
+      </DialogBody>
+    </Dialog>
+  );
+}
+
+function ManualImageViewer({
+  imageUrl,
+  title,
+  page,
+  pageCount,
+  onPrev,
+  onNext,
+}: Readonly<{
+  imageUrl: string;
+  title: string;
+  page: ManualDetailPage;
+  pageCount: number;
+  onPrev: () => void;
+  onNext: () => void;
+}>) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const [zoom, setZoom] = useState<ImageZoom>('fit');
+  const [dragging, setDragging] = useState(false);
+  const viewportRef = useRef<HTMLButtonElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const dragRef = useRef<ImageDragState | null>(null);
+  const showImage = page.image_available && !imageFailed;
+  const zoomedWidth = imageZoomWidth(zoom, page.image_width);
+  const imageStyle =
+    page.image_width && page.image_height
+      ? { aspectRatio: `${page.image_width} / ${page.image_height}`, width: zoomedWidth }
+      : { width: zoomedWidth };
+
+  const clearPan = () => {
+    dragRef.current = null;
+    setDragging(false);
+  };
+
+  const resetImageZoom = () => {
+    clearPan();
+    setZoom('fit');
+    onNextFrame(() => scrollViewportToStart(viewportRef.current));
+  };
+
+  const focusZoom = (nextZoom: ImageZoom, point?: { clientX: number; clientY: number }) => {
+    if (nextZoom === 'fit') {
+      resetImageZoom();
+      return;
+    }
+    clearPan();
+    const viewport = viewportRef.current;
+    const image = imageRef.current;
+    if (!viewport || !image) {
+      setZoom(nextZoom);
+      return;
+    }
+    if (!point && zoom === 'fit') {
+      setZoom(nextZoom);
+      onNextFrame(() => scrollViewportToStart(viewportRef.current));
+      return;
+    }
+
+    const focusPoint = point ?? viewportCenter(viewport);
+    const ratio = imagePointRatio(image.getBoundingClientRect(), focusPoint);
+    setZoom(nextZoom);
+    onNextFrame(() => {
+      const nextViewport = viewportRef.current;
+      const nextImage = imageRef.current;
+      if (!nextViewport || !nextImage) return;
+
+      const delta = scrollDeltaForImagePoint(nextImage.getBoundingClientRect(), ratio, focusPoint);
+      nextViewport.scrollLeft += delta.left;
+      nextViewport.scrollTop += delta.top;
+    });
+  };
+
+  const handlePanStart = (event: PointerEvent<HTMLButtonElement>) => {
+    const viewport = viewportRef.current;
+    if (!showImage || zoom === 'fit' || event.button !== 0 || !viewport) return;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop,
+    };
+    viewport.setPointerCapture?.(event.pointerId);
+    setDragging(true);
+    event.preventDefault();
+  };
+
+  const handlePanMove = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    const viewport = viewportRef.current;
+    if (drag?.pointerId !== event.pointerId || !viewport) return;
+    viewport.scrollLeft = drag.scrollLeft - (event.clientX - drag.startX);
+    viewport.scrollTop = drag.scrollTop - (event.clientY - drag.startY);
+    event.preventDefault();
+  };
+
+  const stopPan = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    const viewport = viewportRef.current;
+    if (drag?.pointerId !== event.pointerId) return;
+    if (viewport?.hasPointerCapture?.(event.pointerId)) {
+      viewport.releasePointerCapture?.(event.pointerId);
+    }
+    clearPan();
+  };
+
+  const handleImageDoubleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (zoom !== 'fit') {
+      resetImageZoom();
+      return;
+    }
+    focusZoom(nextImageZoom(zoom), { clientX: event.clientX, clientY: event.clientY });
+  };
+
+  const handleImageKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (zoom !== 'fit') {
+      resetImageZoom();
+      return;
+    }
+    focusZoom(nextImageZoom(zoom));
+  };
+
+  const viewportClassName = cn(
+    'scrollbar-none grid h-[clamp(420px,72vh,720px)] touch-none overflow-auto overscroll-contain rounded-2xl border border-border bg-surface p-3 text-left text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
+    showImage && zoom !== 'fit' && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
+    showImage && zoom === 'fit' && 'cursor-zoom-in',
+  );
+  const imageClassName = cn(
+    'pointer-events-auto place-self-center select-none rounded-lg object-contain',
+    zoom === 'fit' ? 'max-h-[70vh] max-w-full cursor-zoom-in' : 'max-w-none',
+    zoom !== 'fit' && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
+  );
+  const imageViewportLabel =
+    zoom === 'fit' ? 'Ampliar imagen del manual' : 'Restablecer zoom de la imagen';
+
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center justify-center gap-3">
+        <PageNav pageNumber={page.page_number} total={pageCount} onPrev={onPrev} onNext={onNext} />
+        {showImage ? (
+          <div className="inline-flex h-10 items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
+            <ImageZoomButton
+              label="Alejar imagen"
+              disabled={zoom === 'fit'}
+              onClick={() => focusZoom(previousImageZoom(zoom))}
+            >
+              <ZoomOut size={16} strokeWidth={2} />
+            </ImageZoomButton>
+            <output
+              aria-label="Zoom de imagen"
+              className="mono min-w-20 px-2 text-center text-xs font-bold text-fg"
+            >
+              {imageZoomLabel(zoom)}
+            </output>
+            <ImageZoomButton
+              label="Acercar imagen"
+              disabled={zoom === MAX_IMAGE_ZOOM}
+              onClick={() => focusZoom(nextImageZoom(zoom))}
+            >
+              <ZoomIn size={16} strokeWidth={2} />
+            </ImageZoomButton>
+            <ImageZoomButton
+              label="Restablecer zoom"
+              disabled={zoom === 'fit'}
+              onClick={() => focusZoom('fit')}
+            >
+              <Maximize2 size={15} strokeWidth={2} />
+            </ImageZoomButton>
+          </div>
+        ) : null}
+      </div>
+      {showImage ? (
+        <button
+          ref={viewportRef}
+          type="button"
+          aria-label={imageViewportLabel}
+          className={viewportClassName}
+          data-testid="manual-image-viewport"
+          onDoubleClick={handleImageDoubleClick}
+          onKeyDown={handleImageKeyDown}
+          onPointerDown={handlePanStart}
+          onPointerMove={handlePanMove}
+          onPointerUp={stopPan}
+          onPointerCancel={stopPan}
+          onLostPointerCapture={clearPan}
+        >
+          <span className="grid min-h-full min-w-full place-items-center">
             <img
+              ref={imageRef}
               src={imageUrl}
               alt={`Página ${page.page_number} de ${title}`}
               width={page.image_width ?? undefined}
@@ -715,28 +932,82 @@ function ManualImageDialog({
               loading="lazy"
               decoding="async"
               onError={() => setImageFailed(true)}
-              className="max-h-[72vh] w-full place-self-center object-contain"
+              className={imageClassName}
               style={imageStyle}
             />
-          ) : (
-            <div className="grid place-items-center px-6 py-16 text-center">
-              <div>
-                <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-warning-bg text-warning">
-                  <Images size={22} strokeWidth={2.2} aria-hidden="true" />
-                </span>
-                <p className="mt-4 font-display text-base font-bold text-fg">
-                  La imagen todavía no está disponible
-                </p>
-                <p className="mt-2 max-w-sm text-sm leading-relaxed text-fg-2">
-                  Esta página puede seguir procesándose o no tener un render guardado todavía.
-                </p>
-              </div>
+          </span>
+        </button>
+      ) : (
+        <div className={viewportClassName} data-testid="manual-image-viewport">
+          <div className="grid place-items-center px-6 py-16 text-center">
+            <div>
+              <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-warning-bg text-warning">
+                <Images size={22} strokeWidth={2.2} aria-hidden="true" />
+              </span>
+              <p className="mt-4 font-display text-base font-bold text-fg">
+                La imagen todavía no está disponible
+              </p>
+              <p className="mt-2 max-w-sm text-sm leading-relaxed text-fg-2">
+                Esta página puede seguir procesándose o no tener un render guardado todavía.
+              </p>
             </div>
-          )}
+          </div>
         </div>
-      </DialogBody>
-    </Dialog>
+      )}
+    </>
   );
+}
+
+function ImageZoomButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: Readonly<{
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}>) {
+  return (
+    <Tooltip content={label}>
+      <button
+        type="button"
+        aria-label={label}
+        disabled={disabled}
+        onClick={onClick}
+        className="grid size-8 place-items-center rounded-full text-fg-2 transition-colors hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-40"
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
+function scrollViewportToStart(viewport: HTMLButtonElement | null): void {
+  if (!viewport) return;
+  if (typeof viewport.scrollTo === 'function') {
+    viewport.scrollTo({ left: 0, top: 0 });
+    return;
+  }
+  viewport.scrollLeft = 0;
+  viewport.scrollTop = 0;
+}
+
+function viewportCenter(viewport: HTMLButtonElement): { clientX: number; clientY: number } {
+  const rect = viewport.getBoundingClientRect();
+  return {
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  };
+}
+
+function onNextFrame(callback: () => void): void {
+  if (typeof globalThis.requestAnimationFrame === 'function') {
+    globalThis.requestAnimationFrame(callback);
+    return;
+  }
+  globalThis.setTimeout(callback, 0);
 }
 
 function ReprocessBanner({
@@ -809,7 +1080,12 @@ function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
     <Tooltip content={st.tip}>
       <Badge
         tone={st.tone}
-        icon={<st.Icon strokeWidth={2.2} className={st.key === 'processing' ? 'animate-spin' : undefined} />}
+        icon={
+          <st.Icon
+            strokeWidth={2.2}
+            className={st.key === 'processing' ? 'animate-spin' : undefined}
+          />
+        }
         tabIndex={0}
         role="status"
         aria-label={`Estado de lectura: ${st.label}`}

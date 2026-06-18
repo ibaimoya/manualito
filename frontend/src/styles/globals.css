@@ -104,6 +104,14 @@ body,
   background: transparent;
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Chrome dibuja una X nativa en <input type="search"> que choca con
    nuestros iconos personalizados.  Quitamos la X nativa para mantener
    el diseño consistente. */

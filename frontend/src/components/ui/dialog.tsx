@@ -30,15 +30,11 @@ type ModalBodyProps = Readonly<{
 }>;
 
 function dataAttributes(kind: DialogDataKind): Record<string, string> {
-  return kind === 'dialog'
-    ? { 'data-mn-dialog': '' }
-    : { 'data-mn-sheet': '' };
+  return kind === 'dialog' ? { 'data-mn-dialog': '' } : { 'data-mn-sheet': '' };
 }
 
 function overlayAttributes(kind: DialogDataKind): Record<string, string> {
-  return kind === 'dialog'
-    ? { 'data-mn-dialog-overlay': '' }
-    : { 'data-mn-overlay': '' };
+  return kind === 'dialog' ? { 'data-mn-dialog-overlay': '' } : { 'data-mn-overlay': '' };
 }
 
 export function ModalFrame({
@@ -71,38 +67,37 @@ export function ModalFrame({
   );
 }
 
-export const ModalHeader = forwardRef<
-  ComponentRef<typeof DialogPrimitive.Title>,
-  ModalHeaderProps
->(function ModalHeader({ title, description, onClose, className }, ref) {
-  return (
-    <header className={className}>
-      <div className="flex-1">
-        <DialogPrimitive.Title
-          ref={ref}
-          className="font-display text-xl font-bold tracking-tight text-fg"
-        >
-          {title}
-        </DialogPrimitive.Title>
-        {description ? (
-          <DialogPrimitive.Description className="mt-1 text-sm text-fg-2">
-            {description}
-          </DialogPrimitive.Description>
+export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>, ModalHeaderProps>(
+  function ModalHeader({ title, description, onClose, className }, ref) {
+    return (
+      <header className={className}>
+        <div className="flex-1">
+          <DialogPrimitive.Title
+            ref={ref}
+            className="font-display text-xl font-bold tracking-tight text-fg"
+          >
+            {title}
+          </DialogPrimitive.Title>
+          {description ? (
+            <DialogPrimitive.Description className="mt-1 text-sm text-fg-2">
+              {description}
+            </DialogPrimitive.Description>
+          ) : null}
+        </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 transition-colors hover:bg-error/10 hover:text-error focus-visible:bg-error/10 focus-visible:text-error focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-error/15"
+          >
+            <X size={20} strokeWidth={2} />
+          </button>
         ) : null}
-      </div>
-      {onClose ? (
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-        >
-          <X size={20} strokeWidth={2} />
-        </button>
-      ) : null}
-    </header>
-  );
-});
+      </header>
+    );
+  },
+);
 
 export const ModalBody = ({ children, className }: ModalBodyProps) => (
   <div className={cn('px-5 pb-5 pt-2', className)}>{children}</div>

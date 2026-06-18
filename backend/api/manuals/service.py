@@ -532,7 +532,7 @@ async def _process_pdf_page(
             image=image,
             source_fingerprint_kind="pdf_render",
         )
-    except (ApiError, InvalidPdfError, OSError, SQLAlchemyError):
+    except (ApiError, OSError, SQLAlchemyError):
         await session.rollback()
         logger.warning(
             "No se pudo procesar página PDF %d del manual '%s'.",

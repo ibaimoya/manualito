@@ -444,6 +444,9 @@ services:
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-llm
     env_file:
       - ./config/backend.env
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-granite3.3:2b}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-4096}
     build:
       context: .
       dockerfile: backend/llm/Dockerfile
@@ -477,13 +480,6 @@ services:
     pids_limit: 512
     volumes:
       - ollama-data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 60s
@@ -499,6 +495,9 @@ services:
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ollama-init
     env_file:
       - ./config/backend.env
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-granite3.3:2b}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-4096}
     image: ollama/ollama:${OLLAMA_VERSION:?OLLAMA_VERSION no definida}
     pids_limit: 128
     depends_on:

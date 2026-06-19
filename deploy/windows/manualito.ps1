@@ -31,6 +31,7 @@ $script:LocalDir = Join-Path $script:Root "deploy\local"
 $script:SelectedEnv = Join-Path $script:LocalDir "selected.env"
 $script:ComposeFile = Join-Path $script:Root "compose.yaml"
 $script:RootEnv = Join-Path $script:Root ".env"
+$script:LlmEnv = Join-Path $script:Root "config\llm.env"
 $script:NvidiaCompose = Join-Path $script:Root "deploy\compose\accelerators\nvidia.yaml"
 $script:LowProfile = Join-Path $script:Root "deploy\profiles\llm\low.env"
 $script:HighProfile = Join-Path $script:Root "deploy\profiles\llm\high.env"
@@ -558,9 +559,10 @@ function Get-ProfileFile([string]$LlmSize) {
 function Get-ComposePrefix([object]$Selection) {
     $profile = Get-ProfileFile $Selection.Llm
     Assert-File $script:RootEnv ".env"
+    Assert-File $script:LlmEnv "config\llm.env"
     Assert-File $script:ComposeFile "compose.yaml"
     Assert-File $profile "perfil LLM $($Selection.Llm)"
-    $args = @("--env-file", $script:RootEnv, "--env-file", $profile, "-f", $script:ComposeFile)
+    $args = @("--env-file", $script:RootEnv, "--env-file", $script:LlmEnv, "--env-file", $profile, "-f", $script:ComposeFile)
     if ($Selection.Accelerator -eq "nvidia") {
         Assert-File $script:NvidiaCompose "override NVIDIA"
         $args += @("-f", $script:NvidiaCompose)

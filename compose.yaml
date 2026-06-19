@@ -443,10 +443,17 @@ services:
     <<: *service-hardening
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-llm
     env_file:
-      - ./config/backend.env
+      - ./config/llm.env
     environment:
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-granite3.3:2b}
+      OLLAMA_PRELOAD_ON_STARTUP: ${OLLAMA_PRELOAD_ON_STARTUP:-true}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
       OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-4096}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT:-120}
+      OLLAMA_PRELOAD_TIMEOUT: ${OLLAMA_PRELOAD_TIMEOUT:-180}
+      OLLAMA_STARTUP_CHECK_TIMEOUT: ${OLLAMA_STARTUP_CHECK_TIMEOUT:-10}
+      OLLAMA_TEMPERATURE: ${OLLAMA_TEMPERATURE:-0.2}
     build:
       context: .
       dockerfile: backend/llm/Dockerfile
@@ -494,8 +501,9 @@ services:
     <<: *third-party-hardening
     container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ollama-init
     env_file:
-      - ./config/backend.env
+      - ./config/llm.env
     environment:
+      OLLAMA_HOST: ${OLLAMA_HOST:-ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-granite3.3:2b}
       OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-4096}
     image: ollama/ollama:${OLLAMA_VERSION:?OLLAMA_VERSION no definida}

@@ -2,7 +2,7 @@ param(
     [ValidateSet("setup", "start", "stop")]
     [string]$Action = "start",
 
-    [ValidateSet("auto", "base", "nvidia")]
+    [ValidateSet("auto", "cpu", "nvidia")]
     [string]$Accelerator = "auto",
 
     [ValidateSet("auto", "low", "high")]
@@ -119,6 +119,22 @@ function Test-LiveConsole {
     }
 }
 
+function Format-LiveLine([string]$Text) {
+    $width = 80
+    try {
+        $width = [Math]::Max(20, [Console]::BufferWidth - 1)
+    } catch {
+        $width = 80
+    }
+    $escape = [char]27
+    $clean = ([string]$Text) -replace "$escape\[[0-9;?]*[ -/]*[@-~]", ""
+    $clean = $clean -replace "[`r`n`t]", " "
+    if ($clean.Length -gt $width) {
+        $clean = $clean.Substring(0, [Math]::Max(0, $width - 3)) + "..."
+    }
+    return $clean.PadRight($width)
+}
+
 function Get-RecentDockerLines([string[]]$Paths, [int]$Count) {
     $lines = @()
     foreach ($path in $Paths) {
@@ -133,24 +149,28 @@ function Get-RecentDockerLines([string[]]$Paths, [int]$Count) {
     return @($lines)
 }
 
-function Write-DockerProgress([string]$Label, [string]$State, [TimeSpan]$Elapsed, [string[]]$Lines) {
-    if (-not (Test-LiveConsole)) {
-        return
-    }
+function Write-LiveDockerBlock([int]$Top, [string]$State, [TimeSpan]$Elapsed, [string[]]$Lines) {
     $safeLines = @()
     if ($null -ne $Lines) {
         $safeLines = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
     }
-    $currentOperation = "esperando salida de Docker..."
-    if ($safeLines.Count -gt 0) {
-        $currentOperation = [string]$safeLines[$safeLines.Count - 1]
-    }
-    Write-Progress -Id 1 -Activity $Label -Status ("{0} {1}" -f $State, (Format-Elapsed $Elapsed)) -CurrentOperation $currentOperation
-}
-
-function Complete-DockerProgress([string]$Label) {
-    if (Test-LiveConsole) {
-        Write-Progress -Id 1 -Activity $Label -Completed
+    try {
+        $lineCount = 6
+        [Console]::SetCursorPosition(0, $Top)
+        Write-Host (Format-LiveLine ("    {0,-22} {1}" -f "estado", $State)) -ForegroundColor Gray
+        Write-Host (Format-LiveLine ("    {0,-22} {1}" -f "transcurrido", (Format-Elapsed $Elapsed))) -ForegroundColor Gray
+        Write-Host (Format-LiveLine "") -ForegroundColor Gray
+        Write-Host (Format-LiveLine "    Ejecucion de Docker:") -ForegroundColor Gray
+        for ($i = 0; $i -lt $lineCount; $i++) {
+            $line = ""
+            if ($i -lt $safeLines.Count) {
+                $line = [string]$safeLines[$i]
+            }
+            Write-Host (Format-LiveLine ("    > " + $line)) -ForegroundColor DarkGray
+        }
+        [Console]::SetCursorPosition(0, $Top + 4 + $lineCount)
+    } catch {
+        return
     }
 }
 
@@ -165,6 +185,14 @@ function Write-DockerTail([string[]]$Lines) {
     Write-Host "    Ejecucion de Docker:" -ForegroundColor Gray
     foreach ($line in $safeLines) {
         Write-Host ("    > " + [string]$line) -ForegroundColor DarkGray
+    }
+}
+
+function Set-CursorVisibleSafe([bool]$Visible) {
+    try {
+        [Console]::CursorVisible = $Visible
+    } catch {
+        return
     }
 }
 
@@ -210,12 +238,22 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     }
     Write-Field "accion" $Label
     Write-Field "log" "deploy\local\last-docker.log"
-    $showProgress = Test-LiveConsole
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
-    Write-Field "estado" "trabajando"
-    Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
-    if ($showProgress) {
-        Write-DockerProgress $Label "trabajando" $stopwatch.Elapsed @()
+    $liveConsole = Test-LiveConsole
+    $liveTop = 0
+    $previousCursorVisible = $null
+    if ($liveConsole) {
+        try {
+            $previousCursorVisible = [Console]::CursorVisible
+            Set-CursorVisibleSafe $false
+        } catch {
+            $previousCursorVisible = $null
+        }
+        $liveTop = [Console]::CursorTop
+        Write-LiveDockerBlock $liveTop "en curso" $stopwatch.Elapsed @()
+    } else {
+        Write-Field "estado" "en curso"
+        Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
     }
     Remove-Item -LiteralPath $script:DockerOutLog, $script:DockerErrLog, $script:DockerExitLog -Force -ErrorAction SilentlyContinue
     $job = Start-Job -ScriptBlock {
@@ -229,16 +267,15 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     } -ArgumentList $FilePath, $Arguments, $script:DockerOutLog, $script:DockerErrLog, $script:DockerExitLog
     while ($job.State -eq "Running") {
         Start-Sleep -Milliseconds 500
-        if ($showProgress) {
+        if ($liveConsole) {
             $recent = @(Get-RecentDockerLines @($script:DockerOutLog, $script:DockerErrLog) 6)
-            Write-DockerProgress $Label "trabajando" $stopwatch.Elapsed $recent
+            Write-LiveDockerBlock $liveTop "en curso" $stopwatch.Elapsed $recent
         }
     }
     Wait-Job -Job $job | Out-Null
     Receive-Job -Job $job -ErrorAction SilentlyContinue | Out-Null
     Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
     $stopwatch.Stop()
-    Complete-DockerProgress $Label
     $exitCode = 1
     if (Test-Path -LiteralPath $script:DockerExitLog) {
         $rawExitCode = Get-Content -LiteralPath $script:DockerExitLog -TotalCount 1 -ErrorAction SilentlyContinue
@@ -256,21 +293,32 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     $merged = @("# $displayCommand", "") + $merged
     $merged | Set-Content -LiteralPath $script:DockerLog -Encoding ASCII
     Remove-Item -LiteralPath $script:DockerOutLog, $script:DockerErrLog, $script:DockerExitLog -Force -ErrorAction SilentlyContinue
+    if ($null -ne $previousCursorVisible) {
+        Set-CursorVisibleSafe $previousCursorVisible
+    }
     if ($exitCode -ne 0) {
-        Write-Field "estado" "error"
-        Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
+        if ($liveConsole) {
+            Write-LiveDockerBlock $liveTop "error" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) 6)
+        } else {
+            Write-Field "estado" "error"
+            Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
+        }
         Write-Fail "$Label fallo con codigo $exitCode"
-        if (Test-Path -LiteralPath $script:DockerLog) {
+        if ((-not $liveConsole) -and (Test-Path -LiteralPath $script:DockerLog)) {
             Write-DockerTail @(Get-Content -LiteralPath $script:DockerLog -Tail 24)
-            if ((Test-LiveConsole) -and (Read-YesNo "Quieres abrir el log completo")) {
-                Start-Process -FilePath "notepad.exe" -ArgumentList ('"' + $script:DockerLog + '"') -ErrorAction SilentlyContinue
-            }
+        }
+        if ((Test-LiveConsole) -and (Test-Path -LiteralPath $script:DockerLog) -and (Read-YesNo "Quieres abrir el log completo")) {
+            Start-Process -FilePath "notepad.exe" -ArgumentList ('"' + $script:DockerLog + '"') -ErrorAction SilentlyContinue
         }
         exit 1
     }
-    Write-Field "estado" "listo"
-    Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
-    Write-DockerTail @(Get-RecentDockerLines @($script:DockerLog) 6)
+    if ($liveConsole) {
+        Write-LiveDockerBlock $liveTop "listo" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) 6)
+    } else {
+        Write-Field "estado" "listo"
+        Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
+        Write-DockerTail @(Get-RecentDockerLines @($script:DockerLog) 6)
+    }
 }
 
 function Read-EnvFile([string]$Path) {
@@ -296,6 +344,12 @@ function Get-RequiredValue([hashtable]$Values, [string]$Key) {
         Stop-Manualito "Falta $Key en deploy\local\selected.env. Ejecuta setup.bat otra vez."
     }
     return [string]$Values[$Key]
+}
+
+function Assert-Accelerator([string]$Value) {
+    if ($Value -ne "cpu" -and $Value -ne "nvidia") {
+        Stop-Manualito "Acelerador invalido '$Value'. Ejecuta setup.bat otra vez."
+    }
 }
 
 function Test-Tool([string]$Name) {
@@ -395,7 +449,7 @@ function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
         Remove-Item -LiteralPath $stdout.FullName, $stderr.FullName -Force -ErrorAction SilentlyContinue
     }
     Write-Field "estado" "Docker no ha validado --gpus all"
-    Write-Note "Se usara base salvo que fuerces NVIDIA manualmente."
+    Write-Note "Se usara cpu salvo que fuerces NVIDIA manualmente."
     return $false
 }
 
@@ -433,9 +487,9 @@ function Write-MenuOption([string]$Key, [string]$Choice, [string]$Description) {
 
 function Read-SetupSelection([string]$RecommendedAccelerator, [string]$RecommendedLlm, [bool]$DockerGpu) {
     Write-Step "Seleccion de modo"
-    Write-MenuOption "Enter" (Format-MenuSelection $RecommendedAccelerator $RecommendedLlm) "recomendada"
-    Write-MenuOption "1" (Format-MenuSelection "base" "low") "maxima compatibilidad"
-    Write-MenuOption "2" (Format-MenuSelection "base" "high") "avanzado/experimental; puede ir lento"
+    Write-MenuOption "Enter" (Format-MenuSelection $RecommendedAccelerator $RecommendedLlm) "<- recomendada"
+    Write-MenuOption "1" (Format-MenuSelection "cpu" "low") "maxima compatibilidad"
+    Write-MenuOption "2" (Format-MenuSelection "cpu" "high") "CPU/RAM; perfil experimental, puede ser muy lento"
     if ($DockerGpu) {
         Write-MenuOption "3" (Format-MenuSelection "nvidia" "low") "mayor velocidad"
         Write-MenuOption "4" (Format-MenuSelection "nvidia" "high") "perfil de referencia; mejor calidad esperada"
@@ -450,10 +504,10 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
             return [pscustomobject]@{ Accelerator = $RecommendedAccelerator; Llm = $RecommendedLlm }
         }
         if ($answer -eq "1") {
-            return [pscustomobject]@{ Accelerator = "base"; Llm = "low" }
+            return [pscustomobject]@{ Accelerator = "cpu"; Llm = "low" }
         }
         if ($answer -eq "2") {
-            return [pscustomobject]@{ Accelerator = "base"; Llm = "high" }
+            return [pscustomobject]@{ Accelerator = "cpu"; Llm = "high" }
         }
         if ($DockerGpu -and $answer -eq "3") {
             return [pscustomobject]@{ Accelerator = "nvidia"; Llm = "low" }
@@ -469,7 +523,7 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
 }
 
 function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
-    $recommendedAccelerator = "base"
+    $recommendedAccelerator = "cpu"
     $recommendedLlm = "low"
     if ($DockerGpu -and $null -ne $NvidiaInfo) {
         if ($NvidiaInfo.FreeMb -ge $script:HighVramMb) {
@@ -491,7 +545,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     if ($script:ManualSelectionRequested -or $UseRecommended -or $DryRun) {
         if ($Accelerator -ne "auto") { $finalAccelerator = $Accelerator }
         if ($Llm -ne "auto") { $finalLlm = $Llm }
-        if ($finalAccelerator -eq "base" -and $Llm -eq "auto") { $finalLlm = "low" }
+        if ($finalAccelerator -eq "cpu" -and $Llm -eq "auto") { $finalLlm = "low" }
     } else {
         $choice = Read-SetupSelection $recommendedAccelerator $recommendedLlm $DockerGpu
         $finalAccelerator = $choice.Accelerator
@@ -504,8 +558,8 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     if ($finalAccelerator -ne $recommendedAccelerator -or $finalLlm -ne $recommendedLlm) {
         Write-Note "Configuracion manual distinta de la recomendada."
     }
-    if ($finalAccelerator -eq "base" -and $finalLlm -eq "high") {
-        Write-Note "$(Format-Selection "base" "high") no exige GPU explicita; puede ir muy lento o consumir mucha RAM."
+    if ($finalAccelerator -eq "cpu" -and $finalLlm -eq "high") {
+        Write-Note "$(Format-Selection "cpu" "high") usa CPU/RAM; perfil experimental, puede ser muy lento."
     }
     if ($finalAccelerator -eq "nvidia" -and $null -eq $NvidiaInfo) {
         Stop-Manualito "Has forzado NVIDIA, pero nvidia-smi no esta disponible."
@@ -557,6 +611,7 @@ function Get-ProfileFile([string]$LlmSize) {
 }
 
 function Get-ComposePrefix([object]$Selection) {
+    Assert-Accelerator $Selection.Accelerator
     $profile = Get-ProfileFile $Selection.Llm
     Assert-File $script:RootEnv ".env"
     Assert-File $script:LlmEnv "config\llm.env"
@@ -607,6 +662,7 @@ function Load-Selection {
     $values = Read-EnvFile $script:SelectedEnv
     $selectedAccelerator = Get-RequiredValue $values "MANUALITO_ACCELERATOR"
     $selectedLlm = Get-RequiredValue $values "MANUALITO_LLM_SIZE"
+    Assert-Accelerator $selectedAccelerator
     return [pscustomobject]@{
         Accelerator = $selectedAccelerator
         Llm = $selectedLlm
@@ -619,7 +675,7 @@ function Get-ExistingSelectionForCompose {
     if ($null -ne $selection) {
         return $selection
     }
-    return [pscustomobject]@{ Accelerator = "base"; Llm = "low"; Ocr = "tesseract" }
+    return [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract" }
 }
 
 function Get-RunningManualitoServices([string]$DockerPath, [object]$Selection) {
@@ -690,7 +746,7 @@ function Invoke-Start([string]$DockerPath) {
         Write-Field "flower" "http://localhost:5555"
         Write-Field "mailpit" "http://localhost:8025"
         Write-Field "openapi" "http://localhost:8000/docs"
-        Write-Ok "LLM verificado:"
+        Write-Ok "LLM:"
         $runningModel = Get-RunningLlmModel $DockerPath $selection
         if ([string]::IsNullOrWhiteSpace($runningModel)) {
             Write-Field "modelo" "no verificado"
@@ -703,8 +759,8 @@ function Invoke-Start([string]$DockerPath) {
 function Invoke-Stop([string]$DockerPath) {
     $selection = Load-Selection
     if ($null -eq $selection) {
-        $selection = [pscustomobject]@{ Accelerator = "base"; Llm = "low"; Ocr = "tesseract" }
-        Write-Note "No hay selected.env; parando con base + low."
+        $selection = [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract" }
+        Write-Note "No hay selected.env; parando con cpu + low."
     }
     Invoke-Compose $DockerPath $selection @("down")
     if ($DryRun) {

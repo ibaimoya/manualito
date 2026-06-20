@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet("setup", "start", "stop")]
     [string]$Action = "start",
 
@@ -192,7 +192,7 @@ function Format-ProjectPath([string]$Path) {
 # Lee la opción del selector sin añadir caracteres extra a la línea.
 function Read-SetupOption {
     Write-Host -NoNewline "[*] " -ForegroundColor Yellow
-    Write-Host -NoNewline "Selecciona una opcion: " -ForegroundColor Cyan
+    Write-Host -NoNewline "Selecciona una opción: " -ForegroundColor Cyan
     $answer = [Console]::ReadLine()
     if ($null -eq $answer) {
         return ""
@@ -313,13 +313,13 @@ function Get-RequiredValue([hashtable]$Values, [string]$Key) {
 
 function Assert-Accelerator([string]$Value) {
     if ($Value -ne "cpu" -and $Value -ne "nvidia") {
-        Stop-Manualito "Acelerador invalido '$Value'. Ejecuta setup.bat otra vez."
+        Stop-Manualito "Acelerador inválido '$Value'. Ejecuta setup.bat otra vez."
     }
 }
 
 function Assert-Ocr([string]$Value) {
     if ($Value -ne "tesseract" -and $Value -ne "paddle_cpu" -and $Value -ne "paddle_gpu") {
-        Stop-Manualito "OCR invalido '$Value'. Ejecuta setup.bat otra vez."
+        Stop-Manualito "OCR inválido '$Value'. Ejecuta setup.bat otra vez."
     }
 }
 
@@ -358,7 +358,7 @@ function Test-Docker {
         Write-Field "engine" "linux"
     }
     $composeResult = Invoke-NativeQuiet $docker.Source @("compose", "version", "--short")
-    if (-not $DryRun -and $composeResult.ExitCode -ne 0) {
+    if ($composeResult.ExitCode -ne 0) {
         Stop-Manualito "Docker Compose no responde."
     }
     $compose = ($composeResult.Output | Select-Object -First 1)
@@ -412,14 +412,9 @@ function Get-NvidiaInfo {
     return $best
 }
 
-# Verifica que Docker pueda usar NVIDIA antes de recomendar ese acelerador.
-function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
-    if ($null -eq $NvidiaInfo) {
-        return $false
-    }
-    Write-Step "Comprobando NVIDIA en Docker"
+# Comprueba si el daemon actual acepta contenedores con GPU NVIDIA.
+function Test-DockerGpuRun([string]$DockerPath) {
     if ($DryRun) {
-        Write-Field "estado" "saltado en dry-run"
         return $false
     }
     $stdout = New-TemporaryFile
@@ -431,15 +426,82 @@ function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
             -RedirectStandardOutput $stdout.FullName `
             -RedirectStandardError $stderr.FullName
         if ($process.ExitCode -eq 0) {
-            Write-Field "estado" "GPU NVIDIA disponible en Docker"
             return $true
         }
     } finally {
         Remove-Item -LiteralPath $stdout.FullName, $stderr.FullName -Force -ErrorAction SilentlyContinue
     }
-    Write-Field "estado" "Docker no ha validado --gpus all"
-    Write-Note "Se usara cpu salvo que fuerces NVIDIA manualmente."
     return $false
+}
+
+# Verifica que Docker pueda usar NVIDIA antes de recomendar ese acelerador.
+function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
+    if ($null -eq $NvidiaInfo) {
+        return $false
+    }
+    Write-Step "Comprobando NVIDIA en Docker"
+    if ($DryRun) {
+        Write-Field "estado" "saltado en dry-run"
+        return $false
+    }
+    if (Test-DockerGpuRun $DockerPath) {
+        Write-Field "estado" "GPU NVIDIA disponible en Docker"
+        return $true
+    }
+    Write-Field "estado" "Docker no ha validado --gpus all"
+    Write-Note "Se usará CPU salvo que fuerces NVIDIA manualmente."
+    return $false
+}
+
+# Impide arrancar una selección guardada con GPU si el Docker actual no la soporta.
+function Assert-SelectedGpuRuntime([string]$DockerPath, [object]$Selection) {
+    if ($Selection.Accelerator -ne "nvidia" -and $Selection.Ocr -ne "paddle_gpu") {
+        return
+    }
+    Write-Step "Validando NVIDIA guardada"
+    if ($DryRun) {
+        Write-Field "estado" "saltado en dry-run"
+        return
+    }
+    if (Test-DockerGpuRun $DockerPath) {
+        Write-Field "estado" "GPU NVIDIA disponible en Docker"
+        return
+    }
+    Stop-Manualito "La selección guardada pide GPU NVIDIA, pero este Docker no puede usarla. Ejecuta setup.bat en este mismo entorno y usa la recomendada, o configura NVIDIA en Docker."
+}
+
+# Detecta puertos ocupados antes de que Compose deje un arranque parcial.
+function Test-LocalPortOpen([int]$Port) {
+    $client = [Net.Sockets.TcpClient]::new()
+    try {
+        $connected = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
+        if (-not $connected.AsyncWaitHandle.WaitOne(200)) {
+            return $false
+        }
+        $client.EndConnect($connected)
+        return $true
+    } catch {
+        return $false
+    } finally {
+        $client.Close()
+    }
+}
+
+function Assert-StartPortsFree([string[]]$RunningServices) {
+    if ($DryRun) {
+        return
+    }
+    $ports = @(
+        @{ Service = "api"; Port = 8000 },
+        @{ Service = "flower"; Port = 5555 },
+        @{ Service = "mailpit"; Port = 8025 },
+        @{ Service = "frontend"; Port = 5173 }
+    )
+    foreach ($entry in $ports) {
+        if ((Test-LocalPortOpen ([int]$entry.Port)) -and $RunningServices -notcontains $entry.Service) {
+            Stop-Manualito "El puerto $($entry.Port) está ocupado y $($entry.Service) no está corriendo en este stack. Libera el puerto o reinicia Docker Desktop si lo ocupa Docker sin contenedores visibles."
+        }
+    }
 }
 
 function Test-NvidiaDriverForPaddleGpu([object]$NvidiaInfo) {
@@ -487,13 +549,13 @@ function Get-LlmEstimatedVramGb([string]$LlmSize) {
     $parsed = 0.0
     $raw = [string]$values["MANUALITO_LLM_VRAM_GB"]
     if (-not [double]::TryParse($raw, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed) -or $parsed -le 0) {
-        Stop-Manualito "MANUALITO_LLM_VRAM_GB invalido en perfil LLM $LlmSize."
+        Stop-Manualito "MANUALITO_LLM_VRAM_GB inválido en perfil LLM $LlmSize."
     }
     return $parsed
 }
 
 function Get-LlmRecommendedFreeMb([string]$LlmSize) {
-    return [int][Math]::Ceiling((Get-LlmEstimatedVramGb $LlmSize + $script:LlmVramReserveGb) * 1024)
+    return [int][Math]::Ceiling(((Get-LlmEstimatedVramGb $LlmSize) + $script:LlmVramReserveGb) * 1024)
 }
 
 function Format-LlmVram([string]$LlmSize) {
@@ -531,13 +593,13 @@ function Write-OcrSelectionHeader([string]$SelectedAccelerator, [string]$Selecte
 function Write-SetupExecutionHeader([object]$Selection) {
     Clear-ManualitoScreen
     Write-Title "Manualito setup"
-    Write-Step "Seleccion final"
+    Write-Step "Selección final"
     Write-Field "modo" (Format-Selection $Selection.Accelerator $Selection.Llm)
     Write-Field "vram llm" (Format-LlmVram $Selection.Llm)
     Write-Field "ocr" $Selection.Ocr
     Write-Field "config" "deploy\local\selected.env"
     if ($Selection.Accelerator -ne $Selection.RecommendedAccelerator -or $Selection.Llm -ne $Selection.RecommendedLlm -or $Selection.Ocr -ne $Selection.RecommendedOcr) {
-        Write-Field "aviso" "seleccion manual"
+        Write-Field "aviso" "selección manual"
     }
     if ($Selection.Accelerator -eq "cpu" -and $Selection.Llm -eq "high") {
         Write-Field "aviso" "CPU/RAM; puede ser muy lento"
@@ -569,16 +631,17 @@ function Get-OcrRecommendation([string]$SelectedAccelerator, [string]$LlmSize, [
 
 # Dibuja y procesa el selector interactivo de acelerador y modelo.
 function Read-SetupSelection([string]$RecommendedAccelerator, [string]$RecommendedLlm, [bool]$DockerGpu) {
-    Write-Step "Seleccion de modo"
+    Write-Step "Selección de modo"
+    $exitKey = if ($DockerGpu) { "5" } else { "3" }
     Write-MenuOption "Enter" (Format-MenuSelection $RecommendedAccelerator $RecommendedLlm) "<- recomendada"
-    Write-MenuOption "1" (Format-MenuSelection "cpu" "low") "maxima compatibilidad"
+    Write-MenuOption "1" (Format-MenuSelection "cpu" "low") "máxima compatibilidad"
     Write-MenuOption "2" (Format-MenuSelection "cpu" "high") "CPU/RAM; perfil experimental, puede ser muy lento"
     if ($DockerGpu) {
         Write-MenuOption "3" (Format-MenuSelection "nvidia" "low") "mayor velocidad"
         Write-MenuOption "4" (Format-MenuSelection "nvidia" "high") "perfil de referencia; mejor calidad esperada"
     }
-    Write-MenuOption "5" "exit" "salir sin cambios"
-    Write-Note "Usa la recomendada salvo que sepas exactamente que estas cambiando."
+    Write-MenuOption $exitKey "exit" "salir sin cambios"
+    Write-Note "Usa la recomendada salvo que sepas exactamente qué estás cambiando."
 
     while ($true) {
         $answer = Read-SetupOption
@@ -592,32 +655,33 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
         if ($answer -eq "2") {
             return [pscustomobject]@{ Accelerator = "cpu"; Llm = "high" }
         }
+        if ($answer -eq $exitKey -or $answer -eq "5" -or $answer -eq "exit" -or $answer -eq "salir" -or $answer -eq "q") {
+            Exit-Manualito "Setup cancelado. No se han aplicado cambios."
+        }
         if ($DockerGpu -and $answer -eq "3") {
             return [pscustomobject]@{ Accelerator = "nvidia"; Llm = "low" }
         }
         if ($DockerGpu -and $answer -eq "4") {
             return [pscustomobject]@{ Accelerator = "nvidia"; Llm = "high" }
         }
-        if ($answer -eq "5" -or $answer -eq "exit" -or $answer -eq "salir" -or $answer -eq "q") {
-            Exit-Manualito "Setup cancelado. No se han aplicado cambios."
-        }
-        Write-Note "Opcion no valida. Pulsa Enter para usar la recomendada."
+        Write-Note "Opción no válida. Pulsa Enter para usar la recomendada."
     }
 }
 
 function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [string]$RecommendationDetail) {
-    Write-Step "Seleccion de OCR"
+    Write-Step "Selección de OCR"
+    $exitKey = "4"
     Write-MenuOption "Enter" $RecommendedOcr "<- recomendada" 14
-    Write-MenuOption "1" "tesseract" "maxima compatibilidad" 14
+    Write-MenuOption "1" "tesseract" "máxima compatibilidad" 14
     Write-MenuOption "2" "paddle_cpu" "muy fiable, pero lento" 14
     if ($PaddleGpuStatus.Available) {
         Write-MenuOption "3" "paddle_gpu" "mejor OCR esperado; requiere margen de VRAM" 14
     } else {
         Write-MenuOption "3" "paddle_gpu" $PaddleGpuStatus.Reason 14
     }
-    Write-MenuOption "5" "exit" "salir sin cambios" 14
+    Write-MenuOption $exitKey "exit" "salir sin cambios" 14
     if ($RecommendedOcr -eq "paddle_gpu") {
-        Write-Note "paddle_gpu se recomienda porque $RecommendationDetail; Tesseract sigue siendo la opcion conservadora."
+        Write-Note "paddle_gpu se recomienda porque $RecommendationDetail; Tesseract sigue siendo la opción conservadora."
     } else {
         Write-Note "Tesseract recomendado: $RecommendationDetail."
     }
@@ -638,13 +702,13 @@ function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [s
             if ($PaddleGpuStatus.Available) {
                 return "paddle_gpu"
             }
-            Write-Note "paddle_gpu no esta disponible: $($PaddleGpuStatus.Reason)."
+            Write-Note "paddle_gpu no está disponible: $($PaddleGpuStatus.Reason)."
             continue
         }
-        if ($answer -eq "5" -or $answer -eq "exit" -or $answer -eq "salir" -or $answer -eq "q") {
+        if ($answer -eq $exitKey -or $answer -eq "5" -or $answer -eq "exit" -or $answer -eq "salir" -or $answer -eq "q") {
             Exit-Manualito "Setup cancelado. No se han aplicado cambios."
         }
-        Write-Note "Opcion no valida. Pulsa Enter para usar la recomendada."
+        Write-Note "Opción no válida. Pulsa Enter para usar la recomendada."
     }
 }
 
@@ -669,7 +733,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     $finalOcrInfo = $recommendedOcrInfo
     $finalOcr = $recommendedOcrInfo.Mode
 
-    Write-Step "Configuracion recomendada"
+    Write-Step "Configuración recomendada"
     Write-Field "recomendada" (Format-Selection $recommendedAccelerator $recommendedLlm)
     Write-Field "vram llm" (Format-LlmVram $recommendedLlm)
     Write-Field "ocr" $recommendedOcrInfo.Mode
@@ -692,14 +756,14 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
 
     $showSelectionMessages = ($script:ManualSelectionRequested -or $UseRecommended -or $DryRun -or $SkipBuild)
     if ($showSelectionMessages) {
-        Write-Step "Configuracion seleccionada"
-        Write-Field "seleccionada" (Format-Selection $finalAccelerator $finalLlm)
+        Write-Step "Configuración seleccionada"
+        Write-Field "selección" (Format-Selection $finalAccelerator $finalLlm)
         Write-Field "vram llm" (Format-LlmVram $finalLlm)
         Write-Field "ocr" $finalOcr
     }
     if ($finalAccelerator -ne $recommendedAccelerator -or $finalLlm -ne $recommendedLlm -or $finalOcr -ne $recommendedOcrInfo.Mode) {
         if ($showSelectionMessages) {
-            Write-Note "Configuracion manual distinta de la recomendada."
+            Write-Note "Configuración manual distinta de la recomendada."
         }
     }
     if ($finalAccelerator -eq "cpu" -and $finalLlm -eq "high") {
@@ -708,7 +772,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
         }
     }
     if ($finalAccelerator -eq "nvidia" -and $null -eq $NvidiaInfo) {
-        Stop-Manualito "Has forzado NVIDIA, pero nvidia-smi no esta disponible."
+        Stop-Manualito "Has forzado NVIDIA, pero nvidia-smi no está disponible."
     }
     if ($finalAccelerator -eq "nvidia" -and -not $DockerGpu) {
         if ($showSelectionMessages) {
@@ -765,14 +829,14 @@ function Save-Selection([object]$Selection, [switch]$Quiet) {
             return
         }
         if ($selectionExists) {
-            Write-Ok "Seleccion actualizada:"
+            Write-Ok "Selección actualizada:"
         } else {
-            Write-Ok "Seleccion guardada:"
+            Write-Ok "Selección guardada:"
         }
     } elseif ($Quiet) {
         return
     } else {
-        Write-Ok "Seleccion calculada:"
+        Write-Ok "Selección calculada:"
     }
     Write-Field "archivo" "deploy\local\selected.env"
 }
@@ -781,7 +845,7 @@ function Save-Selection([object]$Selection, [switch]$Quiet) {
 function Get-ProfileFile([string]$LlmSize) {
     if ($LlmSize -eq "low") { return $script:LowProfile }
     if ($LlmSize -eq "high") { return $script:HighProfile }
-    Stop-Manualito "LLM invalido: $LlmSize"
+    Stop-Manualito "LLM inválido: $LlmSize"
 }
 
 # Construye la parte común de docker compose con envs y overrides.
@@ -886,19 +950,19 @@ function Resolve-RunningManualitoBeforeVram([string]$DockerPath) {
         return
     }
 
-    Write-Step "Manualito ya esta en ejecucion"
+    Write-Step "Manualito ya está en ejecución"
     Write-Field "servicios" ($runningServices -join ", ")
-    Write-Note "Puede ocupar VRAM y hacer que la recomendacion sea mas conservadora."
+    Write-Note "Puede ocupar VRAM y hacer que la recomendación sea más conservadora."
 
     if ($script:ManualSelectionRequested -or $UseRecommended) {
-        Write-Note "No se parara automaticamente porque has usado parametros de setup."
+        Write-Note "No se parará automáticamente porque has usado parámetros de setup."
         return
     }
 
-    if (Read-YesNo "Quieres pararlo antes de medir VRAM") {
+    if (Read-YesNo "¿Quieres pararlo antes de medir VRAM?") {
         Invoke-Compose $DockerPath $selection @("down")
     } else {
-        Write-Note "La recomendacion usara la VRAM libre actual."
+        Write-Note "La recomendación usará la VRAM libre actual."
     }
 }
 
@@ -927,9 +991,12 @@ function Invoke-Setup([string]$DockerPath) {
 function Invoke-Start([string]$DockerPath) {
     $selection = Load-Selection
     if ($null -eq $selection) {
-        Write-Note "Primera ejecucion detectada: lanzando setup antes de arrancar."
+        Write-Note "Primera ejecución detectada: lanzando setup antes de arrancar."
         $selection = Invoke-Setup $DockerPath
     }
+    Assert-SelectedGpuRuntime $DockerPath $selection
+    $runningServices = @(Get-RunningManualitoServices $DockerPath $selection)
+    Assert-StartPortsFree $runningServices
     Write-Step "Arrancando Manualito"
     Write-Field "modo" (Format-Selection $selection.Accelerator $selection.Llm)
     Write-Field "ocr" $selection.Ocr
@@ -977,7 +1044,7 @@ try {
         "setup" {
             [void](Invoke-Setup $dockerPath)
             if (-not $DryRun -and -not $SkipBuild) {
-                if (Read-YesNo "Quieres arrancar Manualito ahora?") {
+                if (Read-YesNo "¿Quieres arrancar Manualito ahora?") {
                     exit 42
                 } else {
                     Write-Ok "Manualito queda preparado. Abre start.bat para arrancarlo."

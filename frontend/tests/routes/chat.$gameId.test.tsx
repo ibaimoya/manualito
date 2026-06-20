@@ -175,6 +175,85 @@ describe('/chat/$gameId', () => {
     expect(screen.getAllByText('¿Y empate?')).toHaveLength(1);
   });
 
+  it('mantiene el polling cuando el POST devuelve una respuesta pendiente', async () => {
+    let messageReads = 0;
+    let sent = false;
+    const message = (
+      id: string,
+      role: 'user' | 'assistant',
+      status: 'pending' | 'completed',
+      content: string,
+    ) => ({
+      id,
+      role,
+      status,
+      content,
+      created_at: '2026-05-26T10:06:00.000Z',
+      sources: [],
+    });
+    const baseMessages = [
+      message('u-base', 'user', 'completed', '¿Cómo se reparten las cartas?'),
+      message(
+        'b-base',
+        'assistant',
+        'completed',
+        'Cada jugador recibe dos asentamientos y dos carreteras.',
+      ),
+    ];
+    server.use(
+      http.get('/api/conversations/:conversationId/messages', () => {
+        if (!sent) return HttpResponse.json({ messages: baseMessages });
+        messageReads += 1;
+        const newTurn =
+          messageReads < 2
+            ? [
+                message('u-async', 'user', 'completed', 'async'),
+                message('b-async', 'assistant', 'pending', ''),
+              ]
+            : [
+                message('u-async', 'user', 'completed', 'async'),
+                message('b-async', 'assistant', 'completed', 'Respuesta generada por polling.'),
+              ];
+        return HttpResponse.json({
+          messages: [...baseMessages, ...newTurn],
+        });
+      }),
+      http.post('/api/conversations/:conversationId/messages', async ({ request }) => {
+        sent = true;
+        const body = (await request.json()) as { content?: string };
+        return HttpResponse.json({
+          conversation: { ...CONVERSATION, has_pending_reply: true },
+          user_message: {
+            id: 'u-async',
+            role: 'user',
+            status: 'completed',
+            content: body.content ?? '',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            ...message('b-async', 'assistant', 'pending', ''),
+            created_at: '2026-05-26T10:06:05.000Z',
+          },
+        });
+      }),
+    );
+
+    renderChat('test-game-001', { c: 'conv-001' });
+    const user = userEvent.setup();
+    const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
+    await user.type(input, 'async');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    expect(await screen.findByText('async')).toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: /Generando respuesta/i })).toBeInTheDocument();
+    await waitFor(() => expect(messageReads).toBeGreaterThanOrEqual(2), { timeout: 4000 });
+    expect(
+      await screen.findByText('Respuesta generada por polling.', {}, { timeout: 4000 }),
+    ).toBeInTheDocument();
+  });
+
   it('preguntas vacías o solo whitespace NO se envían', async () => {
     renderChat('test-game-001');
     const user = userEvent.setup();

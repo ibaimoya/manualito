@@ -240,9 +240,11 @@ function refreshAfterTurn(
   queryClient: ReturnType<typeof useQueryClient>,
   data: SendMessageResponse,
 ): void {
-  queryClient
-    .invalidateQueries({ queryKey: conversationMessagesKey(data.conversation.id) })
-    .catch(() => undefined);
+  queryClient.setQueryData<ConversationMessage[]>(
+    conversationMessagesKey(data.conversation.id),
+    (current) =>
+      mergeConversationMessages(current ?? [], [data.user_message, data.assistant_message]),
+  );
   queryClient
     .invalidateQueries({ queryKey: conversationsKey(data.conversation.game_id) })
     .catch(() => undefined);

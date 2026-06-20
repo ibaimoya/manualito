@@ -1,4 +1,4 @@
-﻿param(
+param(
     [ValidateSet("setup", "start", "stop")]
     [string]$Action = "start",
 
@@ -41,11 +41,6 @@ $script:OcrPaddleCpuCompose = Join-Path $script:Root "deploy\compose\ocr\paddle-
 $script:OcrPaddleGpuCompose = Join-Path $script:Root "deploy\compose\ocr\paddle-gpu.yaml"
 $script:LowProfile = Join-Path $script:Root "deploy\profiles\llm\low.env"
 $script:HighProfile = Join-Path $script:Root "deploy\profiles\llm\high.env"
-$script:DockerLog = Join-Path $script:LogsDir "last-docker.log"
-$script:DockerOutLog = Join-Path $script:LogsDir "last-docker.out.log"
-$script:DockerErrLog = Join-Path $script:LogsDir "last-docker.err.log"
-$script:DockerExitLog = Join-Path $script:LogsDir "last-docker.exit.log"
-$script:DockerTailLines = 20
 $script:LlmVramReserveGb = 1.0
 $script:PaddleGpuVramBudgetGb = 3.0
 $script:PaddleGpuMinDriver = [version]"522.06"
@@ -119,8 +114,8 @@ function Format-Elapsed([TimeSpan]$Elapsed) {
     return "{0:00}:{1:00}" -f $Elapsed.Minutes, $Elapsed.Seconds
 }
 
-# Comprueba si la consola permite repintar el bloque de progreso en vivo.
-function Test-LiveConsole {
+# Comprueba si la consola permite una animación simple en la línea actual.
+function Test-InteractiveConsole {
     try {
         return (-not [Console]::IsOutputRedirected -and [Console]::BufferWidth -gt 0 -and [Console]::BufferHeight -gt 0)
     } catch {
@@ -130,7 +125,7 @@ function Test-LiveConsole {
 
 # Limpia la pantalla solo cuando la consola puede repintarse de forma fiable.
 function Clear-ManualitoScreen {
-    if (-not (Test-LiveConsole)) {
+    if (-not (Test-InteractiveConsole)) {
         return
     }
     try {
@@ -144,86 +139,54 @@ function Clear-ManualitoScreen {
     }
 }
 
-# Limpia y ajusta una línea para que el repintado no deje restos visuales.
-function Format-LiveLine([string]$Text) {
+# Ajusta una línea dinámica para que no deje restos visuales al repintar.
+function Format-ConsoleLine([string]$Text) {
     $width = 80
     try {
         $width = [Math]::Max(20, [Console]::BufferWidth - 1)
     } catch {
         $width = 80
     }
-    $escape = [char]27
-    $clean = ([string]$Text) -replace "$escape\[[0-9;?]*[ -/]*[@-~]", ""
-    $clean = $clean -replace "[`r`n`t]", " "
+    $clean = ([string]$Text) -replace "[`r`n`t]", " "
     if ($clean.Length -gt $width) {
         $clean = $clean.Substring(0, [Math]::Max(0, $width - 3)) + "..."
     }
     return $clean.PadRight($width)
 }
 
-# Lee las últimas líneas útiles de los logs temporales de Docker.
-function Get-RecentDockerLines([string[]]$Paths, [int]$Count) {
-    $lines = @()
-    foreach ($path in $Paths) {
-        if (Test-Path -LiteralPath $path) {
-            $lines += Get-Content -LiteralPath $path -Tail $Count -ErrorAction SilentlyContinue
-        }
-    }
-    $lines = @($lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
-    if ($lines.Count -gt $Count) {
-        return @($lines | Select-Object -Last $Count)
-    }
-    return @($lines)
+# Devuelve una barra de actividad indeterminada; no representa porcentaje real.
+function Get-ActivityBar([int]$Frame) {
+    $width = 30
+    $marker = "====>"
+    $position = $Frame % ($width - $marker.Length + 1)
+    return "[" + (" " * $position) + $marker + (" " * ($width - $marker.Length - $position)) + "]"
 }
 
-# Repinta en el mismo sitio el estado y las últimas líneas de Docker.
-function Write-LiveDockerBlock([int]$Top, [string]$State, [TimeSpan]$Elapsed, [string[]]$Lines) {
-    $safeLines = @()
-    if ($null -ne $Lines) {
-        $safeLines = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
-    }
-    try {
-        $lineCount = $script:DockerTailLines
-        [Console]::SetCursorPosition(0, $Top)
-        Write-Host (Format-LiveLine ("    {0,-22} {1}" -f "estado", $State)) -ForegroundColor Gray
-        Write-Host (Format-LiveLine ("    {0,-22} {1}" -f "transcurrido", (Format-Elapsed $Elapsed))) -ForegroundColor Gray
-        Write-Host (Format-LiveLine "") -ForegroundColor Gray
-        Write-Host (Format-LiveLine "    Ejecucion de Docker:") -ForegroundColor Gray
-        for ($i = 0; $i -lt $lineCount; $i++) {
-            $line = ""
-            if ($i -lt $safeLines.Count) {
-                $line = [string]$safeLines[$i]
-            }
-            Write-Host (Format-LiveLine ("    > " + $line)) -ForegroundColor DarkGray
-        }
-        [Console]::SetCursorPosition(0, $Top + 4 + $lineCount)
-    } catch {
+# Repinta una única línea de actividad mientras Docker trabaja.
+function Write-ActivityLine([TimeSpan]$Elapsed, [int]$Frame) {
+    if (-not (Test-InteractiveConsole)) {
         return
+    }
+    $line = "    {0,-22} {1}  {2}" -f "transcurrido", (Format-Elapsed $Elapsed), (Get-ActivityBar $Frame)
+    Write-Host -NoNewline ("`r" + (Format-ConsoleLine $line)) -ForegroundColor Gray
+}
+
+function Complete-ActivityLine {
+    if (Test-InteractiveConsole) {
+        Write-Host ""
     }
 }
 
-# Muestra un resumen fijo del log cuando no hay consola interactiva.
-function Write-DockerTail([string[]]$Lines) {
-    $safeLines = @()
-    if ($null -ne $Lines) {
-        $safeLines = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
-    }
-    if ($safeLines.Count -eq 0) {
-        return
-    }
-    Write-Host "    Ejecucion de Docker:" -ForegroundColor Gray
-    foreach ($line in $safeLines) {
-        Write-Host ("    > " + [string]$line) -ForegroundColor DarkGray
-    }
+function New-DockerLogPath {
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    return Join-Path $script:LogsDir "$Action-$stamp.log"
 }
 
-# Cambia la visibilidad del cursor sin romper hosts que no lo soportan.
-function Set-CursorVisibleSafe([bool]$Visible) {
-    try {
-        [Console]::CursorVisible = $Visible
-    } catch {
-        return
+function Format-ProjectPath([string]$Path) {
+    if ($Path.StartsWith($script:Root, [StringComparison]::OrdinalIgnoreCase)) {
+        return $Path.Substring($script:Root.Length + 1)
     }
+    return $Path
 }
 
 # Lee la opción del selector sin añadir caracteres extra a la línea.
@@ -257,7 +220,7 @@ function Read-YesNo([string]$Question) {
     }
 }
 
-# Ejecuta Docker en segundo plano y mantiene feedback visual mientras trabaja.
+# Ejecuta Docker en segundo plano, guarda todo el log y muestra una actividad estable.
 function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments) {
     Write-Step $Label
     $displayCommand = ConvertTo-DisplayCommand (@($FilePath) + $Arguments)
@@ -272,89 +235,54 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     if (-not (Test-Path -LiteralPath $script:LogsDir)) {
         New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
     }
+    $dockerLog = New-DockerLogPath
     Write-Field "accion" $Label
-    Write-Field "log" "deploy\local\logs\last-docker.log"
+    Write-Field "estado" "en curso"
+    Write-Field "log" (Format-ProjectPath $dockerLog)
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
-    $liveConsole = Test-LiveConsole
-    $liveTop = 0
-    $previousCursorVisible = $null
-    if ($liveConsole) {
-        try {
-            $previousCursorVisible = [Console]::CursorVisible
-            Set-CursorVisibleSafe $false
-        } catch {
-            $previousCursorVisible = $null
-        }
-        $liveTop = [Console]::CursorTop
-        Write-LiveDockerBlock $liveTop "en curso" $stopwatch.Elapsed @()
-    } else {
-        Write-Field "estado" "en curso"
+    if (-not (Test-InteractiveConsole)) {
         Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
     }
-    Remove-Item -LiteralPath $script:DockerOutLog, $script:DockerErrLog, $script:DockerExitLog -Force -ErrorAction SilentlyContinue
     $job = Start-Job -ScriptBlock {
-        param([string]$InnerFilePath, [string[]]$InnerArguments, [string]$OutLog, [string]$ErrLog, [string]$ExitLog)
-        & $InnerFilePath @InnerArguments 1> $OutLog 2> $ErrLog
-        $code = $LASTEXITCODE
-        if ($null -eq $code) {
-            $code = 0
+        param([string]$InnerFilePath, [string[]]$InnerArguments, [string]$InnerLog, [string]$InnerCommand)
+        Set-Content -LiteralPath $InnerLog -Value @("# $InnerCommand", "") -Encoding UTF8
+        try {
+            & $InnerFilePath @InnerArguments 2>&1 | Out-File -LiteralPath $InnerLog -Append -Encoding UTF8
+            $code = $LASTEXITCODE
+            if ($null -eq $code) {
+                $code = 0
+            }
+            return [int]$code
+        } catch {
+            $_ | Out-File -LiteralPath $InnerLog -Append -Encoding UTF8
+            return 1
         }
-        Set-Content -LiteralPath $ExitLog -Value ([string]$code) -Encoding ASCII
-    } -ArgumentList $FilePath, $Arguments, $script:DockerOutLog, $script:DockerErrLog, $script:DockerExitLog
+    } -ArgumentList $FilePath, $Arguments, $dockerLog, $displayCommand
+    $frame = 0
     while ($job.State -eq "Running") {
-        Start-Sleep -Milliseconds 500
-        if ($liveConsole) {
-            $recent = @(Get-RecentDockerLines @($script:DockerOutLog, $script:DockerErrLog) $script:DockerTailLines)
-            Write-LiveDockerBlock $liveTop "en curso" $stopwatch.Elapsed $recent
-        }
+        Write-ActivityLine $stopwatch.Elapsed $frame
+        Start-Sleep -Milliseconds 160
+        $frame++
     }
     Wait-Job -Job $job | Out-Null
-    Receive-Job -Job $job -ErrorAction SilentlyContinue | Out-Null
+    $result = @(Receive-Job -Job $job -ErrorAction SilentlyContinue)
     Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
     $stopwatch.Stop()
+    Complete-ActivityLine
     $exitCode = 1
-    if (Test-Path -LiteralPath $script:DockerExitLog) {
-        $rawExitCode = Get-Content -LiteralPath $script:DockerExitLog -TotalCount 1 -ErrorAction SilentlyContinue
-        if (-not [int]::TryParse([string]$rawExitCode, [ref]$exitCode)) {
+    if ($result.Count -gt 0) {
+        $rawExitCode = [string]$result[-1]
+        if (-not [int]::TryParse($rawExitCode, [ref]$exitCode)) {
             $exitCode = 1
         }
     }
-    $merged = @()
-    if (Test-Path -LiteralPath $script:DockerOutLog) {
-        $merged += Get-Content -LiteralPath $script:DockerOutLog
-    }
-    if (Test-Path -LiteralPath $script:DockerErrLog) {
-        $merged += Get-Content -LiteralPath $script:DockerErrLog
-    }
-    $merged = @("# $displayCommand", "") + $merged
-    $merged | Set-Content -LiteralPath $script:DockerLog -Encoding ASCII
-    Remove-Item -LiteralPath $script:DockerOutLog, $script:DockerErrLog, $script:DockerExitLog -Force -ErrorAction SilentlyContinue
-    if ($null -ne $previousCursorVisible) {
-        Set-CursorVisibleSafe $previousCursorVisible
-    }
+    Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
     if ($exitCode -ne 0) {
-        if ($liveConsole) {
-            Write-LiveDockerBlock $liveTop "error" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) $script:DockerTailLines)
-        } else {
-            Write-Field "estado" "error"
-            Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
-        }
-        Write-Fail "$Label fallo con codigo $exitCode"
-        if ((-not $liveConsole) -and (Test-Path -LiteralPath $script:DockerLog)) {
-            Write-DockerTail @(Get-Content -LiteralPath $script:DockerLog -Tail 24)
-        }
-        if ((Test-LiveConsole) -and (Test-Path -LiteralPath $script:DockerLog) -and (Read-YesNo "Quieres abrir el log completo")) {
-            Start-Process -FilePath "notepad.exe" -ArgumentList ('"' + $script:DockerLog + '"') -ErrorAction SilentlyContinue
-        }
+        Write-Field "estado" "error"
+        Write-Fail "$Label fallo con codigo $exitCode. Revisa $(Format-ProjectPath $dockerLog)"
         exit 1
     }
-    if ($liveConsole) {
-        Write-LiveDockerBlock $liveTop "listo" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) $script:DockerTailLines)
-    } else {
-        Write-Field "estado" "listo"
-        Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
-        Write-DockerTail @(Get-RecentDockerLines @($script:DockerLog) $script:DockerTailLines)
-    }
+    Write-Field "estado" "listo"
 }
 
 # Lee archivos .env sencillos como pares clave=valor.
@@ -865,7 +793,7 @@ function Get-ComposePrefix([object]$Selection) {
     Assert-File $script:LlmEnv "config\llm.env"
     Assert-File $script:ComposeFile "compose.yaml"
     Assert-File $profile "perfil LLM $($Selection.Llm)"
-    $args = @("--env-file", $script:RootEnv, "--env-file", $script:LlmEnv, "--env-file", $profile, "-f", $script:ComposeFile)
+    $args = @("--ansi", "never", "--progress", "plain", "--env-file", $script:RootEnv, "--env-file", $script:LlmEnv, "--env-file", $profile, "-f", $script:ComposeFile)
     if ($Selection.Accelerator -eq "nvidia") {
         Assert-File $script:NvidiaCompose "override NVIDIA"
         $args += @("-f", $script:NvidiaCompose)

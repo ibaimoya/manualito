@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet("setup", "start", "stop")]
     [string]$Action = "start",
 
@@ -111,6 +111,7 @@ function Format-Elapsed([TimeSpan]$Elapsed) {
     return "{0:00}:{1:00}" -f $Elapsed.Minutes, $Elapsed.Seconds
 }
 
+# Comprueba si la consola permite repintar el bloque de progreso en vivo.
 function Test-LiveConsole {
     try {
         return (-not [Console]::IsOutputRedirected -and [Console]::BufferWidth -gt 0 -and [Console]::BufferHeight -gt 0)
@@ -119,6 +120,7 @@ function Test-LiveConsole {
     }
 }
 
+# Limpia y ajusta una línea para que el repintado no deje restos visuales.
 function Format-LiveLine([string]$Text) {
     $width = 80
     try {
@@ -135,6 +137,7 @@ function Format-LiveLine([string]$Text) {
     return $clean.PadRight($width)
 }
 
+# Lee las últimas líneas útiles de los logs temporales de Docker.
 function Get-RecentDockerLines([string[]]$Paths, [int]$Count) {
     $lines = @()
     foreach ($path in $Paths) {
@@ -149,6 +152,7 @@ function Get-RecentDockerLines([string[]]$Paths, [int]$Count) {
     return @($lines)
 }
 
+# Repinta en el mismo sitio el estado y las últimas líneas de Docker.
 function Write-LiveDockerBlock([int]$Top, [string]$State, [TimeSpan]$Elapsed, [string[]]$Lines) {
     $safeLines = @()
     if ($null -ne $Lines) {
@@ -174,6 +178,7 @@ function Write-LiveDockerBlock([int]$Top, [string]$State, [TimeSpan]$Elapsed, [s
     }
 }
 
+# Muestra un resumen fijo del log cuando no hay consola interactiva.
 function Write-DockerTail([string[]]$Lines) {
     $safeLines = @()
     if ($null -ne $Lines) {
@@ -188,6 +193,7 @@ function Write-DockerTail([string[]]$Lines) {
     }
 }
 
+# Cambia la visibilidad del cursor sin romper hosts que no lo soportan.
 function Set-CursorVisibleSafe([bool]$Visible) {
     try {
         [Console]::CursorVisible = $Visible
@@ -196,6 +202,7 @@ function Set-CursorVisibleSafe([bool]$Visible) {
     }
 }
 
+# Lee la opción del selector sin añadir caracteres extra a la línea.
 function Read-SetupOption {
     Write-Host -NoNewline "[*] " -ForegroundColor Yellow
     Write-Host -NoNewline "Selecciona una opcion: " -ForegroundColor Cyan
@@ -206,6 +213,7 @@ function Read-SetupOption {
     return [string]$answer
 }
 
+# Pregunta una confirmación simple para decisiones interactivas.
 function Read-YesNo([string]$Question) {
     while ($true) {
         Write-Host -NoNewline "[*] " -ForegroundColor Yellow
@@ -225,6 +233,7 @@ function Read-YesNo([string]$Question) {
     }
 }
 
+# Ejecuta Docker en segundo plano y mantiene feedback visual mientras trabaja.
 function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments) {
     Write-Step $Label
     $displayCommand = ConvertTo-DisplayCommand (@($FilePath) + $Arguments)
@@ -321,6 +330,7 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     }
 }
 
+# Lee archivos .env sencillos como pares clave=valor.
 function Read-EnvFile([string]$Path) {
     $values = @{}
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -356,33 +366,52 @@ function Test-Tool([string]$Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1)
 }
 
+# Ejecuta comandos nativos capturando stderr sin saltarse nuestro manejo de errores.
+function Invoke-NativeQuiet([string]$FilePath, [string[]]$Arguments) {
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = & $FilePath @Arguments 2>&1
+        return [pscustomobject]@{
+            ExitCode = $LASTEXITCODE
+            Output = @($output | ForEach-Object { [string]$_ })
+        }
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+}
+
+# Valida que Docker exista, responda y esté usando contenedores Linux.
 function Test-Docker {
     Write-Step "Comprobando Docker"
     $docker = Get-Command "docker" -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $docker) {
-        Stop-Manualito "Docker no esta instalado o no esta en PATH."
+        Stop-Manualito "Docker no está instalado o no está en PATH."
     }
     Write-Field "docker" $docker.Source
     if (-not $DryRun) {
-        $osType = (& $docker.Source info --format "{{.OSType}}" 2>$null)
-        if ($LASTEXITCODE -ne 0) {
+        $dockerInfo = Invoke-NativeQuiet $docker.Source @("info", "--format", "{{.OSType}}")
+        if ($dockerInfo.ExitCode -ne 0) {
             Stop-Manualito "Docker no responde. Abre Docker Desktop y vuelve a intentarlo."
         }
+        $osType = ($dockerInfo.Output | Select-Object -First 1)
         if ($osType -and $osType.Trim() -ne "linux") {
-            Stop-Manualito "Docker esta en modo '$($osType.Trim())'. Manualito necesita contenedores Linux."
+            Stop-Manualito "Docker está en modo '$($osType.Trim())'. Manualito necesita contenedores Linux."
         }
         Write-Field "engine" "linux"
     }
-    $compose = (& $docker.Source compose version --short 2>$null)
-    if (-not $DryRun -and $LASTEXITCODE -ne 0) {
+    $composeResult = Invoke-NativeQuiet $docker.Source @("compose", "version", "--short")
+    if (-not $DryRun -and $composeResult.ExitCode -ne 0) {
         Stop-Manualito "Docker Compose no responde."
     }
+    $compose = ($composeResult.Output | Select-Object -First 1)
     if ($compose) {
         Write-Field "compose" $compose.Trim()
     }
     return $docker.Source
 }
 
+# Obtiene la GPU NVIDIA con más VRAM libre para recomendar perfil.
 function Get-NvidiaInfo {
     Write-Step "Buscando NVIDIA"
     $nvidia = Get-Command "nvidia-smi" -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -395,8 +424,9 @@ function Get-NvidiaInfo {
         Write-Field "estado" "detectada (sin medir en dry-run)"
         return [pscustomobject]@{ Name = "NVIDIA"; FreeMb = 0; TotalMb = 0 }
     }
-    $raw = & $nvidia.Source --query-gpu=name,memory.free,memory.total --format=csv,noheader,nounits 2>$null
-    if ($LASTEXITCODE -ne 0 -or -not $raw) {
+    $nvidiaQuery = Invoke-NativeQuiet $nvidia.Source @("--query-gpu=name,memory.free,memory.total", "--format=csv,noheader,nounits")
+    $raw = $nvidiaQuery.Output
+    if ($nvidiaQuery.ExitCode -ne 0 -or -not $raw) {
         Write-Field "estado" "nvidia-smi no responde"
         return $null
     }
@@ -424,6 +454,7 @@ function Get-NvidiaInfo {
     return $best
 }
 
+# Verifica que Docker pueda usar NVIDIA antes de recomendar ese acelerador.
 function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
     if ($null -eq $NvidiaInfo) {
         return $false
@@ -453,6 +484,7 @@ function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
     return $false
 }
 
+# Resuelve el modelo real leyendo el perfil low/high correspondiente.
 function Get-LlmModel([string]$LlmSize) {
     $profile = Get-ProfileFile $LlmSize
     if (-not (Test-Path -LiteralPath $profile)) {
@@ -485,6 +517,7 @@ function Write-MenuOption([string]$Key, [string]$Choice, [string]$Description) {
     Write-Host $line -ForegroundColor Gray
 }
 
+# Dibuja y procesa el selector interactivo de acelerador y modelo.
 function Read-SetupSelection([string]$RecommendedAccelerator, [string]$RecommendedLlm, [bool]$DockerGpu) {
     Write-Step "Seleccion de modo"
     Write-MenuOption "Enter" (Format-MenuSelection $RecommendedAccelerator $RecommendedLlm) "<- recomendada"
@@ -522,6 +555,7 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
     }
 }
 
+# Calcula la recomendación final mezclando autodetección y flags manuales.
 function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     $recommendedAccelerator = "cpu"
     $recommendedLlm = "low"
@@ -577,6 +611,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     }
 }
 
+# Persiste la selección para que start.bat use exactamente el mismo perfil.
 function Save-Selection([object]$Selection) {
     if (-not (Test-Path -LiteralPath $script:LocalDir)) {
         New-Item -ItemType Directory -Path $script:LocalDir -Force | Out-Null
@@ -604,12 +639,14 @@ function Save-Selection([object]$Selection) {
     Write-Field "archivo" "deploy\local\selected.env"
 }
 
+# Devuelve el .env del perfil LLM elegido.
 function Get-ProfileFile([string]$LlmSize) {
     if ($LlmSize -eq "low") { return $script:LowProfile }
     if ($LlmSize -eq "high") { return $script:HighProfile }
     Stop-Manualito "LLM invalido: $LlmSize"
 }
 
+# Construye la parte común de docker compose con envs y overrides.
 function Get-ComposePrefix([object]$Selection) {
     Assert-Accelerator $Selection.Accelerator
     $profile = Get-ProfileFile $Selection.Llm
@@ -625,11 +662,13 @@ function Get-ComposePrefix([object]$Selection) {
     return $args
 }
 
+# Ejecuta docker compose con la selección activa.
 function Invoke-Compose([string]$DockerPath, [object]$Selection, [string[]]$ComposeTail) {
     $prefix = Get-ComposePrefix $Selection
     Invoke-External "docker compose $($ComposeTail -join ' ')" $DockerPath (@("compose") + $prefix + $ComposeTail)
 }
 
+# Captura salida corta de compose para comprobaciones internas.
 function Invoke-DockerCaptureLines([string]$DockerPath, [object]$Selection, [string[]]$ComposeTail) {
     $prefix = Get-ComposePrefix $Selection
     $arguments = @("compose") + $prefix + $ComposeTail
@@ -643,6 +682,7 @@ function Invoke-DockerCaptureLines([string]$DockerPath, [object]$Selection, [str
     return @($output | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
 }
 
+# Devuelve la primera línea útil de una captura de Docker.
 function Invoke-DockerCapture([string]$DockerPath, [object]$Selection, [string[]]$ComposeTail) {
     $output = @(Invoke-DockerCaptureLines $DockerPath $Selection $ComposeTail)
     if ($output.Count -eq 0) {
@@ -651,10 +691,12 @@ function Invoke-DockerCapture([string]$DockerPath, [object]$Selection, [string[]
     return [string]$output[0]
 }
 
+# Consulta el modelo que realmente tiene cargado el contenedor LLM.
 function Get-RunningLlmModel([string]$DockerPath, [object]$Selection) {
     return Invoke-DockerCapture $DockerPath $Selection @("exec", "-T", "llm", "printenv", "OLLAMA_MODEL")
 }
 
+# Carga la selección guardada por setup.bat.
 function Load-Selection {
     if (-not (Test-Path -LiteralPath $script:SelectedEnv)) {
         return $null
@@ -670,6 +712,7 @@ function Load-Selection {
     }
 }
 
+# Usa una selección mínima para poder ejecutar compose antes del primer setup.
 function Get-ExistingSelectionForCompose {
     $selection = Load-Selection
     if ($null -ne $selection) {
@@ -678,10 +721,12 @@ function Get-ExistingSelectionForCompose {
     return [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract" }
 }
 
+# Lista servicios de Manualito que siguen arrancados.
 function Get-RunningManualitoServices([string]$DockerPath, [object]$Selection) {
     return @(Invoke-DockerCaptureLines $DockerPath $Selection @("ps", "--status=running", "--services"))
 }
 
+# Evita medir VRAM con Manualito consumiendo GPU salvo que el usuario lo acepte.
 function Resolve-RunningManualitoBeforeVram([string]$DockerPath) {
     if ($DryRun) {
         return
@@ -708,6 +753,7 @@ function Resolve-RunningManualitoBeforeVram([string]$DockerPath) {
     }
 }
 
+# Prepara configuración, guarda selección y deja las imágenes construidas.
 function Invoke-Setup([string]$DockerPath) {
     Resolve-RunningManualitoBeforeVram $DockerPath
     $nvidia = Get-NvidiaInfo
@@ -727,6 +773,7 @@ function Invoke-Setup([string]$DockerPath) {
     return $selection
 }
 
+# Arranca Manualito con la selección guardada o lanza setup si falta.
 function Invoke-Start([string]$DockerPath) {
     $selection = Load-Selection
     if ($null -eq $selection) {
@@ -756,6 +803,7 @@ function Invoke-Start([string]$DockerPath) {
     }
 }
 
+# Detiene Manualito con el mismo conjunto de compose usado para arrancar.
 function Invoke-Stop([string]$DockerPath) {
     $selection = Load-Selection
     if ($null -eq $selection) {

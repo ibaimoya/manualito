@@ -1,13 +1,13 @@
 services:
   ocr:
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:gpu
+    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:paddle-gpu
     build:
       args:
-        # cu118
+        # PaddleGPU usa CUDA 11.8 (cu118).
         OCR_RUNTIME_STAGE: paddle_gpu
     environment:
-      - PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
-      - OCR_ENGINE=paddle_gpu
+      PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: "True"
+      OCR_ENGINE: paddle_gpu
     volumes:
       - ocr-paddlex-gpu-cache:/home/appuser/.paddlex
     deploy:

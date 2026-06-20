@@ -45,6 +45,7 @@ $script:DockerLog = Join-Path $script:LogsDir "last-docker.log"
 $script:DockerOutLog = Join-Path $script:LogsDir "last-docker.out.log"
 $script:DockerErrLog = Join-Path $script:LogsDir "last-docker.err.log"
 $script:DockerExitLog = Join-Path $script:LogsDir "last-docker.exit.log"
+$script:DockerTailLines = 20
 $script:LlmVramReserveGb = 1.0
 $script:PaddleGpuVramBudgetGb = 3.0
 $script:PaddleGpuMinDriver = [version]"522.06"
@@ -182,7 +183,7 @@ function Write-LiveDockerBlock([int]$Top, [string]$State, [TimeSpan]$Elapsed, [s
         $safeLines = @($Lines | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })
     }
     try {
-        $lineCount = 6
+        $lineCount = $script:DockerTailLines
         [Console]::SetCursorPosition(0, $Top)
         Write-Host (Format-LiveLine ("    {0,-22} {1}" -f "estado", $State)) -ForegroundColor Gray
         Write-Host (Format-LiveLine ("    {0,-22} {1}" -f "transcurrido", (Format-Elapsed $Elapsed))) -ForegroundColor Gray
@@ -303,7 +304,7 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     while ($job.State -eq "Running") {
         Start-Sleep -Milliseconds 500
         if ($liveConsole) {
-            $recent = @(Get-RecentDockerLines @($script:DockerOutLog, $script:DockerErrLog) 6)
+            $recent = @(Get-RecentDockerLines @($script:DockerOutLog, $script:DockerErrLog) $script:DockerTailLines)
             Write-LiveDockerBlock $liveTop "en curso" $stopwatch.Elapsed $recent
         }
     }
@@ -333,7 +334,7 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     }
     if ($exitCode -ne 0) {
         if ($liveConsole) {
-            Write-LiveDockerBlock $liveTop "error" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) 6)
+            Write-LiveDockerBlock $liveTop "error" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) $script:DockerTailLines)
         } else {
             Write-Field "estado" "error"
             Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
@@ -348,11 +349,11 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
         exit 1
     }
     if ($liveConsole) {
-        Write-LiveDockerBlock $liveTop "listo" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) 6)
+        Write-LiveDockerBlock $liveTop "listo" $stopwatch.Elapsed @(Get-RecentDockerLines @($script:DockerLog) $script:DockerTailLines)
     } else {
         Write-Field "estado" "listo"
         Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
-        Write-DockerTail @(Get-RecentDockerLines @($script:DockerLog) 6)
+        Write-DockerTail @(Get-RecentDockerLines @($script:DockerLog) $script:DockerTailLines)
     }
 }
 
@@ -583,16 +584,8 @@ function Format-MenuSelection([string]$SelectedAccelerator, [string]$LlmSize) {
     return "{0,-6} + {1,-4} ({2})" -f $SelectedAccelerator, $LlmSize, (Get-LlmModel $LlmSize)
 }
 
-function Write-MenuOption([string]$Key, [string]$Choice, [string]$Description) {
-    $line = "    {0,-6} {1,-38}" -f $Key, $Choice
-    if (-not [string]::IsNullOrWhiteSpace($Description)) {
-        $line += " $Description"
-    }
-    Write-Host $line -ForegroundColor Gray
-}
-
-function Write-OcrMenuOption([string]$Key, [string]$Choice, [string]$Description) {
-    $line = "    {0,-6} {1,-14}" -f $Key, $Choice
+function Write-MenuOption([string]$Key, [string]$Choice, [string]$Description, [int]$ChoiceWidth = 38) {
+    $line = "    {0,-6} {1,-$ChoiceWidth}" -f $Key, $Choice
     if (-not [string]::IsNullOrWhiteSpace($Description)) {
         $line += " $Description"
     }
@@ -686,15 +679,15 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
 
 function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [string]$RecommendationDetail) {
     Write-Step "Seleccion de OCR"
-    Write-OcrMenuOption "Enter" $RecommendedOcr "<- recomendada"
-    Write-OcrMenuOption "1" "tesseract" "maxima compatibilidad"
-    Write-OcrMenuOption "2" "paddle_cpu" "muy fiable, pero lento"
+    Write-MenuOption "Enter" $RecommendedOcr "<- recomendada" 14
+    Write-MenuOption "1" "tesseract" "maxima compatibilidad" 14
+    Write-MenuOption "2" "paddle_cpu" "muy fiable, pero lento" 14
     if ($PaddleGpuStatus.Available) {
-        Write-OcrMenuOption "3" "paddle_gpu" "mejor OCR esperado; requiere margen de VRAM"
+        Write-MenuOption "3" "paddle_gpu" "mejor OCR esperado; requiere margen de VRAM" 14
     } else {
-        Write-OcrMenuOption "3" "paddle_gpu" $PaddleGpuStatus.Reason
+        Write-MenuOption "3" "paddle_gpu" $PaddleGpuStatus.Reason 14
     }
-    Write-OcrMenuOption "5" "exit" "salir sin cambios"
+    Write-MenuOption "5" "exit" "salir sin cambios" 14
     if ($RecommendedOcr -eq "paddle_gpu") {
         Write-Note "paddle_gpu se recomienda porque $RecommendationDetail; Tesseract sigue siendo la opcion conservadora."
     } else {

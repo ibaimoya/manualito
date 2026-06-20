@@ -99,9 +99,6 @@ class GameDetailResponse(StrictModel):
     name: str = Field(max_length=GAME_NAME_MAX_LENGTH)
     bgg_id: int | None
     year_published: int | None
-    min_players: int | None
-    max_players: int | None
-    playing_time_minutes: int | None
     status: str
     my_rating: RatingResponse | None
     manuals: list[GamePoolManualItem]

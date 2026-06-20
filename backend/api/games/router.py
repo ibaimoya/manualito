@@ -99,14 +99,12 @@ async def get_game_detail_handler(
     auth: CurrentAuth,
     game_id: UUID,
     session: DbSession,
-    client: HttpClient,
 ) -> GameDetailResponse:
     """Devuelve el hub de un juego; uno oculto se sirve en solo lectura."""
     return await get_game_detail(
         session,
         auth=auth,
         game_id=game_id,
-        client=client,
     )
 
 

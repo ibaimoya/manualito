@@ -6,20 +6,16 @@ from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import anyio
-import httpx
 import pytest
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.exc import SQLAlchemyError
 
 from api.auth.dependencies import get_current_auth
 from api.auth.service import AuthenticatedSession
-from api.games.bgg import BggGameDetails, fetch_board_game_details
-from api.games.exceptions import BggUnavailableError, GameNotFoundError
+from api.games.exceptions import GameNotFoundError
 from api.games.repository import (
     count_user_game_conversations,
     get_game_for_detail,
     list_game_pool_manuals,
-    update_game_play_metadata,
 )
 from api.games.schemas import GameDetailResponse
 from api.games.service import get_game_detail
@@ -92,7 +88,7 @@ def test_get_game_detail_missing_game_returns_stable_404(
 
 def test_get_game_detail_service_composes_personal_view(monkeypatch):
     """El servicio agrega juego, manuales visibles, conversaciones y rating."""
-    game = _game_row(min_players=3, max_players=4, playing_time_minutes=60)
+    game = _game_row()
     manual = SimpleNamespace(
         id=uuid4(),
         title="Edición clásica",
@@ -109,7 +105,6 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
         created_at=_NOW,
         updated_at=_NOW,
     )
-    fetch_mock = AsyncMock()
     monkeypatch.setattr(
         "api.games.service.repository.get_game_for_detail",
         AsyncMock(return_value=game),
@@ -127,7 +122,6 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
         AsyncMock(return_value=True),
     )
     monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=rating))
-    monkeypatch.setattr("api.games.service.fetch_board_game_details", fetch_mock)
 
     response = anyio.run(
         partial(
@@ -135,19 +129,16 @@ def test_get_game_detail_service_composes_personal_view(monkeypatch):
             _FAKE_SESSION,
             auth=_auth(),
             game_id=_GAME_ID,
-            client=object(),
         )
     )
 
     assert isinstance(response, GameDetailResponse)
-    assert response.min_players == 3
     assert response.conversations_count == 12
     assert response.my_rating is not None
     assert response.my_rating.score == 4
     assert response.manuals[0].is_own is True
     assert response.manuals[0].duplicate_page_count == 2
     assert response.is_following is True
-    fetch_mock.assert_not_called()
 
 
 def test_get_game_detail_without_rating_returns_null(monkeypatch):
@@ -176,216 +167,16 @@ def test_get_game_detail_without_rating_returns_null(monkeypatch):
             _FAKE_SESSION,
             auth=_auth(),
             game_id=_GAME_ID,
-            client=object(),
         )
     )
 
     assert response.my_rating is None
     assert response.manuals == []
-    assert response.min_players is None
     assert response.is_following is False
 
 
-def test_get_game_detail_fills_play_metadata_from_bgg_once(monkeypatch):
-    """La primera visita completa los metadatos de BGG con escritura condicional."""
-    update_mock = AsyncMock()
-    monkeypatch.setattr(
-        "api.games.service.repository.get_game_for_detail",
-        AsyncMock(return_value=_game_row()),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.list_game_pool_manuals",
-        AsyncMock(return_value=[]),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.count_user_game_conversations",
-        AsyncMock(return_value=0),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.is_following",
-        AsyncMock(return_value=False),
-    )
-    monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
-    monkeypatch.setattr(
-        "api.games.service.fetch_board_game_details",
-        AsyncMock(
-            return_value=BggGameDetails(
-                min_players=3,
-                max_players=4,
-                playing_time_minutes=60,
-            )
-        ),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.update_game_play_metadata",
-        update_mock,
-    )
-
-    response = anyio.run(
-        partial(
-            get_game_detail,
-            _FAKE_SESSION,
-            auth=_auth(),
-            game_id=_GAME_ID,
-            client=object(),
-        )
-    )
-
-    assert response.min_players == 3
-    assert response.playing_time_minutes == 60
-    update_mock.assert_awaited_once()
-    assert update_mock.await_args.kwargs["min_players"] == 3
-
-
-def test_get_game_detail_survives_bgg_outage(monkeypatch):
-    """Si BGG no responde, el hub se sirve igualmente sin metadatos."""
-    update_mock = AsyncMock()
-    monkeypatch.setattr(
-        "api.games.service.repository.get_game_for_detail",
-        AsyncMock(return_value=_game_row()),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.list_game_pool_manuals",
-        AsyncMock(return_value=[]),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.count_user_game_conversations",
-        AsyncMock(return_value=0),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.is_following",
-        AsyncMock(return_value=False),
-    )
-    monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
-    monkeypatch.setattr(
-        "api.games.service.fetch_board_game_details",
-        AsyncMock(side_effect=BggUnavailableError),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.update_game_play_metadata",
-        update_mock,
-    )
-
-    response = anyio.run(
-        partial(
-            get_game_detail,
-            _FAKE_SESSION,
-            auth=_auth(),
-            game_id=_GAME_ID,
-            client=object(),
-        )
-    )
-
-    assert response.min_players is None
-    update_mock.assert_not_called()
-
-
-def test_get_game_detail_skips_write_when_bgg_has_no_data(monkeypatch):
-    """Una respuesta vacía de BGG no escribe nada para reintentar otro día."""
-    update_mock = AsyncMock()
-    monkeypatch.setattr(
-        "api.games.service.repository.get_game_for_detail",
-        AsyncMock(return_value=_game_row()),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.list_game_pool_manuals",
-        AsyncMock(return_value=[]),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.count_user_game_conversations",
-        AsyncMock(return_value=0),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.is_following",
-        AsyncMock(return_value=False),
-    )
-    monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
-    monkeypatch.setattr(
-        "api.games.service.fetch_board_game_details",
-        AsyncMock(
-            return_value=BggGameDetails(
-                min_players=None,
-                max_players=None,
-                playing_time_minutes=None,
-            )
-        ),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.update_game_play_metadata",
-        update_mock,
-    )
-
-    anyio.run(
-        partial(
-            get_game_detail,
-            _FAKE_SESSION,
-            auth=_auth(),
-            game_id=_GAME_ID,
-            client=object(),
-        )
-    )
-
-    update_mock.assert_not_called()
-
-
-def test_get_game_detail_keeps_metadata_when_write_fails(monkeypatch):
-    """Un fallo al guardar metadatos no rompe el hub ni pierde los valores."""
-    session = SimpleNamespace(rollbacks=0)
-
-    async def rollback():
-        await anyio.lowlevel.checkpoint()
-        session.rollbacks += 1
-
-    session.rollback = rollback
-    monkeypatch.setattr(
-        "api.games.service.repository.get_game_for_detail",
-        AsyncMock(return_value=_game_row()),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.list_game_pool_manuals",
-        AsyncMock(return_value=[]),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.count_user_game_conversations",
-        AsyncMock(return_value=0),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.is_following",
-        AsyncMock(return_value=False),
-    )
-    monkeypatch.setattr("api.games.service.get_user_rating", AsyncMock(return_value=None))
-    monkeypatch.setattr(
-        "api.games.service.fetch_board_game_details",
-        AsyncMock(
-            return_value=BggGameDetails(
-                min_players=2,
-                max_players=5,
-                playing_time_minutes=45,
-            )
-        ),
-    )
-    monkeypatch.setattr(
-        "api.games.service.repository.update_game_play_metadata",
-        AsyncMock(side_effect=SQLAlchemyError("boom")),
-    )
-
-    response = anyio.run(
-        partial(
-            get_game_detail,
-            session,
-            auth=_auth(),
-            game_id=_GAME_ID,
-            client=object(),
-        )
-    )
-
-    assert response.min_players == 2
-    assert response.max_players == 5
-    assert session.rollbacks == 1
-
-
 def test_get_game_for_detail_returns_row_when_game_exists():
-    """Un juego vivo devuelve su fila con los metadatos de mesa."""
+    """Un juego vivo devuelve la fila base del hub."""
     row = SimpleNamespace(id=_GAME_ID, name="Catan", status="hidden")
 
     class FakeResult:
@@ -486,107 +277,6 @@ def test_count_user_game_conversations_filters_deleted():
     assert "conversations.deleted_at IS NULL" in compiled
 
 
-def test_update_game_play_metadata_only_fills_empty_columns():
-    """La escritura condicional convierte la carrera de dos visitas en no-op."""
-
-    class FakeSession:
-        def __init__(self):
-            self.commits = 0
-
-        async def execute(self, statement):
-            await anyio.lowlevel.checkpoint()
-            self.statement = statement
-            return SimpleNamespace(rowcount=1)
-
-        async def commit(self):
-            await anyio.lowlevel.checkpoint()
-            self.commits += 1
-
-    session = FakeSession()
-
-    anyio.run(
-        partial(
-            update_game_play_metadata,
-            session,
-            game_id=_GAME_ID,
-            min_players=3,
-            max_players=4,
-            playing_time_minutes=60,
-        )
-    )
-
-    assert session.commits == 1
-    compiled = _compile(session.statement)
-    assert "games.min_players IS NULL" in compiled
-    assert "games.max_players IS NULL" in compiled
-    assert "games.playing_time_minutes IS NULL" in compiled
-
-
-def test_fetch_board_game_details_parses_thing_response():
-    """El endpoint thing de BGG se traduce a metadatos saneados."""
-    client = _bgg_client(
-        200,
-        """
-        <items>
-          <item type="boardgame" id="13">
-            <minplayers value="3" />
-            <maxplayers value="4" />
-            <playingtime value="60" />
-          </item>
-        </items>
-        """,
-    )
-
-    details = anyio.run(partial(fetch_board_game_details, client, bgg_id=13))
-
-    assert details == BggGameDetails(min_players=3, max_players=4, playing_time_minutes=60)
-
-
-def test_fetch_board_game_details_discards_incoherent_player_range():
-    """Un máximo menor que el mínimo invalida ambos valores."""
-    client = _bgg_client(
-        200,
-        """
-        <items>
-          <item type="boardgame" id="13">
-            <minplayers value="4" />
-            <maxplayers value="2" />
-            <playingtime value="0" />
-          </item>
-        </items>
-        """,
-    )
-
-    details = anyio.run(partial(fetch_board_game_details, client, bgg_id=13))
-
-    assert details == BggGameDetails(
-        min_players=None,
-        max_players=None,
-        playing_time_minutes=None,
-    )
-
-
-def test_fetch_board_game_details_handles_missing_item():
-    """Una respuesta sin item devuelve metadatos vacíos en vez de fallar."""
-    client = _bgg_client(200, "<items></items>")
-
-    details = anyio.run(partial(fetch_board_game_details, client, bgg_id=99))
-
-    assert details == BggGameDetails(
-        min_players=None,
-        max_players=None,
-        playing_time_minutes=None,
-    )
-
-
-def test_fetch_board_game_details_raises_for_malformed_xml():
-    """XML mal formado del thing se traduce a excepción de dominio."""
-    client = _bgg_client(200, "<items>")
-
-    with pytest.raises(BggUnavailableError):
-        anyio.run(partial(fetch_board_game_details, client, bgg_id=13))
-
-
 def _auth() -> AuthenticatedSession:
     """Construye una sesión autenticada mínima para el servicio."""
     return SimpleNamespace(user=SimpleNamespace(id=_USER_ID))
@@ -621,9 +311,6 @@ def _auth_session() -> AuthenticatedSession:
 def _game_row(
     *,
     bgg_id: int | None = 13,
-    min_players: int | None = None,
-    max_players: int | None = None,
-    playing_time_minutes: int | None = None,
 ) -> SimpleNamespace:
     """Construye la fila de juego que devuelve el repositorio."""
     return SimpleNamespace(
@@ -631,9 +318,6 @@ def _game_row(
         name="Catan",
         bgg_id=bgg_id,
         year_published=1995,
-        min_players=min_players,
-        max_players=max_players,
-        playing_time_minutes=playing_time_minutes,
         status="active",
     )
 
@@ -645,9 +329,6 @@ def _detail_response() -> GameDetailResponse:
         name="Catan",
         bgg_id=13,
         year_published=1995,
-        min_players=3,
-        max_players=4,
-        playing_time_minutes=60,
         status="active",
         my_rating={
             "game_id": _GAME_ID,
@@ -669,13 +350,6 @@ def _detail_response() -> GameDetailResponse:
         conversations_count=12,
         is_following=True,
     )
-
-
-def _bgg_client(status_code: int, text: str):
-    """Construye un cliente HTTP falso con una respuesta XML."""
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.get.side_effect = [httpx.Response(status_code, text=text)]
-    return client
 
 
 def _compile(statement) -> str:

@@ -31,9 +31,6 @@ export interface GameDetail {
   name: string;
   bgg_id: number | null;
   year_published: number | null;
-  min_players: number | null;
-  max_players: number | null;
-  playing_time_minutes: number | null;
   status: string;
   my_rating: GameRating | null;
   /** Si el usuario sigue el juego (aparece en su biblioteca). */

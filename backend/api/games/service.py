@@ -7,14 +7,13 @@ from uuid import UUID
 from weakref import WeakValueDictionary
 
 import httpx
-from sqlalchemy.engine import Row
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import config
 from api.auth.service import AuthenticatedSession
 from api.games import repository
-from api.games.bgg import fetch_board_game_details, search_board_games
+from api.games.bgg import search_board_games
 from api.games.exceptions import BggUnavailableError
 from api.games.schemas import (
     GameDetailResponse,
@@ -97,11 +96,9 @@ async def get_game_detail(
     *,
     auth: AuthenticatedSession,
     game_id: UUID,
-    client: httpx.AsyncClient,
 ) -> GameDetailResponse:
     """Construye el hub de un juego con la vista personal del usuario."""
     game = await repository.get_game_for_detail(session, game_id=game_id)
-    play_metadata = await _resolve_play_metadata(session, game=game, client=client)
     manuals = await repository.list_game_pool_manuals(
         session,
         game_id=game_id,
@@ -123,9 +120,6 @@ async def get_game_detail(
         name=game.name,
         bgg_id=game.bgg_id,
         year_published=game.year_published,
-        min_players=play_metadata[0],
-        max_players=play_metadata[1],
-        playing_time_minutes=play_metadata[2],
         status=game.status,
         my_rating=RatingResponse.model_validate(rating) if rating is not None else None,
         manuals=[GamePoolManualItem.model_validate(manual) for manual in manuals],
@@ -164,48 +158,6 @@ async def unfollow_game(
         game_id=game_id,
         following=False,
     )
-
-
-async def _resolve_play_metadata(
-    session: AsyncSession,
-    *,
-    game: Row,
-    client: httpx.AsyncClient,
-) -> tuple[int | None, int | None, int | None]:
-    """Completa jugadores y duración desde BGG la primera vez que se piden."""
-    if (
-        game.min_players is not None
-        or game.max_players is not None
-        or game.playing_time_minutes is not None
-        or game.bgg_id is None
-    ):
-        return game.min_players, game.max_players, game.playing_time_minutes
-
-    try:
-        details = await fetch_board_game_details(client, bgg_id=game.bgg_id)
-    except BggUnavailableError:
-        logger.warning("No se pudieron completar metadatos de BGG para un juego.")
-        return None, None, None
-
-    if (
-        details.min_players is None
-        and details.max_players is None
-        and details.playing_time_minutes is None
-    ):
-        return None, None, None
-
-    try:
-        await repository.update_game_play_metadata(
-            session,
-            game_id=game.id,
-            min_players=details.min_players,
-            max_players=details.max_players,
-            playing_time_minutes=details.playing_time_minutes,
-        )
-    except SQLAlchemyError:
-        await session.rollback()
-        logger.warning("No se pudieron guardar metadatos de BGG.", exc_info=True)
-    return details.min_players, details.max_players, details.playing_time_minutes
 
 
 async def _cache_bgg_results_once(

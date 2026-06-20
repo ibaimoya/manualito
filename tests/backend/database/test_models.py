@@ -146,6 +146,9 @@ def test_games_schema_supports_bgg_catalog_and_typeahead():
     assert games.c.name_key.nullable is False
     assert games.c.name_key.unique is None
     assert games.c.bgg_id.unique is None
+    assert "min_players" not in games.c
+    assert "max_players" not in games.c
+    assert "playing_time_minutes" not in games.c
     assert isinstance(games.c.status.type, String)
     assert str(games.c.status.server_default.arg) == "'active'"
     assert _single_fk(games.c.created_by_user_id).ondelete == "SET NULL"
@@ -169,6 +172,38 @@ def test_games_schema_supports_bgg_catalog_and_typeahead():
     assert _compile(bgg_index.dialect_options["postgresql"]["where"]) == (
         "bgg_id IS NOT NULL AND deleted_at IS NULL"
     )
+
+
+def test_remove_bgg_play_metadata_migration_drops_retired_columns(monkeypatch):
+    """La migración 0025 borra los metadatos de mesa que ya no se exponen."""
+    migration = _load_migration("0025_remove_bgg_play_metadata.py")
+    calls = []
+
+    def record(name):
+        def recorder(*args, **kwargs):
+            calls.append((name, args, kwargs))
+
+        return recorder
+
+    fake_op = SimpleNamespace(
+        f=lambda name: name,
+        drop_constraint=record("drop_constraint"),
+        drop_column=record("drop_column"),
+    )
+    monkeypatch.setattr(migration, "op", fake_op)
+
+    migration.upgrade()
+
+    assert [args[0] for name, args, _ in calls if name == "drop_constraint"] == [
+        "ck_games_playing_time_minutes_positive",
+        "ck_games_max_players_positive",
+        "ck_games_min_players_positive",
+    ]
+    assert [args[1] for name, args, _ in calls if name == "drop_column"] == [
+        "playing_time_minutes",
+        "max_players",
+        "min_players",
+    ]
 
 
 def test_manuals_schema_tracks_owner_game_visibility_and_index_status():

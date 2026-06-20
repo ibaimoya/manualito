@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select, update
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -250,9 +250,6 @@ async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> Row:
             Game.name,
             Game.bgg_id,
             Game.year_published,
-            Game.min_players,
-            Game.max_players,
-            Game.playing_time_minutes,
             Game.status,
         ).where(
             Game.id == game_id,
@@ -494,32 +491,6 @@ async def count_user_game_conversations(
         )
     )
     return int(result.scalar_one())
-
-
-async def update_game_play_metadata(
-    session: AsyncSession,
-    *,
-    game_id: UUID,
-    min_players: int | None,
-    max_players: int | None,
-    playing_time_minutes: int | None,
-) -> None:
-    """Rellena metadatos de mesa solo si nadie los escribió antes."""
-    await session.execute(
-        update(Game)
-        .where(
-            Game.id == game_id,
-            Game.min_players.is_(None),
-            Game.max_players.is_(None),
-            Game.playing_time_minutes.is_(None),
-        )
-        .values(
-            min_players=min_players,
-            max_players=max_players,
-            playing_time_minutes=playing_time_minutes,
-        )
-    )
-    await session.commit()
 
 
 async def upsert_bgg_games(

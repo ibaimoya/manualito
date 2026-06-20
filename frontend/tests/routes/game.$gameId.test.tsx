@@ -32,15 +32,13 @@ function renderHub() {
 }
 
 describe('/game/$gameId · cabecera', () => {
-  it('muestra nombre, año, metadatos BGG y el chip de IA', async () => {
+  it('muestra nombre, año y el chip de IA', async () => {
     renderHub();
     expect((await screen.findAllByRole('heading', { name: 'Catan' })).length).toBeGreaterThan(0);
     // El año se interpola en un nodo aparte: comparamos el texto del párrafo.
     expect(
       screen.getByText((_, element) => element?.textContent === 'Juego de mesa · 1995'),
     ).toBeInTheDocument();
-    expect(screen.getByText('3–4 jugadores')).toBeInTheDocument();
-    expect(screen.getByText('90 min')).toBeInTheDocument();
     expect(screen.getByText('Generado con IA')).toBeInTheDocument();
   });
 

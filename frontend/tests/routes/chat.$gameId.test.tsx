@@ -2,7 +2,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse, delay } from 'msw';
-import { Route as ChatRoute } from '@/routes/_app.chat.$gameId';
+import {
+  PENDING_ASSISTANT_POLL_INTERVAL_MS,
+  Route as ChatRoute,
+} from '@/routes/_app.chat.$gameId';
 import { server } from '@tests/_helpers/server';
 import { failSendMessage, SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
@@ -50,6 +53,11 @@ function renderChat(gameId: string, search?: { q?: string; c?: string }) {
     },
   });
 }
+
+const PENDING_ASSISTANT_POLL_EXPECTED_READS = 2;
+const PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS =
+  PENDING_ASSISTANT_POLL_INTERVAL_MS * (PENDING_ASSISTANT_POLL_EXPECTED_READS + 2);
+const PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS = PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS + 3_000;
 
 describe('/chat/$gameId · search schema', () => {
   it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
@@ -248,11 +256,18 @@ describe('/chat/$gameId', () => {
 
     expect(await screen.findByText('async')).toBeInTheDocument();
     expect(await screen.findByRole('status', { name: /Generando respuesta/i })).toBeInTheDocument();
-    await waitFor(() => expect(messageReads).toBeGreaterThanOrEqual(2), { timeout: 4000 });
+    await waitFor(
+      () => expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS),
+      { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
+    );
     expect(
-      await screen.findByText('Respuesta generada por polling.', {}, { timeout: 4000 }),
+      await screen.findByText(
+        'Respuesta generada por polling.',
+        {},
+        { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
+      ),
     ).toBeInTheDocument();
-  });
+  }, PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS);
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {
     renderChat('test-game-001');

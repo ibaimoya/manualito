@@ -53,8 +53,10 @@ const WELCOME_SUGGESTIONS = [
   '¿Se puede pasar el turno?',
 ];
 
+export const PENDING_ASSISTANT_POLL_INTERVAL_MS = 1_500;
+
 function pendingAssistantPollInterval(messages: ConversationMessage[] | undefined): number | false {
-  return hasPendingAssistantMessage(messages ?? []) ? 1500 : false;
+  return hasPendingAssistantMessage(messages ?? []) ? PENDING_ASSISTANT_POLL_INTERVAL_MS : false;
 }
 
 function hasPendingAssistantMessage(messages: readonly ConversationMessage[]): boolean {

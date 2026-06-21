@@ -47,20 +47,15 @@ async def test_advisory_lock_rolls_back_open_transaction_before_unlock(monkeypat
     """Una transacción a medias se revierte antes de soltar el lock."""
     conn = _FakeConnection(acquired=True)
     conn.in_transaction = lambda: True
-    rollbacks = []
-
-    async def rollback():
-        rollbacks.append(True)
-
-    conn.rollback = rollback
+    conn.rollback = AsyncMock()
     session_factory = MagicMock(return_value=_AsyncContext(object()))
     monkeypatch.setattr(advisory_locks, "get_engine", lambda: _FakeEngine(conn))
     monkeypatch.setattr(advisory_locks, "AsyncSession", session_factory)
 
-    async with advisory_locks.advisory_session_lock("manual:abc"):
-        pass
+    async with advisory_locks.advisory_session_lock("manual:abc") as locked_session:
+        assert locked_session is not None
 
-    assert rollbacks == [True]
+    conn.rollback.assert_awaited_once_with()
     assert conn.unlock_params == {"key": "manual:abc"}
 
 
@@ -72,8 +67,8 @@ async def test_advisory_lock_namespaces_keys_per_resource(monkeypatch):
     monkeypatch.setattr(advisory_locks, "get_engine", lambda: _FakeEngine(conn))
     monkeypatch.setattr(advisory_locks, "AsyncSession", session_factory)
 
-    async with advisory_locks.advisory_session_lock("explanation:user:game"):
-        pass
+    async with advisory_locks.advisory_session_lock("explanation:user:game") as locked_session:
+        assert locked_session is not None
 
     assert conn.lock_params == {"key": "explanation:user:game"}
 

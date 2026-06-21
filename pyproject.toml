@@ -129,7 +129,7 @@ explicit = true
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["backend", "tests"]
+src = ["backend"]
 extend-exclude = [
     "htmlcov",
     "backend/ocr/.ocr_cache",
@@ -140,7 +140,7 @@ extend-exclude = [
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "C4", "RUF"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["backend/tests"]
 log_cli = false
 log_level = "WARNING"
 
@@ -148,9 +148,8 @@ log_level = "WARNING"
 branch = true
 relative_files = true
 source = ["backend"]
-# El entorno Alembic (env.py) y las migraciones no son lógica unit-testeable:
-# se ejercitan en el job de migraciones contra Postgres, no en pytest.
-omit = ["backend/database/alembic/*"]
+# Alembic se valida en su job de migraciones.
+omit = ["backend/database/alembic/*", "backend/tests/*"]
 
 [tool.coverage.report]
 show_missing = true

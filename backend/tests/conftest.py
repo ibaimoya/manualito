@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 # Añade los servicios al path para que los tests encuentren los módulos.
-_root = Path(__file__).resolve().parent.parent
+_root = Path(__file__).resolve().parents[2]
 
 
 def _load_env_file(path: Path) -> None:

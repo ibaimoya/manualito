@@ -224,10 +224,10 @@ secretos del entorno de despliegue.
 uv sync --locked --no-default-groups --only-group test
 
 # Backend: lint
-uv run --locked --no-default-groups --only-group test ruff check backend tests
+uv run --locked --no-default-groups --only-group test ruff check backend
 
 # Backend: tests con cobertura
-uv run --locked --no-default-groups --only-group test pytest -v --cov=backend
+uv run --locked --no-default-groups --only-group test pytest -v backend/tests --cov=backend
 
 # Backend: migraciones
 uv run --locked --no-default-groups --only-group test alembic -c backend/database/alembic.ini upgrade head
@@ -261,13 +261,13 @@ backend/
   llm/        servicio de generación con Ollama
   ocr/        servicio OCR con Tesseract y PaddleOCR
   rag/        embeddings, ChromaDB y recuperación semántica
+  tests/      tests de backend
 frontend/
   src/        app React, rutas, features, cliente API y estilos
   tests/      tests de UI, rutas, hooks y cliente
 config/       configuración de runtime
 deploy/       scripts, perfiles y overrides de arranque local
 secrets/      secretos locales de desarrollo
-tests/        tests de backend
 compose.yaml  orquestación principal
 ```
 

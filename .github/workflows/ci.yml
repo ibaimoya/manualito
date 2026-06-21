@@ -53,7 +53,7 @@ jobs:
         run: uv sync --locked --no-default-groups --only-group test
 
       - name: Comprobar lint con Ruff
-        run: uv run --locked --no-default-groups --only-group test ruff check backend tests --output-format=github
+        run: uv run --locked --no-default-groups --only-group test ruff check backend --output-format=github
 
   tests:
     name: Tests unitarios
@@ -93,7 +93,7 @@ jobs:
         run: uv sync --locked --no-default-groups --only-group test
 
       - name: Ejecutar tests
-        run: uv run --locked --no-default-groups --only-group test pytest -v --cov=backend --cov-report=xml:coverage.xml --junitxml=pytest-report.xml
+        run: uv run --locked --no-default-groups --only-group test pytest -v backend/tests --cov=backend --cov-report=xml:coverage.xml --junitxml=pytest-report.xml
 
       - name: Guardar reportes de tests y cobertura
         uses: actions/upload-artifact@v4

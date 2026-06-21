@@ -1,0 +1,57 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Windows.
+[*.{bat,cmd}]
+end_of_line = crlf
+indent_size = 4
+
+[*.{ps1,psm1,psd1}]
+charset = utf-8-bom
+end_of_line = crlf
+indent_size = 4
+
+# Unix/Linux.
+[*.sh]
+end_of_line = lf
+indent_size = 4
+
+# Backend.
+[*.{py,py3,pyi,pyw,pyx,pxd,mako}]
+indent_size = 4
+
+# Frontend y configuración.
+[*.{ts,tsx,js,jsx,json,yaml,yml,toml,css,html,svg}]
+indent_size = 2
+
+# Docker.
+[{Dockerfile,*.Dockerfile,Dockerfile.*}]
+indent_size = 4
+
+# Documentación y memoria.
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+[*.{tex,ltx,latex,cls,sty,bib,bst,bbx,cbx,lbx}]
+indent_size = 2
+
+# Make usa tabuladores por convención.
+[{Makefile,makefile,GNUmakefile}]
+indent_style = tab
+indent_size = unset
+
+# Binarios: no aplicar reglas de texto si algún editor los abre.
+[*.{db,p,pkl,pickle,pyc,pyo,pyd,jpg,jpeg,png,webp,ico,pdf,zip}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset

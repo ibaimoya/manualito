@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag existente a publicar, por ejemplo v0.1.0"
+        description: "Tag existente a publicar, por ejemplo v1.0.0"
         required: true
         type: string
 
@@ -36,6 +36,8 @@ jobs:
 
       - name: Resolver release
         id: release
+        env:
+          TAG_INPUT: ${{ inputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -43,13 +45,13 @@ jobs:
           git fetch --force --tags origin
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            tag="${{ inputs.tag }}"
+            tag="$TAG_INPUT"
           else
             tag="${GITHUB_REF_NAME}"
           fi
 
           if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo "::error::El tag debe tener formato SemVer con prefijo v, por ejemplo v0.1.0 o v0.1.0-rc.1."
+            echo "::error::El tag debe tener formato SemVer con prefijo v, por ejemplo v1.0.0 o v1.0.0-rc.1."
             exit 1
           fi
 
@@ -59,6 +61,7 @@ jobs:
           fi
 
           version="${tag#v}"
+          project_version="${version%%-*}"
           is_prerelease=false
           if [[ "$version" == *-* ]]; then
             is_prerelease=true
@@ -67,23 +70,28 @@ jobs:
           {
             echo "tag=$tag"
             echo "version=$version"
+            echo "project_version=$project_version"
             echo "is_prerelease=$is_prerelease"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Comprobar rama principal
+      - name: Comprobar rama principal y fijar tag
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
 
-          git fetch origin "$DEFAULT_BRANCH"
-          if ! git merge-base --is-ancestor "refs/tags/${{ steps.release.outputs.tag }}^{commit}" "origin/$DEFAULT_BRANCH"; then
-            echo "::error::El tag ${{ steps.release.outputs.tag }} no apunta a un commit incluido en $DEFAULT_BRANCH."
+          git fetch origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
+          if ! git merge-base --is-ancestor "refs/tags/${TAG}^{commit}" "refs/remotes/origin/${DEFAULT_BRANCH}"; then
+            echo "::error::El tag ${TAG} no apunta a un commit incluido en $DEFAULT_BRANCH."
             exit 1
           fi
 
+          git checkout --detach "refs/tags/${TAG}^{commit}"
+
       - name: Comprobar versiones del proyecto
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          PROJECT_VERSION: ${{ steps.release.outputs.project_version }}
         run: |
           python - <<'PY'
           import json
@@ -111,7 +119,7 @@ jobs:
               raise RuntimeError(f"No se ha encontrado sonar.projectVersion en {path}")
 
 
-          expected = os.environ["VERSION"]
+          expected = os.environ["PROJECT_VERSION"]
           versions = {
               ".env APP_VERSION": read_env_value(".env", "APP_VERSION"),
               "pyproject.toml": tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))[
@@ -127,7 +135,7 @@ jobs:
           if mismatches:
               for name, value in mismatches.items():
                   print(
-                      f"::error::{name} declara {value}, pero el tag pide {expected}.",
+                      f"::error::{name} declara {value}, pero la versión base del tag pide {expected}.",
                       file=sys.stderr,
                   )
               sys.exit(1)
@@ -136,10 +144,109 @@ jobs:
               print(f"{name}: {value}")
           PY
 
+      - name: Preparar notas de release
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          changelog="CHANGELOG.md"
+          output="dist/release-notes.md"
+          allowed_categories="Added Changed Deprecated Removed Fixed Security"
+
+          if [ ! -f "$changelog" ]; then
+            echo "::error::No existe $changelog."
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$output")"
+          tmp="${output}.tmp"
+          trap 'rm -f "$tmp"' EXIT
+
+          awk -v version="$VERSION" -v allowed="$allowed_categories" '
+          BEGIN {
+            split(allowed, names, " ")
+            for (i in names) {
+              allowed_name[names[i]] = 1
+            }
+          }
+
+          function fail(message) {
+            print "::error::" message > "/dev/stderr"
+            failed = 1
+          }
+
+          function is_target_heading(line) {
+            return substr(line, 1, length("## [" version "]")) == "## [" version "]"
+          }
+
+          function is_valid_target_heading(line) {
+            return line ~ ("^## \\[" version "\\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$")
+          }
+
+          /^## / {
+            if (is_target_heading($0)) {
+              found += 1
+              if (found > 1) {
+                fail("La versión " version " aparece más de una vez en CHANGELOG.md.")
+              }
+              if (!is_valid_target_heading($0)) {
+                fail("La sección " version " debe tener formato: ## [" version "] - YYYY-MM-DD.")
+              }
+              in_release = 1
+              print
+              next
+            }
+            if (in_release) {
+              in_release = 0
+            }
+          }
+
+          in_release {
+            if ($0 ~ /^### /) {
+              category = substr($0, 5)
+              if (!(category in allowed_name)) {
+                fail("Apartado no permitido en " version ": " category ". Permitidos: " allowed ".")
+              } else if (category in seen_category) {
+                fail("Apartado duplicado en " version ": " category ".")
+              } else {
+                seen_category[category] = 1
+                category_count += 1
+              }
+              current_category = category
+            } else if ($0 ~ /^#/) {
+              fail("Solo se permiten apartados ### dentro de la versión " version ": " $0)
+            } else if (current_category != "" && $0 ~ /^[[:space:]]*[-*] /) {
+              category_has_entry[current_category] = 1
+            }
+            print
+          }
+
+          END {
+            if (found == 0) {
+              fail("CHANGELOG.md no contiene la versión " version ".")
+            } else if (category_count == 0) {
+              fail("La versión " version " no contiene ningún apartado de cambios.")
+            } else {
+              for (category in seen_category) {
+                if (!(category in category_has_entry)) {
+                  fail("El apartado " category " de " version " no contiene entradas.")
+                }
+              }
+            }
+            if (failed) {
+              exit 1
+            }
+          }
+          ' "$changelog" > "$tmp"
+
+          mv "$tmp" "$output"
+          trap - EXIT
+
       - name: Calcular checksums de archivos fuente
         env:
           TAG: ${{ steps.release.outputs.tag }}
-          REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
@@ -148,16 +255,13 @@ jobs:
 
           zip_name="github-source-${TAG}.zip"
           tar_name="github-source-${TAG}.tar.gz"
-          zip_url="https://github.com/${REPOSITORY}/archive/refs/tags/${TAG}.zip"
-          tar_url="https://github.com/${REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
+          prefix="${PROJECT_NAME}-${TAG}/"
 
-          curl --fail --location --silent --show-error "$zip_url" --output "dist/$zip_name"
-          curl --fail --location --silent --show-error "$tar_url" --output "dist/$tar_name"
+          git archive --format=zip --prefix="$prefix" --output="dist/$zip_name" "$TAG"
+          git archive --format=tar --prefix="$prefix" "$TAG" | gzip -n > "dist/$tar_name"
 
           {
-            echo "# SHA256SUMS for GitHub source archives (${TAG})"
-            echo "# zip: ${zip_url}"
-            echo "# tar.gz: ${tar_url}"
+            echo "# SHA256SUMS for Manualito source archives (${TAG})"
             (cd dist && sha256sum "$zip_name" "$tar_name")
           } > dist/SHA256SUMS.txt
 
@@ -176,11 +280,16 @@ jobs:
             exit 1
           fi
 
+          zip_name="github-source-${TAG}.zip"
+          tar_name="github-source-${TAG}.tar.gz"
+
           args=(
             "$TAG"
+            "dist/$zip_name#$zip_name"
+            "dist/$tar_name#$tar_name"
             "dist/SHA256SUMS.txt#SHA256SUMS.txt"
             --verify-tag
-            --generate-notes
+            --notes-file dist/release-notes.md
             --title "${PROJECT_NAME} ${TAG}"
           )
 

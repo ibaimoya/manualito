@@ -74,7 +74,7 @@ def test_upload_limits_are_generous_by_default(monkeypatch):
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
-        app_version="0.1.0",
+        app_version="1.0.0",
     )
 
     assert settings.max_image_size == 30 * 1024 * 1024
@@ -96,7 +96,7 @@ def test_ocr_postprocess_defaults_match_ocr_env(monkeypatch):
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
-        app_version="0.1.0",
+        app_version="1.0.0",
     )
 
     assert settings.ocr_postprocess_low_confidence_line == pytest.approx(0.35)
@@ -115,7 +115,7 @@ def test_redis_credential_is_required_by_default(monkeypatch):
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
-        app_version="0.1.0",
+        app_version="1.0.0",
     )
 
     expected_message = f"{_REDIS_CREDENTIAL_FILE_ENV} o {_REDIS_CREDENTIAL_ENV}"
@@ -131,7 +131,7 @@ def test_redis_without_credential_mode_requires_explicit_opt_in(monkeypatch):
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
-        app_version="0.1.0",
+        app_version="1.0.0",
         redis_allow_empty_credential=True,
     )
 
@@ -145,7 +145,7 @@ def test_celery_time_limits_must_be_ordered():
             ocr_url="http://ocr:8000",
             rag_url="http://rag:8000",
             llm_url="http://llm:8000",
-            app_version="0.1.0",
+            app_version="1.0.0",
             celery_gpu_soft_time_limit=400,
             celery_gpu_hard_time_limit=300,
         )
@@ -158,7 +158,7 @@ def test_celery_hard_time_limits_must_fit_visibility_timeout():
             ocr_url="http://ocr:8000",
             rag_url="http://rag:8000",
             llm_url="http://llm:8000",
-            app_version="0.1.0",
+            app_version="1.0.0",
             celery_gpu_hard_time_limit=3600,
         )
 
@@ -169,14 +169,14 @@ def test_cookie_names_keep_host_prefix_only_when_secure():
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
-        app_version="0.1.0",
+        app_version="1.0.0",
         auth_cookie_secure=False,
     )
     secure = ApiSettings(
         ocr_url="http://ocr:8000",
         rag_url="http://rag:8000",
         llm_url="http://llm:8000",
-        app_version="0.1.0",
+        app_version="1.0.0",
         auth_cookie_secure=True,
     )
 

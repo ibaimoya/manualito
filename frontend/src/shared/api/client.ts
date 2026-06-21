@@ -77,7 +77,7 @@ export interface GameSearchResponse {
   attribution: string;
 }
 
-/** Juego sugerido por el recomendador content-based (ver notimportant/RECOMMENDER_CONTRACT.md). */
+/** Juego sugerido por el recomendador content-based. */
 export interface RecommendedGame {
   id: string;
   name: string;
@@ -298,8 +298,7 @@ export const api = {
 
   /**
    * GET /api/recommendations — juegos sugeridos para el usuario (content-based
-   * sobre los metadatos de su biblioteca). Contrato definido en
-   * "notimportant/RECOMMENDER_CONTRACT.md"; el backend lo implementa en una fase posterior.
+   * sobre los metadatos de su biblioteca).
    */
   async getRecommendations(
     params?: { limit?: number },

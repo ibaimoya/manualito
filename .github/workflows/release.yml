@@ -1,0 +1,191 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existente a publicar, por ejemplo v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publicar release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PROJECT_NAME: Manualito
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolver release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --force --tags origin
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::El tag debe tener formato SemVer con prefijo v, por ejemplo v0.1.0 o v0.1.0-rc.1."
+            exit 1
+          fi
+
+          if ! git rev-parse --verify --quiet "refs/tags/$tag^{commit}" >/dev/null; then
+            echo "::error::El tag $tag no existe en el repositorio remoto."
+            exit 1
+          fi
+
+          version="${tag#v}"
+          is_prerelease=false
+          if [[ "$version" == *-* ]]; then
+            is_prerelease=true
+          fi
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "is_prerelease=$is_prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comprobar rama principal
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin "$DEFAULT_BRANCH"
+          if ! git merge-base --is-ancestor "refs/tags/${{ steps.release.outputs.tag }}^{commit}" "origin/$DEFAULT_BRANCH"; then
+            echo "::error::El tag ${{ steps.release.outputs.tag }} no apunta a un commit incluido en $DEFAULT_BRANCH."
+            exit 1
+          fi
+
+      - name: Comprobar versiones del proyecto
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import tomllib
+          from pathlib import Path
+
+
+          def read_env_value(path: str, key: str) -> str:
+              for line in Path(path).read_text(encoding="utf-8").splitlines():
+                  line = line.strip()
+                  if line.startswith(f"{key}="):
+                      return line.split("=", 1)[1]
+              raise RuntimeError(f"No se ha encontrado {key} en {path}")
+
+
+          def read_sonar_version(path: str) -> str:
+              pattern = re.compile(r"^sonar\.projectVersion=(.+)$")
+              for line in Path(path).read_text(encoding="utf-8").splitlines():
+                  match = pattern.match(line.strip())
+                  if match:
+                      return match.group(1)
+              raise RuntimeError(f"No se ha encontrado sonar.projectVersion en {path}")
+
+
+          expected = os.environ["VERSION"]
+          versions = {
+              ".env APP_VERSION": read_env_value(".env", "APP_VERSION"),
+              "pyproject.toml": tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))[
+                  "project"
+              ]["version"],
+              "frontend/package.json": json.loads(
+                  Path("frontend/package.json").read_text(encoding="utf-8")
+              )["version"],
+              "sonar-project.properties": read_sonar_version("sonar-project.properties"),
+          }
+
+          mismatches = {name: value for name, value in versions.items() if value != expected}
+          if mismatches:
+              for name, value in mismatches.items():
+                  print(
+                      f"::error::{name} declara {value}, pero el tag pide {expected}.",
+                      file=sys.stderr,
+                  )
+              sys.exit(1)
+
+          for name, value in versions.items():
+              print(f"{name}: {value}")
+          PY
+
+      - name: Calcular checksums de archivos fuente
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          zip_name="github-source-${TAG}.zip"
+          tar_name="github-source-${TAG}.tar.gz"
+          zip_url="https://github.com/${REPOSITORY}/archive/refs/tags/${TAG}.zip"
+          tar_url="https://github.com/${REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
+
+          curl --fail --location --silent --show-error "$zip_url" --output "dist/$zip_name"
+          curl --fail --location --silent --show-error "$tar_url" --output "dist/$tar_name"
+
+          {
+            echo "# SHA256SUMS for GitHub source archives (${TAG})"
+            echo "# zip: ${zip_url}"
+            echo "# tar.gz: ${tar_url}"
+            (cd dist && sha256sum "$zip_name" "$tar_name")
+          } > dist/SHA256SUMS.txt
+
+          cat dist/SHA256SUMS.txt
+
+      - name: Crear release
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          IS_PRERELEASE: ${{ steps.release.outputs.is_prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::La release $TAG ya existe."
+            exit 1
+          fi
+
+          args=(
+            "$TAG"
+            "dist/SHA256SUMS.txt#SHA256SUMS.txt"
+            --verify-tag
+            --generate-notes
+            --title "${PROJECT_NAME} ${TAG}"
+          )
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            args+=(--prerelease --latest=false)
+          fi
+
+          gh release create "${args[@]}"

@@ -4,8 +4,10 @@
 [![TypeScript 6](https://img.shields.io/badge/TypeScript%206-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite 8](https://img.shields.io/badge/Vite%208-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind%20CSS%204-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![TanStack](https://img.shields.io/badge/TanStack-FF4154?logo=tanstack&logoColor=white)](https://tanstack.com/)
 [![Vitest 4](https://img.shields.io/badge/Vitest%204-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![pnpm 11](https://img.shields.io/badge/pnpm%2011-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![NGINX](https://img.shields.io/badge/NGINX-009639?logo=nginx&logoColor=white)](https://nginx.org/)
 
 Interfaz web de Manualito. Está desarrollada con React, TypeScript y Vite; en
 desarrollo se sirve con el dev server de Vite y en Docker se compila como SPA

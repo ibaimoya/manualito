@@ -2,18 +2,12 @@
     [ValidateSet("setup", "start", "stop")]
     [string]$Action = "start",
 
-    [ValidateSet("auto", "cpu", "nvidia")]
-    [string]$Accelerator = "auto",
-
-    [ValidateSet("auto", "low", "high")]
-    [string]$Llm = "auto",
-
-    [ValidateSet("auto", "tesseract", "paddle_cpu", "paddle_gpu")]
-    [string]$Ocr = "auto",
-
     [switch]$UseRecommended,
     [switch]$DryRun,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$ExtraArgs
 )
 
 Set-StrictMode -Version Latest
@@ -44,7 +38,6 @@ $script:HighProfile = Join-Path $script:Root "deploy\profiles\llm\high.env"
 $script:LlmVramReserveGb = 1.0
 $script:PaddleGpuVramBudgetGb = 3.0
 $script:PaddleGpuMinDriver = [version]"522.06"
-$script:ManualSelectionRequested = ($Accelerator -ne "auto" -or $Llm -ne "auto" -or $Ocr -ne "auto")
 
 function Write-Rule {
     Write-Host ("=" * 72) -ForegroundColor DarkGray
@@ -58,37 +51,110 @@ function Write-Title([string]$Text) {
     Write-Rule
 }
 
+function Get-ConsoleTextWidth {
+    $layoutWidth = 72
+    try {
+        if (-not [Console]::IsOutputRedirected -and [Console]::BufferWidth -gt 0) {
+            return [Math]::Min($layoutWidth, [Math]::Max(40, [Console]::BufferWidth - 1))
+        }
+    } catch {
+    }
+    return $layoutWidth
+}
+
+function Get-WrapCutIndex([string]$Candidate, [int]$Width) {
+    $best = -1
+    $includeDelimiter = $false
+    foreach ($delimiter in @(" ", "\", "/", ",")) {
+        $index = $Candidate.LastIndexOf($delimiter)
+        if ($index -gt $best) {
+            $best = $index
+            $includeDelimiter = ($delimiter -ne " ")
+        }
+    }
+    if ($best -lt 1) {
+        return $Width
+    }
+    if ($includeDelimiter) {
+        return [Math]::Min($best + 1, $Width)
+    }
+    return $best
+}
+
+function Split-WrappedText([string]$Text, [int]$Width) {
+    if ($null -eq $Text) {
+        $Text = ""
+    }
+    $remaining = (([string]$Text) -replace "[`r`n`t]", " ").Trim()
+    if ([string]::IsNullOrEmpty($remaining)) {
+        return @("")
+    }
+    $Width = [Math]::Max(10, $Width)
+    $lines = New-Object "System.Collections.Generic.List[string]"
+    while ($remaining.Length -gt $Width) {
+        $candidate = $remaining.Substring(0, [Math]::Min($remaining.Length, $Width))
+        $breakAt = Get-WrapCutIndex $candidate $Width
+        $lines.Add($remaining.Substring(0, $breakAt).TrimEnd())
+        $remaining = $remaining.Substring($breakAt).TrimStart()
+    }
+    $lines.Add($remaining)
+    return @($lines.ToArray())
+}
+
+function Write-WrappedLine([string]$Prefix, [string]$Text, [ConsoleColor]$TextColor, [ConsoleColor]$PrefixColor = $TextColor) {
+    $bodyWidth = [Math]::Max(10, (Get-ConsoleTextWidth) - $Prefix.Length)
+    $lines = @(Split-WrappedText $Text $bodyWidth)
+    $indent = " " * $Prefix.Length
+    Write-Host -NoNewline $Prefix -ForegroundColor $PrefixColor
+    Write-Host $lines[0] -ForegroundColor $TextColor
+    for ($i = 1; $i -lt $lines.Count; $i++) {
+        Write-Host ($indent + $lines[$i]) -ForegroundColor $TextColor
+    }
+}
+
 function Write-Step([string]$Text) {
     if (-not $Text.EndsWith(":")) {
         $Text = $Text + ":"
     }
-    Write-Host -NoNewline "[*] " -ForegroundColor Yellow
-    Write-Host $Text -ForegroundColor Cyan
+    Write-WrappedLine "[*] " $Text Cyan Yellow
 }
 
 function Write-Ok([string]$Text) {
-    Write-Host -NoNewline "[*] " -ForegroundColor Yellow
-    Write-Host $Text -ForegroundColor Green
+    Write-WrappedLine "[*] " $Text Green Yellow
 }
 
 function Write-Note([string]$Text) {
-    Write-Host -NoNewline "[!] " -ForegroundColor Yellow
-    Write-Host $Text -ForegroundColor Yellow
+    Write-WrappedLine "[!] " $Text Yellow Yellow
 }
 
 function Write-Fail([string]$Text) {
-    Write-Host -NoNewline "[!] ERROR: " -ForegroundColor Red
-    Write-Host $Text -ForegroundColor Red
+    Write-WrappedLine "[!] ERROR: " $Text Red Red
 }
 
 function Write-Field([string]$Name, [string]$Value) {
-    Write-Host ("    {0,-22} {1}" -f $Name, $Value) -ForegroundColor Gray
+    Write-WrappedLine ("    {0,-22} " -f $Name) $Value Gray
 }
 
 function Stop-Manualito([string]$Message) {
     Write-Fail $Message
     exit 1
 }
+
+function Apply-ExtraArgs {
+    foreach ($arg in @($ExtraArgs)) {
+        if ([string]::IsNullOrWhiteSpace($arg)) {
+            continue
+        }
+        switch ($arg) {
+            "--use-recommended" { $script:UseRecommended = $true; continue }
+            "--dry-run" { $script:DryRun = $true; continue }
+            "--skip-build" { $script:SkipBuild = $true; continue }
+            default { Stop-Manualito "Argumento no reconocido: $arg" }
+        }
+    }
+}
+
+Apply-ExtraArgs
 
 function Exit-Manualito([string]$Message) {
     Write-Ok $Message
@@ -141,12 +207,7 @@ function Clear-ManualitoScreen {
 
 # Ajusta una línea dinámica para que no deje restos visuales al repintar.
 function Format-ConsoleLine([string]$Text) {
-    $width = 80
-    try {
-        $width = [Math]::Max(20, [Console]::BufferWidth - 1)
-    } catch {
-        $width = 80
-    }
+    $width = Get-ConsoleTextWidth
     $clean = ([string]$Text) -replace "[`r`n`t]", " "
     if ($clean.Length -gt $width) {
         $clean = $clean.Substring(0, [Math]::Max(0, $width - 3)) + "..."
@@ -154,7 +215,7 @@ function Format-ConsoleLine([string]$Text) {
     return $clean.PadRight($width)
 }
 
-# Devuelve una barra de actividad indeterminada; no representa porcentaje real.
+# Devuelve una barra de actividad indeterminada. No representa porcentaje real.
 function Get-ActivityBar([int]$Frame) {
     $width = 30
     $marker = "====>"
@@ -178,7 +239,7 @@ function Complete-ActivityLine {
 }
 
 function New-DockerLogPath {
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
     return Join-Path $script:LogsDir "$Action-$stamp.log"
 }
 
@@ -222,10 +283,10 @@ function Read-YesNo([string]$Question) {
 
 # Ejecuta Docker en segundo plano, guarda todo el log y muestra una actividad estable.
 function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments) {
-    Write-Step $Label
+    Write-Step "Ejecución de Docker"
     $displayCommand = ConvertTo-DisplayCommand (@($FilePath) + $Arguments)
     if ($DryRun) {
-        Write-Field "accion" $Label
+        Write-Field "acción" $Label
         Write-Field "modo" "dry-run"
         return
     }
@@ -236,11 +297,11 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
         New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
     }
     $dockerLog = New-DockerLogPath
-    Write-Field "accion" $Label
-    Write-Field "estado" "en curso"
+    Write-Field "acción" $Label
     Write-Field "log" (Format-ProjectPath $dockerLog)
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
-    if (-not (Test-InteractiveConsole)) {
+    $interactiveConsole = Test-InteractiveConsole
+    if (-not $interactiveConsole) {
         Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
     }
     $job = Start-Job -ScriptBlock {
@@ -260,7 +321,9 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
     } -ArgumentList $FilePath, $Arguments, $dockerLog, $displayCommand
     $frame = 0
     while ($job.State -eq "Running") {
-        Write-ActivityLine $stopwatch.Elapsed $frame
+        if ($interactiveConsole) {
+            Write-ActivityLine $stopwatch.Elapsed $frame
+        }
         Start-Sleep -Milliseconds 160
         $frame++
     }
@@ -276,10 +339,12 @@ function Invoke-External([string]$Label, [string]$FilePath, [string[]]$Arguments
             $exitCode = 1
         }
     }
-    Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
+    if (-not $interactiveConsole) {
+        Write-Field "transcurrido" (Format-Elapsed $stopwatch.Elapsed)
+    }
     if ($exitCode -ne 0) {
         Write-Field "estado" "error"
-        Write-Fail "$Label fallo con codigo $exitCode. Revisa $(Format-ProjectPath $dockerLog)"
+        Write-Fail "$Label falló con código $exitCode. Revisa $(Format-ProjectPath $dockerLog)"
         exit 1
     }
     Write-Field "estado" "listo"
@@ -448,8 +513,8 @@ function Test-DockerGpu([string]$DockerPath, [object]$NvidiaInfo) {
         Write-Field "estado" "GPU NVIDIA disponible en Docker"
         return $true
     }
-    Write-Field "estado" "Docker no ha validado --gpus all"
-    Write-Note "Se usará CPU salvo que fuerces NVIDIA manualmente."
+    Write-Field "estado" "GPU NVIDIA no disponible en Docker"
+    Write-Note "Se usará CPU porque Docker no puede usar la GPU NVIDIA."
     return $false
 }
 
@@ -517,10 +582,10 @@ function Test-NvidiaDriverForPaddleGpu([object]$NvidiaInfo) {
 
 function Get-PaddleGpuStatus([bool]$DockerGpu, [object]$NvidiaInfo) {
     if (-not $DockerGpu) {
-        return [pscustomobject]@{ Available = $false; Reason = "no disponible: requiere NVIDIA en Docker" }
+        return [pscustomobject]@{ Available = $false; Reason = "requiere NVIDIA en Docker" }
     }
     if (-not (Test-NvidiaDriverForPaddleGpu $NvidiaInfo)) {
-        return [pscustomobject]@{ Available = $false; Reason = "no disponible: driver NVIDIA < 522.06" }
+        return [pscustomobject]@{ Available = $false; Reason = "driver NVIDIA < 522.06" }
     }
     return [pscustomobject]@{ Available = $true; Reason = "NVIDIA compatible" }
 }
@@ -566,28 +631,27 @@ function Format-LlmChoice([string]$LlmSize) {
     return "$LlmSize ($(Get-LlmModel $LlmSize))"
 }
 
+function Format-AcceleratorLabel([string]$SelectedAccelerator) {
+    if ($SelectedAccelerator -eq "cpu") { return "CPU" }
+    if ($SelectedAccelerator -eq "nvidia") { return "NVIDIA" }
+    return $SelectedAccelerator
+}
+
 function Format-Selection([string]$SelectedAccelerator, [string]$LlmSize) {
-    return "$SelectedAccelerator + $(Format-LlmChoice $LlmSize)"
+    return "$(Format-AcceleratorLabel $SelectedAccelerator) + $(Format-LlmChoice $LlmSize)"
 }
 
 function Format-MenuSelection([string]$SelectedAccelerator, [string]$LlmSize) {
-    return "{0,-6} + {1,-4} ({2})" -f $SelectedAccelerator, $LlmSize, (Get-LlmModel $LlmSize)
+    return "{0,-6} + {1,-4} ({2})" -f (Format-AcceleratorLabel $SelectedAccelerator), $LlmSize, (Get-LlmModel $LlmSize)
 }
 
-function Write-MenuOption([string]$Key, [string]$Choice, [string]$Description, [int]$ChoiceWidth = 38) {
-    $line = "    {0,-6} {1,-$ChoiceWidth}" -f $Key, $Choice
-    if (-not [string]::IsNullOrWhiteSpace($Description)) {
-        $line += " $Description"
+function Write-MenuOption([string]$Key, [string]$Choice, [string]$Description, [int]$ChoiceWidth = 34) {
+    $prefix = "    {0,-6} {1,-$ChoiceWidth}" -f $Key, $Choice
+    if ([string]::IsNullOrWhiteSpace($Description)) {
+        Write-Host $prefix -ForegroundColor Gray
+        return
     }
-    Write-Host $line -ForegroundColor Gray
-}
-
-function Write-OcrSelectionHeader([string]$SelectedAccelerator, [string]$SelectedLlm) {
-    Clear-ManualitoScreen
-    Write-Title "Manualito setup"
-    Write-Step "Modo seleccionado"
-    Write-Field "modo" (Format-Selection $SelectedAccelerator $SelectedLlm)
-    Write-Field "vram llm" (Format-LlmVram $SelectedLlm)
+    Write-WrappedLine ($prefix + " ") $Description Gray
 }
 
 function Write-SetupExecutionHeader([object]$Selection) {
@@ -599,10 +663,10 @@ function Write-SetupExecutionHeader([object]$Selection) {
     Write-Field "ocr" $Selection.Ocr
     Write-Field "config" "deploy\local\selected.env"
     if ($Selection.Accelerator -ne $Selection.RecommendedAccelerator -or $Selection.Llm -ne $Selection.RecommendedLlm -or $Selection.Ocr -ne $Selection.RecommendedOcr) {
-        Write-Field "aviso" "selección manual"
+        Write-Field "aviso" "distinta de la recomendada"
     }
     if ($Selection.Accelerator -eq "cpu" -and $Selection.Llm -eq "high") {
-        Write-Field "aviso" "CPU/RAM; puede ser muy lento"
+        Write-Field "aviso" "CPU/RAM, puede ser muy lento"
     }
     if ($Selection.Ocr -eq "paddle_cpu") {
         Write-Field "aviso ocr" "muy fiable, pero lento"
@@ -612,9 +676,26 @@ function Write-SetupExecutionHeader([object]$Selection) {
     }
 }
 
+function Confirm-SetupSelection([object]$Selection) {
+    if ($UseRecommended -or $DryRun -or $SkipBuild) {
+        return
+    }
+    try {
+        if ([Console]::IsInputRedirected) {
+            Exit-Manualito "Setup cancelado. No se han aplicado cambios."
+        }
+    } catch {
+        Exit-Manualito "Setup cancelado. No se han aplicado cambios."
+    }
+    Write-SetupExecutionHeader $Selection
+    if (-not (Read-YesNo "¿Aplicar esta configuración y preparar Manualito?")) {
+        Exit-Manualito "Setup cancelado. No se han aplicado cambios."
+    }
+}
+
 function Get-OcrRecommendation([string]$SelectedAccelerator, [string]$LlmSize, [object]$NvidiaInfo, [object]$PaddleGpuStatus) {
     if ($SelectedAccelerator -ne "nvidia") {
-        return [pscustomobject]@{ Mode = "tesseract"; Detail = "el modo cpu no solicita GPU a Docker" }
+        return [pscustomobject]@{ Mode = "tesseract"; Detail = "el modo CPU no solicita GPU a Docker" }
     }
     if (-not $PaddleGpuStatus.Available) {
         return [pscustomobject]@{ Mode = "tesseract"; Detail = $PaddleGpuStatus.Reason }
@@ -626,21 +707,24 @@ function Get-OcrRecommendation([string]$SelectedAccelerator, [string]$LlmSize, [
     if ($remainingGb -ge $script:PaddleGpuVramBudgetGb) {
         return [pscustomobject]@{ Mode = "paddle_gpu"; Detail = ("quedan ~{0:N1} GB tras el LLM seleccionado" -f $remainingGb) }
     }
-    return [pscustomobject]@{ Mode = "tesseract"; Detail = ("quedan ~{0:N1} GB tras el LLM seleccionado; PaddleGPU pide ~{1:N1} GB de margen" -f $remainingGb, $script:PaddleGpuVramBudgetGb) }
+    return [pscustomobject]@{ Mode = "tesseract"; Detail = ("quedan ~{0:N1} GB tras el LLM seleccionado. PaddleGPU pide ~{1:N1} GB de margen" -f $remainingGb, $script:PaddleGpuVramBudgetGb) }
 }
 
 # Dibuja y procesa el selector interactivo de acelerador y modelo.
 function Read-SetupSelection([string]$RecommendedAccelerator, [string]$RecommendedLlm, [bool]$DockerGpu) {
-    Write-Step "Selección de modo"
-    $exitKey = if ($DockerGpu) { "5" } else { "3" }
+    Write-Step "Paso 1/2: LLM"
     Write-MenuOption "Enter" (Format-MenuSelection $RecommendedAccelerator $RecommendedLlm) "<- recomendada"
     Write-MenuOption "1" (Format-MenuSelection "cpu" "low") "máxima compatibilidad"
-    Write-MenuOption "2" (Format-MenuSelection "cpu" "high") "CPU/RAM; perfil experimental, puede ser muy lento"
+    Write-MenuOption "2" (Format-MenuSelection "cpu" "high") "experimental"
     if ($DockerGpu) {
         Write-MenuOption "3" (Format-MenuSelection "nvidia" "low") "mayor velocidad"
-        Write-MenuOption "4" (Format-MenuSelection "nvidia" "high") "perfil de referencia; mejor calidad esperada"
+        Write-MenuOption "4" (Format-MenuSelection "nvidia" "high") "referencia y mejor calidad"
+    } else {
+        Write-MenuOption "-" (Format-MenuSelection "nvidia" "low") "requiere NVIDIA en Docker"
+        Write-MenuOption "-" (Format-MenuSelection "nvidia" "high") "requiere NVIDIA en Docker"
     }
-    Write-MenuOption $exitKey "exit" "salir sin cambios"
+    Write-MenuOption "q" "exit" "salir sin cambios"
+    Write-Note "CPU + high usa CPU/RAM y puede ser muy lento. Úsalo solo si tienes mucha RAM y aceptas esperas largas."
     Write-Note "Usa la recomendada salvo que sepas exactamente qué estás cambiando."
 
     while ($true) {
@@ -655,7 +739,7 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
         if ($answer -eq "2") {
             return [pscustomobject]@{ Accelerator = "cpu"; Llm = "high" }
         }
-        if ($answer -eq $exitKey -or $answer -eq "5" -or $answer -eq "exit" -or $answer -eq "salir" -or $answer -eq "q") {
+        if ($answer -eq "q" -or $answer -eq "exit" -or $answer -eq "salir") {
             Exit-Manualito "Setup cancelado. No se han aplicado cambios."
         }
         if ($DockerGpu -and $answer -eq "3") {
@@ -669,22 +753,20 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
 }
 
 function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [string]$RecommendationDetail) {
-    Write-Step "Selección de OCR"
-    $exitKey = "4"
+    Write-Step "Paso 2/2: OCR"
     Write-MenuOption "Enter" $RecommendedOcr "<- recomendada" 14
     Write-MenuOption "1" "tesseract" "máxima compatibilidad" 14
     Write-MenuOption "2" "paddle_cpu" "muy fiable, pero lento" 14
     if ($PaddleGpuStatus.Available) {
-        Write-MenuOption "3" "paddle_gpu" "mejor OCR esperado; requiere margen de VRAM" 14
+        Write-MenuOption "3" "paddle_gpu" "mejor OCR esperado, requiere margen de VRAM" 14
     } else {
-        Write-MenuOption "3" "paddle_gpu" $PaddleGpuStatus.Reason 14
+        Write-MenuOption "-" "paddle_gpu" $PaddleGpuStatus.Reason 14
     }
-    Write-MenuOption $exitKey "exit" "salir sin cambios" 14
-    if ($RecommendedOcr -eq "paddle_gpu") {
-        Write-Note "paddle_gpu se recomienda porque $RecommendationDetail; Tesseract sigue siendo la opción conservadora."
-    } else {
+    Write-MenuOption "q" "exit" "salir sin cambios" 14
+    if ($RecommendedOcr -ne "paddle_gpu") {
         Write-Note "Tesseract recomendado: $RecommendationDetail."
     }
+    Write-Note "Usa la recomendada salvo que sepas exactamente qué estás cambiando."
 
     while ($true) {
         $answer = Read-SetupOption
@@ -705,7 +787,7 @@ function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [s
             Write-Note "paddle_gpu no está disponible: $($PaddleGpuStatus.Reason)."
             continue
         }
-        if ($answer -eq $exitKey -or $answer -eq "5" -or $answer -eq "exit" -or $answer -eq "salir" -or $answer -eq "q") {
+        if ($answer -eq "q" -or $answer -eq "exit" -or $answer -eq "salir") {
             Exit-Manualito "Setup cancelado. No se han aplicado cambios."
         }
         Write-Note "Opción no válida. Pulsa Enter para usar la recomendada."
@@ -738,23 +820,15 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     Write-Field "vram llm" (Format-LlmVram $recommendedLlm)
     Write-Field "ocr" $recommendedOcrInfo.Mode
 
-    if ($script:ManualSelectionRequested -or $UseRecommended -or $DryRun) {
-        if ($Accelerator -ne "auto") { $finalAccelerator = $Accelerator }
-        if ($Llm -ne "auto") { $finalLlm = $Llm }
-        if ($finalAccelerator -eq "cpu" -and $Llm -eq "auto") { $finalLlm = "low" }
-        $finalOcrInfo = Get-OcrRecommendation $finalAccelerator $finalLlm $NvidiaInfo $paddleGpuStatus
-        $finalOcr = $finalOcrInfo.Mode
-        if ($Ocr -ne "auto") { $finalOcr = $Ocr }
-    } else {
+    if (-not ($UseRecommended -or $DryRun)) {
         $choice = Read-SetupSelection $recommendedAccelerator $recommendedLlm $DockerGpu
         $finalAccelerator = $choice.Accelerator
         $finalLlm = $choice.Llm
         $finalOcrInfo = Get-OcrRecommendation $finalAccelerator $finalLlm $NvidiaInfo $paddleGpuStatus
-        Write-OcrSelectionHeader $finalAccelerator $finalLlm
         $finalOcr = Read-OcrSelection $finalOcrInfo.Mode $paddleGpuStatus $finalOcrInfo.Detail
     }
 
-    $showSelectionMessages = ($script:ManualSelectionRequested -or $UseRecommended -or $DryRun -or $SkipBuild)
+    $showSelectionMessages = ($UseRecommended -or $DryRun -or $SkipBuild)
     if ($showSelectionMessages) {
         Write-Step "Configuración seleccionada"
         Write-Field "selección" (Format-Selection $finalAccelerator $finalLlm)
@@ -763,20 +837,12 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     }
     if ($finalAccelerator -ne $recommendedAccelerator -or $finalLlm -ne $recommendedLlm -or $finalOcr -ne $recommendedOcrInfo.Mode) {
         if ($showSelectionMessages) {
-            Write-Note "Configuración manual distinta de la recomendada."
+            Write-Note "Configuración distinta de la recomendada."
         }
     }
     if ($finalAccelerator -eq "cpu" -and $finalLlm -eq "high") {
         if ($showSelectionMessages) {
-            Write-Note "$(Format-Selection "cpu" "high") usa CPU/RAM; perfil experimental, puede ser muy lento."
-        }
-    }
-    if ($finalAccelerator -eq "nvidia" -and $null -eq $NvidiaInfo) {
-        Stop-Manualito "Has forzado NVIDIA, pero nvidia-smi no está disponible."
-    }
-    if ($finalAccelerator -eq "nvidia" -and -not $DockerGpu) {
-        if ($showSelectionMessages) {
-            Write-Note "Has forzado NVIDIA aunque Docker no ha validado --gpus all."
+            Write-Note "$(Format-Selection "cpu" "high") usa CPU/RAM y puede ser muy lento. Úsalo solo si tienes mucha RAM y aceptas esperas largas."
         }
     }
     if ($finalOcr -eq "paddle_cpu") {
@@ -786,9 +852,9 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     }
     if ($finalOcr -eq "paddle_gpu" -and -not $paddleGpuStatus.Available) {
         if ($DryRun) {
-            Write-Note "Has elegido paddle_gpu, pero $($paddleGpuStatus.Reason)."
+            Write-Note "paddle_gpu no está disponible: $($paddleGpuStatus.Reason)."
         } else {
-            Stop-Manualito "Has elegido paddle_gpu, pero $($paddleGpuStatus.Reason)."
+            Stop-Manualito "paddle_gpu no está disponible: $($paddleGpuStatus.Reason)."
         }
     }
     if ($finalOcr -eq "paddle_gpu" -and $paddleGpuStatus.Available -and $finalOcrInfo.Mode -ne "paddle_gpu") {
@@ -818,9 +884,6 @@ function Save-Selection([object]$Selection, [switch]$Quiet) {
         "MANUALITO_ACCELERATOR=$($Selection.Accelerator)",
         "MANUALITO_LLM_SIZE=$($Selection.Llm)",
         "MANUALITO_OCR_MODE=$($Selection.Ocr)",
-        "MANUALITO_RECOMMENDED_ACCELERATOR=$($Selection.RecommendedAccelerator)",
-        "MANUALITO_RECOMMENDED_LLM_SIZE=$($Selection.RecommendedLlm)",
-        "MANUALITO_RECOMMENDED_OCR_MODE=$($Selection.RecommendedOcr)",
         "MANUALITO_SETUP_VERSION=1"
     )
     if (-not $DryRun) {
@@ -954,8 +1017,8 @@ function Resolve-RunningManualitoBeforeVram([string]$DockerPath) {
     Write-Field "servicios" ($runningServices -join ", ")
     Write-Note "Puede ocupar VRAM y hacer que la recomendación sea más conservadora."
 
-    if ($script:ManualSelectionRequested -or $UseRecommended) {
-        Write-Note "No se parará automáticamente porque has usado parámetros de setup."
+    if ($UseRecommended) {
+        Write-Note "No se parará automáticamente porque estás usando la recomendada sin interacción."
         return
     }
 
@@ -972,6 +1035,7 @@ function Invoke-Setup([string]$DockerPath) {
     $nvidia = Get-NvidiaInfo
     $dockerGpu = Test-DockerGpu $DockerPath $nvidia
     $selection = Resolve-Selection $dockerGpu $nvidia
+    Confirm-SetupSelection $selection
     Save-Selection $selection -Quiet:(-not $DryRun -and -not $SkipBuild)
     if ($SkipBuild) {
         Write-Note "Build saltado por -SkipBuild."
@@ -1025,7 +1089,7 @@ function Invoke-Stop([string]$DockerPath) {
     $selection = Load-Selection
     if ($null -eq $selection) {
         $selection = [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract" }
-        Write-Note "No hay selected.env; parando con cpu + low."
+        Write-Note "No hay selected.env. Parando con CPU + low."
     }
     Invoke-Compose $DockerPath $selection @("down")
     if ($DryRun) {

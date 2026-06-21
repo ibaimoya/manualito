@@ -3,13 +3,9 @@
 set -Eeuo pipefail
 
 ACTION="start"
-ACCELERATOR="auto"
-LLM="auto"
-OCR="auto"
 USE_RECOMMENDED=0
 DRY_RUN=0
 SKIP_BUILD=0
-MANUAL_SELECTION_REQUESTED=0
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd -P)"
@@ -84,9 +80,6 @@ Uso:
 
 Opciones equivalentes a Windows:
   -Action, --action                 setup | start | stop
-  -Accelerator, --accelerator       auto | cpu | nvidia
-  -Llm, --llm                       auto | low | high
-  -Ocr, --ocr                       auto | tesseract | paddle_cpu | paddle_gpu
   -UseRecommended, --use-recommended
   -DryRun, --dry-run
   -SkipBuild, --skip-build
@@ -103,21 +96,6 @@ parse_args() {
             -action|--action)
                 [[ $# -ge 2 ]] || stop_manualito "Falta valor para $1."
                 ACTION="$(lower "$2")"
-                shift 2
-                ;;
-            -accelerator|--accelerator)
-                [[ $# -ge 2 ]] || stop_manualito "Falta valor para $1."
-                ACCELERATOR="$(lower "$2")"
-                shift 2
-                ;;
-            -llm|--llm)
-                [[ $# -ge 2 ]] || stop_manualito "Falta valor para $1."
-                LLM="$(lower "$2")"
-                shift 2
-                ;;
-            -ocr|--ocr)
-                [[ $# -ge 2 ]] || stop_manualito "Falta valor para $1."
-                OCR="$(lower "$2")"
                 shift 2
                 ;;
             -userecommended|--use-recommended)
@@ -143,13 +121,6 @@ parse_args() {
     done
 
     case "$ACTION" in setup|start|stop) ;; *) stop_manualito "Acción inválida: $ACTION" ;; esac
-    case "$ACCELERATOR" in auto|cpu|nvidia) ;; *) stop_manualito "Acelerador inválido: $ACCELERATOR" ;; esac
-    case "$LLM" in auto|low|high) ;; *) stop_manualito "LLM inválido: $LLM" ;; esac
-    case "$OCR" in auto|tesseract|paddle_cpu|paddle_gpu) ;; *) stop_manualito "OCR inválido: $OCR" ;; esac
-
-    if [[ "$ACCELERATOR" != "auto" || "$LLM" != "auto" || "$OCR" != "auto" ]]; then
-        MANUAL_SELECTION_REQUESTED=1
-    fi
 }
 
 write_rule() {
@@ -166,26 +137,104 @@ write_title() {
     write_rule
 }
 
+pad_right() {
+    local text="$1"
+    local width="$2"
+    local padding=$((width - ${#text}))
+    printf '%s' "$text"
+    if ((padding > 0)); then
+        printf '%*s' "$padding" ''
+    fi
+}
+
+wrap_text() {
+    local text="${1-}"
+    local width="${2:-80}"
+    text="${text//$'\r'/ }"
+    text="${text//$'\n'/ }"
+    text="${text//$'\t'/ }"
+    text="${text#"${text%%[![:space:]]*}"}"
+    text="${text%"${text##*[![:space:]]}"}"
+    [[ "$width" =~ ^[0-9]+$ ]] || width=80
+    ((width < 10)) && width=10
+    if [[ -z "$text" ]]; then
+        printf '\n'
+        return 0
+    fi
+    while ((${#text} > width)); do
+        local chunk="${text:0:width}"
+        local cut_index="$width"
+        local i char
+        for ((i = ${#chunk} - 1; i > 0; i--)); do
+            char="${chunk:i:1}"
+            case "$char" in
+                " ")
+                    cut_index="$i"
+                    break
+                    ;;
+                \\|/|,)
+                    cut_index="$((i + 1))"
+                    break
+                    ;;
+            esac
+        done
+        printf '%s\n' "${text:0:cut_index}"
+        text="${text:cut_index}"
+        text="${text#"${text%%[![:space:]]*}"}"
+    done
+    printf '%s\n' "$text"
+}
+
+write_wrapped_line() {
+    local prefix="$1"
+    local text="$2"
+    local text_color="$3"
+    local prefix_color="${4:-$text_color}"
+    local stream="${5:-stdout}"
+    local width body_width indent line first=1
+    width="$(console_width)"
+    body_width=$((width - ${#prefix}))
+    ((body_width < 10)) && body_width=10
+    printf -v indent '%*s' "${#prefix}" ''
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if ((first)); then
+            if [[ "$stream" == "stderr" ]]; then
+                printf '%s%s%s%s%s\n' "$prefix_color" "$prefix" "$text_color" "$line" "$COLOR_RESET" >&2
+            else
+                printf '%s%s%s%s%s\n' "$prefix_color" "$prefix" "$text_color" "$line" "$COLOR_RESET"
+            fi
+            first=0
+        elif [[ "$stream" == "stderr" ]]; then
+            printf '%s%s%s%s\n' "$text_color" "$indent" "$line" "$COLOR_RESET" >&2
+        else
+            printf '%s%s%s%s\n' "$text_color" "$indent" "$line" "$COLOR_RESET"
+        fi
+    done < <(wrap_text "$text" "$body_width")
+}
+
 write_step() {
     local text="$1"
     [[ "$text" == *: ]] || text="$text:"
-    printf '%s[*] %s%s%s\n' "$COLOR_YELLOW" "$COLOR_CYAN" "$text" "$COLOR_RESET"
+    write_wrapped_line "[*] " "$text" "$COLOR_CYAN" "$COLOR_YELLOW"
 }
 
 write_ok() {
-    printf '%s[*] %s%s%s\n' "$COLOR_YELLOW" "$COLOR_GREEN" "$1" "$COLOR_RESET"
+    write_wrapped_line "[*] " "$1" "$COLOR_GREEN" "$COLOR_YELLOW"
 }
 
 write_note() {
-    printf '%s[!] %s%s%s\n' "$COLOR_YELLOW" "$COLOR_YELLOW" "$1" "$COLOR_RESET"
+    write_wrapped_line "[!] " "$1" "$COLOR_YELLOW" "$COLOR_YELLOW"
 }
 
 write_fail() {
-    printf '%s[!] ERROR: %s%s\n' "$COLOR_RED" "$1" "$COLOR_RESET" >&2
+    write_wrapped_line "[!] ERROR: " "$1" "$COLOR_RED" "$COLOR_RED" stderr
 }
 
 write_field() {
-    printf '%s    %-22s %s%s\n' "$COLOR_GRAY" "$1" "$2" "$COLOR_RESET"
+    local prefix padded_name
+    padded_name="$(pad_right "$1" 22)"
+    prefix="    ${padded_name} "
+    write_wrapped_line "$prefix" "$2" "$COLOR_GRAY"
 }
 
 join_lines() {
@@ -252,13 +301,14 @@ clear_manualito_screen() {
 }
 
 console_width() {
-    local width=80
+    local width=72
     if command -v tput >/dev/null 2>&1; then
-        width="$(tput cols 2>/dev/null || printf '80')"
+        width="$(tput cols 2>/dev/null || printf '72')"
     fi
-    [[ "$width" =~ ^[0-9]+$ ]] || width=80
+    [[ "$width" =~ ^[0-9]+$ ]] || width=72
+    ((width > 72)) && width=72
     ((width < 20)) && width=20
-    printf '%s' "$((width - 1))"
+    printf '%s' "$width"
 }
 
 format_console_line() {
@@ -309,7 +359,7 @@ ensure_local_dirs() {
 
 new_docker_log_path() {
     local stamp
-    stamp="$(date +%Y%m%d-%H%M%S-%3N 2>/dev/null || date +%Y%m%d-%H%M%S)"
+    stamp="$(date +%Y%m%d-%H%M%S)"
     printf '%s/%s-%s.log' "$LOGS_DIR" "$ACTION" "$stamp"
 }
 
@@ -370,20 +420,21 @@ run_external() {
     local args=("$@")
     local display
     display="$(display_command "$command_path" "${args[@]}")"
-    write_step "$label"
+    write_step "Ejecución de Docker"
     if ((DRY_RUN)); then
-        write_field "accion" "$label"
+        write_field "acción" "$label"
         write_field "modo" "dry-run"
         return 0
     fi
 
     ensure_local_dirs
-    local docker_log started_at frame exit_code pid
+    local docker_log started_at frame exit_code pid interactive_console
     docker_log="$(new_docker_log_path)"
-    write_field "accion" "$label"
-    write_field "estado" "en curso"
+    write_field "acción" "$label"
     write_field "log" "$(format_project_path "$docker_log")"
     started_at="$(date +%s)"
+    interactive_console=0
+    is_interactive_console && interactive_console=1
 
     {
         printf '# %s\n\n' "$display"
@@ -393,7 +444,9 @@ run_external() {
     CURRENT_CHILD_PID="$pid"
     frame=0
     while kill -0 "$pid" 2>/dev/null; do
-        write_activity_line "$started_at" "$frame"
+        if ((interactive_console)); then
+            write_activity_line "$started_at" "$frame"
+        fi
         sleep 0.16
         frame=$((frame + 1))
     done
@@ -403,7 +456,9 @@ run_external() {
     set -e
     CURRENT_CHILD_PID=""
     complete_activity_line
-    write_field "transcurrido" "$(format_elapsed "$(($(date +%s) - started_at))")"
+    if (( ! interactive_console )); then
+        write_field "transcurrido" "$(format_elapsed "$(($(date +%s) - started_at))")"
+    fi
     if ((exit_code != 0)); then
         write_field "estado" "error"
         write_fail "$label falló con código $exit_code. Revisa $(format_project_path "$docker_log")"
@@ -473,7 +528,7 @@ test_docker() {
     if compose="$("$docker_path" compose version --short 2>/dev/null)"; then
         write_field "compose" "$(trim "$compose")"
     else
-        stop_manualito "Docker Compose no responde. En Linux instala el plugin de Compose; en WSL activa la integración de Docker Desktop con esta distro."
+        stop_manualito "Docker Compose no responde. En Linux instala el plugin de Compose. En WSL activa la integración de Docker Desktop con esta distro."
     fi
 }
 
@@ -549,8 +604,8 @@ test_docker_gpu() {
         DOCKER_GPU=1
         write_field "estado" "GPU NVIDIA disponible en Docker"
     else
-        write_field "estado" "Docker no ha validado --gpus all"
-        write_note "Se usará cpu salvo que fuerces NVIDIA manualmente."
+        write_field "estado" "GPU NVIDIA no disponible en Docker"
+        write_note "Se usará CPU porque Docker no puede usar la GPU NVIDIA."
     fi
 }
 
@@ -629,10 +684,10 @@ version_ge() {
 get_paddle_gpu_status() {
     if (( ! DOCKER_GPU )); then
         PADDLE_GPU_AVAILABLE=0
-        PADDLE_GPU_REASON="no disponible: requiere NVIDIA en Docker"
+        PADDLE_GPU_REASON="requiere NVIDIA en Docker"
     elif ! version_ge "$NVIDIA_DRIVER" "$PADDLE_GPU_MIN_DRIVER"; then
         PADDLE_GPU_AVAILABLE=0
-        PADDLE_GPU_REASON="no disponible: driver NVIDIA < 522.06"
+        PADDLE_GPU_REASON="driver NVIDIA < 522.06"
     else
         PADDLE_GPU_AVAILABLE=1
         PADDLE_GPU_REASON="NVIDIA compatible"
@@ -679,31 +734,36 @@ format_llm_choice() {
     printf '%s (%s)' "$1" "$(get_llm_model "$1")"
 }
 
+format_accelerator_label() {
+    case "$1" in
+        cpu) printf 'CPU' ;;
+        nvidia) printf 'NVIDIA' ;;
+        *) printf '%s' "$1" ;;
+    esac
+}
+
 format_selection() {
-    printf '%s + %s' "$1" "$(format_llm_choice "$2")"
+    printf '%s + %s' "$(format_accelerator_label "$1")" "$(format_llm_choice "$2")"
 }
 
 format_menu_selection() {
-    printf '%-6s + %-4s (%s)' "$1" "$2" "$(get_llm_model "$2")"
+    printf '%-6s + %-4s (%s)' "$(format_accelerator_label "$1")" "$2" "$(get_llm_model "$2")"
 }
 
 write_menu_option() {
     local key="$1"
     local choice="$2"
     local description="$3"
-    local width="${4:-38}"
-    printf '%s' "$COLOR_GRAY"
-    printf "    %-6s %-${width}s" "$key" "$choice"
-    [[ -n "$description" ]] && printf ' %s' "$description"
-    printf '%s\n' "$COLOR_RESET"
-}
-
-write_ocr_selection_header() {
-    clear_manualito_screen
-    write_title "Manualito setup"
-    write_step "Modo seleccionado"
-    write_field "modo" "$(format_selection "$1" "$2")"
-    write_field "vram llm" "$(format_llm_vram "$2")"
+    local width="${4:-34}"
+    local prefix padded_key padded_choice
+    padded_key="$(pad_right "$key" 6)"
+    padded_choice="$(pad_right "$choice" "$width")"
+    prefix="    ${padded_key} ${padded_choice}"
+    if [[ -z "$description" ]]; then
+        printf '%s%s%s\n' "$COLOR_GRAY" "$prefix" "$COLOR_RESET"
+        return 0
+    fi
+    write_wrapped_line "$prefix " "$description" "$COLOR_GRAY"
 }
 
 write_setup_execution_header() {
@@ -715,12 +775,21 @@ write_setup_execution_header() {
     write_field "ocr" "$FINAL_OCR"
     write_field "config" "deploy/local/selected.env"
     if [[ "$FINAL_ACCELERATOR" != "$RECOMMENDED_ACCELERATOR" || "$FINAL_LLM" != "$RECOMMENDED_LLM" || "$FINAL_OCR" != "$RECOMMENDED_OCR" ]]; then
-        write_field "aviso" "selección manual"
+        write_field "aviso" "distinta de la recomendada"
     fi
-    [[ "$FINAL_ACCELERATOR" == "cpu" && "$FINAL_LLM" == "high" ]] && write_field "aviso" "CPU/RAM; puede ser muy lento"
+    [[ "$FINAL_ACCELERATOR" == "cpu" && "$FINAL_LLM" == "high" ]] && write_field "aviso" "CPU/RAM, puede ser muy lento"
     [[ "$FINAL_OCR" == "paddle_cpu" ]] && write_field "aviso ocr" "muy fiable, pero lento"
     [[ "$FINAL_OCR" == "paddle_gpu" ]] && write_field "aviso ocr" "requiere Paddle CUDA y VRAM libre"
     return 0
+}
+
+confirm_setup_selection() {
+    ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && return 0
+    [[ -t 0 ]] || exit_manualito "Setup cancelado. No se han aplicado cambios."
+    write_setup_execution_header
+    if ! read_yes_no "¿Aplicar esta configuración y preparar Manualito?"; then
+        exit_manualito "Setup cancelado. No se han aplicado cambios."
+    fi
 }
 
 get_ocr_recommendation() {
@@ -728,7 +797,7 @@ get_ocr_recommendation() {
     local llm_size="$2"
     if [[ "$selected_accelerator" != "nvidia" ]]; then
         OCR_RECOMMENDED_MODE="tesseract"
-        OCR_RECOMMENDATION_DETAIL="el modo cpu no solicita GPU a Docker"
+        OCR_RECOMMENDATION_DETAIL="el modo CPU no solicita GPU a Docker"
         return 0
     fi
     if (( ! PADDLE_GPU_AVAILABLE )); then
@@ -748,25 +817,27 @@ get_ocr_recommendation() {
         OCR_RECOMMENDATION_DETAIL="quedan ~$remaining GB tras el LLM seleccionado"
     else
         OCR_RECOMMENDED_MODE="tesseract"
-        OCR_RECOMMENDATION_DETAIL="quedan ~$remaining GB tras el LLM seleccionado; PaddleGPU pide ~$PADDLE_GPU_VRAM_BUDGET_GB GB de margen"
+        OCR_RECOMMENDATION_DETAIL="quedan ~$remaining GB tras el LLM seleccionado. PaddleGPU pide ~$PADDLE_GPU_VRAM_BUDGET_GB GB de margen"
     fi
 }
 
 read_setup_selection() {
     local recommended_accelerator="$1"
     local recommended_llm="$2"
-    local answer exit_key
-    exit_key=5
-    ((DOCKER_GPU)) || exit_key=3
-    write_step "Selección de modo"
+    local answer
+    write_step "Paso 1/2: LLM"
     write_menu_option "Enter" "$(format_menu_selection "$recommended_accelerator" "$recommended_llm")" "<- recomendada"
     write_menu_option "1" "$(format_menu_selection "cpu" "low")" "máxima compatibilidad"
-    write_menu_option "2" "$(format_menu_selection "cpu" "high")" "CPU/RAM; perfil experimental, puede ser muy lento"
+    write_menu_option "2" "$(format_menu_selection "cpu" "high")" "experimental"
     if ((DOCKER_GPU)); then
         write_menu_option "3" "$(format_menu_selection "nvidia" "low")" "mayor velocidad"
-        write_menu_option "4" "$(format_menu_selection "nvidia" "high")" "perfil de referencia; mejor calidad esperada"
+        write_menu_option "4" "$(format_menu_selection "nvidia" "high")" "referencia y mejor calidad"
+    else
+        write_menu_option "-" "$(format_menu_selection "nvidia" "low")" "requiere NVIDIA en Docker"
+        write_menu_option "-" "$(format_menu_selection "nvidia" "high")" "requiere NVIDIA en Docker"
     fi
-    write_menu_option "$exit_key" "exit" "salir sin cambios"
+    write_menu_option "q" "exit" "salir sin cambios"
+    write_note "CPU + high usa CPU/RAM y puede ser muy lento. Úsalo solo si tienes mucha RAM y aceptas esperas largas."
     write_note "Usa la recomendada salvo que sepas exactamente qué estás cambiando."
 
     if [[ ! -t 0 ]]; then
@@ -776,7 +847,7 @@ read_setup_selection() {
     fi
     while true; do
         answer="$(lower "$(trim "$(read_setup_option)")")"
-        if [[ "$answer" == "$exit_key" || "$answer" == "5" || "$answer" == "exit" || "$answer" == "salir" || "$answer" == "q" ]]; then
+        if [[ "$answer" == "q" || "$answer" == "exit" || "$answer" == "salir" ]]; then
             exit_manualito "Setup cancelado. No se han aplicado cambios."
         fi
         case "$answer" in
@@ -793,23 +864,21 @@ read_setup_selection() {
 read_ocr_selection() {
     local recommended_ocr="$1"
     local recommendation_detail="$2"
-    local answer exit_key
-    exit_key=4
-    write_step "Selección de OCR"
+    local answer
+    write_step "Paso 2/2: OCR"
     write_menu_option "Enter" "$recommended_ocr" "<- recomendada" 14
     write_menu_option "1" "tesseract" "máxima compatibilidad" 14
     write_menu_option "2" "paddle_cpu" "muy fiable, pero lento" 14
     if ((PADDLE_GPU_AVAILABLE)); then
-        write_menu_option "3" "paddle_gpu" "mejor OCR esperado; requiere margen de VRAM" 14
+        write_menu_option "3" "paddle_gpu" "mejor OCR esperado, requiere margen de VRAM" 14
     else
-        write_menu_option "3" "paddle_gpu" "$PADDLE_GPU_REASON" 14
+        write_menu_option "-" "paddle_gpu" "$PADDLE_GPU_REASON" 14
     fi
-    write_menu_option "$exit_key" "exit" "salir sin cambios" 14
-    if [[ "$recommended_ocr" == "paddle_gpu" ]]; then
-        write_note "paddle_gpu se recomienda porque $recommendation_detail; Tesseract sigue siendo la opción conservadora."
-    else
+    write_menu_option "q" "exit" "salir sin cambios" 14
+    if [[ "$recommended_ocr" != "paddle_gpu" ]]; then
         write_note "Tesseract recomendado: $recommendation_detail."
     fi
+    write_note "Usa la recomendada salvo que sepas exactamente qué estás cambiando."
 
     if [[ ! -t 0 ]]; then
         CHOSEN_OCR="$recommended_ocr"
@@ -817,7 +886,7 @@ read_ocr_selection() {
     fi
     while true; do
         answer="$(lower "$(trim "$(read_setup_option)")")"
-        if [[ "$answer" == "$exit_key" || "$answer" == "5" || "$answer" == "exit" || "$answer" == "salir" || "$answer" == "q" ]]; then
+        if [[ "$answer" == "q" || "$answer" == "exit" || "$answer" == "salir" ]]; then
             exit_manualito "Setup cancelado. No se han aplicado cambios."
         fi
         case "$answer" in
@@ -861,49 +930,37 @@ resolve_selection() {
     write_field "vram llm" "$(format_llm_vram "$RECOMMENDED_LLM")"
     write_field "ocr" "$RECOMMENDED_OCR"
 
-    if ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN)); then
-        [[ "$ACCELERATOR" != "auto" ]] && FINAL_ACCELERATOR="$ACCELERATOR"
-        [[ "$LLM" != "auto" ]] && FINAL_LLM="$LLM"
-        [[ "$FINAL_ACCELERATOR" == "cpu" && "$LLM" == "auto" ]] && FINAL_LLM="low"
-        get_ocr_recommendation "$FINAL_ACCELERATOR" "$FINAL_LLM"
-        FINAL_OCR="$OCR_RECOMMENDED_MODE"
-        [[ "$OCR" != "auto" ]] && FINAL_OCR="$OCR"
-    else
+    if (( ! USE_RECOMMENDED && ! DRY_RUN )); then
         read_setup_selection "$RECOMMENDED_ACCELERATOR" "$RECOMMENDED_LLM"
         FINAL_ACCELERATOR="$CHOSEN_ACCELERATOR"
         FINAL_LLM="$CHOSEN_LLM"
         get_ocr_recommendation "$FINAL_ACCELERATOR" "$FINAL_LLM"
-        write_ocr_selection_header "$FINAL_ACCELERATOR" "$FINAL_LLM"
         read_ocr_selection "$OCR_RECOMMENDED_MODE" "$OCR_RECOMMENDATION_DETAIL"
         FINAL_OCR="$CHOSEN_OCR"
     fi
 
-    if ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)); then
+    if ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)); then
         write_step "Configuración seleccionada"
         write_field "selección" "$(format_selection "$FINAL_ACCELERATOR" "$FINAL_LLM")"
         write_field "vram llm" "$(format_llm_vram "$FINAL_LLM")"
         write_field "ocr" "$FINAL_OCR"
     fi
     if [[ "$FINAL_ACCELERATOR" != "$RECOMMENDED_ACCELERATOR" || "$FINAL_LLM" != "$RECOMMENDED_LLM" || "$FINAL_OCR" != "$RECOMMENDED_OCR" ]]; then
-        ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "Configuración manual distinta de la recomendada."
+        ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "Configuración distinta de la recomendada."
     fi
     if [[ "$FINAL_ACCELERATOR" == "cpu" && "$FINAL_LLM" == "high" ]]; then
-        ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "$(format_selection "cpu" "high") usa CPU/RAM; perfil experimental, puede ser muy lento."
+        ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "$(format_selection "cpu" "high") usa CPU/RAM y puede ser muy lento. Úsalo solo si tienes mucha RAM y aceptas esperas largas."
     fi
-    [[ "$FINAL_ACCELERATOR" == "nvidia" && "$NVIDIA_AVAILABLE" -eq 0 ]] && stop_manualito "Has forzado NVIDIA, pero nvidia-smi no está disponible."
-    if [[ "$FINAL_ACCELERATOR" == "nvidia" && "$DOCKER_GPU" -eq 0 ]]; then
-        ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "Has forzado NVIDIA aunque Docker no ha validado --gpus all."
-    fi
-    [[ "$FINAL_OCR" == "paddle_cpu" ]] && ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "paddle_cpu es muy fiable, pero puede ser bastante lento."
+    [[ "$FINAL_OCR" == "paddle_cpu" ]] && ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "paddle_cpu es muy fiable, pero puede ser bastante lento."
     if [[ "$FINAL_OCR" == "paddle_gpu" && "$PADDLE_GPU_AVAILABLE" -eq 0 ]]; then
         if ((DRY_RUN)); then
-            write_note "Has elegido paddle_gpu, pero $PADDLE_GPU_REASON."
+            write_note "paddle_gpu no está disponible: $PADDLE_GPU_REASON."
         else
-            stop_manualito "Has elegido paddle_gpu, pero $PADDLE_GPU_REASON."
+            stop_manualito "paddle_gpu no está disponible: $PADDLE_GPU_REASON."
         fi
     fi
     if [[ "$FINAL_OCR" == "paddle_gpu" && "$PADDLE_GPU_AVAILABLE" -eq 1 && "$OCR_RECOMMENDED_MODE" != "paddle_gpu" ]]; then
-        ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "Has elegido paddle_gpu aunque $OCR_RECOMMENDATION_DETAIL."
+        ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "Has elegido paddle_gpu aunque $OCR_RECOMMENDATION_DETAIL."
     fi
     return 0
 }
@@ -927,9 +984,6 @@ save_selection() {
         printf 'MANUALITO_ACCELERATOR=%s\n' "$FINAL_ACCELERATOR"
         printf 'MANUALITO_LLM_SIZE=%s\n' "$FINAL_LLM"
         printf 'MANUALITO_OCR_MODE=%s\n' "$FINAL_OCR"
-        printf 'MANUALITO_RECOMMENDED_ACCELERATOR=%s\n' "$RECOMMENDED_ACCELERATOR"
-        printf 'MANUALITO_RECOMMENDED_LLM_SIZE=%s\n' "$RECOMMENDED_LLM"
-        printf 'MANUALITO_RECOMMENDED_OCR_MODE=%s\n' "$RECOMMENDED_OCR"
         printf 'MANUALITO_SETUP_VERSION=1\n'
     } >"$tmp"
     mv -f "$tmp" "$SELECTED_ENV"
@@ -1031,8 +1085,8 @@ resolve_running_manualito_before_vram() {
     write_step "Manualito ya está en ejecución"
     write_field "servicios" "$(printf '%s\n' "$running_services" | join_lines ', ')"
     write_note "Puede ocupar VRAM y hacer que la recomendación sea más conservadora."
-    if ((MANUAL_SELECTION_REQUESTED || USE_RECOMMENDED)); then
-        write_note "No se parará automáticamente porque has usado parámetros de setup."
+    if ((USE_RECOMMENDED)); then
+        write_note "No se parará automáticamente porque estás usando la recomendada sin interacción."
         return 0
     fi
     if read_yes_no "¿Quieres pararlo antes de medir VRAM?"; then
@@ -1048,6 +1102,7 @@ invoke_setup() {
     get_nvidia_info
     test_docker_gpu "$docker_path"
     resolve_selection
+    confirm_setup_selection
     save_selection "$((! DRY_RUN && ! SKIP_BUILD))"
     if ((SKIP_BUILD)); then
         write_note "Build saltado por -SkipBuild."
@@ -1063,8 +1118,9 @@ invoke_setup() {
 }
 
 get_running_llm_model() {
-    local docker_path="$1"
-    capture_compose_lines "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" exec -T llm printenv OLLAMA_MODEL | head -n1
+    local docker_bin="${1:-${DOCKER_PATH:-}}"
+    [[ -n "$docker_bin" ]] || return 0
+    capture_compose_lines "$docker_bin" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" exec -T llm printenv OLLAMA_MODEL | head -n1
 }
 
 invoke_start() {
@@ -1108,7 +1164,7 @@ invoke_stop() {
         SELECTED_ACCELERATOR="cpu"
         SELECTED_LLM="low"
         SELECTED_OCR="tesseract"
-        write_note "No hay selected.env; parando con cpu + low."
+        write_note "No hay selected.env. Parando con CPU + low."
     fi
     invoke_compose "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" down
     if ((DRY_RUN)); then
@@ -1137,7 +1193,7 @@ main() {
                 if read_yes_no "¿Quieres arrancar Manualito ahora?"; then
                     exit 42
                 else
-                    write_ok "Manualito queda preparado. Abre start.sh para arrancarlo."
+                    write_ok "Manualito queda preparado. Ejecuta start.sh para arrancarlo."
                 fi
             fi
             ;;

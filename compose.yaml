@@ -1,4 +1,4 @@
-name: ${PROYECT_NAME:?PROYECT_NAME no definida}
+name: ${PROJECT_NAME:?PROJECT_NAME no definida}
 
 x-service-hardening: &service-hardening
   security_opt:
@@ -67,7 +67,7 @@ x-celery-base: &celery-base
   environment:
     APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
     REDIS_PASSWORD_FILE: /run/secrets/redis_password
-  image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+  image: ${PROJECT_NAME:?PROJECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
   build: *api-build
   secrets:
     - postgres_user
@@ -108,8 +108,8 @@ services:
 
   asset-storage-init:
     <<: *volume-init-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-asset-storage-init
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-asset-storage-init
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
     user: "0:0"
     entrypoint: ["/usr/bin/install"]
@@ -129,7 +129,7 @@ services:
 
   api:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-api
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-api
     env_file:
       - ./config/backend.env
       - ./config/ocr.env
@@ -138,7 +138,7 @@ services:
     environment:
       APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
     secrets:
       - postgres_user
@@ -168,7 +168,7 @@ services:
 
   celery-worker-manuals:
     <<: *celery-base
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-worker-manuals
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-celery-worker-manuals
     command:
       - celery
       - -A
@@ -199,7 +199,7 @@ services:
 
   celery-worker-gpu:
     <<: *celery-base
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-worker-gpu
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-celery-worker-gpu
     command:
       - celery
       - -A
@@ -230,7 +230,7 @@ services:
 
   celery-worker-mail:
     <<: *celery-base
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-worker-mail
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-celery-worker-mail
     command:
       - celery
       - -A
@@ -257,7 +257,7 @@ services:
 
   celery-beat:
     <<: *celery-base
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-celery-beat
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-celery-beat
     command:
       - celery
       - -A
@@ -278,14 +278,14 @@ services:
 
   flower:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-flower
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-flower
     env_file:
       - ./config/backend.env
       - ./config/celery.env
     environment:
       APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-flower:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-flower:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *flower-build
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -314,10 +314,10 @@ services:
 
   database-migrate:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-database-migrate
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-database-migrate
     env_file:
       - ./config/database.env
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-database:${DATABASE_IMAGE_VERSION:?DATABASE_IMAGE_VERSION no definida}
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-database:${DATABASE_IMAGE_VERSION:?DATABASE_IMAGE_VERSION no definida}
     build: *database-build
     secrets:
       - postgres_user
@@ -331,7 +331,7 @@ services:
 
   database:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-database
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-database
     image: postgres:${POSTGRES_VERSION:?POSTGRES_VERSION no definida}${POSTGRES_VARIANT:+-${POSTGRES_VARIANT}}
     env_file:
       - ./config/database.env
@@ -352,7 +352,7 @@ services:
 
   redis:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-redis
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-redis
     image: redis:${REDIS_VERSION:?REDIS_VERSION no definida}${REDIS_VARIANT:+-${REDIS_VARIANT}}
     user: "0:0"
     cap_drop:
@@ -391,11 +391,11 @@ services:
 
   ocr:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-ocr
     env_file:
       - ./config/backend.env
       - ./config/ocr.env
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:cpu
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-ocr:cpu
     build:
       context: .
       dockerfile: backend/ocr/Dockerfile
@@ -412,7 +412,7 @@ services:
 
   rag:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-rag
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-rag
     env_file:
       - ./config/backend.env
     build:
@@ -432,7 +432,7 @@ services:
 
   chroma:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-chroma
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-chroma
     image: chromadb/chroma:${CHROMA_VERSION:?CHROMA_VERSION no definida}
     pids_limit: 256
     volumes:
@@ -442,7 +442,7 @@ services:
 
   llm:
     <<: *service-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-llm
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-llm
     env_file:
       - ./config/llm.env
     environment:
@@ -471,7 +471,7 @@ services:
 
   mailpit:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-mailpit
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-mailpit
     image: axllent/mailpit:${MAILPIT_VERSION:?MAILPIT_VERSION no definida}
     pids_limit: 128
     environment:
@@ -483,7 +483,7 @@ services:
 
   ollama:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ollama
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-ollama
     image: ollama/ollama:${OLLAMA_VERSION:?OLLAMA_VERSION no definida}
     pids_limit: 512
     volumes:
@@ -500,7 +500,7 @@ services:
   # Descarga el modelo si falta.
   ollama-init:
     <<: *third-party-hardening
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-ollama-init
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-ollama-init
     env_file:
       - ./config/llm.env
     environment:
@@ -520,7 +520,7 @@ services:
 
   frontend:
     <<: *service-hardening-nginx
-    container_name: ${PROYECT_NAME:?PROYECT_NAME no definida}-frontend
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-frontend
     build:
       context: ./frontend
       args:

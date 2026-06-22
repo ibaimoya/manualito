@@ -1,6 +1,6 @@
 services:
   ocr:
-    image: ${PROYECT_NAME:?PROYECT_NAME no definida}-ocr:paddle-gpu
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-ocr:paddle-gpu
     build:
       args:
         # PaddleGPU usa CUDA 11.8 (cu118).

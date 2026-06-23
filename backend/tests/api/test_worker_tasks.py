@@ -177,6 +177,7 @@ def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):
         to_email="user@example.com",
         subject="Restablece tu contraseña",
         text_body="https://frontend/reset-password?token=secreto",
+        html_body="<html>secreto</html>",
     )
 
     apply_mock.assert_called_once_with(
@@ -184,9 +185,72 @@ def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):
             "user@example.com",
             "Restablece tu contraseña",
             "https://frontend/reset-password?token=secreto",
+            "<html>secreto</html>",
         ),
         argsrepr=mail_tasks.REDACTED_EMAIL_ARGS,
     )
+
+
+def test_send_email_task_forwards_html_body(monkeypatch):
+    """La task de correo conserva la alternativa HTML al invocar el cliente SMTP."""
+    send_mock = AsyncMock()
+    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
+
+    mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto", "<html>Texto</html>")
+
+    send_mock.assert_awaited_once_with(
+        to_email="user@example.com",
+        subject="Asunto",
+        text_body="Texto",
+        html_body="<html>Texto</html>",
+    )
+
+
+def test_send_email_task_retries_smtp_errors(monkeypatch):
+    """La task de correo reintenta errores SMTP transitorios."""
+    send_mock = AsyncMock(side_effect=mail_tasks.aiosmtplib.SMTPException("smtp down"))
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
+    monkeypatch.setattr(mail_tasks.send_email_task, "retry", retry_mock)
+
+    mail_tasks.send_email_task.push_request(retries=0)
+    try:
+        with pytest.raises(Retry):
+            mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto")
+    finally:
+        mail_tasks.send_email_task.pop_request()
+
+    retry_mock.assert_called_once()
+    assert retry_mock.call_args.kwargs["countdown"] == 30
+    assert isinstance(retry_mock.call_args.kwargs["exc"], mail_tasks.aiosmtplib.SMTPException)
+
+
+def test_send_email_task_stops_when_retries_are_exhausted(monkeypatch):
+    """La task de correo registra el fallo final sin reintentar indefinidamente."""
+    send_mock = AsyncMock(side_effect=OSError("network down"))
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
+    monkeypatch.setattr(mail_tasks.send_email_task, "retry", retry_mock)
+
+    mail_tasks.send_email_task.push_request(retries=mail_tasks.send_email_task.max_retries)
+    try:
+        mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto")
+    finally:
+        mail_tasks.send_email_task.pop_request()
+
+    retry_mock.assert_not_called()
+
+
+def test_send_email_task_logs_soft_timeout(monkeypatch):
+    """La task de correo no reintenta si Celery corta por soft timeout."""
+    send_mock = AsyncMock(side_effect=mail_tasks.SoftTimeLimitExceeded())
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
+    monkeypatch.setattr(mail_tasks.send_email_task, "retry", retry_mock)
+
+    mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto")
+
+    retry_mock.assert_not_called()
 
 
 def test_celery_config_is_strict_and_ignores_results_by_default():

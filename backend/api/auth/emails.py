@@ -1,15 +1,20 @@
 """Correos transaccionales de autenticación."""
 
 import logging
+from html import escape
+from pathlib import Path
+from string import Template
 from urllib.parse import urlencode
 
-import aiosmtplib
-
 from api import config
-from api.mail.client import send_email
 from api.worker.tasks.mail import enqueue_email
 
 logger = logging.getLogger(__name__)
+_VERIFICATION_TEMPLATE = Template(
+    (
+        Path(__file__).parents[1] / "mail" / "templates" / "verification_email.html"
+    ).read_text(encoding="utf-8")
+)
 
 
 def schedule_verification_email(
@@ -18,11 +23,12 @@ def schedule_verification_email(
     username: str,
     token: str,
 ) -> None:
-    """Encola el email de verificación sin bloquear la respuesta HTTP."""
+    """Encola el email de verificación (texto + HTML) sin bloquear la respuesta."""
     enqueue_email(
         to_email=to_email,
-        subject="Verifica tu email en Manualito",
+        subject=f"Tu turno, {username} — confirma tu email",
         text_body=_verification_email_body(username=username, token=token),
+        html_body=_verification_email_html(username=username, token=token),
     )
 
 
@@ -40,14 +46,6 @@ def schedule_password_reset_email(
     )
 
 
-async def send_email_safely(*, to_email: str, subject: str, text_body: str) -> None:
-    """Envía email best-effort y registra fallos sin tokens ni URLs."""
-    try:
-        await send_email(to_email=to_email, subject=subject, text_body=text_body)
-    except (aiosmtplib.SMTPException, OSError):
-        logger.warning("No se pudo enviar un email transaccional de auth.", exc_info=True)
-
-
 def _verification_email_body(*, username: str, token: str) -> str:
     """Construye el texto del email de verificación."""
     link = _frontend_link("/verify-email", token)
@@ -56,6 +54,15 @@ def _verification_email_body(*, username: str, token: str) -> str:
         "Puedes verificar tu email de Manualito con este enlace:\n"
         f"{link}\n\n"
         "Si no has creado esta cuenta, puedes ignorar este correo."
+    )
+
+
+def _verification_email_html(*, username: str, token: str) -> str:
+    """Construye el cuerpo HTML del email de verificación."""
+    return _VERIFICATION_TEMPLATE.substitute(
+        username=escape(username),
+        verify_url=_frontend_link("/verify-email", token),
+        expiry_label=_humanize_minutes(config.EMAIL_VERIFICATION_TOKEN_MINUTES),
     )
 
 
@@ -74,3 +81,11 @@ def _frontend_link(path: str, token: str) -> str:
     """Genera un enlace de frontend sin loguearlo."""
     base_url = config.FRONTEND_PUBLIC_URL.rstrip("/")
     return f"{base_url}{path}?{urlencode({'token': token})}"
+
+
+def _humanize_minutes(minutes: int) -> str:
+    """Devuelve una etiqueta de caducidad legible a partir de minutos."""
+    if minutes % 60 == 0:
+        hours = minutes // 60
+        return "1 hora" if hours == 1 else f"{hours} horas"
+    return "1 minuto" if minutes == 1 else f"{minutes} minutos"

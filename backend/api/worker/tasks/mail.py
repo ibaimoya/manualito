@@ -12,13 +12,17 @@ from api.mail.client import send_email
 from api.worker.celery import celery_app
 
 logger = logging.getLogger(__name__)
-REDACTED_EMAIL_ARGS = "('<email oculto>', '<asunto oculto>', '<contenido oculto>')"
+REDACTED_EMAIL_ARGS = (
+    "('<email oculto>', '<asunto oculto>', '<contenido oculto>', '<html oculto>')"
+)
 
 
-def enqueue_email(*, to_email: str, subject: str, text_body: str) -> None:
+def enqueue_email(
+    *, to_email: str, subject: str, text_body: str, html_body: str | None = None
+) -> None:
     """Encola un email ocultando argumentos sensibles en eventos Celery."""
     send_email_task.apply_async(
-        args=(to_email, subject, text_body),
+        args=(to_email, subject, text_body, html_body),
         argsrepr=REDACTED_EMAIL_ARGS,
     )
 
@@ -31,7 +35,9 @@ def enqueue_email(*, to_email: str, subject: str, text_body: str) -> None:
     soft_time_limit=config.CELERY_MAIL_SOFT_TIME_LIMIT,
     time_limit=config.CELERY_MAIL_HARD_TIME_LIMIT,
 )
-def send_email_task(self, to_email: str, subject: str, text_body: str) -> None:
+def send_email_task(
+    self, to_email: str, subject: str, text_body: str, html_body: str | None = None
+) -> None:
     """Envía un email transaccional sin bloquear la petición principal."""
     try:
         anyio.run(
@@ -40,6 +46,7 @@ def send_email_task(self, to_email: str, subject: str, text_body: str) -> None:
                 to_email=to_email,
                 subject=subject,
                 text_body=text_body,
+                html_body=html_body,
             )
         )
     except (aiosmtplib.SMTPException, OSError) as exc:

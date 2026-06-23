@@ -701,6 +701,9 @@
   font-size: 13.5px;
   line-height: 1.5;
   color: #fff8f0;
+  /* Justificado. */
+  text-align: justify;
+  hyphens: auto;
 }
 
 .acc {
@@ -770,6 +773,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  text-align: justify;
+  hyphens: auto;
 }
 
 /* — Choice (última diapositiva del carrusel: crear cuenta / entrar) — */

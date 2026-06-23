@@ -52,7 +52,7 @@ const SLIDES: Slide[] = [
     id: 'entiende',
     n: 3,
     title: 'Te lo explica con calma',
-    sub: 'Resumen, secciones colapsables y un chat para resolver dudas mientras jugáis.',
+    sub: 'Resumen, preguntas frecuentes y un chat para resolver dudas mientras jugáis.',
   },
 ];
 
@@ -314,10 +314,7 @@ function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
     <h1 aria-label="Manualito" className={styles.heroWord}>
       {WORD_LETTERS.map(({ id, character, order }) => (
         <span key={id} className={styles.letterMask}>
-          <span
-            className={cn(styles.letter, playing && styles.letterIn)}
-            style={{ '--i': order }}
-          >
+          <span className={cn(styles.letter, playing && styles.letterIn)} style={{ '--i': order }}>
             {character}
           </span>
         </span>
@@ -404,11 +401,7 @@ function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
       <div className={styles.thumbs}>
         {shown &&
           THUMBNAILS.map(({ id, number }) => (
-            <div
-              key={id}
-              className={styles.thumb}
-              style={{ '--d': `${number * 200}ms` }}
-            >
+            <div key={id} className={styles.thumb} style={{ '--d': `${number * 200}ms` }}>
               <span className={styles.thumbNum}>{number}</span>
             </div>
           ))}
@@ -483,8 +476,8 @@ function StepEntiende() {
       <div className={styles.summary}>
         <span className={styles.eyebrow}>RESUMEN</span>
         <p>
-          Construyes una isla con poblados y ciudades para sumar <strong>10 puntos</strong>. Tiras
-          dados, recibes recursos y comercias.
+          En el juego del Catán los jugadores compiten por <strong>colonizar una isla</strong>{' '}
+          recolectando recursos, comerciando y construyendo asentamientos.
         </p>
       </div>
 
@@ -509,7 +502,7 @@ function StepEntiende() {
   );
 }
 
-// Acordeones de mentira de la demo de Catan: solo el primero viene abierto.
+// Acordeones de mentira de la demo de Catán: solo el primero viene abierto.
 const DEMO_BLOCKS = [
   {
     icon: Flag,
@@ -524,6 +517,6 @@ const DEMO_BLOCKS = [
     ),
   },
   { icon: RefreshCw, title: '¿Cómo van los turnos?', em: '3 fases', body: null },
-  { icon: Crown, title: '¿Cómo se gana?', em: '10 PV', body: null },
-  { icon: Check, title: 'Casos especiales', em: 'Ladrón · puerto · cartas', body: null },
+  { icon: Crown, title: '¿Cómo se gana?', em: 'Llegando a 10 puntos', body: null },
+  { icon: Check, title: 'Casos especiales', em: 'Ladrón, puerto, cartas, etc.', body: null },
 ];

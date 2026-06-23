@@ -178,12 +178,12 @@ jobs:
       - name: Instalar pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11.5.1
+          version: 11.8.0
 
       - name: Configurar Node 26
         uses: actions/setup-node@v6
         with:
-          node-version: 26.3.0
+          node-version: 26.3.1
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 

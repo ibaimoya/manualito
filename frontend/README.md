@@ -39,7 +39,7 @@ Requisitos locales:
 | Herramienta | Versión  |
 | ----------- | -------- |
 | Node.js     | `>=24`   |
-| pnpm        | `11.5.1` |
+| pnpm        | `11.8.0` |
 
 Se prefiere pnpm porque acelera instalaciones y reduce espacio usando un store
 compartido de dependencias; además, su `node_modules` estricto evita depender de

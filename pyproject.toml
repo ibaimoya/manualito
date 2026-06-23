@@ -4,41 +4,41 @@ version = "1.0.0"
 requires-python = "==3.13.*"
 dependencies = [
     "chromadb>=1.5.9",
-    "ipykernel>=7.2.0",
+    "ipykernel>=7.3.0",
     "pytesseract>=0.3.13",
 ]
 
 [dependency-groups]
 api = [
-    "aiosmtplib==5.1.1",
-    "anyio==4.13.0",
+    "aiosmtplib==5.1.2",
+    "anyio==4.14.0",
     "celery[redis]==5.6.3",
     "email-validator==2.3.0",
-    "fastapi==0.136.3",
+    "fastapi==0.138.0",
     "httpx==0.28.1",
     "pillow==12.2.0",
     "psycopg[binary]==3.3.4",
     "pydantic==2.13.4",
-    "pypdfium2==5.9.0",
+    "pypdfium2==5.10.1",
     "pwdlib[argon2]==0.3.0",
-    "python-multipart==0.0.31",
+    "python-multipart==0.0.32",
     "redis==6.4.0",
-    "slowapi==0.1.9",
-    "sqlalchemy==2.0.50",
+    "slowapi==0.1.10",
+    "sqlalchemy==2.0.51",
     "uvicorn[standard]==0.49.0",
-    "pydantic-settings==2.14.1",
+    "pydantic-settings==2.14.2",
 ]
 database = [
     "alembic==1.18.4",
     "psycopg[binary]==3.3.4",
-    "sqlalchemy==2.0.50",
+    "sqlalchemy==2.0.51",
 ]
 ocr = [
-    "fastapi==0.136.3",
+    "fastapi==0.138.0",
     "numpy==2.3.5",
     "opencv-contrib-python==4.10.0.84",
     "pillow==12.2.0",
-    "python-multipart==0.0.31",
+    "python-multipart==0.0.32",
     "uvicorn[standard]==0.49.0",
 ]
 ocr-paddle = [
@@ -55,15 +55,15 @@ ocr-tesseract = [
 ]
 rag = [
     "chromadb-client==1.5.9",
-    "fastapi==0.136.3",
+    "fastapi==0.138.0",
     "numpy==2.3.5",
     "pydantic==2.13.4",
-    "sentence-transformers==5.5.1",
-    "torch==2.12.0",
+    "sentence-transformers==5.6.0",
+    "torch==2.12.1",
     "uvicorn[standard]==0.49.0",
 ]
 llm = [
-    "fastapi==0.136.3",
+    "fastapi==0.138.0",
     "httpx==0.28.1",
     "pydantic==2.13.4",
     "uvicorn[standard]==0.49.0",
@@ -72,29 +72,29 @@ monitoring = [
     "flower==2.0.1",
 ]
 test = [
-    "aiosmtplib==5.1.1",
+    "aiosmtplib==5.1.2",
     "alembic==1.18.4",
-    "anyio==4.13.0",
+    "anyio==4.14.0",
     "celery[redis]==5.6.3",
     "email-validator==2.3.0",
-    "fastapi==0.136.3",
+    "fastapi==0.138.0",
     "httpx==0.28.1",
     "numpy==2.3.5",
     "opencv-contrib-python==4.10.0.84",
     "pillow==12.2.0",
     "psycopg[binary]==3.3.4",
     "pydantic==2.13.4",
-    "pypdfium2==5.9.0",
+    "pypdfium2==5.10.1",
     "pwdlib[argon2]==0.3.0",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "python-multipart==0.0.31",
+    "python-multipart==0.0.32",
     "redis==6.4.0",
-    "ruff==0.15.15",
-    "slowapi==0.1.9",
-    "sqlalchemy==2.0.50",
+    "ruff==0.15.18",
+    "slowapi==0.1.10",
+    "sqlalchemy==2.0.51",
     "uvicorn[standard]==0.49.0",
-    "pydantic-settings==2.14.1",
+    "pydantic-settings==2.14.2",
 ]
 
 [tool.uv]

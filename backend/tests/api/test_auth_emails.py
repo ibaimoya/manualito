@@ -1,3 +1,4 @@
+import re
 from unittest.mock import Mock
 
 import pytest
@@ -80,6 +81,21 @@ def test_verification_email_html_escapes_username_and_uses_template_values(monke
     )
     assert "Verificar mi email" in html_body
     assert "El enlace caduca en 24 horas." in html_body
+
+
+def test_verification_email_html_avoids_layout_tables(monkeypatch):
+    """El layout del email evita tablas presentacionales y atributos obsoletos."""
+    monkeypatch.setattr(emails.config, "FRONTEND_PUBLIC_URL", "http://frontend.local/")
+
+    html_body = emails._verification_email_html(username="Nora", token="token")
+
+    assert "<table" not in html_body
+    assert 'role="presentation"' not in html_body
+    deprecated_attrs = re.findall(
+        r"<(?:table|td)\b[^>]*\s(?:align|bgcolor|border|cellpadding|cellspacing|width)=",
+        html_body,
+    )
+    assert deprecated_attrs == []
 
 
 @pytest.mark.parametrize(

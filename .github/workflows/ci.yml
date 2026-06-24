@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Cargar versiones
         id: versions
@@ -34,12 +34,12 @@ jobs:
           echo "uv_version=$UV_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ steps.versions.outputs.python_ci_version }}
 
       - name: Cache de uv
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
@@ -64,7 +64,7 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Cargar versiones
         id: versions
@@ -74,12 +74,12 @@ jobs:
           echo "uv_version=$UV_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ steps.versions.outputs.python_ci_version }}
 
       - name: Cache de uv
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
@@ -96,7 +96,7 @@ jobs:
         run: uv run --locked --no-default-groups --only-group test pytest -v backend/tests --cov=backend --cov-report=xml:coverage.xml --junitxml=pytest-report.xml
 
       - name: Guardar reportes de tests y cobertura
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-and-coverage-reports
           path: |
@@ -129,7 +129,7 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Cargar versiones
         id: versions
@@ -139,12 +139,12 @@ jobs:
           echo "uv_version=$UV_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ steps.versions.outputs.python_ci_version }}
 
       - name: Cache de uv
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cache/uv
           key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
@@ -173,12 +173,12 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Instalar pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11.8.0
+          version: 11.9.0
 
       - name: Configurar Node 26
         uses: actions/setup-node@v6
@@ -214,7 +214,7 @@ jobs:
         run: pnpm build
 
       - name: Guardar bundle de producción
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: frontend/dist
@@ -222,7 +222,7 @@ jobs:
           retention-days: 7
 
       - name: Guardar cobertura del frontend
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: frontend/coverage/lcov.info
@@ -238,17 +238,17 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Descargar reportes de tests del backend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: test-and-coverage-reports
 
       - name: Descargar cobertura del frontend
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-coverage
           path: frontend/coverage
@@ -262,7 +262,7 @@ jobs:
           fi
 
       - name: Analizar con SonarQube Cloud
-        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e
         with:
           args: >
             -Dsonar.qualitygate.wait=true

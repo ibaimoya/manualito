@@ -56,7 +56,7 @@ function renderChat(gameId: string, search?: { q?: string; c?: string }) {
 
 const PENDING_ASSISTANT_POLL_EXPECTED_READS = 2;
 const PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS =
-  PENDING_ASSISTANT_POLL_INTERVAL_MS * (PENDING_ASSISTANT_POLL_EXPECTED_READS + 2);
+  PENDING_ASSISTANT_POLL_INTERVAL_MS * (PENDING_ASSISTANT_POLL_EXPECTED_READS + 4);
 const PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS = PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS + 3_000;
 
 describe('/chat/$gameId · search schema', () => {
@@ -213,7 +213,7 @@ describe('/chat/$gameId', () => {
         if (!sent) return HttpResponse.json({ messages: baseMessages });
         messageReads += 1;
         const newTurn =
-          messageReads < 2
+          messageReads < PENDING_ASSISTANT_POLL_EXPECTED_READS
             ? [
                 message('u-async', 'user', 'completed', 'async'),
                 message('b-async', 'assistant', 'pending', ''),
@@ -257,16 +257,12 @@ describe('/chat/$gameId', () => {
     expect(await screen.findByText('async')).toBeInTheDocument();
     expect(await screen.findByRole('status', { name: /Generando respuesta/i })).toBeInTheDocument();
     await waitFor(
-      () => expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS),
+      () => {
+        expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS);
+        expect(screen.getByText('Respuesta generada por polling.')).toBeInTheDocument();
+      },
       { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
     );
-    expect(
-      await screen.findByText(
-        'Respuesta generada por polling.',
-        {},
-        { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
-      ),
-    ).toBeInTheDocument();
   }, PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS);
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {

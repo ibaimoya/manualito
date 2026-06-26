@@ -15,6 +15,11 @@ _VERIFICATION_TEMPLATE = Template(
         Path(__file__).parents[1] / "mail" / "templates" / "verification_email.html"
     ).read_text(encoding="utf-8")
 )
+_RESET_TEMPLATE = Template(
+    (
+        Path(__file__).parents[1] / "mail" / "templates" / "reset_password_email.html"
+    ).read_text(encoding="utf-8")
+)
 
 
 def schedule_verification_email(
@@ -38,11 +43,12 @@ def schedule_password_reset_email(
     username: str,
     token: str,
 ) -> None:
-    """Encola el email de reset ocultando su contenido en eventos Celery."""
+    """Encola el email de reset (texto + HTML) ocultando su contenido en Celery."""
     enqueue_email(
         to_email=to_email,
         subject="Restablece tu contraseña en Manualito",
         text_body=_password_reset_email_body(username=username, token=token),
+        html_body=_password_reset_email_html(username=username, token=token),
     )
 
 
@@ -53,7 +59,7 @@ def _verification_email_body(*, username: str, token: str) -> str:
         f"Hola {username},\n\n"
         "Puedes verificar tu email de Manualito con este enlace:\n"
         f"{link}\n\n"
-        "Si no has creado esta cuenta, puedes ignorar este correo."
+        "Si no has creado esta cuenta, ignora este correo sin problema."
     )
 
 
@@ -74,6 +80,15 @@ def _password_reset_email_body(*, username: str, token: str) -> str:
         "Puedes restablecer tu contraseña de Manualito con este enlace:\n"
         f"{link}\n\n"
         "Si no has pedido este cambio, puedes ignorar este correo."
+    )
+
+
+def _password_reset_email_html(*, username: str, token: str) -> str:
+    """Construye el cuerpo HTML del email de restablecimiento."""
+    return _RESET_TEMPLATE.substitute(
+        username=escape(username),
+        reset_url=_frontend_link("/reset-password", token),
+        expiry_label=_humanize_minutes(config.PASSWORD_RESET_TOKEN_MINUTES),
     )
 
 

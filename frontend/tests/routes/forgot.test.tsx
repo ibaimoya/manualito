@@ -69,6 +69,7 @@ describe('/forgot', () => {
 
     releaseBackend();
     expect(await screen.findByText('Revisa tu correo')).toBeInTheDocument();
+    expect(screen.getByText('¿No llega? Mira en spam y espera 2 min')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Volver a entrar' })).toHaveAttribute(
       'href',
       '/login',

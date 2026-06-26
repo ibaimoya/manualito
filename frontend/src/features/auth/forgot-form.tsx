@@ -20,7 +20,7 @@ export function ForgotForm() {
         icon={Mail}
         title="Revisa tu correo"
         body="Si existe una cuenta con ese email, te hemos enviado un enlace para crear una contraseña nueva."
-        footnote="¿No llega? Mira en spam · espera 1–2 min"
+        footnote="¿No llega? Mira en spam y espera 2 min"
       >
         <Button asChild size="lg" block variant="secondary">
           <Link to="/login">Volver a entrar</Link>

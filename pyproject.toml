@@ -9,37 +9,73 @@ dependencies = [
 ]
 
 [dependency-groups]
-api = [
-    "aiosmtplib==5.1.2",
-    "anyio==4.14.0",
-    "celery[redis]==5.6.3",
-    "email-validator==2.3.0",
+common-web = [
     "fastapi==0.138.0",
-    "httpx==0.28.1",
-    "pillow==12.2.0",
-    "psycopg[binary]==3.3.4",
-    "pydantic==2.13.4",
-    "pypdfium2==5.10.1",
-    "pwdlib[argon2]==0.3.0",
-    "python-multipart==0.0.32",
-    "redis==6.4.0",
-    "slowapi==0.1.10",
-    "sqlalchemy==2.0.51",
     "uvicorn[standard]==0.49.0",
+]
+common-validation = [
+    "pydantic==2.13.4",
+]
+common-settings = [
+    { include-group = "common-validation" },
     "pydantic-settings==2.14.2",
 ]
-database = [
-    "alembic==1.18.4",
+common-http-client = [
+    "httpx==0.28.1",
+]
+common-database = [
     "psycopg[binary]==3.3.4",
     "sqlalchemy==2.0.51",
 ]
-ocr = [
-    "fastapi==0.138.0",
-    "numpy==2.3.5",
-    "opencv-contrib-python==4.10.0.84",
+common-upload = [
     "pillow==12.2.0",
     "python-multipart==0.0.32",
-    "uvicorn[standard]==0.49.0",
+]
+common-numeric = [
+    "numpy==2.3.5",
+]
+common-mail = [
+    "aiosmtplib==5.1.2",
+    "email-validator==2.3.0",
+]
+common-worker = [
+    "celery[redis]==5.6.3",
+    "redis==6.4.0",
+]
+common-async = [
+    "anyio==4.14.0",
+]
+common-auth = [
+    "pwdlib[argon2]==0.3.0",
+]
+common-pdf = [
+    "pypdfium2==5.10.1",
+]
+common-rate-limit = [
+    "slowapi==0.1.10",
+]
+api = [
+    { include-group = "common-web" },
+    { include-group = "common-settings" },
+    { include-group = "common-http-client" },
+    { include-group = "common-database" },
+    { include-group = "common-upload" },
+    { include-group = "common-mail" },
+    { include-group = "common-worker" },
+    { include-group = "common-async" },
+    { include-group = "common-auth" },
+    { include-group = "common-pdf" },
+    { include-group = "common-rate-limit" },
+]
+database = [
+    { include-group = "common-database" },
+    "alembic==1.18.4",
+]
+ocr = [
+    { include-group = "common-web" },
+    { include-group = "common-upload" },
+    { include-group = "common-numeric" },
+    "opencv-contrib-python==4.10.0.84",
 ]
 ocr-paddle = [
     "paddleocr==3.7.0",
@@ -54,47 +90,39 @@ ocr-tesseract = [
     "pytesseract==0.3.13",
 ]
 rag = [
+    { include-group = "common-web" },
+    { include-group = "common-validation" },
+    { include-group = "common-numeric" },
     "chromadb-client==1.5.9",
-    "fastapi==0.138.0",
-    "numpy==2.3.5",
-    "pydantic==2.13.4",
     "sentence-transformers==5.6.0",
     "torch==2.12.1",
-    "uvicorn[standard]==0.49.0",
 ]
 llm = [
-    "fastapi==0.138.0",
-    "httpx==0.28.1",
-    "pydantic==2.13.4",
-    "uvicorn[standard]==0.49.0",
+    { include-group = "common-web" },
+    { include-group = "common-validation" },
+    { include-group = "common-http-client" },
 ]
 monitoring = [
     "flower==2.0.1",
 ]
 test = [
-    "aiosmtplib==5.1.2",
+    { include-group = "common-web" },
+    { include-group = "common-settings" },
+    { include-group = "common-http-client" },
+    { include-group = "common-database" },
+    { include-group = "common-upload" },
+    { include-group = "common-numeric" },
+    { include-group = "common-mail" },
+    { include-group = "common-worker" },
+    { include-group = "common-async" },
+    { include-group = "common-auth" },
+    { include-group = "common-pdf" },
+    { include-group = "common-rate-limit" },
     "alembic==1.18.4",
-    "anyio==4.14.0",
-    "celery[redis]==5.6.3",
-    "email-validator==2.3.0",
-    "fastapi==0.138.0",
-    "httpx==0.28.1",
-    "numpy==2.3.5",
     "opencv-contrib-python==4.10.0.84",
-    "pillow==12.2.0",
-    "psycopg[binary]==3.3.4",
-    "pydantic==2.13.4",
-    "pypdfium2==5.10.1",
-    "pwdlib[argon2]==0.3.0",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "python-multipart==0.0.32",
-    "redis==6.4.0",
     "ruff==0.15.18",
-    "slowapi==0.1.10",
-    "sqlalchemy==2.0.51",
-    "uvicorn[standard]==0.49.0",
-    "pydantic-settings==2.14.2",
 ]
 
 [tool.uv]

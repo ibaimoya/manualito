@@ -124,6 +124,10 @@ test = [
     "pytest-cov==7.1.0",
     "ruff==0.15.18",
 ]
+typecheck = [
+    { include-group = "test" },
+    "mypy==2.1.0",
+]
 
 [tool.uv]
 package = false
@@ -166,6 +170,43 @@ extend-exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "C4", "RUF"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+files = [
+    "backend/api",
+    "backend/common",
+    "backend/database",
+    "backend/llm",
+    "backend/ocr",
+    "backend/rag",
+]
+exclude = "^backend/tests/"
+show_error_codes = true
+warn_unused_configs = true
+mypy_path = "backend"
+
+[[tool.mypy.overrides]]
+module = [
+    "billiard.*",
+    "celery",
+    "celery.*",
+    "kombu",
+    "paddle",
+    "paddle.*",
+    "paddleocr",
+    "pypdfium2",
+    "pytesseract",
+    "sentence_transformers",
+]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_typed = true
+init_forbid_extra = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]

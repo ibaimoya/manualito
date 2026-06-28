@@ -31,7 +31,7 @@ class _FakePdfDocument:
 
 @pytest.mark.anyio
 async def test_validate_manual_pdf_accepts_pdf_and_counts_pages():
-    """La validacion PDF confirma firma real y cuenta paginas con PDFium."""
+    """La validación PDF confirma firma real y cuenta páginas con PDFium."""
     upload = _upload_file(_pdf_bytes(page_count=2), "manual.pdf", "application/pdf")
 
     result = await manual_validation.validate_manual_pdf(upload)
@@ -44,7 +44,7 @@ async def test_validate_manual_pdf_accepts_pdf_and_counts_pages():
 
 @pytest.mark.anyio
 async def test_validate_manual_pdf_rejects_mime_that_does_not_match_pdf():
-    """El MIME declarado sigue siendo un filtro rapido, aunque no sea suficiente."""
+    """El MIME declarado sigue siendo un filtro rápido, aunque no sea suficiente."""
     upload = _upload_file(_pdf_bytes(page_count=1), "manual.jpg", "image/jpeg")
 
     with pytest.raises(InvalidPdfError):
@@ -71,7 +71,7 @@ async def test_validate_manual_pdf_rejects_corrupt_pdf():
 
 @pytest.mark.anyio
 async def test_validate_manual_pdf_rejects_too_large_file(monkeypatch):
-    """El validador lee solo limite+1 bytes para cortar PDFs enormes pronto."""
+    """El validador lee solo límite+1 bytes para cortar PDFs enormes pronto."""
     monkeypatch.setattr(manual_validation.config, "MAX_MANUAL_PDF_SIZE", 4)
     upload = _upload_file(b"%PDF-" + b"x" * 20, "manual.pdf", "application/pdf")
 
@@ -83,7 +83,7 @@ async def test_validate_manual_pdf_rejects_too_large_file(monkeypatch):
 @pytest.mark.parametrize(
     ("page_count", "accepted"),
     [(29, True), (30, True), (31, False)],
-    ids=["29_paginas", "30_paginas", "31_paginas"],
+    ids=["29_páginas", "30_páginas", "31_páginas"],
 )
 async def test_validate_manual_pdf_page_count_bva(monkeypatch, page_count, accepted):
     """BVA del número de páginas: el límite acepta 30 y rechaza 31."""
@@ -102,7 +102,7 @@ async def test_validate_manual_pdf_page_count_bva(monkeypatch, page_count, accep
 @pytest.mark.parametrize(
     ("size", "accepted"),
     [(9, True), (10, True), (11, False)],
-    ids=["limite_menos_1", "limite_exacto", "limite_mas_1"],
+    ids=["límite_menos_1", "límite_exacto", "límite_más_1"],
 )
 async def test_validate_manual_pdf_size_bva(monkeypatch, size, accepted):
     """BVA del tamaño de PDF: corta justo por encima del límite configurado."""
@@ -120,7 +120,7 @@ async def test_validate_manual_pdf_size_bva(monkeypatch, size, accepted):
 
 @pytest.mark.anyio
 async def test_validate_manual_pdf_rejects_too_many_pages(monkeypatch):
-    """El limite de paginas se aplica tras contar el PDF en backend."""
+    """El límite de páginas se aplica tras contar el PDF en backend."""
     monkeypatch.setattr(manual_validation.config, "MAX_MANUAL_PAGES", 1)
     upload = _upload_file(_pdf_bytes(page_count=2), "manual.pdf", "application/pdf")
 
@@ -129,7 +129,7 @@ async def test_validate_manual_pdf_rejects_too_many_pages(monkeypatch):
 
 
 def test_validate_manual_image_rejects_decompression_bomb(monkeypatch):
-    """Pillow puede rechazar imagenes pequenas que explotan a demasiados pixeles."""
+    """Pillow puede rechazar imágenes pequeñas que explotan a demasiados píxeles."""
 
     def raise_decompression_bomb(_content):
         raise manual_validation.Image.DecompressionBombError("too many pixels")
@@ -140,10 +140,22 @@ def test_validate_manual_image_rejects_decompression_bomb(monkeypatch):
         manual_validation._validate_manual_image_content(b"image", "image/jpeg")
 
 
+def test_validate_manual_image_rejects_missing_image_format(monkeypatch):
+    """Una imagen sin formato detectado no se guarda como imagen válida."""
+    monkeypatch.setattr(
+        manual_validation.Image,
+        "open",
+        lambda _content: _FakeImage((1, 1), image_format=None),
+    )
+
+    with pytest.raises(InvalidImageError):
+        manual_validation._validate_manual_image_content(b"image", "image/jpeg")
+
+
 @pytest.mark.parametrize(
     ("size", "accepted"),
     [((60_000_000, 1), True), ((60_000_001, 1), False)],
-    ids=["limite_exacto", "limite_mas_1"],
+    ids=["límite_exacto", "límite_más_1"],
 )
 def test_validate_manual_image_pixel_count_bva(monkeypatch, size, accepted):
     """BVA del límite de píxeles: acepta el límite configurado y corta por encima."""
@@ -163,8 +175,9 @@ class _FakeImage:
 
     format = "JPEG"
 
-    def __init__(self, size: tuple[int, int]) -> None:
+    def __init__(self, size: tuple[int, int], image_format: str | None = "JPEG") -> None:
         self.size = size
+        self.format = image_format
 
     def __enter__(self):
         return self

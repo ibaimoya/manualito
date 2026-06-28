@@ -103,7 +103,10 @@ def _validate_manual_image_content(
         with Image.open(BytesIO(content)) as candidate:
             candidate.verify()
         with Image.open(BytesIO(content)) as verified:
-            mime_type = IMAGE_FORMAT_TO_MIME[verified.format]
+            image_format = verified.format
+            if image_format is None:
+                raise InvalidImageError
+            mime_type = IMAGE_FORMAT_TO_MIME[image_format]
             width, height = verified.size
     except (Image.DecompressionBombError, KeyError, OSError):
         raise InvalidImageError from None

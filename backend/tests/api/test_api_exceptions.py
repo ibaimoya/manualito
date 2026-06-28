@@ -233,6 +233,23 @@ def test_rate_limit_handler_returns_stable_public_envelope():
     assert response.headers["RateLimit-Reset"] == "60"
 
 
+def test_rate_limit_handler_omits_backoff_headers_without_limit():
+    """Si SlowAPI no aporta límite, no se inventan headers de backoff."""
+    exc = _rate_limit_exceeded()
+    exc.limit = None
+
+    response = rate_limit_exceeded_handler(None, exc)
+
+    body = _json_body(response)
+    assert response.status_code == 429
+    assert body["detail"] == "Demasiados intentos. Inténtalo más tarde."
+    assert body["errors"][0]["code"] == "rate_limited"
+    assert "Retry-After" not in response.headers
+    assert "RateLimit-Limit" not in response.headers
+    assert "RateLimit-Remaining" not in response.headers
+    assert "RateLimit-Reset" not in response.headers
+
+
 def test_auth_validation_handler_serializes_domain_field_errors():
     """Las excepciones de auth conservan field/code al llegar a HTTP."""
     response = auth_validation_handler(

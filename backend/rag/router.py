@@ -37,7 +37,7 @@ async def ingest_endpoint(payload: IngestRequest) -> IngestResponse:
     Returns:
         IngestResponse: Estado del indexado y metadatos de sincronización.
     """
-    return IngestResponse(**await ingest_manual(payload))
+    return await ingest_manual(payload)
 
 
 @router.post(
@@ -57,7 +57,7 @@ async def retrieve_endpoint(payload: RetrieveRequest) -> RetrieveResponse:
     Returns:
         RetrieveResponse: Lista de IDs rehidratables con score y metadatos.
     """
-    return RetrieveResponse(**await retrieve_chunks(payload))
+    return await retrieve_chunks(payload)
 
 
 @router.post(
@@ -76,4 +76,4 @@ async def delete_endpoint(payload: DeleteRequest) -> DeleteResponse:
     Returns:
         DeleteResponse: Número de chunks eliminados del índice derivado.
     """
-    return DeleteResponse(**await delete_manual(payload))
+    return await delete_manual(payload)

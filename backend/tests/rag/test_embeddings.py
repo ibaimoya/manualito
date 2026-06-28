@@ -57,7 +57,8 @@ def fake_sentence_transformers(monkeypatch):
 #   Clase 1: Pasajes — se prefijan con "passage: ".
 #   Clase 2: Query — se prefija con "query: ".
 # ---------------------------------------------------------------------------
-def test_embed_passages_applies_e5_prefix(fake_sentence_transformers):
+@pytest.mark.usefixtures("fake_sentence_transformers")
+def test_embed_passages_applies_e5_prefix():
     """Los pasajes se codifican con el prefijo requerido por el modelo E5."""
     service = embeddings.EmbeddingService("modelo-prueba")
 
@@ -70,7 +71,8 @@ def test_embed_passages_applies_e5_prefix(fake_sentence_transformers):
     ]
 
 
-def test_embed_query_applies_query_prefix(fake_sentence_transformers):
+@pytest.mark.usefixtures("fake_sentence_transformers")
+def test_embed_query_applies_query_prefix():
     """La pregunta del usuario se codifica con el prefijo de query."""
     service = embeddings.EmbeddingService("modelo-prueba")
 
@@ -84,7 +86,8 @@ def test_embed_query_applies_query_prefix(fake_sentence_transformers):
 # Análisis de Valores Límite (BVA) — reutilización del modelo cargado
 #   Dos llamadas consecutivas deben reutilizar la misma instancia.
 # ---------------------------------------------------------------------------
-def test_warm_up_reuses_cached_model(fake_sentence_transformers):
+@pytest.mark.usefixtures("fake_sentence_transformers")
+def test_warm_up_reuses_cached_model():
     """El warmup carga SentenceTransformers una sola vez por servicio."""
     service = embeddings.EmbeddingService("modelo-prueba")
 

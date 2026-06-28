@@ -194,6 +194,7 @@ module = [
     "billiard.*",
     "celery",
     "celery.*",
+    "chromadb",
     "kombu",
     "paddle",
     "paddle.*",

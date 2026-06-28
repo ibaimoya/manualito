@@ -11,11 +11,12 @@ from api.responses import (
     INTERNAL_ERROR_RESPONSE,
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
     INVALID_IMAGE_RESPONSE,
+    OpenApiResponses,
 )
 
 router = APIRouter()
 
-_OCR_RESPONSES: dict[int | str, dict[str, str]] = {
+_OCR_RESPONSES: OpenApiResponses = {
     404: {"description": "Recurso no encontrado en el servicio OCR."},
     **IMAGE_TOO_LARGE_RESPONSE,
     **INVALID_IMAGE_RESPONSE,

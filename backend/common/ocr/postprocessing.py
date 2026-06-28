@@ -49,7 +49,10 @@ def _normalize_line_text(text: str) -> str:
 
 
 def _is_probable_noise(line: dict[str, object], config: OcrPostprocessConfig) -> bool:
-    text = line["text"]
+    text = line.get("text")
+    if not isinstance(text, str):
+        return True
+
     alnum_count = _alnum_count(text)
     if alnum_count < config.min_alnum_to_keep and not _is_useful_short_token(text):
         return True

@@ -1,13 +1,13 @@
 """Respuestas OpenAPI reutilizables del gateway."""
 
-from typing import Any, TypeAlias
+from typing import Any
 
 from api import config
 
 _MB = 1024 * 1024
 
-OpenApiResponse: TypeAlias = dict[str, Any]
-OpenApiResponses: TypeAlias = dict[int | str, OpenApiResponse]
+type OpenApiResponse = dict[str, Any]
+type OpenApiResponses = dict[int | str, OpenApiResponse]
 
 
 def _format_megabytes(byte_count: int) -> str:

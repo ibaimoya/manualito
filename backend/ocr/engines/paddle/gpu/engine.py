@@ -15,7 +15,7 @@ class PaddleGpuOcrEngine:
 
     name = "paddle_gpu"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Inicializa PaddleOCR tras comprobar que Paddle ve CUDA y una GPU."""
         self._ensure_cuda_available()
         self._ocr = PaddleOCR(
@@ -29,7 +29,9 @@ class PaddleGpuOcrEngine:
         """Extrae líneas OCR normalizadas con PaddleOCR GPU."""
         logger.info("Iniciando OCR sobre: %s", image_path)
         with preprocessed_image_path(image_path, preprocess_for_paddle) as processed_path:
-            lines = normalize_paddle_result(self._ocr.predict(processed_path))
+            lines: list[OcrLine] = normalize_paddle_result(
+                self._ocr.predict(processed_path)
+            )
         log_ocr_result(logger, image_path, lines)
         return lines
 

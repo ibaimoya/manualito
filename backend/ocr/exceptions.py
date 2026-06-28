@@ -10,7 +10,7 @@ class OcrProcessingError(OcrError):
     """El motor OCR ha fallado al procesar la imagen."""
 
 
-def ocr_processing_handler(_request: Request, _exc: Exception):
+def ocr_processing_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=500,
         content={"detail": "Error interno al procesar la imagen con OCR."},

@@ -30,4 +30,4 @@ async def extract_endpoint(
     Returns:
         ExtractResponse: ``{"lines": [{"text": str, "confidence": float}, ...]}``.
     """
-    return ExtractResponse(**await extract_image_text(image))
+    return await extract_image_text(image)

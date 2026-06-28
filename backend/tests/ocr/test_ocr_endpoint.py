@@ -125,7 +125,7 @@ def test_extract_image_text_succeeds_if_engine_removes_temp_file(valid_jpeg_byte
     with patch("ocr.service.extract_text", side_effect=_capture_and_remove):
         response = asyncio.run(extract_image_text(upload))
 
-    assert response == {"lines": FAKE_OCR_RESULT}
+    assert response.model_dump() == {"lines": FAKE_OCR_RESULT}
     assert len(captured) == 1
     assert not os.path.exists(captured[0])
 

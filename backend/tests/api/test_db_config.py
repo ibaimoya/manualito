@@ -83,6 +83,24 @@ def test_build_from_parts_uses_plain_env_vars_without_secret_files(monkeypatch):
     assert database_url.host == "database"
 
 
+@pytest.mark.parametrize("blank_env_name", ["POSTGRES_USER", "POSTGRES_PASSWORD"])
+def test_build_from_parts_rejects_blank_plain_env_vars(monkeypatch, blank_env_name):
+    """Las credenciales por entorno no pueden quedar vacías tras normalizar."""
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("POSTGRES_USER_FILE", raising=False)
+    monkeypatch.delenv("POSTGRES_PASSWORD_FILE", raising=False)
+    monkeypatch.setenv("DATABASE_DRIVER", "postgresql+psycopg")
+    monkeypatch.setenv("POSTGRES_USER", "manualito")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "p@ss word")
+    monkeypatch.setenv("POSTGRES_HOST", "database")
+    monkeypatch.setenv("POSTGRES_PORT", "5432")
+    monkeypatch.setenv("POSTGRES_DB", "manualito")
+    monkeypatch.setenv(blank_env_name, "   ")
+
+    with pytest.raises(RuntimeError, match=f"{blank_env_name} no puede estar vacía"):
+        get_database_url()
+
+
 def test_build_from_parts_requires_user_via_file_or_env(monkeypatch):
     """Si falta el usuario por fichero y por entorno, el error lo dice claro."""
     monkeypatch.delenv("DATABASE_URL", raising=False)

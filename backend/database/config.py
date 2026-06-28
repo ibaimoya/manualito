@@ -51,14 +51,17 @@ def _get_secret_or_env(file_env_name: str, value_env_name: str) -> str:
         path = Path(secret_file)
         if not path.is_file():
             raise RuntimeError(f"{file_env_name} no apunta a un fichero válido.")
-        value = path.read_text(encoding="utf-8").strip()
-        if not value:
+        secret_value = path.read_text(encoding="utf-8").strip()
+        if not secret_value:
             raise RuntimeError(f"{file_env_name} no puede estar vacío.")
-        return value
+        return secret_value
 
-    value = os.environ.get(value_env_name)
-    if value:
-        return value.strip()
+    env_value = os.environ.get(value_env_name)
+    if env_value is not None:
+        env_value = env_value.strip()
+        if not env_value:
+            raise RuntimeError(f"{value_env_name} no puede estar vacía.")
+        return env_value
 
     raise RuntimeError(f"Se requiere {file_env_name} o {value_env_name}.")
 

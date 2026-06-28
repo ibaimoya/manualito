@@ -119,6 +119,7 @@ test = [
     { include-group = "common-pdf" },
     { include-group = "common-rate-limit" },
     "alembic==1.18.4",
+    "httpx2==2.5.0",
     "opencv-contrib-python==4.10.0.84",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",

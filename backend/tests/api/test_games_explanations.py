@@ -481,7 +481,7 @@ def _partial_explanation(
     status: str,
     error_code: str | None = None,
     fingerprint: str = _FINGERPRINT,
-    updated_at: datetime | None = None,
+    updated_at: datetime = _NOW,
 ) -> GameExplanationSnapshot:
     """Construye una caché parcial de explicación."""
     return GameExplanationSnapshot(
@@ -489,7 +489,7 @@ def _partial_explanation(
         source_fingerprint=fingerprint,
         status=status,
         error_code=error_code,
-        generated_at=None,
+        generated_at=_NOW,
         updated_at=updated_at,
     )
 

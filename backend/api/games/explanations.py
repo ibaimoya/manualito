@@ -196,11 +196,7 @@ def _is_generating_fresh(explanation: GameExplanationSnapshot, fingerprint: str)
         or explanation.status != "generating"
     ):
         return False
-    updated_at = explanation.updated_at
-    return (
-        isinstance(updated_at, datetime)
-        and datetime.now(UTC) - updated_at < GENERATION_STALE_AFTER
-    )
+    return datetime.now(UTC) - explanation.updated_at < GENERATION_STALE_AFTER
 
 
 def _sections_for(

@@ -81,8 +81,8 @@ class GameExplanationSnapshot:
     source_fingerprint: str
     status: str
     error_code: str | None
-    generated_at: datetime | None
-    updated_at: datetime | None
+    generated_at: datetime
+    updated_at: datetime
 
 
 @dataclass(frozen=True, slots=True)

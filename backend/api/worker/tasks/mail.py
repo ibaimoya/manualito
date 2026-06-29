@@ -2,6 +2,7 @@
 
 import logging
 from functools import partial
+from typing import NoReturn, Protocol
 
 import aiosmtplib
 import anyio
@@ -17,6 +18,17 @@ REDACTED_EMAIL_ARGS = (
 )
 
 
+class _TaskRequest(Protocol):
+    retries: int
+
+
+class _RetryableTask(Protocol):
+    request: _TaskRequest
+    max_retries: int
+
+    def retry(self, *args: object, **kwargs: object) -> NoReturn: ...
+
+
 def enqueue_email(
     *, to_email: str, subject: str, text_body: str, html_body: str | None = None
 ) -> None:
@@ -27,7 +39,7 @@ def enqueue_email(
     )
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.mail.send_email_task",
     bind=True,
     acks_late=True,
@@ -36,7 +48,11 @@ def enqueue_email(
     time_limit=config.CELERY_MAIL_HARD_TIME_LIMIT,
 )
 def send_email_task(
-    self, to_email: str, subject: str, text_body: str, html_body: str | None = None
+    self: _RetryableTask,
+    to_email: str,
+    subject: str,
+    text_body: str,
+    html_body: str | None = None,
 ) -> None:
     """Envía un email transaccional sin bloquear la petición principal."""
     try:

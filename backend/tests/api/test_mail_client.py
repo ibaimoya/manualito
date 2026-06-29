@@ -38,6 +38,8 @@ async def test_send_email_uses_configured_smtp(monkeypatch):
         "start_tls": False,
         "use_tls": False,
         "timeout": 10.0,
+        "username": None,
+        "password": None,
     }
 
 

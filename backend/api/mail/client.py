@@ -25,8 +25,9 @@ async def send_email(
     message["Subject"] = subject
     message.set_content(text_body)
     if html_body is not None:
-        message.add_alternative(html_body, subtype="html")
-        message.get_payload()[-1].add_related(
+        html_part = EmailMessage()
+        html_part.set_content(html_body, subtype="html")
+        html_part.add_related(
             _LOGO_BYTES,
             maintype="image",
             subtype="png",
@@ -34,17 +35,16 @@ async def send_email(
             disposition="inline",
             filename="manualito-logo.png",
         )
+        message.make_alternative()
+        message.attach(html_part)
 
-    send_options = {
-        "hostname": config.SMTP_HOST,
-        "port": config.SMTP_PORT,
-        "start_tls": config.SMTP_STARTTLS,
-        "use_tls": config.SMTP_USE_TLS,
-        "timeout": config.SMTP_TIMEOUT,
-    }
-    if config.SMTP_USERNAME:
-        send_options["username"] = config.SMTP_USERNAME
-    if config.SMTP_PASSWORD:
-        send_options["password"] = config.SMTP_PASSWORD
-
-    await aiosmtplib.send(message, **send_options)
+    await aiosmtplib.send(
+        message,
+        hostname=config.SMTP_HOST,
+        port=config.SMTP_PORT,
+        start_tls=config.SMTP_STARTTLS,
+        use_tls=config.SMTP_USE_TLS,
+        timeout=config.SMTP_TIMEOUT,
+        username=config.SMTP_USERNAME,
+        password=config.SMTP_PASSWORD,
+    )

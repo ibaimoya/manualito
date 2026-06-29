@@ -19,7 +19,7 @@ async def extract_ocr_lines(
     *,
     image: UploadFile,
     client: httpx.AsyncClient,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     """Valida una imagen subida y delega su extracción en el servicio OCR."""
     validated = await validate_manual_image(image)
     return await run_ocr(filename=image.filename, image=validated, client=client)
@@ -30,7 +30,7 @@ async def run_ocr(
     filename: str | None,
     image: ValidatedManualImage,
     client: httpx.AsyncClient,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     """Delega en OCR una imagen que API ya ha validado."""
     logger.info(
         "Petición OCR recibida: %s (%d bytes)",

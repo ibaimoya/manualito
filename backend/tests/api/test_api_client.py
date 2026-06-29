@@ -161,3 +161,45 @@ async def test_send_request_maps_invalid_json_to_internal_error():
         )
 
     assert exc_info.value.detail == "Error RAG."
+
+
+@pytest.mark.anyio
+async def test_send_request_maps_non_object_success_json_to_internal_error():
+    """Una respuesta 200 con JSON raíz no objeto queda como error controlado."""
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = ["not", "an", "object"]
+    client = AsyncMock()
+    client.post.return_value = response
+
+    with pytest.raises(InternalServiceError) as exc_info:
+        await api_client.send_request(
+            client=client,
+            service_name="RAG",
+            request_kwargs={"url": "http://rag/ingest"},
+            timeout_seconds=api_client.config.INTERNAL_JSON_TIMEOUT,
+            unavailable_detail="RAG no disponible.",
+            internal_detail="Error RAG.",
+        )
+
+    assert exc_info.value.detail == "Error RAG."
+
+
+@pytest.mark.anyio
+async def test_call_ocr_service_maps_corrupt_payload_to_internal_error():
+    """Un payload OCR sin líneas válidas no llega al postprocesado."""
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"lines": [{"confidence": 0.9}]}
+    client = AsyncMock()
+    client.post.return_value = response
+
+    with pytest.raises(InternalServiceError) as exc_info:
+        await api_client.call_ocr_service(
+            client=client,
+            filename="manual.jpg",
+            content=b"image",
+            content_type="image/jpeg",
+        )
+
+    assert exc_info.value.detail == "Error interno al procesar la imagen con OCR."

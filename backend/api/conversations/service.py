@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
@@ -13,12 +12,17 @@ from api import client as internal_client
 from api import config
 from api.auth.service import AuthenticatedSession
 from api.conversations import repository
+from api.conversations.dto import (
+    ConversationTitleJob,
+    ConversationTurnContext,
+    MessageSnapshot,
+    SendMessageOutcome,
+)
 from api.conversations.exceptions import ConversationNotFoundError, NoManualSourcesError
 from api.conversations.schemas import (
     ConversationResponse,
     MessageResponse,
     SendMessageRequest,
-    SendMessageResponse,
 )
 from api.exceptions import InternalServiceError, InternalServiceUnavailableError
 from api.games import repository as games_repository
@@ -32,24 +36,6 @@ from database.session import get_sessionmaker
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True, slots=True)
-class ConversationTitleJob:
-    """Datos opacos para refinar el título de una conversación."""
-
-    user_id: UUID
-    conversation_id: UUID
-    user_message_id: UUID
-    expected_title: str
-
-
-@dataclass(frozen=True, slots=True)
-class SendMessageOutcome:
-    """Respuesta HTTP y trabajo opcional derivado del turno."""
-
-    response: SendMessageResponse
-    title_job: ConversationTitleJob | None
-
-
 async def create_conversation(
     session: AsyncSession,
     *,
@@ -57,12 +43,12 @@ async def create_conversation(
     game_id: UUID,
 ) -> ConversationResponse:
     """Crea una conversación vacía para un juego."""
-    row = await repository.create_user_conversation(
+    summary = await repository.create_user_conversation(
         session,
         user_id=auth.user.id,
         game_id=game_id,
     )
-    return ConversationResponse.model_validate(row)
+    return ConversationResponse.model_validate(summary)
 
 
 async def list_conversations(
@@ -74,14 +60,14 @@ async def list_conversations(
     offset: int,
 ) -> list[ConversationResponse]:
     """Lista conversaciones propias de un juego."""
-    rows = await repository.list_game_conversations(
+    summaries = await repository.list_game_conversations(
         session,
         user_id=auth.user.id,
         game_id=game_id,
         limit=limit,
         offset=offset,
     )
-    return [ConversationResponse.model_validate(row) for row in rows]
+    return [ConversationResponse.model_validate(summary) for summary in summaries]
 
 
 async def list_messages(
@@ -136,11 +122,6 @@ async def send_message(
     except SQLAlchemyError:
         await session.rollback()
         logger.warning("No se pudo auto-seguir el juego tras enviar mensaje.", exc_info=True)
-    response = SendMessageResponse(
-        conversation=ConversationResponse.model_validate(stored.conversation),
-        user_message=MessageResponse.model_validate(stored.user_message),
-        assistant_message=MessageResponse.model_validate(stored.assistant_message),
-    )
     await session.rollback()
     title_job = (
         ConversationTitleJob(
@@ -152,7 +133,12 @@ async def send_message(
         if fallback_title is not None
         else None
     )
-    return SendMessageOutcome(response=response, title_job=title_job)
+    return SendMessageOutcome(
+        conversation=stored.conversation,
+        user_message=stored.user_message,
+        assistant_message=stored.assistant_message,
+        title_job=title_job,
+    )
 
 
 async def generate_pending_reply(
@@ -257,13 +243,13 @@ async def rename_conversation(
     title: str,
 ) -> ConversationResponse:
     """Renombra una conversación propia con el título elegido por el usuario."""
-    row = await repository.rename_user_conversation(
+    summary = await repository.rename_user_conversation(
         session,
         user_id=auth.user.id,
         conversation_id=conversation_id,
         title=title,
     )
-    return ConversationResponse.model_validate(row)
+    return ConversationResponse.model_validate(summary)
 
 
 async def delete_conversation(
@@ -285,7 +271,7 @@ async def _load_turn_context(
     *,
     user_id: UUID,
     conversation_id: UUID,
-) -> repository.ConversationTurnContext:
+) -> ConversationTurnContext:
     """Carga el snapshot del turno y libera la transacción de lectura."""
     try:
         return await repository.load_conversation_turn_context(
@@ -453,7 +439,7 @@ async def _fail_pending_reply(
 
 
 def _history_payload(
-    messages: Sequence[repository.MessageSnapshot],
+    messages: Sequence[MessageSnapshot],
 ) -> list[dict[str, str]]:
     """Convierte snapshots de mensajes en el contrato interno del LLM."""
     return [{"role": message.role, "content": message.content} for message in messages]

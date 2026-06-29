@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from functools import partial
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -9,6 +10,14 @@ import pytest
 
 import api.conversations.service as conversation_service
 from api.auth.service import AuthenticatedSession
+from api.conversations.dto import (
+    ConversationSummary,
+    ConversationTurnContext,
+    MessageSnapshot,
+    PendingReplyContext,
+    StoredMessage,
+    StoredMessagePair,
+)
 from api.conversations.exceptions import NoManualSourcesError
 from api.conversations.schemas import SendMessageRequest
 from api.conversations.service import generate_pending_reply, send_message
@@ -22,6 +31,7 @@ _USER_MESSAGE_ID = uuid4()
 _ASSISTANT_MESSAGE_ID = uuid4()
 _MANUAL_ID = uuid4()
 _MANUAL_TITLE = "Reglamento base"
+_NOW = datetime(2026, 6, 2, 10, 0, tzinfo=UTC)
 
 
 def test_send_message_persists_pending_pair_and_returns_title_job(monkeypatch):
@@ -64,9 +74,9 @@ def test_send_message_persists_pending_pair_and_returns_title_job(monkeypatch):
         )
     )
 
-    assert outcome.response.conversation.title == "¿Y si empato?"
-    assert outcome.response.assistant_message.status == "pending"
-    assert outcome.response.assistant_message.content == ""
+    assert outcome.conversation.title == "¿Y si empato?"
+    assert outcome.assistant_message.status == "pending"
+    assert outcome.assistant_message.content == ""
     assert outcome.title_job is not None
     assert outcome.title_job.user_message_id == _USER_MESSAGE_ID
     assert outcome.title_job.expected_title == "¿Y si empato?"
@@ -343,28 +353,36 @@ def _auth() -> AuthenticatedSession:
     return SimpleNamespace(user=SimpleNamespace(id=_USER_ID))
 
 
-def _turn_context(*, title: str | None, history: list[SimpleNamespace]) -> SimpleNamespace:
+def _turn_context(
+    *,
+    title: str | None,
+    history: list[SimpleNamespace],
+) -> ConversationTurnContext:
     """Construye el snapshot de turno que devuelve el repositorio."""
-    return SimpleNamespace(
+    return ConversationTurnContext(
         id=_CONVERSATION_ID,
         user_id=_USER_ID,
         game_id=_GAME_ID,
         game_name="Catan",
         title=title,
-        history=tuple(history),
+        history=tuple(
+            MessageSnapshot(message.role, message.content) for message in history
+        ),
     )
 
 
-def _pending_context(*, history: list[SimpleNamespace]) -> SimpleNamespace:
+def _pending_context(*, history: list[SimpleNamespace]) -> PendingReplyContext:
     """Construye el snapshot de worker para una respuesta pendiente."""
-    return SimpleNamespace(
+    return PendingReplyContext(
         id=_CONVERSATION_ID,
         user_id=_USER_ID,
         game_id=_GAME_ID,
         game_name="Catan",
         title="¿Y si empato?",
         user_message_content="¿Y si empato?",
-        history=tuple(history),
+        history=tuple(
+            MessageSnapshot(message.role, message.content) for message in history
+        ),
     )
 
 
@@ -396,34 +414,35 @@ def _sessionmaker(session):
     return FakeSessionmaker()
 
 
-def _stored_pair(*, title: str | None) -> SimpleNamespace:
+def _stored_pair(*, title: str | None) -> StoredMessagePair:
     """Construye el resultado persistido que devuelve el repositorio."""
-    return SimpleNamespace(
-        conversation=SimpleNamespace(
+    return StoredMessagePair(
+        conversation=ConversationSummary(
             id=_CONVERSATION_ID,
             game_id=_GAME_ID,
             game_name="Catan",
             title=title,
-            created_at="2026-06-02T10:00:00Z",
-            updated_at="2026-06-02T10:01:00Z",
+            created_at=_NOW,
+            updated_at=_NOW,
+            has_pending_reply=True,
         ),
-        user_message=SimpleNamespace(
+        user_message=StoredMessage(
             id=_USER_MESSAGE_ID,
             role="user",
             status="completed",
             content="¿Y si empato?",
             sources=[],
             error_code=None,
-            created_at="2026-06-02T10:00:00Z",
+            created_at=_NOW,
         ),
-        assistant_message=SimpleNamespace(
+        assistant_message=StoredMessage(
             id=_ASSISTANT_MESSAGE_ID,
             role="assistant",
             status="pending",
             content="",
             sources=[],
             error_code=None,
-            created_at="2026-06-02T10:01:00Z",
+            created_at=_NOW,
         ),
     )
 

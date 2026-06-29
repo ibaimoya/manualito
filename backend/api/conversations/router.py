@@ -17,6 +17,7 @@ from api.conversations.schemas import (
     ConversationListResponse,
     ConversationResponse,
     MessageListResponse,
+    MessageResponse,
     RenameConversationRequest,
     SendMessageRequest,
     SendMessageResponse,
@@ -145,11 +146,16 @@ async def send_conversation_message_handler(
         conversation_id=conversation_id,
         payload=payload,
     )
+    response = SendMessageResponse(
+        conversation=ConversationResponse.model_validate(outcome.conversation),
+        user_message=MessageResponse.model_validate(outcome.user_message),
+        assistant_message=MessageResponse.model_validate(outcome.assistant_message),
+    )
     generate_chat_reply_task.delay(
         str(user_id),
         str(conversation_id),
-        str(outcome.response.user_message.id),
-        str(outcome.response.assistant_message.id),
+        str(outcome.user_message.id),
+        str(outcome.assistant_message.id),
         payload.top_k,
     )
     if outcome.title_job is not None:
@@ -159,7 +165,7 @@ async def send_conversation_message_handler(
             str(outcome.title_job.user_message_id),
             outcome.title_job.expected_title,
         )
-    return outcome.response
+    return response
 
 
 @router.patch(

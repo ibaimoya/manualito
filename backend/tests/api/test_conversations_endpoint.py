@@ -9,13 +9,12 @@ import pytest
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
 from api.conversations.dependencies import valid_conversation
+from api.conversations.dto import ConversationSummary, SendMessageOutcome, StoredMessage
 from api.conversations.exceptions import ConversationNotFoundError
 from api.conversations.schemas import (
     ConversationResponse,
     MessageResponse,
-    SendMessageResponse,
 )
-from api.conversations.service import SendMessageOutcome
 from api.games.dependencies import valid_game_id
 from api.main import app
 from api.rate_limit import limiter
@@ -149,9 +148,7 @@ def test_send_conversation_message_persists_turn(
     override_auth_conversation_and_db,
 ):
     """Enviar mensaje delega el turno completo en el servicio."""
-    send_mock = AsyncMock(
-        return_value=SendMessageOutcome(response=_send_message_response(), title_job=None)
-    )
+    send_mock = AsyncMock(return_value=_send_message_outcome())
     delay_mock = MagicMock()
     monkeypatch.setattr("api.conversations.router.send_message", send_mock)
     monkeypatch.setattr(
@@ -183,7 +180,7 @@ def test_send_conversation_message_no_relee_usuario_tras_el_servicio(
 
     def send_side_effect(*_args, **kwargs):
         kwargs["auth"].user.expire()
-        return SendMessageOutcome(response=_send_message_response(), title_job=None)
+        return _send_message_outcome()
 
     delay_mock = MagicMock()
     monkeypatch.setattr(
@@ -438,10 +435,37 @@ def _message_response(role: Literal["user", "assistant"], content: str) -> Messa
     )
 
 
-def _send_message_response() -> SendMessageResponse:
-    """Construye una respuesta estable de turno conversacional."""
-    return SendMessageResponse(
-        conversation=_conversation_response(),
-        user_message=_message_response("user", "¿Y si empato?"),
-        assistant_message=_message_response("assistant", "Revisa el desempate."),
+def _conversation_summary() -> ConversationSummary:
+    """Construye un resumen interno de conversación."""
+    return ConversationSummary(
+        id=_CONVERSATION_ID,
+        game_id=_GAME_ID,
+        game_name="Catan",
+        title="Cómo se gana",
+        created_at=_NOW,
+        updated_at=_NOW,
+        has_pending_reply=True,
+    )
+
+
+def _stored_message(role: Literal["user", "assistant"], content: str) -> StoredMessage:
+    """Construye un mensaje interno persistido."""
+    return StoredMessage(
+        id=_USER_MESSAGE_ID if role == "user" else _ASSISTANT_MESSAGE_ID,
+        role=role,
+        status="completed" if role == "user" else "pending",
+        content=content,
+        created_at=_NOW,
+        sources=[],
+        error_code=None,
+    )
+
+
+def _send_message_outcome() -> SendMessageOutcome:
+    """Construye un resultado interno de turno conversacional."""
+    return SendMessageOutcome(
+        conversation=_conversation_summary(),
+        user_message=_stored_message("user", "¿Y si empato?"),
+        assistant_message=_stored_message("assistant", "Revisa el desempate."),
+        title_job=None,
     )

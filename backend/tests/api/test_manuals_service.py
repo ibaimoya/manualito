@@ -15,7 +15,7 @@ from api.manuals.exceptions import (
     ManualDuplicateError,
     ManualTooLargeError,
 )
-from api.manuals.repository import AuthorizedChunk, DeletedManualAssets
+from api.manuals.repository import AuthorizedChunk, DeletedManualAssets, ManualPageForProcessing
 from api.manuals.schemas import GAME_QUESTION_TOP_K_MAX, AnswerResponse
 from api.manuals.validation import ValidatedManualImage
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
@@ -1074,10 +1074,9 @@ def _manual(
 
 def _image_page(*, page_id, page_number: int):
     """Construye una página con imagen ya persistida en storage."""
-    return SimpleNamespace(
+    return ManualPageForProcessing(
         id=page_id,
         page_number=page_number,
-        ocr_status="processing",
         storage_key=f"manuals/user/manual/page-{page_number}.jpg",
         mime_type="image/jpeg",
         width=10,
@@ -1088,10 +1087,9 @@ def _image_page(*, page_id, page_number: int):
 
 def _pdf_page(*, page_id, page_number: int):
     """Construye una página PDF aún sin imagen renderizada."""
-    return SimpleNamespace(
+    return ManualPageForProcessing(
         id=page_id,
         page_number=page_number,
-        ocr_status="processing",
         storage_key=None,
         mime_type=None,
         width=None,

@@ -65,6 +65,19 @@ class _ScalarsResult:
         return self.values
 
 
+class _RowsResult:
+    def __init__(self, values):
+        self.values = values
+
+    def __iter__(self):
+        """Itera filas preparadas como un Result de SQLAlchemy."""
+        return iter(self.values)
+
+    def mappings(self):
+        """Devuelve filas por nombre, como Result.mappings."""
+        return _RowsResult([_row_mapping(value) for value in self.values])
+
+
 class _OneOrNoneResult:
     def __init__(self, value):
         self.value = value
@@ -72,6 +85,14 @@ class _OneOrNoneResult:
     def one_or_none(self):
         """Devuelve una fila o None, como SQLAlchemy."""
         return self.value
+
+    def one(self):
+        """Devuelve una fila obligatoria, como SQLAlchemy."""
+        return self.value
+
+    def mappings(self):
+        """Devuelve la fila por nombre, como Result.mappings."""
+        return _OneOrNoneResult(None if self.value is None else _row_mapping(self.value))
 
 
 class _FakeSession:
@@ -113,7 +134,8 @@ class _FakeSession:
         """Devuelve resultados preparados manteniendo la query para inspección."""
         await anyio.lowlevel.checkpoint()
         self.executed.append(statement)
-        return self.execute_results.pop(0)
+        result = self.execute_results.pop(0)
+        return _RowsResult(result) if isinstance(result, list) else result
 
     async def scalar(self, statement):
         """Devuelve un escalar preparado, como AsyncSession.scalar."""
@@ -172,6 +194,7 @@ async def test_get_user_manual_detail_loads_pages_in_order():
             ocr_status="completed",
             text_source="ocr",
             text_quality="ok",
+            dedup_status="none",
             ocr_confidence_mean=0.9,
             ocr_lines=[{"text": "A"}],
             image_available=True,
@@ -183,6 +206,7 @@ async def test_get_user_manual_detail_loads_pages_in_order():
             ocr_status="completed",
             text_source="pdf_text",
             text_quality="ok",
+            dedup_status="none",
             ocr_confidence_mean=None,
             ocr_lines=[{"text": "B"}],
             image_available=False,
@@ -203,7 +227,7 @@ async def test_get_user_manual_detail_loads_pages_in_order():
         manual_id=_MANUAL_ID,
     )
 
-    assert detail.summary.id == _MANUAL_ID
+    assert detail.id == _MANUAL_ID
     assert detail.pages[0].page_number == 1
     assert detail.pages[0].text_source == "ocr"
     assert detail.pages[0].ocr_lines == [{"text": "A"}]
@@ -231,26 +255,33 @@ async def test_get_user_manual_detail_raises_for_missing_manual():
 async def test_get_user_manual_processing_status_loads_lightweight_progress():
     """El progreso no trae ocr_lines completas."""
     pages = [
-        SimpleNamespace(page_number=1, ocr_status="completed", text_quality="ok"),
-        SimpleNamespace(page_number=2, ocr_status="pending", text_quality=None),
+        SimpleNamespace(
+            page_number=1, ocr_status="completed", text_quality="ok", dedup_status="none"
+        ),
+        SimpleNamespace(
+            page_number=2, ocr_status="pending", text_quality=None, dedup_status="none"
+        ),
     ]
     session = _FakeSession(
         execute_results=[
-            _OneOrNoneResult(SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)),
+            _OneOrNoneResult(
+                SimpleNamespace(manual_id=_MANUAL_ID, status="indexing", page_count=2)
+            ),
             pages,
         ],
     )
 
-    manual, loaded_pages = await get_user_manual_processing_status(
+    processing = await get_user_manual_processing_status(
         session,
         owner_user_id=_OWNER_USER_ID,
         manual_id=_MANUAL_ID,
     )
 
-    assert manual.id == _MANUAL_ID
-    assert manual.status == "indexing"
-    assert manual.page_count == 2
-    assert loaded_pages == pages
+    assert processing.manual_id == _MANUAL_ID
+    assert processing.status == "indexing"
+    assert processing.page_count == 2
+    assert processing.pages[0].page_number == 1
+    assert processing.pages[1].ocr_status == "pending"
     assert "source_reused_from_page_id IS NOT NULL" in _compile(session.executed[1])
 
 
@@ -934,6 +965,11 @@ def _manual_row(*, title: str | None):
         created_at=_INDEXED_AT,
         indexed_at=_INDEXED_AT,
     )
+
+
+def _row_mapping(row):
+    """Representa una fila fake como mapping de SQLAlchemy."""
+    return vars(row) if isinstance(row, SimpleNamespace) else row
 
 
 def _assign_id(entity) -> None:

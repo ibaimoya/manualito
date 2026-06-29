@@ -2,11 +2,12 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, and_, case, delete, func, or_, select, update
-from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from api.manuals.exceptions import (
     ManualBusyError,
@@ -74,15 +75,87 @@ class ReusablePageResult:
 
 
 @dataclass(frozen=True, slots=True)
-class ManualDetailRow:
+class ManualSummary:
+    """Resumen de manual propio leído desde Postgres."""
+
+    id: UUID
+    game_id: UUID
+    game_name: str
+    title: str | None
+    status: str
+    visibility: str
+    source_type: str
+    page_count: int
+    language: str | None
+    chunks_indexed: int
+    created_at: datetime
+    indexed_at: datetime | None
+    duplicate_page_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class ManualPageDetail:
+    """Página de manual propia lista para respuesta pública."""
+
+    page_number: int
+    ocr_status: str
+    text_source: str
+    text_quality: str | None
+    ocr_confidence_mean: float | None
+    ocr_lines: list[dict[str, object]]
+    image_available: bool
+    image_width: int | None
+    image_height: int | None
+    dedup_status: str
+
+
+@dataclass(frozen=True, slots=True)
+class ManualDetail(ManualSummary):
     """Detalle completo de manual propio."""
 
-    summary: Row
-    pages: list[Row]
+    pages: list[ManualPageDetail]
 
-    def __getattr__(self, name: str) -> object:
-        """Permite a Pydantic leer campos del resumen con from_attributes."""
-        return getattr(self.summary, name)
+
+@dataclass(frozen=True, slots=True)
+class ManualProcessingPage:
+    """Estado ligero de una página durante el procesamiento."""
+
+    page_number: int
+    ocr_status: str
+    text_quality: str | None
+    dedup_status: str
+
+
+@dataclass(frozen=True, slots=True)
+class ManualProcessingStatus:
+    """Progreso de procesamiento de un manual propio."""
+
+    manual_id: UUID
+    status: str
+    page_count: int
+    pages: list[ManualProcessingPage]
+
+
+@dataclass(frozen=True, slots=True)
+class ManualPageForProcessing:
+    """Página reclamada por el procesador con asset opcional."""
+
+    id: UUID
+    page_number: int
+    storage_key: str | None
+    mime_type: str | None
+    width: int | None
+    height: int | None
+    sha256: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ManualPageEditContext:
+    """Datos mínimos para editar una página de manual propio."""
+
+    status: str
+    visibility: str
+    page_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -253,10 +326,10 @@ async def list_user_manuals(
     owner_user_id: UUID,
     limit: int,
     offset: int,
-) -> list[Row]:
+) -> list[ManualSummary]:
     """Lista manuales propios sin cargar relaciones perezosas."""
     result = await session.execute(_manual_summary_query(owner_user_id).limit(limit).offset(offset))
-    return list(result)
+    return [ManualSummary(**row) for row in result.mappings()]
 
 
 async def get_user_manual_detail(
@@ -264,12 +337,12 @@ async def get_user_manual_detail(
     *,
     owner_user_id: UUID,
     manual_id: UUID,
-) -> ManualDetailRow:
+) -> ManualDetail:
     """Carga detalle de manual con ownership embebido en la query."""
     result = await session.execute(
         _manual_summary_query(owner_user_id).where(Manual.id == manual_id)
     )
-    summary_row = result.one_or_none()
+    summary_row = result.mappings().one_or_none()
     if summary_row is None:
         raise ManualNotFoundError
 
@@ -297,9 +370,9 @@ async def get_user_manual_detail(
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
     )
-    return ManualDetailRow(
-        summary=summary_row,
-        pages=list(pages_result),
+    return ManualDetail(
+        **summary_row,
+        pages=[ManualPageDetail(**row) for row in pages_result.mappings()],
     )
 
 
@@ -308,16 +381,16 @@ async def get_user_manual_processing_status(
     *,
     owner_user_id: UUID,
     manual_id: UUID,
-) -> tuple[Row, list[Row]]:
+) -> ManualProcessingStatus:
     """Carga progreso multipágina sin traer líneas OCR pesadas."""
     result = await session.execute(
-        select(Manual.id, Manual.status, Manual.page_count).where(
+        select(Manual.id.label("manual_id"), Manual.status, Manual.page_count).where(
             Manual.id == manual_id,
             Manual.owner_user_id == owner_user_id,
             Manual.deleted_at.is_(None),
         )
     )
-    manual = result.one_or_none()
+    manual = result.mappings().one_or_none()
     if manual is None:
         raise ManualNotFoundError
 
@@ -331,7 +404,10 @@ async def get_user_manual_processing_status(
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
     )
-    return manual, list(pages_result)
+    return ManualProcessingStatus(
+        **manual,
+        pages=[ManualProcessingPage(**row) for row in pages_result.mappings()],
+    )
 
 
 async def get_user_manual_page_image_asset(
@@ -362,17 +438,10 @@ async def get_user_manual_page_image_asset(
             Asset.deleted_at.is_(None),
         )
     )
-    row = result.one_or_none()
+    row = result.mappings().one_or_none()
     if row is None:
         return None
-    return ManualPageImageAsset(
-        storage_key=row.storage_key,
-        mime_type=row.mime_type,
-        byte_size=row.byte_size,
-        sha256=row.sha256,
-        width=row.width,
-        height=row.height,
-    )
+    return ManualPageImageAsset(**row)
 
 
 async def get_manual_for_processing(
@@ -412,13 +481,12 @@ async def get_page_for_processing(
     *,
     manual_id: UUID,
     page_id: UUID,
-) -> Row | None:
+) -> ManualPageForProcessing | None:
     """Carga una página concreta con su asset de imagen si ya existe."""
     result = await session.execute(
         select(
             ManualPage.id,
             ManualPage.page_number,
-            ManualPage.ocr_status,
             Asset.storage_key,
             Asset.mime_type,
             Asset.width,
@@ -431,7 +499,10 @@ async def get_page_for_processing(
             ManualPage.manual_id == manual_id,
         )
     )
-    return result.one_or_none()
+    row = result.mappings().one_or_none()
+    if row is None:
+        return None
+    return ManualPageForProcessing(**row)
 
 
 async def claim_page_for_processing(
@@ -626,14 +697,10 @@ async def get_page_for_edit(
     owner_user_id: UUID,
     manual_id: UUID,
     page_number: int,
-) -> Row:
+) -> ManualPageEditContext:
     """Carga manual propio y página con ownership embebido en la query."""
     result = await session.execute(
         select(
-            Manual.id,
-            Manual.game_id,
-            Manual.owner_user_id,
-            Manual.language,
             Manual.status,
             Manual.visibility,
             ManualPage.id.label("page_id"),
@@ -646,10 +713,10 @@ async def get_page_for_edit(
             ManualPage.page_number == page_number,
         )
     )
-    row = result.one_or_none()
+    row = result.mappings().one_or_none()
     if row is None:
         raise ManualNotFoundError
-    return row
+    return ManualPageEditContext(**row)
 
 
 async def list_page_chunk_ids(session: AsyncSession, *, page_id: UUID) -> list[UUID]:
@@ -672,7 +739,7 @@ async def list_page_chunks_for_ingest(
     return list(result.scalars())
 
 
-async def get_manual_page_row(session: AsyncSession, *, page_id: UUID) -> Row:
+async def get_manual_page_detail(session: AsyncSession, *, page_id: UUID) -> ManualPageDetail:
     """Relee los campos públicos de una página tras editarla."""
     result = await session.execute(
         select(
@@ -697,7 +764,7 @@ async def get_manual_page_row(session: AsyncSession, *, page_id: UUID) -> Row:
         )
         .where(ManualPage.id == page_id)
     )
-    return result.one()
+    return ManualPageDetail(**result.mappings().one())
 
 
 async def mark_page_chunks_indexed(
@@ -952,7 +1019,7 @@ def _authorized_chunks_query(
     game_id: UUID,
     current_user_id: UUID,
     chunk_ids: list[UUID],
-) -> Select:
+) -> Select[Any]:
     """Construye la query con ownership y visibilidad embebidos."""
     return (
         select(
@@ -980,7 +1047,7 @@ def _authorized_chunks_query(
     )
 
 
-def _manual_summary_query(owner_user_id: UUID) -> Select:
+def _manual_summary_query(owner_user_id: UUID) -> Select[Any]:
     """Construye el listado base de manuales propios."""
     return (
         select(
@@ -1014,7 +1081,7 @@ def _manual_summary_query(owner_user_id: UUID) -> Select:
     )
 
 
-def _manual_page_dedup_status():
+def _manual_page_dedup_status() -> ColumnElement[str]:
     """Expone si una página ha reutilizado OCR sin filtrar IDs internos."""
     return case(
         (ManualPage.source_reused_from_page_id.is_not(None), "reused"),

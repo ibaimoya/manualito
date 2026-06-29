@@ -16,7 +16,13 @@ from api.manuals.exceptions import (
     ManualContextNotFoundError,
     ManualNotFoundError,
 )
-from api.manuals.repository import ManualDetailRow
+from api.manuals.repository import (
+    ManualDetail,
+    ManualPageDetail,
+    ManualProcessingPage,
+    ManualProcessingStatus,
+    ManualSummary,
+)
 from api.manuals.schemas import AnswerResponse, ManualCreatedResponse
 from database.models.auth import AuthSession
 from database.models.user import User
@@ -176,10 +182,23 @@ def test_get_manual_devuelve_detalle_con_paginas(
     override_auth_and_db,
 ):
     """El detalle incluye las páginas OCR sin exponer storage interno."""
-    detail = ManualDetailRow(
-        summary=_manual_summary(),
+    summary = _manual_summary()
+    detail = ManualDetail(
+        id=summary.id,
+        game_id=summary.game_id,
+        game_name=summary.game_name,
+        title=summary.title,
+        status=summary.status,
+        visibility=summary.visibility,
+        source_type=summary.source_type,
+        page_count=summary.page_count,
+        language=summary.language,
+        chunks_indexed=summary.chunks_indexed,
+        created_at=summary.created_at,
+        indexed_at=summary.indexed_at,
+        duplicate_page_count=summary.duplicate_page_count,
         pages=[
-            SimpleNamespace(
+            ManualPageDetail(
                 page_number=1,
                 ocr_status="completed",
                 text_source="ocr",
@@ -230,14 +249,26 @@ def test_get_manual_processing_devuelve_estado_ligero(
     override_auth_and_db,
 ):
     """El progreso no arrastra las líneas OCR completas."""
-    manual = SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)
-    pages = [
-        SimpleNamespace(
-            page_number=1, ocr_status="completed", text_quality="ok", dedup_status="reused"
-        ),
-        SimpleNamespace(page_number=2, ocr_status="failed", text_quality=None, dedup_status="none"),
-    ]
-    get_mock = AsyncMock(return_value=(manual, pages))
+    processing = ManualProcessingStatus(
+        manual_id=_MANUAL_ID,
+        status="indexing",
+        page_count=2,
+        pages=[
+            ManualProcessingPage(
+                page_number=1,
+                ocr_status="completed",
+                text_quality="ok",
+                dedup_status="reused",
+            ),
+            ManualProcessingPage(
+                page_number=2,
+                ocr_status="failed",
+                text_quality=None,
+                dedup_status="none",
+            ),
+        ],
+    )
+    get_mock = AsyncMock(return_value=processing)
     monkeypatch.setattr("api.manuals.router.get_user_manual_processing_status", get_mock)
 
     response = client.get(f"/api/manuals/{_MANUAL_ID}/processing")
@@ -529,10 +560,10 @@ def _user() -> User:
     )
 
 
-def _manual_summary() -> SimpleNamespace:
+def _manual_summary() -> ManualSummary:
     """Construye un resumen estable para respuestas de manuales."""
     timestamp = datetime(2026, 5, 31, 10, 0, tzinfo=UTC)
-    return SimpleNamespace(
+    return ManualSummary(
         id=_MANUAL_ID,
         game_id=_GAME_ID,
         game_name="Catan",
@@ -541,6 +572,7 @@ def _manual_summary() -> SimpleNamespace:
         visibility="private",
         source_type="images",
         page_count=1,
+        duplicate_page_count=0,
         language="es",
         chunks_indexed=1,
         created_at=timestamp,

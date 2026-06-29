@@ -19,7 +19,12 @@ from api.manuals.exceptions import (
     ManualNotEditableError,
     ManualNotFoundError,
 )
-from api.manuals.repository import get_page_for_edit, mark_page_chunks_indexed
+from api.manuals.repository import (
+    ManualPageDetail,
+    ManualPageEditContext,
+    get_page_for_edit,
+    mark_page_chunks_indexed,
+)
 from api.manuals.schemas import MANUAL_PAGE_TEXT_MAX_LENGTH, ManualPageResponse
 from api.manuals.service import PageEditResult, edit_page_text, sync_page_rag
 from api.rate_limit import limiter
@@ -196,7 +201,7 @@ def test_edit_page_text_service_replaces_and_returns_sync_payload(monkeypatch):
     monkeypatch.setattr(manual_service, "_replace_page_text", replace_mock)
     monkeypatch.setattr(
         manual_service,
-        "get_manual_page_row",
+        "get_manual_page_detail",
         AsyncMock(return_value=_page_row()),
     )
     monkeypatch.setattr(
@@ -324,7 +329,7 @@ def test_sync_page_rag_cleans_old_chunks_and_ingests_new_ones(monkeypatch):
     monkeypatch.setattr(
         manual_service,
         "get_manual_for_processing",
-        AsyncMock(return_value=_page_context()),
+        AsyncMock(return_value=_manual_for_processing()),
     )
     monkeypatch.setattr(
         manual_service,
@@ -356,7 +361,7 @@ def test_sync_page_rag_skips_ingest_for_empty_text(monkeypatch):
     monkeypatch.setattr(
         manual_service,
         "get_manual_for_processing",
-        AsyncMock(return_value=_page_context()),
+        AsyncMock(return_value=_manual_for_processing()),
     )
     monkeypatch.setattr(
         manual_service,
@@ -379,6 +384,9 @@ def test_get_page_for_edit_embeds_ownership_in_query():
     """El lookup de página exige dueño, manual vivo y número de página."""
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one_or_none(self):
             return None
 
@@ -534,34 +542,43 @@ def _page_context(
     *,
     status: str = "pending_review",
     visibility: str = "private",
-) -> SimpleNamespace:
+) -> ManualPageEditContext:
     """Construye el contexto de manual+página que devuelve el repositorio."""
-    return SimpleNamespace(
-        id=_MANUAL_ID,
-        game_id=_GAME_ID,
-        owner_user_id=_USER_ID,
-        language="es",
+    return ManualPageEditContext(
         status=status,
         visibility=visibility,
         page_id=_PAGE_ID,
     )
 
 
+def _manual_for_processing() -> SimpleNamespace:
+    """Construye un manual mínimo para sincronizar RAG."""
+    return SimpleNamespace(
+        id=_MANUAL_ID,
+        game_id=_GAME_ID,
+        owner_user_id=_USER_ID,
+        language="es",
+    )
+
+
 def _page_row(
     *,
     text_quality: str = "ok",
-    lines: list[dict] | None = None,
-) -> SimpleNamespace:
+    lines: list[dict[str, object]] | None = None,
+) -> ManualPageDetail:
     """Construye la fila pública de la página tras editarla."""
     default_lines = [{"text": "El ladrón se mueve al sacar un 7.", "confidence": None}]
-    return SimpleNamespace(
+    return ManualPageDetail(
         page_number=3,
         ocr_status="completed",
         text_source="user_edit",
         text_quality=text_quality,
-        dedup_status="none",
         ocr_confidence_mean=None,
         ocr_lines=default_lines if lines is None else lines,
+        image_available=False,
+        image_width=None,
+        image_height=None,
+        dedup_status="none",
     )
 
 

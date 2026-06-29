@@ -9,7 +9,6 @@ from uuid import UUID
 
 import httpx
 from fastapi import UploadFile
-from sqlalchemy.engine import Row
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +39,7 @@ from api.manuals.exceptions import (
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
+    ManualPageForProcessing,
     PreparedChunk,
     StoredManualImage,
     StoredManualPdf,
@@ -50,7 +50,7 @@ from api.manuals.repository import (
     find_reusable_page_result,
     get_asset_for_processing,
     get_manual_for_processing,
-    get_manual_page_row,
+    get_manual_page_detail,
     get_page_for_edit,
     get_page_for_processing,
     list_manual_chunks_for_ingest,
@@ -400,8 +400,8 @@ async def _process_image_page(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual: Row,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     source_fingerprint_kind: str = "image",
 ) -> None:
     """Procesa una página que ya tiene imagen en storage."""
@@ -461,8 +461,8 @@ async def _process_pdf_page(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     pdf_content: bytes | None,
 ) -> None:
     """Procesa una página PDF con texto embebido u OCR de fallback."""
@@ -551,8 +551,8 @@ async def _process_pdf_page(
 async def _ensure_pdf_page_image_asset(
     *,
     session: AsyncSession,
-    manual,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     pdf_content: bytes,
 ) -> None:
     """Guarda un render de PDF para el visor sin forzar OCR si ya hay texto."""
@@ -679,9 +679,9 @@ async def _edit_page_text_locked(
     await session.commit()
 
     # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
-    row = await get_manual_page_row(session, page_id=context.page_id)
+    page_detail = await get_manual_page_detail(session, page_id=context.page_id)
     return PageEditResult(
-        response=ManualPageResponse.model_validate(row),
+        response=ManualPageResponse.model_validate(page_detail),
         page_id=context.page_id,
         stale_chunk_ids=old_chunk_ids,
     )
@@ -708,7 +708,7 @@ async def delete_manual(
     return deleted.chunk_ids
 
 
-async def _read_source_pdf(session: AsyncSession, manual) -> bytes | None:
+async def _read_source_pdf(session: AsyncSession, manual: Manual) -> bytes | None:
     """Carga el PDF original conservado para procesar sus páginas."""
     if manual.source_asset_id is None:
         return None
@@ -753,8 +753,8 @@ async def _process_validated_image_page(
 async def _reuse_page_result(
     session: AsyncSession,
     *,
-    manual: Row,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     source_fingerprint: str,
     source_fingerprint_kind: str,
 ) -> bool:

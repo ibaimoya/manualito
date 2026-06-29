@@ -14,7 +14,11 @@ from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
 from api.main import app
 from api.manuals.exceptions import ManualBusyError, ManualNotFoundError
-from api.manuals.repository import begin_manual_reprocessing
+from api.manuals.repository import (
+    ManualProcessingPage,
+    ManualProcessingStatus,
+    begin_manual_reprocessing,
+)
 from api.manuals.service import reprocess_manual, run_reprocess
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
@@ -418,18 +422,21 @@ def _auth_session() -> AuthenticatedSession:
     )
 
 
-def _processing_rows() -> tuple[SimpleNamespace, list[SimpleNamespace]]:
+def _processing_rows() -> ManualProcessingStatus:
     """Construye el estado de procesamiento recién reclamado."""
-    manual = SimpleNamespace(id=_MANUAL_ID, status="indexing", page_count=2)
-    pages = [
-        SimpleNamespace(
-            page_number=1, ocr_status="pending", text_quality=None, dedup_status="none"
-        ),
-        SimpleNamespace(
-            page_number=2, ocr_status="pending", text_quality=None, dedup_status="none"
-        ),
-    ]
-    return manual, pages
+    return ManualProcessingStatus(
+        manual_id=_MANUAL_ID,
+        status="indexing",
+        page_count=2,
+        pages=[
+            ManualProcessingPage(
+                page_number=1, ocr_status="pending", text_quality=None, dedup_status="none"
+            ),
+            ManualProcessingPage(
+                page_number=2, ocr_status="pending", text_quality=None, dedup_status="none"
+            ),
+        ],
+    )
 
 
 def _compile(statement) -> str:

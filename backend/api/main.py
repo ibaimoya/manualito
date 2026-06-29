@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -24,7 +25,7 @@ install_health_log_filter()
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Crea el ``httpx.AsyncClient`` compartido y lo cierra al parar el servicio."""
     await dependencies.start_http_client()
     try:

@@ -13,7 +13,7 @@ MAINTENANCE_TASK_OPTIONS = {
 }
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.maintenance.healthcheck",
     **MAINTENANCE_TASK_OPTIONS,
 )
@@ -22,7 +22,7 @@ def healthcheck() -> str:
     return "ok"
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.maintenance.recover_stale_manual_pages",
     **MAINTENANCE_TASK_OPTIONS,
 )

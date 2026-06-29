@@ -6,10 +6,14 @@ import anyio
 import pytest
 from sqlalchemy.dialects import postgresql
 
-from api.manuals.exceptions import ManualContextNotFoundError, ManualNotFoundError
-from api.manuals.repository import (
+from api.manuals.dto import (
     StoredManualImage,
     StoredManualPdf,
+    ValidatedManualImage,
+    ValidatedManualPdf,
+)
+from api.manuals.exceptions import ManualContextNotFoundError, ManualNotFoundError
+from api.manuals.repository import (
     _authorized_chunks_query,
     _manual_summary_query,
     attach_page_image_asset,
@@ -32,7 +36,6 @@ from api.manuals.repository import (
     soft_delete_user_manual,
 )
 from api.manuals.schemas import ManualSummaryResponse
-from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
 from database.models.asset import Asset
 from database.models.manual import ManualPage
 

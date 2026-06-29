@@ -13,12 +13,9 @@ import api.manuals.service as manual_service
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
 from api.main import app
+from api.manuals.dto import ManualProcessingPage, ManualProcessingStatus
 from api.manuals.exceptions import ManualBusyError, ManualNotFoundError
-from api.manuals.repository import (
-    ManualProcessingPage,
-    ManualProcessingStatus,
-    begin_manual_reprocessing,
-)
+from api.manuals.repository import begin_manual_reprocessing
 from api.manuals.service import reprocess_manual, run_reprocess
 from api.rate_limit import limiter
 from database.models.auth import AuthSession

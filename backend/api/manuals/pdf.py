@@ -11,8 +11,9 @@ import pypdfium2 as pdfium
 
 from api import config
 from api.exceptions import InvalidPdfError
+from api.manuals.dto import ValidatedManualImage
 from api.manuals.pdfium import run_pdfium
-from api.manuals.validation import JPEG_MIME_TYPE, ValidatedManualImage
+from api.manuals.validation import JPEG_MIME_TYPE
 from common.crypto import sha256_hex
 
 PDF_POINTS_PER_INCH = 72

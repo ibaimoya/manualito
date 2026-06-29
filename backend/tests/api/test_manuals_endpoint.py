@@ -11,17 +11,17 @@ from api.auth.service import AuthenticatedSession
 from api.exceptions import InternalServiceUnavailableError
 from api.games.dependencies import valid_game_form_id, valid_game_id
 from api.main import app
-from api.manuals.exceptions import (
-    GameNotFoundError,
-    ManualContextNotFoundError,
-    ManualNotFoundError,
-)
-from api.manuals.repository import (
+from api.manuals.dto import (
     ManualDetail,
     ManualPageDetail,
     ManualProcessingPage,
     ManualProcessingStatus,
     ManualSummary,
+)
+from api.manuals.exceptions import (
+    GameNotFoundError,
+    ManualContextNotFoundError,
+    ManualNotFoundError,
 )
 from api.manuals.schemas import AnswerResponse, ManualCreatedResponse
 from database.models.auth import AuthSession

@@ -14,19 +14,22 @@ import api.manuals.service as manual_service
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
 from api.main import app
+from api.manuals.dto import (
+    ManualPageDetail,
+    ManualPageEditContext,
+    PageEditResult,
+)
 from api.manuals.exceptions import (
     ManualBusyError,
     ManualNotEditableError,
     ManualNotFoundError,
 )
 from api.manuals.repository import (
-    ManualPageDetail,
-    ManualPageEditContext,
     get_page_for_edit,
     mark_page_chunks_indexed,
 )
-from api.manuals.schemas import MANUAL_PAGE_TEXT_MAX_LENGTH, ManualPageResponse
-from api.manuals.service import PageEditResult, edit_page_text, sync_page_rag
+from api.manuals.schemas import MANUAL_PAGE_TEXT_MAX_LENGTH
+from api.manuals.service import edit_page_text, sync_page_rag
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
 from database.models.user import User
@@ -222,7 +225,7 @@ def test_edit_page_text_service_replaces_and_returns_sync_payload(monkeypatch):
     )
 
     assert isinstance(response, PageEditResult)
-    assert response.response.text_source == "user_edit"
+    assert response.page_detail.text_source == "user_edit"
     assert response.page_id == _PAGE_ID
     assert response.stale_chunk_ids == [old_chunk_id]
     replace_kwargs = replace_mock.await_args.kwargs
@@ -582,15 +585,10 @@ def _page_row(
     )
 
 
-def _page_response() -> ManualPageResponse:
-    """Construye la respuesta pública estable de la página editada."""
-    return ManualPageResponse.model_validate(_page_row())
-
-
 def _page_edit_result(*, stale_chunk_ids: list[UUID] | None = None) -> PageEditResult:
     """Construye el resultado interno de editar una página."""
     return PageEditResult(
-        response=_page_response(),
+        page_detail=_page_row(),
         page_id=_PAGE_ID,
         stale_chunk_ids=[] if stale_chunk_ids is None else stale_chunk_ids,
     )

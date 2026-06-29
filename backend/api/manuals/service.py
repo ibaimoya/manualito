@@ -2,7 +2,6 @@
 
 import logging
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import PurePath
 from uuid import UUID
@@ -29,6 +28,14 @@ from api.exceptions import (
     ManualPageLimitExceededError,
 )
 from api.games import repository as games_repository
+from api.manuals.dto import (
+    ManualPageForProcessing,
+    PageEditResult,
+    PreparedChunk,
+    StoredManualImage,
+    StoredManualPdf,
+    ValidatedManualImage,
+)
 from api.manuals.exceptions import (
     ManualBusyError,
     ManualDuplicateError,
@@ -39,10 +46,6 @@ from api.manuals.exceptions import (
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
-    ManualPageForProcessing,
-    PreparedChunk,
-    StoredManualImage,
-    StoredManualPdf,
     attach_page_image_asset,
     begin_manual_reprocessing,
     claim_page_for_processing,
@@ -67,8 +70,8 @@ from api.manuals.repository import (
     resolve_manual_processed_status,
     soft_delete_user_manual,
 )
-from api.manuals.schemas import ManualCreatedResponse, ManualPageResponse
-from api.manuals.validation import ValidatedManualImage, validate_manual_image, validate_manual_pdf
+from api.manuals.schemas import ManualCreatedResponse
+from api.manuals.validation import validate_manual_image, validate_manual_pdf
 from api.ocr.service import run_ocr
 from common.crypto import sha256_hex
 from common.logging import safe_for_log
@@ -93,15 +96,6 @@ def _internal_http_timeout() -> httpx.Timeout:
 def _internal_http_client() -> httpx.AsyncClient:
     """Cliente para servicios internos usados por tasks de manuales."""
     return httpx.AsyncClient(timeout=_internal_http_timeout())
-
-
-@dataclass(frozen=True, slots=True)
-class PageEditResult:
-    """Resultado de editar una página y trabajo RAG derivado."""
-
-    response: ManualPageResponse
-    page_id: UUID
-    stale_chunk_ids: list[UUID]
 
 
 async def create_manual(
@@ -681,7 +675,7 @@ async def _edit_page_text_locked(
     # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
     page_detail = await get_manual_page_detail(session, page_id=context.page_id)
     return PageEditResult(
-        response=ManualPageResponse.model_validate(page_detail),
+        page_detail=page_detail,
         page_id=context.page_id,
         stale_chunk_ids=old_chunk_ids,
     )

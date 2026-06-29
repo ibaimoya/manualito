@@ -274,7 +274,7 @@ async def edit_manual_page_text_handler(
         str(result.page_id),
         [str(chunk_id) for chunk_id in result.stale_chunk_ids],
     )
-    return result.response
+    return ManualPageResponse.model_validate(result.page_detail)
 
 
 @router.delete(

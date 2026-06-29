@@ -10,14 +10,18 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import api.manuals.retrieval.service as retrieval_service
 import api.manuals.service as manual_service
 from api.exceptions import InternalServiceError, ManualPageLimitExceededError
+from api.manuals.dto import (
+    AuthorizedChunk,
+    DeletedManualAssets,
+    ManualPageForProcessing,
+    ValidatedManualImage,
+)
 from api.manuals.exceptions import (
     GeneratedAnswerTooLongError,
     ManualDuplicateError,
     ManualTooLargeError,
 )
-from api.manuals.repository import AuthorizedChunk, DeletedManualAssets, ManualPageForProcessing
 from api.manuals.schemas import GAME_QUESTION_TOP_K_MAX, AnswerResponse
-from api.manuals.validation import ValidatedManualImage
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 from rag.annotations import RAG_RETRIEVAL_TOP_K_MAX
 

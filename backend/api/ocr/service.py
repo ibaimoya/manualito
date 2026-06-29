@@ -7,7 +7,8 @@ from fastapi import UploadFile
 
 from api import client as internal_client
 from api import config
-from api.manuals.validation import ValidatedManualImage, validate_manual_image
+from api.manuals.dto import ValidatedManualImage
+from api.manuals.validation import validate_manual_image
 from common.logging import safe_for_log
 from common.ocr.postprocessing import OcrPostprocessConfig, postprocess_ocr_lines
 

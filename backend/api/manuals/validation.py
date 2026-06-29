@@ -1,6 +1,5 @@
 """Validación segura de imágenes de manual."""
 
-from dataclasses import dataclass
 from io import BytesIO
 
 import anyio
@@ -16,6 +15,7 @@ from api.exceptions import (
     ManualPageLimitExceededError,
     PdfTooLargeError,
 )
+from api.manuals.dto import ValidatedManualImage, ValidatedManualPdf
 from api.manuals.pdfium import run_pdfium
 from common.crypto import sha256_hex
 
@@ -44,29 +44,6 @@ IMAGE_MIME_TO_EXTENSION = {
     PNG_MIME_TYPE: ".png",
     WEBP_MIME_TYPE: ".webp",
 }
-
-
-@dataclass(frozen=True, slots=True)
-class ValidatedManualImage:
-    """Imagen validada y lista para storage/OCR."""
-
-    content: bytes
-    mime_type: str
-    extension: str
-    width: int
-    height: int
-    sha256: str
-
-
-@dataclass(frozen=True, slots=True)
-class ValidatedManualPdf:
-    """PDF validado y listo para storage/procesamiento posterior."""
-
-    content: bytes
-    mime_type: str
-    extension: str
-    page_count: int
-    sha256: str
 
 
 async def validate_manual_image(image: UploadFile) -> ValidatedManualImage:

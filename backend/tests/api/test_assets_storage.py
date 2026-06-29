@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from api.assets import storage as asset_storage
-from api.manuals.validation import ValidatedManualImage, ValidatedManualPdf
+from api.manuals.dto import ValidatedManualImage, ValidatedManualPdf
 
 
 @pytest.mark.anyio

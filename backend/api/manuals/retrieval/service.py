@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api import client as internal_client
 from api import config
 from api.exceptions import InternalServiceError
+from api.manuals.dto import AuthorizedChunk
 from api.manuals.exceptions import GeneratedAnswerTooLongError
-from api.manuals.repository import AuthorizedChunk, load_authorized_chunks
+from api.manuals.repository import load_authorized_chunks
 from api.manuals.retrieval.deduplication import deduplicate_chunks
 from api.manuals.schemas import AnswerResponse, AnswerSource
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH

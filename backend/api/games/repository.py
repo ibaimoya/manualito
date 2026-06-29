@@ -1,11 +1,9 @@
 """Consultas SQL del catálogo local de juegos."""
 
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -13,6 +11,7 @@ from api.games.dto import (
     CachedGameInput,
     CreatedGame,
     GameDetail,
+    GameExplanationSnapshot,
     GamePoolManualSummary,
     GameSearchResult,
     MyGameSummary,
@@ -328,7 +327,7 @@ async def get_game_explanation(
     *,
     user_id: UUID,
     game_id: UUID,
-) -> GameExplanation | None:
+) -> GameExplanationSnapshot | None:
     """Carga la explicación cacheada de un juego para un usuario."""
     result = await session.execute(
         select(GameExplanation).where(
@@ -336,7 +335,10 @@ async def get_game_explanation(
             GameExplanation.game_id == game_id,
         )
     )
-    return result.scalar_one_or_none()
+    explanation = result.scalar_one_or_none()
+    if explanation is None:
+        return None
+    return _game_explanation_snapshot(explanation)
 
 
 async def upsert_game_explanation(
@@ -346,7 +348,7 @@ async def upsert_game_explanation(
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
-) -> Row[Any]:
+) -> GameExplanationSnapshot:
     """Guarda la explicación del usuario en una sola sentencia atómica."""
     stmt = (
         insert(GameExplanation)
@@ -379,9 +381,9 @@ async def upsert_game_explanation(
         )
     )
     result = await session.execute(stmt)
-    row = result.one()
+    snapshot = GameExplanationSnapshot(**result.mappings().one())
     await session.commit()
-    return row
+    return snapshot
 
 
 async def mark_game_explanation_generating(
@@ -391,7 +393,7 @@ async def mark_game_explanation_generating(
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
-) -> Row[Any]:
+) -> GameExplanationSnapshot:
     """Guarda que la explicación del usuario se está generando para una huella."""
     stmt = (
         insert(GameExplanation)
@@ -423,9 +425,9 @@ async def mark_game_explanation_generating(
         )
     )
     result = await session.execute(stmt)
-    row = result.one()
+    snapshot = GameExplanationSnapshot(**result.mappings().one())
     await session.commit()
-    return row
+    return snapshot
 
 
 async def mark_game_explanation_failed(
@@ -461,6 +463,18 @@ async def mark_game_explanation_failed(
     )
     await session.execute(stmt)
     await session.commit()
+
+
+def _game_explanation_snapshot(explanation: GameExplanation) -> GameExplanationSnapshot:
+    """Convierte el modelo cacheado al DTO interno."""
+    return GameExplanationSnapshot(
+        sections=explanation.sections,
+        source_fingerprint=explanation.source_fingerprint,
+        status=explanation.status,
+        error_code=explanation.error_code,
+        generated_at=explanation.generated_at,
+        updated_at=explanation.updated_at,
+    )
 
 
 def _pool_visibility_filters(

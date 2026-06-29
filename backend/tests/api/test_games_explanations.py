@@ -14,6 +14,11 @@ import api.games.explanations as explanations_module
 from api.auth.dependencies import get_current_auth
 from api.auth.service import AuthenticatedSession
 from api.exceptions import InternalServiceUnavailableError
+from api.games.dto import (
+    GameExplanationJob,
+    GameExplanationOutcome,
+    GameExplanationSnapshot,
+)
 from api.games.explanations import EXPLANATION_QUESTIONS, get_game_explanation
 from api.games.repository import get_pool_fingerprint, upsert_game_explanation
 from api.main import app
@@ -31,7 +36,7 @@ _MANUAL_ID = UUID("018fd000-0000-7000-8000-000000000062")
 _NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
 _FAKE_HASH = "hash-value"
 _FINGERPRINT = "a" * 64
-_SECTIONS = {
+_SECTIONS: dict[str, object] = {
     "summary": {"answer": "Construyes una isla.", "sources": []},
     "setup": {"answer": "Coloca los hexágonos.", "sources": []},
     "turns": {"answer": "Tira, comercia y construye.", "sources": []},
@@ -70,13 +75,9 @@ def test_explanation_endpoint_returns_payload_and_enqueues_job(
 ):
     """El endpoint devuelve el estado y encola si el servicio lo pide."""
     explanation_mock = AsyncMock(
-        return_value=explanations_module.GameExplanationOutcome(
-            response=explanations_module.GameExplanationResponse(
-                status="generating",
-                sections=None,
-                generated_at=None,
-            ),
-            job=explanations_module.GameExplanationJob(user_id=_USER_ID, game_id=_GAME_ID),
+        return_value=GameExplanationOutcome(
+            snapshot=_partial_explanation(status="generating"),
+            job=GameExplanationJob(user_id=_USER_ID, game_id=_GAME_ID),
         )
     )
     delay_mock = MagicMock()
@@ -127,8 +128,10 @@ def test_explanation_cache_hit_skips_job(monkeypatch):
         )
     )
 
-    assert outcome.response.status == "ready"
-    assert outcome.response.generated_at == _NOW
+    response = explanations_module.build_game_explanation_response(outcome.snapshot)
+
+    assert response.status == "ready"
+    assert response.generated_at == _NOW
     assert outcome.job is None
 
 
@@ -147,8 +150,8 @@ def test_explanation_missing_cache_marks_generating_and_returns_job(monkeypatch)
         partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
     )
 
-    assert outcome.response.status == "generating"
-    assert outcome.job == explanations_module.GameExplanationJob(
+    assert outcome.snapshot.status == "generating"
+    assert outcome.job == GameExplanationJob(
         user_id=_USER_ID,
         game_id=_GAME_ID,
     )
@@ -176,7 +179,7 @@ def test_fresh_generating_cache_does_not_requeue(monkeypatch):
         partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
     )
 
-    assert outcome.response.status == "generating"
+    assert outcome.snapshot.status == "generating"
     assert outcome.job is None
     mark_mock.assert_not_awaited()
 
@@ -194,8 +197,10 @@ def test_failed_cache_returns_failed_without_requeue(monkeypatch):
         partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
     )
 
-    assert outcome.response.status == "failed"
-    assert outcome.response.error_code == "generation_failed"
+    response = explanations_module.build_game_explanation_response(outcome.snapshot)
+
+    assert response.status == "failed"
+    assert response.error_code == "generation_failed"
     assert outcome.job is None
 
 
@@ -321,17 +326,22 @@ def test_get_pool_fingerprint_hashes_visible_manuals_in_stable_order():
 
 def test_upsert_game_explanation_marks_ready_atomically():
     """El upsert por juego reemplaza secciones, huella y estado de una vez."""
-    row = SimpleNamespace(
-        sections=_SECTIONS,
-        source_fingerprint=_FINGERPRINT,
-        status="ready",
-        error_code=None,
-        generated_at=_NOW,
-    )
+    row = {
+        "sections": _SECTIONS,
+        "source_fingerprint": _FINGERPRINT,
+        "status": "ready",
+        "error_code": None,
+        "generated_at": _NOW,
+        "updated_at": _NOW,
+    }
 
-    class FakeResult:
+    class FakeMappings:
         def one(self):
             return row
+
+    class FakeResult:
+        def mappings(self):
+            return FakeMappings()
 
     class FakeSession:
         def __init__(self):
@@ -359,7 +369,7 @@ def test_upsert_game_explanation_marks_ready_atomically():
         )
     )
 
-    assert stored is row
+    assert stored == GameExplanationSnapshot(**row)
     assert session.commits == 1
     compiled = _compile(session.statement)
     assert "INSERT INTO game_explanations" in compiled
@@ -454,14 +464,15 @@ def _read_session() -> SimpleNamespace:
     return session
 
 
-def _cached_explanation(*, status: str) -> SimpleNamespace:
+def _cached_explanation(*, status: str) -> GameExplanationSnapshot:
     """Construye la explicación cacheada completa que devuelve el repositorio."""
-    return SimpleNamespace(
+    return GameExplanationSnapshot(
         sections=_SECTIONS,
         source_fingerprint=_FINGERPRINT,
         status=status,
         error_code=None,
         generated_at=_NOW,
+        updated_at=_NOW,
     )
 
 
@@ -471,9 +482,9 @@ def _partial_explanation(
     error_code: str | None = None,
     fingerprint: str = _FINGERPRINT,
     updated_at: datetime | None = None,
-) -> SimpleNamespace:
+) -> GameExplanationSnapshot:
     """Construye una caché parcial de explicación."""
-    return SimpleNamespace(
+    return GameExplanationSnapshot(
         sections={"summary": _SECTIONS["summary"]} if status != "generating" else {},
         source_fingerprint=fingerprint,
         status=status,

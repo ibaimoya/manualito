@@ -9,7 +9,7 @@ from api import config
 from api.annotations import DbSession, HttpClient
 from api.auth.dependencies import CsrfProtection, CurrentAuth
 from api.games.dependencies import ValidGameId
-from api.games.explanations import get_game_explanation
+from api.games.explanations import build_game_explanation_response, get_game_explanation
 from api.games.schemas import (
     GAME_SEARCH_LIMIT_DEFAULT,
     GAME_SEARCH_LIMIT_MAX,
@@ -165,7 +165,7 @@ async def get_game_explanation_handler(
             str(outcome.job.user_id),
             str(outcome.job.game_id),
         )
-    return outcome.response
+    return build_game_explanation_response(outcome.snapshot)
 
 
 @router.post(

@@ -71,3 +71,31 @@ class GamePoolManualSummary:
     created_at: datetime
     is_own: bool
     duplicate_page_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class GameExplanationSnapshot:
+    """Explicación cacheada de un juego."""
+
+    sections: dict[str, object]
+    source_fingerprint: str
+    status: str
+    error_code: str | None
+    generated_at: datetime | None
+    updated_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class GameExplanationJob:
+    """Trabajo opaco para generar la explicación de un juego."""
+
+    user_id: UUID
+    game_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class GameExplanationOutcome:
+    """Snapshot interno y trabajo opcional de generación."""
+
+    snapshot: GameExplanationSnapshot
+    job: GameExplanationJob | None

@@ -197,7 +197,6 @@ module = [
     "chromadb",
     "kombu",
     "paddle",
-    "paddle.*",
     "paddleocr",
     "pypdfium2",
     "pytesseract",

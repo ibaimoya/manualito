@@ -1,6 +1,7 @@
 """Casos de uso de manuales persistidos."""
 
 import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import PurePath
@@ -73,6 +74,7 @@ from common.crypto import sha256_hex
 from common.logging import safe_for_log
 from common.manual_text.chunking import chunk_text
 from common.manual_text.normalizer import normalize_ocr_lines
+from database.models.manual import Manual, ManualChunk
 from database.session import get_sessionmaker
 
 RAG_INDEX_INTERNAL_DETAIL = "Error interno al indexar el manual."
@@ -253,11 +255,14 @@ def _is_duplicate_manual_error(exc: IntegrityError) -> bool:
     )
 
 
-def _parse_rag_ingest_response(response: dict) -> tuple[set[UUID], str, datetime]:
+def _parse_rag_ingest_response(response: Mapping[str, object]) -> tuple[set[UUID], str, datetime]:
     """Valida los campos mínimos que API necesita de RAG."""
-    int(response["chunks_indexed"])
+    chunk_ids = response["chunk_ids"]
+    if not isinstance(chunk_ids, list):
+        raise TypeError
+    int(str(response["chunks_indexed"]))
     return (
-        {UUID(chunk_id) for chunk_id in response["chunk_ids"]},
+        {UUID(str(chunk_id)) for chunk_id in chunk_ids},
         str(response["embedding_model"]),
         datetime.fromisoformat(str(response["indexed_at"])),
     )
@@ -358,7 +363,7 @@ async def _finalize_manual_locked(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual,
+    manual: Manual,
 ) -> None:
     """Indexa los chunks persistidos y actualiza el estado final del manual."""
     final_status = await resolve_manual_processed_status(session, manual_id=manual.id)
@@ -879,9 +884,9 @@ def _text_quality(chunks: list[PreparedChunk], confidence_mean: float | None) ->
 async def _index_manual_in_rag(
     *,
     client: httpx.AsyncClient,
-    manual,
-    chunks,
-) -> dict:
+    manual: Manual,
+    chunks: Sequence[ManualChunk],
+) -> Mapping[str, object]:
     """Envía a RAG solo chunks ya persistidos en Postgres."""
     return await internal_client.post_json(
         client=client,

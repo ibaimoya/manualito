@@ -78,10 +78,13 @@ async def generate_game_answer(
     return AnswerResponse(answer=answer, sources=sources)
 
 
-def _parse_retrieved_chunk_ids(response: dict) -> list[UUID]:
+def _parse_retrieved_chunk_ids(response: Mapping[str, object]) -> list[UUID]:
     """Valida IDs devueltos por RAG antes de consultar Postgres."""
     try:
-        return [UUID(str(chunk["id"])) for chunk in response["chunks"]]
+        chunks = response["chunks"]
+        if not isinstance(chunks, list) or not all(isinstance(chunk, Mapping) for chunk in chunks):
+            raise TypeError
+        return [UUID(str(chunk["id"])) for chunk in chunks]
     except (KeyError, TypeError, ValueError) as retrieval_err:
         raise InternalServiceError(
             "Error interno al recuperar el contexto del juego."

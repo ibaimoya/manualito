@@ -12,8 +12,11 @@ from api import config
 class AssetUpload(Protocol):
     """Contenido validado que puede guardarse como asset físico."""
 
-    content: bytes
-    extension: str
+    @property
+    def content(self) -> bytes: ...
+
+    @property
+    def extension(self) -> str: ...
 
 
 async def save_manual_image(

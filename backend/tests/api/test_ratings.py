@@ -1,7 +1,7 @@
 from collections.abc import Iterator
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from functools import partial
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -15,6 +15,7 @@ from api.games.dependencies import valid_game_id
 from api.games.exceptions import GameNotFoundError
 from api.main import app
 from api.rate_limit import limiter
+from api.ratings.dto import RatingSnapshot
 from api.ratings.exceptions import RatingNotFoundError
 from api.ratings.repository import delete_user_rating, get_user_rating, upsert_user_rating
 from database.models.auth import AuthSession
@@ -63,7 +64,9 @@ def test_rate_game_upserts_score_and_trimmed_note(
     override_auth_game_and_db,
 ):
     """Valorar delega el upsert con la nota recortada y el usuario autenticado."""
-    upsert_mock = AsyncMock(return_value=_rating_row(score=4, note="Brilla a 4 jugadores."))
+    upsert_mock = AsyncMock(
+        return_value=_rating_snapshot(score=4, note="Brilla a 4 jugadores.")
+    )
     auto_follow_mock = AsyncMock()
     monkeypatch.setattr("api.ratings.router.upsert_user_rating", upsert_mock)
     monkeypatch.setattr(
@@ -95,7 +98,9 @@ def test_rate_game_accepts_score_boundaries_without_note(
     override_auth_game_and_db,
 ):
     """Los extremos válidos del score (1 y 5) pasan sin nota."""
-    upsert_mock = AsyncMock(side_effect=[_rating_row(score=1), _rating_row(score=5)])
+    upsert_mock = AsyncMock(
+        side_effect=[_rating_snapshot(score=1), _rating_snapshot(score=5)]
+    )
     auto_follow_mock = AsyncMock()
     monkeypatch.setattr("api.ratings.router.upsert_user_rating", upsert_mock)
     monkeypatch.setattr(
@@ -164,7 +169,7 @@ def test_rate_game_is_rate_limited(
     override_auth_game_and_db,
 ):
     """Valorar comparte el freno de acciones interactivas."""
-    upsert_mock = AsyncMock(return_value=_rating_row(score=3))
+    upsert_mock = AsyncMock(return_value=_rating_snapshot(score=3))
     auto_follow_mock = AsyncMock()
     monkeypatch.setattr("api.ratings.router.upsert_user_rating", upsert_mock)
     monkeypatch.setattr(
@@ -221,9 +226,12 @@ def test_delete_rating_not_found_returns_stable_404(
 
 def test_upsert_user_rating_compiles_to_atomic_on_conflict_update():
     """El upsert resuelve la carrera de PUTs concurrentes en una sentencia."""
-    row = _rating_row(score=5)
+    row = _rating_mapping(score=5)
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one(self):
             return row
 
@@ -253,7 +261,7 @@ def test_upsert_user_rating_compiles_to_atomic_on_conflict_update():
         )
     )
 
-    assert stored is row
+    assert stored == _rating_snapshot(score=5)
     assert session.commits == 1
     compiled = _compile(session.statement)
     assert "INSERT INTO ratings" in compiled
@@ -265,6 +273,9 @@ def test_get_user_rating_embeds_ownership_in_query():
     """La lectura de valoración filtra por usuario y juego en el WHERE."""
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one_or_none(self):
             return None
 
@@ -295,7 +306,7 @@ def test_delete_user_rating_raises_when_no_row_deleted():
 
         async def execute(self, _statement):
             await anyio.lowlevel.checkpoint()
-            return SimpleNamespace(rowcount=0)
+            return _ScalarResult(None)
 
         async def commit(self):
             await anyio.lowlevel.checkpoint()
@@ -321,7 +332,7 @@ def test_delete_user_rating_commits_when_row_deleted():
         async def execute(self, statement):
             await anyio.lowlevel.checkpoint()
             self.statement = statement
-            return SimpleNamespace(rowcount=1)
+            return _ScalarResult(_GAME_ID)
 
         async def commit(self):
             await anyio.lowlevel.checkpoint()
@@ -335,6 +346,7 @@ def test_delete_user_rating_commits_when_row_deleted():
     compiled = _compile(session.statement)
     assert "DELETE FROM ratings" in compiled
     assert "ratings.user_id =" in compiled
+    assert "RETURNING ratings.id" in compiled
 
 
 def _auth_session() -> AuthenticatedSession:
@@ -363,15 +375,30 @@ def _auth_session() -> AuthenticatedSession:
     )
 
 
-def _rating_row(*, score: int, note: str | None = None) -> SimpleNamespace:
-    """Construye la fila devuelta por el upsert con RETURNING."""
-    return SimpleNamespace(
+def _rating_snapshot(*, score: int, note: str | None = None) -> RatingSnapshot:
+    """Construye el snapshot devuelto por valoraciones."""
+    return RatingSnapshot(
         game_id=_GAME_ID,
         score=score,
         note=note,
         created_at=_NOW,
         updated_at=_NOW,
     )
+
+
+def _rating_mapping(*, score: int, note: str | None = None) -> dict[str, object]:
+    """Construye la fila proyectada por SQLAlchemy."""
+    return asdict(_rating_snapshot(score=score, note=note))
+
+
+class _ScalarResult:
+    """Resultado escalar mínimo para tests."""
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def scalar_one_or_none(self) -> object:
+        return self._value
 
 
 def _compile(statement) -> str:

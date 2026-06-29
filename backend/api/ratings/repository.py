@@ -4,9 +4,9 @@ from uuid import UUID
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.ratings.dto import RatingSnapshot
 from api.ratings.exceptions import RatingNotFoundError
 from database.models.rating import Rating
 
@@ -18,7 +18,7 @@ async def upsert_user_rating(
     game_id: UUID,
     score: int,
     note: str | None,
-) -> Row:
+) -> RatingSnapshot:
     """Crea o actualiza la valoración en una sola sentencia atómica."""
     stmt = (
         insert(Rating)
@@ -36,9 +36,9 @@ async def upsert_user_rating(
         )
     )
     result = await session.execute(stmt)
-    row = result.one()
+    snapshot = RatingSnapshot(**result.mappings().one())
     await session.commit()
-    return row
+    return snapshot
 
 
 async def get_user_rating(
@@ -46,7 +46,7 @@ async def get_user_rating(
     *,
     user_id: UUID,
     game_id: UUID,
-) -> Row | None:
+) -> RatingSnapshot | None:
     """Carga la valoración propia de un juego si existe."""
     result = await session.execute(
         select(
@@ -60,7 +60,10 @@ async def get_user_rating(
             Rating.game_id == game_id,
         )
     )
-    return result.one_or_none()
+    row = result.mappings().one_or_none()
+    if row is None:
+        return None
+    return RatingSnapshot(**row)
 
 
 async def delete_user_rating(
@@ -74,8 +77,8 @@ async def delete_user_rating(
         delete(Rating).where(
             Rating.user_id == user_id,
             Rating.game_id == game_id,
-        )
+        ).returning(Rating.id)
     )
-    if result.rowcount == 0:
+    if result.scalar_one_or_none() is None:
         raise RatingNotFoundError
     await session.commit()

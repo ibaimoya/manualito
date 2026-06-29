@@ -5,6 +5,14 @@ import unicodedata
 from api.auth.exceptions import UsernameValidationError
 from database.models.constants import USERNAME_KEY_MAX_LENGTH, USERNAME_MAX_LENGTH
 
+__all__ = [
+    "USERNAME_KEY_MAX_LENGTH",
+    "USERNAME_MAX_LENGTH",
+    "UsernameValidationError",
+    "build_username_key",
+    "normalize_username",
+]
+
 USERNAME_ALLOWED_SYMBOLS = frozenset({"_", "-", "."})
 
 

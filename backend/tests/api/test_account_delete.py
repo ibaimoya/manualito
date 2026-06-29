@@ -10,7 +10,8 @@ import pytest
 from sqlalchemy.dialects import postgresql
 
 import api.account.service as account_service
-from api.account.repository import AccountCleanup, purge_user_account
+from api.account.dto import AccountCleanup
+from api.account.repository import purge_user_account
 from api.account.service import delete_account
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.exceptions import AuthFormValidationError

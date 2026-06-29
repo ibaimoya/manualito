@@ -11,6 +11,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 
 import api.account.service as account_service
+from api.account.dto import AccountActivityStats
 from api.account.repository import get_user_activity_stats
 from api.account.schemas import MeStatsResponse
 from api.account.service import (
@@ -489,12 +490,12 @@ def test_change_password_service_revokes_other_sessions(monkeypatch):
     assert "auth_sessions.id !=" in compiled
 
 
-def test_get_account_stats_validates_repository_row(monkeypatch):
-    """El servicio convierte la fila agregada en contrato público."""
+def test_get_account_stats_validates_repository_stats(monkeypatch):
+    """El servicio convierte el DTO agregado en contrato público."""
     monkeypatch.setattr(
         "api.account.service.repository.get_user_activity_stats",
         AsyncMock(
-            return_value=SimpleNamespace(
+            return_value=AccountActivityStats(
                 games_count=2,
                 conversations_count=5,
                 manuals_count=1,
@@ -513,8 +514,15 @@ def test_get_user_activity_stats_unions_games_with_activity():
     """Los juegos cuentan actividad de manuales, conversaciones y ratings."""
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one(self):
-            return SimpleNamespace(games_count=3, conversations_count=4, manuals_count=2)
+            return {
+                "games_count": 3,
+                "conversations_count": 4,
+                "manuals_count": 2,
+            }
 
     class FakeSession:
         async def execute(self, statement):
@@ -524,9 +532,9 @@ def test_get_user_activity_stats_unions_games_with_activity():
 
     session = FakeSession()
 
-    row = anyio.run(partial(get_user_activity_stats, session, user_id=_USER_ID))
+    stats = anyio.run(partial(get_user_activity_stats, session, user_id=_USER_ID))
 
-    assert row.games_count == 3
+    assert stats.games_count == 3
     compiled = _compile(session.statement)
     assert "UNION" in compiled
     assert "manuals.owner_user_id" in compiled

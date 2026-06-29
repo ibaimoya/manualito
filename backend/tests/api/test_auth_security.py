@@ -100,10 +100,14 @@ class FakeScalarResult:
 
 
 class FakeRowResult:
-    """Resultado de tupla compatible con one_or_none()."""
+    """Resultado de tupla compatible con tuples().one_or_none()."""
 
     def __init__(self, value):
         self.value = value
+
+    def tuples(self):
+        """Devuelve el mismo resultado preparado."""
+        return self
 
     def one_or_none(self):
         """Devuelve la tupla preparada por el test."""

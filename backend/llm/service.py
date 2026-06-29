@@ -5,7 +5,7 @@ import httpx
 
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 from llm import config
-from llm.client import OllamaClient, model_control_payload
+from llm.client import JsonValue, OllamaClient, OllamaResponseError, model_control_payload
 from llm.exceptions import (
     EmptyLlmAnswerError,
     InvalidLlmResponseError,
@@ -21,8 +21,11 @@ from llm.prompt_builder import (
 )
 from llm.schemas import (
     CondenseQuestionRequest,
+    CondenseQuestionResponse,
     ConversationTitleRequest,
+    ConversationTitleResponse,
     GenerateRequest,
+    GenerateResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +35,7 @@ async def generate_answer(
     *,
     payload: GenerateRequest,
     client: httpx.AsyncClient,
-) -> dict:
+) -> GenerateResponse:
     """
     Genera una respuesta usando Ollama a partir de una pregunta y su contexto.
 
@@ -41,7 +44,7 @@ async def generate_answer(
         client (httpx.AsyncClient): Cliente HTTP compartido inyectado por FastAPI.
 
     Returns:
-        dict: Respuesta final limpia generada por el LLM.
+        GenerateResponse: Respuesta final limpia generada por el LLM.
     """
     prompt, included_chunks = build_prompt(
         payload.question,
@@ -60,14 +63,14 @@ async def generate_answer(
         prompt=prompt,
         client=client,
     )
-    return {"answer": answer}
+    return GenerateResponse(answer=answer)
 
 
 async def condense_question(
     *,
     payload: CondenseQuestionRequest,
     client: httpx.AsyncClient,
-) -> dict:
+) -> CondenseQuestionResponse:
     """
     Reformula una pregunta contextual para mejorar la recuperación RAG.
 
@@ -76,7 +79,7 @@ async def condense_question(
         client (httpx.AsyncClient): Cliente HTTP compartido.
 
     Returns:
-        dict: Pregunta independiente para usar en recuperación.
+        CondenseQuestionResponse: Pregunta independiente para usar en recuperación.
     """
     prompt = build_condense_question_prompt(
         payload.question,
@@ -87,14 +90,14 @@ async def condense_question(
         client=client,
         log_label="pregunta reformulada",
     )
-    return {"question": question}
+    return CondenseQuestionResponse(question=question)
 
 
 async def generate_conversation_title(
     *,
     payload: ConversationTitleRequest,
     client: httpx.AsyncClient,
-) -> dict:
+) -> ConversationTitleResponse:
     """
     Genera un título corto para una conversación.
 
@@ -103,7 +106,7 @@ async def generate_conversation_title(
         client (httpx.AsyncClient): Cliente HTTP compartido.
 
     Returns:
-        dict: Título limpio y acotado.
+        ConversationTitleResponse: Título limpio y acotado.
     """
     prompt = build_title_prompt(
         payload.game_name,
@@ -118,7 +121,7 @@ async def generate_conversation_title(
     )
     if not title:
         raise EmptyLlmAnswerError
-    return {"title": title}
+    return ConversationTitleResponse(title=title)
 
 
 async def _generate_text(
@@ -136,7 +139,7 @@ async def _generate_text(
         len(prompt),
     )
 
-    ollama_payload = {
+    ollama_payload: dict[str, JsonValue] = {
         **model_control_payload(),
         "prompt": prompt,
         "stream": False,
@@ -149,7 +152,7 @@ async def _generate_text(
     ollama = OllamaClient(client)
 
     try:
-        response = await ollama.generate(ollama_payload)
+        generated_text = await ollama.generate(ollama_payload)
     except httpx.ConnectError:
         logger.error("No se pudo conectar con Ollama en %s.", config.OLLAMA_URL)
         raise LlmUnavailableError from None
@@ -159,14 +162,11 @@ async def _generate_text(
     except httpx.HTTPStatusError as llm_err:
         logger.exception("Ollama devolvió un error HTTP.")
         raise LlmGenerationError from llm_err
-
-    try:
-        body = response.json()
-    except ValueError:
+    except OllamaResponseError:
         logger.exception("Respuesta JSON inválida de Ollama.")
         raise InvalidLlmResponseError from None
 
-    answer = (body.get("response") or "").strip()
+    answer = generated_text.strip()
     if not answer:
         raise EmptyLlmAnswerError
 

@@ -47,7 +47,7 @@ async def generate_endpoint(
     Returns:
         GenerateResponse: Respuesta final limpia generada por el LLM.
     """
-    return GenerateResponse(**await generate_answer(payload=payload, client=client))
+    return await generate_answer(payload=payload, client=client)
 
 
 @router.post(
@@ -72,7 +72,7 @@ async def condense_question_endpoint(
     Returns:
         CondenseQuestionResponse: Pregunta independiente para el retriever.
     """
-    return CondenseQuestionResponse(**await condense_question(payload=payload, client=client))
+    return await condense_question(payload=payload, client=client)
 
 
 @router.post(
@@ -97,6 +97,4 @@ async def conversation_title_endpoint(
     Returns:
         ConversationTitleResponse: Título corto y limpio.
     """
-    return ConversationTitleResponse(
-        **await generate_conversation_title(payload=payload, client=client)
-    )
+    return await generate_conversation_title(payload=payload, client=client)

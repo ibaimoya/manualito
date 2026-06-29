@@ -3,7 +3,7 @@ import logging
 from collections.abc import Mapping, Sequence
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 from llm import config
 
@@ -90,7 +90,7 @@ def _validate_json_response[ResponseModelT: BaseModel](
 ) -> ResponseModelT:
     try:
         return model_type.model_validate(response.json())
-    except (ValueError) as validation_err:
+    except ValueError as validation_err:
         raise OllamaResponseError from validation_err
 
 

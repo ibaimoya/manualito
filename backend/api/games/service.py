@@ -14,6 +14,7 @@ from api import config
 from api.auth.service import AuthenticatedSession
 from api.games import repository
 from api.games.bgg import search_board_games
+from api.games.dto import CachedGameInput, GameSearchResult
 from api.games.exceptions import BggUnavailableError
 from api.games.schemas import (
     GameDetailResponse,
@@ -44,17 +45,17 @@ async def search_game_catalog(
     if not query_key:
         return GameSearchResponse(games=[])
 
-    rows = await _search_local(session, query=query, query_key=query_key, limit=limit)
-    if not rows and client is not None and len(query_key) >= config.BGG_EXTERNAL_SEARCH_MIN_LENGTH:
+    games = await _search_local(session, query=query, query_key=query_key, limit=limit)
+    if not games and client is not None and len(query_key) >= config.BGG_EXTERNAL_SEARCH_MIN_LENGTH:
         await _cache_bgg_results_once(
             session,
             client=client,
             query=query,
             query_key=query_key,
         )
-        rows = await _search_local(session, query=query, query_key=query_key, limit=limit)
+        games = await _search_local(session, query=query, query_key=query_key, limit=limit)
 
-    return GameSearchResponse(games=[GameSearchItem.model_validate(row) for row in rows])
+    return GameSearchResponse(games=[GameSearchItem.model_validate(game) for game in games])
 
 
 async def create_manual_game(
@@ -64,17 +65,17 @@ async def create_manual_game(
     created_by_user_id: UUID,
 ) -> GameSearchItem:
     """Da de alta un juego ausente de BGG y lo deja listo para elegir."""
-    row = await repository.create_manual_game(
+    game = await repository.create_manual_game(
         session,
         name=name,
         name_key=build_game_name_key(name),
         created_by_user_id=created_by_user_id,
     )
     return GameSearchItem(
-        id=row.id,
-        name=row.name,
-        bgg_id=row.bgg_id,
-        year_published=row.year_published,
+        id=game.id,
+        name=game.name,
+        bgg_id=game.bgg_id,
+        year_published=game.year_published,
         manuals_count=0,
     )
 
@@ -87,8 +88,8 @@ async def list_my_games(
     offset: int,
 ) -> MyGamesResponse:
     """Biblioteca del usuario: juegos seguidos, por actividad o seguimiento reciente."""
-    rows = await repository.list_my_games(session, user_id=user_id, limit=limit, offset=offset)
-    return MyGamesResponse(games=[MyGameItem.model_validate(row) for row in rows])
+    games = await repository.list_my_games(session, user_id=user_id, limit=limit, offset=offset)
+    return MyGamesResponse(games=[MyGameItem.model_validate(game) for game in games])
 
 
 async def get_game_detail(
@@ -170,8 +171,8 @@ async def _cache_bgg_results_once(
     """Coalescea misses concurrentes para no martillear BGG con la misma query."""
     cache_lock = await _bgg_cache_lock(query_key)
     async with cache_lock:
-        cached_rows = await _search_local(session, query=query, query_key=query_key, limit=1)
-        if cached_rows:
+        cached_games = await _search_local(session, query=query, query_key=query_key, limit=1)
+        if cached_games:
             return
         await _cache_bgg_results(session, client=client, query=query)
 
@@ -192,7 +193,7 @@ async def _search_local(
     query: str,
     query_key: str,
     limit: int,
-) -> list[object]:
+) -> list[GameSearchResult]:
     """Consulta el catálogo local de Postgres."""
     return await repository.search_games(
         session,
@@ -218,7 +219,7 @@ async def _cache_bgg_results(
         await repository.upsert_bgg_games(
             session,
             games=[
-                repository.CachedGameInput(
+                CachedGameInput(
                     bgg_id=game.bgg_id,
                     name=game.name,
                     name_key=build_game_name_key(game.name),

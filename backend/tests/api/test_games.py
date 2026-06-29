@@ -1,5 +1,4 @@
 from functools import partial
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID
 
@@ -13,9 +12,9 @@ import api.games.bgg as bgg_client
 from api import config
 from api.games.bgg import BggGame, search_board_games
 from api.games.dependencies import valid_game_form_id, valid_game_id
+from api.games.dto import CachedGameInput, GameSearchResult
 from api.games.exceptions import BggUnavailableError, GameNotFoundError
 from api.games.repository import (
-    CachedGameInput,
     ensure_active_game,
     search_games,
     upsert_bgg_games,
@@ -122,16 +121,16 @@ def test_search_game_catalog_returns_empty_for_blank_query(monkeypatch):
     repository_mock.assert_not_called()
 
 
-def test_search_game_catalog_maps_repository_rows(monkeypatch):
-    """El service transforma filas internas en contrato público."""
-    row = SimpleNamespace(
+def test_search_game_catalog_maps_repository_results(monkeypatch):
+    """El service transforma resultados internos en contrato público."""
+    game = GameSearchResult(
         id=_GAME_ID,
         name=_GAME_NAME,
         bgg_id=13,
         year_published=1995,
         manuals_count=4,
     )
-    repository_mock = AsyncMock(return_value=[row])
+    repository_mock = AsyncMock(return_value=[game])
     monkeypatch.setattr("api.games.service.repository.search_games", repository_mock)
 
     response = anyio.run(
@@ -152,14 +151,14 @@ def test_search_game_catalog_maps_repository_rows(monkeypatch):
 
 def test_search_game_catalog_caches_bgg_results_on_local_miss(monkeypatch):
     """Si Postgres no tiene resultados, se consulta BGG una vez y se cachea."""
-    row = SimpleNamespace(
+    game = GameSearchResult(
         id=_GAME_ID,
         name=_GAME_NAME,
         bgg_id=13,
         year_published=1995,
         manuals_count=0,
     )
-    search_mock = AsyncMock(side_effect=[[], [], [row]])
+    search_mock = AsyncMock(side_effect=[[], [], [game]])
     bgg_mock = AsyncMock(
         return_value=[BggGame(bgg_id=13, name=_GAME_NAME, year_published=1995)]
     )
@@ -275,7 +274,7 @@ def test_search_game_catalog_returns_empty_when_bgg_is_unavailable(monkeypatch):
 def test_search_game_catalog_coalesces_concurrent_bgg_miss(monkeypatch):
     """Dos misses iguales concurrentes comparten una sola consulta BGG."""
     cached = False
-    row = SimpleNamespace(
+    game = GameSearchResult(
         id=_GAME_ID,
         name=_GAME_NAME,
         bgg_id=13,
@@ -285,7 +284,7 @@ def test_search_game_catalog_coalesces_concurrent_bgg_miss(monkeypatch):
 
     async def fake_search_games(*_args, **_kwargs):
         await anyio.lowlevel.checkpoint()
-        return [row] if cached else []
+        return [game] if cached else []
 
     async def fake_search_board_games(*_args, **_kwargs):
         await anyio.sleep(0.01)
@@ -327,8 +326,20 @@ def test_search_game_catalog_coalesces_concurrent_bgg_miss(monkeypatch):
     upsert_mock.assert_awaited_once()
 
 
-def test_search_games_builds_typeahead_query_and_projects_rows():
-    """El repositorio aplica filtros activos y devuelve filas proyectadas."""
+def test_search_games_builds_typeahead_query_and_projects_results():
+    """El repositorio aplica filtros activos y devuelve DTOs proyectados."""
+
+    class FakeResult:
+        def mappings(self):
+            return [
+                {
+                    "id": _GAME_ID,
+                    "name": _GAME_NAME,
+                    "bgg_id": 13,
+                    "year_published": 1995,
+                    "manuals_count": 3,
+                }
+            ]
 
     class FakeSession:
         def __init__(self):
@@ -337,24 +348,16 @@ def test_search_games_builds_typeahead_query_and_projects_rows():
         async def execute(self, statement):
             await anyio.lowlevel.checkpoint()
             self.statement = statement
-            return [
-                SimpleNamespace(
-                    id=_GAME_ID,
-                    name=_GAME_NAME,
-                    bgg_id=13,
-                    year_published=1995,
-                    manuals_count=3,
-                )
-            ]
+            return FakeResult()
 
     session = FakeSession()
 
-    rows = anyio.run(
+    games = anyio.run(
         partial(search_games, session, query=_GAME_QUERY, query_key=_GAME_QUERY, limit=5)
     )
 
-    assert rows[0].id == _GAME_ID
-    assert rows[0].manuals_count == 3
+    assert games[0].id == _GAME_ID
+    assert games[0].manuals_count == 3
     compiled = str(session.statement.compile(dialect=postgresql.dialect()))
     assert "similarity" in compiled
     assert "manuals" in compiled

@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from functools import partial
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -12,6 +11,7 @@ from sqlalchemy.dialects import postgresql
 from api.auth.dependencies import get_current_auth
 from api.auth.service import AuthenticatedSession
 from api.games import repository, service
+from api.games.dto import MyGameSummary
 from api.games.schemas import MyGameItem, MyGamesResponse
 from api.main import app
 from api.rate_limit import limiter
@@ -91,9 +91,9 @@ def test_my_games_route_is_not_captured_as_game_id(client, monkeypatch, override
     list_mock.assert_awaited_once()
 
 
-def test_list_my_games_service_maps_rows(monkeypatch):
-    """El service transforma filas internas en el contrato público de biblioteca."""
-    row = SimpleNamespace(
+def test_list_my_games_service_maps_results(monkeypatch):
+    """El service transforma resultados internos en el contrato público de biblioteca."""
+    game = MyGameSummary(
         id=_GAME_ID,
         name="Catan",
         bgg_id=13,
@@ -102,7 +102,7 @@ def test_list_my_games_service_maps_rows(monkeypatch):
         conversations_count=1,
         last_activity_at=_NOW,
     )
-    repo_mock = AsyncMock(return_value=[row])
+    repo_mock = AsyncMock(return_value=[game])
     monkeypatch.setattr("api.games.service.repository.list_my_games", repo_mock)
 
     response = anyio.run(
@@ -117,7 +117,7 @@ def test_list_my_games_repository_lists_followed_games_and_orders_by_activity():
     """La query usa seguimientos y ordena por actividad o fecha de seguimiento."""
 
     class FakeResult:
-        def __iter__(self):
+        def mappings(self):
             return iter([])
 
     class FakeSession:
@@ -127,11 +127,11 @@ def test_list_my_games_repository_lists_followed_games_and_orders_by_activity():
             return FakeResult()
 
     session = FakeSession()
-    rows = anyio.run(
+    games = anyio.run(
         partial(repository.list_my_games, session, user_id=_USER_ID, limit=10, offset=3)
     )
 
-    assert rows == []
+    assert games == []
     compiled = str(session.statement.compile(dialect=postgresql.dialect()))
     assert "JOIN game_follows" in compiled
     assert "game_follows.user_id =" in compiled

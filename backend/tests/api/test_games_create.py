@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from functools import partial
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -12,6 +11,7 @@ from sqlalchemy.dialects import postgresql
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
 from api.games import repository, service
+from api.games.dto import CreatedGame
 from api.games.schemas import GameSearchItem
 from api.games.service import build_game_name_key
 from api.main import app
@@ -109,8 +109,13 @@ def test_create_game_is_rate_limited(client, monkeypatch, override_auth_and_db):
 
 def test_create_manual_game_service_normalizes_key_and_counts_zero(monkeypatch):
     """El service normaliza la clave del nombre y devuelve la ficha con 0 manuales."""
-    row = SimpleNamespace(id=_GAME_ID, name="Catán Casero", bgg_id=None, year_published=None)
-    repo_mock = AsyncMock(return_value=row)
+    game = CreatedGame(
+        id=_GAME_ID,
+        name="Catán Casero",
+        bgg_id=None,
+        year_published=None,
+    )
+    repo_mock = AsyncMock(return_value=game)
     monkeypatch.setattr("api.games.service.repository.create_manual_game", repo_mock)
 
     item = anyio.run(
@@ -137,9 +142,12 @@ def test_create_manual_game_service_normalizes_key_and_counts_zero(monkeypatch):
 
 def test_create_manual_game_repository_inserts_and_commits():
     """El repositorio inserta el juego con RETURNING y confirma la transacción."""
-    row = SimpleNamespace(id=_GAME_ID, name="Mi juego", bgg_id=None, year_published=None)
+    row = {"id": _GAME_ID, "name": "Mi juego", "bgg_id": None, "year_published": None}
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one(self):
             return row
 
@@ -167,7 +175,12 @@ def test_create_manual_game_repository_inserts_and_commits():
         )
     )
 
-    assert stored is row
+    assert stored == CreatedGame(
+        id=_GAME_ID,
+        name="Mi juego",
+        bgg_id=None,
+        year_published=None,
+    )
     assert session.commits == 1
     compiled = str(session.statement.compile(dialect=postgresql.dialect()))
     assert "INSERT INTO games" in compiled

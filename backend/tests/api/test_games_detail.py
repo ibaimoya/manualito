@@ -11,6 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 from api.auth.dependencies import get_current_auth
 from api.auth.service import AuthenticatedSession
+from api.games.dto import GameDetail, GamePoolManualSummary
 from api.games.exceptions import GameNotFoundError
 from api.games.repository import (
     count_user_game_conversations,
@@ -29,6 +30,11 @@ _USER_ID = uuid4()
 _GAME_ID = UUID("018fd000-0000-7000-8000-000000000031")
 _NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
 _FAKE_HASH = "hash-value"  # placeholder de hash en fixtures, no es una credencial
+
+
+class _EmptyMappingsResult:
+    def mappings(self):
+        return iter([])
 
 
 @pytest.fixture
@@ -88,8 +94,8 @@ def test_get_game_detail_missing_game_returns_stable_404(
 
 def test_get_game_detail_service_composes_personal_view(monkeypatch):
     """El servicio agrega juego, manuales visibles, conversaciones y rating."""
-    game = _game_row()
-    manual = SimpleNamespace(
+    game = _game_detail()
+    manual = GamePoolManualSummary(
         id=uuid4(),
         title="Edición clásica",
         source_type="pdf",
@@ -145,7 +151,7 @@ def test_get_game_detail_without_rating_returns_null(monkeypatch):
     """Sin valoración guardada el hub devuelve my_rating nulo."""
     monkeypatch.setattr(
         "api.games.service.repository.get_game_for_detail",
-        AsyncMock(return_value=_game_row(bgg_id=None)),
+        AsyncMock(return_value=_game_detail(bgg_id=None)),
     )
     monkeypatch.setattr(
         "api.games.service.repository.list_game_pool_manuals",
@@ -175,11 +181,20 @@ def test_get_game_detail_without_rating_returns_null(monkeypatch):
     assert response.is_following is False
 
 
-def test_get_game_for_detail_returns_row_when_game_exists():
-    """Un juego vivo devuelve la fila base del hub."""
-    row = SimpleNamespace(id=_GAME_ID, name="Catan", status="hidden")
+def test_get_game_for_detail_returns_detail_when_game_exists():
+    """Un juego vivo devuelve el detalle base del hub."""
+    row = {
+        "id": _GAME_ID,
+        "name": "Catan",
+        "bgg_id": 13,
+        "year_published": 1995,
+        "status": "hidden",
+    }
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one_or_none(self):
             return row
 
@@ -191,13 +206,22 @@ def test_get_game_for_detail_returns_row_when_game_exists():
 
     game = anyio.run(partial(get_game_for_detail, FakeSession(), game_id=_GAME_ID))
 
-    assert game is row
+    assert game == GameDetail(
+        id=_GAME_ID,
+        name="Catan",
+        bgg_id=13,
+        year_published=1995,
+        status="hidden",
+    )
 
 
 def test_get_game_for_detail_returns_hidden_games_but_not_deleted():
     """El hub admite juegos ocultos y rechaza los borrados."""
 
     class FakeResult:
+        def mappings(self):
+            return self
+
         def one_or_none(self):
             return None
 
@@ -224,11 +248,11 @@ def test_list_game_pool_manuals_mirrors_retrieval_visibility():
         async def execute(self, statement):
             await anyio.lowlevel.checkpoint()
             self.statement = statement
-            return []
+            return _EmptyMappingsResult()
 
     session = FakeSession()
 
-    rows = anyio.run(
+    manuals = anyio.run(
         partial(
             list_game_pool_manuals,
             session,
@@ -237,7 +261,7 @@ def test_list_game_pool_manuals_mirrors_retrieval_visibility():
         )
     )
 
-    assert rows == []
+    assert manuals == []
     compiled = _compile(session.statement)
     assert "manuals.visibility = " in compiled
     assert "manuals.owner_user_id = " in compiled
@@ -308,12 +332,12 @@ def _auth_session() -> AuthenticatedSession:
     )
 
 
-def _game_row(
+def _game_detail(
     *,
     bgg_id: int | None = 13,
-) -> SimpleNamespace:
-    """Construye la fila de juego que devuelve el repositorio."""
-    return SimpleNamespace(
+) -> GameDetail:
+    """Construye el detalle de juego que devuelve el repositorio."""
+    return GameDetail(
         id=_GAME_ID,
         name="Catan",
         bgg_id=bgg_id,

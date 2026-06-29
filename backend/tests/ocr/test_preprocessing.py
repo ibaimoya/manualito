@@ -47,6 +47,14 @@ def test_common_helpers_keep_bgr_contract():
     assert clahe_bgr(bgr, clip_limit=1.0, tile_size=2).shape == (3, 4, 3)
 
 
+def test_ensure_bgr_rejects_non_uint8_images():
+    """Una imagen no uint8 falla antes de llegar al motor OCR."""
+    image = np.zeros((3, 4, 3), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="debe ser uint8"):
+        ensure_bgr(image)
+
+
 def test_load_bgr_image_fails_clearly_for_invalid_path():
     """Una ruta inválida falla antes de llamar al motor OCR."""
     with pytest.raises(ValueError, match="No se pudo leer la imagen"):

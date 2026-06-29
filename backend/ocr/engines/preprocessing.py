@@ -5,13 +5,15 @@ import tempfile
 import uuid
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager, suppress
+from typing import Any, cast
 
 import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-ImageArray = NDArray[np.uint8]
-ImagePreprocessor = Callable[[ImageArray], ImageArray]
+type ImageArray = NDArray[np.uint8]
+type RawImageArray = NDArray[np.integer[Any] | np.floating[Any]]
+type ImagePreprocessor = Callable[[ImageArray], ImageArray]
 
 TEMP_IMAGE_EXTENSION = ".jpg"
 JPEG_QUALITY = 95
@@ -52,21 +54,28 @@ def save_bgr_image(image_path: str, image: ImageArray) -> None:
         raise OSError(f"No se pudo guardar la imagen preprocesada: {image_path!r}.")
 
 
-def ensure_bgr(image: ImageArray) -> ImageArray:
+def ensure_bgr(image: RawImageArray) -> ImageArray:
     """Normaliza cualquier salida válida a BGR de 3 canales."""
+
+    # Exige imagen uint8.
+    if image.dtype != np.uint8:
+        raise ValueError("La imagen preprocesada debe ser uint8.")
     if image.ndim == 2:
-        return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        # Normaliza gris 2D.
+        return ensure_bgr(cv2.cvtColor(image, cv2.COLOR_GRAY2BGR))
     if image.ndim == 3 and image.shape[2] == 1:
-        return cv2.cvtColor(image[:, :, 0], cv2.COLOR_GRAY2BGR)
+        # Normaliza un canal.
+        return ensure_bgr(cv2.cvtColor(image[:, :, 0], cv2.COLOR_GRAY2BGR))
     if image.ndim == 3 and image.shape[2] == 3:
-        return image
+        # Acepta BGR.
+        return cast(ImageArray, image)
     raise ValueError("La imagen preprocesada debe tener 1 o 3 canales.")
 
 
 def gray_bgr(image: ImageArray) -> ImageArray:
     """Convierte una imagen BGR a escala de grises manteniendo 3 canales."""
     gray = cv2.cvtColor(ensure_bgr(image), cv2.COLOR_BGR2GRAY)
-    return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    return ensure_bgr(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR))
 
 
 def resize_bgr(image: ImageArray, *, scale: float) -> ImageArray:
@@ -79,7 +88,7 @@ def resize_bgr(image: ImageArray, *, scale: float) -> ImageArray:
         max(1, round(width * scale)),
         max(1, round(height * scale)),
     )
-    return cv2.resize(source, target_size, interpolation=cv2.INTER_CUBIC)
+    return ensure_bgr(cv2.resize(source, target_size, interpolation=cv2.INTER_CUBIC))
 
 
 def clahe_bgr(
@@ -95,7 +104,7 @@ def clahe_bgr(
         raise ValueError("El tamaño de mosaico CLAHE debe ser mayor o igual que 1.")
     gray = cv2.cvtColor(ensure_bgr(image), cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_size, tile_size))
-    return cv2.cvtColor(clahe.apply(gray), cv2.COLOR_GRAY2BGR)
+    return ensure_bgr(cv2.cvtColor(clahe.apply(gray), cv2.COLOR_GRAY2BGR))
 
 
 def _new_temp_path() -> str:

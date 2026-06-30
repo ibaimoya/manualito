@@ -40,6 +40,7 @@ la aplicación antes de la publicación estable `1.0.0`.
 - Documentación de arranque, despliegue local, arquitectura, pruebas y
   configuración del proyecto.
 - Calidad automatizada con tests de backend y frontend, linting, cobertura,
-  SonarQube Cloud y workflows de CI.
+  validación de tipos, SonarQube Cloud y workflows de CI.
+- Generación de releases automática a partir de tags.
 - Flujo de release con changelog validado, archivos fuente propios y checksums
   SHA256.

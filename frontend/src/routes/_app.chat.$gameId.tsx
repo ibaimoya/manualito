@@ -408,13 +408,15 @@ function ChatScreen() {
 
   useCompletedAssistantAnimation(messages, setAnimateId);
 
+  const waitingForReply = askMutation.isPending || hasPendingAssistant;
+  const sendPending = waitingForReply && canAsk;
+
   // Scroll al final cuando entra un mensaje nuevo.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length, pendingQuestion, askMutation.isPending, hasPendingAssistant]);
 
-  // Mantiene la vista pegada al fondo mientras la respuesta se escribe, salvo
-  // que el usuario haya subido a leer mensajes anteriores.
+  // Mantiene la vista pegada al fondo mientras la respuesta se escribe.
   const pinToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) {
@@ -474,7 +476,8 @@ function ChatScreen() {
         onSubmit={sendQuestion}
         canAsk={canAsk}
         gameName={gameName}
-        disabled={askMutation.isPending || canAsk === false}
+        disabled={canAsk === false}
+        sendPending={sendPending}
       />
     </div>
   );
@@ -579,6 +582,7 @@ function ChatComposerBar({
   canAsk,
   gameName,
   disabled,
+  sendPending,
 }: Readonly<{
   draft: string;
   onDraftChange: (value: string) => void;
@@ -586,6 +590,7 @@ function ChatComposerBar({
   canAsk: boolean;
   gameName: string | null;
   disabled: boolean;
+  sendPending: boolean;
 }>) {
   const placeholder = canAsk
     ? `Pregunta sobre ${gameName ?? 'el juego'}…`
@@ -605,6 +610,7 @@ function ChatComposerBar({
           placeholder={placeholder}
           maxLength={QUESTION_MAX}
           disabled={disabled}
+          sendPending={sendPending}
         />
       </div>
     </div>

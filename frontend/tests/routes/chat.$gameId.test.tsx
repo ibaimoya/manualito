@@ -186,6 +186,7 @@ describe('/chat/$gameId', () => {
   it('mantiene el polling cuando el POST devuelve una respuesta pendiente', async () => {
     let messageReads = 0;
     let sent = false;
+    let sends = 0;
     const message = (
       id: string,
       role: 'user' | 'assistant',
@@ -228,6 +229,7 @@ describe('/chat/$gameId', () => {
       }),
       http.post('/api/conversations/:conversationId/messages', async ({ request }) => {
         sent = true;
+        sends += 1;
         const body = (await request.json()) as { content?: string };
         return HttpResponse.json({
           conversation: { ...CONVERSATION, has_pending_reply: true },
@@ -256,6 +258,16 @@ describe('/chat/$gameId', () => {
 
     expect(await screen.findByText('async')).toBeInTheDocument();
     expect(await screen.findByRole('status', { name: /Generando respuesta/i })).toBeInTheDocument();
+    // Mientras se sondea la respuesta, el borrador sigue editable, pero el
+    // envio queda bloqueado: ese era el hueco que dejaba pasar un segundo turno.
+    await waitFor(() => expect(input).toBeEnabled());
+    await user.type(input, 'otra pregunta');
+    expect(input).toHaveValue('otra pregunta');
+    const send = screen.getByRole('button', { name: /Enviar pregunta/i });
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute('aria-busy', 'true');
+    await user.click(send);
+    expect(sends).toBe(1);
     await waitFor(
       () => {
         expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS);
@@ -263,6 +275,9 @@ describe('/chat/$gameId', () => {
       },
       { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
     );
+    // En cuanto la respuesta llega completa, se puede enviar el borrador preparado.
+    expect(input).toBeEnabled();
+    expect(send).toBeEnabled();
   }, PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS);
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {

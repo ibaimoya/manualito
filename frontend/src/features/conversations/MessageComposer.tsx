@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -19,6 +19,7 @@ export function MessageComposer({
   placeholder,
   maxLength,
   disabled = false,
+  sendPending = false,
   autoFocus = false,
 }: Readonly<{
   value: string;
@@ -27,6 +28,8 @@ export function MessageComposer({
   placeholder: string;
   maxLength: number;
   disabled?: boolean;
+  /** Bloquea solo el envio: el textarea queda editable para preparar el siguiente borrador. */
+  sendPending?: boolean;
   autoFocus?: boolean;
 }>) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -43,7 +46,7 @@ export function MessageComposer({
     el.style.overflowY = full > MAX_TEXTAREA_PX ? 'auto' : 'hidden';
   }, [value]);
 
-  const canSend = value.trim().length > 0 && !disabled;
+  const canSend = value.trim().length > 0 && !disabled && !sendPending;
   const near = value.length > maxLength * NEAR_RATIO;
 
   function submit(): void {
@@ -88,12 +91,26 @@ export function MessageComposer({
         type="submit"
         disabled={!canSend}
         aria-label="Enviar pregunta"
+        aria-busy={sendPending || undefined}
         className={cn(
           'grid size-10 shrink-0 place-items-center rounded-full bg-primary text-fg-inv transition-[background-color,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-          canSend ? 'hover:bg-primary-600' : 'cursor-not-allowed opacity-50',
+          {
+            'cursor-wait': sendPending,
+            'hover:bg-primary-600': canSend && !sendPending,
+            'cursor-not-allowed opacity-50': !canSend && !sendPending,
+          },
         )}
       >
-        <ArrowUp size={18} strokeWidth={2.25} />
+        {sendPending ? (
+          <Loader2
+            size={18}
+            strokeWidth={2}
+            className="animate-[mn-spin_0.9s_linear_infinite]"
+            aria-hidden="true"
+          />
+        ) : (
+          <ArrowUp size={18} strokeWidth={2.25} aria-hidden="true" />
+        )}
       </button>
     </form>
   );

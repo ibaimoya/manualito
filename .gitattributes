@@ -1,0 +1,79 @@
+# Texto del proyecto.
+* text=auto eol=lf
+
+# Scripts Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+# Scripts Unix/Linux.
+*.sh text eol=lf
+
+# Código backend/frontend.
+*.py text eol=lf diff=python
+*.py3 text eol=lf diff=python
+*.pyi text eol=lf diff=python
+*.pyw text eol=lf diff=python
+*.pyx text eol=lf diff=python
+*.pxd text eol=lf diff=python
+*.pyz text eol=lf diff=python
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.css text eol=lf diff=css
+*.html text eol=lf diff=html
+*.svg text eol=lf
+
+# Docker.
+Dockerfile text eol=lf
+**/Dockerfile text eol=lf
+
+# Configuración y datos de texto.
+*.env text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.ini text eol=lf
+*.conf text eol=lf
+*.properties text eol=lf
+*.mako text eol=lf
+*.lock text eol=lf
+
+# Documentación.
+*.ipynb text eol=lf
+*.md text eol=lf diff=markdown
+*.txt text eol=lf
+LICENSE text eol=lf
+
+# Memoria LaTeX/BibTeX.
+*.tex text eol=lf diff=tex
+*.ltx text eol=lf diff=tex
+*.latex text eol=lf diff=tex
+*.cls text eol=lf diff=tex
+*.sty text eol=lf diff=tex
+*.bib text eol=lf diff=bibtex
+*.bst text eol=lf
+*.bbx text eol=lf diff=tex
+*.cbx text eol=lf diff=tex
+*.lbx text eol=lf diff=tex
+
+# Artefactos Python binarios.
+*.db binary
+*.p binary
+*.pkl binary
+*.pickle binary
+*.pyc binary export-ignore
+*.pyo binary export-ignore
+*.pyd binary
+
+# Assets binarios.
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary

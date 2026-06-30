@@ -1,5 +1,6 @@
 """Tasks Celery para explicaciones de juegos."""
 
+from typing import NoReturn, Protocol
 from uuid import UUID
 
 import anyio
@@ -15,7 +16,11 @@ LOCK_BUSY_RETRY_SECONDS = 5
 TASK_MAX_RETRIES = EXTERNAL_ERROR_MAX_RETRIES + LOCK_BUSY_MAX_RETRIES
 
 
-@celery_app.task(
+class _RetryableTask(Protocol):
+    def retry(self, *args: object, **kwargs: object) -> NoReturn: ...
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.games.generate_game_explanation_task",
     bind=True,
     acks_late=True,
@@ -24,7 +29,7 @@ TASK_MAX_RETRIES = EXTERNAL_ERROR_MAX_RETRIES + LOCK_BUSY_MAX_RETRIES
     time_limit=config.CELERY_GPU_HARD_TIME_LIMIT,
 )
 def generate_game_explanation_task(
-    self,
+    self: _RetryableTask,
     user_id: str,
     game_id: str,
     lock_retry_count: int = 0,

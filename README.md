@@ -2,7 +2,7 @@
 
 ![Banner de Manualito](docs/images/manualito-banner.png)
 
-[![CI](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml/badge.svg)](https://github.com/ibaimoya/tfg/actions/workflows/ci.yml)
+[![CI](https://github.com/ibaimoya/manualito/actions/workflows/ci.yml/badge.svg)](https://github.com/ibaimoya/manualito/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=alert_status&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=coverage&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ibaimoya_tfg&metric=code_smells&token=fbc956ab25c51ad7a60728ae1451ce5f0457841f)](https://sonarcloud.io/summary/new_code?id=ibaimoya_tfg)
@@ -33,16 +33,61 @@ TFG en entorno empresarial.
 
 ## Tabla de contenidos
 
+- [Arranque rápido](#arranque-rápido)
 - [Funcionalidades](#funcionalidades)
 - [Cómo funciona](#cómo-funciona)
 - [Stack técnico](#stack-técnico)
 - [Arquitectura](#arquitectura)
-- [Arranque rápido](#arranque-rápido)
 - [Configuración](#configuración)
 - [Calidad y tests](#calidad-y-tests)
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Alcance del proyecto](#alcance-del-proyecto)
 - [Licencia](#licencia)
+
+---
+
+## Arranque rápido
+
+Para ejecutar la aplicación se necesitan Docker y Docker Compose. En Windows, se recomienda usar Docker Desktop con soporte WSL2.
+### Windows
+
+Desde la carpeta raíz del proyecto, ejecuta los scripts con doble clic o desde PowerShell:
+
+```powershell
+.\setup.bat
+.\start.bat
+.\stop.bat
+```
+Para Windows usa [Docker Desktop](https://www.docker.com/products/docker-desktop/) con soporte WSL2.
+
+### Linux
+
+Para Linux, desde la terminal y dentro de la carpeta raíz del proyecto:
+
+```bash
+./setup.sh
+./start.sh
+./stop.sh
+```
+
+En este caso el usuario que lo ejecute tiene que estar en el grupo `docker`, puedes ver una guía de como configurar
+docker en Linux [aquí](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04).
+
+`setup` guarda la selección local en `deploy/local/selected.env`. La salida
+completa de Docker queda en `deploy/local/logs/`.
+
+Servicios expuestos:
+
+| Servicio | URL |
+| --- | --- |
+| API | `http://localhost:8000` |
+| App | `http://localhost:5173` |
+| Flower | `http://localhost:5555` |
+| Mailpit | `http://localhost:8025` |
+| OpenAPI | `http://localhost:8000/docs` |
+
+Los detalles de perfiles LLM, NVIDIA, OCR, logs y overrides están en
+[aquí](deploy/README.md).
 
 ---
 
@@ -138,31 +183,6 @@ api (FastAPI, :8000)
 - `asset-storage-init` y volúmenes: preparan y conservan assets, cachés de
   modelos y datos de aplicación.
 
----
-
-## Arranque rápido
-
-Necesitas [Docker Desktop](https://www.docker.com/products/docker-desktop/) con soporte WSL2.
-
-```bash
-# Levantar todos los servicios
-docker compose up --build -d
-
-# Parar todos los servicios
-docker compose down
-```
-
-Servicios expuestos:
-
-| Servicio | URL |
-| --- | --- |
-| App web | `http://localhost:5173` |
-| API | `http://localhost:8000` |
-| OpenAPI | `http://localhost:8000/docs` |
-| Mailpit | `http://localhost:8025` |
-
----
-
 ## Configuración
 
 Docker Compose lee automáticamente el fichero `.env` de la raíz del proyecto.
@@ -177,6 +197,7 @@ que editar Dockerfiles ni `compose.yaml`.
 | `config/celery.env` | Host de Redis, bases de datos de broker/resultados y tiempos de visibilidad/expiración de Celery. |
 | `config/database.env` | Nombre de base de datos, host, puerto, driver y rutas de secretos. |
 | `config/frontend.env` | Variables públicas de Vite para desarrollo/build del frontend (`VITE_*`). |
+| `deploy/local/selected.env` | Selección local generada por `setup`. |
 | `secrets/` | Secretos locales usados por Compose para Postgres, Redis y Flower. |
 
 El servicio `llm` puede precargar el modelo de Ollama al arrancar con
@@ -194,23 +215,6 @@ Los secretos incluidos en `secrets/` son de desarrollo local para que el TFG se
 pueda clonar y arrancar tal cual. Fuera de ese contexto deben sustituirse por
 secretos del entorno de despliegue.
 
-Para usar PaddleOCR CPU en lugar de Tesseract, arranca el servicio OCR con el
-override dedicado:
-
-```bash
-docker compose -f compose.yaml -f compose.ocr-paddle-cpu.yaml up --build ocr
-```
-
-Para usar PaddleOCR GPU, usa el override equivalente:
-
-```bash
-docker compose -f compose.yaml -f compose.ocr-gpu.yaml up --build ocr
-```
-
-Los modelos de PaddleOCR CPU se cachean en el volumen Docker
-`ocr-paddlex-cpu-cache`. La variante GPU usa `compose.ocr-gpu.yaml` y cachea sus
-modelos en `ocr-paddlex-gpu-cache`.
-
 ---
 
 ## Calidad y tests
@@ -220,10 +224,10 @@ modelos en `ocr-paddlex-gpu-cache`.
 uv sync --locked --no-default-groups --only-group test
 
 # Backend: lint
-uv run --locked --no-default-groups --only-group test ruff check backend tests
+uv run --locked --no-default-groups --only-group test ruff check backend
 
 # Backend: tests con cobertura
-uv run --locked --no-default-groups --only-group test pytest -v --cov=backend
+uv run --locked --no-default-groups --only-group test pytest -v backend/tests --cov=backend
 
 # Backend: migraciones
 uv run --locked --no-default-groups --only-group test alembic -c backend/database/alembic.ini upgrade head
@@ -257,12 +261,13 @@ backend/
   llm/        servicio de generación con Ollama
   ocr/        servicio OCR con Tesseract y PaddleOCR
   rag/        embeddings, ChromaDB y recuperación semántica
+  tests/      tests de backend
 frontend/
   src/        app React, rutas, features, cliente API y estilos
   tests/      tests de UI, rutas, hooks y cliente
 config/       configuración de runtime
+deploy/       scripts, perfiles y overrides de arranque local
 secrets/      secretos locales de desarrollo
-tests/        tests de backend
 compose.yaml  orquestación principal
 ```
 

@@ -34,7 +34,7 @@ async def rate_game_handler(
     _csrf: CsrfProtection,
 ) -> RatingResponse:
     """Crea o actualiza la valoración propia de un juego activo."""
-    row = await upsert_user_rating(
+    rating = await upsert_user_rating(
         session,
         user_id=auth.user.id,
         game_id=game_id,
@@ -50,7 +50,7 @@ async def rate_game_handler(
     except SQLAlchemyError:
         await session.rollback()
         logger.warning("No se pudo auto-seguir el juego tras valorar.", exc_info=True)
-    return RatingResponse.model_validate(row)
+    return RatingResponse.model_validate(rating)
 
 
 @router.delete(

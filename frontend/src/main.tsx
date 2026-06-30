@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import '@fontsource-variable/manrope';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
@@ -27,6 +28,8 @@ async function clearDevBrowserCaches(): Promise<void> {
 
 if (import.meta.env.DEV) {
   await clearDevBrowserCaches().catch(() => undefined);
+} else {
+  registerSW({ immediate: true });
 }
 
 createRoot(rootEl).render(

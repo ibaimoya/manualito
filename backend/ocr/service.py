@@ -11,12 +11,13 @@ from common.logging import safe_for_log
 from ocr import config
 from ocr.exceptions import OcrProcessingError
 from ocr.extractor import extract_text
+from ocr.schemas import ExtractResponse, OCRLine
 
 logger = logging.getLogger(__name__)
 _ocr_limiter = anyio.CapacityLimiter(config.OCR_MAX_CONCURRENCY)
 
 
-async def extract_image_text(image: UploadFile) -> dict:
+async def extract_image_text(image: UploadFile) -> ExtractResponse:
     """Guarda la imagen temporalmente y ejecuta el OCR configurado."""
     data = await image.read()
     logger.info(
@@ -44,4 +45,9 @@ async def extract_image_text(image: UploadFile) -> dict:
             with suppress(OSError):
                 os.remove(tmp_path)
 
-    return {"lines": lines}
+    return ExtractResponse(
+        lines=[
+            OCRLine(text=line["text"], confidence=line["confidence"])
+            for line in lines
+        ]
+    )

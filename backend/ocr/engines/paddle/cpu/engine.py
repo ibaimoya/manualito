@@ -15,7 +15,7 @@ class PaddleCpuOcrEngine:
 
     name = "paddle_cpu"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Inicializa PaddleOCR con la configuración histórica del servicio."""
         self._ocr = PaddleOCR(
             use_textline_orientation=True,
@@ -29,6 +29,8 @@ class PaddleCpuOcrEngine:
         """Extrae líneas OCR normalizadas con PaddleOCR CPU."""
         logger.info("Iniciando OCR sobre: %s", image_path)
         with preprocessed_image_path(image_path, preprocess_for_paddle) as processed_path:
-            lines = normalize_paddle_result(self._ocr.predict(processed_path))
+            lines: list[OcrLine] = normalize_paddle_result(
+                self._ocr.predict(processed_path)
+            )
         log_ocr_result(logger, image_path, lines)
         return lines

@@ -2,7 +2,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse, delay } from 'msw';
-import { Route as ChatRoute } from '@/routes/_app.chat.$gameId';
+import {
+  PENDING_ASSISTANT_POLL_INTERVAL_MS,
+  Route as ChatRoute,
+} from '@/routes/_app.chat.$gameId';
 import { server } from '@tests/_helpers/server';
 import { failSendMessage, SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
@@ -50,6 +53,11 @@ function renderChat(gameId: string, search?: { q?: string; c?: string }) {
     },
   });
 }
+
+const PENDING_ASSISTANT_POLL_EXPECTED_READS = 2;
+const PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS =
+  PENDING_ASSISTANT_POLL_INTERVAL_MS * (PENDING_ASSISTANT_POLL_EXPECTED_READS + 4);
+const PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS = PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS + 3_000;
 
 describe('/chat/$gameId · search schema', () => {
   it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
@@ -174,6 +182,103 @@ describe('/chat/$gameId', () => {
     // La pregunta sigue visible como turno confirmado (no se duplica).
     expect(screen.getAllByText('¿Y empate?')).toHaveLength(1);
   });
+
+  it('mantiene el polling cuando el POST devuelve una respuesta pendiente', async () => {
+    let messageReads = 0;
+    let sent = false;
+    let sends = 0;
+    const message = (
+      id: string,
+      role: 'user' | 'assistant',
+      status: 'pending' | 'completed',
+      content: string,
+    ) => ({
+      id,
+      role,
+      status,
+      content,
+      created_at: '2026-05-26T10:06:00.000Z',
+      sources: [],
+    });
+    const baseMessages = [
+      message('u-base', 'user', 'completed', '¿Cómo se reparten las cartas?'),
+      message(
+        'b-base',
+        'assistant',
+        'completed',
+        'Cada jugador recibe dos asentamientos y dos carreteras.',
+      ),
+    ];
+    server.use(
+      http.get('/api/conversations/:conversationId/messages', () => {
+        if (!sent) return HttpResponse.json({ messages: baseMessages });
+        messageReads += 1;
+        const newTurn =
+          messageReads < PENDING_ASSISTANT_POLL_EXPECTED_READS
+            ? [
+                message('u-async', 'user', 'completed', 'async'),
+                message('b-async', 'assistant', 'pending', ''),
+              ]
+            : [
+                message('u-async', 'user', 'completed', 'async'),
+                message('b-async', 'assistant', 'completed', 'Respuesta generada por polling.'),
+              ];
+        return HttpResponse.json({
+          messages: [...baseMessages, ...newTurn],
+        });
+      }),
+      http.post('/api/conversations/:conversationId/messages', async ({ request }) => {
+        sent = true;
+        sends += 1;
+        const body = (await request.json()) as { content?: string };
+        return HttpResponse.json({
+          conversation: { ...CONVERSATION, has_pending_reply: true },
+          user_message: {
+            id: 'u-async',
+            role: 'user',
+            status: 'completed',
+            content: body.content ?? '',
+            created_at: '2026-05-26T10:06:00.000Z',
+            sources: [],
+          },
+          assistant_message: {
+            ...message('b-async', 'assistant', 'pending', ''),
+            created_at: '2026-05-26T10:06:05.000Z',
+          },
+        });
+      }),
+    );
+
+    renderChat('test-game-001', { c: 'conv-001' });
+    const user = userEvent.setup();
+    const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+    await waitFor(() => expect(input).toBeEnabled());
+    await user.type(input, 'async');
+    await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+
+    expect(await screen.findByText('async')).toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: /Generando respuesta/i })).toBeInTheDocument();
+    // Mientras se sondea la respuesta, el borrador sigue editable, pero el
+    // envio queda bloqueado: ese era el hueco que dejaba pasar un segundo turno.
+    await waitFor(() => expect(input).toBeEnabled());
+    await user.type(input, 'otra pregunta');
+    expect(input).toHaveValue('otra pregunta');
+    const send = screen.getByRole('button', { name: /Enviar pregunta/i });
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute('aria-busy', 'true');
+    await user.click(send);
+    expect(sends).toBe(1);
+    await waitFor(
+      () => {
+        expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS);
+        expect(screen.getByText('Respuesta generada por polling.')).toBeInTheDocument();
+      },
+      { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
+    );
+    // En cuanto la respuesta llega completa, se puede enviar el borrador preparado.
+    expect(input).toBeEnabled();
+    expect(send).toBeEnabled();
+  }, PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS);
 
   it('preguntas vacías o solo whitespace NO se envían', async () => {
     renderChat('test-game-001');

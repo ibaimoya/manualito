@@ -42,6 +42,27 @@ describe('/forgot', () => {
     expect(screen.getByText('¿Olvidaste tu contraseña?')).toBeInTheDocument();
   });
 
+  it('muestra error local y no envía emails con formato inválido', async () => {
+    let requests = 0;
+    server.use(
+      http.post('/api/auth/password/forgot', () => {
+        requests += 1;
+        return HttpResponse.json({ detail: 'ok' });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderForgot();
+
+    const email = await screen.findByLabelText('Email');
+    await user.type(email, 'no-es-email');
+    await user.click(screen.getByRole('button', { name: 'Enviar enlace' }));
+
+    expect(requests).toBe(0);
+    expect(email).toHaveFocus();
+    expect(screen.getByText('Ese email no parece válido')).toBeInTheDocument();
+  });
+
   it('recorta el email, muestra carga y termina en estado de éxito', async () => {
     let releaseBackend!: () => void;
     const backendReady = new Promise<void>((resolve) => {
@@ -69,6 +90,7 @@ describe('/forgot', () => {
 
     releaseBackend();
     expect(await screen.findByText('Revisa tu correo')).toBeInTheDocument();
+    expect(screen.getByText('¿No llega? Mira en spam y espera 2 min')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Volver a entrar' })).toHaveAttribute(
       'href',
       '/login',

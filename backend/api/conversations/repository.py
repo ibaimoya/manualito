@@ -3,67 +3,26 @@
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, and_, exists, func, or_, select
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.conversations.dto import (
+    ConversationSummary,
+    ConversationTitleContext,
+    ConversationTurnContext,
+    MessageSnapshot,
+    PendingReplyContext,
+    StoredMessage,
+    StoredMessagePair,
+)
 from api.conversations.exceptions import ConversationNotFoundError
 from api.games.exceptions import GameUnavailableError
 from database.models.conversation import Conversation, Message
 from database.models.game import Game
-
-
-@dataclass(frozen=True, slots=True)
-class MessageSnapshot:
-    """Mensaje desacoplado de la sesión para construir prompts."""
-
-    role: str
-    content: str
-
-
-@dataclass(frozen=True, slots=True)
-class ConversationTurnContext:
-    """Datos mínimos de una conversación antes de llamar al LLM."""
-
-    id: UUID
-    user_id: UUID
-    game_id: UUID
-    game_name: str
-    title: str | None
-    history: tuple[MessageSnapshot, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class PendingReplyContext:
-    """Datos necesarios para completar una respuesta pendiente."""
-
-    id: UUID
-    user_id: UUID
-    game_id: UUID
-    game_name: str
-    title: str | None
-    user_message_content: str
-    history: tuple[MessageSnapshot, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ConversationTitleContext:
-    """Datos mínimos para refinar el título fuera de la petición HTTP."""
-
-    game_name: str
-    question: str
-    history: tuple[MessageSnapshot, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class StoredMessagePair:
-    """Mensajes creados en un turno de conversación."""
-
-    user_message: Message
-    assistant_message: Message
-    conversation: Row
 
 
 async def create_user_conversation(
@@ -71,7 +30,7 @@ async def create_user_conversation(
     *,
     user_id: UUID,
     game_id: UUID,
-) -> Row:
+) -> ConversationSummary:
     """Crea una conversación vacía asociada a un juego activo."""
     conversation = Conversation(user_id=user_id, game_id=game_id)
     session.add(conversation)
@@ -91,7 +50,7 @@ async def list_game_conversations(
     game_id: UUID,
     limit: int,
     offset: int,
-) -> list[Row]:
+) -> list[ConversationSummary]:
     """Lista conversaciones propias de un juego por actividad reciente."""
     result = await session.execute(
         _conversation_summary_query(user_id)
@@ -99,7 +58,7 @@ async def list_game_conversations(
         .limit(limit)
         .offset(offset)
     )
-    return list(result)
+    return [_conversation_summary_from_row(row) for row in result]
 
 
 async def get_owned_conversation(
@@ -158,7 +117,7 @@ async def get_conversation_summary(
     *,
     user_id: UUID,
     conversation_id: UUID,
-) -> Row:
+) -> ConversationSummary:
     """Devuelve el resumen público de una conversación propia."""
     result = await session.execute(
         _conversation_summary_query(user_id).where(Conversation.id == conversation_id)
@@ -166,7 +125,7 @@ async def get_conversation_summary(
     row = result.one_or_none()
     if row is None:
         raise ConversationNotFoundError
-    return row
+    return _conversation_summary_from_row(row)
 
 
 async def list_conversation_messages(
@@ -246,14 +205,15 @@ async def append_pending_message_pair(
     session.add(assistant_message)
     await session.flush()
     await session.commit()
+    conversation_summary = await get_conversation_summary(
+        session,
+        user_id=conversation.user_id,
+        conversation_id=conversation.id,
+    )
     return StoredMessagePair(
-        user_message=user_message,
-        assistant_message=assistant_message,
-        conversation=await get_conversation_summary(
-            session,
-            user_id=conversation.user_id,
-            conversation_id=conversation.id,
-        ),
+        user_message=_stored_message_from_model(user_message),
+        assistant_message=_stored_message_from_model(assistant_message),
+        conversation=conversation_summary,
     )
 
 
@@ -414,7 +374,7 @@ async def complete_assistant_message(
         await session.rollback()
         return
     row.message.content = content
-    row.message.sources = list(sources)
+    row.message.sources = [dict(source) for source in sources]
     row.message.status = "completed"
     row.message.error_code = None
     row.message.updated_at = func.now()
@@ -455,7 +415,7 @@ async def rename_user_conversation(
     user_id: UUID,
     conversation_id: UUID,
     title: str,
-) -> Row:
+) -> ConversationSummary:
     """Renombra una conversación propia sin alterar su actividad reciente."""
     conversation = await get_owned_conversation(
         session,
@@ -511,7 +471,7 @@ async def soft_delete_conversation(
     await session.commit()
 
 
-def _conversation_summary_query(user_id: UUID) -> Select:
+def _conversation_summary_query(user_id: UUID) -> Select[Any]:
     """Construye la query base de conversaciones propias."""
     return (
         select(
@@ -535,6 +495,32 @@ def _conversation_summary_query(user_id: UUID) -> Select:
             Conversation.deleted_at.is_(None),
         )
         .order_by(Conversation.updated_at.desc(), Conversation.id.desc())
+    )
+
+
+def _conversation_summary_from_row(row: Row[Any]) -> ConversationSummary:
+    """Convierte una fila SQLAlchemy en contrato interno."""
+    return ConversationSummary(
+        id=row.id,
+        game_id=row.game_id,
+        game_name=row.game_name,
+        title=row.title,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+        has_pending_reply=row.has_pending_reply,
+    )
+
+
+def _stored_message_from_model(message: Message) -> StoredMessage:
+    """Desacopla el mensaje de la sesión SQLAlchemy."""
+    return StoredMessage(
+        id=message.id,
+        role=message.role,
+        status=message.status,
+        content=message.content,
+        created_at=message.created_at,
+        sources=[dict(source) for source in message.sources],
+        error_code=message.error_code,
     )
 
 

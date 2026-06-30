@@ -1,0 +1,10 @@
+services:
+  ocr:
+    image: ${PROJECT_NAME:?PROJECT_NAME no definida}-ocr:paddle-cpu
+    build:
+      args:
+        OCR_RUNTIME_STAGE: paddle_cpu
+    environment:
+      OCR_ENGINE: paddle_cpu
+    volumes:
+      - ocr-paddlex-cpu-cache:/home/appuser/.paddlex

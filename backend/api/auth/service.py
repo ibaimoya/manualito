@@ -456,11 +456,13 @@ async def _find_active_user_by_email(session: AsyncSession, email: str) -> User 
     return result.scalar_one_or_none()
 
 
-async def _find_token_with_user(
+async def _find_token_with_user[
+    AccountTokenT: (EmailVerificationToken, PasswordResetToken)
+](
     session: AsyncSession,
-    token_model: type[EmailVerificationToken] | type[PasswordResetToken],
+    token_model: type[AccountTokenT],
     token: str,
-) -> tuple[EmailVerificationToken | PasswordResetToken, User] | None:
+) -> tuple[AccountTokenT, User] | None:
     """Carga token y usuario activo sin exponer el token crudo."""
     result = await session.execute(
         select(token_model, User)
@@ -471,7 +473,12 @@ async def _find_token_with_user(
             User.status == ACTIVE_USER_STATUS,
         )
     )
-    return result.one_or_none()
+    row = result.tuples().one_or_none()
+    if row is None:
+        return None
+    token_record, user = row
+    assert isinstance(token_record, token_model)
+    return token_record, user
 
 
 async def _consume_active_account_tokens(

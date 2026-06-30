@@ -10,13 +10,21 @@ from rag.exceptions import (
     RagIndexingError,
     RagRetrievalError,
 )
-from rag.repository import get_repository
-from rag.schemas import DeleteRequest, IngestRequest, RetrieveRequest
+from rag.repository import RetrievedChunkData, get_repository
+from rag.schemas import (
+    DeleteRequest,
+    DeleteResponse,
+    IngestRequest,
+    IngestResponse,
+    RetrievedChunk,
+    RetrieveRequest,
+    RetrieveResponse,
+)
 
 logger = logging.getLogger(__name__)
 
 
-async def ingest_manual(payload: IngestRequest) -> dict:
+async def ingest_manual(payload: IngestRequest) -> IngestResponse:
     """
     Indexa en Chroma chunks ya persistidos por API en Postgres.
 
@@ -41,17 +49,17 @@ async def ingest_manual(payload: IngestRequest) -> dict:
         raise RagIndexingError from rag_err
 
     indexed_at = datetime.now(UTC).isoformat()
-    return {
-        "manual_id": payload.manual_id,
-        "chunks_indexed": chunks_indexed,
-        "status": "indexed",
-        "embedding_model": EMBEDDING_MODEL,
-        "indexed_at": indexed_at,
-        "chunk_ids": [chunk.id for chunk in payload.chunks],
-    }
+    return IngestResponse(
+        manual_id=payload.manual_id,
+        chunks_indexed=chunks_indexed,
+        status="indexed",
+        embedding_model=EMBEDDING_MODEL,
+        indexed_at=indexed_at,
+        chunk_ids=[chunk.id for chunk in payload.chunks],
+    )
 
 
-async def retrieve_chunks(payload: RetrieveRequest) -> dict:
+async def retrieve_chunks(payload: RetrieveRequest) -> RetrieveResponse:
     """Recupera candidatos de Chroma filtrando por juego."""
     try:
         query_embedding = await asyncio.to_thread(
@@ -72,10 +80,20 @@ async def retrieve_chunks(payload: RetrieveRequest) -> dict:
         )
         raise RagRetrievalError from rag_err
 
-    return {"chunks": chunks}
+    return RetrieveResponse(
+        chunks=[
+            RetrievedChunk(
+                id=chunk["id"],
+                chunk_index=chunk["chunk_index"],
+                source_page=chunk["source_page"],
+                score=chunk["score"],
+            )
+            for chunk in chunks
+        ]
+    )
 
 
-async def delete_manual(payload: DeleteRequest) -> dict:
+async def delete_manual(payload: DeleteRequest) -> DeleteResponse:
     """Limpia de Chroma los chunks derivados de un manual borrado en Postgres."""
     try:
         chunks_deleted = await asyncio.to_thread(
@@ -90,11 +108,11 @@ async def delete_manual(payload: DeleteRequest) -> dict:
         )
         raise RagDeletionError from rag_err
 
-    return {
-        "manual_id": payload.manual_id,
-        "chunks_deleted": chunks_deleted,
-        "status": "deleted",
-    }
+    return DeleteResponse(
+        manual_id=payload.manual_id,
+        chunks_deleted=chunks_deleted,
+        status="deleted",
+    )
 
 
 def upsert_sync(payload: IngestRequest, embeddings: list[list[float]]) -> int:
@@ -113,7 +131,7 @@ def query_sync(
     game_id: str,
     query_embedding: list[float],
     top_k: int,
-) -> list[dict[str, object]]:
+) -> list[RetrievedChunkData]:
     """Wrapper síncrono para consultar Chroma desde ``asyncio.to_thread``."""
     return get_repository().query_game(
         game_id=game_id,

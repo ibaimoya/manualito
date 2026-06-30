@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
@@ -60,7 +60,7 @@ class EmbeddingService:
         """
         model = self._load_model()
         vectors = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
-        return vectors.tolist()
+        return cast(list[list[float]], vectors.tolist())
 
     def _load_model(self) -> SentenceTransformer:
         """

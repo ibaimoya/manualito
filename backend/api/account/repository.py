@@ -1,27 +1,18 @@
 """Consultas SQL de cuenta y actividad del usuario."""
 
-from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import delete, func, select, union, update
-from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.account.dto import AccountActivityStats, AccountCleanup
 from database.models.asset import Asset
 from database.models.auth import AuthSession
 from database.models.conversation import Conversation
 from database.models.manual import Manual, ManualChunk
 from database.models.rating import Rating
 from database.models.user import User
-
-
-@dataclass(frozen=True, slots=True)
-class AccountCleanup:
-    """Recursos derivados a limpiar tras confirmar el borrado en Postgres."""
-
-    chunk_ids_by_manual: dict[UUID, list[UUID]]
-    storage_keys: list[str]
 
 
 async def purge_user_account(
@@ -78,7 +69,11 @@ async def purge_user_account(
     return AccountCleanup(chunk_ids_by_manual=chunk_ids_by_manual, storage_keys=storage_keys)
 
 
-async def get_user_activity_stats(session: AsyncSession, *, user_id: UUID) -> Row:
+async def get_user_activity_stats(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+) -> AccountActivityStats:
     """Agrega juegos con actividad, conversaciones y manuales en una query."""
     games_with_activity = union(
         select(Manual.game_id).where(
@@ -115,4 +110,4 @@ async def get_user_activity_stats(session: AsyncSession, *, user_id: UUID) -> Ro
             manuals_count.label("manuals_count"),
         )
     )
-    return result.one()
+    return AccountActivityStats(**result.mappings().one())

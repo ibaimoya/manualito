@@ -16,7 +16,8 @@ export function conversationMessagesKey(conversationId: string) {
 export function conversationsQueryOptions(gameId: string) {
   return queryOptions({
     queryKey: conversationsKey(gameId),
-    queryFn: async ({ signal }) => (await conversationsApi.list(gameId, undefined, signal)).conversations,
+    queryFn: async ({ signal }) =>
+      (await conversationsApi.list(gameId, undefined, signal)).conversations,
     staleTime: 30_000,
     // Mientras alguna conversación genera respuesta, re-sondea para encender y
     // apagar sola la ruleta de "generando" en su fila.
@@ -50,5 +51,6 @@ export function conversationMessagesQueryOptions(conversationId: string) {
     queryFn: async ({ signal }) =>
       (await conversationsApi.listMessages(conversationId, undefined, signal)).messages,
     staleTime: 30_000,
+    refetchIntervalInBackground: true,
   });
 }

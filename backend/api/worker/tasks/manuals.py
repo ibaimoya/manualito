@@ -9,7 +9,7 @@ from api import config
 from api.manuals import service
 from api.worker.celery import celery_app
 
-IO_RETRY_TASK_OPTIONS = {
+IO_RETRY_TASK_OPTIONS: dict[str, object] = {
     "acks_late": True,
     "autoretry_for": (ConnectionError, TimeoutError),
     "retry_backoff": True,
@@ -18,7 +18,7 @@ IO_RETRY_TASK_OPTIONS = {
 }
 
 
-def _with_limits(options: dict, *, soft: int, hard: int) -> dict:
+def _with_limits(options: dict[str, object], *, soft: int, hard: int) -> dict[str, object]:
     """Añade límites temporales a opciones de task sin duplicar configuración."""
     return options | {"soft_time_limit": soft, "time_limit": hard}
 
@@ -40,7 +40,7 @@ RAG_TASK_OPTIONS = _with_limits(
 )
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.manuals.process_manual_task",
     **MANUAL_PAGE_TASK_OPTIONS,
 )
@@ -50,7 +50,7 @@ def process_manual_task(manual_id: str) -> None:
     _enqueue_manual_pages(manual_id, page_ids)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.manuals.process_manual_page_task",
     **MANUAL_PAGE_TASK_OPTIONS,
 )
@@ -65,7 +65,7 @@ def process_manual_page_task(manual_id: str, page_id: str) -> None:
         finalize_manual_task.delay(manual_id)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.manuals.finalize_manual_task",
     **MANUAL_FINALIZE_TASK_OPTIONS,
 )
@@ -78,7 +78,7 @@ def finalize_manual_task(manual_id: str) -> None:
         raise
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.manuals.reprocess_manual_task",
     **MANUAL_PAGE_TASK_OPTIONS,
 )
@@ -92,7 +92,7 @@ def reprocess_manual_task(manual_id: str, stale_chunk_ids: list[str]) -> None:
     _enqueue_manual_pages(manual_id, page_ids)
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.manuals.sync_page_rag_task",
     **RAG_TASK_OPTIONS,
 )
@@ -106,7 +106,7 @@ def sync_page_rag_task(manual_id: str, page_id: str, stale_chunk_ids: list[str])
     )
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[untyped-decorator]
     name="api.worker.tasks.manuals.delete_chunks_from_rag_task",
     **RAG_TASK_OPTIONS,
 )

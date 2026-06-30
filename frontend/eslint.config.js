@@ -88,8 +88,7 @@ export default defineConfig([
     },
   },
   {
-    // Scripts Node que orquestan Playwright — el callback de `page.evaluate`
-    // corre en browser, así que mezcla globals de Node + browser.
+    // Scripts Node que orquestan Playwright
     files: ['scripts/**/*.{mjs,js}'],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },

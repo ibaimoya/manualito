@@ -1,7 +1,10 @@
 import asyncio
 import logging
+from collections.abc import Mapping, Sequence
+from typing import NotRequired, TypedDict
 
 import httpx
+from pydantic import ValidationError
 
 from api import config
 from api.exceptions import (
@@ -9,8 +12,20 @@ from api.exceptions import (
     InternalServiceError,
     InternalServiceUnavailableError,
 )
+from api.ocr.schemas import OcrLinesResponse
 
 logger = logging.getLogger(__name__)
+
+type JsonValue = (
+    None | bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
+)
+type JsonObject = dict[str, JsonValue]
+
+
+class _PostRequestKwargs(TypedDict):
+    url: str
+    json: NotRequired[Mapping[str, JsonValue]]
+    files: NotRequired[dict[str, tuple[str | None, bytes, str | None]]]
 
 
 async def call_ocr_service(
@@ -19,7 +34,7 @@ async def call_ocr_service(
     filename: str | None,
     content: bytes,
     content_type: str | None,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     """
     Reenvía una imagen validada al servicio OCR interno.
 
@@ -30,7 +45,7 @@ async def call_ocr_service(
         content_type (str | None): MIME type declarado por el cliente.
 
     Returns:
-        list[dict]: Líneas OCR devueltas por el servicio interno.
+        list[dict[str, object]]: Líneas OCR devueltas por el servicio interno.
     """
     response = await send_request(
         client=client,
@@ -43,7 +58,12 @@ async def call_ocr_service(
         unavailable_detail="Servicio OCR no disponible.",
         internal_detail="Error interno al procesar la imagen con OCR.",
     )
-    return response["lines"]
+    try:
+        return [line.model_dump() for line in OcrLinesResponse.model_validate(response).lines]
+    except ValidationError as validation_err:
+        raise InternalServiceError(
+            "Error interno al procesar la imagen con OCR."
+        ) from validation_err
 
 
 async def post_json(
@@ -51,10 +71,10 @@ async def post_json(
     client: httpx.AsyncClient,
     service_name: str,
     url: str,
-    payload: dict,
+    payload: Mapping[str, JsonValue],
     unavailable_detail: str,
     internal_detail: str,
-) -> dict:
+) -> JsonObject:
     """
     Envía una petición JSON a un servicio interno y devuelve su payload.
 
@@ -62,12 +82,12 @@ async def post_json(
         client (httpx.AsyncClient): Cliente HTTP compartido.
         service_name (str): Nombre lógico del servicio destino.
         url (str): Endpoint completo a invocar.
-        payload (dict): Cuerpo JSON de la petición.
+        payload (Mapping[str, JsonValue]): Cuerpo JSON de la petición.
         unavailable_detail (str): Mensaje a devolver si el servicio no responde.
         internal_detail (str): Mensaje a devolver si el servicio responde error.
 
     Returns:
-        dict: JSON decodificado de la respuesta interna.
+        JsonObject: JSON decodificado de la respuesta interna.
     """
     return await send_request(
         client=client,
@@ -86,24 +106,24 @@ async def send_request(
     *,
     client: httpx.AsyncClient,
     service_name: str,
-    request_kwargs: dict,
+    request_kwargs: _PostRequestKwargs,
     timeout_seconds: float,
     unavailable_detail: str,
     internal_detail: str,
-) -> dict:
+) -> JsonObject:
     """
     Ejecuta una llamada POST a un servicio interno con manejo uniforme de errores.
 
     Args:
         client (httpx.AsyncClient): Cliente HTTP compartido (connection pooling).
         service_name (str): Nombre lógico del servicio.
-        request_kwargs (dict): Argumentos a pasar a ``httpx.AsyncClient.post``.
+        request_kwargs (_PostRequestKwargs): Argumentos de ``httpx.AsyncClient.post``.
         timeout_seconds (float): Límite máximo del bloque de petición.
         unavailable_detail (str): Mensaje para errores de conexión.
         internal_detail (str): Mensaje para errores HTTP del servicio.
 
     Returns:
-        dict: JSON de la respuesta exitosa.
+        JsonObject: JSON de la respuesta exitosa.
 
     Raises:
         InternalResourceNotFoundError: Si el servicio responde 404.
@@ -130,10 +150,14 @@ async def send_request(
         raise InternalServiceError(internal_detail) from http_err
 
     try:
-        return response.json()
+        body = response.json()
     except ValueError as json_err:
         logger.error("El servicio %s devolvió una respuesta JSON inválida.", service_name)
         raise InternalServiceError(internal_detail) from json_err
+    if not isinstance(body, dict):
+        logger.error("El servicio %s devolvió un JSON no objeto.", service_name)
+        raise InternalServiceError(internal_detail)
+    return body
 
 
 def _response_detail(response: httpx.Response, *, default: str) -> str:

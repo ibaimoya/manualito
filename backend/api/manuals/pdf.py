@@ -6,13 +6,16 @@ import re
 from contextlib import closing
 from io import BytesIO
 from math import sqrt
+from typing import Protocol
 
 import pypdfium2 as pdfium
+from PIL import Image
 
 from api import config
 from api.exceptions import InvalidPdfError
+from api.manuals.dto import ValidatedManualImage
 from api.manuals.pdfium import run_pdfium
-from api.manuals.validation import JPEG_MIME_TYPE, ValidatedManualImage
+from api.manuals.validation import JPEG_MIME_TYPE
 from common.crypto import sha256_hex
 
 PDF_POINTS_PER_INCH = 72
@@ -20,6 +23,16 @@ JPEG_EXTENSION = ".jpg"
 RENDER_CAP_MARGIN = 0.95
 WORD_RE = re.compile(r"\w+", re.UNICODE)
 ALLOWED_CONTROL_CHARS = {"\n", "\r", "\t"}
+
+
+class _PdfBitmap(Protocol):
+    def close(self) -> None: ...
+    def to_pil(self) -> Image.Image: ...
+
+
+class _PdfPage(Protocol):
+    def get_size(self) -> tuple[float, float]: ...
+    def render(self, *, scale: float) -> _PdfBitmap: ...
 
 
 async def extract_pdf_page_text(content: bytes, *, page_number: int) -> str:
@@ -51,7 +64,8 @@ def _extract_pdf_page_text(content: bytes, page_number: int) -> str:
         with pdfium.PdfDocument(content) as document, closing(
             document.get_page(page_number - 1)
         ) as page, closing(page.get_textpage()) as text_page:
-            return text_page.get_text_range().strip()
+            text = text_page.get_text_range()
+            return text.strip() if isinstance(text, str) else ""
     except (pdfium.PdfiumError, OSError, ValueError):
         return ""
 
@@ -82,7 +96,7 @@ def _render_pdf_page(content: bytes, page_number: int) -> ValidatedManualImage:
     )
 
 
-def _render_page_image(page):
+def _render_page_image(page: _PdfPage) -> Image.Image:
     """Renderiza ajustando escala si la página supera el límite de píxeles."""
     scale = _render_scale(page)
     for _ in range(3):
@@ -99,7 +113,7 @@ def _render_page_image(page):
     raise InvalidPdfError
 
 
-def _render_scale(page) -> float:
+def _render_scale(page: _PdfPage) -> float:
     """Calcula la escala de render dentro del DPI objetivo y el cap de píxeles."""
     width_points, height_points = page.get_size()
     if width_points <= 0 or height_points <= 0:

@@ -274,7 +274,7 @@ async def edit_manual_page_text_handler(
         str(result.page_id),
         [str(chunk_id) for chunk_id in result.stale_chunk_ids],
     )
-    return result.response
+    return ManualPageResponse.model_validate(result.page_detail)
 
 
 @router.delete(
@@ -300,16 +300,16 @@ async def _processing_response(
     manual_id: UUID,
 ) -> ManualProcessingResponse:
     """Construye el progreso multipágina de un manual propio."""
-    manual, page_rows = await get_user_manual_processing_status(
+    processing = await get_user_manual_processing_status(
         session,
         owner_user_id=auth.user.id,
         manual_id=manual_id,
     )
     return ManualProcessingResponse(
-        manual_id=manual.id,
-        status=manual.status,
-        page_count=manual.page_count,
-        completed_pages=sum(page.ocr_status == "completed" for page in page_rows),
-        failed_pages=sum(page.ocr_status == "failed" for page in page_rows),
-        pages=[ManualProcessingPageResponse.model_validate(page) for page in page_rows],
+        manual_id=processing.manual_id,
+        status=processing.status,
+        page_count=processing.page_count,
+        completed_pages=sum(page.ocr_status == "completed" for page in processing.pages),
+        failed_pages=sum(page.ocr_status == "failed" for page in processing.pages),
+        pages=[ManualProcessingPageResponse.model_validate(page) for page in processing.pages],
     )

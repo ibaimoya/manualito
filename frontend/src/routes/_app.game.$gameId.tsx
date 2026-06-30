@@ -2,13 +2,11 @@ import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronRight,
-  Clock,
   FileText,
   Plus,
   RotateCw,
   ScanText,
   Sparkles,
-  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -114,21 +112,10 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   );
 }
 
-function playersLabel(game: GameDetail): string | null {
-  if (game.min_players === null && game.max_players === null) return null;
-  if (game.min_players !== null && game.max_players !== null) {
-    return game.min_players === game.max_players
-      ? `${game.min_players} jugadores`
-      : `${game.min_players}–${game.max_players} jugadores`;
-  }
-  return `${game.min_players ?? game.max_players} jugadores`;
-}
-
 function GameHeader({
   game,
   onRate,
 }: Readonly<{ game: GameDetail; onRate: (score?: number) => void }>) {
-  const players = playersLabel(game);
   const yearSuffix = game.year_published === null ? '' : ` · ${game.year_published}`;
   const { gameIds } = useProcessingManuals();
   return (
@@ -142,16 +129,6 @@ function GameHeader({
           {game.name}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {players ? (
-            <Badge tone="neutral" icon={<Users strokeWidth={2} />}>
-              {players}
-            </Badge>
-          ) : null}
-          {game.playing_time_minutes === null ? null : (
-            <Badge tone="neutral" icon={<Clock strokeWidth={2} />}>
-              {game.playing_time_minutes} min
-            </Badge>
-          )}
           <Tooltip content="Generado por IA: puede equivocarse. Si algo no cuadra, contrástalo con el manual original.">
             <Badge tone="neutral" tabIndex={0} className="cursor-help">
               <Sparkles size={12} strokeWidth={2} aria-hidden="true" />

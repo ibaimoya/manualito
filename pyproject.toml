@@ -1,45 +1,81 @@
 [project]
 name = "manualito"
-version = "0.1.0"
+version = "1.0.0"
 requires-python = "==3.13.*"
 dependencies = [
     "chromadb>=1.5.9",
-    "ipykernel>=7.2.0",
+    "ipykernel>=7.3.0",
     "pytesseract>=0.3.13",
 ]
 
 [dependency-groups]
-api = [
-    "aiosmtplib==5.1.1",
-    "anyio==4.13.0",
-    "celery[redis]==5.6.3",
-    "email-validator==2.3.0",
-    "fastapi==0.136.3",
-    "httpx==0.28.1",
-    "pillow==12.2.0",
-    "psycopg[binary]==3.3.4",
-    "pydantic==2.13.4",
-    "pypdfium2==5.9.0",
-    "pwdlib[argon2]==0.3.0",
-    "python-multipart==0.0.31",
-    "redis==6.4.0",
-    "slowapi==0.1.9",
-    "sqlalchemy==2.0.50",
+common-web = [
+    "fastapi==0.138.0",
     "uvicorn[standard]==0.49.0",
-    "pydantic-settings==2.14.1",
+]
+common-validation = [
+    "pydantic==2.13.4",
+]
+common-settings = [
+    { include-group = "common-validation" },
+    "pydantic-settings==2.14.2",
+]
+common-http-client = [
+    "httpx==0.28.1",
+]
+common-database = [
+    "psycopg[binary]==3.3.4",
+    "sqlalchemy==2.0.51",
+]
+common-upload = [
+    "pillow==12.2.0",
+    "python-multipart==0.0.32",
+]
+common-numeric = [
+    "numpy==2.3.5",
+]
+common-mail = [
+    "aiosmtplib==5.1.2",
+    "email-validator==2.3.0",
+]
+common-worker = [
+    "celery[redis]==5.6.3",
+    "redis==6.4.0",
+]
+common-async = [
+    "anyio==4.14.0",
+]
+common-auth = [
+    "pwdlib[argon2]==0.3.0",
+]
+common-pdf = [
+    "pypdfium2==5.10.1",
+]
+common-rate-limit = [
+    "slowapi==0.1.10",
+]
+api = [
+    { include-group = "common-web" },
+    { include-group = "common-settings" },
+    { include-group = "common-http-client" },
+    { include-group = "common-database" },
+    { include-group = "common-upload" },
+    { include-group = "common-mail" },
+    { include-group = "common-worker" },
+    { include-group = "common-async" },
+    { include-group = "common-auth" },
+    { include-group = "common-pdf" },
+    { include-group = "common-rate-limit" },
 ]
 database = [
+    { include-group = "common-database" },
     "alembic==1.18.4",
-    "psycopg[binary]==3.3.4",
-    "sqlalchemy==2.0.50",
 ]
 ocr = [
-    "fastapi==0.136.3",
-    "numpy==2.3.5",
+    { include-group = "common-web" },
+    { include-group = "common-upload" },
+    { include-group = "common-numeric" },
     "opencv-contrib-python==4.10.0.84",
-    "pillow==12.2.0",
-    "python-multipart==0.0.31",
-    "uvicorn[standard]==0.49.0",
 ]
 ocr-paddle = [
     "paddleocr==3.7.0",
@@ -54,47 +90,44 @@ ocr-tesseract = [
     "pytesseract==0.3.13",
 ]
 rag = [
+    { include-group = "common-web" },
+    { include-group = "common-validation" },
+    { include-group = "common-numeric" },
     "chromadb-client==1.5.9",
-    "fastapi==0.136.3",
-    "numpy==2.3.5",
-    "pydantic==2.13.4",
-    "sentence-transformers==5.5.1",
-    "torch==2.12.0",
-    "uvicorn[standard]==0.49.0",
+    "sentence-transformers==5.6.0",
+    "torch==2.12.1",
 ]
 llm = [
-    "fastapi==0.136.3",
-    "httpx==0.28.1",
-    "pydantic==2.13.4",
-    "uvicorn[standard]==0.49.0",
+    { include-group = "common-web" },
+    { include-group = "common-validation" },
+    { include-group = "common-http-client" },
 ]
 monitoring = [
     "flower==2.0.1",
 ]
 test = [
-    "aiosmtplib==5.1.1",
+    { include-group = "common-web" },
+    { include-group = "common-settings" },
+    { include-group = "common-http-client" },
+    { include-group = "common-database" },
+    { include-group = "common-upload" },
+    { include-group = "common-numeric" },
+    { include-group = "common-mail" },
+    { include-group = "common-worker" },
+    { include-group = "common-async" },
+    { include-group = "common-auth" },
+    { include-group = "common-pdf" },
+    { include-group = "common-rate-limit" },
     "alembic==1.18.4",
-    "anyio==4.13.0",
-    "celery[redis]==5.6.3",
-    "email-validator==2.3.0",
-    "fastapi==0.136.3",
-    "httpx==0.28.1",
-    "numpy==2.3.5",
+    "httpx2==2.5.0",
     "opencv-contrib-python==4.10.0.84",
-    "pillow==12.2.0",
-    "psycopg[binary]==3.3.4",
-    "pydantic==2.13.4",
-    "pypdfium2==5.9.0",
-    "pwdlib[argon2]==0.3.0",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "python-multipart==0.0.31",
-    "redis==6.4.0",
-    "ruff==0.15.15",
-    "slowapi==0.1.9",
-    "sqlalchemy==2.0.50",
-    "uvicorn[standard]==0.49.0",
-    "pydantic-settings==2.14.1",
+    "ruff==0.15.18",
+]
+typecheck = [
+    { include-group = "test" },
+    "mypy==2.1.0",
 ]
 
 [tool.uv]
@@ -129,7 +162,7 @@ explicit = true
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["backend", "tests"]
+src = ["backend"]
 extend-exclude = [
     "htmlcov",
     "backend/ocr/.ocr_cache",
@@ -139,8 +172,45 @@ extend-exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "C4", "RUF"]
 
+[tool.mypy]
+python_version = "3.13"
+strict = true
+plugins = ["pydantic.mypy"]
+files = [
+    "backend/api",
+    "backend/common",
+    "backend/database",
+    "backend/llm",
+    "backend/ocr",
+    "backend/rag",
+]
+exclude = "^backend/tests/"
+show_error_codes = true
+warn_unused_configs = true
+mypy_path = "backend"
+
+[[tool.mypy.overrides]]
+module = [
+    "billiard.*",
+    "celery",
+    "celery.*",
+    "chromadb",
+    "kombu",
+    "paddle",
+    "paddleocr",
+    "pypdfium2",
+    "pytesseract",
+    "sentence_transformers",
+]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_typed = true
+init_forbid_extra = true
+warn_required_dynamic_aliases = true
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["backend/tests"]
 log_cli = false
 log_level = "WARNING"
 
@@ -148,9 +218,8 @@ log_level = "WARNING"
 branch = true
 relative_files = true
 source = ["backend"]
-# El entorno Alembic (env.py) y las migraciones no son lógica unit-testeable:
-# se ejercitan en el job de migraciones contra Postgres, no en pytest.
-omit = ["backend/database/alembic/*"]
+# Alembic se valida en su job de migraciones.
+omit = ["backend/database/alembic/*", "backend/tests/*"]
 
 [tool.coverage.report]
 show_missing = true

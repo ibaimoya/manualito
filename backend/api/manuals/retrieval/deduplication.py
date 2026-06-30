@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 
-from api.manuals.repository import AuthorizedChunk
+from api.manuals.dto import AuthorizedChunk
 
 
 def deduplicate_chunks(chunks: Iterable[AuthorizedChunk]) -> list[AuthorizedChunk]:

@@ -57,6 +57,10 @@
   --radius-sm: var(--m-r-sm);
   --radius-md: var(--m-r-md);
   --radius-lg: var(--m-r-lg);
+  /* tokens.css ya documenta que --m-r-lg es el radio de "rounded-2xl"; sin este
+     enlace, esa utilidad caía al 1rem por defecto de Tailwind en vez del radio
+     de marca (era la causa de que el cometa de "respondiendo" no encajase). */
+  --radius-2xl: var(--m-r-lg);
   --radius-xl: var(--m-r-xl);
   --radius-full: var(--m-r-full);
 
@@ -255,8 +259,12 @@ kbd {
 }
 
 /* Cometa que recorre el borde de la fila respondiéndose (conic-gradient
-   enmascarado a solo-borde). inset:-1px + radio 1px mayor que la caja lo
-   pega a la arista sin separación; --proc-radius = radio de la caja + 1. */
+   enmascarado a solo-borde). inset:-1px + radio 1px mayor que la caja lo pega
+   a la arista sin separación. El radio se deriva de --radius-2xl (el mismo
+   token que usa la clase `rounded-2xl` de la caja) en vez de un valor fijo
+   copiado a mano: así el anillo nunca puede desajustarse de la caja, sea cual
+   sea su radio real. Aceptamos --proc-radius como override puntual si algún
+   callsite futuro usase una caja con otro radio. */
 @property --proc-angle {
   syntax: '<angle>';
   inherits: false;
@@ -265,7 +273,7 @@ kbd {
 .proc-border {
   position: absolute;
   inset: -1px;
-  border-radius: var(--proc-radius, 17px);
+  border-radius: var(--proc-radius, calc(var(--radius-2xl, 1rem) + 1px));
   padding: 2.5px;
   pointer-events: none;
   z-index: 0;

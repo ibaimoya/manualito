@@ -421,12 +421,9 @@ FodyWeavers.xsd
 # Entorno virtual Python
 .venv/
 
-# Claude Code instructions
-CLAUDE.md
-.claude/
-
 # Ficheros locales auxiliares
 notimportant/
+deploy/local/
 
 # Caché de modelos de OCR
 .paddleocr_cache/

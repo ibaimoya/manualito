@@ -1,13 +1,21 @@
 """Consultas SQL del catálogo local de juegos."""
 
-from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select, update
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
+from api.games.dto import (
+    CachedGameInput,
+    CreatedGame,
+    GameDetail,
+    GameExplanationSnapshot,
+    GamePoolManualSummary,
+    GameSearchResult,
+    MyGameSummary,
+)
 from api.games.exceptions import GameNotFoundError
 from common.crypto import sha256_hex
 from database.models.conversation import Conversation
@@ -19,23 +27,13 @@ from database.models.manual import Manual, ManualPage
 SIMILARITY_THRESHOLD = 0.1
 
 
-@dataclass(frozen=True, slots=True)
-class CachedGameInput:
-    """Juego externo normalizado antes de cachearlo en Postgres."""
-
-    bgg_id: int
-    name: str
-    name_key: str
-    year_published: int | None
-
-
 async def search_games(
     session: AsyncSession,
     *,
     query: str,
     query_key: str,
     limit: int,
-) -> list[Row]:
+) -> list[GameSearchResult]:
     """Busca juegos activos en Postgres, ordenando por prefijo, similitud y uso."""
     manuals_count = (
         select(Manual.game_id, func.count(Manual.id).label("manuals_count"))
@@ -72,7 +70,7 @@ async def search_games(
         .limit(limit)
     )
 
-    return list(result)
+    return [GameSearchResult(**row) for row in result.mappings()]
 
 
 async def ensure_active_game(session: AsyncSession, *, game_id: UUID) -> None:
@@ -94,7 +92,7 @@ async def create_manual_game(
     name: str,
     name_key: str,
     created_by_user_id: UUID,
-) -> Row:
+) -> CreatedGame:
     """Inserta un juego sin BGG atribuido al usuario y devuelve su ficha."""
     result = await session.execute(
         insert(Game)
@@ -106,9 +104,9 @@ async def create_manual_game(
         )
         .returning(Game.id, Game.name, Game.bgg_id, Game.year_published)
     )
-    row = result.one()
+    game = CreatedGame(**result.mappings().one())
     await session.commit()
-    return row
+    return game
 
 
 async def list_my_games(
@@ -117,7 +115,7 @@ async def list_my_games(
     user_id: UUID,
     limit: int,
     offset: int,
-) -> list[Row]:
+) -> list[MyGameSummary]:
     """Juegos seguidos por el usuario, por actividad reciente o seguimiento."""
     manuals_count = (
         select(func.count(Manual.id))
@@ -185,7 +183,7 @@ async def list_my_games(
         .limit(limit)
         .offset(offset)
     )
-    return list(result)
+    return [MyGameSummary(**row) for row in result.mappings()]
 
 
 async def auto_follow_game(
@@ -242,7 +240,7 @@ async def is_following(
     return bool(result.scalar_one_or_none())
 
 
-async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> Row:
+async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> GameDetail:
     """Carga un juego no borrado; uno oculto se devuelve con su estado."""
     result = await session.execute(
         select(
@@ -250,19 +248,16 @@ async def get_game_for_detail(session: AsyncSession, *, game_id: UUID) -> Row:
             Game.name,
             Game.bgg_id,
             Game.year_published,
-            Game.min_players,
-            Game.max_players,
-            Game.playing_time_minutes,
             Game.status,
         ).where(
             Game.id == game_id,
             Game.deleted_at.is_(None),
         )
     )
-    game = result.one_or_none()
-    if game is None:
+    row = result.mappings().one_or_none()
+    if row is None:
         raise GameNotFoundError
-    return game
+    return GameDetail(**row)
 
 
 async def list_game_pool_manuals(
@@ -270,7 +265,7 @@ async def list_game_pool_manuals(
     *,
     game_id: UUID,
     current_user_id: UUID,
-) -> list[Row]:
+) -> list[GamePoolManualSummary]:
     """Lista manuales visibles para el usuario sin exponer dueños."""
     result = await session.execute(
         select(
@@ -292,7 +287,7 @@ async def list_game_pool_manuals(
         .where(*_pool_visibility_filters(game_id, current_user_id))
         .order_by(Manual.created_at.desc(), Manual.id.desc())
     )
-    return list(result)
+    return [GamePoolManualSummary(**row) for row in result.mappings()]
 
 
 async def game_pool_has_manuals(
@@ -323,7 +318,8 @@ async def get_pool_fingerprint(
     items = [f"{row.id}:{row.indexed_at.isoformat() if row.indexed_at else ''}" for row in result]
     if not items:
         return None
-    return sha256_hex("|".join(items))
+    fingerprint: str = sha256_hex("|".join(items))
+    return fingerprint
 
 
 async def get_game_explanation(
@@ -331,7 +327,7 @@ async def get_game_explanation(
     *,
     user_id: UUID,
     game_id: UUID,
-) -> GameExplanation | None:
+) -> GameExplanationSnapshot | None:
     """Carga la explicación cacheada de un juego para un usuario."""
     result = await session.execute(
         select(GameExplanation).where(
@@ -339,7 +335,10 @@ async def get_game_explanation(
             GameExplanation.game_id == game_id,
         )
     )
-    return result.scalar_one_or_none()
+    explanation = result.scalar_one_or_none()
+    if explanation is None:
+        return None
+    return _game_explanation_snapshot(explanation)
 
 
 async def upsert_game_explanation(
@@ -349,7 +348,7 @@ async def upsert_game_explanation(
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
-) -> Row:
+) -> GameExplanationSnapshot:
     """Guarda la explicación del usuario en una sola sentencia atómica."""
     stmt = (
         insert(GameExplanation)
@@ -382,9 +381,9 @@ async def upsert_game_explanation(
         )
     )
     result = await session.execute(stmt)
-    row = result.one()
+    snapshot = GameExplanationSnapshot(**result.mappings().one())
     await session.commit()
-    return row
+    return snapshot
 
 
 async def mark_game_explanation_generating(
@@ -394,7 +393,7 @@ async def mark_game_explanation_generating(
     game_id: UUID,
     sections: dict[str, object],
     source_fingerprint: str,
-) -> Row:
+) -> GameExplanationSnapshot:
     """Guarda que la explicación del usuario se está generando para una huella."""
     stmt = (
         insert(GameExplanation)
@@ -426,9 +425,9 @@ async def mark_game_explanation_generating(
         )
     )
     result = await session.execute(stmt)
-    row = result.one()
+    snapshot = GameExplanationSnapshot(**result.mappings().one())
     await session.commit()
-    return row
+    return snapshot
 
 
 async def mark_game_explanation_failed(
@@ -466,7 +465,22 @@ async def mark_game_explanation_failed(
     await session.commit()
 
 
-def _pool_visibility_filters(game_id: UUID, current_user_id: UUID) -> tuple:
+def _game_explanation_snapshot(explanation: GameExplanation) -> GameExplanationSnapshot:
+    """Convierte el modelo cacheado al DTO interno."""
+    return GameExplanationSnapshot(
+        sections=explanation.sections,
+        source_fingerprint=explanation.source_fingerprint,
+        status=explanation.status,
+        error_code=explanation.error_code,
+        generated_at=explanation.generated_at,
+        updated_at=explanation.updated_at,
+    )
+
+
+def _pool_visibility_filters(
+    game_id: UUID,
+    current_user_id: UUID,
+) -> tuple[ColumnElement[bool], ...]:
     """Predicado de manuales visibles: compartidos activos más los propios."""
     return (
         Manual.game_id == game_id,
@@ -494,32 +508,6 @@ async def count_user_game_conversations(
         )
     )
     return int(result.scalar_one())
-
-
-async def update_game_play_metadata(
-    session: AsyncSession,
-    *,
-    game_id: UUID,
-    min_players: int | None,
-    max_players: int | None,
-    playing_time_minutes: int | None,
-) -> None:
-    """Rellena metadatos de mesa solo si nadie los escribió antes."""
-    await session.execute(
-        update(Game)
-        .where(
-            Game.id == game_id,
-            Game.min_players.is_(None),
-            Game.max_players.is_(None),
-            Game.playing_time_minutes.is_(None),
-        )
-        .values(
-            min_players=min_players,
-            max_players=max_players,
-            playing_time_minutes=playing_time_minutes,
-        )
-    )
-    await session.commit()
 
 
 async def upsert_bgg_games(

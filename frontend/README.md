@@ -1,133 +1,170 @@
-# Manualito · Frontend
+# Frontend
 
-PWA en React 19 + TypeScript que consume el backend FastAPI de Manualito.
-El usuario fotografía un manual de juego de mesa y la app genera una
-explicación clara con resumen, preparación, turno y condiciones de victoria,
-más un chat para preguntar cualquier duda.
+[![React 19](https://img.shields.io/badge/React%2019-61DAFB?logo=react&logoColor=000)](https://react.dev/)
+[![TypeScript 6](https://img.shields.io/badge/TypeScript%206-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite 8](https://img.shields.io/badge/Vite%208-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind%20CSS%204-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![TanStack](https://img.shields.io/badge/TanStack-FF4154?logo=tanstack&logoColor=white)](https://tanstack.com/)
+[![Vitest 4](https://img.shields.io/badge/Vitest%204-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![pnpm 11](https://img.shields.io/badge/pnpm%2011-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![NGINX](https://img.shields.io/badge/NGINX-009639?logo=nginx&logoColor=white)](https://nginx.org/)
 
-## Stack
+Interfaz web de Manualito. Está desarrollada con React, TypeScript y Vite; en
+desarrollo se sirve con el dev server de Vite y en Docker se compila como SPA
+estática servida por Nginx.
 
-| Pieza | Versión / decisión |
-|---|---|
-| Build tool | Vite 8 (Rolldown + Oxc) |
-| UI runtime | React 19, TypeScript 5 strict (+ `noUncheckedIndexedAccess`) |
-| Estilado | Tailwind CSS v4 (`@theme inline`) sobre tokens propios (`tokens.css`) |
-| Componentes | shadcn-style sobre Radix UI primitives |
-| Iconos | Lucide React (strokeWidth 1.75) |
-| Tipografía | Manrope (display) + Inter (cuerpo) + JetBrains Mono — variable, local (`@fontsource-variable/*`) |
-| Routing | TanStack Router (file-based + autoCodeSplitting) |
-| Server state | TanStack Query |
-| Persistencia local | `localStorage` con schemas Zod |
-| Notificaciones | `sonner` |
-| PWA | `vite-plugin-pwa` (Workbox · NetworkFirst para `/api/*`) |
-| Tests | Vitest 4 + RTL + jest-axe + MSW |
-| Gestor de paquetes | pnpm 11 |
-| Runtime web (prod) | Nginx Alpine + proxy_pass a `api:8000` |
+El flujo recomendado para ejecutar la aplicación completa está en el
+[README de la raíz](../README.md) o [aquí](../deploy/README.md). Este documento resume la
+parte específica del frontend.
 
-Más detalle de cada decisión y enlaces a las fuentes en
-[`../notimportant/decisiones-frontend.txt`](../notimportant/decisiones-frontend.txt).
+## Arranque rápido
+
+Para trabajar solo en la interfaz:
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+El dev server escucha en `http://localhost:5173` por defecto. Si ese puerto ya
+está ocupado, Vite escogerá otro porque `strictPort` está desactivado.
+
+El frontend espera que la API esté disponible en `http://localhost:8000`. Ese
+destino se define en [`../config/frontend.env`](../config/frontend.env) mediante
+`VITE_API_TARGET`.
+
+Requisitos locales:
+
+| Herramienta | Versión  |
+| ----------- | -------- |
+| Node.js     | `>=24`   |
+| pnpm        | `11.8.0` |
+
+Se prefiere pnpm porque acelera instalaciones y reduce espacio usando un store
+compartido de dependencias; además, su `node_modules` estricto evita depender de
+paquetes no declarados explícitamente.
+
+## Stack técnico
+
+| Capa            | Tecnología                                        |
+| --------------- | ------------------------------------------------- |
+| Runtime UI      | React 19, React DOM                               |
+| Lenguaje        | TypeScript estricto                               |
+| Build           | Vite 8, plugin oficial de React, target `es2025`  |
+| Routing         | TanStack Router con rutas por archivo             |
+| Estado servidor | TanStack Query                                    |
+| Estilos         | Tailwind CSS v4, tokens propios y fuentes locales |
+| Componentes     | Primitivos propios apoyados en Radix UI           |
+| Iconos          | Lucide React                                      |
+| Notificaciones  | Sonner                                            |
+| PWA             | `vite-plugin-pwa` con caché offline               |
+| Tests           | Vitest, Testing Library, MSW y jest-axe           |
+| Runtime Docker  | Nginx Alpine, puerto interno `8080`               |
 
 ## Estructura
 
+```text
+frontend/
+  src/
+    app/          providers, router y layout de aplicación
+    components/   primitivos UI reutilizables
+    features/     módulos de dominio: auth, juegos, manuales, perfil, PWA
+    routes/       rutas por archivo de TanStack Router
+    shared/       cliente API, hooks, helpers y componentes transversales
+    styles/       tokens y estilos globales
+    types/        tipos compartidos del frontend
+  tests/          suites de Vitest espejando app, routes, features y shared
 ```
-src/
-  app/                      providers + theme + router glue
-  routes/                   file-based routing (TanStack Router)
-  features/
-    onboarding/             intro cinematográfico (mesh + view transitions)
-    manual/                 componentes compartidos sobre manuales
-    processing/             hook que orquesta las 4 preguntas iniciales
-  shared/
-    api/                    cliente HTTP + error-mapper
-    components/             Brand, ErrorBoundary
-    lib/                    cn(), storage (zod)
-  components/ui/            primitivos shadcn-style (Button, Card, …)
-  styles/                   tokens.css + globals.css
-tests/                      espejo de src/ (setup, MSW handlers, suites)
-```
+
+El árbol de rutas generado vive en `src/routeTree.gen.ts`. Es un artefacto de
+TanStack Router y no debe editarse a mano.
 
 ## Scripts
 
-| Comando | Qué hace |
-|---|---|
-| `pnpm dev` | Genera el route tree y arranca Vite en `:5173` |
-| `pnpm build` | Genera el route tree, `tsc --build`, `vite build` + SW |
-| `pnpm preview` | Sirve el bundle de producción local |
-| `pnpm lint` | ESLint 9 flat config (`--max-warnings 0`) |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm test` | Vitest run (incluye jsdom) |
-| `pnpm test:coverage` | Vitest + cobertura V8 (lcov + html) |
-| `pnpm test:ui` | UI de Vitest (Playwright dashboard) |
-| `pnpm format` | Prettier --write . |
-| `pnpm routes:generate` | TanStack Router CLI |
-| `pnpm api:generate` | Genera tipos desde `/openapi.json` del backend |
+| Comando                | Uso                                                |
+| ---------------------- | -------------------------------------------------- |
+| `pnpm dev`             | Genera rutas y arranca Vite.                       |
+| `pnpm build`           | Ejecuta `tsc -b` y genera el bundle de producción. |
+| `pnpm preview`         | Sirve localmente el bundle construido.             |
+| `pnpm lint`            | Ejecuta ESLint con `--max-warnings 0`.             |
+| `pnpm lint:fix`        | Aplica fixes automáticos de ESLint.                |
+| `pnpm typecheck`       | Ejecuta TypeScript sin emitir archivos.            |
+| `pnpm test`            | Ejecuta la suite de Vitest.                        |
+| `pnpm test:watch`      | Ejecuta Vitest en modo watch.                      |
+| `pnpm test:coverage`   | Genera cobertura V8 en `coverage/`.                |
+| `pnpm test:ui`         | Abre la UI de Vitest.                              |
+| `pnpm format`          | Formatea con Prettier.                             |
+| `pnpm format:check`    | Comprueba formato sin escribir.                    |
+| `pnpm routes:generate` | Regenera `src/routeTree.gen.ts`.                   |
+
+`pnpm api:generate` queda disponible como entrada a `@hey-api/openapi-ts` si se
+necesita regenerar un cliente desde OpenAPI, pero no forma parte del flujo
+normal de desarrollo.
 
 ## Desarrollo
 
-```bash
-# 1. Arrancar el backend (en otra terminal)
-cd .. && docker compose up -d api ocr rag llm chroma ollama
+Las llamadas HTTP del cliente usan rutas relativas (`/api/...` y `/health`).
+Durante desarrollo, Vite las proxifica hacia `VITE_API_TARGET`; en Docker,
+Nginx las proxifica hacia el servicio `api` de Compose.
 
-# 2. Arrancar el frontend en dev (proxy a localhost:8000)
-cd frontend && pnpm dev
-# → http://localhost:5173
-```
+El flujo habitual es:
 
-El proxy de Vite (`server.proxy['/api']`) reenvía a `localhost:8000`.  Las
-llamadas del cliente usan URLs relativas (`/api/manuals`, etc.), por lo que
-no hay que tocar nada al pasar a producción detrás de Nginx.
+1. Arrancar la API y servicios auxiliares con los scripts de la raíz.
+2. Ejecutar `pnpm dev` dentro de `frontend/`.
+3. Abrir la URL que imprima Vite.
 
-Los valores públicos de desarrollo/build del frontend viven en
-`../config/frontend.env`.
+Si la aplicación completa ya está levantada por Docker, el contenedor
+`frontend` puede estar usando `5173`. En ese caso Vite elegirá otro puerto y la
+API seguirá siendo la misma (`localhost:8000`).
 
-## Despliegue (Docker Compose)
+## Docker
 
-El servicio `frontend` está añadido a `../compose.yaml` con el mismo
-hardening que el backend (read_only, cap_drop ALL, no-new-privileges,
-pids_limit) más `tmpfs` extras para los directorios donde Nginx escribe
-(`/var/cache/nginx`, `/var/run`, `/var/log/nginx`) — todos como `uid=1001`
-para coincidir con el usuario `appuser` del contenedor.
+El servicio `frontend` se define en [`../compose.yaml`](../compose.yaml). El
+build usa [`Dockerfile`](Dockerfile):
 
-```bash
-docker compose up -d --build frontend
-# → http://localhost:5173
-```
+1. Etapa `builder`: instala dependencias con pnpm y ejecuta `pnpm build`.
+2. Etapa `runtime`: copia `dist/` a Nginx y sirve la SPA desde el puerto `8080`.
 
-Nginx sirve `dist/` y hace `proxy_pass /api → api:8000`.  No hay CORS porque
-todo es mismo origen.
+Compose publica ese puerto como `http://localhost:5173`.
 
-## Tests
+[`nginx.conf`](nginx.conf) aplica el fallback de SPA, caché largo para assets
+hasheados, no-caché para `index.html`, proxy de `/api/` a `api:8000` y proxy de
+`/health` al healthcheck del backend.
 
-```bash
-pnpm test            # Vitest run
-pnpm test:coverage   # con cobertura V8 (HTML + lcov)
-```
+## Estado local
 
-La suite cubre storage, theme, cliente API, error mapper, hooks, primitivos UI
-y las pantallas completas.  MSW mockea las llamadas a `/api/*` sin levantar
-Docker, y `jest-axe` valida accesibilidad en los componentes críticos.
+Los datos de usuario, manuales, juegos y conversaciones viven en el backend. El
+frontend solo usa `localStorage` para preferencias y marcas de UI:
 
-## Estado local (`localStorage`)
+| Clave                              | Uso                                    |
+| ---------------------------------- | -------------------------------------- |
+| `manualito.settings`               | Tema y acento visual.                  |
+| `manualito.onboarding.seen`        | Onboarding completado.                 |
+| `manualito.conversations.seen`     | Última lectura vista por conversación. |
+| `manualito.sidebar.collapsed`      | Estado colapsado de la barra lateral.  |
+| `manualito.verifyBanner.dismissed` | Aviso de verificación de email oculto. |
 
-| Slot | Contenido | Estado |
-|---|---|---|
-| `manualito.manuals` | Manuales recientes (nombre/fechas para headers) | cache de `GET /api/manuals` |
-| `manualito.result.{id}` | Resumen + secciones generadas en `/processing` | pendiente de endpoint de lectura |
-| `manualito.ocr.{id}` | Texto OCR para el visor | cache opcional del detalle del manual |
-| `manualito.settings` | Tema, acento, detalle de respuesta | `GET/PUT /api/users/me/preferences` no existe |
-| `manualito.onboarding.seen` | Flag de onboarding visto | solo cliente |
+`storage.wipeAll()` también borra claves antiguas de versiones previas
+relacionadas con manuales cacheados en local.
 
-El historial de Q&A ya no vive aquí: las conversaciones las persiste el
-backend (`/api/games/{id}/conversations`).
+## Calidad y tests
 
-## Accesibilidad
+La configuración de ESLint está en [`eslint.config.js`](eslint.config.js). Usa
+ESLint 9 con configuración plana, TypeScript, reglas de React, hooks,
+accesibilidad JSX y Prettier al final.
 
-- Targets táctiles ≥ 44 px (WCAG 2.2 SC 2.5.8) en botones principales.
-- Contraste WCAG AA verificado para los pares texto/fondo de la paleta.
-- `prefers-reduced-motion` respetado globalmente.
-- Navegación completa con teclado (TanStack Router + Radix).
-- Tests automáticos con `jest-axe` en componentes críticos.
+La configuración de TypeScript está repartida entre `tsconfig.json`,
+`tsconfig.app.json` y `tsconfig.node.json`. La app usa modo estricto, resolución
+`bundler`, `noUncheckedIndexedAccess` y alias `@/*`.
+
+La suite de tests usa:
+
+- Vitest con `jsdom`.
+- Testing Library para componentes y rutas.
+- MSW para simular endpoints `/api/*`.
+- jest-axe para checks de accesibilidad en componentes y pantallas críticas.
 
 ## Licencia
 
-Hereda la licencia del proyecto (MIT — ver `../LICENSE`).
+Hereda la [licencia MIT del proyecto](../LICENSE).

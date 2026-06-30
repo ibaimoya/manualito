@@ -195,7 +195,7 @@ function ConversationCard({
   return (
     <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
       <Card
-        style={pending ? { borderColor: 'transparent', '--proc-radius': '21px' } : undefined}
+        style={pending ? { borderColor: 'transparent' } : undefined}
         className={cn(
           'relative flex items-start gap-3 p-3.5',
           'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',

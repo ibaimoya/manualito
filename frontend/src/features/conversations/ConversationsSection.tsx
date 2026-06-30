@@ -110,10 +110,10 @@ function ConversationRow({
 
   return (
     // Caja redondeada propia: respondiendo, el borde transparente deja sitio al
-    // cometa (--proc-radius = radio 20 + 1). El bg redondea sin overflow-hidden
-    // para no recortar el cometa, que sobresale 1px.
+    // cometa (su radio se deriva en CSS de --radius-2xl, el mismo token que usa
+    // rounded-2xl aquí). El bg redondea sin overflow-hidden para no recortar
+    // el cometa, que sobresale 1px.
     <div
-      style={{ '--proc-radius': '21px' }}
       className={cn(
         'relative rounded-2xl border bg-card shadow-xs transition-colors',
         pending ? 'border-transparent' : 'border-border hover:bg-surface-2',

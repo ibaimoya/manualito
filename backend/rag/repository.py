@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Protocol, TypedDict
 from urllib.parse import urlparse
 
 from rag import config
@@ -8,6 +9,64 @@ from rag.exceptions import ContextNotFoundError
 from rag.schemas import IngestChunk
 
 logger = logging.getLogger(__name__)
+
+ChromaMetadata = dict[str, str | int]
+
+
+class ChromaGetResult(TypedDict):
+    ids: list[str]
+
+
+class ChromaQueryResult(TypedDict):
+    ids: list[list[str]]
+    metadatas: list[list[ChromaMetadata]]
+    distances: list[list[float]]
+
+
+class RetrievedChunkData(TypedDict):
+    id: str
+    chunk_index: int
+    source_page: int
+    score: float
+
+
+class ChromaCollection(Protocol):
+    def upsert(
+        self,
+        *,
+        ids: list[str],
+        documents: list[str],
+        embeddings: list[list[float]],
+        metadatas: list[ChromaMetadata],
+    ) -> None: ...
+
+    def get(
+        self,
+        *,
+        where: dict[str, str],
+        include: list[str],
+        limit: int | None = None,
+    ) -> ChromaGetResult: ...
+
+    def query(
+        self,
+        *,
+        query_embeddings: list[list[float]],
+        n_results: int,
+        where: dict[str, str],
+    ) -> ChromaQueryResult: ...
+
+    def delete(self, *, ids: list[str]) -> None: ...
+
+
+class ChromaClient(Protocol):
+    def get_or_create_collection(
+        self,
+        *,
+        name: str,
+        metadata: dict[str, str],
+    ) -> ChromaCollection: ...
+
 
 _repository: ChromaRepository | None = None
 
@@ -23,8 +82,8 @@ class ChromaRepository:
         """
         self.chroma_url = chroma_url
         self.collection_name = collection_name
-        self._client = None
-        self._collection = None
+        self._client: ChromaClient | None = None
+        self._collection: ChromaCollection | None = None
 
     def upsert_manual(
         self,
@@ -85,7 +144,7 @@ class ChromaRepository:
         game_id: str,
         query_embedding: list[float],
         top_k: int,
-    ) -> list[dict[str, object]]:
+    ) -> list[RetrievedChunkData]:
         """
         Recupera candidatos por juego; API rehidrata el texto desde Postgres.
 
@@ -95,7 +154,7 @@ class ChromaRepository:
             top_k (int): Número máximo de candidatos a devolver.
 
         Returns:
-            list[dict[str, object]]: IDs rehidratables con score y metadatos.
+            list[RetrievedChunkData]: IDs rehidratables con score y metadatos.
         """
         collection = self._get_collection()
         result = collection.query(
@@ -111,13 +170,13 @@ class ChromaRepository:
         distances = result["distances"][0]
         scores = [max(0.0, 1.0 - float(distance)) for distance in distances]
 
-        chunks: list[dict[str, object]] = []
+        chunks: list[RetrievedChunkData] = []
         for chunk_id, metadata, score in zip(ids, metadatas, scores, strict=True):
             chunks.append(
                 {
                     "id": chunk_id,
-                    "chunk_index": metadata["chunk_index"],
-                    "source_page": metadata["source_page"],
+                    "chunk_index": int(metadata["chunk_index"]),
+                    "source_page": int(metadata["source_page"]),
                     "score": round(score, 4),
                 }
             )
@@ -155,7 +214,7 @@ class ChromaRepository:
         result = collection.get(where={"manual_id": manual_id}, limit=1, include=[])
         return bool(result["ids"])
 
-    def _get_collection(self):
+    def _get_collection(self) -> ChromaCollection:
         """
         Devuelve la colección de trabajo, creándola si es necesario.
 
@@ -174,7 +233,7 @@ class ChromaRepository:
         """Inicializa la colección si todavía no está cargada."""
         self._get_collection()
 
-    def _get_client(self):
+    def _get_client(self) -> ChromaClient:
         """
         Crea perezosamente el cliente HTTP hacia ChromaDB.
 
@@ -214,9 +273,9 @@ def _metadata(
     owner_user_id: str,
     language: str | None,
     chunk: IngestChunk,
-) -> dict[str, str | int]:
+) -> ChromaMetadata:
     """Construye metadata denormalizada para filtrar sin joins en Chroma."""
-    metadata: dict[str, str | int] = {
+    metadata: ChromaMetadata = {
         "manual_id": manual_id,
         "game_id": game_id,
         "owner_user_id": owner_user_id,

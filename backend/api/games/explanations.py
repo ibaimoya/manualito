@@ -1,22 +1,24 @@
 """Explicación cacheada de un juego, generada por Celery."""
 
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import httpx
-from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api import config
 from api.auth.service import AuthenticatedSession
 from api.exceptions import InternalServiceError, InternalServiceUnavailableError
 from api.games import repository
-from api.games.schemas import GameExplanationResponse
+from api.games.dto import (
+    GameExplanationJob,
+    GameExplanationOutcome,
+    GameExplanationSnapshot,
+)
+from api.games.schemas import ExplanationSection, GameExplanationResponse
 from api.locks import advisory_session_lock
 from api.manuals.exceptions import ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
-from database.models.explanation import GameExplanation
 from database.session import get_sessionmaker
 
 EXPLANATION_TOP_K = 5
@@ -28,22 +30,6 @@ EXPLANATION_QUESTIONS = {
     "turns": "Explica cómo es un turno: sus fases y qué puede hacer un jugador.",
     "victory": "Explica cómo se gana la partida y cómo se resuelven los empates.",
 }
-
-
-@dataclass(frozen=True, slots=True)
-class GameExplanationJob:
-    """Trabajo opaco para generar la explicación de un juego."""
-
-    user_id: UUID
-    game_id: UUID
-
-
-@dataclass(frozen=True, slots=True)
-class GameExplanationOutcome:
-    """Respuesta HTTP y trabajo opcional de generación."""
-
-    response: GameExplanationResponse
-    job: GameExplanationJob | None
 
 
 async def get_game_explanation(
@@ -64,15 +50,11 @@ async def get_game_explanation(
         raise ManualContextNotFoundError
 
     cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
-    if _is_ready(cached, fingerprint):
-        return GameExplanationOutcome(response=_ready_response(cached), job=None)
-    if _is_failed(cached, fingerprint):
-        return GameExplanationOutcome(response=_failed_response(cached), job=None)
-    if _is_generating_fresh(cached, fingerprint):
-        return GameExplanationOutcome(response=_generating_response(cached), job=None)
+    if cached is not None and _use_cached_explanation(cached, fingerprint):
+        return GameExplanationOutcome(snapshot=cached, job=None)
 
     sections = _sections_for(cached, fingerprint)
-    row = await repository.mark_game_explanation_generating(
+    snapshot = await repository.mark_game_explanation_generating(
         session,
         user_id=user_id,
         game_id=game_id,
@@ -80,7 +62,7 @@ async def get_game_explanation(
         source_fingerprint=fingerprint,
     )
     return GameExplanationOutcome(
-        response=_generating_response(row),
+        snapshot=snapshot,
         job=GameExplanationJob(user_id=user_id, game_id=game_id),
     )
 
@@ -100,7 +82,7 @@ async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
             return True
 
         cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
-        if _is_ready(cached, fingerprint):
+        if cached is not None and _is_ready(cached, fingerprint):
             return True
 
         sections = _sections_for(cached, fingerprint)
@@ -174,72 +156,92 @@ async def fail_game_explanation(user_id: UUID, game_id: UUID, error_code: str) -
         )
 
 
-def _is_ready(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
+def build_game_explanation_response(
+    snapshot: GameExplanationSnapshot,
+) -> GameExplanationResponse:
+    """Construye la respuesta pública desde el snapshot interno."""
+    if snapshot.status == "ready":
+        return _ready_response(snapshot)
+    if snapshot.status == "failed":
+        return _failed_response(snapshot)
+    return _generating_response(snapshot)
+
+
+def _is_ready(explanation: GameExplanationSnapshot, fingerprint: str) -> bool:
     """True si la caché vale para esta huella y tiene los cuatro apartados."""
     return (
-        explanation is not None
-        and explanation.source_fingerprint == fingerprint
-        and getattr(explanation, "status", "ready") == "ready"
-        and all(key in explanation.sections for key in EXPLANATION_QUESTIONS)
+        explanation.source_fingerprint == fingerprint
+        and explanation.status == "ready"
+        and _has_all_sections(explanation)
     )
 
 
-def _is_failed(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
-    """True si el último intento para esta huella acabó en error."""
-    return (
-        explanation is not None
-        and explanation.source_fingerprint == fingerprint
-        and getattr(explanation, "status", "ready") == "failed"
-    )
-
-
-def _is_generating_fresh(explanation: GameExplanation | Row | None, fingerprint: str) -> bool:
-    """True si ya hay una generación reciente y el polling no debe reencolar."""
-    if (
-        explanation is None
-        or explanation.source_fingerprint != fingerprint
-        or getattr(explanation, "status", "ready") != "generating"
-    ):
+def _use_cached_explanation(
+    explanation: GameExplanationSnapshot,
+    fingerprint: str,
+) -> bool:
+    """True si el endpoint puede reutilizar el snapshot sin reencolar."""
+    if explanation.source_fingerprint != fingerprint:
         return False
-    updated_at = getattr(explanation, "updated_at", None)
-    return (
-        isinstance(updated_at, datetime)
-        and datetime.now(UTC) - updated_at < GENERATION_STALE_AFTER
-    )
+    if explanation.status == "ready":
+        return _has_all_sections(explanation)
+    if explanation.status == "failed":
+        return True
+    if explanation.status == "generating":
+        return datetime.now(UTC) - explanation.updated_at < GENERATION_STALE_AFTER
+    return False
 
 
-def _sections_for(explanation: GameExplanation | Row | None, fingerprint: str) -> dict[str, object]:
+def _has_all_sections(explanation: GameExplanationSnapshot) -> bool:
+    """True si están los cuatro apartados esperados."""
+    return all(key in explanation.sections for key in EXPLANATION_QUESTIONS)
+
+
+def _sections_for(
+    explanation: GameExplanationSnapshot | None,
+    fingerprint: str,
+) -> dict[str, object]:
     """Apartados ya generados para esta huella; vacío si la caché es de otra."""
     if explanation is not None and explanation.source_fingerprint == fingerprint:
         return dict(explanation.sections)
     return {}
 
 
-def _ready_response(explanation: GameExplanation | Row) -> GameExplanationResponse:
+def _ready_response(explanation: GameExplanationSnapshot) -> GameExplanationResponse:
     """Convierte la fila cacheada completa en el contrato público."""
     return GameExplanationResponse(
         status="ready",
-        sections=explanation.sections,
+        sections=_response_sections(explanation.sections),
         generated_at=explanation.generated_at,
     )
 
 
-def _generating_response(explanation: GameExplanation | Row) -> GameExplanationResponse:
+def _generating_response(explanation: GameExplanationSnapshot) -> GameExplanationResponse:
     """Devuelve el estado intermedio mientras el worker completa apartados."""
-    sections = dict(explanation.sections)
     return GameExplanationResponse(
         status="generating",
-        sections=sections or None,
+        sections=_response_sections(explanation.sections),
         generated_at=None,
     )
 
 
-def _failed_response(explanation: GameExplanation | Row) -> GameExplanationResponse:
+def _failed_response(explanation: GameExplanationSnapshot) -> GameExplanationResponse:
     """Devuelve el último fallo conocido de generación."""
-    sections = dict(explanation.sections)
     return GameExplanationResponse(
         status="failed",
-        sections=sections or None,
+        sections=_response_sections(explanation.sections),
         generated_at=None,
-        error_code=getattr(explanation, "error_code", None) or "generation_failed",
+        error_code=explanation.error_code or "generation_failed",
     )
+
+
+def _response_sections(
+    sections: dict[str, object],
+) -> dict[str, ExplanationSection] | None:
+    """Valida las secciones JSONB para la API."""
+    if not sections:
+        return None
+    return {
+        key: ExplanationSection.model_validate(section)
+        for key, section in sections.items()
+    }

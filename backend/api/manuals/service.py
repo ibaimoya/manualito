@@ -1,14 +1,13 @@
 """Casos de uso de manuales persistidos."""
 
 import logging
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import PurePath
 from uuid import UUID
 
 import httpx
 from fastapi import UploadFile
-from sqlalchemy.engine import Row
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +28,14 @@ from api.exceptions import (
     ManualPageLimitExceededError,
 )
 from api.games import repository as games_repository
+from api.manuals.dto import (
+    ManualPageForProcessing,
+    PageEditResult,
+    PreparedChunk,
+    StoredManualImage,
+    StoredManualPdf,
+    ValidatedManualImage,
+)
 from api.manuals.exceptions import (
     ManualBusyError,
     ManualDuplicateError,
@@ -39,9 +46,6 @@ from api.manuals.exceptions import (
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
-    PreparedChunk,
-    StoredManualImage,
-    StoredManualPdf,
     attach_page_image_asset,
     begin_manual_reprocessing,
     claim_page_for_processing,
@@ -49,7 +53,7 @@ from api.manuals.repository import (
     find_reusable_page_result,
     get_asset_for_processing,
     get_manual_for_processing,
-    get_manual_page_row,
+    get_manual_page_detail,
     get_page_for_edit,
     get_page_for_processing,
     list_manual_chunks_for_ingest,
@@ -66,13 +70,14 @@ from api.manuals.repository import (
     resolve_manual_processed_status,
     soft_delete_user_manual,
 )
-from api.manuals.schemas import ManualCreatedResponse, ManualPageResponse
-from api.manuals.validation import ValidatedManualImage, validate_manual_image, validate_manual_pdf
+from api.manuals.schemas import ManualCreatedResponse
+from api.manuals.validation import validate_manual_image, validate_manual_pdf
 from api.ocr.service import run_ocr
 from common.crypto import sha256_hex
 from common.logging import safe_for_log
 from common.manual_text.chunking import chunk_text
 from common.manual_text.normalizer import normalize_ocr_lines
+from database.models.manual import Manual, ManualChunk
 from database.session import get_sessionmaker
 
 RAG_INDEX_INTERNAL_DETAIL = "Error interno al indexar el manual."
@@ -91,15 +96,6 @@ def _internal_http_timeout() -> httpx.Timeout:
 def _internal_http_client() -> httpx.AsyncClient:
     """Cliente para servicios internos usados por tasks de manuales."""
     return httpx.AsyncClient(timeout=_internal_http_timeout())
-
-
-@dataclass(frozen=True, slots=True)
-class PageEditResult:
-    """Resultado de editar una página y trabajo RAG derivado."""
-
-    response: ManualPageResponse
-    page_id: UUID
-    stale_chunk_ids: list[UUID]
 
 
 async def create_manual(
@@ -253,11 +249,14 @@ def _is_duplicate_manual_error(exc: IntegrityError) -> bool:
     )
 
 
-def _parse_rag_ingest_response(response: dict) -> tuple[set[UUID], str, datetime]:
+def _parse_rag_ingest_response(response: Mapping[str, object]) -> tuple[set[UUID], str, datetime]:
     """Valida los campos mínimos que API necesita de RAG."""
-    int(response["chunks_indexed"])
+    chunk_ids = response["chunk_ids"]
+    if not isinstance(chunk_ids, list):
+        raise TypeError
+    int(str(response["chunks_indexed"]))
     return (
-        {UUID(chunk_id) for chunk_id in response["chunk_ids"]},
+        {UUID(str(chunk_id)) for chunk_id in chunk_ids},
         str(response["embedding_model"]),
         datetime.fromisoformat(str(response["indexed_at"])),
     )
@@ -358,7 +357,7 @@ async def _finalize_manual_locked(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual,
+    manual: Manual,
 ) -> None:
     """Indexa los chunks persistidos y actualiza el estado final del manual."""
     final_status = await resolve_manual_processed_status(session, manual_id=manual.id)
@@ -395,8 +394,8 @@ async def _process_image_page(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual: Row,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     source_fingerprint_kind: str = "image",
 ) -> None:
     """Procesa una página que ya tiene imagen en storage."""
@@ -456,8 +455,8 @@ async def _process_pdf_page(
     *,
     session: AsyncSession,
     client: httpx.AsyncClient,
-    manual,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     pdf_content: bytes | None,
 ) -> None:
     """Procesa una página PDF con texto embebido u OCR de fallback."""
@@ -546,8 +545,8 @@ async def _process_pdf_page(
 async def _ensure_pdf_page_image_asset(
     *,
     session: AsyncSession,
-    manual,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     pdf_content: bytes,
 ) -> None:
     """Guarda un render de PDF para el visor sin forzar OCR si ya hay texto."""
@@ -674,9 +673,9 @@ async def _edit_page_text_locked(
     await session.commit()
 
     # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
-    row = await get_manual_page_row(session, page_id=context.page_id)
+    page_detail = await get_manual_page_detail(session, page_id=context.page_id)
     return PageEditResult(
-        response=ManualPageResponse.model_validate(row),
+        page_detail=page_detail,
         page_id=context.page_id,
         stale_chunk_ids=old_chunk_ids,
     )
@@ -703,7 +702,7 @@ async def delete_manual(
     return deleted.chunk_ids
 
 
-async def _read_source_pdf(session: AsyncSession, manual) -> bytes | None:
+async def _read_source_pdf(session: AsyncSession, manual: Manual) -> bytes | None:
     """Carga el PDF original conservado para procesar sus páginas."""
     if manual.source_asset_id is None:
         return None
@@ -748,8 +747,8 @@ async def _process_validated_image_page(
 async def _reuse_page_result(
     session: AsyncSession,
     *,
-    manual: Row,
-    page: Row,
+    manual: Manual,
+    page: ManualPageForProcessing,
     source_fingerprint: str,
     source_fingerprint_kind: str,
 ) -> bool:
@@ -879,9 +878,9 @@ def _text_quality(chunks: list[PreparedChunk], confidence_mean: float | None) ->
 async def _index_manual_in_rag(
     *,
     client: httpx.AsyncClient,
-    manual,
-    chunks,
-) -> dict:
+    manual: Manual,
+    chunks: Sequence[ManualChunk],
+) -> Mapping[str, object]:
     """Envía a RAG solo chunks ya persistidos en Postgres."""
     return await internal_client.post_json(
         client=client,

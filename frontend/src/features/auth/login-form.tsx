@@ -79,7 +79,7 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
           />
           <div className="mt-2 flex justify-end">
             <Link to="/forgot" className="text-sm font-semibold text-accent hover:underline">
-              ¿Olvidaste tu contraseña?
+              ¿Has olvidado tu contraseña?
             </Link>
           </div>
         </AuthField>

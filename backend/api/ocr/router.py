@@ -11,11 +11,12 @@ from api.responses import (
     INTERNAL_ERROR_RESPONSE,
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
     INVALID_IMAGE_RESPONSE,
+    OpenApiResponses,
 )
 
 router = APIRouter()
 
-_OCR_RESPONSES: dict[int | str, dict[str, str]] = {
+_OCR_RESPONSES: OpenApiResponses = {
     404: {"description": "Recurso no encontrado en el servicio OCR."},
     **IMAGE_TOO_LARGE_RESPONSE,
     **INVALID_IMAGE_RESPONSE,
@@ -33,7 +34,7 @@ async def ocr_json(image: ImageUpload, client: HttpClient) -> OcrLinesResponse:
     y devuelve las líneas reconocidas con su confianza asociada.
     """
     lines = await extract_ocr_lines(image=image, client=client)
-    return OcrLinesResponse(lines=[OcrLine(**line) for line in lines])
+    return OcrLinesResponse(lines=[OcrLine.model_validate(line) for line in lines])
 
 
 @router.post(
@@ -49,4 +50,5 @@ async def ocr_text(image: ImageUpload, client: HttpClient) -> PlainTextResponse:
     estructura de confianza por línea.
     """
     lines = await extract_ocr_lines(image=image, client=client)
-    return PlainTextResponse("\n".join(line["text"] for line in lines))
+    ocr_lines = [OcrLine.model_validate(line) for line in lines]
+    return PlainTextResponse("\n".join(line.text for line in ocr_lines))

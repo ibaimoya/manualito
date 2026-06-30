@@ -53,8 +53,10 @@ const WELCOME_SUGGESTIONS = [
   '¿Se puede pasar el turno?',
 ];
 
+export const PENDING_ASSISTANT_POLL_INTERVAL_MS = 1_500;
+
 function pendingAssistantPollInterval(messages: ConversationMessage[] | undefined): number | false {
-  return hasPendingAssistantMessage(messages ?? []) ? 1500 : false;
+  return hasPendingAssistantMessage(messages ?? []) ? PENDING_ASSISTANT_POLL_INTERVAL_MS : false;
 }
 
 function hasPendingAssistantMessage(messages: readonly ConversationMessage[]): boolean {
@@ -240,9 +242,11 @@ function refreshAfterTurn(
   queryClient: ReturnType<typeof useQueryClient>,
   data: SendMessageResponse,
 ): void {
-  queryClient
-    .invalidateQueries({ queryKey: conversationMessagesKey(data.conversation.id) })
-    .catch(() => undefined);
+  queryClient.setQueryData<ConversationMessage[]>(
+    conversationMessagesKey(data.conversation.id),
+    (current) =>
+      mergeConversationMessages(current ?? [], [data.user_message, data.assistant_message]),
+  );
   queryClient
     .invalidateQueries({ queryKey: conversationsKey(data.conversation.game_id) })
     .catch(() => undefined);
@@ -404,13 +408,15 @@ function ChatScreen() {
 
   useCompletedAssistantAnimation(messages, setAnimateId);
 
+  const waitingForReply = askMutation.isPending || hasPendingAssistant;
+  const sendPending = waitingForReply && canAsk;
+
   // Scroll al final cuando entra un mensaje nuevo.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length, pendingQuestion, askMutation.isPending, hasPendingAssistant]);
 
-  // Mantiene la vista pegada al fondo mientras la respuesta se escribe, salvo
-  // que el usuario haya subido a leer mensajes anteriores.
+  // Mantiene la vista pegada al fondo mientras la respuesta se escribe.
   const pinToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) {
@@ -470,7 +476,8 @@ function ChatScreen() {
         onSubmit={sendQuestion}
         canAsk={canAsk}
         gameName={gameName}
-        disabled={askMutation.isPending || canAsk === false}
+        disabled={canAsk === false}
+        sendPending={sendPending}
       />
     </div>
   );
@@ -575,6 +582,7 @@ function ChatComposerBar({
   canAsk,
   gameName,
   disabled,
+  sendPending,
 }: Readonly<{
   draft: string;
   onDraftChange: (value: string) => void;
@@ -582,6 +590,7 @@ function ChatComposerBar({
   canAsk: boolean;
   gameName: string | null;
   disabled: boolean;
+  sendPending: boolean;
 }>) {
   const placeholder = canAsk
     ? `Pregunta sobre ${gameName ?? 'el juego'}…`
@@ -601,6 +610,7 @@ function ChatComposerBar({
           placeholder={placeholder}
           maxLength={QUESTION_MAX}
           disabled={disabled}
+          sendPending={sendPending}
         />
       </div>
     </div>

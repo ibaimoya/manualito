@@ -50,6 +50,14 @@ function mountLogin() {
 }
 
 describe('LoginForm', () => {
+  it('muestra el enlace de recuperar contraseña en español de España', async () => {
+    mountLogin();
+
+    expect(
+      await screen.findByRole('link', { name: '¿Has olvidado tu contraseña?' }),
+    ).toHaveAttribute('href', '/forgot');
+  });
+
   it('inicia sesión con credenciales válidas y avisa al terminar', async () => {
     const user = userEvent.setup();
     const { onAuthenticated } = mountLogin();

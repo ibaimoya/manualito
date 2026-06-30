@@ -52,8 +52,8 @@ async def get_account_stats(
     auth: AuthenticatedSession,
 ) -> MeStatsResponse:
     """Devuelve la actividad agregada del usuario autenticado."""
-    row = await repository.get_user_activity_stats(session, user_id=auth.user.id)
-    return MeStatsResponse.model_validate(row)
+    stats = await repository.get_user_activity_stats(session, user_id=auth.user.id)
+    return MeStatsResponse.model_validate(stats)
 
 
 async def update_profile(

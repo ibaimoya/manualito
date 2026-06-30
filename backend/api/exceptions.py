@@ -447,7 +447,11 @@ def _coded_api_error_response(
 
 def _rate_limit_headers(exc: RateLimitExceeded) -> dict[str, str]:
     """Devuelve headers útiles de backoff sin usar APIs privadas de SlowAPI."""
-    rate_limit = exc.limit.limit
+    limit = exc.limit
+    if limit is None:
+        return {}
+
+    rate_limit = limit.limit
     retry_after = max(1, int(rate_limit.get_expiry()))
     return {
         "Retry-After": str(retry_after),

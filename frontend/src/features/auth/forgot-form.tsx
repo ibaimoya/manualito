@@ -5,13 +5,16 @@ import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/shared/api/auth';
-import { AuthField } from './auth-controls';
+import { ariaInvalid, AuthField, emailFieldError, isEmail } from './auth-controls';
 import { AuthStatus } from './auth-status';
 
 export function ForgotForm() {
   const fieldId = useId();
   const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const forgot = useMutation({ mutationFn: (value: string) => authApi.forgotPassword(value) });
+  const trimmedEmail = email.trim();
+  const emailError = emailFieldError(trimmedEmail, submitted);
 
   if (forgot.isSuccess) {
     return (
@@ -20,7 +23,7 @@ export function ForgotForm() {
         icon={Mail}
         title="Revisa tu correo"
         body="Si existe una cuenta con ese email, te hemos enviado un enlace para crear una contraseña nueva."
-        footnote="¿No llega? Mira en spam · espera 1–2 min"
+        footnote="¿No llega? Mira en spam y espera 2 min"
       >
         <Button asChild size="lg" block variant="secondary">
           <Link to="/login">Volver a entrar</Link>
@@ -31,8 +34,12 @@ export function ForgotForm() {
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
-    if (!email.trim()) return;
-    forgot.mutate(email.trim());
+    setSubmitted(true);
+    if (!isEmail(trimmedEmail)) {
+      document.getElementById(`${fieldId}-email`)?.focus();
+      return;
+    }
+    forgot.mutate(trimmedEmail);
   };
 
   return (
@@ -45,12 +52,13 @@ export function ForgotForm() {
       </p>
 
       <div className="mt-5 flex flex-col gap-4">
-        <AuthField label="Email" htmlFor={`${fieldId}-email`}>
+        <AuthField label="Email" htmlFor={`${fieldId}-email`} error={emailError}>
           <Input
             id={`${fieldId}-email`}
             preset="email"
             placeholder="tu@email.com"
             value={email}
+            aria-invalid={ariaInvalid(Boolean(emailError))}
             onChange={(event) => setEmail(event.target.value)}
             required
           />

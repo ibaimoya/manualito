@@ -7,7 +7,8 @@ from fastapi import UploadFile
 
 from api import client as internal_client
 from api import config
-from api.manuals.validation import ValidatedManualImage, validate_manual_image
+from api.manuals.dto import ValidatedManualImage
+from api.manuals.validation import validate_manual_image
 from common.logging import safe_for_log
 from common.ocr.postprocessing import OcrPostprocessConfig, postprocess_ocr_lines
 
@@ -18,7 +19,7 @@ async def extract_ocr_lines(
     *,
     image: UploadFile,
     client: httpx.AsyncClient,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     """Valida una imagen subida y delega su extracción en el servicio OCR."""
     validated = await validate_manual_image(image)
     return await run_ocr(filename=image.filename, image=validated, client=client)
@@ -29,7 +30,7 @@ async def run_ocr(
     filename: str | None,
     image: ValidatedManualImage,
     client: httpx.AsyncClient,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     """Delega en OCR una imagen que API ya ha validado."""
     logger.info(
         "Petición OCR recibida: %s (%d bytes)",

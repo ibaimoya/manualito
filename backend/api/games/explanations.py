@@ -50,13 +50,8 @@ async def get_game_explanation(
         raise ManualContextNotFoundError
 
     cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
-    if cached is not None:
-        if _is_ready(cached, fingerprint):
-            return GameExplanationOutcome(snapshot=cached, job=None)
-        if _is_failed(cached, fingerprint):
-            return GameExplanationOutcome(snapshot=cached, job=None)
-        if _is_generating_fresh(cached, fingerprint):
-            return GameExplanationOutcome(snapshot=cached, job=None)
+    if cached is not None and _use_cached_explanation(cached, fingerprint):
+        return GameExplanationOutcome(snapshot=cached, job=None)
 
     sections = _sections_for(cached, fingerprint)
     snapshot = await repository.mark_game_explanation_generating(
@@ -177,26 +172,29 @@ def _is_ready(explanation: GameExplanationSnapshot, fingerprint: str) -> bool:
     return (
         explanation.source_fingerprint == fingerprint
         and explanation.status == "ready"
-        and all(key in explanation.sections for key in EXPLANATION_QUESTIONS)
+        and _has_all_sections(explanation)
     )
 
 
-def _is_failed(explanation: GameExplanationSnapshot, fingerprint: str) -> bool:
-    """True si el último intento para esta huella acabó en error."""
-    return (
-        explanation.source_fingerprint == fingerprint
-        and explanation.status == "failed"
-    )
-
-
-def _is_generating_fresh(explanation: GameExplanationSnapshot, fingerprint: str) -> bool:
-    """True si ya hay una generación reciente y el polling no debe reencolar."""
-    if (
-        explanation.source_fingerprint != fingerprint
-        or explanation.status != "generating"
-    ):
+def _use_cached_explanation(
+    explanation: GameExplanationSnapshot,
+    fingerprint: str,
+) -> bool:
+    """True si el endpoint puede reutilizar el snapshot sin reencolar."""
+    if explanation.source_fingerprint != fingerprint:
         return False
-    return datetime.now(UTC) - explanation.updated_at < GENERATION_STALE_AFTER
+    if explanation.status == "ready":
+        return _has_all_sections(explanation)
+    if explanation.status == "failed":
+        return True
+    if explanation.status == "generating":
+        return datetime.now(UTC) - explanation.updated_at < GENERATION_STALE_AFTER
+    return False
+
+
+def _has_all_sections(explanation: GameExplanationSnapshot) -> bool:
+    """True si están los cuatro apartados esperados."""
+    return all(key in explanation.sections for key in EXPLANATION_QUESTIONS)
 
 
 def _sections_for(

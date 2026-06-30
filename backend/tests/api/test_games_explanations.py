@@ -184,6 +184,35 @@ def test_fresh_generating_cache_does_not_requeue(monkeypatch):
     mark_mock.assert_not_awaited()
 
 
+def test_stale_generating_cache_requeues(monkeypatch):
+    """Un generating antiguo se trata como atascado y crea otra task."""
+    session = _read_session()
+    mark_mock = AsyncMock(return_value=_partial_explanation(status="generating"))
+    _patch_repo(
+        monkeypatch,
+        fingerprint=_FINGERPRINT,
+        cached=_partial_explanation(
+            status="generating",
+            updated_at=datetime.now(UTC)
+            - explanations_module.GENERATION_STALE_AFTER
+            - timedelta(seconds=1),
+        ),
+    )
+    monkeypatch.setattr(
+        explanations_module.repository,
+        "mark_game_explanation_generating",
+        mark_mock,
+    )
+
+    outcome = anyio.run(
+        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
+    )
+
+    assert outcome.snapshot.status == "generating"
+    assert outcome.job == GameExplanationJob(user_id=_USER_ID, game_id=_GAME_ID)
+    mark_mock.assert_awaited_once()
+
+
 def test_failed_cache_returns_failed_without_requeue(monkeypatch):
     """Un fallo persistido se expone y no crea más trabajos automáticamente."""
     session = _read_session()

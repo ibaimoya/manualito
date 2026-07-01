@@ -220,10 +220,16 @@ jobs:
         with:
           version: 11.9.0
 
+      - name: Cargar versiones
+        id: versions
+        run: |
+          . ../.env
+          echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Configurar Node 26
         uses: actions/setup-node@v6
         with:
-          node-version: 26.3.1
+          node-version: ${{ steps.versions.outputs.node_version }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 

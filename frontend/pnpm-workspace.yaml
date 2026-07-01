@@ -15,5 +15,6 @@ allowBuilds:
   msw: true
 
 overrides:
-  '@typescript-eslint/tsconfig-utils': 8.61.1
-  '@typescript-eslint/types': 8.61.1
+  '@types/node': 26.0.1
+  '@typescript-eslint/tsconfig-utils': 8.62.1
+  '@typescript-eslint/types': 8.62.1

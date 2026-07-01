@@ -10,7 +10,7 @@ dependencies = [
 
 [dependency-groups]
 common-web = [
-    "fastapi==0.138.0",
+    "fastapi==0.139.0",
     "uvicorn[standard]==0.49.0",
 ]
 common-validation = [
@@ -28,7 +28,7 @@ common-database = [
     "sqlalchemy==2.0.51",
 ]
 common-upload = [
-    "pillow==12.2.0",
+    "pillow==12.3.0",
     "python-multipart==0.0.32",
 ]
 common-numeric = [
@@ -43,13 +43,13 @@ common-worker = [
     "redis==6.4.0",
 ]
 common-async = [
-    "anyio==4.14.0",
+    "anyio==4.14.1",
 ]
 common-auth = [
     "pwdlib[argon2]==0.3.0",
 ]
 common-pdf = [
-    "pypdfium2==5.10.1",
+    "pypdfium2==5.11.0",
 ]
 common-rate-limit = [
     "slowapi==0.1.10",
@@ -69,7 +69,7 @@ api = [
 ]
 database = [
     { include-group = "common-database" },
-    "alembic==1.18.4",
+    "alembic==1.18.5",
 ]
 ocr = [
     { include-group = "common-web" },
@@ -118,12 +118,12 @@ test = [
     { include-group = "common-auth" },
     { include-group = "common-pdf" },
     { include-group = "common-rate-limit" },
-    "alembic==1.18.4",
+    "alembic==1.18.5",
     "httpx2==2.5.0",
     "opencv-contrib-python==4.10.0.84",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "ruff==0.15.18",
+    "ruff==0.15.20",
 ]
 typecheck = [
     { include-group = "test" },

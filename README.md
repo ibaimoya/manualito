@@ -24,10 +24,14 @@ con OCR y convertirlos en explicaciones consultables por juego mediante RAG y un
 modelo de lenguaje local. El objetivo es que aprender un juego deje de depender
 de pelearse con un PDF largo, una foto borrosa o un reglamento poco amable.
 
+
 El proyecto está desarrollado como Trabajo de Fin de Grado en el marco del
 [Observatorio Tecnológico HP SCDS](https://hpscds.com/en/innovation/technological-observatory/),
 un programa de colaboración entre HP SCDS y universidades españolas para realizar
 TFG en entorno empresarial.
+
+> [!NOTE]
+> La aplicación también está disponible online en [manualito.dev](https://manualito.dev/).
 
 ---
 

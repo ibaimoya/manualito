@@ -276,6 +276,8 @@ jobs:
 
   sonarqube:
     name: SonarQube Cloud
+    # El plan gratuito de SonarQube Cloud solo analiza main y pull requests.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [typecheck, tests, migrations, frontend]

@@ -1,0 +1,11 @@
+# Mantiene al día los SHAs de las actions (workflows y composite actions).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"

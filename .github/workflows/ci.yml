@@ -31,7 +31,7 @@ jobs:
         uses: ./.github/actions/backend-setup
 
       - name: Comprobar lint con Ruff
-        run: uv run --no-sync ruff check backend --output-format=github
+        run: uv run --no-sync ruff check backend scripts --output-format=github
 
   backend-typecheck:
     name: Backend - Tipos
@@ -61,7 +61,10 @@ jobs:
         uses: ./.github/actions/backend-setup
 
       - name: Ejecutar tests
-        run: uv run --no-sync pytest -v backend/tests --cov=backend --cov-report=xml:coverage.xml --junitxml=pytest-report.xml
+        run: >-
+          uv run --no-sync pytest -v backend/tests scripts/hooks/tests
+          --cov=backend --cov=scripts/hooks --cov-report=xml:coverage.xml
+          --junitxml=pytest-report.xml
 
       - name: Guardar reportes de tests y cobertura
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

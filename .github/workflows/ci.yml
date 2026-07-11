@@ -34,7 +34,7 @@ jobs:
         run: uv run --no-sync ruff check backend scripts --output-format=github
 
   backend-typecheck:
-    name: Backend - Tipos
+    name: Backend - Tipado
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -50,14 +50,25 @@ al ejemplo anterior. El hook rechaza issues duplicadas, una issue principal
 repetida en `Refs:`, referencias `#N` fuera del sufijo o de `Refs:` y cualquier
 sufijo que no contenga exactamente una vez la issue de la rama.
 
+## Archivos
+
+El stage `pre-commit` aplica comprobaciones sobre los archivos staged:
+
+- `trailing-whitespace` elimina espacios y tabuladores al final de las líneas.
+  Conserva los dos espacios que representan un salto de línea en Markdown y no
+  modifica `uv.lock` ni `frontend/pnpm-lock.yaml`.
+
+Si el hook corrige un archivo, el commit se cancela para poder revisar el cambio.
+Después hay que ejecutar `git add` de nuevo y repetir el commit.
+
 ## Activación
 
 Si el repositorio ya usa un dispatcher mediante `core.hooksPath` y este ejecuta
-pre-commit para `commit-msg`, no hace falta instalar otro hook. Es el caso del
-proxy local de sincronización de Manualito.
+pre-commit para los stages `pre-commit` y `commit-msg`, no hace falta instalar
+otro hook. Es el caso del proxy local de sincronización de Manualito.
 
 En un clon sin `core.hooksPath` personalizado, la configuración instala los
-hooks necesarios únicamente para el stage `commit-msg`:
+hooks necesarios para los stages `pre-commit` y `commit-msg`:
 
 ```bash
 git config --get core.hooksPath

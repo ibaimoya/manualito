@@ -1,7 +1,15 @@
 minimum_pre_commit_version: "4.6.0"
-default_install_hook_types: [commit-msg]
+default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^(uv\.lock|frontend/pnpm-lock\.yaml)$
+        stages: [pre-commit]
+
   - repo: local
     hooks:
       - id: manualito-commit-msg

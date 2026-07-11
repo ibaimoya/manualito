@@ -19,7 +19,7 @@ repos:
   - repo: local
     hooks:
       - id: manualito-commit-msg
-        name: Validar mensaje de commit
+        name: validate commit message
         entry: >-
           uv run --frozen --no-default-groups --only-group commit-policy
           python scripts/hooks/commit_message.py

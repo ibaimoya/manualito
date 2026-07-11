@@ -105,7 +105,12 @@ llm = [
 monitoring = [
     "flower==2.0.1",
 ]
+commit-policy = [
+    "conventional-pre-commit==4.4.0",
+    "emoji==2.15.0",
+]
 test = [
+    { include-group = "commit-policy" },
     { include-group = "common-web" },
     { include-group = "common-settings" },
     { include-group = "common-http-client" },
@@ -130,6 +135,7 @@ typecheck = [
     "mypy==2.1.0",
 ]
 dev = [
+    { include-group = "commit-policy" },
     "pre-commit==4.6.0",
 ]
 
@@ -165,7 +171,7 @@ explicit = true
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["backend"]
+src = ["backend", "scripts"]
 extend-exclude = [
     "htmlcov",
     "backend/ocr/.ocr_cache",
@@ -220,9 +226,13 @@ log_level = "WARNING"
 [tool.coverage.run]
 branch = true
 relative_files = true
-source = ["backend"]
+source = ["backend", "scripts/hooks"]
 # Alembic se valida en su job de migraciones.
-omit = ["backend/database/alembic/*", "backend/tests/*"]
+omit = [
+    "backend/database/alembic/*",
+    "backend/tests/*",
+    "scripts/hooks/tests/*",
+]
 
 [tool.coverage.report]
 show_missing = true

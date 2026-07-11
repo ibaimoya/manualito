@@ -1,7 +1,14 @@
 minimum_pre_commit_version: "4.6.0"
+default_install_hook_types: [commit-msg]
 
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+  - repo: local
     hooks:
-      - id: check-yaml
+      - id: manualito-commit-msg
+        name: Validar mensaje de commit
+        entry: >-
+          uv run --frozen --no-default-groups --only-group commit-policy
+          python scripts/hooks/commit_message.py
+        language: unsupported
+        stages: [commit-msg]
+        always_run: true

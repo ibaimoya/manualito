@@ -592,6 +592,15 @@ wheels = [
 ]
 
 [[package]]
+name = "conventional-pre-commit"
+version = "4.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/6a/c4c902f9526c026b8f5d59ac099028bea7acb2415d5f6603668e92dfa22c/conventional_pre_commit-4.4.0.tar.gz", hash = "sha256:5426bef9039a162c3203cc7de3624954dea7120af8dec6f878d8f1c83c58af7b", size = 27161, upload-time = "2026-02-18T19:14:53.042Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/26/affaaa8928f04729d0e69b33b4643a9713eaa270e9712892347f3c683ce5/conventional_pre_commit-4.4.0-py3-none-any.whl", hash = "sha256:5d266cb32a857344e1c4d87660c290cca1646d1ae480dcef6388e27bbc7f022f", size = 16825, upload-time = "2026-02-18T19:14:51.485Z" },
+]
+
+[[package]]
 name = "coverage"
 version = "7.14.1"
 source = { registry = "https://pypi.org/simple" }
@@ -728,6 +737,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f5/22/900cb125c76b7aaa450ce02fd727f452243f2e91a61af068b40adba60ea9/email_validator-2.3.0.tar.gz", hash = "sha256:9fc05c37f2f6cf439ff414f8fc46d917929974a82244c20eb10231ba60c54426", size = 51238, upload-time = "2025-08-26T13:09:06.831Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/15/545e2b6cf2e3be84bc1ed85613edd75b8aea69807a71c26f4ca6a9258e82/email_validator-2.3.0-py3-none-any.whl", hash = "sha256:80f13f623413e6b197ae73bb10bf4eb0908faf509ad8362c5edeb0be7fd450b4", size = 35604, upload-time = "2025-08-26T13:09:05.858Z" },
+]
+
+[[package]]
+name = "emoji"
+version = "2.15.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/78/0d2db9382c92a163d7095fc08efff7800880f830a152cfced40161e7638d/emoji-2.15.0.tar.gz", hash = "sha256:eae4ab7d86456a70a00a985125a03263a5eac54cd55e51d7e184b1ed3b6757e4", size = 615483, upload-time = "2025-09-21T12:13:02.755Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/5e/4b5aaaabddfacfe36ba7768817bd1f71a7a810a43705e531f3ae4c690767/emoji-2.15.0-py3-none-any.whl", hash = "sha256:205296793d66a89d88af4688fa57fd6496732eb48917a87175a023c8138995eb", size = 608433, upload-time = "2025-09-21T12:13:01.197Z" },
 ]
 
 [[package]]
@@ -1343,6 +1361,10 @@ api = [
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
 ]
+commit-policy = [
+    { name = "conventional-pre-commit" },
+    { name = "emoji" },
+]
 common-async = [
     { name = "anyio" },
 ]
@@ -1394,6 +1416,8 @@ database = [
     { name = "sqlalchemy" },
 ]
 dev = [
+    { name = "conventional-pre-commit" },
+    { name = "emoji" },
     { name = "pre-commit" },
 ]
 llm = [
@@ -1440,7 +1464,9 @@ test = [
     { name = "alembic" },
     { name = "anyio" },
     { name = "celery", extra = ["redis"] },
+    { name = "conventional-pre-commit" },
     { name = "email-validator" },
+    { name = "emoji" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "httpx2" },
@@ -1466,7 +1492,9 @@ typecheck = [
     { name = "alembic" },
     { name = "anyio" },
     { name = "celery", extra = ["redis"] },
+    { name = "conventional-pre-commit" },
     { name = "email-validator" },
+    { name = "emoji" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "httpx2" },
@@ -1516,6 +1544,10 @@ api = [
     { name = "sqlalchemy", specifier = "==2.0.51" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
+commit-policy = [
+    { name = "conventional-pre-commit", specifier = "==4.4.0" },
+    { name = "emoji", specifier = "==2.15.0" },
+]
 common-async = [{ name = "anyio", specifier = "==4.14.1" }]
 common-auth = [{ name = "pwdlib", extras = ["argon2"], specifier = "==0.3.0" }]
 common-database = [
@@ -1552,7 +1584,11 @@ database = [
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
 ]
-dev = [{ name = "pre-commit", specifier = "==4.6.0" }]
+dev = [
+    { name = "conventional-pre-commit", specifier = "==4.4.0" },
+    { name = "emoji", specifier = "==2.15.0" },
+    { name = "pre-commit", specifier = "==4.6.0" },
+]
 llm = [
     { name = "fastapi", specifier = "==0.139.0" },
     { name = "httpx", specifier = "==0.28.1" },
@@ -1586,7 +1622,9 @@ test = [
     { name = "alembic", specifier = "==1.18.5" },
     { name = "anyio", specifier = "==4.14.1" },
     { name = "celery", extras = ["redis"], specifier = "==5.6.3" },
+    { name = "conventional-pre-commit", specifier = "==4.4.0" },
     { name = "email-validator", specifier = "==2.3.0" },
+    { name = "emoji", specifier = "==2.15.0" },
     { name = "fastapi", specifier = "==0.139.0" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "httpx2", specifier = "==2.5.0" },
@@ -1612,7 +1650,9 @@ typecheck = [
     { name = "alembic", specifier = "==1.18.5" },
     { name = "anyio", specifier = "==4.14.1" },
     { name = "celery", extras = ["redis"], specifier = "==5.6.3" },
+    { name = "conventional-pre-commit", specifier = "==4.4.0" },
     { name = "email-validator", specifier = "==2.3.0" },
+    { name = "emoji", specifier = "==2.15.0" },
     { name = "fastapi", specifier = "==0.139.0" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "httpx2", specifier = "==2.5.0" },

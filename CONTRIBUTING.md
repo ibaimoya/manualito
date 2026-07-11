@@ -26,6 +26,8 @@ y la política de Manualito:
 - Scope opcional, en minúsculas y kebab-case.
 - Descripción de al menos 10 caracteres, comenzada en minúscula, sin espacios
   sobrantes, emoji ni punto final.
+- Las secuencias de dos o más espacios de la cabecera se reducen automáticamente
+  a un único espacio; el cuerpo y los footers no se modifican.
 - Cabecera completa de 72 caracteres como máximo.
 - La issue principal se obtiene de la rama y se añade si falta.
 - `!` y `BREAKING CHANGE: <descripción>` deben aparecer juntos.
@@ -51,11 +53,11 @@ sufijo que no contenga exactamente una vez la issue de la rama.
 ## Activación
 
 Si el repositorio ya usa un dispatcher mediante `core.hooksPath` y este ejecuta
-pre-commit para cada stage, no hace falta instalar otro hook. Es el caso del
+pre-commit para `commit-msg`, no hace falta instalar otro hook. Es el caso del
 proxy local de sincronización de Manualito.
 
 En un clon sin `core.hooksPath` personalizado, la configuración instala los
-stages `pre-commit` y `commit-msg`:
+hooks necesarios únicamente para el stage `commit-msg`:
 
 ```bash
 git config --get core.hooksPath

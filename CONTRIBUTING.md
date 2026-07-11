@@ -57,6 +57,8 @@ El stage `pre-commit` aplica comprobaciones sobre los archivos staged:
 - `trailing-whitespace` elimina espacios y tabuladores al final de las líneas.
 - `end-of-file-fixer` garantiza que los archivos de texto estén vacíos o
   terminen con exactamente un salto de línea.
+- `check-merge-conflict` bloquea archivos con marcadores de conflicto sin
+  modificarlos, incluso cuando Git no tiene un merge en curso.
 
 `trailing-whitespace` conserva los dos espacios que representan un salto de
 línea en Markdown. Los hooks de autocorrección no modifican `uv.lock` ni

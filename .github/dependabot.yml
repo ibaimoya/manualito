@@ -8,6 +8,7 @@ multi-ecosystem-groups:
       time: "08:00"
       timezone: Europe/Madrid
     target-branch: development
+    open-pull-requests-limit: 1
     labels:
       - dependencies
       - ci-cd
@@ -21,7 +22,6 @@ updates:
       - "*"
     cooldown:
       default-days: 7 # Retraso para prevenir supply-chain attack.
-    open-pull-requests-limit: 1
     multi-ecosystem-group: automation
 
   - package-ecosystem: pre-commit # Pre-Commit.
@@ -30,5 +30,4 @@ updates:
       - "*"
     cooldown:
       default-days: 7 # Retraso para prevenir supply-chain attack.
-    open-pull-requests-limit: 1
     multi-ecosystem-group: automation

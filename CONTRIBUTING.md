@@ -55,10 +55,14 @@ sufijo que no contenga exactamente una vez la issue de la rama.
 El stage `pre-commit` aplica comprobaciones sobre los archivos staged:
 
 - `trailing-whitespace` elimina espacios y tabuladores al final de las líneas.
-  Conserva los dos espacios que representan un salto de línea en Markdown y no
-  modifica `uv.lock` ni `frontend/pnpm-lock.yaml`.
+- `end-of-file-fixer` garantiza que los archivos de texto estén vacíos o
+  terminen con exactamente un salto de línea.
 
-Si el hook corrige un archivo, el commit se cancela para poder revisar el cambio.
+`trailing-whitespace` conserva los dos espacios que representan un salto de
+línea en Markdown. Los hooks de autocorrección no modifican `uv.lock` ni
+`frontend/pnpm-lock.yaml`.
+
+Si un hook corrige un archivo, el commit se cancela para poder revisar el cambio.
 Después hay que ejecutar `git add` de nuevo y repetir el commit.
 
 ## Activación

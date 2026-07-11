@@ -9,6 +9,9 @@ repos:
         args: [--markdown-linebreak-ext=md]
         exclude: ^(uv\.lock|frontend/pnpm-lock\.yaml)$
         stages: [pre-commit]
+      - id: end-of-file-fixer
+        exclude: ^(uv\.lock|frontend/pnpm-lock\.yaml)$
+        stages: [pre-commit]
 
   - repo: local
     hooks:

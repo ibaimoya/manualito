@@ -6,9 +6,9 @@ name: CI
 
 on:
   push:
-    branches: ["main", "staging", "development"]
+    branches: ["master", "staging", "development"]
   pull_request:
-    branches: ["main", "staging", "development"]
+    branches: ["master", "staging", "development"]
   workflow_dispatch:
 
 permissions:
@@ -225,8 +225,8 @@ jobs:
     name: Calidad - SonarQube
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # El plan gratuito de SonarQube Cloud solo analiza main y pull requests.
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    # El plan gratuito de SonarQube Cloud solo analiza master y pull requests.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     needs: [backend-typecheck, backend-tests, backend-migrations, frontend-tests]
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

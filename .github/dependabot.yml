@@ -10,6 +10,8 @@ multi-ecosystem-groups:
     target-branch: development
     open-pull-requests-limit: 1
     labels:
+      - "type::maintenance"
+      - "priority::low"
       - "topic:dependencies"
       - "topic:ci-cd"
     commit-message:

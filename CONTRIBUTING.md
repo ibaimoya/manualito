@@ -1,5 +1,18 @@
 # Flujo de desarrollo
 
+---
+
+## Issues
+
+Crea cada issue con la plantilla correspondiente y completa sus apartados. Las
+plantillas asignan el tipo y `status:needs-triage`. Antes de retirar este estado,
+la issue debe tener exactamente una etiqueta de tipo (`type::...`) y una de
+prioridad (`priority::...`), además de al menos un tópico (`topic:...`).
+
+Se pueden acumular tantos tópicos como sean relevantes. Los estados (`status:`) son
+temporales y solo puede haber uno a la vez. La taxonomía completa y sus criterios
+de uso se detallarán en la documentación técnica.
+
 ## Ramas
 
 Las ramas de trabajo siguen `<tipo>/<issue>-<slug>`:
@@ -23,11 +36,11 @@ y la política de Manualito:
 - Formato `type(scope)!: descripción (#N)`.
 - Tipos de commit: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
   `refactor`, `revert`, `style` y `test`.
-- Scope opcional, en minúsculas y kebab-case.
+- Objetivo opcional, en minúsculas y kebab-case.
 - Descripción de al menos 10 caracteres, comenzada en minúscula, sin espacios
   sobrantes, emoji ni punto final.
 - Las secuencias de dos o más espacios de la cabecera se reducen automáticamente
-  a un único espacio; el cuerpo y los footers no se modifican.
+  a un único espacio. El cuerpo y los footers no se modifican.
 - Cabecera completa de 72 caracteres como máximo.
 - La issue principal se obtiene de la rama y se añade si falta.
 - `!` y `BREAKING CHANGE: <descripción>` deben aparecer juntos.
@@ -52,7 +65,8 @@ sufijo que no contenga exactamente una vez la issue de la rama.
 
 ## Archivos
 
-El stage `pre-commit` aplica comprobaciones sobre los archivos staged:
+El stage `pre-commit` aplica comprobaciones sobre los archivos staged, además de
+comprobar el estilo del mensaje del commit:
 
 - `trailing-whitespace` elimina espacios y tabuladores al final de las líneas.
 - `end-of-file-fixer` garantiza que los archivos de texto estén vacíos o

@@ -2,11 +2,18 @@
 
 Todos los cambios relevantes de Manualito se documentan en este archivo.
 
-El formato sigue Keep a Changelog y las versiones siguen SemVer.
+El formato sigue [Keep a Changelog 1.1.0](https://keepachangelog.com/es-ES/1.1.0/)
+y las versiones siguen [SemVer 2.0.0](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+---
+
+
 ## [1.0.0-rc.1] - 2026-06-21
+
+---
+
 
 Primera versión previa de Manualito, preparada para validar el flujo completo de
 la aplicación antes de la publicación estable `1.0.0`.

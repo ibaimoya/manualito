@@ -1,11 +1,35 @@
-# Mantiene al día los SHAs de las actions (workflows y composite actions).
 version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
+
+multi-ecosystem-groups:
+  automation:
     schedule:
       interval: weekly
-    groups:
-      actions:
-        patterns:
-          - "*"
+      day: friday
+      time: "08:00"
+      timezone: Europe/Madrid
+    target-branch: development
+    open-pull-requests-limit: 1
+    labels:
+      - "type::maintenance"
+      - "priority::low"
+      - "topic:dependencies"
+      - "topic:ci-cd"
+    commit-message:
+      prefix: "chore(deps)"
+
+updates:
+  - package-ecosystem: github-actions # GitHub Actions.
+    directory: /
+    patterns:
+      - "*"
+    cooldown:
+      default-days: 7 # Retraso para prevenir supply-chain attack.
+    multi-ecosystem-group: automation
+
+  - package-ecosystem: pre-commit # Pre-Commit.
+    directory: /
+    patterns:
+      - "*"
+    cooldown:
+      default-days: 7 # Retraso para prevenir supply-chain attack.
+    multi-ecosystem-group: automation

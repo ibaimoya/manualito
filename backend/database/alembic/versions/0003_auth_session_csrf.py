@@ -30,4 +30,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Elimina el hash CSRF de las sesiones."""
     op.drop_column(AUTH_SESSIONS_TABLE, CSRF_TOKEN_HASH_COLUMN)
-

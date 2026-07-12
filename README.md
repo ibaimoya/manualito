@@ -227,11 +227,11 @@ secretos del entorno de despliegue.
 # Backend: instalar dependencias de test
 uv sync --locked --no-default-groups --only-group test
 
-# Backend: lint
-uv run --locked --no-default-groups --only-group test ruff check backend
+# Backend y scripts: lint
+uv run --locked --no-default-groups --only-group test ruff check backend scripts
 
-# Backend: tests con cobertura
-uv run --locked --no-default-groups --only-group test pytest -v backend/tests --cov=backend
+# Backend y hooks: tests con cobertura
+uv run --locked --no-default-groups --only-group test pytest -v backend/tests scripts/hooks/tests --cov=backend --cov=scripts/hooks
 
 # Backend: migraciones
 uv run --locked --no-default-groups --only-group test alembic -c backend/database/alembic.ini upgrade head
@@ -253,6 +253,9 @@ build de frontend y análisis de SonarQube Cloud. Las dependencias externas como
 Ollama, ChromaDB, PaddleOCR y servicios HTTP se aíslan en tests mediante mocks,
 fakes o fronteras de repositorio/cliente.
 
+El formato de ramas y mensajes de commit se describe en
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ---
 
 ## Estructura del repositorio
@@ -269,6 +272,8 @@ backend/
 frontend/
   src/        app React, rutas, features, cliente API y estilos
   tests/      tests de UI, rutas, hooks y cliente
+scripts/
+  hooks/      política local de mensajes de commit
 config/       configuración de runtime
 deploy/       scripts, perfiles y overrides de arranque local
 secrets/      secretos locales de desarrollo

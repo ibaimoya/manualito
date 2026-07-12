@@ -541,4 +541,3 @@ def _user() -> User:
         last_login_at=None,
         password_changed_at=datetime(2026, 5, 29, tzinfo=UTC),
     )
-

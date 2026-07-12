@@ -3,4 +3,3 @@
 from ocr.engines.paddle.cpu.engine import PaddleCpuOcrEngine
 
 __all__ = ["PaddleCpuOcrEngine"]
-

@@ -19,6 +19,8 @@ la aplicación antes de la publicación estable `1.0.0`.
   documentos multipágina.
 - Extracción y revisión de texto mediante OCR con Tesseract por defecto y
   motores PaddleOCR opcionales.
+- Estandarizado el flujo de contribución en GitHub y GitLab con convenciones de
+  ramas y commits, etiquetas, plantillas de issues y hooks de pre-commit.
 - Normalización, preprocesado, postprocesado y deduplicación del texto antes de
   indexarlo.
 - Sistema RAG con ChromaDB, embeddings multilingües y respuestas generadas por

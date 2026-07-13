@@ -13,7 +13,7 @@ from api import config
 from api.auth import passwords as password_helpers
 from api.auth import service
 from api.auth.audit import record_security_event
-from api.auth.cookies import set_auth_cookies
+from api.auth.cookies import clear_auth_cookies, set_auth_cookies
 from api.auth.dependencies import client_ip, get_current_auth, require_admin, require_csrf
 from api.auth.exceptions import (
     AdminRequiredError,
@@ -203,25 +203,55 @@ async def test_password_async_wrappers_use_limited_worker_thread(monkeypatch):
     ]
 
 
-def test_set_auth_cookies_pins_security_flags():
-    """La cookie de sesión es HttpOnly y la de CSRF queda legible por el frontend."""
+def test_set_auth_cookies_pins_secure_host_only_contract():
+    """Las cookies de auth se emiten Secure y limitadas al host completo."""
     response = Response()
 
     set_auth_cookies(response, session_token="session-token", csrf_token="csrf-token")
 
     set_cookie_headers = response.headers.getlist("set-cookie")
-    session_cookie = next(
-        header for header in set_cookie_headers if config.AUTH_SESSION_COOKIE_NAME in header
-    )
-    csrf_cookie = next(
-        header for header in set_cookie_headers if config.AUTH_CSRF_COOKIE_NAME in header
-    )
+    assert len(set_cookie_headers) == 2
+    cookies_by_name = {header.partition("=")[0]: header for header in set_cookie_headers}
+    assert set(cookies_by_name) == {
+        "__Host-manualito_session",
+        "__Host-manualito_csrf",
+    }
+    session_cookie = cookies_by_name["__Host-manualito_session"]
+    csrf_cookie = cookies_by_name["__Host-manualito_csrf"]
+    for cookie in (session_cookie, csrf_cookie):
+        assert "Secure" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Path=/" in cookie
+        assert "Max-Age=604800" in cookie
+        assert "domain=" not in cookie.lower()
     assert "HttpOnly" in session_cookie
-    assert "SameSite=lax" in session_cookie
-    assert "Path=/" in session_cookie
-    assert f"Max-Age={config.AUTH_SESSION_MAX_AGE_SECONDS}" in session_cookie
     assert "HttpOnly" not in csrf_cookie
-    assert "SameSite=lax" in csrf_cookie
+
+
+def test_clear_auth_cookies_preserves_secure_host_only_contract():
+    """Al cerrar sesión se expiran las dos cookies con su mismo ámbito seguro."""
+    response = Response()
+
+    clear_auth_cookies(response)
+
+    set_cookie_headers = response.headers.getlist("set-cookie")
+    assert len(set_cookie_headers) == 2
+    cookies_by_name = {header.partition("=")[0]: header for header in set_cookie_headers}
+    assert set(cookies_by_name) == {
+        "__Host-manualito_session",
+        "__Host-manualito_csrf",
+    }
+    session_cookie = cookies_by_name["__Host-manualito_session"]
+    csrf_cookie = cookies_by_name["__Host-manualito_csrf"]
+    for cookie in (session_cookie, csrf_cookie):
+        assert "Secure" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Path=/" in cookie
+        assert "Max-Age=0" in cookie
+        assert "expires=" in cookie.lower()
+        assert "domain=" not in cookie.lower()
+    assert "HttpOnly" in session_cookie
+    assert "HttpOnly" not in csrf_cookie
 
 
 def test_record_security_event_strips_sensitive_event_data():

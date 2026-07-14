@@ -63,9 +63,9 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
     severity: 'warning',
   },
   413: {
-    title: 'Foto demasiado grande',
-    message: 'La foto pesa más de 30 MB.',
-    hint: 'Hazla con menos resolución o usa un editor para reducirla.',
+    title: 'Archivo demasiado grande',
+    message: 'La subida supera el tamaño permitido.',
+    hint: 'Reduce el tamaño del archivo e inténtalo de nuevo.',
     retryable: true,
     severity: 'warning',
   },
@@ -116,8 +116,13 @@ const TABLE: Record<number, Omit<ApiErrorView, 'code'>> = {
 const CODE_OVERRIDES: Record<string, Partial<Omit<ApiErrorView, 'code'>>> = {
   pdf_too_large: {
     title: 'PDF demasiado grande',
-    message: 'El PDF puede ocupar como máximo 200 MB.',
+    message: 'El PDF puede ocupar como máximo 95 MB.',
     hint: 'Reduce el PDF o divide el manual en un archivo más pequeño.',
+  },
+  manual_too_large: {
+    title: 'Manual demasiado grande',
+    message: 'El conjunto de imágenes puede ocupar como máximo 95 MB.',
+    hint: 'Reduce las imágenes o divide el manual en varias subidas.',
   },
   invalid_pdf: {
     title: 'PDF no válido',

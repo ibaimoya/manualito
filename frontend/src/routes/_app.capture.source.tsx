@@ -38,10 +38,10 @@ export const Route = createFileRoute('/_app/capture/source')({
   component: NewManualScreen,
 });
 
-const MB = 1024 * 1024;
+const MB = 1_000_000;
 const MAX_IMAGE_MB = 30;
-const MAX_PDF_MB = 200;
-const MAX_TOTAL_MB = 200;
+const MAX_PDF_MB = 95;
+const MAX_TOTAL_MB = 95;
 const MAX_IMAGE_BYTES = MAX_IMAGE_MB * MB;
 const MAX_PDF_BYTES = MAX_PDF_MB * MB;
 const MAX_TOTAL_BYTES = MAX_TOTAL_MB * MB;
@@ -513,7 +513,7 @@ function PageRow({
           {isPdf ? 'PDF' : `Página ${index + 1}`}
         </p>
         <p className="truncate text-sm font-semibold text-fg">{file.name}</p>
-        <p className="mono text-xs text-fg-3">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+        <p className="mono text-xs text-fg-3">{(file.size / MB).toFixed(2)} MB</p>
       </div>
       <div className="flex shrink-0 gap-1">
         {isPdf ? null : (

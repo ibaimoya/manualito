@@ -28,9 +28,8 @@ async function pickGame(user: ReturnType<typeof userEvent.setup>, name: string) 
   await user.click(await screen.findByRole('button', { name: new RegExp(`${name}.*1995`, 'i') }));
 }
 
-const MB = 1024 * 1024;
-const MAX_IMAGE_BYTES = 30 * MB;
-const MAX_UPLOAD_BYTES = 200 * MB;
+const MAX_IMAGE_BYTES = 30_000_000;
+const MAX_UPLOAD_BYTES = 95_000_000;
 
 function imageFile(name: string, size = 1): File {
   return sizedFile(name, 'image/jpeg', size);
@@ -140,16 +139,27 @@ describe('/capture/source · nuevo manual', () => {
     }
   });
 
-  it('rechaza una imagen mayor de 30 MB', async () => {
+  it.each([
+    [MAX_IMAGE_BYTES - 1, true],
+    [MAX_IMAGE_BYTES, true],
+    [MAX_IMAGE_BYTES + 1, false],
+  ])('BVA tamaño por imagen: %i bytes', async (imageSize, accepted) => {
     renderSource();
-    await screen.findByRole('combobox', { name: /Buscar juego/i });
-    fireEvent.change(screen.getByTestId('picker-gallery'), {
-      target: {
-        files: [new File(['x'.repeat(31 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' })],
-      },
-    });
-    expect(await screen.findByText(/Imagen demasiado grande/i)).toBeInTheDocument();
-    expect(screen.queryByText('big.jpg')).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+
+    await user.upload(
+      screen.getByTestId('picker-gallery') as HTMLInputElement,
+      imageFile('boundary.jpg', imageSize),
+    );
+
+    if (accepted) {
+      expect(await screen.findByText('boundary.jpg')).toBeInTheDocument();
+    } else {
+      expect(await screen.findByText(/Imagen demasiado grande/i)).toBeInTheDocument();
+      expect(screen.getByText('Cada imagen puede ocupar 30 MB.')).toBeInTheDocument();
+      expect(screen.queryByText('boundary.jpg')).not.toBeInTheDocument();
+    }
   });
 
   it.each([
@@ -188,6 +198,7 @@ describe('/capture/source · nuevo manual', () => {
       expect(await screen.findByText(`${files.length} / 30 páginas`)).toBeInTheDocument();
     } else {
       expect(await screen.findByText(/Archivo demasiado grande/i)).toBeInTheDocument();
+      expect(screen.getByText('El total no puede superar 95 MB.')).toBeInTheDocument();
       expect(screen.queryByText('page-1.jpg')).not.toBeInTheDocument();
     }
   });
@@ -207,6 +218,7 @@ describe('/capture/source · nuevo manual', () => {
       expect(await screen.findByText('manual.pdf')).toBeInTheDocument();
     } else {
       expect(await screen.findByText(/PDF demasiado grande/i)).toBeInTheDocument();
+      expect(screen.getByText('El PDF puede ocupar 95 MB.')).toBeInTheDocument();
       expect(screen.queryByText('manual.pdf')).not.toBeInTheDocument();
     }
   });

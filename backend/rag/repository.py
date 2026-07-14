@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol, TypedDict
+from typing import Protocol, TypedDict, cast
 from urllib.parse import urlparse
 
 from rag import config
@@ -247,7 +247,10 @@ class ChromaRepository:
             host = parsed.hostname or "chroma"
             port = parsed.port or 8000
             logger.info("Conectando con ChromaDB en %s:%s", host, port)
-            self._client = chromadb.HttpClient(host=host, port=port)
+            self._client = cast(
+                ChromaClient,
+                chromadb.HttpClient(host=host, port=port),
+            )
         return self._client
 
 

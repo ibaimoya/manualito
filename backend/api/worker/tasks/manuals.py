@@ -119,6 +119,15 @@ def delete_chunks_from_rag_task(manual_id: str, chunk_ids: list[str]) -> None:
     )
 
 
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="api.worker.tasks.manuals.reconcile_pending_asset_batches",
+    **MANUAL_PAGE_TASK_OPTIONS,
+)
+def reconcile_pending_asset_batches() -> None:
+    """Reconcilia lotes pendientes en el worker que monta el volumen."""
+    anyio.run(service.reconcile_pending_asset_batches)
+
+
 def _enqueue_manual_pages(manual_id: str, page_ids: list[UUID]) -> None:
     """Encola páginas concretas o finaliza si no queda nada pendiente."""
     if not page_ids:

@@ -2,10 +2,12 @@
 
 import logging
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from pathlib import PurePath
+from pathlib import Path, PurePath
 from uuid import UUID
 
+import anyio
 import httpx
 from fastapi import UploadFile
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -14,10 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api import client as internal_client
 from api import config
 from api.assets.storage import (
+    AssetWriteBatch,
+    LocalAssetStore,
     delete_stored_file,
-    read_stored_file,
-    save_manual_image,
-    save_manual_pdf,
+    stored_file_path,
 )
 from api.auth.audit import record_security_event
 from api.auth.service import AuthenticatedSession
@@ -37,15 +39,19 @@ from api.manuals.dto import (
     ValidatedManualImage,
 )
 from api.manuals.exceptions import (
+    AssetStorageUnavailableError,
     ManualBusyError,
+    ManualContextNotFoundError,
     ManualDuplicateError,
     ManualNotEditableError,
+    ManualsError,
     ManualTooLargeError,
     ManualUploadSelectionError,
 )
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
+    asset_storage_prefix_is_referenced,
     attach_page_image_asset,
     begin_manual_reprocessing,
     claim_page_for_processing,
@@ -57,6 +63,7 @@ from api.manuals.repository import (
     get_page_for_edit,
     get_page_for_processing,
     list_manual_chunks_for_ingest,
+    list_manual_ids_pending_dispatch,
     list_page_chunk_ids,
     list_page_chunks_for_ingest,
     list_pending_page_ids_for_processing,
@@ -87,15 +94,12 @@ MANUAL_SOURCE_FINGERPRINT_UNIQUE_INDEX = "uq_manuals_live_source_fingerprint"
 logger = logging.getLogger(__name__)
 
 
-def _internal_http_timeout() -> httpx.Timeout:
-    """Timeout HTTP suficientemente amplio para OCR/RAG, sin caer en el default de 5 s."""
-    request_timeout = max(config.OCR_SERVICE_TIMEOUT, config.INTERNAL_JSON_TIMEOUT)
-    return httpx.Timeout(request_timeout, connect=min(10.0, request_timeout))
-
-
 def _internal_http_client() -> httpx.AsyncClient:
     """Cliente para servicios internos usados por tasks de manuales."""
-    return httpx.AsyncClient(timeout=_internal_http_timeout())
+    request_timeout = max(config.OCR_SERVICE_TIMEOUT, config.INTERNAL_JSON_TIMEOUT)
+    return httpx.AsyncClient(
+        timeout=httpx.Timeout(request_timeout, connect=min(10.0, request_timeout))
+    )
 
 
 async def create_manual(
@@ -109,17 +113,18 @@ async def create_manual(
     images: list[UploadFile] | None,
     pdf: UploadFile | None,
 ) -> ManualCreatedResponse:
-    """Persiste un manual en Postgres antes del procesamiento."""
-    stored_keys: list[str] = []
+    """Persiste un manual y adopta sus assets solo tras confirmar el commit."""
+    batch: AssetWriteBatch | None = None
+    commit_started = False
     try:
+        batch = await LocalAssetStore(config.ASSET_STORAGE_DIR).create_manual_batch(
+            owner_user_id=auth.user.id
+        )
         stored_images, source_pdf, source_type, page_count = await _store_upload(
-            owner_user_id=auth.user.id,
+            batch=batch,
             images=images,
             pdf=pdf,
         )
-        stored_keys.extend(item.storage_key for item in stored_images)
-        if source_pdf is not None:
-            stored_keys.append(source_pdf.storage_key)
         source_fingerprint = _manual_source_fingerprint(
             source_type=source_type,
             images=stored_images,
@@ -140,26 +145,57 @@ async def create_manual(
                 images=stored_images,
                 source_pdf=source_pdf,
             )
+            manual_id = manual.id
         except IntegrityError as exc:
-            await session.rollback()
             if _is_duplicate_manual_error(exc):
                 raise ManualDuplicateError from exc
             raise
+
+        commit_started = True
         try:
-            await games_repository.auto_follow_game(
-                session,
-                user_id=auth.user.id,
-                game_id=game_id,
-            )
-        except SQLAlchemyError:
+            with anyio.CancelScope(shield=True):
+                await session.commit()
+        except IntegrityError as exc:
+            with anyio.CancelScope(shield=True):
+                await session.rollback()
+                await _abort_batch_safely(batch)
+            if _is_duplicate_manual_error(exc):
+                raise ManualDuplicateError from exc
+            raise
+
+        with anyio.CancelScope(shield=True):
+            try:
+                await batch.adopt()
+            except (OSError, ValueError):
+                logger.warning(
+                    "El manual se confirmó, pero el marcador del lote sigue pendiente.",
+                    exc_info=True,
+                )
+    except OSError as exc:
+        if not commit_started:
+            with anyio.CancelScope(shield=True):
+                await session.rollback()
+                await _abort_batch_safely(batch)
+        raise AssetStorageUnavailableError from exc
+    except BaseException:
+        with anyio.CancelScope(shield=True):
             await session.rollback()
-            logger.warning("No se pudo auto-seguir el juego tras subir manual.", exc_info=True)
-    except (ApiError, OSError, SQLAlchemyError, ManualDuplicateError):
-        for storage_key in stored_keys:
-            await delete_stored_file(storage_key)
+            if not commit_started:
+                await _abort_batch_safely(batch)
         raise
+
+    try:
+        await games_repository.auto_follow_game(
+            session,
+            user_id=auth.user.id,
+            game_id=game_id,
+        )
+    except SQLAlchemyError:
+        await session.rollback()
+        logger.warning("No se pudo auto-seguir el juego tras subir manual.", exc_info=True)
+
     return ManualCreatedResponse(
-        manual_id=manual.id,
+        manual_id=manual_id,
         game_id=game_id,
         status="indexing",
         visibility=visibility,
@@ -170,61 +206,97 @@ async def create_manual(
 
 async def _store_upload(
     *,
-    owner_user_id: UUID,
+    batch: AssetWriteBatch,
     images: list[UploadFile] | None,
     pdf: UploadFile | None,
 ) -> tuple[list[StoredManualImage], StoredManualPdf | None, str, int]:
     """Valida y guarda la fuente subida antes de crear filas en DB."""
     image_files = images or []
     if bool(image_files) == (pdf is not None):
+        await _close_uploads(image_files)
+        if pdf is not None and not pdf.file.closed:
+            await pdf.close()
         raise ManualUploadSelectionError
 
     if image_files:
-        stored_images = await _store_images(owner_user_id=owner_user_id, images=image_files)
+        stored_images = await _store_images(batch=batch, images=image_files)
         return stored_images, None, "images", len(stored_images)
 
     assert pdf is not None
-    validated_pdf = await validate_manual_pdf(pdf)
-    if len(validated_pdf.content) > config.MAX_MANUAL_TOTAL_SIZE:
+    validated_pdf = await validate_manual_pdf(pdf, batch=batch)
+    if validated_pdf.byte_size > config.MAX_MANUAL_TOTAL_SIZE:
         raise ManualTooLargeError
-    storage_key = await save_manual_pdf(validated_pdf, owner_user_id=owner_user_id)
-    source_pdf = StoredManualPdf(pdf=validated_pdf, storage_key=storage_key)
-    return [], source_pdf, "pdf", validated_pdf.page_count
+    storage_key = await batch.promote(
+        validated_pdf,
+        name="source",
+        extension=validated_pdf.extension,
+    )
+    source_pdf = StoredManualPdf(
+        storage_key=storage_key,
+        byte_size=validated_pdf.byte_size,
+        mime_type=validated_pdf.mime_type,
+        extension=validated_pdf.extension,
+        page_count=validated_pdf.page_count,
+        sha256=validated_pdf.sha256,
+    )
+    return [], source_pdf, "pdf", source_pdf.page_count
 
 
 async def _store_images(
     *,
-    owner_user_id: UUID,
+    batch: AssetWriteBatch,
     images: list[UploadFile],
 ) -> list[StoredManualImage]:
     """Valida y guarda imágenes en orden de página."""
     if len(images) > config.MAX_MANUAL_PAGES:
+        await _close_uploads(images)
         raise ManualPageLimitExceededError
 
-    validated = [await validate_manual_image(image) for image in images]
-    if sum(len(image.content) for image in validated) > config.MAX_MANUAL_TOTAL_SIZE:
-        raise ManualTooLargeError
-
     stored: list[StoredManualImage] = []
+    total_size = 0
     try:
-        for page_number, image in enumerate(validated, start=1):
-            storage_key = await save_manual_image(
+        for page_number, upload in enumerate(images, start=1):
+            image = await validate_manual_image(upload, batch=batch)
+            total_size += image.byte_size
+            if total_size > config.MAX_MANUAL_TOTAL_SIZE:
+                raise ManualTooLargeError
+            storage_key = await batch.promote(
                 image,
-                owner_user_id=owner_user_id,
-                page_number=page_number,
+                name=f"page-{page_number}",
+                extension=image.extension,
             )
             stored.append(
                 StoredManualImage(
                     page_number=page_number,
-                    image=image,
                     storage_key=storage_key,
+                    byte_size=image.byte_size,
+                    mime_type=image.mime_type,
+                    extension=image.extension,
+                    width=image.width,
+                    height=image.height,
+                    sha256=image.sha256,
                 )
             )
-    except OSError:
-        for item in stored:
-            await delete_stored_file(item.storage_key)
-        raise
+    finally:
+        await _close_uploads(images)
     return stored
+
+
+async def _close_uploads(uploads: Sequence[UploadFile]) -> None:
+    """Cierra spools que el procesamiento secuencial no haya alcanzado."""
+    for upload in uploads:
+        if not upload.file.closed:
+            await upload.close()
+
+
+async def _abort_batch_safely(batch: AssetWriteBatch | None) -> None:
+    """Limpia un lote precommit sin ocultar la excepción original."""
+    if batch is None:
+        return
+    try:
+        await batch.abort()
+    except (OSError, ValueError):
+        logger.warning("No se pudo limpiar un lote de assets pendiente.", exc_info=True)
 
 
 def _manual_source_fingerprint(
@@ -237,8 +309,8 @@ def _manual_source_fingerprint(
     if source_type == "pdf":
         if source_pdf is None:
             raise ValueError("Un manual PDF necesita asset fuente.")
-        return sha256_hex(f"pdf\n{source_pdf.pdf.sha256}")
-    return sha256_hex("images\n" + "\n".join(item.image.sha256 for item in images))
+        return sha256_hex(f"pdf\n{source_pdf.sha256}")
+    return sha256_hex("images\n" + "\n".join(item.sha256 for item in images))
 
 
 def _is_duplicate_manual_error(exc: IntegrityError) -> bool:
@@ -278,6 +350,7 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
         )
         if not claimed:
             return
+        await session.commit()
 
         manual = await get_manual_for_processing(session, manual_id=manual_id)
         if manual is None or manual.status != "indexing":
@@ -291,9 +364,9 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
         if page is None:
             return
 
-        source_pdf_content = None
+        source_pdf_path = None
         if manual.source_type == "pdf":
-            source_pdf_content = await _read_source_pdf(session, manual)
+            source_pdf_path = await _read_source_pdf(session, manual)
 
         async with _internal_http_client() as client:
             if manual.source_type == "pdf":
@@ -302,7 +375,7 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
                     client=client,
                     manual=manual,
                     page=page,
-                    pdf_content=source_pdf_content,
+                    pdf_path=source_pdf_path,
                 )
             else:
                 await _process_image_page(
@@ -311,6 +384,7 @@ async def process_manual_page(manual_id: UUID, page_id: UUID) -> None:
                     manual=manual,
                     page=page,
                 )
+        await session.commit()
 
 
 async def fail_manual_page(manual_id: UUID, page_id: UUID) -> None:
@@ -320,6 +394,7 @@ async def fail_manual_page(manual_id: UUID, page_id: UUID) -> None:
         if manual is None or manual.status != "indexing":
             return
         await mark_page_failed(session, page_id=page_id)
+        await session.commit()
 
 
 async def fail_manual(manual_id: UUID) -> None:
@@ -327,6 +402,7 @@ async def fail_manual(manual_id: UUID) -> None:
     try:
         async with get_sessionmaker()() as session:
             await mark_manual_failed(session, manual_id=manual_id)
+            await session.commit()
     except SQLAlchemyError:
         logger.warning(
             "No se pudo marcar como fallido el manual '%s'.",
@@ -363,6 +439,7 @@ async def _finalize_manual_locked(
     final_status = await resolve_manual_processed_status(session, manual_id=manual.id)
     if final_status == "failed":
         await mark_manual_failed(session, manual_id=manual.id)
+        await session.commit()
         return
 
     chunks = await list_manual_chunks_for_ingest(session, manual_id=manual.id)
@@ -376,9 +453,11 @@ async def _finalize_manual_locked(
         )
     except ApiError:
         await mark_manual_failed(session, manual_id=manual.id)
+        await session.commit()
         raise
     except (KeyError, TypeError, ValueError) as ingest_err:
         await mark_manual_failed(session, manual_id=manual.id)
+        await session.commit()
         raise InternalServiceError(RAG_INDEX_INTERNAL_DETAIL) from ingest_err
     await mark_manual_indexed(
         session,
@@ -388,6 +467,7 @@ async def _finalize_manual_locked(
         indexed_at=indexed_at,
         status=final_status,
     )
+    await session.commit()
 
 
 async def _process_image_page(
@@ -399,12 +479,20 @@ async def _process_image_page(
     source_fingerprint_kind: str = "image",
 ) -> None:
     """Procesa una página que ya tiene imagen en storage."""
-    if page.storage_key is None or page.mime_type is None:
+    manual_id = manual.id
+    if (
+        page.storage_key is None
+        or page.mime_type is None
+        or page.byte_size is None
+        or page.width is None
+        or page.height is None
+        or page.sha256 is None
+    ):
         await mark_page_failed(session, page_id=page.id)
         return
 
     try:
-        if page.sha256 is not None and await _reuse_page_result(
+        if await _reuse_page_result(
             session,
             manual=manual,
             page=page,
@@ -413,39 +501,34 @@ async def _process_image_page(
         ):
             return
 
-        content = await read_stored_file(page.storage_key)
+        image_path = stored_file_path(page.storage_key)
+        if not image_path.is_file():
+            raise OSError("El asset de imagen no existe")
         image = ValidatedManualImage(
-            content=content,
+            path=image_path,
+            byte_size=page.byte_size,
             mime_type=page.mime_type,
             extension=PurePath(page.storage_key).suffix,
-            width=page.width or 1,
-            height=page.height or 1,
-            sha256=page.sha256 or sha256_hex(content),
+            width=page.width,
+            height=page.height,
+            sha256=page.sha256,
         )
-        if page.sha256 is None and await _reuse_page_result(
-            session,
-            manual=manual,
-            page=page,
-            source_fingerprint=image.sha256,
-            source_fingerprint_kind=source_fingerprint_kind,
-        ):
-            return
 
         await _process_validated_image_page(
             session=session,
             client=client,
-            manual_id=manual.id,
+            manual_id=manual_id,
             page_id=page.id,
             page_number=page.page_number,
             image=image,
             source_fingerprint_kind=source_fingerprint_kind,
         )
-    except (ApiError, OSError, SQLAlchemyError):
+    except (ApiError, OSError, SQLAlchemyError, ValueError):
         await session.rollback()
         logger.warning(
             "No se pudo procesar página %d del manual '%s'.",
             page.page_number,
-            safe_for_log(str(manual.id)),
+            safe_for_log(str(manual_id)),
             exc_info=True,
         )
         await mark_page_failed(session, page_id=page.id)
@@ -457,25 +540,26 @@ async def _process_pdf_page(
     client: httpx.AsyncClient,
     manual: Manual,
     page: ManualPageForProcessing,
-    pdf_content: bytes | None,
+    pdf_path: Path | None,
 ) -> None:
     """Procesa una página PDF con texto embebido u OCR de fallback."""
-    if pdf_content is None:
+    manual_id = manual.id
+    if pdf_path is None:
         await mark_page_failed(session, page_id=page.id)
         return
 
     try:
-        text = await extract_pdf_page_text(pdf_content, page_number=page.page_number)
+        text = await extract_pdf_page_text(pdf_path, page_number=page.page_number)
         if pdf_text_is_usable(text):
             await _ensure_pdf_page_image_asset(
                 session=session,
                 manual=manual,
                 page=page,
-                pdf_content=pdf_content,
+                pdf_path=pdf_path,
             )
             await _replace_page_text(
                 session,
-                manual_id=manual.id,
+                manual_id=manual_id,
                 page_id=page.id,
                 page_number=page.page_number,
                 lines=[{"text": text, "confidence": None}],
@@ -494,7 +578,12 @@ async def _process_pdf_page(
             )
             return
 
-        image = await render_pdf_page(pdf_content, page_number=page.page_number)
+        image = await _persist_pdf_page_image(
+            session=session,
+            manual=manual,
+            page=page,
+            pdf_path=pdf_path,
+        )
         if await _reuse_page_result(
             session,
             manual=manual,
@@ -504,39 +593,21 @@ async def _process_pdf_page(
         ):
             return
 
-        storage_key = await save_manual_image(
-            image,
-            owner_user_id=manual.owner_user_id,
-            page_number=page.page_number,
-        )
-        try:
-            await attach_page_image_asset(
-                session,
-                owner_user_id=manual.owner_user_id,
-                page_id=page.id,
-                image=image,
-                storage_key=storage_key,
-                source_fingerprint_kind="pdf_render",
-            )
-        except SQLAlchemyError:
-            await delete_stored_file(storage_key)
-            raise
-
         await _process_validated_image_page(
             session=session,
             client=client,
-            manual_id=manual.id,
+            manual_id=manual_id,
             page_id=page.id,
             page_number=page.page_number,
             image=image,
             source_fingerprint_kind="pdf_render",
         )
-    except (ApiError, OSError, SQLAlchemyError):
+    except (ApiError, ManualsError, OSError, SQLAlchemyError, ValueError):
         await session.rollback()
         logger.warning(
             "No se pudo procesar página PDF %d del manual '%s'.",
             page.page_number,
-            safe_for_log(str(manual.id)),
+            safe_for_log(str(manual_id)),
             exc_info=True,
         )
         await mark_page_failed(session, page_id=page.id)
@@ -547,39 +618,85 @@ async def _ensure_pdf_page_image_asset(
     session: AsyncSession,
     manual: Manual,
     page: ManualPageForProcessing,
-    pdf_content: bytes,
+    pdf_path: Path,
 ) -> None:
     """Guarda un render de PDF para el visor sin forzar OCR si ya hay texto."""
+    manual_id = manual.id
     if page.storage_key is not None:
         return
 
     try:
-        image = await render_pdf_page(pdf_content, page_number=page.page_number)
-        storage_key = await save_manual_image(
-            image,
-            owner_user_id=manual.owner_user_id,
-            page_number=page.page_number,
+        await _persist_pdf_page_image(
+            session=session,
+            manual=manual,
+            page=page,
+            pdf_path=pdf_path,
         )
-        try:
+    except (InvalidPdfError, ManualsError, OSError, SQLAlchemyError, ValueError):
+        await session.rollback()
+        logger.warning(
+            "No se pudo guardar imagen para visualizar la página PDF %d del manual '%s'.",
+            page.page_number,
+            safe_for_log(str(manual_id)),
+            exc_info=True,
+        )
+
+
+async def _persist_pdf_page_image(
+    *,
+    session: AsyncSession,
+    manual: Manual,
+    page: ManualPageForProcessing,
+    pdf_path: Path,
+) -> ValidatedManualImage:
+    """Publica un render y conserva el lote hasta confirmar su referencia SQL."""
+    owner_user_id = manual.owner_user_id
+    store = LocalAssetStore(config.ASSET_STORAGE_DIR)
+    batch: AssetWriteBatch | None = None
+    commit_started = False
+    try:
+        batch = await store.create_manual_batch(owner_user_id=owner_user_id)
+        image = await render_pdf_page(
+            pdf_path,
+            page_number=page.page_number,
+            batch=batch,
+        )
+        storage_key = await batch.promote(
+            image,
+            name=f"page-{page.page_number}",
+            extension=image.extension,
+        )
+        image = replace(image, path=store.resolve_file(storage_key))
+        with anyio.CancelScope(shield=True):
             await attach_page_image_asset(
                 session,
-                owner_user_id=manual.owner_user_id,
+                owner_user_id=owner_user_id,
                 page_id=page.id,
                 image=image,
                 storage_key=storage_key,
                 source_fingerprint_kind="pdf_render",
             )
-        except SQLAlchemyError:
-            await delete_stored_file(storage_key)
-            raise
-    except (InvalidPdfError, OSError, SQLAlchemyError):
-        await session.rollback()
-        logger.warning(
-            "No se pudo guardar imagen para visualizar la página PDF %d del manual '%s'.",
-            page.page_number,
-            safe_for_log(str(manual.id)),
-            exc_info=True,
-        )
+            commit_started = True
+            await session.commit()
+            try:
+                await batch.adopt()
+            except (OSError, ValueError):
+                logger.warning(
+                    "El render se confirmó, pero su lote sigue pendiente.",
+                    exc_info=True,
+                )
+        return image
+    except ManualContextNotFoundError:
+        with anyio.CancelScope(shield=True):
+            await session.rollback()
+            await _abort_batch_safely(batch)
+        raise
+    except BaseException:
+        with anyio.CancelScope(shield=True):
+            await session.rollback()
+            if not commit_started:
+                await _abort_batch_safely(batch)
+        raise
 
 
 async def reprocess_manual(
@@ -590,12 +707,18 @@ async def reprocess_manual(
     page_number: int | None,
 ) -> list[UUID]:
     """Reclama un manual quieto y devuelve chunks obsoletos para limpiar."""
-    return await begin_manual_reprocessing(
-        session,
-        owner_user_id=auth.user.id,
-        manual_id=manual_id,
-        page_number=page_number,
-    )
+    try:
+        stale_chunk_ids = await begin_manual_reprocessing(
+            session,
+            owner_user_id=auth.user.id,
+            manual_id=manual_id,
+            page_number=page_number,
+        )
+    except BaseException:
+        await session.rollback()
+        raise
+    await session.commit()
+    return stale_chunk_ids
 
 
 async def run_reprocess(manual_id: UUID, stale_chunk_ids: list[UUID]) -> list[UUID]:
@@ -693,6 +816,7 @@ async def delete_manual(
         owner_user_id=auth.user.id,
         manual_id=manual_id,
     )
+    await session.commit()
     for storage_key in deleted.storage_keys:
         if not await delete_stored_file(storage_key):
             logger.warning(
@@ -702,7 +826,7 @@ async def delete_manual(
     return deleted.chunk_ids
 
 
-async def _read_source_pdf(session: AsyncSession, manual: Manual) -> bytes | None:
+async def _read_source_pdf(session: AsyncSession, manual: Manual) -> Path | None:
     """Carga el PDF original conservado para procesar sus páginas."""
     if manual.source_asset_id is None:
         return None
@@ -710,8 +834,9 @@ async def _read_source_pdf(session: AsyncSession, manual: Manual) -> bytes | Non
     if storage_key is None:
         return None
     try:
-        return await read_stored_file(storage_key)
-    except OSError:
+        path = stored_file_path(storage_key)
+        return path if path.is_file() else None
+    except (OSError, ValueError):
         return None
 
 
@@ -727,7 +852,6 @@ async def _process_validated_image_page(
 ) -> None:
     """Ejecuta OCR sobre una imagen validada y guarda sus chunks."""
     ocr_lines = await run_ocr(
-        filename=f"page-{page_number}{image.extension}",
         image=image,
         client=client,
     )
@@ -800,8 +924,8 @@ async def _replace_page_text(
     source_fingerprint_kind: str | None = None,
 ) -> None:
     """Reemplaza texto y chunks de una página de forma idempotente."""
-    chunks = _prepare_page_chunks(
-        lines,
+    chunks = _prepare_text_chunks(
+        chunk_text(normalize_ocr_lines(lines)),
         source_page=page_number,
     )
     await replace_page_result(
@@ -816,16 +940,6 @@ async def _replace_page_text(
         source_fingerprint=source_fingerprint,
         source_fingerprint_kind=source_fingerprint_kind,
     )
-
-
-def _prepare_page_chunks(
-    ocr_lines: list[dict[str, object]],
-    *,
-    source_page: int,
-) -> list[PreparedChunk]:
-    """Normaliza una página OCR y genera chunks persistibles."""
-    text = normalize_ocr_lines(ocr_lines)
-    return _prepare_text_chunks(chunk_text(text), source_page=source_page)
 
 
 def _prepare_text_chunks(
@@ -974,10 +1088,45 @@ async def sync_page_rag(manual_id: UUID, page_id: UUID, stale_chunk_ids: list[UU
             embedding_model=embedding_model,
             indexed_at=indexed_at,
         )
+        await session.commit()
 
 
 async def recover_stale_manual_pages() -> list[UUID]:
     """Marca como fallidas las páginas abandonadas en processing."""
     cutoff = datetime.now(UTC) - timedelta(seconds=config.CELERY_MANUAL_PAGE_HARD_TIME_LIMIT + 300)
     async with get_sessionmaker()() as session:
-        return await mark_stale_processing_pages_failed(session, cutoff=cutoff)
+        manual_ids = await mark_stale_processing_pages_failed(session, cutoff=cutoff)
+        await session.commit()
+        return manual_ids
+
+
+async def recover_manuals_pending_dispatch() -> list[UUID]:
+    """Recupera manuales confirmados que nunca llegaron a la cola."""
+    cutoff = datetime.now(UTC) - timedelta(seconds=config.MANUAL_DISPATCH_RECOVERY_DELAY_SECONDS)
+    async with get_sessionmaker()() as session:
+        return await list_manual_ids_pending_dispatch(
+            session,
+            cutoff=cutoff,
+            limit=config.MANUAL_DISPATCH_RECOVERY_BATCH_SIZE,
+        )
+
+
+async def reconcile_pending_asset_batches() -> tuple[int, int]:
+    """Adopta lotes referenciados y elimina huérfanos expirados."""
+    store = LocalAssetStore(config.ASSET_STORAGE_DIR)
+    cutoff = datetime.now(UTC) - timedelta(seconds=config.ASSET_PENDING_BATCH_TTL_SECONDS)
+    pending_batches = await store.list_pending_batches(older_than=cutoff)
+    adopted = 0
+    deleted = 0
+    async with get_sessionmaker()() as session:
+        for batch in pending_batches:
+            referenced = await asset_storage_prefix_is_referenced(
+                session,
+                storage_prefix=batch.storage_prefix,
+            )
+            await store.reconcile_batch(batch, referenced=referenced)
+            if referenced:
+                adopted += 1
+            else:
+                deleted += 1
+    return adopted, deleted

@@ -48,6 +48,14 @@ celery_app.conf.update(
             "task": "api.worker.tasks.maintenance.recover_stale_manual_pages",
             "schedule": 300.0,
         },
+        "recover-manuals-pending-dispatch": {
+            "task": "api.worker.tasks.maintenance.recover_manuals_pending_dispatch",
+            "schedule": 300.0,
+        },
+        "reconcile-pending-asset-batches": {
+            "task": "api.worker.tasks.manuals.reconcile_pending_asset_batches",
+            "schedule": 3600.0,
+        },
     },
     task_queues=(
         Queue("manuals"),
@@ -63,11 +71,13 @@ celery_app.conf.update(
         "api.worker.tasks.manuals.finalize_manual_task": {"queue": "rag"},
         "api.worker.tasks.manuals.sync_page_rag_task": {"queue": "rag"},
         "api.worker.tasks.manuals.delete_chunks_from_rag_task": {"queue": "rag"},
+        "api.worker.tasks.manuals.reconcile_pending_asset_batches": {"queue": "manuals"},
         "api.worker.tasks.conversations.generate_chat_reply_task": {"queue": "gpu"},
         "api.worker.tasks.conversations.refresh_conversation_title_task": {"queue": "gpu"},
         "api.worker.tasks.games.generate_game_explanation_task": {"queue": "gpu"},
         "api.worker.tasks.mail.send_email_task": {"queue": "mail"},
         "api.worker.tasks.maintenance.healthcheck": {"queue": "maintenance"},
         "api.worker.tasks.maintenance.recover_stale_manual_pages": {"queue": "maintenance"},
+        "api.worker.tasks.maintenance.recover_manuals_pending_dispatch": {"queue": "maintenance"},
     },
 )

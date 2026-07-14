@@ -29,18 +29,21 @@ from api.manuals.schemas import (
     ManualSummaryResponse,
 )
 from api.manuals.service import create_manual, delete_manual, edit_page_text, reprocess_manual
+from api.manuals.upload_route import ManualUploadRoute
 from api.rate_limit import limiter
 from api.responses import (
+    ASSET_STORAGE_UNAVAILABLE_RESPONSE,
     GAME_NOT_FOUND_RESPONSE,
-    IMAGE_TOO_LARGE_RESPONSE,
     INTERNAL_ERROR_RESPONSE,
     INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
-    INVALID_IMAGE_RESPONSE,
+    INVALID_MANUAL_SOURCE_RESPONSE,
     MANUAL_BUSY_RESPONSE,
     MANUAL_DUPLICATE_RESPONSE,
     MANUAL_NOT_EDITABLE_RESPONSE,
     MANUAL_NOT_FOUND_RESPONSE,
+    MANUAL_UPLOAD_TOO_LARGE_RESPONSE,
 )
+from api.worker.dispatch import dispatch_task
 from api.worker.tasks.manuals import (
     delete_chunks_from_rag_task,
     process_manual_task,
@@ -49,6 +52,7 @@ from api.worker.tasks.manuals import (
 )
 
 router = APIRouter()
+upload_router = APIRouter(route_class=ManualUploadRoute)
 
 ManualTitle = Annotated[str | None, Form(max_length=255)]
 ManualVisibility = Annotated[str, Form(pattern="^(shared|private)$")]
@@ -172,7 +176,11 @@ async def reprocess_manual_handler(
         manual_id=manual_id,
         page_number=None,
     )
-    reprocess_manual_task.delay(str(manual_id), [str(chunk_id) for chunk_id in stale_chunk_ids])
+    await dispatch_task(
+        reprocess_manual_task.delay,
+        str(manual_id),
+        [str(chunk_id) for chunk_id in stale_chunk_ids],
+    )
     return await _processing_response(session, auth=auth, manual_id=manual_id)
 
 
@@ -200,17 +208,22 @@ async def reprocess_manual_page_handler(
         manual_id=manual_id,
         page_number=page_number,
     )
-    reprocess_manual_task.delay(str(manual_id), [str(chunk_id) for chunk_id in stale_chunk_ids])
+    await dispatch_task(
+        reprocess_manual_task.delay,
+        str(manual_id),
+        [str(chunk_id) for chunk_id in stale_chunk_ids],
+    )
     return await _processing_response(session, auth=auth, manual_id=manual_id)
 
 
-@router.post(
+@upload_router.post(
     "/api/manuals",
     status_code=status.HTTP_202_ACCEPTED,
     responses={
         **GAME_NOT_FOUND_RESPONSE,
-        **IMAGE_TOO_LARGE_RESPONSE,
-        **INVALID_IMAGE_RESPONSE,
+        **MANUAL_UPLOAD_TOO_LARGE_RESPONSE,
+        **INVALID_MANUAL_SOURCE_RESPONSE,
+        **ASSET_STORAGE_UNAVAILABLE_RESPONSE,
         **INTERNAL_ERROR_RESPONSE,
         **INTERNAL_SERVICE_UNAVAILABLE_RESPONSE,
         **MANUAL_DUPLICATE_RESPONSE,
@@ -238,8 +251,11 @@ async def create_manual_handler(
         images=images,
         pdf=pdf,
     )
-    process_manual_task.delay(str(result.manual_id))
+    await dispatch_task(process_manual_task.delay, str(result.manual_id))
     return result
+
+
+router.include_router(upload_router)
 
 
 @router.put(
@@ -269,7 +285,8 @@ async def edit_manual_page_text_handler(
         text=payload.text,
         ip_address=client_ip(request),
     )
-    sync_page_rag_task.delay(
+    await dispatch_task(
+        sync_page_rag_task.delay,
         str(manual_id),
         str(result.page_id),
         [str(chunk_id) for chunk_id in result.stale_chunk_ids],
@@ -290,7 +307,11 @@ async def delete_manual_handler(
 ) -> None:
     """Borra un manual propio y encola la limpieza de recursos derivados."""
     chunk_ids = await delete_manual(session, auth=auth, manual_id=manual_id)
-    delete_chunks_from_rag_task.delay(str(manual_id), [str(chunk_id) for chunk_id in chunk_ids])
+    await dispatch_task(
+        delete_chunks_from_rag_task.delay,
+        str(manual_id),
+        [str(chunk_id) for chunk_id in chunk_ids],
+    )
 
 
 async def _processing_response(

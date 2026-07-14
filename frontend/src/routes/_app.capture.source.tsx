@@ -76,16 +76,14 @@ function NewManualScreen() {
     ...gameDetailQueryOptions(gameId ?? ''),
     enabled: Boolean(gameId),
   });
-  const presetGame = useMemo(
-    () => (presetDetail.data ? toGameSearchItem(presetDetail.data) : null),
-    [presetDetail.data],
-  );
+  const presetGame = presetDetail.data ? toGameSearchItem(presetDetail.data) : null;
   // "undefined" ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
   const [chosenGame, setChosenGame] = useState<GameSearchItem | null | undefined>(undefined);
   const game = chosenGame === undefined ? presetGame : chosenGame;
   const [pages, setPages] = useState<File[]>([]);
   // Un manual usa imágenes XOR un PDF, nunca ambos.
-  const [mode, setMode] = useState<Mode | null>(null);
+  const mode: Mode | null =
+    pages.length === 0 ? null : pages[0]?.type === 'application/pdf' ? 'pdf' : 'images';
   // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
   const [share, setShare] = useState(true);
 
@@ -188,7 +186,6 @@ function NewManualScreen() {
       return;
     }
     setPages(next);
-    setMode('images');
   }
 
   function addPdf(file: File | undefined): void {
@@ -204,15 +201,10 @@ function NewManualScreen() {
       return;
     }
     setPages([file]);
-    setMode('pdf');
   }
 
   function removePage(index: number): void {
-    setPages((current) => {
-      const next = current.filter((_, i) => i !== index);
-      if (next.length === 0) setMode(null);
-      return next;
-    });
+    setPages((current) => current.filter((_, i) => i !== index));
   }
 
   function movePage(index: number, delta: -1 | 1): void {

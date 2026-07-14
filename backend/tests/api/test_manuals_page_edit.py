@@ -428,6 +428,7 @@ def test_mark_page_chunks_indexed_recounts_and_resolves_status(monkeypatch):
     class FakeSession:
         def __init__(self):
             self.commits = 0
+            self.flushes = 0
             self.calls = 0
 
         async def execute(self, _statement):
@@ -444,6 +445,10 @@ def test_mark_page_chunks_indexed_recounts_and_resolves_status(monkeypatch):
         async def commit(self):
             await anyio.lowlevel.checkpoint()
             self.commits += 1
+
+        async def flush(self):
+            await anyio.lowlevel.checkpoint()
+            self.flushes += 1
 
     session = FakeSession()
     monkeypatch.setattr(
@@ -467,7 +472,8 @@ def test_mark_page_chunks_indexed_recounts_and_resolves_status(monkeypatch):
     assert manual.chunks_indexed == 5
     assert manual.status == "active"
     assert manual.indexed_at == indexed_at
-    assert session.commits == 1
+    assert session.flushes == 1
+    assert session.commits == 0
 
 
 def _patch_lock(monkeypatch, session) -> None:

@@ -11,6 +11,7 @@ dependencies = [
 [dependency-groups]
 common-web = [
     "fastapi==0.139.0",
+    "starlette==1.3.1",
     "uvicorn[standard]==0.49.0",
 ]
 common-validation = [
@@ -43,7 +44,7 @@ common-worker = [
     "redis==6.4.0",
 ]
 common-async = [
-    "anyio==4.14.1",
+    "anyio==4.14.2",
 ]
 common-auth = [
     "pwdlib[argon2]==0.3.0",
@@ -208,6 +209,7 @@ module = [
     "paddle",
     "paddleocr",
     "pypdfium2",
+    "pypdfium2.*",
     "pytesseract",
     "sentence_transformers",
 ]
@@ -222,6 +224,11 @@ warn_required_dynamic_aliases = true
 testpaths = ["backend/tests"]
 log_cli = false
 log_level = "WARNING"
+strict_markers = true
+markers = [
+    "upload_integration: integración de subidas con PostgreSQL, Redis y filesystem reales",
+    "upload_load: carga operacional de subidas grandes, reservada para CI programada o manual",
+]
 
 [tool.coverage.run]
 branch = true

@@ -145,14 +145,14 @@ wheels = [
 
 [[package]]
 name = "anyio"
-version = "4.14.1"
+version = "4.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "idna" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3b/72/5562aabb8dd7181e8e860622a38bea08d17842b99ecd4c91f84ac95251b0/anyio-4.14.1.tar.gz", hash = "sha256:8d648a3544c1a700e3ff78615cd679e4c5c3f149904287e73687b2596963629e", size = 254831, upload-time = "2026-06-24T20:56:06.017Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/7b/90df4a0a816d98d6ea26f559d87836d494a2cf1fcf063be67df50a7bcc30/anyio-4.14.1-py3-none-any.whl", hash = "sha256:4e5533c5b8ff0a24f5d7a176cbe6877129cd183893f66b537f8f227d10527d72", size = 124875, upload-time = "2026-06-24T20:56:04.413Z" },
+    { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
 ]
 
 [[package]]
@@ -1359,6 +1359,7 @@ api = [
     { name = "redis" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 commit-policy = [
@@ -1404,6 +1405,7 @@ common-validation = [
 ]
 common-web = [
     { name = "fastapi" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 common-worker = [
@@ -1424,6 +1426,7 @@ llm = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 monitoring = [
@@ -1435,6 +1438,7 @@ ocr = [
     { name = "opencv-contrib-python" },
     { name = "pillow" },
     { name = "python-multipart" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 ocr-paddle = [
@@ -1455,6 +1459,7 @@ rag = [
     { name = "numpy" },
     { name = "pydantic" },
     { name = "sentence-transformers" },
+    { name = "starlette" },
     { name = "torch", version = "2.12.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'group-9-manualito-ocr-paddle-cpu' and extra == 'group-9-manualito-ocr-paddle-gpu')" },
     { name = "torch", version = "2.12.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'group-9-manualito-ocr-paddle-cpu' and extra == 'group-9-manualito-ocr-paddle-gpu')" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1485,6 +1490,7 @@ test = [
     { name = "ruff" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 typecheck = [
@@ -1514,6 +1520,7 @@ typecheck = [
     { name = "ruff" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
+    { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1527,7 +1534,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 api = [
     { name = "aiosmtplib", specifier = "==5.1.2" },
-    { name = "anyio", specifier = "==4.14.1" },
+    { name = "anyio", specifier = "==4.14.2" },
     { name = "celery", extras = ["redis"], specifier = "==5.6.3" },
     { name = "email-validator", specifier = "==2.3.0" },
     { name = "fastapi", specifier = "==0.139.0" },
@@ -1542,13 +1549,14 @@ api = [
     { name = "redis", specifier = "==6.4.0" },
     { name = "slowapi", specifier = "==0.1.10" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 commit-policy = [
     { name = "conventional-pre-commit", specifier = "==4.4.0" },
     { name = "emoji", specifier = "==2.15.0" },
 ]
-common-async = [{ name = "anyio", specifier = "==4.14.1" }]
+common-async = [{ name = "anyio", specifier = "==4.14.2" }]
 common-auth = [{ name = "pwdlib", extras = ["argon2"], specifier = "==0.3.0" }]
 common-database = [
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
@@ -1573,6 +1581,7 @@ common-upload = [
 common-validation = [{ name = "pydantic", specifier = "==2.13.4" }]
 common-web = [
     { name = "fastapi", specifier = "==0.139.0" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 common-worker = [
@@ -1593,6 +1602,7 @@ llm = [
     { name = "fastapi", specifier = "==0.139.0" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "pydantic", specifier = "==2.13.4" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 monitoring = [{ name = "flower", specifier = "==2.0.1" }]
@@ -1602,6 +1612,7 @@ ocr = [
     { name = "opencv-contrib-python", specifier = "==4.10.0.84" },
     { name = "pillow", specifier = "==12.3.0" },
     { name = "python-multipart", specifier = "==0.0.32" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 ocr-paddle = [{ name = "paddleocr", specifier = "==3.7.0" }]
@@ -1614,13 +1625,14 @@ rag = [
     { name = "numpy", specifier = "==2.3.5" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "sentence-transformers", specifier = "==5.6.0" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "torch", specifier = "==2.12.1", index = "https://download.pytorch.org/whl/cpu" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 test = [
     { name = "aiosmtplib", specifier = "==5.1.2" },
     { name = "alembic", specifier = "==1.18.5" },
-    { name = "anyio", specifier = "==4.14.1" },
+    { name = "anyio", specifier = "==4.14.2" },
     { name = "celery", extras = ["redis"], specifier = "==5.6.3" },
     { name = "conventional-pre-commit", specifier = "==4.4.0" },
     { name = "email-validator", specifier = "==2.3.0" },
@@ -1643,12 +1655,13 @@ test = [
     { name = "ruff", specifier = "==0.15.20" },
     { name = "slowapi", specifier = "==0.1.10" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 typecheck = [
     { name = "aiosmtplib", specifier = "==5.1.2" },
     { name = "alembic", specifier = "==1.18.5" },
-    { name = "anyio", specifier = "==4.14.1" },
+    { name = "anyio", specifier = "==4.14.2" },
     { name = "celery", extras = ["redis"], specifier = "==5.6.3" },
     { name = "conventional-pre-commit", specifier = "==4.4.0" },
     { name = "email-validator", specifier = "==2.3.0" },
@@ -1672,6 +1685,7 @@ typecheck = [
     { name = "ruff", specifier = "==0.15.20" },
     { name = "slowapi", specifier = "==0.1.10" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
+    { name = "starlette", specifier = "==1.3.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.49.0" },
 ]
 
@@ -3400,14 +3414,14 @@ wheels = [
 
 [[package]]
 name = "starlette"
-version = "1.2.1"
+version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/25/44/ec35f1b6e83094b997da438a02c8c9b0ade2b1e84cfc48bd4656780760a6/starlette-1.2.1.tar.gz", hash = "sha256:9b9b5ebb992e67d6093741e63c2f59e4f6fff986f81163c087867bd7b924b3f6", size = 2701854, upload-time = "2026-05-31T01:07:51.847Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/e3/7c1dc7381d9f8ab7d854328ebfa884e62cb3f3d8549ddfd37c7814f42afa/starlette-1.3.1.tar.gz", hash = "sha256:05d0213193f2fbaae60e2ecb593b4add4262ad4e46536b54abe36f11a71724e0", size = 2703240, upload-time = "2026-06-12T09:23:11.602Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1c/54/196d0c1db10af76baa4f64894448505d60d3cdf70ef92cbb35f46a4e4c71/starlette-1.2.1-py3-none-any.whl", hash = "sha256:4de0082d08c8f6764a85a54cf1120d6939507a19905c7768acad2a9f875d2b89", size = 73350, upload-time = "2026-05-31T01:07:50.09Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/bb/2799cc2ede3ed41131f8975621e7213dfc7ef4acbbaadfa440f32500c370/starlette-1.3.1-py3-none-any.whl", hash = "sha256:c7372aae11c3c3f26a42df7bd626cec2f47d03483d261d369516a615a53714c6", size = 73632, upload-time = "2026-06-12T09:23:10.017Z" },
 ]
 
 [[package]]

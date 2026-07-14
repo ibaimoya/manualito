@@ -2,14 +2,16 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
 class ValidatedManualImage:
-    """Imagen validada y lista para almacenaje/OCR."""
+    """Descriptor por ruta de una imagen validada para almacenaje/OCR."""
 
-    content: bytes
+    path: Path
+    byte_size: int
     mime_type: str
     extension: str
     width: int
@@ -19,9 +21,10 @@ class ValidatedManualImage:
 
 @dataclass(frozen=True, slots=True)
 class ValidatedManualPdf:
-    """PDF validado y listo para almacenaje/procesamiento posterior."""
+    """Descriptor por ruta de un PDF validado para su procesamiento."""
 
-    content: bytes
+    path: Path
+    byte_size: int
     mime_type: str
     extension: str
     page_count: int
@@ -40,19 +43,28 @@ class PreparedChunk:
 
 @dataclass(frozen=True, slots=True)
 class StoredManualImage:
-    """Imagen validada y ya guardada."""
+    """Metadatos inmutables de una imagen publicada, sin ruta de staging."""
 
     page_number: int
-    image: ValidatedManualImage
     storage_key: str
+    byte_size: int
+    mime_type: str
+    extension: str
+    width: int
+    height: int
+    sha256: str
 
 
 @dataclass(frozen=True, slots=True)
 class StoredManualPdf:
-    """PDF validado y ya guardado en el almacenamiento."""
+    """Metadatos inmutables de un PDF publicado, sin ruta de staging."""
 
-    pdf: ValidatedManualPdf
     storage_key: str
+    byte_size: int
+    mime_type: str
+    extension: str
+    page_count: int
+    sha256: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -150,6 +162,7 @@ class ManualPageForProcessing:
     page_number: int
     storage_key: str | None
     mime_type: str | None
+    byte_size: int | None
     width: int | None
     height: int | None
     sha256: str | None

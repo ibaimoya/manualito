@@ -4,7 +4,7 @@ from typing import Any
 
 from api import config
 
-_MB = 1024 * 1024
+_MB = 1_000_000
 
 type OpenApiResponse = dict[str, Any]
 type OpenApiResponses = dict[int | str, OpenApiResponse]
@@ -27,6 +27,22 @@ IMAGE_TOO_LARGE_RESPONSE = openapi_response(
 INVALID_IMAGE_RESPONSE = openapi_response(
     415,
     "El archivo no es una imagen válida.",
+)
+MANUAL_UPLOAD_TOO_LARGE_RESPONSE = openapi_response(
+    413,
+    (
+        f"Cada imagen admite {_format_megabytes(config.MAX_IMAGE_SIZE)} MB; "
+        f"el PDF o el conjunto admite {_format_megabytes(config.MAX_MANUAL_TOTAL_SIZE)} MB; "
+        f"el manual admite {config.MAX_MANUAL_PAGES} páginas."
+    ),
+)
+INVALID_MANUAL_SOURCE_RESPONSE = openapi_response(
+    415,
+    "La fuente debe ser un JPEG, PNG o WebP estático válido, o un PDF válido.",
+)
+ASSET_STORAGE_UNAVAILABLE_RESPONSE = openapi_response(
+    503,
+    "El almacenamiento de archivos no está disponible.",
 )
 INTERNAL_ERROR_RESPONSE = openapi_response(
     500,

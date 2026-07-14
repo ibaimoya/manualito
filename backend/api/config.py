@@ -20,9 +20,9 @@ class ApiSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="", extra="ignore", populate_by_name=True)
 
     app_version: str = Field(min_length=1)
-    max_image_size: int = 30 * 1024 * 1024
-    max_manual_pdf_size: int = 200 * 1024 * 1024
-    max_manual_total_size: int = 200 * 1024 * 1024
+    max_image_size: int = Field(default=30_000_000, ge=1)
+    max_manual_pdf_size: int = Field(default=95_000_000, ge=1)
+    max_manual_total_size: int = Field(default=95_000_000, ge=1)
     max_manual_pages: int = Field(default=30, ge=1)
     max_image_pixels: int = Field(default=60_000_000, ge=1)
     pdf_render_dpi: int = Field(default=300, ge=72)

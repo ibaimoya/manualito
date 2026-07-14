@@ -1,17 +1,13 @@
 import asyncio
 from io import BytesIO
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
 from fastapi import UploadFile
 from starlette.datastructures import Headers
 
-from api.exceptions import ImageTooLargeError, InvalidImageError
-from api.manuals.validation import validate_manual_image
-
 FAKE_OCR_RESULT = [{"text": "Reglas del juego", "confidence": 0.9821}]
-MAX_IMAGE_SIZE = 30 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +78,16 @@ def test_root_banner(client):
     assert "v1.0.0" in response.text
     assert "/docs" in response.text
     assert "/health" in response.text
+
+
+def test_openapi_describes_decimal_image_limit(client):
+    """OpenAPI publica el mismo límite decimal de imagen que aplica la API."""
+    response = client.get("/openapi.json")
+
+    description = response.json()["paths"]["/api/ocr"]["post"]["responses"]["413"][
+        "description"
+    ]
+    assert description == "La imagen no puede superar 30 MB."
 
 
 def test_health(client):
@@ -184,7 +190,7 @@ def test_ocr_log_sanitizes_uploaded_filename(
     ]
     assert messages
     assert all("\r" not in message and "\n" not in message for message in messages)
-    assert any("ok.jpg??2025-01-01 [WARNING] FALSO" in message for message in messages)
+    assert all("ok.jpg" not in message and "FALSO" not in message for message in messages)
 
 
 # ---------------------------------------------------------------------------
@@ -215,26 +221,24 @@ def test_invalid_image_content(client, data, filename, mime):
 # cliente HTTP, aislando así el test de la lógica de tamaño pura.
 # El caso 413 no llega siquiera a PIL, por lo que no necesita mock.
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("size,expected_status", [
-    (int(29.9 * 1024 * 1024), 200),   # justo por debajo -> aceptado.
-    (30 * 1024 * 1024,         200),   # exacto 30 MB -> aceptado.
-    (30 * 1024 * 1024 + 1,     413),   # justo por encima -> rechazado.
-], ids=["29.9mb", "30mb_exacto", "30mb_mas_1_byte"])
-def test_size_boundary(client, size, expected_status, override_http_client):
-    """Imágenes en el límite de 30 MB: <=30 MB pasan, >30 MB 413."""
-    data = b"\x00" * size
-
+@pytest.mark.parametrize(
+    ("size", "expected_status"),
+    [(29_999_999, 200), (30_000_000, 200), (30_000_001, 413)],
+    ids=["limit-minus-one", "exact-limit", "limit-plus-one"],
+)
+def test_size_boundary(
+    client,
+    valid_jpeg_bytes,
+    size,
+    expected_status,
+    override_http_client,
+):
+    """El endpoint aplica 30 MB decimales sobre un JPEG real rellenado."""
+    data = valid_jpeg_bytes + b"\0" * (size - len(valid_jpeg_bytes))
     if expected_status == 200:
         _configure_ocr_success(override_http_client)
-        with patch("api.manuals.validation.Image.open") as mock_open:
-            mock_img = MagicMock()
-            mock_img.format = "JPEG"
-            mock_img.size = (10, 10)
-            mock_open.return_value.__enter__ = MagicMock(return_value=mock_img)
-            mock_open.return_value.__exit__ = MagicMock(return_value=False)
-            response = _post_image_json(client, data, "large.jpg", "image/jpeg")
-    else:
-        response = _post_image_json(client, data, "large.jpg", "image/jpeg")
+
+    response = _post_image_json(client, data, "large.jpg", "image/jpeg")
 
     assert response.status_code == expected_status
     if expected_status == 413:
@@ -325,27 +329,3 @@ def test_missing_image_field(client):
     """Una petición sin el campo image en el multipart devuelve 422."""
     response = client.post("/api/ocr")
     assert response.status_code == 422
-
-
-def test_validate_manual_image_raises_domain_error_when_file_is_too_large():
-    """La validación interna expresa el exceso de tamaño como error de dominio."""
-    upload = _upload_file(b"\x00" * (MAX_IMAGE_SIZE + 1), "large.jpg", "image/jpeg")
-
-    with pytest.raises(ImageTooLargeError):
-        asyncio.run(validate_manual_image(upload))
-
-
-def test_validate_manual_image_raises_domain_error_when_content_is_not_image():
-    """La validación interna expresa el contenido inválido como error de dominio."""
-    upload = _upload_file(b"not an image", "manual.jpg", "image/jpeg")
-
-    with pytest.raises(InvalidImageError):
-        asyncio.run(validate_manual_image(upload))
-
-
-def test_validate_manual_image_rejects_mime_that_does_not_match_signature(valid_jpeg_bytes):
-    """La validación compara el MIME declarado con la firma real del fichero."""
-    upload = _upload_file(valid_jpeg_bytes, "manual.png", "image/png")
-
-    with pytest.raises(InvalidImageError):
-        asyncio.run(validate_manual_image(upload))

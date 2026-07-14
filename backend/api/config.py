@@ -89,7 +89,7 @@ class ApiSettings(BaseSettings):
     manual_reprocess_rate_limit: str = STRICT_ACTION_RATE_LIMIT
 
     auth_session_days: int = Field(default=7, ge=1)
-    auth_cookie_secure: bool = False
+    auth_cookie_secure: bool = True
     auth_session_cookie_name: str | None = None
     auth_csrf_cookie_name: str | None = None
     auth_csrf_header_name: str = "X-CSRF-Token"

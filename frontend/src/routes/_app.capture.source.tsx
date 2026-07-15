@@ -56,6 +56,12 @@ type CreateManualVariables = Readonly<{
   visibility: 'shared' | 'private';
 }>;
 
+function deriveUploadMode(pages: readonly File[]): Mode | null {
+  const firstPage = pages[0];
+  if (!firstPage) return null;
+  return firstPage.type === 'application/pdf' ? 'pdf' : 'images';
+}
+
 /** Reduce el detalle del hub a la forma que consume el paso 1. */
 function toGameSearchItem(detail: GameDetail): GameSearchItem {
   return {
@@ -82,8 +88,7 @@ function NewManualScreen() {
   const game = chosenGame === undefined ? presetGame : chosenGame;
   const [pages, setPages] = useState<File[]>([]);
   // Un manual usa imágenes XOR un PDF, nunca ambos.
-  const mode: Mode | null =
-    pages.length === 0 ? null : pages[0]?.type === 'application/pdf' ? 'pdf' : 'images';
+  const mode = deriveUploadMode(pages);
   // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
   const [share, setShare] = useState(true);
 

@@ -223,6 +223,41 @@ describe('/capture/source · nuevo manual', () => {
     }
   });
 
+  it('al quitar la última imagen vuelve a permitir cualquier fuente', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+
+    await user.upload(
+      screen.getByTestId('picker-gallery') as HTMLInputElement,
+      imageFile('page.jpg'),
+    );
+    expect(await screen.findByText('page.jpg')).toBeInTheDocument();
+    expect(screen.getByTestId('picker-pdf')).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Quitar página 1' }));
+
+    expect(await screen.findByText(/Aún no hay páginas/i)).toBeInTheDocument();
+    expect(screen.getByTestId('picker-gallery')).toBeEnabled();
+    expect(screen.getByTestId('picker-pdf')).toBeEnabled();
+  });
+
+  it('al quitar el PDF vuelve a permitir cualquier fuente', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+
+    await user.upload(screen.getByTestId('picker-pdf') as HTMLInputElement, pdfFile(1));
+    expect(await screen.findByText('manual.pdf')).toBeInTheDocument();
+    expect(screen.getByTestId('picker-gallery')).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Quitar PDF' }));
+
+    expect(await screen.findByText(/Aún no hay páginas/i)).toBeInTheDocument();
+    expect(screen.getByTestId('picker-gallery')).toBeEnabled();
+    expect(screen.getByTestId('picker-pdf')).toBeEnabled();
+  });
+
   it('rechaza formatos fuera de JPG, PNG y WebP', async () => {
     renderSource();
     await screen.findByRole('combobox', { name: /Buscar juego/i });

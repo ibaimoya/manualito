@@ -645,12 +645,13 @@ def test_attach_render_to_missing_page_leaves_no_asset_after_rollback(
     )
     portal = upload_client.portal
     assert portal is not None
+    missing_page_id = uuid4()
 
     with pytest.raises(ManualContextNotFoundError):
         portal.call(
             _attach_missing_render_then_rollback,
             identity.user_id,
-            uuid4(),
+            missing_page_id,
             image,
             storage_key,
         )

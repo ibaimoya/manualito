@@ -185,12 +185,10 @@ async def test_validate_manual_image_rejects_dimensions_over_pixel_budget(
         height=1,
     )
     batch = await LocalAssetStore(tmp_path).create_manual_batch(owner_user_id=uuid4())
+    upload = _upload_file(oversized_header, "wide.png", "image/png")
 
     with pytest.raises(InvalidImageError):
-        await manual_validation.validate_manual_image(
-            _upload_file(oversized_header, "wide.png", "image/png"),
-            batch=batch,
-        )
+        await manual_validation.validate_manual_image(upload, batch=batch)
 
 
 @pytest.mark.anyio
@@ -272,12 +270,10 @@ async def test_validate_manual_pdf_rejects_invalid_sources(tmp_path, content, mi
     """Firma, estructura y MIME son condiciones independientes y obligatorias."""
     content = _pdf_bytes(page_count=1) if content is None else content
     batch = await LocalAssetStore(tmp_path).create_manual_batch(owner_user_id=uuid4())
+    upload = _upload_file(content, "manual.pdf", mime_type)
 
     with pytest.raises(InvalidPdfError):
-        await manual_validation.validate_manual_pdf(
-            _upload_file(content, "manual.pdf", mime_type),
-            batch=batch,
-        )
+        await manual_validation.validate_manual_pdf(upload, batch=batch)
 
     assert list(batch.path.glob("*.part")) == []
 
@@ -287,24 +283,20 @@ async def test_validate_manual_pdf_rejects_password_protected_pdf(tmp_path):
     """Los PDFs protegidos se rechazan aunque PDFium soporte contraseñas."""
     content = base64.b64decode(_PDFIUM_ENCRYPTED_R2_BASE64)
     batch = await LocalAssetStore(tmp_path).create_manual_batch(owner_user_id=uuid4())
+    upload = _upload_file(content, "encrypted.pdf", "application/pdf")
 
     with pytest.raises(InvalidPdfError):
-        await manual_validation.validate_manual_pdf(
-            _upload_file(content, "encrypted.pdf", "application/pdf"),
-            batch=batch,
-        )
+        await manual_validation.validate_manual_pdf(upload, batch=batch)
 
 
 @pytest.mark.anyio
 async def test_validate_manual_pdf_rejects_zero_page_document(tmp_path):
     """Un contenedor PDF sin páginas no puede crear un manual vacío."""
     batch = await LocalAssetStore(tmp_path).create_manual_batch(owner_user_id=uuid4())
+    upload = _upload_file(_pdf_bytes(page_count=0), "empty.pdf", "application/pdf")
 
     with pytest.raises(InvalidPdfError):
-        await manual_validation.validate_manual_pdf(
-            _upload_file(_pdf_bytes(page_count=0), "empty.pdf", "application/pdf"),
-            batch=batch,
-        )
+        await manual_validation.validate_manual_pdf(upload, batch=batch)
 
 
 @pytest.mark.anyio
@@ -323,15 +315,13 @@ async def test_validate_manual_pdf_real_page_count_bva(tmp_path, page_count, acc
         )
         assert result.page_count == page_count
     else:
+        upload = _upload_file(
+            _pdf_bytes(page_count=page_count),
+            "manual.pdf",
+            "application/pdf",
+        )
         with pytest.raises(ManualPageLimitExceededError):
-            await manual_validation.validate_manual_pdf(
-                _upload_file(
-                    _pdf_bytes(page_count=page_count),
-                    "manual.pdf",
-                    "application/pdf",
-                ),
-                batch=batch,
-            )
+            await manual_validation.validate_manual_pdf(upload, batch=batch)
 
 
 @pytest.mark.anyio

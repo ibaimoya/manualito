@@ -267,17 +267,16 @@ def test_begin_reprocessing_busy_when_already_indexing():
             self.commits += 1
 
     session = FakeSession()
+    action = partial(
+        begin_manual_reprocessing,
+        session,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=None,
+    )
 
     with pytest.raises(ManualBusyError):
-        anyio.run(
-            partial(
-                begin_manual_reprocessing,
-                session,
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=None,
-            )
-        )
+        anyio.run(action)
 
     assert session.rollbacks == 0
     assert session.commits == 0
@@ -298,16 +297,15 @@ def test_begin_reprocessing_missing_manual_raises_404():
         async def rollback(self):
             await anyio.lowlevel.checkpoint()
 
+    action = partial(
+        begin_manual_reprocessing,
+        FakeSession(),
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=None,
+    )
     with pytest.raises(ManualNotFoundError):
-        anyio.run(
-            partial(
-                begin_manual_reprocessing,
-                FakeSession(),
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=None,
-            )
-        )
+        anyio.run(action)
 
 
 def test_begin_reprocessing_single_page_scopes_reset_and_chunks():
@@ -380,17 +378,16 @@ def test_begin_reprocessing_missing_page_leaves_rollback_to_service():
             self.commits += 1
 
     session = FakeSession()
+    action = partial(
+        begin_manual_reprocessing,
+        session,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=99,
+    )
 
     with pytest.raises(ManualNotFoundError):
-        anyio.run(
-            partial(
-                begin_manual_reprocessing,
-                session,
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=99,
-            )
-        )
+        anyio.run(action)
 
     assert session.rollbacks == 0
     assert session.commits == 0

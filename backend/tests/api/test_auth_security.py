@@ -283,10 +283,11 @@ async def test_login_missing_user_uses_dummy_hash_and_writes_uniform_failure(mon
     dummy_verify = AsyncMock()
 
     monkeypatch.setattr(service, "verify_password_against_dummy_async", dummy_verify)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
-            cast(AsyncSession, fake_session),
+            session,
             identifier="missing@example.com",
             password="valid-password",
             ip_address="127.0.0.1",
@@ -471,10 +472,11 @@ async def test_register_user_maps_integrity_error_to_duplicate(monkeypatch):
             raise IntegrityError("INSERT", {}, ValueError("duplicate key"))
 
     fake_session = DuplicateSession()
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(service.DuplicateIdentityError):
         await service.register_user(
-            cast(AsyncSession, fake_session),
+            session,
             email="user@example.com",
             username="Nora",
             password="valid-password",
@@ -597,10 +599,11 @@ async def test_verify_email_token_rejects_missing_or_expired(monkeypatch):
     )
     fake_session = FakeSession(row_result=(expired_token, user))
     monkeypatch.setattr(service, "utc_now", lambda: now)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidEmailVerificationTokenError):
         await service.verify_email_token(
-            cast(AsyncSession, fake_session),
+            session,
             token="verify-token",
             ip_address=None,
         )
@@ -680,10 +683,11 @@ async def test_reset_password_with_token_rejects_consumed_token(monkeypatch):
     )
     fake_session = FakeSession(row_result=(reset_token, user))
     monkeypatch.setattr(service, "utc_now", lambda: now)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidPasswordResetTokenError):
         await service.reset_password_with_token(
-            cast(AsyncSession, fake_session),
+            session,
             token="reset-token",
             password="valid-password",
             ip_address=None,
@@ -700,10 +704,11 @@ async def test_login_wrong_password_fails_uniformly_with_audit(monkeypatch):
         "verify_password_async",
         AsyncMock(return_value=(False, None)),
     )
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
-            cast(AsyncSession, fake_session),
+            session,
             identifier="user@example.com",
             password="bad-password",
             ip_address="127.0.0.1",
@@ -766,10 +771,11 @@ async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
     fake_session = FakeSession(scalar_result=None)
     dummy = AsyncMock()
     monkeypatch.setattr(service, "verify_password_against_dummy_async", dummy)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
-            cast(AsyncSession, fake_session),
+            session,
             identifier="x" * 200,
             password="valid-password",
             ip_address=None,
@@ -782,11 +788,10 @@ async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
 async def test_authenticate_session_without_token_requires_auth():
     """Sin token de sesión no se intenta tocar la base de datos."""
     fake_session = FakeSession()
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(AuthenticationRequiredError):
-        await service.authenticate_session(
-            cast(AsyncSession, fake_session), session_token=None, csrf_token=None
-        )
+        await service.authenticate_session(session, session_token=None, csrf_token=None)
 
     assert fake_session.statements == []
 
@@ -796,10 +801,11 @@ async def test_authenticate_session_without_matching_row_requires_auth():
     """Una sesión inexistente, revocada o expirada exige reautenticación."""
     fake_session = FakeSession()
     fake_session.execute = AsyncMock(return_value=FakeRowResult(None))
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(AuthenticationRequiredError):
         await service.authenticate_session(
-            cast(AsyncSession, fake_session), session_token="session-token", csrf_token="csrf-token"
+            session, session_token="session-token", csrf_token="csrf-token"
         )
 
 

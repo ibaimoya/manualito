@@ -46,9 +46,10 @@ async def test_staging_enforces_actual_size_and_removes_partial_file(tmp_path):
     """El contador durante la copia no confía en el tamaño anunciado por HTTP."""
     store = asset_storage.LocalAssetStore(tmp_path)
     batch = await store.create_manual_batch(owner_user_id=uuid4())
+    source = BytesIO(b"123456")
 
     with pytest.raises(asset_storage.AssetSizeExceededError):
-        await batch.stage(BytesIO(b"123456"), max_bytes=5)
+        await batch.stage(source, max_bytes=5)
 
     assert list(batch.path.glob("*.part")) == []
     assert (batch.path / ".pending").is_file()
@@ -108,8 +109,9 @@ async def test_adopting_a_manual_batch_keeps_assets_and_removes_pending_marker(
 
     assert store.resolve_file(storage_key).is_file()
     assert not (batch.path / ".pending").exists()
+    source = BytesIO(valid_jpeg_bytes)
     with pytest.raises(ValueError):
-        await batch.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
+        await batch.stage(source, max_bytes=30_000_000)
 
 
 @pytest.mark.anyio
@@ -235,8 +237,9 @@ def test_resolve_file_rejects_symbolic_link_components(tmp_path):
     except OSError:
         pytest.skip("La plataforma no permite crear symlinks sin privilegios")
     try:
+        store = asset_storage.LocalAssetStore(tmp_path)
         with pytest.raises(ValueError):
-            asset_storage.LocalAssetStore(tmp_path).resolve_file("manuals/secret.jpg")
+            store.resolve_file("manuals/secret.jpg")
     finally:
         link.unlink(missing_ok=True)
         outside.rmdir()

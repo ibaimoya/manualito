@@ -849,11 +849,12 @@ async def test_reprocess_manual_revierte_un_claim_incompleto(monkeypatch):
         "begin_manual_reprocessing",
         AsyncMock(side_effect=ManualNotFoundError),
     )
+    auth = _auth()
 
     with pytest.raises(ManualNotFoundError):
         await manual_service.reprocess_manual(
             session,
-            auth=_auth(),
+            auth=auth,
             manual_id=_MANUAL_ID,
             page_number=99,
         )
@@ -1043,10 +1044,11 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
             ]
         ),
     )
+    session = _session()
 
     with pytest.raises(GeneratedAnswerTooLongError):
         await retrieval_service.generate_game_answer(
-            _session(),
+            session,
             current_user_id=_USER_ID,
             game_id=_GAME_ID,
             question="¿Cómo se gana?",
@@ -1063,10 +1065,11 @@ async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
         "post_json",
         AsyncMock(return_value={"chunks": [{"id": "no-es-uuid"}]}),
     )
+    session = _session()
 
     with pytest.raises(InternalServiceError):
         await retrieval_service.generate_game_answer(
-            _session(),
+            session,
             current_user_id=_USER_ID,
             game_id=_GAME_ID,
             question="¿Cómo se gana?",

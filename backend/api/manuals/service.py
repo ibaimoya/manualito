@@ -115,7 +115,6 @@ async def create_manual(
 ) -> ManualCreatedResponse:
     """Persiste un manual y adopta sus assets solo tras confirmar el commit."""
     batch: AssetWriteBatch | None = None
-    commit_started = False
     try:
         batch = await LocalAssetStore(config.ASSET_STORAGE_DIR).create_manual_batch(
             owner_user_id=auth.user.id
@@ -151,38 +150,36 @@ async def create_manual(
                 raise ManualDuplicateError from exc
             raise
 
-        commit_started = True
-        try:
-            with anyio.CancelScope(shield=True):
-                await session.commit()
-        except IntegrityError as exc:
-            with anyio.CancelScope(shield=True):
-                await session.rollback()
-                await _abort_batch_safely(batch)
-            if _is_duplicate_manual_error(exc):
-                raise ManualDuplicateError from exc
-            raise
-
-        with anyio.CancelScope(shield=True):
-            try:
-                await batch.adopt()
-            except (OSError, ValueError):
-                logger.warning(
-                    "El manual se confirmó, pero el marcador del lote sigue pendiente.",
-                    exc_info=True,
-                )
     except OSError as exc:
-        if not commit_started:
-            with anyio.CancelScope(shield=True):
-                await session.rollback()
-                await _abort_batch_safely(batch)
+        await _rollback_and_abort(session, batch)
+        raise AssetStorageUnavailableError from exc
+    except BaseException:
+        await _rollback_and_abort(session, batch)
+        raise
+
+    try:
+        with anyio.CancelScope(shield=True):
+            await session.commit()
+    except IntegrityError as exc:
+        await _rollback_and_abort(session, batch)
+        if _is_duplicate_manual_error(exc):
+            raise ManualDuplicateError from exc
+        raise
+    except OSError as exc:
         raise AssetStorageUnavailableError from exc
     except BaseException:
         with anyio.CancelScope(shield=True):
             await session.rollback()
-            if not commit_started:
-                await _abort_batch_safely(batch)
         raise
+
+    with anyio.CancelScope(shield=True):
+        try:
+            await batch.adopt()
+        except (OSError, ValueError):
+            logger.warning(
+                "El manual se confirmó, pero el marcador del lote sigue pendiente.",
+                exc_info=True,
+            )
 
     try:
         await games_repository.auto_follow_game(
@@ -297,6 +294,16 @@ async def _abort_batch_safely(batch: AssetWriteBatch | None) -> None:
         await batch.abort()
     except (OSError, ValueError):
         logger.warning("No se pudo limpiar un lote de assets pendiente.", exc_info=True)
+
+
+async def _rollback_and_abort(
+    session: AsyncSession,
+    batch: AssetWriteBatch | None,
+) -> None:
+    """Revierte DB y assets cuando el commit todavía no ha empezado o ha fallado."""
+    with anyio.CancelScope(shield=True):
+        await session.rollback()
+        await _abort_batch_safely(batch)
 
 
 def _manual_source_fingerprint(

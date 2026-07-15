@@ -215,6 +215,79 @@ async def test_pending_scan_ignores_fresh_and_legacy_directories(tmp_path):
     assert legacy.is_dir()
 
 
+@pytest.mark.anyio
+async def test_pending_scan_accepts_only_canonical_old_regular_markers(tmp_path):
+    """Solo un owner, batch y marcador canónicos pueden entrar en reconciliación."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    expected = await store.create_manual_batch(owner_user_id=uuid4())
+    old = datetime.now(UTC) - timedelta(days=2)
+    os.utime(expected.path / ".pending", (old.timestamp(), old.timestamp()))
+
+    manuals = tmp_path / "manuals"
+    noncanonical_owner = manuals / str(uuid4()).upper() / ("a" * 32)
+    noncanonical_owner.mkdir(parents=True)
+    (noncanonical_owner / ".pending").touch()
+
+    owner_dir = manuals / str(uuid4())
+    noncanonical_batch = owner_dir / ("A" * 32)
+    noncanonical_batch.mkdir(parents=True)
+    (noncanonical_batch / ".pending").touch()
+    (owner_dir / ("b" * 32)).mkdir()
+    marker_directory = owner_dir / ("c" * 32) / ".pending"
+    marker_directory.mkdir(parents=True)
+
+    pending = await store.list_pending_batches(older_than=datetime.now(UTC) - timedelta(days=1))
+
+    assert pending == [
+        asset_storage.PendingAssetBatch(
+            owner_user_id=expected.owner_user_id,
+            batch_id=expected.batch_id,
+        )
+    ]
+
+
+@pytest.mark.anyio
+async def test_pending_scan_rejects_a_namespace_file(tmp_path):
+    """Un fichero no puede ocupar el namespace reservado para manuales."""
+    (tmp_path / "manuals").write_text("unsafe", encoding="utf-8")
+    store = asset_storage.LocalAssetStore(tmp_path)
+    cutoff = datetime.now(UTC)
+
+    with pytest.raises(ValueError, match="namespace de manuales"):
+        await store.list_pending_batches(older_than=cutoff)
+
+
+@pytest.mark.anyio
+async def test_pending_scan_rejects_a_namespace_symlink(tmp_path):
+    """El escaneo no sigue un namespace redirigido fuera del store."""
+    outside = tmp_path.parent / f"pending-outside-{uuid4().hex}"
+    outside.mkdir()
+    link = tmp_path / "manuals"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        outside.rmdir()
+        pytest.skip("La plataforma no permite crear symlinks sin privilegios")
+    store = asset_storage.LocalAssetStore(tmp_path)
+    cutoff = datetime.now(UTC)
+    try:
+        with pytest.raises(ValueError, match="namespace de manuales"):
+            await store.list_pending_batches(older_than=cutoff)
+    finally:
+        link.unlink(missing_ok=True)
+        outside.rmdir()
+
+
+@pytest.mark.anyio
+async def test_pending_scan_requires_a_timezone_aware_cutoff(tmp_path):
+    """Comparar mtimes exige un instante inequívoco."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    naive_cutoff = datetime.now()
+
+    with pytest.raises(ValueError, match="zona horaria"):
+        await store.list_pending_batches(older_than=naive_cutoff)
+
+
 @pytest.mark.parametrize(
     "storage_key",
     ["../secret.jpg", "/absolute.jpg", "manuals\\escape.jpg", "manuals//asset.jpg"],

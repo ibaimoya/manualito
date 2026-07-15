@@ -22,6 +22,7 @@ COPY_CHUNK_SIZE = 1024 * 1024
 _INTERNAL_NAME_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?")
 _EXTENSION_RE = re.compile(r"\.[a-z0-9]{1,10}")
 _BATCH_ID_RE = re.compile(r"[0-9a-f]{32}")
+_PENDING_MARKER = ".pending"
 
 
 class AssetSizeExceededError(Exception):
@@ -202,7 +203,7 @@ def _create_pending_batch(root: Path, batch_dir: Path) -> None:
     batch_dir.mkdir(mode=0o700, exist_ok=False)
     try:
         marker_fd = os.open(
-            batch_dir / ".pending",
+            batch_dir / _PENDING_MARKER,
             os.O_WRONLY | os.O_CREAT | os.O_EXCL,
             0o600,
         )
@@ -214,7 +215,7 @@ def _create_pending_batch(root: Path, batch_dir: Path) -> None:
         _fsync_directory(batch_dir.parent)
     except BaseException:
         with suppress(OSError):
-            (batch_dir / ".pending").unlink(missing_ok=True)
+            (batch_dir / _PENDING_MARKER).unlink(missing_ok=True)
             batch_dir.rmdir()
         raise
 
@@ -344,7 +345,7 @@ def _promote_staged(
 def _adopt_batch(root: Path, batch_dir: Path) -> None:
     """Retira el marcador sin introducir otro punto de espera asíncrono."""
     resolved_batch = _assert_batch_directory(root, batch_dir, require_pending=False)
-    marker = batch_dir / ".pending"
+    marker = batch_dir / _PENDING_MARKER
     if marker.is_symlink():
         raise ValueError("Marcador pendiente inválido")
     marker.unlink(missing_ok=True)
@@ -361,7 +362,7 @@ def _abort_batch(root: Path, owner_user_id: UUID, batch_id: str, batch_dir: Path
     if batch_dir.absolute() != expected.absolute():
         raise ValueError("Ruta de lote inválida")
     _assert_batch_directory(root, batch_dir, require_pending=True)
-    marker = batch_dir / ".pending"
+    marker = batch_dir / _PENDING_MARKER
     if marker.is_symlink() or not marker.is_file():
         raise ValueError("Solo se puede abortar un lote pendiente")
     shutil.rmtree(batch_dir)
@@ -396,12 +397,38 @@ def _assert_batch_directory(
         or not resolved_batch.is_dir()
     ):
         raise ValueError("Directorio de lote inseguro")
-    marker = resolved_batch / ".pending"
+    marker = resolved_batch / _PENDING_MARKER
     if marker.is_symlink():
         raise ValueError("Marcador pendiente inválido")
     if require_pending and not marker.is_file():
         raise ValueError("El lote ya no está pendiente")
     return resolved_batch
+
+
+def _canonical_owner_id(owner_entry: os.DirEntry[str]) -> UUID | None:
+    """Devuelve el UUID de un directorio de propietario canónico y seguro."""
+    try:
+        if not owner_entry.is_dir(follow_symlinks=False):
+            return None
+        owner_user_id = UUID(owner_entry.name)
+    except (FileNotFoundError, ValueError):
+        return None
+    return owner_user_id if str(owner_user_id) == owner_entry.name else None
+
+
+def _pending_batch_id(batch_entry: os.DirEntry[str], cutoff: float) -> str | None:
+    """Devuelve un lote canónico cuyo marcador regular sea suficientemente antiguo."""
+    try:
+        if _BATCH_ID_RE.fullmatch(batch_entry.name) is None or not batch_entry.is_dir(
+            follow_symlinks=False
+        ):
+            return None
+        marker_stat = (Path(batch_entry.path) / _PENDING_MARKER).stat(follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(marker_stat.st_mode) or marker_stat.st_mtime > cutoff:
+        return None
+    return batch_entry.name
 
 
 def _list_pending_batches(root: Path, older_than: datetime) -> list[PendingAssetBatch]:
@@ -416,31 +443,18 @@ def _list_pending_batches(root: Path, older_than: datetime) -> list[PendingAsset
     pending: list[PendingAssetBatch] = []
     with os.scandir(manuals_dir) as owners:
         for owner_entry in owners:
-            if not owner_entry.is_dir(follow_symlinks=False):
-                continue
-            try:
-                owner_user_id = UUID(owner_entry.name)
-            except ValueError:
-                continue
-            if str(owner_user_id) != owner_entry.name:
+            owner_user_id = _canonical_owner_id(owner_entry)
+            if owner_user_id is None:
                 continue
             with os.scandir(owner_entry.path) as batches:
                 for batch_entry in batches:
-                    if _BATCH_ID_RE.fullmatch(batch_entry.name) is None or not batch_entry.is_dir(
-                        follow_symlinks=False
-                    ):
-                        continue
-                    marker = Path(batch_entry.path) / ".pending"
-                    try:
-                        marker_stat = marker.stat(follow_symlinks=False)
-                    except FileNotFoundError:
-                        continue
-                    if not stat.S_ISREG(marker_stat.st_mode) or marker_stat.st_mtime > cutoff:
+                    batch_id = _pending_batch_id(batch_entry, cutoff)
+                    if batch_id is None:
                         continue
                     pending.append(
                         PendingAssetBatch(
                             owner_user_id=owner_user_id,
-                            batch_id=batch_entry.name,
+                            batch_id=batch_id,
                         )
                     )
     return sorted(pending, key=lambda item: item.storage_prefix)

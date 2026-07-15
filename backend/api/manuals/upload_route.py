@@ -3,10 +3,11 @@
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from fastapi import Request, Response
+from fastapi import Response
 from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException
 from starlette.formparsers import MultiPartException
+from starlette.requests import Request
 from starlette.types import Message, Receive, Scope, Send
 
 from api import config

@@ -263,8 +263,8 @@ def test_upload_form_field_count_parser_boundary(
 
 @pytest.mark.parametrize(
     ("field_size", "expected_status", "expected_code"),
-    [(4096, 202, None), (4097, 400, "http_error")],
-    ids=["4096-bytes-accepted", "4097-bytes-rejected"],
+    [(1024 * 1024, 202, None), (1024 * 1024 + 1, 400, "http_error")],
+    ids=["one-mibibyte-accepted", "one-mibibyte-plus-one-rejected"],
 )
 def test_upload_form_part_size_parser_boundary(
     upload_client: TestClient,
@@ -278,7 +278,7 @@ def test_upload_form_part_size_parser_boundary(
     expected_status: int,
     expected_code: str | None,
 ) -> None:
-    """Una parte de campo acepta 4096 bytes y corta el byte siguiente."""
+    """Una parte de campo acepta un MiB y corta el byte siguiente."""
     identity = upload_world.users[0]
     auth = upload_authenticator(upload_client, identity, upload_world.password)
 

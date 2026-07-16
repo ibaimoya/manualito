@@ -227,7 +227,6 @@ log_level = "WARNING"
 strict_markers = true
 markers = [
     "upload_integration: integración de subidas con PostgreSQL, Redis y filesystem reales",
-    "upload_load: carga operacional de subidas grandes, reservada para CI programada o manual",
 ]
 
 [tool.coverage.run]

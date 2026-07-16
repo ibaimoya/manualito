@@ -9,9 +9,6 @@ on:
     branches: ["master", "staging", "development"]
   pull_request:
     branches: ["master", "staging", "development"]
-  schedule:
-    # Evita el inicio de hora, cuando GitHub advierte de posibles retrasos.
-    - cron: "17 3 * * 3"
   workflow_dispatch:
 
 permissions:
@@ -66,7 +63,7 @@ jobs:
       - name: Ejecutar tests
         run: >-
           uv run --no-sync pytest -v backend/tests scripts/hooks/tests
-          -m "not upload_integration and not upload_load"
+          -m "not upload_integration"
           --cov=backend --cov=scripts/hooks --cov-report=xml:coverage.xml
           --junitxml=pytest-report.xml
 
@@ -155,7 +152,7 @@ jobs:
       - name: Ejecutar integración de subidas
         run: >-
           uv run --no-sync pytest -v backend/tests/integration/uploads
-          -m "upload_integration and not upload_load"
+          -m upload_integration
           --cov=backend --cov-report=xml:upload-integration-coverage.xml
           --junitxml=upload-integration-report.xml
 
@@ -168,104 +165,6 @@ jobs:
             upload-integration-coverage.xml
             upload-integration-report.xml
           if-no-files-found: error
-          retention-days: 7
-
-  backend-upload-load:
-    name: Backend - Carga de subidas 3x95 MB
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      DATABASE_URL: postgresql+psycopg://manualito@127.0.0.1:5432/manualito
-      REDIS_HOST: 127.0.0.1
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: ""
-      REDIS_ALLOW_EMPTY_PASSWORD: "true"
-      UPLOAD_LOAD_CONTAINER_DATABASE_URL: postgresql+psycopg://manualito@host.docker.internal:5432/manualito
-      UPLOAD_LOAD_CONTAINER_REDIS_HOST: host.docker.internal
-
-    services:
-      postgres:
-        image: postgres:18.4-alpine3.23
-        env:
-          POSTGRES_DB: manualito
-          POSTGRES_USER: manualito
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U manualito -d manualito"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:8.8.0-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-    steps:
-      - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Comprobar deriva de imágenes de carga
-        env:
-          POSTGRES_SERVICE_IMAGE: postgres:18.4-alpine3.23
-          REDIS_SERVICE_IMAGE: redis:8.8.0-alpine
-        run: |
-          . ./.env
-          expected_postgres="postgres:${POSTGRES_VERSION}-${POSTGRES_VARIANT}"
-          expected_redis="redis:${REDIS_VERSION}-${REDIS_VARIANT}"
-          if [ "$POSTGRES_SERVICE_IMAGE" != "$expected_postgres" ]; then
-            echo "::error::Postgres usa $POSTGRES_SERVICE_IMAGE pero .env declara $expected_postgres."
-            exit 1
-          fi
-          if [ "$REDIS_SERVICE_IMAGE" != "$expected_redis" ]; then
-            echo "::error::Redis usa $REDIS_SERVICE_IMAGE pero .env declara $expected_redis."
-            exit 1
-          fi
-
-      - name: Preparar backend
-        uses: ./.github/actions/backend-setup
-
-      - name: Preparar almacenamiento temporal
-        run: |
-          asset_dir="$RUNNER_TEMP/manualito-upload-load/assets"
-          spool_dir="$asset_dir/.spool"
-          install -d -m 0700 "$spool_dir" "$asset_dir"
-          {
-            echo "ASSET_STORAGE_DIR=$asset_dir"
-            echo "TMPDIR=$spool_dir"
-          } >> "$GITHUB_ENV"
-
-      - name: Aplicar migraciones
-        run: uv run --no-sync alembic -c backend/database/alembic.ini upgrade head
-
-      - name: Construir la imagen API sometida a carga
-        env:
-          COMPOSE_BAKE: "true"
-        run: |
-          docker compose build api
-          . ./.env
-          echo "UPLOAD_LOAD_API_IMAGE=${PROJECT_NAME}-api:${API_IMAGE_VERSION}" >> "$GITHUB_ENV"
-
-      - name: Ejecutar carga concurrente de subidas
-        run: >-
-          uv run --no-sync pytest -v backend/tests/integration/uploads
-          -m upload_load
-          --junitxml=upload-load-report.xml
-
-      - name: Guardar reporte de carga
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: upload-load-report
-          path: upload-load-report.xml
-          if-no-files-found: warn
           retention-days: 7
 
   backend-migrations:

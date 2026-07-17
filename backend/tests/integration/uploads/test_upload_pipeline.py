@@ -528,6 +528,237 @@ def test_image_upload_is_transactional_queryable_and_scoped(
     ]
 
 
+def test_image_worker_preserves_the_internal_ocr_product_pipeline(
+    upload_client: TestClient,
+    upload_world: Any,
+    upload_runtime: Any,
+    upload_db_engine: Engine,
+    upload_authenticator: Any,
+    captured_manual_dispatches: list[str],
+    internal_service_probe: Any,
+    valid_jpeg_bytes: bytes,
+) -> None:
+    """Una subida pública termina en OCR interno sin depender del endpoint legado."""
+    identity = upload_world.users[0]
+    auth = upload_authenticator(upload_client, identity, upload_world.password)
+    internal_service_probe.ocr_responses.append(
+        (
+            200,
+            {
+                "lines": [
+                    {"text": "x", "confidence": 0.10},
+                    {"text": " Reglas\tclaras ", "confidence": 0.98},
+                ]
+            },
+        )
+    )
+
+    response = _post_image(
+        upload_client,
+        game_id=upload_world.game_ids[0],
+        image=valid_jpeg_bytes,
+        headers=auth.headers,
+    )
+    assert response.status_code == 202, response.text
+    manual_id = UUID(response.json()["manual_id"])
+    with Session(upload_db_engine) as session:
+        page_id = session.scalar(select(ManualPage.id).where(ManualPage.manual_id == manual_id))
+    assert page_id is not None
+
+    portal = upload_client.portal
+    assert portal is not None
+    portal.call(manuals_service.process_manual_page, manual_id, page_id)
+
+    detail = upload_client.get(f"/api/manuals/{manual_id}")
+    assert detail.status_code == 200, detail.text
+    page = detail.json()["pages"][0]
+    assert page["ocr_status"] == "completed"
+    assert page["text_source"] == "ocr"
+    assert page["text_quality"] == "ok"
+    assert page["ocr_confidence_mean"] == pytest.approx(0.98)
+    assert page["ocr_lines"] == [{"text": "Reglas claras", "confidence": 0.98}]
+    assert internal_service_probe.ocr_requests == [
+        {
+            "body": valid_jpeg_bytes,
+            "content_type": "image/jpeg",
+            "content_length": str(len(valid_jpeg_bytes)),
+        }
+    ]
+    assert len(_published_files(upload_runtime.asset_root, (identity.user_id,))) == 1
+    assert _residual_files(upload_runtime.asset_root, (identity.user_id,)) == []
+    assert captured_manual_dispatches == [str(manual_id)]
+
+
+def test_blank_pdf_falls_back_to_internal_ocr_after_real_pdfium_render(
+    upload_client: TestClient,
+    upload_world: Any,
+    upload_runtime: Any,
+    upload_authenticator: Any,
+    captured_manual_dispatches: list[str],
+    internal_service_probe: Any,
+) -> None:
+    """Un PDF sin texto se renderiza de verdad y usa la misma frontera OCR interna."""
+    identity = upload_world.users[0]
+    auth = upload_authenticator(upload_client, identity, upload_world.password)
+    internal_service_probe.ocr_responses.append(
+        (200, {"lines": [{"text": "Texto de la página", "confidence": 0.93}]})
+    )
+
+    response = upload_client.post(
+        "/api/manuals",
+        data={"game_id": str(upload_world.game_ids[0])},
+        files={"pdf": ("blank.pdf", _real_blank_pdf(), "application/pdf")},
+        headers=auth.headers,
+    )
+    assert response.status_code == 202, response.text
+    manual_id = UUID(response.json()["manual_id"])
+
+    portal = upload_client.portal
+    assert portal is not None
+    page_ids = portal.call(manuals_service.process_manual, manual_id)
+    assert len(page_ids) == 1
+    portal.call(manuals_service.process_manual_page, manual_id, page_ids[0])
+
+    detail = upload_client.get(f"/api/manuals/{manual_id}")
+    assert detail.status_code == 200, detail.text
+    page = detail.json()["pages"][0]
+    assert page["ocr_status"] == "completed"
+    assert page["text_source"] == "ocr"
+    assert page["ocr_lines"] == [{"text": "Texto de la página", "confidence": 0.93}]
+    assert len(internal_service_probe.ocr_requests) == 1
+    ocr_request = internal_service_probe.ocr_requests[0]
+    assert ocr_request["content_type"] == "image/jpeg"
+    assert ocr_request["content_length"] == str(len(ocr_request["body"]))
+    with Image.open(io.BytesIO(ocr_request["body"])) as rendered:
+        assert rendered.format == "JPEG"
+    assert len(_published_files(upload_runtime.asset_root, (identity.user_id,))) == 2
+    assert _residual_files(upload_runtime.asset_root, (identity.user_id,)) == []
+    assert captured_manual_dispatches == [str(manual_id)]
+
+
+def test_internal_ocr_failure_marks_the_product_page_failed_without_residue(
+    upload_client: TestClient,
+    upload_world: Any,
+    upload_runtime: Any,
+    upload_db_engine: Engine,
+    upload_authenticator: Any,
+    captured_manual_dispatches: list[str],
+    internal_service_probe: Any,
+    valid_jpeg_bytes: bytes,
+) -> None:
+    """Un 500 del servicio privado no revive la fachada pública ni deja temporales."""
+    identity = upload_world.users[0]
+    auth = upload_authenticator(upload_client, identity, upload_world.password)
+    internal_service_probe.ocr_responses.append((500, {"detail": "forced failure"}))
+
+    response = _post_image(
+        upload_client,
+        game_id=upload_world.game_ids[0],
+        image=valid_jpeg_bytes,
+        headers=auth.headers,
+    )
+    assert response.status_code == 202, response.text
+    manual_id = UUID(response.json()["manual_id"])
+    with Session(upload_db_engine) as session:
+        page_id = session.scalar(select(ManualPage.id).where(ManualPage.manual_id == manual_id))
+    assert page_id is not None
+
+    portal = upload_client.portal
+    assert portal is not None
+    portal.call(manuals_service.process_manual_page, manual_id, page_id)
+
+    detail = upload_client.get(f"/api/manuals/{manual_id}")
+    assert detail.status_code == 200, detail.text
+    page = detail.json()["pages"][0]
+    assert page["ocr_status"] == "failed"
+    assert page["text_source"] == "none"
+    assert page["ocr_lines"] == []
+    assert len(internal_service_probe.ocr_requests) == 1
+    assert len(_published_files(upload_runtime.asset_root, (identity.user_id,))) == 1
+    assert _residual_files(upload_runtime.asset_root, (identity.user_id,)) == []
+    assert captured_manual_dispatches == [str(manual_id)]
+
+
+def test_reprocessing_replaces_product_ocr_through_the_private_boundary(
+    upload_client: TestClient,
+    upload_world: Any,
+    upload_runtime: Any,
+    upload_authenticator: Any,
+    captured_manual_dispatches: list[str],
+    internal_service_probe: Any,
+    valid_jpeg_bytes: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """El reprocesado público vuelve a OCR interno y persiste el resultado nuevo."""
+    identity = upload_world.users[0]
+    auth = upload_authenticator(upload_client, identity, upload_world.password)
+    internal_service_probe.ocr_responses.append(
+        (200, {"lines": [{"text": "Primera lectura", "confidence": 0.91}]})
+    )
+
+    response = _post_image(
+        upload_client,
+        game_id=upload_world.game_ids[0],
+        image=valid_jpeg_bytes,
+        headers=auth.headers,
+    )
+    assert response.status_code == 202, response.text
+    manual_id = UUID(response.json()["manual_id"])
+    portal = upload_client.portal
+    assert portal is not None
+    page_ids = portal.call(manuals_service.process_manual, manual_id)
+    assert len(page_ids) == 1
+    portal.call(manuals_service.process_manual_page, manual_id, page_ids[0])
+    portal.call(manuals_service.finalize_manual, manual_id)
+
+    reprocess_dispatches: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        "api.manuals.router.reprocess_manual_task.delay",
+        lambda dispatched_manual_id, chunk_ids: reprocess_dispatches.append(
+            (dispatched_manual_id, chunk_ids)
+        ),
+    )
+    reprocess = upload_client.post(
+        f"/api/manuals/{manual_id}/reprocess",
+        headers=auth.headers,
+    )
+    assert reprocess.status_code == 202, reprocess.text
+    assert len(reprocess_dispatches) == 1
+    dispatched_manual_id, stale_chunk_ids = reprocess_dispatches[0]
+    assert dispatched_manual_id == str(manual_id)
+    assert stale_chunk_ids
+
+    internal_service_probe.ocr_responses.append(
+        (200, {"lines": [{"text": "Segunda lectura", "confidence": 0.97}]})
+    )
+    page_ids = portal.call(
+        manuals_service.run_reprocess,
+        manual_id,
+        [UUID(chunk_id) for chunk_id in stale_chunk_ids],
+    )
+    assert len(page_ids) == 1
+    portal.call(manuals_service.process_manual_page, manual_id, page_ids[0])
+    portal.call(manuals_service.finalize_manual, manual_id)
+
+    detail = upload_client.get(f"/api/manuals/{manual_id}")
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["status"] == "active"
+    page = detail.json()["pages"][0]
+    assert page["ocr_status"] == "completed"
+    assert page["ocr_lines"] == [{"text": "Segunda lectura", "confidence": 0.97}]
+    assert len(internal_service_probe.ocr_requests) == 2
+    assert len(internal_service_probe.rag_ingests) == 2
+    assert internal_service_probe.rag_deletes == [
+        {
+            "manual_id": str(manual_id),
+            "chunk_ids": stale_chunk_ids,
+        }
+    ]
+    assert len(_published_files(upload_runtime.asset_root, (identity.user_id,))) == 1
+    assert _residual_files(upload_runtime.asset_root, (identity.user_id,)) == []
+    assert captured_manual_dispatches == [str(manual_id)]
+
+
 def test_pdf_worker_reads_the_persisted_path_with_real_pdfium(
     upload_client: TestClient,
     upload_world: Any,
@@ -1101,6 +1332,18 @@ def _real_searchable_pdf() -> bytes:
         document.save(output)
     finally:
         page.close()
+        document.close()
+    return output.getvalue()
+
+
+def _real_blank_pdf() -> bytes:
+    """Genera un PDF real sin capa de texto para forzar el fallback OCR."""
+    output = io.BytesIO()
+    document = pdfium.PdfDocument.new()
+    document.new_page(200, 200)
+    try:
+        document.save(output)
+    finally:
         document.close()
     return output.getvalue()
 

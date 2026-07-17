@@ -4,13 +4,18 @@ import asyncio
 import os
 import shutil
 import sys
+from collections import deque
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import count
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 from redis import Redis
 from redis.exceptions import RedisError
@@ -21,6 +26,7 @@ from sqlalchemy.orm import Session
 from api import config
 from api.auth.passwords import hash_password
 from api.main import app
+from api.manuals import service as manuals_service
 from database.config import get_database_url
 from database.models.audit import AuditLog
 from database.models.game import Game
@@ -66,6 +72,73 @@ class UploadAuth:
     @property
     def headers(self) -> dict[str, str]:
         return {config.AUTH_CSRF_HEADER_NAME: self.csrf_token}
+
+
+@dataclass(slots=True)
+class InternalServiceProbe:
+    """Frontera HTTP determinista para observar OCR/RAG sin simular dominio."""
+
+    ocr_responses: deque[tuple[int, dict[str, object]]] = field(default_factory=deque)
+    ocr_requests: list[dict[str, object]] = field(default_factory=list)
+    rag_ingests: list[dict[str, object]] = field(default_factory=list)
+    rag_deletes: list[dict[str, object]] = field(default_factory=list)
+    app: FastAPI = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.app = FastAPI()
+        self.app.add_api_route("/extract", self._extract, methods=["POST"])
+        self.app.add_api_route("/ingest", self._ingest, methods=["POST"])
+        self.app.add_api_route("/delete", self._delete, methods=["POST"])
+
+    async def _extract(self, request: Request) -> JSONResponse:
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+        self.ocr_requests.append(
+            {
+                "body": bytes(body),
+                "content_type": request.headers.get("content-type"),
+                "content_length": request.headers.get("content-length"),
+            }
+        )
+        if not self.ocr_responses:
+            raise AssertionError("El pipeline llamó a OCR sin respuesta preparada")
+        status_code, payload = self.ocr_responses.popleft()
+        return JSONResponse(status_code=status_code, content=payload)
+
+    async def _ingest(self, request: Request) -> JSONResponse:
+        payload = await self._json_object(request)
+        self.rag_ingests.append(payload)
+        chunks = payload.get("chunks")
+        if not isinstance(chunks, list):
+            raise AssertionError("RAG recibió chunks con un contrato inválido")
+        chunk_ids = [
+            str(chunk["id"]) for chunk in chunks if isinstance(chunk, dict) and "id" in chunk
+        ]
+        if len(chunk_ids) != len(chunks):
+            raise AssertionError("RAG recibió un chunk sin identificador")
+        return JSONResponse(
+            content={
+                "chunk_ids": chunk_ids,
+                "chunks_indexed": len(chunk_ids),
+                "embedding_model": "integration-test-model",
+                "indexed_at": "2026-01-01T00:00:00+00:00",
+            }
+        )
+
+    async def _delete(self, request: Request) -> JSONResponse:
+        self.rag_deletes.append(await self._json_object(request))
+        return JSONResponse(content={})
+
+    @staticmethod
+    async def _json_object(request: Request) -> dict[str, object]:
+        payload: Any = await request.json()
+        if not isinstance(payload, dict):
+            raise AssertionError("El servicio interno recibió un JSON no objeto")
+        return payload
+
+    def client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(transport=httpx.ASGITransport(app=self.app))
 
 
 @pytest.fixture(scope="session")
@@ -255,3 +328,11 @@ def captured_manual_dispatches(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         lambda manual_id: dispatched.append(manual_id),
     )
     return dispatched
+
+
+@pytest.fixture
+def internal_service_probe(monkeypatch: pytest.MonkeyPatch) -> InternalServiceProbe:
+    """Sustituye solo la red externa por un servidor ASGI determinista."""
+    probe = InternalServiceProbe()
+    monkeypatch.setattr(manuals_service, "_internal_http_client", probe.client)
+    return probe

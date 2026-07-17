@@ -17,6 +17,19 @@ _CELERY_SERVICES = (
 )
 
 
+def _compose_services() -> dict[str, object]:
+    result = subprocess.run(
+        ["docker", "compose", "config", "--format", "json"],
+        cwd=_REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    services = json.loads(result.stdout)["services"]
+    assert isinstance(services, dict)
+    return services
+
+
 def _dotenv_value(name: str) -> str:
     for raw_line in (_REPOSITORY_ROOT / ".env").read_text(encoding="utf-8").splitlines():
         key, separator, value = raw_line.partition("=")
@@ -27,14 +40,7 @@ def _dotenv_value(name: str) -> str:
 
 def test_compose_prepares_disk_backed_upload_spool_for_api_only() -> None:
     """La API puede volcar uploads grandes sin consumir el tmpfs de /tmp."""
-    result = subprocess.run(
-        ["docker", "compose", "config", "--format", "json"],
-        cwd=_REPOSITORY_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    services = json.loads(result.stdout)["services"]
+    services = _compose_services()
 
     assert services["api"]["environment"]["TMPDIR"] == _SPOOL_DIR
     api_volume = next(
@@ -64,3 +70,13 @@ def test_compose_prepares_disk_backed_upload_spool_for_api_only() -> None:
         _SPOOL_DIR,
     ]
     assert all("TMPDIR" not in services[name]["environment"] for name in _CELERY_SERVICES)
+
+
+def test_only_the_manual_worker_waits_for_the_private_ocr_service() -> None:
+    """El gateway web arranca sin OCR; el consumidor real conserva su dependencia."""
+    services = _compose_services()
+
+    assert "ocr" not in services["api"]["depends_on"]
+    assert services["celery-worker-manuals"]["depends_on"]["ocr"]["condition"] == (
+        "service_healthy"
+    )

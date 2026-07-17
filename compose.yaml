@@ -156,8 +156,6 @@ services:
         condition: service_completed_successfully
       database-migrate:
         condition: service_completed_successfully
-      ocr:
-        condition: service_healthy
       rag:
         condition: service_healthy
       llm:

@@ -20,14 +20,6 @@ def openapi_response(status_code: int | str, description: str) -> OpenApiRespons
     return {status_code: {"description": description}}
 
 
-IMAGE_TOO_LARGE_RESPONSE = openapi_response(
-    413,
-    f"La imagen no puede superar {_format_megabytes(config.MAX_IMAGE_SIZE)} MB.",
-)
-INVALID_IMAGE_RESPONSE = openapi_response(
-    415,
-    "El archivo no es una imagen válida.",
-)
 MANUAL_UPLOAD_TOO_LARGE_RESPONSE = openapi_response(
     413,
     (

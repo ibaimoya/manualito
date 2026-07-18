@@ -1,8 +1,9 @@
 # Túnel de Cloudflare
 
 Este código declara el túnel administrado remotamente, su ingress HTTPS hacia
-Caddy y el registro `app.manualito.dev` dentro de la zona. No contiene
-credenciales ni se aplica automáticamente.
+Caddy y el registro configurado mediante `app_hostname` (por defecto,
+`app.manualito.dev`) dentro de la zona. No contiene credenciales ni se aplica
+automáticamente.
 
 ## Pasos manuales
 

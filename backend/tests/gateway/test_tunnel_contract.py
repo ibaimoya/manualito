@@ -52,7 +52,7 @@ def _caddy_block(caddyfile: str, declaration: str) -> str:
         start = caddyfile.index(declaration)
     except ValueError as exc:
         raise AssertionError(f"Bloque ausente: {declaration}") from exc
-    opening_brace = caddyfile.index("{", start)
+    opening_brace = caddyfile.index("{", start + len(declaration) - 1)
     depth = 0
     for position in range(opening_brace, len(caddyfile)):
         if caddyfile[position] == "{":

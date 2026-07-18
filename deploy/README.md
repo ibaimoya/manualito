@@ -131,11 +131,14 @@ certificados por nombre o sujeto.
   delimita qué proxy puede enviar cabeceras reenviadas a Uvicorn.
 - `backend-net`: API, workers, datos y servicios de IA; no tiene subred fija.
 - `edge-net`: solo Caddy y `cloudflared`; no publica el listener interno
-  `app.manualito.dev:8444` al host.
+  `{$APP_HOSTNAME}:8444` al host.
 
 El stack base no arranca ningún túnel. Para habilitar Cloudflare Tunnel, primero
 provisiona la infraestructura de [`terraform/`](terraform/README.md), guarda el
 token en `secrets/tunnel_token.txt` y arranca el perfil explícito:
+
+`APP_HOSTNAME`, definido en `.env`, configura el hostname público y usa
+`app.manualito.dev` por defecto.
 
 ```bash
 docker compose --profile tunnel up -d
@@ -144,7 +147,7 @@ docker compose --profile tunnel up -d
 El init `edge-ca-init` copia únicamente `root.crt` al volumen `edge-ca`.
 `cloudflared` verifica con esa CA el origen HTTPS y Caddy acepta
 `CF-Connecting-IP` solo desde la subred de `edge-net`. Las rutas `/docs`,
-`/redoc` y `/openapi.json` responden 404 en `app.manualito.dev`.
+`/redoc` y `/openapi.json` responden 404 en el hostname configurado.
 
 ## Logs
 

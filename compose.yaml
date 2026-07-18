@@ -569,6 +569,7 @@ services:
         CADDY_DIGEST: ${CADDY_DIGEST:?CADDY_DIGEST no definido}
         EDGE_NET_SUBNET: ${EDGE_NET_SUBNET:-172.30.250.8/29}
     environment:
+      APP_HOSTNAME: ${APP_HOSTNAME:?APP_HOSTNAME no definido}
       EDGE_NET_SUBNET: ${EDGE_NET_SUBNET:-172.30.250.8/29}
     ports:
       - "127.0.0.1:80:8080"
@@ -585,7 +586,7 @@ services:
       gateway-net:
       edge-net:
         aliases:
-          - app.manualito.dev
+          - ${APP_HOSTNAME:?APP_HOSTNAME no definido}
     logging:
       driver: json-file
       options:

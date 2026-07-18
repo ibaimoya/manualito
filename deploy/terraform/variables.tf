@@ -14,6 +14,12 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
+variable "app_hostname" {
+  description = "Hostname público de la aplicación."
+  type        = string
+  default     = "app.manualito.dev"
+}
+
 variable "tunnel_name" {
   description = "Nombre del túnel administrado por Terraform."
   type        = string

@@ -129,7 +129,7 @@ localhost {
 	import app
 }
 
-app.manualito.dev:8444 {
+{$APP_HOSTNAME}:8444 {
 	tls internal
 	import access-log
 

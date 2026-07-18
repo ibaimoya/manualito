@@ -4,7 +4,7 @@ locals {
     name = "manualito.dev"
   }
 
-  app_hostname = "app.${local.zone.name}"
+  app_hostname = var.app_hostname
 }
 
 resource "cloudflare_dns_record" "app" {

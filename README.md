@@ -12,6 +12,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
 [![Ollama](https://img.shields.io/badge/Ollama-000000?logo=ollama&logoColor=white)](https://ollama.com)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-9A3412?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCc+PGNpcmNsZSBjeD0nOC41JyBjeT0nMTInIHI9JzUnIGZpbGw9J3doaXRlJyBmaWxsLW9wYWNpdHk9JzAuNCcvPjxjaXJjbGUgY3g9JzE1LjUnIGN5PScxMicgcj0nNScgZmlsbD0nd2hpdGUnIGZpbGwtb3BhY2l0eT0nMC43Jy8+PGNpcmNsZSBjeD0nMTInIGN5PScxMicgcj0nNScgZmlsbD0nd2hpdGUnIGZpbGwtb3BhY2l0eT0nMScvPjwvc3ZnPg==&logoColor=white)](https://www.trychroma.com/)
 [![uv](https://img.shields.io/badge/uv-6D28D9?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)

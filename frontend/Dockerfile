@@ -42,4 +42,7 @@ RUN caddy fmt --diff /etc/caddy/Caddyfile \
 
 USER appuser
 
-EXPOSE 8080
+EXPOSE 8080 8082 8443
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/healthz || exit 1

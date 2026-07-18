@@ -1,9 +1,19 @@
 {
 	admin off
+	grace_period 120s
+	http_port 8080
+	https_port 8443
 	persist_config off
+
+	servers {
+		protocols h1 h2
+		timeouts {
+			read_header 10s
+		}
+	}
 }
 
-:8080 {
+(app) {
 	root * /srv
 
 	handle /api/* {
@@ -18,4 +28,17 @@
 		try_files {path} /index.html
 		file_server
 	}
+}
+
+http://:8080 {
+	redir https://localhost{uri} 308
+}
+
+localhost {
+	tls internal
+	import app
+}
+
+http://:8082 {
+	respond /healthz 200
 }

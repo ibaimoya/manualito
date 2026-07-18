@@ -127,6 +127,23 @@ services:
     restart: "no"
     network_mode: none
 
+  caddy-data-init:
+    <<: *volume-init-hardening
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-caddy-data-init
+    image: caddy:${CADDY_VERSION:?CADDY_VERSION no definida}@${CADDY_DIGEST:?CADDY_DIGEST no definido}
+    # Conserva la inicialización repetible sin dar acceso al material de la CA.
+    user: "0:1001"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        chown 1001:1001 /data
+        chmod 0700 /data
+    volumes:
+      - caddy-data:/data
+    restart: "no"
+    network_mode: none
+
   api:
     <<: *service-hardening
     container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-api
@@ -529,9 +546,15 @@ services:
         CADDY_DIGEST: ${CADDY_DIGEST:?CADDY_DIGEST no definido}
     ports:
       - "127.0.0.1:80:8080"
+      - "127.0.0.1:443:8443"
+    volumes:
+      - caddy-data:/data
     depends_on:
       api:
         condition: service_started
+      caddy-data-init:
+        condition: service_completed_successfully
+    stop_grace_period: 130s
     networks:
       - manualito-net
     logging:
@@ -549,6 +572,7 @@ volumes:
   ollama-data:
   rag-hf-cache:
   assets-data:
+  caddy-data:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
   redis-data:

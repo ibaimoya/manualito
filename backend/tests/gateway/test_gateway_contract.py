@@ -301,21 +301,15 @@ def test_compose_isolates_gateway_from_backend_services() -> None:
     assert set(networks) == {"backend-net", "gateway-net"}
     assert networks["gateway-net"]["driver"] == "bridge"
     assert networks["gateway-net"]["internal"] is True
-    assert networks["gateway-net"]["ipam"]["config"] == [
-        {"subnet": _GATEWAY_NET_SUBNET}
-    ]
+    assert networks["gateway-net"]["ipam"]["config"] == [{"subnet": _GATEWAY_NET_SUBNET}]
     assert networks["backend-net"]["driver"] == "bridge"
     assert networks["backend-net"].get("internal", False) is False
 
     gateway_members = {
-        name
-        for name, service in services.items()
-        if "gateway-net" in service.get("networks", {})
+        name for name, service in services.items() if "gateway-net" in service.get("networks", {})
     }
     backend_members = {
-        name
-        for name, service in services.items()
-        if "backend-net" in service.get("networks", {})
+        name for name, service in services.items() if "backend-net" in service.get("networks", {})
     }
     assert gateway_members == {"api", "frontend"}
     assert backend_members == {

@@ -74,7 +74,7 @@ x-celery-base: &celery-base
     - postgres_password
     - redis_password
   networks:
-    - manualito-net
+    - backend-net
 
 # Variante para Caddy.
 x-service-hardening-caddy: &service-hardening-caddy
@@ -154,6 +154,7 @@ services:
       - ./config/database.env
     environment:
       APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
+      FORWARDED_ALLOW_IPS: ${GATEWAY_NET_SUBNET}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
       TMPDIR: /app/storage/assets/.spool
     image: ${PROJECT_NAME:?PROJECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
@@ -164,8 +165,6 @@ services:
       - redis_password
     volumes:
       - assets-data:/app/storage/assets
-    ports:
-      - "127.0.0.1:8000:8000"
     depends_on:
       asset-storage-init:
         condition: service_completed_successfully
@@ -180,7 +179,8 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - manualito-net
+      - backend-net
+      - gateway-net
 
   celery-worker-manuals:
     <<: *celery-base
@@ -326,7 +326,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - manualito-net
+      - backend-net
 
   database-migrate:
     <<: *service-hardening
@@ -343,7 +343,7 @@ services:
         condition: service_healthy
     restart: "no"
     networks:
-      - manualito-net
+      - backend-net
 
   database:
     <<: *third-party-hardening
@@ -364,7 +364,7 @@ services:
     volumes:
       - database-data:/var/lib/postgresql
     networks:
-      - manualito-net
+      - backend-net
 
   redis:
     <<: *third-party-hardening
@@ -403,7 +403,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - manualito-net
+      - backend-net
 
   ocr:
     <<: *service-hardening
@@ -424,7 +424,7 @@ services:
     environment:
       OCR_ENGINE: ${OCR_RUNTIME_STAGE:?OCR_RUNTIME_STAGE no definida}
     networks:
-      - manualito-net
+      - backend-net
 
   rag:
     <<: *service-hardening
@@ -444,7 +444,7 @@ services:
     depends_on:
       - chroma
     networks:
-      - manualito-net
+      - backend-net
 
   chroma:
     <<: *third-party-hardening
@@ -454,7 +454,7 @@ services:
     volumes:
       - chromadb-data:/data
     networks:
-      - manualito-net
+      - backend-net
 
   llm:
     <<: *service-hardening
@@ -483,7 +483,7 @@ services:
       ollama-init:
         condition: service_completed_successfully
     networks:
-      - manualito-net
+      - backend-net
 
   mailpit:
     <<: *third-party-hardening
@@ -495,7 +495,7 @@ services:
     ports:
       - "127.0.0.1:8025:8025"
     networks:
-      - manualito-net
+      - backend-net
 
   ollama:
     <<: *third-party-hardening
@@ -511,7 +511,7 @@ services:
       retries: 10
       start_period: 20s
     networks:
-      - manualito-net
+      - backend-net
 
   # Descarga el modelo si falta.
   ollama-init:
@@ -532,7 +532,7 @@ services:
     command: ["ollama pull $$OLLAMA_MODEL"]
     restart: "no"
     networks:
-      - manualito-net
+      - backend-net
 
   frontend:
     <<: *service-hardening-caddy
@@ -556,15 +556,21 @@ services:
         condition: service_completed_successfully
     stop_grace_period: 130s
     networks:
-      - manualito-net
+      - gateway-net
     logging:
       driver: json-file
       options:
         max-size: "10m"
 
 networks:
-  manualito-net:
+  backend-net:
     driver: bridge
+  gateway-net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${GATEWAY_NET_SUBNET:-172.30.250.0/29}
 
 volumes:
   database-data:

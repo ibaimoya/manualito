@@ -11,12 +11,41 @@
 			read_header 10s
 		}
 	}
+
+	servers :8444 {
+		protocols h1 h2
+		timeouts {
+			read_header 10s
+		}
+		trusted_proxies static {$EDGE_NET_SUBNET}
+		trusted_proxies_strict
+		client_ip_headers CF-Connecting-IP
+	}
 }
 
 (api-proxy) {
 	reverse_proxy api:8000 {
+		header_up X-Forwarded-For {client_ip}
 		transport http {
 			keepalive 4s
+		}
+	}
+}
+
+(access-log) {
+	log {
+		output stdout
+		format filter {
+			fields {
+				request>headers>Cookie replace REDACTED
+				request>headers>Authorization replace REDACTED
+				request>headers>Referer replace REDACTED
+				resp_headers>Set-Cookie replace REDACTED
+				request>uri query {
+					replace token REDACTED
+				}
+			}
+			wrap json
 		}
 	}
 }
@@ -90,26 +119,23 @@ http://:8080 {
 
 localhost {
 	tls internal
-
-	log {
-		output stdout
-		format filter {
-			fields {
-				request>headers>Cookie replace REDACTED
-				request>headers>Authorization replace REDACTED
-				request>headers>Referer replace REDACTED
-				resp_headers>Set-Cookie replace REDACTED
-				request>uri query {
-					replace token REDACTED
-				}
-			}
-			wrap json
-		}
-	}
+	import access-log
 
 	@api_docs path /docs /redoc /openapi.json /docs/oauth2-redirect
 	handle @api_docs {
 		import api-proxy
+	}
+
+	import app
+}
+
+app.manualito.dev:8444 {
+	tls internal
+	import access-log
+
+	@edge_docs path /docs /docs/* /redoc /redoc/* /openapi.json
+	handle @edge_docs {
+		respond 404
 	}
 
 	import app

@@ -144,6 +144,29 @@ services:
     restart: "no"
     network_mode: none
 
+  edge-ca-init:
+    <<: *volume-init-hardening
+    profiles: ["tunnel"]
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-edge-ca-init
+    image: caddy:${CADDY_VERSION:?CADDY_VERSION no definida}@${CADDY_DIGEST:?CADDY_DIGEST no definido}
+    user: "0:0"
+    cap_add:
+      - DAC_READ_SEARCH
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        test -s /data/caddy/pki/authorities/local/root.crt
+        install -m 0444 /data/caddy/pki/authorities/local/root.crt /edge-ca/root.crt
+    volumes:
+      - caddy-data:/data:ro
+      - edge-ca:/edge-ca
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: "no"
+    network_mode: none
+
   api:
     <<: *service-hardening
     container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-api
@@ -544,6 +567,9 @@ services:
         NODE_VARIANT: ${NODE_VARIANT:-}
         CADDY_VERSION: ${CADDY_VERSION:?CADDY_VERSION no definida}
         CADDY_DIGEST: ${CADDY_DIGEST:?CADDY_DIGEST no definido}
+        EDGE_NET_SUBNET: ${EDGE_NET_SUBNET:-172.30.250.8/29}
+    environment:
+      EDGE_NET_SUBNET: ${EDGE_NET_SUBNET:-172.30.250.8/29}
     ports:
       - "127.0.0.1:80:8080"
       - "127.0.0.1:443:8443"
@@ -556,7 +582,37 @@ services:
         condition: service_completed_successfully
     stop_grace_period: 130s
     networks:
-      - gateway-net
+      gateway-net:
+      edge-net:
+        aliases:
+          - app.manualito.dev
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+
+  cloudflared:
+    <<: *service-hardening
+    profiles: ["tunnel"]
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-cloudflared
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:?CLOUDFLARED_VERSION no definida}@${CLOUDFLARED_DIGEST:?CLOUDFLARED_DIGEST no definido}
+    user: "65532:65532"
+    entrypoint: ["cloudflared", "--output", "json"]
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token-file
+      - /run/secrets/tunnel_token
+    secrets:
+      - tunnel_token
+    volumes:
+      - edge-ca:/etc/cloudflared/ca:ro
+    depends_on:
+      edge-ca-init:
+        condition: service_completed_successfully
+    networks:
+      - edge-net
     logging:
       driver: json-file
       options:
@@ -570,6 +626,11 @@ networks:
     ipam:
       config:
         - subnet: ${GATEWAY_NET_SUBNET:-172.30.250.0/29}
+  edge-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${EDGE_NET_SUBNET:-172.30.250.8/29}
 
 volumes:
   database-data:
@@ -578,6 +639,7 @@ volumes:
   rag-hf-cache:
   assets-data:
   caddy-data:
+  edge-ca:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
   redis-data:
@@ -591,3 +653,5 @@ secrets:
     file: ./secrets/redis_password.txt
   flower_basic_auth:
     file: ./secrets/flower_basic_auth.txt
+  tunnel_token:
+    file: ./secrets/tunnel_token.txt

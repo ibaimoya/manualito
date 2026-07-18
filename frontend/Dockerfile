@@ -4,6 +4,7 @@ ARG NODE_VERSION
 ARG NODE_VARIANT
 ARG CADDY_VERSION
 ARG CADDY_DIGEST
+ARG EDGE_NET_SUBNET
 
 # Stage: build.
 FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}${NODE_VARIANT:+-${NODE_VARIANT}} AS builder
@@ -26,6 +27,9 @@ RUN pnpm build
 # Stage: runtime.
 FROM caddy:${CADDY_VERSION:?CADDY_VERSION_no_definida}@${CADDY_DIGEST:?CADDY_DIGEST_no_definido} AS runtime
 
+ARG EDGE_NET_SUBNET
+ENV EDGE_NET_SUBNET=${EDGE_NET_SUBNET}
+
 RUN addgroup -g 1001 -S appuser \
     && adduser -u 1001 -S appuser -G appuser \
     && setcap -r /usr/bin/caddy \
@@ -42,7 +46,7 @@ RUN caddy fmt --diff /etc/caddy/Caddyfile \
 
 USER appuser
 
-EXPOSE 8080 8082 8443
+EXPOSE 8080 8082 8443 8444
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/healthz || exit 1

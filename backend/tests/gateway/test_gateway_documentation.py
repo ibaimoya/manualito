@@ -9,6 +9,14 @@ def _read(relative_path: str) -> str:
     return (_REPOSITORY_ROOT / relative_path).read_text(encoding="utf-8")
 
 
+def _dotenv_value(name: str) -> str:
+    for raw_line in _read(".env").splitlines():
+        key, separator, value = raw_line.partition("=")
+        if separator and key.strip() == name:
+            return value.strip()
+    raise AssertionError(f"{name} no está definido en .env")
+
+
 def test_project_documentation_describes_the_https_gateway_architecture() -> None:
     """La guia principal presenta Caddy, HTTPS y las tres redes del despliegue."""
     readme = _read("README.md")
@@ -24,12 +32,17 @@ def test_project_documentation_describes_the_https_gateway_architecture() -> Non
 def test_deployment_documentation_covers_ca_trust_and_the_optional_tunnel() -> None:
     """La guia de despliegue explica la CA local y el perfil opt-in del tunel."""
     deployment = _read("deploy/README.md")
+    terraform = _read("deploy/terraform/README.md")
+    app_hostname = _dotenv_value("APP_HOSTNAME")
 
     assert ".\\local-ca.bat trust" in deployment
     assert "./local-ca.sh trust" in deployment
     assert "docker compose --profile tunnel up -d" in deployment
     assert "secrets/tunnel_token.txt" in deployment
-    assert "app.manualito.dev" in deployment
+    assert "`APP_HOSTNAME`" in deployment
+    assert app_hostname in deployment
+    assert "`app_hostname`" in terraform
+    assert app_hostname in terraform
 
 
 def test_frontend_documentation_separates_vite_development_from_caddy_runtime() -> None:

@@ -135,8 +135,9 @@ def test_edge_network_and_ca_volume_are_narrowly_shared() -> None:
 def test_caddy_exposes_a_strict_edge_listener_without_host_publication() -> None:
     """El listener 8444 confía CF-Connecting-IP solo desde edge-net y oculta docs."""
     caddyfile = _read(_CADDYFILE)
+    app_hostname = _dotenv_value("APP_HOSTNAME")
     edge_server = _caddy_block(caddyfile, "servers :8444 {")
-    edge_site = _caddy_block(caddyfile, "app.manualito.dev:8444 {")
+    edge_site = _caddy_block(caddyfile, "{$APP_HOSTNAME}:8444 {")
     edge_docs = _caddy_block(edge_site, "handle @edge_docs {")
     frontend = _compose_config(tunnel=True)["services"]["frontend"]
 
@@ -151,6 +152,8 @@ def test_caddy_exposes_a_strict_edge_listener_without_host_publication() -> None
     assert "import access-log" in edge_site
     assert "import app" in edge_site
     assert all(port["target"] != 8444 for port in frontend["ports"])
+    assert frontend["environment"]["APP_HOSTNAME"] == app_hostname
+    assert frontend["networks"]["edge-net"]["aliases"] == [app_hostname]
     assert frontend["environment"]["EDGE_NET_SUBNET"] == _EDGE_NET_SUBNET
     assert frontend["build"]["args"]["EDGE_NET_SUBNET"] == _EDGE_NET_SUBNET
     assert "EXPOSE 8080 8082 8443 8444" in _read(_DOCKERFILE)
@@ -159,6 +162,8 @@ def test_caddy_exposes_a_strict_edge_listener_without_host_publication() -> None
 def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
     """Terraform declara túnel, ingress TLS verificado y DNS sin valores sensibles."""
     terraform = "\n".join(_read(path) for path in sorted(_TERRAFORM.glob("*.tf")))
+    app_hostname = _dotenv_value("APP_HOSTNAME")
+    app_hostname_variable = _caddy_block(terraform, 'variable "app_hostname"')
 
     assert 'source  = "cloudflare/cloudflare"' in terraform
     assert 'version = "5.22.0"' in terraform
@@ -168,7 +173,8 @@ def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
     assert re.search(r'service\s*=\s*"https://frontend:8444"', terraform)
     assert re.search(r"origin_server_name\s*=\s*local\.app_hostname", terraform)
     assert re.search(rf'ca_pool\s*=\s*"{_EDGE_CERTIFICATE}"', terraform)
-    assert 'app_hostname = "app.${local.zone.name}"' in terraform
+    assert f'default     = "{app_hostname}"' in app_hostname_variable
+    assert re.search(r"app_hostname\s*=\s*var\.app_hostname", terraform)
     assert 'service = "http_status:404"' in terraform
     assert "no_tls_verify" not in terraform
     assert 'variable "cloudflare_api_token"' in terraform

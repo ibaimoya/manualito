@@ -8,8 +8,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%MANUALITO_SCRIPT%" -Ac
 set "MANUALITO_EXIT=%ERRORLEVEL%"
 if "%MANUALITO_EXIT%"=="42" (
     set "MANUALITO_NO_PAUSE=1"
+    set "MANUALITO_PARENT_CA_PROMPT=%MANUALITO_SETUP_TRUST_PROMPT%"
+    set "MANUALITO_SETUP_TRUST_PROMPT=1"
     call "%~dp0start.bat"
     set "MANUALITO_EXIT=!ERRORLEVEL!"
+    if defined MANUALITO_PARENT_CA_PROMPT (
+        set "MANUALITO_SETUP_TRUST_PROMPT=%MANUALITO_PARENT_CA_PROMPT%"
+    ) else (
+        set "MANUALITO_SETUP_TRUST_PROMPT="
+    )
     if defined MANUALITO_PARENT_NO_PAUSE (
         set "MANUALITO_NO_PAUSE=%MANUALITO_PARENT_NO_PAUSE%"
     ) else (

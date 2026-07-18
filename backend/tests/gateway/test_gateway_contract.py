@@ -75,6 +75,8 @@ def test_frontend_image_pins_and_validates_caddy_runtime() -> None:
         "FROM caddy:${CADDY_VERSION:?CADDY_VERSION_no_definida}"
         "@${CADDY_DIGEST:?CADDY_DIGEST_no_definido} AS runtime"
     ) in dockerfile
+    assert f"ARG APP_HOSTNAME={_dotenv_value('APP_HOSTNAME')}" in dockerfile
+    assert "ENV APP_HOSTNAME=${APP_HOSTNAME}" in dockerfile
     assert "setcap -r /usr/bin/caddy" in dockerfile
     assert "chown -R appuser:appuser /data /config" in dockerfile
     assert "COPY --link --from=builder --chown=1001:1001 /app/dist /srv" in dockerfile

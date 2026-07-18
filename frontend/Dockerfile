@@ -27,8 +27,10 @@ RUN pnpm build
 # Stage: runtime.
 FROM caddy:${CADDY_VERSION:?CADDY_VERSION_no_definida}@${CADDY_DIGEST:?CADDY_DIGEST_no_definido} AS runtime
 
+ARG APP_HOSTNAME=app.manualito.dev
 ARG EDGE_NET_SUBNET
-ENV EDGE_NET_SUBNET=${EDGE_NET_SUBNET}
+ENV APP_HOSTNAME=${APP_HOSTNAME} \
+    EDGE_NET_SUBNET=${EDGE_NET_SUBNET}
 
 RUN addgroup -g 1001 -S appuser \
     && adduser -u 1001 -S appuser -G appuser \

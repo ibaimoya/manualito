@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   gateway-config:
-    name: Gateway - Configuración
+    name: Caddy - Validación
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -43,11 +43,13 @@ jobs:
           . ./.env
           docker run --rm \
             --env "EDGE_NET_SUBNET=$EDGE_NET_SUBNET" \
+            --env "APP_HOSTNAME=$APP_HOSTNAME" \
             --volume "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
             "$CADDY_IMAGE" \
             caddy fmt --diff /etc/caddy/Caddyfile
           docker run --rm \
             --env "EDGE_NET_SUBNET=$EDGE_NET_SUBNET" \
+            --env "APP_HOSTNAME=$APP_HOSTNAME" \
             --env XDG_DATA_HOME=/tmp/caddy-validation \
             --volume "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
             "$CADDY_IMAGE" \

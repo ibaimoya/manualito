@@ -19,6 +19,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gateway-config:
+    name: Gateway - Configuración
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Comprobar deriva de la imagen de Caddy
+        run: |
+          . ./.env
+          expected="caddy:${CADDY_VERSION}@${CADDY_DIGEST}"
+          if [ "$CADDY_IMAGE" != "$expected" ]; then
+            echo "::error::El gateway usa $CADDY_IMAGE pero .env declara $expected."
+            exit 1
+          fi
+
+      - name: Validar Caddyfile
+        run: |
+          . ./.env
+          docker run --rm \
+            --env "EDGE_NET_SUBNET=$EDGE_NET_SUBNET" \
+            --volume "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            "$CADDY_IMAGE" \
+            caddy fmt --diff /etc/caddy/Caddyfile
+          docker run --rm \
+            --env "EDGE_NET_SUBNET=$EDGE_NET_SUBNET" \
+            --env XDG_DATA_HOME=/tmp/caddy-validation \
+            --volume "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            "$CADDY_IMAGE" \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Renderizar Docker Compose
+        run: |
+          install -m 0600 /dev/null secrets/tunnel_token.txt
+          trap 'rm -f secrets/tunnel_token.txt' EXIT
+          docker compose config --quiet
+          docker compose --profile tunnel config --quiet
+
   backend-lint:
     name: Backend - Lint
     runs-on: ubuntu-latest
@@ -319,7 +360,7 @@ jobs:
     # El plan gratuito de SonarQube Cloud solo analiza master y pull requests.
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     needs:
-      [backend-typecheck, backend-tests, backend-upload-integration, backend-migrations, frontend-tests]
+      [gateway-config, backend-typecheck, backend-tests, backend-upload-integration, backend-migrations, frontend-tests]
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

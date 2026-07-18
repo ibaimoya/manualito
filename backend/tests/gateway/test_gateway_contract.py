@@ -4,10 +4,12 @@ from pathlib import Path
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 _FRONTEND_ROOT = _REPOSITORY_ROOT / "frontend"
+_API_DOCKERFILE = _REPOSITORY_ROOT / "backend" / "api" / "Dockerfile"
 _CADDYFILE_PATH = "/etc/caddy/Caddyfile"
 _VALIDATION_DATA_HOME = "/tmp/caddy-validation"
 _CADDY_VERSION = "2.11.4-alpine"
 _CADDY_DIGEST = "sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648"
+_GATEWAY_NET_SUBNET = "172.30.250.0/29"
 _ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable"
 _NO_STORE_CACHE_CONTROL = "no-cache, no-store, must-revalidate"
 _INDEX_CACHE_CONTROL = f"{_NO_STORE_CACHE_CONTROL}, no-transform"
@@ -287,3 +289,64 @@ def test_compose_publishes_hardened_caddy_on_loopback() -> None:
     assert frontend["stop_grace_period"] == "2m10s"
     assert frontend["logging"]["driver"] == "json-file"
     assert frontend["logging"]["options"]["max-size"]
+
+
+def test_compose_isolates_gateway_from_backend_services() -> None:
+    """Compose limita gateway-net a Caddy/API y conserva el backend separado."""
+    config = _compose_config()
+    services = config["services"]
+    networks = config["networks"]
+
+    assert _dotenv_value("GATEWAY_NET_SUBNET") == _GATEWAY_NET_SUBNET
+    assert set(networks) == {"backend-net", "gateway-net"}
+    assert networks["gateway-net"]["driver"] == "bridge"
+    assert networks["gateway-net"]["internal"] is True
+    assert networks["gateway-net"]["ipam"]["config"] == [
+        {"subnet": _GATEWAY_NET_SUBNET}
+    ]
+    assert networks["backend-net"]["driver"] == "bridge"
+    assert networks["backend-net"].get("internal", False) is False
+
+    gateway_members = {
+        name
+        for name, service in services.items()
+        if "gateway-net" in service.get("networks", {})
+    }
+    backend_members = {
+        name
+        for name, service in services.items()
+        if "backend-net" in service.get("networks", {})
+    }
+    assert gateway_members == {"api", "frontend"}
+    assert backend_members == {
+        "api",
+        "celery-beat",
+        "celery-worker-gpu",
+        "celery-worker-mail",
+        "celery-worker-manuals",
+        "chroma",
+        "database",
+        "database-migrate",
+        "flower",
+        "llm",
+        "mailpit",
+        "ocr",
+        "ollama",
+        "ollama-init",
+        "rag",
+        "redis",
+    }
+
+
+def test_api_trusts_only_gateway_cidr_without_host_publication() -> None:
+    """La API acepta proxy headers solo desde gateway-net y no publica 8000."""
+    api = _compose_service("api")
+    frontend = _compose_service("frontend")
+    dockerfile = _API_DOCKERFILE.read_text(encoding="utf-8")
+
+    assert api["environment"]["FORWARDED_ALLOW_IPS"] == _GATEWAY_NET_SUBNET
+    assert "ports" not in api
+    assert set(api["networks"]) == {"backend-net", "gateway-net"}
+    assert set(frontend["networks"]) == {"gateway-net"}
+    assert '"--proxy-headers"' in dockerfile
+    assert "--forwarded-allow-ips" not in dockerfile

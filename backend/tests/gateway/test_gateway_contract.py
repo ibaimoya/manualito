@@ -189,7 +189,8 @@ def test_localhost_exposes_docs_and_writes_redacted_json_access_logs() -> None:
     assert "request>headers>Referer replace REDACTED" in access_log
     assert "resp_headers>Set-Cookie replace REDACTED" in access_log
     assert "replace token REDACTED" in query_filter
-    assert caddyfile.count("log {") == 1
+    assert "import access-log" in localhost
+    assert caddyfile.count("import access-log") == 2
 
 
 def test_caddy_serves_local_tls_redirect_and_liveness_contract() -> None:
@@ -215,7 +216,7 @@ def test_frontend_image_exposes_internal_ports_and_checks_liveness() -> None:
     """La imagen declara sus listeners y comprueba el endpoint interno de vida."""
     dockerfile = (_FRONTEND_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert "EXPOSE 8080 8082 8443" in dockerfile
+    assert "EXPOSE 8080 8082 8443 8444" in dockerfile
     assert "HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3" in dockerfile
     assert "wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/healthz" in dockerfile
 
@@ -298,7 +299,7 @@ def test_compose_isolates_gateway_from_backend_services() -> None:
     networks = config["networks"]
 
     assert _dotenv_value("GATEWAY_NET_SUBNET") == _GATEWAY_NET_SUBNET
-    assert set(networks) == {"backend-net", "gateway-net"}
+    assert set(networks) == {"backend-net", "edge-net", "gateway-net"}
     assert networks["gateway-net"]["driver"] == "bridge"
     assert networks["gateway-net"].get("internal", False) is False
     assert networks["gateway-net"]["ipam"]["config"] == [{"subnet": _GATEWAY_NET_SUBNET}]
@@ -341,6 +342,6 @@ def test_api_trusts_only_gateway_cidr_without_host_publication() -> None:
     assert api["environment"]["FORWARDED_ALLOW_IPS"] == _GATEWAY_NET_SUBNET
     assert "ports" not in api
     assert set(api["networks"]) == {"backend-net", "gateway-net"}
-    assert set(frontend["networks"]) == {"gateway-net"}
+    assert set(frontend["networks"]) == {"edge-net", "gateway-net"}
     assert '"--proxy-headers"' in dockerfile
     assert "--forwarded-allow-ips" not in dockerfile

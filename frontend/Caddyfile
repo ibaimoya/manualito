@@ -13,20 +13,74 @@
 	}
 }
 
+(api-proxy) {
+	reverse_proxy api:8000 {
+		transport http {
+			keepalive 4s
+		}
+	}
+}
+
 (app) {
 	root * /srv
 
+	encode zstd gzip
+
+	request_body {
+		max_size 128MB
+	}
+
+	@not_docs {
+		not path /docs /docs/* /redoc /redoc/*
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+		-Server
+	}
+	header @not_docs Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self' blob:; base-uri 'self'; form-action 'self';"
+
 	handle /api/* {
-		reverse_proxy api:8000
+		import api-proxy
 	}
 
 	handle /health {
-		reverse_proxy api:8000
+		log_skip
+		import api-proxy
+	}
+
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		@missing_asset not file
+		respond @missing_asset 404
+		file_server
+	}
+
+	@pwa_files path_regexp ^/(sw\.js|registerSW\.js|workbox-[^/]+\.js)$
+	handle @pwa_files {
+		header Cache-Control "no-cache, no-store, must-revalidate"
+		@missing_pwa_file not file
+		respond @missing_pwa_file 404
+		file_server
+	}
+
+	handle /manifest.webmanifest {
+		header Cache-Control "no-cache"
+		@missing_manifest not file
+		respond @missing_manifest 404
+		file_server
 	}
 
 	handle {
-		try_files {path} /index.html
-		file_server
+		route {
+			try_files {path} /index.html
+			@index path /index.html
+			header @index Cache-Control "no-cache, no-store, must-revalidate, no-transform"
+			file_server
+		}
 	}
 }
 
@@ -36,9 +90,36 @@ http://:8080 {
 
 localhost {
 	tls internal
+
+	log {
+		output stdout
+		format filter {
+			fields {
+				request>headers>Cookie replace REDACTED
+				request>headers>Authorization replace REDACTED
+				request>headers>Referer replace REDACTED
+				resp_headers>Set-Cookie replace REDACTED
+				request>uri query {
+					replace token REDACTED
+				}
+			}
+			wrap json
+		}
+	}
+
+	@api_docs path /docs /redoc /openapi.json /docs/oauth2-redirect
+	handle @api_docs {
+		import api-proxy
+	}
+
 	import app
+}
+
+https://:8443 {
+	respond 404
 }
 
 http://:8082 {
 	respond /healthz 200
+	respond 404
 }

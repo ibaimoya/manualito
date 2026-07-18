@@ -186,12 +186,13 @@ def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
 def test_tunnel_token_and_terraform_state_are_ignored() -> None:
     """El token real y el estado Terraform nunca entran en el árbol Git."""
     root_ignore = _read(_REPOSITORY_ROOT / ".gitignore")
-    terraform_ignore = _read(_TERRAFORM / ".gitignore")
 
     assert "secrets/tunnel_token.txt" in root_ignore
-    assert ".terraform/" in terraform_ignore
-    assert "*.tfstate*" in terraform_ignore
-    assert "terraform.tfvars" in terraform_ignore
+    assert "/deploy/terraform/.terraform/" in root_ignore
+    assert "/deploy/terraform/*.tfstate*" in root_ignore
+    assert "/deploy/terraform/terraform.tfvars" in root_ignore
+    assert "/deploy/terraform/crash.log" in root_ignore
+    assert "/deploy/terraform/crash.*.log" in root_ignore
     ignored = subprocess.run(
         ["git", "check-ignore", "--quiet", str(_TUNNEL_TOKEN)],
         cwd=_REPOSITORY_ROOT,

@@ -426,6 +426,13 @@ FodyWeavers.xsd
 notimportant/
 deploy/local/
 
+# Terraform
+/deploy/terraform/.terraform/
+/deploy/terraform/*.tfstate*
+/deploy/terraform/terraform.tfvars
+/deploy/terraform/crash.log
+/deploy/terraform/crash.*.log
+
 # Caché de modelos de OCR
 .paddleocr_cache/
 .ocr_cache/

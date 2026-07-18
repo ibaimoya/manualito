@@ -76,8 +76,8 @@ x-celery-base: &celery-base
   networks:
     - manualito-net
 
-# Variante para nginx
-x-service-hardening-nginx: &service-hardening-nginx
+# Variante para Caddy.
+x-service-hardening-caddy: &service-hardening-caddy
   security_opt:
     - no-new-privileges:true
   cap_drop:
@@ -86,9 +86,7 @@ x-service-hardening-nginx: &service-hardening-nginx
   read_only: true
   tmpfs:
     - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777,uid=1001,gid=1001
-    - /var/cache/nginx:rw,noexec,nosuid,nodev,size=64m,uid=1001,gid=1001
-    - /var/run:rw,noexec,nosuid,nodev,size=4m,uid=1001,gid=1001
-    - /var/log/nginx:rw,noexec,nosuid,nodev,size=32m,uid=1001,gid=1001
+    - /config:rw,noexec,nosuid,nodev,size=16m,uid=1001,gid=1001
   pids_limit: 100
 
 services:
@@ -520,22 +518,26 @@ services:
       - manualito-net
 
   frontend:
-    <<: *service-hardening-nginx
+    <<: *service-hardening-caddy
     container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-frontend
     build:
       context: ./frontend
       args:
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
         NODE_VARIANT: ${NODE_VARIANT:-}
-        NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}
-        NGINX_VARIANT: ${NGINX_VARIANT:-}
+        CADDY_VERSION: ${CADDY_VERSION:?CADDY_VERSION no definida}
+        CADDY_DIGEST: ${CADDY_DIGEST:?CADDY_DIGEST no definido}
     ports:
-      - "5173:8080"
+      - "127.0.0.1:80:8080"
     depends_on:
       api:
         condition: service_started
     networks:
       - manualito-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
 
 networks:
   manualito-net:

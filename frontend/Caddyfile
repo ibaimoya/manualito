@@ -1,0 +1,21 @@
+{
+	admin off
+	persist_config off
+}
+
+:8080 {
+	root * /srv
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle /health {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

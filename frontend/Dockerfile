@@ -2,8 +2,8 @@
 
 ARG NODE_VERSION
 ARG NODE_VARIANT
-ARG NGINX_VERSION
-ARG NGINX_VARIANT
+ARG CADDY_VERSION
+ARG CADDY_DIGEST
 
 # Stage: build.
 FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}${NODE_VARIANT:+-${NODE_VARIANT}} AS builder
@@ -24,24 +24,22 @@ COPY --link . .
 RUN pnpm build
 
 # Stage: runtime.
-FROM nginx:${NGINX_VERSION:?NGINX_VERSION_no_definida}${NGINX_VARIANT:+-${NGINX_VARIANT}} AS runtime
+FROM caddy:${CADDY_VERSION:?CADDY_VERSION_no_definida}@${CADDY_DIGEST:?CADDY_DIGEST_no_definido} AS runtime
 
 RUN addgroup -g 1001 -S appuser \
     && adduser -u 1001 -S appuser -G appuser \
-    && chown -R appuser:appuser /var/cache/nginx /var/run /var/log/nginx /etc/nginx/conf.d \
-    && touch /var/run/nginx.pid \
-    && chown appuser:appuser /var/run/nginx.pid \
-    && rm -f /etc/nginx/conf.d/default.conf
+    && setcap -r /usr/bin/caddy \
+    && chown -R appuser:appuser /data /config
 
-COPY --link --from=builder --chown=1001:1001 /app/dist /usr/share/nginx/html
+COPY --link --from=builder --chown=1001:1001 /app/dist /srv
 
-COPY --link --chown=1001:1001 nginx.conf /etc/nginx/conf.d/default.conf
+COPY --link --chown=1001:1001 Caddyfile /etc/caddy/Caddyfile
+
+RUN caddy fmt --diff /etc/caddy/Caddyfile \
+    && XDG_DATA_HOME=/tmp/caddy-validation \
+        caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
+    && rm -rf "/tmp/caddy-validation"
 
 USER appuser
 
 EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -q --spider http://127.0.0.1:8080/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]

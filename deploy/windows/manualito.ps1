@@ -1143,11 +1143,10 @@ function Invoke-Start([string]$DockerPath) {
         Write-Ok "Comando de arranque preparado"
     } else {
         Write-Ok "Manualito listo:"
-        Write-Field "api" "http://localhost:8000"
-        Write-Field "app" "http://localhost:5173"
+        Write-Field "app" "https://localhost"
         Write-Field "flower" "http://localhost:5555"
         Write-Field "mailpit" "http://localhost:8025"
-        Write-Field "openapi" "http://localhost:8000/docs"
+        Write-Field "openapi" "https://localhost/docs"
         Write-Ok "LLM:"
         $runningModel = Get-RunningLlmModel $DockerPath $selection
         if ([string]::IsNullOrWhiteSpace($runningModel)) {

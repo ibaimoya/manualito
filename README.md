@@ -84,11 +84,14 @@ Servicios expuestos:
 
 | Servicio | URL |
 | --- | --- |
-| API | `http://localhost:8000` |
-| App | `http://localhost:5173` |
+| App y API (`/api/*`) | `https://localhost` |
 | Flower | `http://localhost:5555` |
 | Mailpit | `http://localhost:8025` |
-| OpenAPI | `http://localhost:8000/docs` |
+| OpenAPI | `https://localhost/docs` |
+
+El puerto 80 solo redirige a HTTPS. La API no publica un puerto propio en el
+host: Caddy es el único gateway de la aplicación. Para confiar en la CA local,
+usa `local-ca trust` como se explica en la [guía de despliegue](deploy/README.md).
 
 Los detalles de perfiles LLM, NVIDIA, OCR, logs y overrides están en
 [aquí](deploy/README.md).
@@ -146,7 +149,7 @@ Imagen/PDF -> OCR -> normalización -> fragmentos -> ChromaDB -> RAG -> LLM -> e
 | LLM | Ollama con modelos locales |
 | Archivos | Volumen Docker para assets de manuales y páginas |
 | Email local | Mailpit |
-| Infraestructura | Docker Compose, Nginx, contenedores endurecidos |
+| Infraestructura | Docker Compose, Caddy, Cloudflare Tunnel opcional, contenedores endurecidos |
 | Calidad | Ruff, pytest, ESLint, Vitest, Testing Library, SonarQube Cloud |
 | Dependencias | uv para Python, pnpm para frontend |
 
@@ -154,19 +157,26 @@ Imagen/PDF -> OCR -> normalización -> fragmentos -> ChromaDB -> RAG -> LLM -> e
 
 ## Arquitectura
 
-La aplicación se levanta con Docker Compose y separa la interfaz, la API, la
-persistencia y los servicios de IA. El frontend se sirve con Nginx y habla con
-la API por el mismo origen; la API orquesta el resto de servicios por red
-interna.
+La aplicación se levanta con Docker Compose y separa el gateway, la API, la
+persistencia y los servicios de IA. Caddy sirve la SPA, termina TLS y envía
+`/api/*` y `/health` a FastAPI por el mismo origen. La API orquesta el resto de
+servicios por una red distinta.
 
 ```text
-Browser
-  |
-  v
-frontend (Nginx, :5173)
-  |
-  v
-api (FastAPI, :8000)
+Navegador ── https://localhost:443 ───────────────┐
+                                                  v
+Cloudflare ──> cloudflared ── edge-net ──> frontend (Caddy :8443/:8444)
+                                                  |
+                                             gateway-net
+                                                  |
+                                                  v
+                                         api (FastAPI :8000)
+                                                  |
+                                             backend-net
+                                                  |
+                         database, Redis, Celery, OCR, RAG, LLM y Mailpit
+
+api (FastAPI, :8000 interno)
   |----------> database (PostgreSQL)
   |----------> assets-data (manuales e imágenes)
   |----------> ocr (Tesseract/PaddleOCR)
@@ -175,9 +185,11 @@ api (FastAPI, :8000)
   |----------> mailpit
 ```
 
-- `frontend`: compila la app React y sirve `dist/` con Nginx.
-- `api`: gateway público, autenticación, permisos, validación, orquestación y
-  contratos HTTP.
+- `frontend`: compila React y ejecuta Caddy como gateway non-root y read-only.
+- `api`: autenticación, permisos, validación, orquestación y contratos HTTP;
+  solo es alcanzable desde `gateway-net` y `backend-net`.
+- `cloudflared`: cliente opcional de Cloudflare Tunnel; comparte únicamente
+  `edge-net` con Caddy y no publica puertos.
 - `database`: PostgreSQL con migraciones gestionadas por Alembic.
 - `database-migrate`: aplica migraciones antes de arrancar la API.
 - `ocr`: servicio aislado para extracción de texto.
@@ -186,6 +198,12 @@ api (FastAPI, :8000)
 - `mailpit`: buzón SMTP local para verificación y recuperación de cuenta.
 - `asset-storage-init` y volúmenes: preparan y conservan assets, cachés de
   modelos y datos de aplicación.
+
+Las redes delimitan cada frontera: `gateway-net` une solo Caddy y FastAPI,
+`backend-net` contiene la API y los servicios internos, y `edge-net` une Caddy
+con el túnel opcional. El listener local `:8443` publica la documentación de la
+API; el listener del túnel `:8444` la oculta. En el contenedor, `:8080` atiende
+solo la redirección HTTP y `:8082` el liveness de Caddy.
 
 ## Configuración
 
@@ -196,13 +214,13 @@ que editar Dockerfiles ni `compose.yaml`.
 
 | Fichero | Responsabilidad |
 | --- | --- |
-| `.env` | Versiones de app, Python, Node, Nginx, Postgres, ChromaDB, Ollama, Mailpit y tags locales. |
+| `.env` | Versiones de app, Python, Node, Caddy, cloudflared, Postgres, ChromaDB, Ollama, Mailpit y tags locales. |
 | `config/backend.env` | URLs internas, modelo de Ollama, límites, cookies, SMTP, ChromaDB y modelos de embeddings. |
 | `config/celery.env` | Host de Redis, bases de datos de broker/resultados y tiempos de visibilidad/expiración de Celery. |
 | `config/database.env` | Nombre de base de datos, host, puerto, driver y rutas de secretos. |
 | `config/frontend.env` | Variables públicas de Vite para desarrollo/build del frontend (`VITE_*`). |
 | `deploy/local/selected.env` | Selección local generada por `setup`. |
-| `secrets/` | Secretos locales usados por Compose para Postgres, Redis y Flower. |
+| `secrets/` | Defaults locales de Postgres, Redis y Flower; el token opcional del túnel permanece gitignorado. |
 
 El servicio `llm` puede precargar el modelo de Ollama al arrancar con
 `OLLAMA_PRELOAD_ON_STARTUP=true`. La carga usa la API oficial de Ollama con una

@@ -97,7 +97,7 @@ class ApiSettings(BaseSettings):
     auth_csrf_cookie_name: str | None = None
     auth_csrf_header_name: str = "X-CSRF-Token"
 
-    frontend_public_url: str = "http://localhost:5173"
+    frontend_public_url: str = "https://localhost"
     smtp_host: str = "mailpit"
     smtp_port: int = Field(default=1025, ge=1, le=65535)
     smtp_username: str | None = None

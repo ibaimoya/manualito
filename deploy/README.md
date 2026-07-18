@@ -7,6 +7,11 @@ llamar a `docker compose` a mano, sino usar los scripts de la raíz.
 `setup` prepara la configuración local, `start` arranca la aplicación y `stop`
 la detiene con el mismo perfil.
 
+La aplicación completa queda en `https://localhost`; `http://localhost`
+redirige con 308 y la API solo se alcanza bajo `/api/*`. OpenAPI está disponible
+en `https://localhost/docs`. Flower y Mailpit mantienen sus puertos locales
+`5555` y `8025`.
+
 ### Windows
 
 Desde la carpeta raíz del proyecto, ejecuta los scripts con doble clic o desde PowerShell:
@@ -42,7 +47,10 @@ docker en Linux [aquí](https://www.digitalocean.com/community/tutorials/how-to-
 6. Recomienda OCR.
 7. Pide confirmación.
 8. Guarda `deploy/local/selected.env`.
-9. Prepara Docker Compose con los overrides necesarios.
+9. Prepara Docker Compose con los overrides necesarios y espera a que Caddy esté
+   sano.
+10. En modo interactivo, ofrece confiar una vez en la CA local. En CI o modo no
+    interactivo muestra el comando manual y continúa.
 
 La recomendación es conservadora, úsala a no ser que sepas lo que estás cambiando.
 
@@ -88,6 +96,55 @@ responsabilidad.
 
 `deploy/local/` es estado local de la máquina. No representa una configuración
 portable del proyecto.
+
+## HTTPS y CA local
+
+Caddy conserva su CA en el volumen `caddy-data`; solo `root.crt` puede copiarse
+al host. `root.key` nunca sale del volumen. Confiar o dejar de confiar en la CA
+es una decisión explícita del usuario y `stop` no modifica el almacén de
+certificados.
+
+En Windows, la instalación se limita al almacén Root del usuario y no requiere
+UAC:
+
+```powershell
+.\local-ca.bat trust
+.\local-ca.bat status
+.\local-ca.bat untrust
+```
+
+En Debian o Ubuntu, la implementación usa `sudo update-ca-certificates`:
+
+```bash
+./local-ca.sh trust
+./local-ca.sh status
+./local-ca.sh untrust
+```
+
+Las huellas que Manualito instala se registran en el estado local del usuario.
+La rotación retira únicamente huellas registradas por Manualito; nunca elimina
+certificados por nombre o sujeto.
+
+## Redes y túnel opcional
+
+- `gateway-net`: solo Caddy (`frontend`) y FastAPI (`api`). La subred fija
+  delimita qué proxy puede enviar cabeceras reenviadas a Uvicorn.
+- `backend-net`: API, workers, datos y servicios de IA; no tiene subred fija.
+- `edge-net`: solo Caddy y `cloudflared`; no publica el listener interno
+  `app.manualito.dev:8444` al host.
+
+El stack base no arranca ningún túnel. Para habilitar Cloudflare Tunnel, primero
+provisiona la infraestructura de [`terraform/`](terraform/README.md), guarda el
+token en `secrets/tunnel_token.txt` y arranca el perfil explícito:
+
+```bash
+docker compose --profile tunnel up -d
+```
+
+El init `edge-ca-init` copia únicamente `root.crt` al volumen `edge-ca`.
+`cloudflared` verifica con esa CA el origen HTTPS y Caddy acepta
+`CF-Connecting-IP` solo desde la subred de `edge-net`. Las rutas `/docs`,
+`/redoc` y `/openapi.json` responden 404 en `app.manualito.dev`.
 
 ## Logs
 

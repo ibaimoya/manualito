@@ -7,6 +7,15 @@ y las versiones siguen [SemVer 2.0.0](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+
+- Gateway Caddy endurecido para servir la SPA y FastAPI bajo un único origen,
+  con caché por tipo de recurso, cabeceras de seguridad y logs redactados.
+- HTTPS local con CA gestionable mediante `local-ca`, redirección desde HTTP y
+  persistencia segura del material de la autoridad en un volumen Docker.
+- Perfil opcional de Cloudflare Tunnel para `app.manualito.dev`, con origen TLS
+  verificado, redes aisladas e infraestructura declarativa en Terraform.
+
 ---
 
 

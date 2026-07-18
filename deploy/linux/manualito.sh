@@ -1208,11 +1208,10 @@ invoke_start() {
         write_ok "Comando de arranque preparado"
     else
         write_ok "Manualito listo:"
-        write_field "api" "http://localhost:8000"
-        write_field "app" "http://localhost:5173"
+        write_field "app" "https://localhost"
         write_field "flower" "http://localhost:5555"
         write_field "mailpit" "http://localhost:8025"
-        write_field "openapi" "http://localhost:8000/docs"
+        write_field "openapi" "https://localhost/docs"
         write_ok "LLM:"
         local running_model
         running_model="$(get_running_llm_model "$docker_path" || true)"

@@ -104,7 +104,6 @@ jobs:
       - name: Ejecutar tests
         run: >-
           uv run --no-sync pytest -v backend/tests scripts/hooks/tests
-          -m "not upload_integration"
           --cov=backend --cov=scripts/hooks --cov-report=xml:coverage.xml
           --junitxml=pytest-report.xml
 
@@ -115,96 +114,6 @@ jobs:
           path: |
             coverage.xml
             pytest-report.xml
-          if-no-files-found: error
-          retention-days: 7
-
-  backend-upload-integration:
-    name: Backend - Integración de subidas
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      DATABASE_URL: postgresql+psycopg://manualito@127.0.0.1:5432/manualito
-      REDIS_HOST: 127.0.0.1
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: ""
-      REDIS_ALLOW_EMPTY_PASSWORD: "true"
-
-    services:
-      postgres:
-        image: postgres:18.4-alpine3.23
-        env:
-          POSTGRES_DB: manualito
-          POSTGRES_USER: manualito
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U manualito -d manualito"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:8.8.0-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
-    steps:
-      - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Comprobar deriva de imágenes de integración
-        env:
-          POSTGRES_SERVICE_IMAGE: postgres:18.4-alpine3.23
-          REDIS_SERVICE_IMAGE: redis:8.8.0-alpine
-        run: |
-          . ./.env
-          expected_postgres="postgres:${POSTGRES_VERSION}-${POSTGRES_VARIANT}"
-          expected_redis="redis:${REDIS_VERSION}-${REDIS_VARIANT}"
-          if [ "$POSTGRES_SERVICE_IMAGE" != "$expected_postgres" ]; then
-            echo "::error::Postgres usa $POSTGRES_SERVICE_IMAGE pero .env declara $expected_postgres."
-            exit 1
-          fi
-          if [ "$REDIS_SERVICE_IMAGE" != "$expected_redis" ]; then
-            echo "::error::Redis usa $REDIS_SERVICE_IMAGE pero .env declara $expected_redis."
-            exit 1
-          fi
-
-      - name: Preparar backend
-        uses: ./.github/actions/backend-setup
-
-      - name: Preparar almacenamiento temporal
-        run: |
-          asset_dir="$RUNNER_TEMP/manualito-upload-integration/assets"
-          spool_dir="$asset_dir/.spool"
-          install -d -m 0700 "$spool_dir" "$asset_dir"
-          {
-            echo "ASSET_STORAGE_DIR=$asset_dir"
-            echo "TMPDIR=$spool_dir"
-          } >> "$GITHUB_ENV"
-
-      - name: Aplicar migraciones
-        run: uv run --no-sync alembic -c backend/database/alembic.ini upgrade head
-
-      - name: Ejecutar integración de subidas
-        run: >-
-          uv run --no-sync pytest -v backend/tests/integration/uploads
-          -m upload_integration
-          --cov=backend --cov-report=xml:upload-integration-coverage.xml
-          --junitxml=upload-integration-report.xml
-
-      - name: Guardar reportes de integración y cobertura
-        if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: upload-integration-reports
-          path: |
-            upload-integration-coverage.xml
-            upload-integration-report.xml
           if-no-files-found: error
           retention-days: 7
 
@@ -360,7 +269,7 @@ jobs:
     # El plan gratuito de SonarQube Cloud solo analiza master y pull requests.
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     needs:
-      [gateway-config, backend-typecheck, backend-tests, backend-upload-integration, backend-migrations, frontend-tests]
+      [gateway-config, backend-typecheck, backend-tests, backend-migrations, frontend-tests]
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -374,12 +283,6 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: test-and-coverage-reports
-
-      - name: Descargar cobertura de integración de subidas
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: upload-integration-reports
-          path: coverage-reports/upload-integration
 
       - name: Descargar cobertura del frontend
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

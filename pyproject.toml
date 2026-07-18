@@ -225,9 +225,6 @@ testpaths = ["backend/tests"]
 log_cli = false
 log_level = "WARNING"
 strict_markers = true
-markers = [
-    "upload_integration: integración de subidas con PostgreSQL, Redis y filesystem reales",
-]
 
 [tool.coverage.run]
 branch = true

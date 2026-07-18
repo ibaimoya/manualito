@@ -1,6 +1,7 @@
 """Contratos del túnel opcional y su infraestructura declarativa."""
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -124,7 +125,9 @@ def test_edge_network_and_ca_volume_are_narrowly_shared() -> None:
     edge_mount = next(mount for mount in cloudflared["volumes"] if mount["source"] == "edge-ca")
     assert edge_mount["target"] == "/etc/cloudflared/ca"
     assert edge_mount["read_only"] is True
-    assert cloudflared["secrets"] == [{"source": "tunnel_token", "target": "tunnel_token"}]
+    assert cloudflared["secrets"] == [
+        {"source": "tunnel_token", "target": "/run/secrets/tunnel_token"}
+    ]
     token_file = config["secrets"]["tunnel_token"]["file"].replace("\\", "/")
     assert token_file.endswith("/secrets/tunnel_token.txt")
 
@@ -137,7 +140,7 @@ def test_caddy_exposes_a_strict_edge_listener_without_host_publication() -> None
     edge_docs = _caddy_block(edge_site, "handle @edge_docs {")
     frontend = _compose_config(tunnel=True)["services"]["frontend"]
 
-    assert f"trusted_proxies static {_EDGE_NET_SUBNET}" in edge_server
+    assert "trusted_proxies static {$EDGE_NET_SUBNET}" in edge_server
     assert "trusted_proxies_strict" in edge_server
     assert "client_ip_headers CF-Connecting-IP" in edge_server
     assert "protocols h1 h2" in edge_server
@@ -148,6 +151,8 @@ def test_caddy_exposes_a_strict_edge_listener_without_host_publication() -> None
     assert "import access-log" in edge_site
     assert "import app" in edge_site
     assert all(port["target"] != 8444 for port in frontend["ports"])
+    assert frontend["environment"]["EDGE_NET_SUBNET"] == _EDGE_NET_SUBNET
+    assert frontend["build"]["args"]["EDGE_NET_SUBNET"] == _EDGE_NET_SUBNET
     assert "EXPOSE 8080 8082 8443 8444" in _read(_DOCKERFILE)
 
 
@@ -160,13 +165,14 @@ def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
     assert 'resource "cloudflare_zero_trust_tunnel_cloudflared" "manualito"' in terraform
     assert 'resource "cloudflare_zero_trust_tunnel_cloudflared_config" "manualito"' in terraform
     assert 'resource "cloudflare_dns_record" "app"' in terraform
-    assert 'service            = "https://frontend:8444"' in terraform
-    assert 'origin_server_name = "app.manualito.dev"' in terraform
-    assert f'ca_pool            = "{_EDGE_CERTIFICATE}"' in terraform
+    assert re.search(r'service\s*=\s*"https://frontend:8444"', terraform)
+    assert re.search(r"origin_server_name\s*=\s*local\.app_hostname", terraform)
+    assert re.search(rf'ca_pool\s*=\s*"{_EDGE_CERTIFICATE}"', terraform)
+    assert 'app_hostname = "app.${local.zone.name}"' in terraform
     assert 'service = "http_status:404"' in terraform
     assert "no_tls_verify" not in terraform
     assert 'variable "cloudflare_api_token"' in terraform
-    assert "sensitive = true" in terraform
+    assert re.search(r"sensitive\s*=\s*true", terraform)
     assert "default" not in _caddy_block(terraform, 'variable "cloudflare_api_token"')
     assert "terraform apply" in _read(_TERRAFORM / "README.md")
 

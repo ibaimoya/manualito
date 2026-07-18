@@ -96,6 +96,7 @@ def test_caddy_routes_the_spa_and_backend_contract() -> None:
     assert ":8080 {" in caddyfile
     assert "root * /srv" in caddyfile
     assert "reverse_proxy api:8000" in api_proxy
+    assert "header_up X-Forwarded-For {http.request.client_ip}" in api_proxy
     assert caddyfile.count("reverse_proxy api:8000") == 1
     assert "import api-proxy" in api
     assert "import api-proxy" in health
@@ -176,7 +177,7 @@ def test_localhost_exposes_docs_and_writes_redacted_json_access_logs() -> None:
     caddyfile = (_FRONTEND_ROOT / "Caddyfile").read_text(encoding="utf-8")
     localhost = _caddy_block(caddyfile, "localhost {")
     docs = _caddy_block(localhost, "handle @api_docs {")
-    access_log = _caddy_block(localhost, "log {")
+    access_log = _caddy_block(caddyfile, "(access-log) {")
     query_filter = _caddy_block(access_log, "request>uri query {")
 
     assert "@api_docs path /docs /redoc /openapi.json /docs/oauth2-redirect" in localhost

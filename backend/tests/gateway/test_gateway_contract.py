@@ -96,7 +96,7 @@ def test_caddy_routes_the_spa_and_backend_contract() -> None:
     assert ":8080 {" in caddyfile
     assert "root * /srv" in caddyfile
     assert "reverse_proxy api:8000" in api_proxy
-    assert "header_up X-Forwarded-For {http.request.client_ip}" in api_proxy
+    assert "header_up X-Forwarded-For {client_ip}" in api_proxy
     assert caddyfile.count("reverse_proxy api:8000") == 1
     assert "import api-proxy" in api
     assert "import api-proxy" in health

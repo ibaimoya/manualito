@@ -18,7 +18,7 @@ def _dotenv_value(name: str) -> str:
     raise AssertionError(f"{name} no está definido en .env")
 
 
-def _compose_frontend() -> dict[str, object]:
+def _compose_config() -> dict[str, object]:
     result = subprocess.run(
         ["docker", "compose", "config", "--format", "json"],
         cwd=_REPOSITORY_ROOT,
@@ -26,9 +26,15 @@ def _compose_frontend() -> dict[str, object]:
         capture_output=True,
         text=True,
     )
-    frontend = json.loads(result.stdout)["services"]["frontend"]
-    assert isinstance(frontend, dict)
-    return frontend
+    config = json.loads(result.stdout)
+    assert isinstance(config, dict)
+    return config
+
+
+def _compose_service(name: str) -> dict[str, object]:
+    service = _compose_config()["services"][name]
+    assert isinstance(service, dict)
+    return service
 
 
 def test_frontend_image_pins_and_validates_caddy_runtime() -> None:
@@ -65,9 +71,75 @@ def test_caddy_routes_the_spa_and_backend_contract() -> None:
     assert "file_server" in caddyfile
 
 
+def test_caddy_serves_local_tls_redirect_and_liveness_contract() -> None:
+    """Caddy separa HTTPS, redirección HTTP y liveness sin puertos privilegiados."""
+    caddyfile = (_FRONTEND_ROOT / "Caddyfile").read_text(encoding="utf-8")
+
+    assert "grace_period 120s" in caddyfile
+    assert "http_port 8080" in caddyfile
+    assert "https_port 8443" in caddyfile
+    assert "servers {" in caddyfile
+    assert "protocols h1 h2" in caddyfile
+    assert "read_header 10s" in caddyfile
+    assert "http://:8080 {" in caddyfile
+    assert "redir https://localhost{uri} 308" in caddyfile
+    assert "https://localhost:8443" not in caddyfile
+    assert "localhost {" in caddyfile
+    assert "tls internal" in caddyfile
+    assert "http://:8082 {" in caddyfile
+    assert "respond /healthz 200" in caddyfile
+
+
+def test_frontend_image_exposes_internal_ports_and_checks_liveness() -> None:
+    """La imagen declara sus listeners y comprueba el endpoint interno de vida."""
+    dockerfile = (_FRONTEND_ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "EXPOSE 8080 8082 8443" in dockerfile
+    assert "HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3" in dockerfile
+    assert "wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/healthz" in dockerfile
+
+
+def test_compose_initializes_private_caddy_data_volume() -> None:
+    """Compose prepara /data para UID 1001 sin exportar la CA al host."""
+    config = _compose_config()
+    init = config["services"]["caddy-data-init"]
+    frontend = config["services"]["frontend"]
+
+    assert isinstance(init, dict)
+    assert isinstance(frontend, dict)
+    assert init["user"] == "0:1001"
+    assert init["network_mode"] == "none"
+    assert init["read_only"] is True
+    assert init["cap_drop"] == ["ALL"]
+    assert init["cap_add"] == ["CHOWN", "FOWNER"]
+    assert init["restart"] == "no"
+    assert "chown 1001:1001 /data" in " ".join(init["command"])
+    assert "chmod 0700 /data" in " ".join(init["command"])
+    assert init["volumes"] == [
+        {
+            "type": "volume",
+            "source": "caddy-data",
+            "target": "/data",
+            "volume": {},
+        }
+    ]
+    assert frontend["volumes"] == [
+        {
+            "type": "volume",
+            "source": "caddy-data",
+            "target": "/data",
+            "volume": {},
+        }
+    ]
+    assert "caddy-data" in config["volumes"]
+    assert frontend["depends_on"]["caddy-data-init"]["condition"] == (
+        "service_completed_successfully"
+    )
+
+
 def test_compose_publishes_hardened_caddy_on_loopback() -> None:
-    """Compose publica solo el gateway HTTP y mantiene su raíz inmutable."""
-    frontend = _compose_frontend()
+    """Compose publica HTTP/HTTPS en loopback y mantiene la raíz inmutable."""
+    frontend = _compose_service("frontend")
     build = frontend["build"]
     assert isinstance(build, dict)
 
@@ -84,7 +156,15 @@ def test_compose_publishes_hardened_caddy_on_loopback() -> None:
             "published": "80",
             "protocol": "tcp",
             "host_ip": "127.0.0.1",
-        }
+        },
+        {
+            "mode": "ingress",
+            "target": 8443,
+            "published": "443",
+            "protocol": "tcp",
+            "host_ip": "127.0.0.1",
+        },
     ]
+    assert frontend["stop_grace_period"] == "2m10s"
     assert frontend["logging"]["driver"] == "json-file"
     assert frontend["logging"]["options"]["max-size"]

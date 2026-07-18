@@ -567,7 +567,6 @@ networks:
     driver: bridge
   gateway-net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: ${GATEWAY_NET_SUBNET:-172.30.250.0/29}

@@ -300,7 +300,7 @@ def test_compose_isolates_gateway_from_backend_services() -> None:
     assert _dotenv_value("GATEWAY_NET_SUBNET") == _GATEWAY_NET_SUBNET
     assert set(networks) == {"backend-net", "gateway-net"}
     assert networks["gateway-net"]["driver"] == "bridge"
-    assert networks["gateway-net"]["internal"] is True
+    assert networks["gateway-net"].get("internal", False) is False
     assert networks["gateway-net"]["ipam"]["config"] == [{"subnet": _GATEWAY_NET_SUBNET}]
     assert networks["backend-net"]["driver"] == "bridge"
     assert networks["backend-net"].get("internal", False) is False

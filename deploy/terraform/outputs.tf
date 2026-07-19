@@ -1,6 +1,6 @@
 output "app_hostname" {
   description = "Nombre público creado en la zona."
-  value       = local.app_hostname
+  value       = var.app_hostname
 }
 
 output "tunnel_token" {

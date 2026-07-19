@@ -11,10 +11,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "manualito" {
   config = {
     ingress = [
       {
-        hostname = local.app_hostname
+        hostname = var.app_hostname
         service  = "https://frontend:8444"
         origin_request = {
-          origin_server_name = local.app_hostname
+          origin_server_name = var.app_hostname
           ca_pool            = "/etc/cloudflared/ca/root.crt"
         }
       },

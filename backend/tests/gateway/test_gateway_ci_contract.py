@@ -13,10 +13,7 @@ _CADDY_IMAGE = (
 )
 _TERRAFORM_VERSION = "1.15.8"
 _SETUP_TERRAFORM_ACTION = "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e"
-_TERRAFORM_IMAGE = (
-    "hashicorp/terraform:1.15.8@"
-    "sha256:7ae513256f7ce67879e218ae8593d6fbe216ec9e123abe6c94e4e10704857963"
-)
+_TERRAFORM_LINUX_AMD64_SHA256 = "d25ce7b6902013ad905db3d2eab0be4cd905887fe88b81a6171b8d5503c31f3d"
 
 
 def _read(path: Path) -> str:
@@ -41,6 +38,11 @@ def _yaml_mapping_block(source: str, key: str, *, indent: int) -> str:
     return "\n".join(lines[start:])
 
 
+def _assert_in_order(source: str, *fragments: str) -> None:
+    positions = [source.index(fragment) for fragment in fragments]
+    assert positions == sorted(positions)
+
+
 @pytest.mark.skipif(not _GITHUB_CI.exists(), reason="Repositorio sin CI de GitHub")
 def test_github_gateway_is_a_pinned_quality_gate() -> None:
     """GitHub valida Caddy, Terraform y ambos renders antes del quality gate."""
@@ -48,7 +50,7 @@ def test_github_gateway_is_a_pinned_quality_gate() -> None:
     gateway = _yaml_mapping_block(workflow, "gateway-config", indent=2)
     sonar = _yaml_mapping_block(workflow, "sonarqube", indent=2)
 
-    assert "name: Caddy - Validación" in gateway
+    assert "name: Gateway - Validación" in gateway
     assert "runs-on: ubuntu-latest" in gateway
     assert _CADDY_IMAGE in gateway
     assert "caddy fmt --diff /etc/caddy/Caddyfile" in gateway
@@ -63,19 +65,27 @@ def test_github_gateway_is_a_pinned_quality_gate() -> None:
     assert "terraform fmt -recursive -check" in gateway
     assert "terraform init -backend=false" in gateway
     assert "terraform validate" in gateway
+    _assert_in_order(
+        gateway,
+        "- name: Comprobar deriva de la imagen de Caddy",
+        "- name: Validar Caddyfile",
+        "- name: Renderizar Docker Compose",
+        "- name: Preparar Terraform",
+        "- name: Validar Terraform",
+    )
     assert "gateway-config" in sonar
 
 
 @pytest.mark.skipif(not _GITLAB_CI.exists(), reason="Repositorio sin CI de GitLab")
-def test_gitlab_gateway_uses_caddy_without_a_docker_daemon() -> None:
-    """GitLab incluye gates Caddy/Compose y Terraform requeridos por release."""
+def test_gitlab_gateway_mirrors_the_single_github_gate() -> None:
+    """GitLab refleja el gate secuencial de GitHub en un solo contenedor."""
     root = _read(_GITLAB_CI)
     gateway = _read(_GITLAB_GATEWAY)
     quality = _read(_REPOSITORY_ROOT / ".gitlab" / "ci" / "quality.yml")
     release = _read(_REPOSITORY_ROOT / ".gitlab" / "ci" / "release.yml")
 
     assert "- local: .gitlab/ci/gateway.yml" in root
-    assert gateway.startswith("# Caddy - Validación:")
+    assert gateway.startswith("# Gateway - Validación:")
     assert "gateway-config:" in gateway
     assert "stage: check" in gateway
     assert f"name: {_CADDY_IMAGE}" in gateway
@@ -89,12 +99,24 @@ def test_gitlab_gateway_uses_caddy_without_a_docker_daemon() -> None:
     assert "docker compose config --quiet" in gateway
     assert "docker compose --profile tunnel config --quiet" in gateway
     assert "secrets/tunnel_token.txt" in gateway
-    assert "terraform-config:" in gateway
-    assert f"name: {_TERRAFORM_IMAGE}" in gateway
-    assert "terraform -chdir=deploy/terraform fmt -recursive -check" in gateway
-    assert "terraform -chdir=deploy/terraform init -backend=false" in gateway
-    assert "terraform -chdir=deploy/terraform validate" in gateway
+    assert f'TERRAFORM_VERSION: "{_TERRAFORM_VERSION}"' in gateway
+    assert f'TERRAFORM_LINUX_AMD64_SHA256: "{_TERRAFORM_LINUX_AMD64_SHA256}"' in gateway
+    assert "releases.hashicorp.com/terraform/${TERRAFORM_VERSION}" in gateway
+    assert "sha256sum -c -" in gateway
+    assert 'unzip -q "$archive" -d /tmp/terraform-bin' in gateway
+    assert "/tmp/terraform-bin/terraform -chdir=deploy/terraform fmt -recursive -check" in gateway
+    assert "/tmp/terraform-bin/terraform -chdir=deploy/terraform init -backend=false" in gateway
+    assert "/tmp/terraform-bin/terraform -chdir=deploy/terraform validate" in gateway
+    _assert_in_order(
+        gateway,
+        'expected="caddy:${CADDY_VERSION}@${CADDY_DIGEST}"',
+        "caddy fmt --diff frontend/Caddyfile",
+        "caddy validate --config frontend/Caddyfile --adapter caddyfile",
+        "docker compose config --quiet",
+        "releases.hashicorp.com/terraform/${TERRAFORM_VERSION}",
+        "/tmp/terraform-bin/terraform -chdir=deploy/terraform fmt -recursive -check",
+        "/tmp/terraform-bin/terraform -chdir=deploy/terraform init -backend=false",
+        "/tmp/terraform-bin/terraform -chdir=deploy/terraform validate",
+    )
     assert "job: gateway-config" in quality
-    assert "job: terraform-config" in quality
     assert "job: gateway-config" in release
-    assert "job: terraform-config" in release

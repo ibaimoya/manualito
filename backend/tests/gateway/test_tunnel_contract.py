@@ -163,7 +163,10 @@ def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
     """Terraform declara túnel, ingress TLS verificado y DNS sin valores sensibles."""
     terraform = "\n".join(_read(path) for path in sorted(_TERRAFORM.glob("*.tf")))
     app_hostname = _dotenv_value("APP_HOSTNAME")
+    account_id_variable = _caddy_block(terraform, 'variable "cloudflare_account_id"')
+    zone_id_variable = _caddy_block(terraform, 'variable "cloudflare_zone_id"')
     app_hostname_variable = _caddy_block(terraform, 'variable "app_hostname"')
+    tunnel_name_variable = _caddy_block(terraform, 'variable "tunnel_name"')
 
     assert 'source  = "cloudflare/cloudflare"' in terraform
     assert 'version = "5.22.0"' in terraform
@@ -171,10 +174,16 @@ def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
     assert 'resource "cloudflare_zero_trust_tunnel_cloudflared_config" "manualito"' in terraform
     assert 'resource "cloudflare_dns_record" "app"' in terraform
     assert re.search(r'service\s*=\s*"https://frontend:8444"', terraform)
-    assert re.search(r"origin_server_name\s*=\s*local\.app_hostname", terraform)
+    assert re.search(r"origin_server_name\s*=\s*var\.app_hostname", terraform)
+    assert re.search(r"hostname\s*=\s*var\.app_hostname", terraform)
+    assert re.search(r"zone_id\s*=\s*var\.cloudflare_zone_id", terraform)
+    assert re.search(r"name\s*=\s*var\.app_hostname", terraform)
     assert re.search(rf'ca_pool\s*=\s*"{_EDGE_CERTIFICATE}"', terraform)
     assert f'default     = "{app_hostname}"' in app_hostname_variable
-    assert re.search(r"app_hostname\s*=\s*var\.app_hostname", terraform)
+    assert 'regex("^[0-9a-f]{32}$"' in account_id_variable
+    assert 'regex("^[0-9a-f]{32}$"' in zone_id_variable
+    assert "validation {" in app_hostname_variable
+    assert "validation {" in tunnel_name_variable
     assert 'service = "http_status:404"' in terraform
     assert "no_tls_verify" not in terraform
     assert 'variable "cloudflare_api_token"' in terraform

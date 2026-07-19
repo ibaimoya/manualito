@@ -1,12 +1,12 @@
-resource "cloudflare_zero_trust_tunnel_cloudflared" "manualito" {
+resource "cloudflare_zero_trust_tunnel_cloudflared" "app" {
   account_id = var.cloudflare_account_id
   name       = var.tunnel_name
   config_src = "cloudflare"
 }
 
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "manualito" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "app" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.manualito.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.app.id
 
   config = {
     ingress = [
@@ -25,7 +25,7 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "manualito" {
   }
 }
 
-data "cloudflare_zero_trust_tunnel_cloudflared_token" "manualito" {
+data "cloudflare_zero_trust_tunnel_cloudflared_token" "app" {
   account_id = var.cloudflare_account_id
-  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.manualito.id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.app.id
 }

@@ -5,6 +5,6 @@ output "app_hostname" {
 
 output "tunnel_token" {
   description = "Token para secrets/tunnel_token.txt."
-  value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.manualito.token
+  value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.app.token
   sensitive   = true
 }

@@ -1,5 +1,8 @@
 # Túnel de Cloudflare
 
+[![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?logo=cloudflare&logoColor=white)](https://www.cloudflare.com/)
+
 Este código declara el túnel administrado remotamente, su ingress HTTPS hacia
 Caddy y el registro configurado mediante `app_hostname` (por defecto,
 `app.manualito.dev`) dentro de la zona. No contiene credenciales ni se aplica
@@ -46,7 +49,3 @@ automáticamente.
    cd ../..
    docker compose --profile tunnel up -d
    ```
-
-No comitees `terraform.tfvars`, el estado ni `secrets/tunnel_token.txt`. El
-estado contiene material sensible aunque los outputs se marquen como
-`sensitive`.

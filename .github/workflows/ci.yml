@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   gateway-config:
-    name: Caddy - Validación
+    name: Gateway - Validación
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -28,18 +28,6 @@ jobs:
     steps:
       - name: Clonar repositorio
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Preparar Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.15.8
-
-      - name: Validar Terraform
-        working-directory: deploy/terraform
-        run: |
-          terraform fmt -recursive -check
-          terraform init -backend=false
-          terraform validate
 
       - name: Comprobar deriva de la imagen de Caddy
         run: |
@@ -73,6 +61,18 @@ jobs:
           trap 'rm -f secrets/tunnel_token.txt' EXIT
           docker compose config --quiet
           docker compose --profile tunnel config --quiet
+
+      - name: Preparar Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+
+      - name: Validar Terraform
+        working-directory: deploy/terraform
+        run: |
+          terraform fmt -recursive -check
+          terraform init -backend=false
+          terraform validate
 
   backend-lint:
     name: Backend - Lint

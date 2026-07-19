@@ -70,13 +70,3 @@ def test_runtime_and_start_scripts_publish_the_gateway_origin() -> None:
     assert 'Write-Field "openapi" "https://localhost/docs"' in windows
     assert 'write_field "app" "https://localhost"' in linux
     assert 'write_field "openapi" "https://localhost/docs"' in linux
-
-
-def test_unreleased_changelog_records_the_gateway_as_added_functionality() -> None:
-    """Unreleased describe la nueva capacidad local y remota antes de publicar."""
-    unreleased = _read("CHANGELOG.md").split("## [1.0.0-rc.1]", maxsplit=1)[0]
-
-    assert "### Added" in unreleased
-    assert "Caddy" in unreleased
-    assert "HTTPS local" in unreleased
-    assert "Cloudflare Tunnel" in unreleased

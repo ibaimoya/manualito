@@ -170,9 +170,12 @@ def test_terraform_models_the_zone_tunnel_origin_tls_and_dns() -> None:
 
     assert 'source  = "cloudflare/cloudflare"' in terraform
     assert 'version = "5.22.0"' in terraform
-    assert 'resource "cloudflare_zero_trust_tunnel_cloudflared" "manualito"' in terraform
-    assert 'resource "cloudflare_zero_trust_tunnel_cloudflared_config" "manualito"' in terraform
+    assert 'resource "cloudflare_zero_trust_tunnel_cloudflared" "app"' in terraform
+    assert 'resource "cloudflare_zero_trust_tunnel_cloudflared_config" "app"' in terraform
+    assert 'data "cloudflare_zero_trust_tunnel_cloudflared_token" "app"' in terraform
     assert 'resource "cloudflare_dns_record" "app"' in terraform
+    assert terraform.count("cloudflare_zero_trust_tunnel_cloudflared.app.id") == 3
+    assert "data.cloudflare_zero_trust_tunnel_cloudflared_token.app.token" in terraform
     assert re.search(r'service\s*=\s*"https://frontend:8444"', terraform)
     assert re.search(r"origin_server_name\s*=\s*var\.app_hostname", terraform)
     assert re.search(r"hostname\s*=\s*var\.app_hostname", terraform)

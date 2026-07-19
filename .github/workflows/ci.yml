@@ -96,12 +96,45 @@ jobs:
     name: Backend - Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql+psycopg://manualito@localhost:5432/manualito_test
+
+    services:
+      postgres:
+        # No puede leer el .env; el paso de deriva falla si no coincide con él.
+        image: postgres:18.4-alpine3.23
+        env:
+          POSTGRES_DB: manualito_test
+          POSTGRES_USER: manualito
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U manualito -d manualito_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Clonar repositorio
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      - name: Comprobar deriva de la imagen de postgres
+        env:
+          SERVICE_IMAGE: postgres:18.4-alpine3.23
+        run: |
+          . ./.env
+          expected="postgres:${POSTGRES_VERSION}-${POSTGRES_VARIANT}"
+          if [ "$SERVICE_IMAGE" != "$expected" ]; then
+            echo "::error::El service usa $SERVICE_IMAGE pero .env declara $expected. Actualiza services.postgres.image y SERVICE_IMAGE."
+            exit 1
+          fi
+
       - name: Preparar backend
         uses: ./.github/actions/backend-setup
+
+      - name: Aplicar migraciones para los contratos PostgreSQL
+        run: uv run --no-sync alembic -c backend/database/alembic.ini upgrade head
 
       - name: Ejecutar tests
         run: >-

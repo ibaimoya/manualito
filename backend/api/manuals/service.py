@@ -102,6 +102,42 @@ def _internal_http_client() -> httpx.AsyncClient:
     )
 
 
+def _normalize_optional_text(value: str | None) -> str | None:
+    """Elimina espacios y representa el texto vacío como ausencia de valor."""
+    normalized = (value or "").strip()
+    return normalized or None
+
+
+async def _adopt_committed_batch_safely(batch: AssetWriteBatch) -> None:
+    """Adopta un lote confirmado sin interrumpir la respuesta ya persistida."""
+    with anyio.CancelScope(shield=True):
+        try:
+            await batch.adopt()
+        except (OSError, ValueError):
+            logger.warning(
+                "El manual se ha confirmado, pero el marcador del lote sigue pendiente.",
+                exc_info=True,
+            )
+
+
+async def _auto_follow_game_after_upload(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    game_id: UUID,
+) -> None:
+    """Auto-sigue el juego sin invalidar un manual que ya fue confirmado."""
+    try:
+        await games_repository.auto_follow_game(
+            session,
+            user_id=user_id,
+            game_id=game_id,
+        )
+    except SQLAlchemyError:
+        await session.rollback()
+        logger.warning("No se pudo auto-seguir el juego tras subir manual.", exc_info=True)
+
+
 async def create_manual(
     session: AsyncSession,
     *,
@@ -135,9 +171,9 @@ async def create_manual(
                 session,
                 owner_user_id=auth.user.id,
                 game_id=game_id,
-                title=(title or "").strip() or None,
+                title=_normalize_optional_text(title),
                 visibility=visibility,
-                language=(language or "").strip() or None,
+                language=_normalize_optional_text(language),
                 source_type=source_type,
                 page_count=page_count,
                 source_fingerprint=source_fingerprint,
@@ -172,24 +208,12 @@ async def create_manual(
             await session.rollback()
         raise
 
-    with anyio.CancelScope(shield=True):
-        try:
-            await batch.adopt()
-        except (OSError, ValueError):
-            logger.warning(
-                "El manual se confirmó, pero el marcador del lote sigue pendiente.",
-                exc_info=True,
-            )
-
-    try:
-        await games_repository.auto_follow_game(
-            session,
-            user_id=auth.user.id,
-            game_id=game_id,
-        )
-    except SQLAlchemyError:
-        await session.rollback()
-        logger.warning("No se pudo auto-seguir el juego tras subir manual.", exc_info=True)
+    await _adopt_committed_batch_safely(batch)
+    await _auto_follow_game_after_upload(
+        session,
+        user_id=auth.user.id,
+        game_id=game_id,
+    )
 
     return ManualCreatedResponse(
         manual_id=manual_id,

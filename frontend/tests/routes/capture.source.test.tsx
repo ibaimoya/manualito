@@ -418,9 +418,9 @@ describe('/capture/source · nuevo manual', () => {
     );
     await screen.findByText('foto.jpg');
     await user.click((await screen.findAllByRole('button', { name: /Procesar/i }))[0]!);
-    await waitFor(() => expect(screen.getByText('ProcessingScreen')).toBeInTheDocument(), {
-      timeout: 3000,
-    });
+    expect(
+      await screen.findByText('ProcessingScreen', undefined, { timeout: 3000 }),
+    ).toBeInTheDocument();
     expect(sentVisibility).toBe('private');
   });
 });

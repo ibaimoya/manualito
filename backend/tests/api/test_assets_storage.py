@@ -1,102 +1,332 @@
-from types import SimpleNamespace
+import os
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from io import BytesIO
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from PIL import Image
 
 from api.assets import storage as asset_storage
-from api.manuals.dto import ValidatedManualImage, ValidatedManualPdf
 
 
 @pytest.mark.anyio
-async def test_save_manual_image_writes_file_under_configured_storage(tmp_path, monkeypatch):
-    """El storage usa una clave interna y escribe bytes bajo el directorio configurado."""
+async def test_manual_batch_bootstraps_a_missing_local_storage_root(tmp_path):
+    """El desarrollo local no exige preparar a mano la jerarquía de assets."""
+    root = tmp_path / "runtime" / "assets"
+
+    batch = await asset_storage.LocalAssetStore(root).create_manual_batch(owner_user_id=uuid4())
+
+    assert (batch.path / ".pending").is_file()
+
+
+@pytest.mark.anyio
+async def test_manual_batch_stages_a_real_image_with_bounded_file_metadata(
+    tmp_path,
+    valid_jpeg_bytes,
+):
+    """El seam de storage persiste por streaming y devuelve metadatos, no bytes."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+
+    staged = await batch.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
+
+    assert staged.byte_size == len(valid_jpeg_bytes)
+    assert staged.sha256 == sha256(valid_jpeg_bytes).hexdigest()
+    assert staged.path.read_bytes() == valid_jpeg_bytes
+    assert staged.path.suffix == ".part"
+    if os.name == "posix":
+        assert staged.path.stat().st_mode & 0o777 == 0o600
+    assert "content" not in staged.__dataclass_fields__
+
+
+@pytest.mark.anyio
+async def test_staging_enforces_actual_size_and_removes_partial_file(tmp_path):
+    """El contador durante la copia no confía en el tamaño anunciado por HTTP."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+    source = BytesIO(b"123456")
+
+    with pytest.raises(asset_storage.AssetSizeExceededError):
+        await batch.stage(source, max_bytes=5)
+
+    assert list(batch.path.glob("*.part")) == []
+    assert (batch.path / ".pending").is_file()
+
+
+@pytest.mark.anyio
+async def test_manual_batch_promotes_staged_assets_without_using_original_names(
+    tmp_path,
+    valid_jpeg_bytes,
+):
+    """Publicar conserva el lote pendiente y usa solo nombres internos controlados."""
     owner_user_id = uuid4()
-    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
-    monkeypatch.setattr(asset_storage, "uuid4", lambda: SimpleNamespace(hex="abc123"))
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=owner_user_id)
+    staged = await batch.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
 
-    storage_key = await asset_storage.save_manual_image(
-        ValidatedManualImage(
-            content=b"image-bytes",
-            mime_type="image/jpeg",
-            extension=".jpg",
-            width=10,
-            height=10,
-            sha256="a" * 64,
-        ),
-        owner_user_id=owner_user_id,
-        page_number=3,
-    )
+    storage_key = await batch.promote(staged, name="page-1", extension=".jpg")
 
-    assert storage_key == f"manuals/{owner_user_id}/abc123/page-3.jpg"
-    assert (tmp_path / storage_key).read_bytes() == b"image-bytes"
+    expected_key = f"manuals/{owner_user_id}/{batch.batch_id}/page-1.jpg"
+    assert storage_key == expected_key
+    assert store.resolve_file(storage_key).read_bytes() == valid_jpeg_bytes
+    assert not staged.path.exists()
+    assert (batch.path / ".pending").is_file()
 
 
 @pytest.mark.anyio
-async def test_save_manual_pdf_writes_original_source_file(tmp_path, monkeypatch):
-    """El PDF original se guarda como asset fuente, no como página renderizada."""
-    owner_user_id = uuid4()
-    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
-    monkeypatch.setattr(asset_storage, "uuid4", lambda: SimpleNamespace(hex="pdf123"))
-
-    storage_key = await asset_storage.save_manual_pdf(
-        ValidatedManualPdf(
-            content=b"pdf-bytes",
-            mime_type="application/pdf",
-            extension=".pdf",
-            page_count=2,
-            sha256="b" * 64,
-        ),
-        owner_user_id=owner_user_id,
-    )
-
-    assert storage_key == f"manuals/{owner_user_id}/pdf123/source.pdf"
-    assert (tmp_path / storage_key).read_bytes() == b"pdf-bytes"
-
-
-@pytest.mark.anyio
-async def test_read_stored_file_reads_bytes_from_configured_storage(tmp_path, monkeypatch):
-    """El procesamiento en segundo plano puede reabrir assets sin depender de la petición."""
-    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
-    storage_key = "manuals/user/manual/page-1.jpg"
-    path = tmp_path / storage_key
-    path.parent.mkdir(parents=True)
-    path.write_bytes(b"image-bytes")
-
-    assert await asset_storage.read_stored_file(storage_key) == b"image-bytes"
-
-
-def test_stored_file_path_rejects_path_traversal(tmp_path, monkeypatch):
-    """El endpoint de visualización no puede resolver rutas fuera del storage."""
-    monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
+async def test_promote_rejects_unsafe_names_and_a_file_from_another_batch(
+    tmp_path,
+    valid_jpeg_bytes,
+):
+    """Ni traversal nominal ni temporales ajenos pueden cruzar el aislamiento del lote."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    first = await store.create_manual_batch(owner_user_id=uuid4())
+    second = await store.create_manual_batch(owner_user_id=uuid4())
+    staged = await first.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
 
     with pytest.raises(ValueError):
-        asset_storage.stored_file_path("../secret.jpg")
+        await first.promote(staged, name="../page-1", extension=".jpg")
+    with pytest.raises(ValueError):
+        await second.promote(staged, name="page-1", extension=".jpg")
+
+    assert staged.path.is_file()
 
 
 @pytest.mark.anyio
-async def test_delete_stored_file_removes_file_and_ignores_missing(tmp_path, monkeypatch):
-    """El borrado explícito limpia el fichero físico y es idempotente."""
+async def test_adopting_a_manual_batch_keeps_assets_and_removes_pending_marker(
+    tmp_path,
+    valid_jpeg_bytes,
+):
+    """Confirmar el commit lógico hace persistente el lote sin mover sus assets."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+    staged = await batch.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
+    storage_key = await batch.promote(staged, name="page-1", extension=".jpg")
+
+    await batch.adopt()
+
+    assert store.resolve_file(storage_key).is_file()
+    assert not (batch.path / ".pending").exists()
+    source = BytesIO(valid_jpeg_bytes)
+    with pytest.raises(ValueError):
+        await batch.stage(source, max_bytes=30_000_000)
+
+
+@pytest.mark.anyio
+async def test_aborting_a_manual_batch_removes_staged_and_promoted_files(
+    tmp_path,
+    valid_jpeg_bytes,
+):
+    """Un fallo precommit elimina el lote completo sin dejar archivos parciales."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+    first = await batch.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
+    await batch.promote(first, name="page-1", extension=".jpg")
+    await batch.stage(BytesIO(valid_jpeg_bytes), max_bytes=30_000_000)
+
+    await batch.abort()
+    await batch.abort()
+
+    assert not batch.path.exists()
+
+
+@pytest.mark.anyio
+async def test_manual_batch_stages_generated_pillow_output_without_bytes_buffer(tmp_path):
+    """Los renders pueden escribir directamente al temporal acotado del lote."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+    image = Image.new("RGB", (12, 8), color=(30, 60, 90))
+
+    staged = await batch.stage_generated(
+        lambda destination: image.save(destination, format="JPEG"),
+        max_bytes=30_000_000,
+    )
+
+    with Image.open(staged.path) as persisted:
+        persisted.verify()
+    assert staged.byte_size == staged.path.stat().st_size
+    assert staged.sha256 == sha256(staged.path.read_bytes()).hexdigest()
+
+
+@pytest.mark.anyio
+async def test_generated_writer_failure_removes_partial_file(tmp_path):
+    """Un encoder que falla no deja un `.part` para el siguiente intento."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+
+    def broken_writer(destination):
+        destination.write(b"partial")
+        raise OSError("encoder failed")
+
+    with pytest.raises(OSError, match="encoder failed"):
+        await batch.stage_generated(broken_writer, max_bytes=30_000_000)
+
+    assert list(batch.path.glob("*.part")) == []
+
+
+@pytest.mark.anyio
+async def test_reconciliation_removes_only_old_unreferenced_pending_batches(tmp_path):
+    """El reconciliador expone lotes vencidos y elimina el huérfano completo."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+    marker = batch.path / ".pending"
+    old = datetime.now(UTC) - timedelta(days=2)
+    os.utime(marker, (old.timestamp(), old.timestamp()))
+
+    pending = await store.list_pending_batches(older_than=datetime.now(UTC) - timedelta(days=1))
+
+    assert [item.storage_prefix for item in pending] == [
+        f"manuals/{batch.owner_user_id}/{batch.batch_id}/"
+    ]
+    await store.reconcile_batch(pending[0], referenced=False)
+    assert not batch.path.exists()
+
+
+@pytest.mark.anyio
+async def test_reconciliation_adopts_a_referenced_pending_batch(tmp_path):
+    """Un commit confirmado tras un crash conserva el lote y retira su marcador."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    batch = await store.create_manual_batch(owner_user_id=uuid4())
+    marker = batch.path / ".pending"
+    old = datetime.now(UTC) - timedelta(days=2)
+    os.utime(marker, (old.timestamp(), old.timestamp()))
+    pending = await store.list_pending_batches(older_than=datetime.now(UTC))
+
+    await store.reconcile_batch(pending[0], referenced=True)
+
+    assert batch.path.is_dir()
+    assert not marker.exists()
+
+
+@pytest.mark.anyio
+async def test_pending_scan_ignores_fresh_and_legacy_directories(tmp_path):
+    """La recuperación nunca amplía su alcance a rutas no generadas por el store."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    await store.create_manual_batch(owner_user_id=uuid4())
+    legacy = tmp_path / "manuals" / "legacy-user" / "legacy-batch"
+    legacy.mkdir(parents=True)
+    (legacy / ".pending").touch()
+
+    pending = await store.list_pending_batches(older_than=datetime.now(UTC) - timedelta(days=1))
+
+    assert pending == []
+    assert legacy.is_dir()
+
+
+@pytest.mark.anyio
+async def test_pending_scan_accepts_only_canonical_old_regular_markers(tmp_path):
+    """Solo un owner, batch y marcador canónicos pueden entrar en reconciliación."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    expected = await store.create_manual_batch(owner_user_id=uuid4())
+    old = datetime.now(UTC) - timedelta(days=2)
+    os.utime(expected.path / ".pending", (old.timestamp(), old.timestamp()))
+
+    manuals = tmp_path / "manuals"
+    noncanonical_owner = manuals / str(uuid4()).upper() / ("a" * 32)
+    noncanonical_owner.mkdir(parents=True)
+    (noncanonical_owner / ".pending").touch()
+
+    owner_dir = manuals / str(uuid4())
+    noncanonical_batch = owner_dir / ("A" * 32)
+    noncanonical_batch.mkdir(parents=True)
+    (noncanonical_batch / ".pending").touch()
+    (owner_dir / ("b" * 32)).mkdir()
+    marker_directory = owner_dir / ("c" * 32) / ".pending"
+    marker_directory.mkdir(parents=True)
+
+    pending = await store.list_pending_batches(older_than=datetime.now(UTC) - timedelta(days=1))
+
+    assert pending == [
+        asset_storage.PendingAssetBatch(
+            owner_user_id=expected.owner_user_id,
+            batch_id=expected.batch_id,
+        )
+    ]
+
+
+@pytest.mark.anyio
+async def test_pending_scan_rejects_a_namespace_file(tmp_path):
+    """Un fichero no puede ocupar el namespace reservado para manuales."""
+    (tmp_path / "manuals").write_text("unsafe", encoding="utf-8")
+    store = asset_storage.LocalAssetStore(tmp_path)
+    cutoff = datetime.now(UTC)
+
+    with pytest.raises(ValueError, match="namespace de manuales"):
+        await store.list_pending_batches(older_than=cutoff)
+
+
+@pytest.mark.anyio
+async def test_pending_scan_rejects_a_namespace_symlink(tmp_path):
+    """El escaneo no sigue un namespace redirigido fuera del store."""
+    outside = tmp_path.parent / f"pending-outside-{uuid4().hex}"
+    outside.mkdir()
+    link = tmp_path / "manuals"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        outside.rmdir()
+        pytest.skip("La plataforma no permite crear symlinks sin privilegios")
+    store = asset_storage.LocalAssetStore(tmp_path)
+    cutoff = datetime.now(UTC)
+    try:
+        with pytest.raises(ValueError, match="namespace de manuales"):
+            await store.list_pending_batches(older_than=cutoff)
+    finally:
+        link.unlink(missing_ok=True)
+        outside.rmdir()
+
+
+@pytest.mark.anyio
+async def test_pending_scan_requires_a_timezone_aware_cutoff(tmp_path):
+    """Comparar mtimes exige un instante inequívoco."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+    naive_cutoff = datetime.now()
+
+    with pytest.raises(ValueError, match="zona horaria"):
+        await store.list_pending_batches(older_than=naive_cutoff)
+
+
+@pytest.mark.parametrize(
+    "storage_key",
+    ["../secret.jpg", "/absolute.jpg", "manuals\\escape.jpg", "manuals//asset.jpg"],
+)
+def test_resolve_file_rejects_non_canonical_or_escaping_keys(tmp_path, storage_key):
+    """Las claves siempre son POSIX relativas, canónicas y contenidas."""
+    store = asset_storage.LocalAssetStore(tmp_path)
+
+    with pytest.raises(ValueError):
+        store.resolve_file(storage_key)
+
+
+def test_resolve_file_rejects_symbolic_link_components(tmp_path):
+    """Un symlink interno no puede redirigir una lectura fuera de la raíz."""
+    outside = tmp_path.parent / f"outside-{uuid4().hex}"
+    outside.mkdir()
+    link = tmp_path / "manuals"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        pytest.skip("La plataforma no permite crear symlinks sin privilegios")
+    try:
+        store = asset_storage.LocalAssetStore(tmp_path)
+        with pytest.raises(ValueError):
+            store.resolve_file("manuals/secret.jpg")
+    finally:
+        link.unlink(missing_ok=True)
+        outside.rmdir()
+
+
+@pytest.mark.anyio
+async def test_delete_stored_file_is_idempotent_on_a_safe_key(tmp_path, monkeypatch):
+    """La API de borrado conserva compatibilidad sin reintroducir lecturas completas."""
     monkeypatch.setattr(asset_storage.config, "ASSET_STORAGE_DIR", str(tmp_path))
-    storage_key = "manuals/user/manual/page-1.jpg"
-    path = tmp_path / storage_key
+    storage_key = "manuals/user/batch/page-1.jpg"
+    path = tmp_path / Path(*storage_key.split("/"))
     path.parent.mkdir(parents=True)
-    path.write_bytes(b"image-bytes")
+    path.write_bytes(b"image")
 
     assert await asset_storage.delete_stored_file(storage_key) is True
     assert await asset_storage.delete_stored_file(storage_key) is True
-
     assert not path.exists()
-
-
-@pytest.mark.anyio
-async def test_delete_stored_file_reports_filesystem_errors(monkeypatch):
-    """Si el filesystem falla, el caller puede registrar una limpieza pendiente."""
-
-    class BrokenPath:
-        def unlink(self, *, missing_ok: bool) -> None:
-            """Simula un error del filesystem durante el borrado."""
-            raise OSError("disk error")
-
-    monkeypatch.setattr(asset_storage, "_storage_path", lambda _storage_key: BrokenPath())
-
-    assert await asset_storage.delete_stored_file("manuals/user/manual/page-1.jpg") is False

@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
+from fastapi import FastAPI, Request
 
 import api.client as api_client
 from api.exceptions import (
@@ -9,6 +10,44 @@ from api.exceptions import (
     InternalServiceError,
     InternalServiceUnavailableError,
 )
+
+
+@pytest.mark.anyio
+async def test_call_ocr_service_streams_raw_image_to_internal_http_boundary(tmp_path):
+    """OCR recibe el binario exacto con longitud y MIME, sin envoltorio multipart."""
+    image_bytes = b"x" * (2 * 1024 * 1024 + 17)
+    image_path = tmp_path / "generated-internal-name.jpg"
+    image_path.write_bytes(image_bytes)
+    observed: dict[str, object] = {}
+    ocr_app = FastAPI()
+
+    @ocr_app.post("/extract")
+    async def extract(request: Request):
+        observed["headers"] = dict(request.headers)
+        chunks = [chunk async for chunk in request.stream() if chunk]
+        observed["body"] = b"".join(chunks)
+        observed["chunk_sizes"] = [len(chunk) for chunk in chunks]
+        return {"lines": [{"text": "Regla", "confidence": 0.9}]}
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=ocr_app),
+        base_url="http://ocr",
+    ) as client:
+        result = await api_client.call_ocr_service(
+            client=client,
+            image_path=image_path,
+            byte_size=len(image_bytes),
+            content_type="image/jpeg",
+        )
+
+    assert result == [{"text": "Regla", "confidence": 0.9}]
+    assert observed["body"] == image_bytes
+    assert observed["chunk_sizes"] == [1024 * 1024, 1024 * 1024, 17]
+    headers = observed["headers"]
+    assert isinstance(headers, dict)
+    assert headers["content-type"] == "image/jpeg"
+    assert headers["content-length"] == str(len(image_bytes))
+    assert "content-disposition" not in headers
 
 
 @pytest.mark.anyio
@@ -186,20 +225,26 @@ async def test_send_request_maps_non_object_success_json_to_internal_error():
 
 
 @pytest.mark.anyio
-async def test_call_ocr_service_maps_corrupt_payload_to_internal_error():
+async def test_call_ocr_service_maps_corrupt_payload_to_internal_error(tmp_path):
     """Un payload OCR sin líneas válidas no llega al postprocesado."""
-    response = MagicMock()
-    response.raise_for_status.return_value = None
-    response.json.return_value = {"lines": [{"confidence": 0.9}]}
-    client = AsyncMock()
-    client.post.return_value = response
+    image_path = tmp_path / "asset.jpg"
+    image_path.write_bytes(b"image")
+    ocr_app = FastAPI()
 
-    with pytest.raises(InternalServiceError) as exc_info:
-        await api_client.call_ocr_service(
-            client=client,
-            filename="manual.jpg",
-            content=b"image",
-            content_type="image/jpeg",
-        )
+    @ocr_app.post("/extract")
+    async def corrupt_extract():
+        return {"lines": [{"confidence": 0.9}]}
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=ocr_app),
+        base_url="http://ocr",
+    ) as client:
+        with pytest.raises(InternalServiceError) as exc_info:
+            await api_client.call_ocr_service(
+                client=client,
+                image_path=image_path,
+                byte_size=5,
+                content_type="image/jpeg",
+            )
 
     assert exc_info.value.detail == "Error interno al procesar la imagen con OCR."

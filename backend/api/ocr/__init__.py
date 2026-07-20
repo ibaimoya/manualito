@@ -1,1 +1,1 @@
-"""Feature de OCR expuesta por el gateway API."""
+"""Integración privada de OCR para el procesamiento de manuales."""

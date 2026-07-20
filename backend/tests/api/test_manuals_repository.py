@@ -1,9 +1,13 @@
+import hashlib
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
 import anyio
+import pypdfium2 as pdfium
 import pytest
+from PIL import Image
 from sqlalchemy.dialects import postgresql
 
 from api.manuals.dto import (
@@ -30,6 +34,7 @@ from api.manuals.repository import (
     manual_has_unfinished_pages,
     mark_manual_failed,
     mark_manual_indexed,
+    mark_page_failed,
     mark_stale_processing_pages_failed,
     replace_page_result,
     resolve_manual_processed_status,
@@ -331,7 +336,8 @@ async def test_soft_delete_user_manual_marks_manual_and_assets_deleted():
     assert result.manual_id == _MANUAL_ID
     assert result.chunk_ids == [_CHUNK_ID]
     assert result.storage_keys == ["manuals/user/manual/page-1.jpg"]
-    assert session.commits == 1
+    assert session.flushes == 1
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
@@ -387,9 +393,10 @@ async def test_soft_delete_user_manual_raises_when_not_owned_or_missing():
 
 
 @pytest.mark.anyio
-async def test_create_manual_with_pending_pages_persists_images_in_order():
+async def test_create_manual_with_pending_pages_persists_images_in_order(tmp_path):
     """El alta multipagina crea assets y paginas pendientes en el orden recibido."""
     session = _FakeSession()
+    expected_image = _validated_image(tmp_path)
 
     manual = await create_manual_with_pending_pages(
         session,
@@ -404,20 +411,29 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
         images=[
             StoredManualImage(
                 page_number=1,
-                image=_validated_image(),
                 storage_key="manuals/user/manual/page-1.jpg",
+                byte_size=expected_image.byte_size,
+                mime_type=expected_image.mime_type,
+                extension=expected_image.extension,
+                width=expected_image.width,
+                height=expected_image.height,
+                sha256=expected_image.sha256,
             ),
             StoredManualImage(
                 page_number=2,
-                image=_validated_image(),
                 storage_key="manuals/user/manual/page-2.jpg",
+                byte_size=expected_image.byte_size,
+                mime_type=expected_image.mime_type,
+                extension=expected_image.extension,
+                width=expected_image.width,
+                height=expected_image.height,
+                sha256=expected_image.sha256,
             ),
         ],
     )
 
     pages = [entity for entity in session.added if isinstance(entity, ManualPage)]
     assets = [entity for entity in session.added if isinstance(entity, Asset)]
-    expected_image = _validated_image()
     assert len(assets) == 2
     assert manual.source_type == "images"
     assert manual.page_count == 2
@@ -427,7 +443,7 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
         "manuals/user/manual/page-2.jpg",
     ]
     assert all(asset.kind == "manual_page_image" for asset in assets)
-    assert all(asset.byte_size == len(expected_image.content) for asset in assets)
+    assert all(asset.byte_size == expected_image.byte_size for asset in assets)
     assert all(asset.sha256 == expected_image.sha256 for asset in assets)
     assert all(asset.width == expected_image.width for asset in assets)
     assert all(asset.height == expected_image.height for asset in assets)
@@ -437,13 +453,14 @@ async def test_create_manual_with_pending_pages_persists_images_in_order():
     assert all(page.source_reused_from_page_id is None for page in pages)
     assert [page.ocr_status for page in pages] == ["pending", "pending"]
     assert [page.text_source for page in pages] == ["none", "none"]
-    assert session.commits == 1
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
-async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pages():
+async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pages(tmp_path):
     """El PDF original queda como asset fuente y sus paginas nacen pendientes."""
     session = _FakeSession()
+    expected_pdf = _validated_pdf(tmp_path)
 
     manual = await create_manual_with_pending_pages(
         session,
@@ -457,21 +474,24 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
         source_fingerprint="b" * 64,
         images=[],
         source_pdf=StoredManualPdf(
-            pdf=_validated_pdf(),
             storage_key="manuals/user/manual/source.pdf",
+            byte_size=expected_pdf.byte_size,
+            mime_type=expected_pdf.mime_type,
+            extension=expected_pdf.extension,
+            page_count=expected_pdf.page_count,
+            sha256=expected_pdf.sha256,
         ),
     )
 
     source_asset = _first_added(session, Asset)
     pages = [entity for entity in session.added if isinstance(entity, ManualPage)]
-    expected_pdf = _validated_pdf()
     assert manual.source_type == "pdf"
     assert manual.page_count == 2
     assert manual.source_fingerprint == "b" * 64
     assert manual.source_asset_id == source_asset.id
     assert source_asset.kind == "manual_source_pdf"
     assert source_asset.storage_key == "manuals/user/manual/source.pdf"
-    assert source_asset.byte_size == len(expected_pdf.content)
+    assert source_asset.byte_size == expected_pdf.byte_size
     assert source_asset.sha256 == expected_pdf.sha256
     assert source_asset.width is None
     assert source_asset.height is None
@@ -480,7 +500,7 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
     assert [page.source_fingerprint for page in pages] == [None, None]
     assert [page.source_fingerprint_kind for page in pages] == [None, None]
     assert [page.source_reused_from_page_id for page in pages] == [None, None]
-    assert session.commits == 1
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
@@ -581,6 +601,8 @@ async def test_replace_page_result_marks_and_clears_reused_source():
     )
 
     assert page.source_reused_from_page_id is None
+    assert session.flushes == 2
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
@@ -668,7 +690,7 @@ async def test_claim_page_for_processing_is_conditional_update():
     )
 
     assert claimed is True
-    assert session.commits == 1
+    assert session.commits == 0
     compiled = _compile(session.executed[0])
     assert "UPDATE manual_pages" in compiled
     assert "manual_pages.ocr_status =" in compiled
@@ -697,7 +719,7 @@ async def test_mark_stale_processing_pages_failed_returns_affected_manuals():
     )
 
     assert result == [_MANUAL_ID]
-    assert session.commits == 1
+    assert session.commits == 0
     compiled = _compile(session.executed[0])
     assert "UPDATE manual_pages" in compiled
     assert "manual_pages.updated_at <" in compiled
@@ -747,37 +769,38 @@ async def test_resolve_manual_processed_status_keeps_processing_open():
 
 
 @pytest.mark.anyio
-async def test_attach_page_image_asset_persists_rendered_pdf_page():
-    """Una pagina PDF renderizada queda asociada como imagen reutilizable."""
+async def test_attach_page_image_asset_persists_rendered_pdf_page(tmp_path):
+    """El repositorio asocia el render sin apropiarse de la transacción."""
     page = SimpleNamespace(image_asset_id=None)
     session = _FakeSession(get_result=page)
+    expected_image = _validated_image(tmp_path)
 
     await attach_page_image_asset(
         session,
         owner_user_id=_OWNER_USER_ID,
         page_id=uuid4(),
-        image=_validated_image(),
+        image=expected_image,
         storage_key="manuals/user/manual/page-1.jpg",
     )
 
     asset = _first_added(session, Asset)
-    expected_image = _validated_image()
     assert asset.owner_user_id == _OWNER_USER_ID
     assert asset.kind == "manual_page_image"
     assert asset.storage_key == "manuals/user/manual/page-1.jpg"
-    assert asset.byte_size == len(expected_image.content)
+    assert asset.byte_size == expected_image.byte_size
     assert asset.sha256 == expected_image.sha256
     assert asset.width == expected_image.width
     assert asset.height == expected_image.height
     assert page.image_asset_id == asset.id
-    assert session.commits == 1
+    assert session.flushes == 2
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
-async def test_attach_page_image_asset_can_store_render_fingerprint():
+async def test_attach_page_image_asset_can_store_render_fingerprint(tmp_path):
     """Una página PDF renderizada guarda huella para evitar OCR repetido."""
     page = SimpleNamespace(image_asset_id=None, source_fingerprint=None)
-    image = _validated_image()
+    image = _validated_image(tmp_path)
     session = _FakeSession(get_result=page)
 
     await attach_page_image_asset(
@@ -816,7 +839,8 @@ async def test_mark_manual_indexed_updates_manual_and_chunks():
     assert manual.status == "active"
     assert manual.chunks_indexed == 1
     assert manual.indexed_at == _INDEXED_AT
-    assert session.commits == 1
+    assert session.flushes == 1
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
@@ -843,7 +867,8 @@ async def test_mark_manual_failed_sets_status_when_manual_exists():
     await mark_manual_failed(session, manual_id=_MANUAL_ID)
 
     assert manual.status == "failed"
-    assert session.commits == 1
+    assert session.flushes == 1
+    assert session.commits == 0
 
 
 @pytest.mark.anyio
@@ -853,6 +878,19 @@ async def test_mark_manual_failed_ignores_missing_manual():
 
     await mark_manual_failed(session, manual_id=_MANUAL_ID)
 
+    assert session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_mark_page_failed_flushes_without_closing_the_unit_of_work():
+    """El servicio conserva la decisión de confirmar o revertir el fallo."""
+    page = SimpleNamespace(ocr_status="processing")
+    session = _FakeSession(get_result=page)
+
+    await mark_page_failed(session, page_id=uuid4())
+
+    assert page.ocr_status == "failed"
+    assert session.flushes == 1
     assert session.commits == 0
 
 
@@ -928,27 +966,45 @@ async def test_load_authorized_chunks_raises_without_authorized_context(
         )
 
 
-def _validated_image() -> ValidatedManualImage:
-    """Devuelve una imagen validada mínima para persistencia."""
+def _validated_image(root: Path) -> ValidatedManualImage:
+    """Crea una imagen real y devuelve sus metadatos de persistencia."""
+    path = root / "validated.jpg"
+    Image.new("RGB", (10, 10), color=(100, 150, 200)).save(path, format="JPEG")
     return ValidatedManualImage(
-        content=b"image-bytes",
+        path=path,
+        byte_size=path.stat().st_size,
         mime_type="image/jpeg",
         extension=".jpg",
         width=10,
         height=10,
-        sha256="f" * 64,
+        sha256=_file_sha256(path),
     )
 
 
-def _validated_pdf() -> ValidatedManualPdf:
-    """Devuelve un PDF validado minimo para persistencia."""
+def _validated_pdf(root: Path) -> ValidatedManualPdf:
+    """Crea un PDF real de dos páginas y devuelve sus metadatos."""
+    path = root / "validated.pdf"
+    document = pdfium.PdfDocument.new()
+    document.new_page(200, 200)
+    document.new_page(200, 200)
+    try:
+        document.save(path)
+    finally:
+        document.close()
     return ValidatedManualPdf(
-        content=b"pdf-bytes",
+        path=path,
+        byte_size=path.stat().st_size,
         mime_type="application/pdf",
         extension=".pdf",
         page_count=2,
-        sha256="e" * 64,
+        sha256=_file_sha256(path),
     )
+
+
+def _file_sha256(path: Path) -> str:
+    """Calcula la huella del fixture desde su fichero real."""
+    with path.open("rb") as source:
+        return hashlib.file_digest(source, "sha256").hexdigest()
 
 
 def _manual_row(*, title: str | None):

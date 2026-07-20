@@ -15,10 +15,65 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  gateway-config:
+    name: Gateway - Validación
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Comprobar deriva de la imagen de Caddy
+        run: |
+          . ./.env
+          expected="caddy:${CADDY_VERSION}@${CADDY_DIGEST}"
+          if [ "$CADDY_IMAGE" != "$expected" ]; then
+            echo "::error::El gateway usa $CADDY_IMAGE pero .env declara $expected."
+            exit 1
+          fi
+
+      - name: Validar Caddyfile
+        run: |
+          . ./.env
+          docker run --rm \
+            --env "EDGE_NET_SUBNET=$EDGE_NET_SUBNET" \
+            --env "APP_HOSTNAME=$APP_HOSTNAME" \
+            --volume "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            "$CADDY_IMAGE" \
+            caddy fmt --diff /etc/caddy/Caddyfile
+          docker run --rm \
+            --env "EDGE_NET_SUBNET=$EDGE_NET_SUBNET" \
+            --env "APP_HOSTNAME=$APP_HOSTNAME" \
+            --env XDG_DATA_HOME=/tmp/caddy-validation \
+            --volume "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            "$CADDY_IMAGE" \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Renderizar Docker Compose
+        run: |
+          install -m 0600 /dev/null secrets/tunnel_token.txt
+          trap 'rm -f secrets/tunnel_token.txt' EXIT
+          docker compose config --quiet
+          docker compose --profile tunnel config --quiet
+
+      - name: Preparar Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+
+      - name: Validar Terraform
+        working-directory: deploy/terraform
+        run: |
+          terraform fmt -recursive -check
+          terraform init -backend=false
+          terraform validate
+
   backend-lint:
     name: Backend - Lint
     runs-on: ubuntu-latest
@@ -53,12 +108,45 @@ jobs:
     name: Backend - Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql+psycopg://manualito@localhost:5432/manualito_test
+
+    services:
+      postgres:
+        # No puede leer el .env; el paso de deriva falla si no coincide con él.
+        image: postgres:18.4-alpine3.23
+        env:
+          POSTGRES_DB: manualito_test
+          POSTGRES_USER: manualito
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U manualito -d manualito_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Clonar repositorio
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      - name: Comprobar deriva de la imagen de postgres
+        env:
+          SERVICE_IMAGE: postgres:18.4-alpine3.23
+        run: |
+          . ./.env
+          expected="postgres:${POSTGRES_VERSION}-${POSTGRES_VARIANT}"
+          if [ "$SERVICE_IMAGE" != "$expected" ]; then
+            echo "::error::El service usa $SERVICE_IMAGE pero .env declara $expected. Actualiza services.postgres.image y SERVICE_IMAGE."
+            exit 1
+          fi
+
       - name: Preparar backend
         uses: ./.github/actions/backend-setup
+
+      - name: Aplicar migraciones para los contratos PostgreSQL
+        run: uv run --no-sync alembic -c backend/database/alembic.ini upgrade head
 
       - name: Ejecutar tests
         run: >-
@@ -227,7 +315,8 @@ jobs:
     timeout-minutes: 10
     # El plan gratuito de SonarQube Cloud solo analiza master y pull requests.
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
-    needs: [backend-typecheck, backend-tests, backend-migrations, frontend-tests]
+    needs:
+      [gateway-config, backend-typecheck, backend-tests, backend-migrations, frontend-tests]
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 

@@ -20,9 +20,9 @@ class ApiSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="", extra="ignore", populate_by_name=True)
 
     app_version: str = Field(min_length=1)
-    max_image_size: int = 30 * 1024 * 1024
-    max_manual_pdf_size: int = 200 * 1024 * 1024
-    max_manual_total_size: int = 200 * 1024 * 1024
+    max_image_size: int = Field(default=30_000_000, ge=1)
+    max_manual_pdf_size: int = Field(default=95_000_000, ge=1)
+    max_manual_total_size: int = Field(default=95_000_000, ge=1)
     max_manual_pages: int = Field(default=30, ge=1)
     max_image_pixels: int = Field(default=60_000_000, ge=1)
     pdf_render_dpi: int = Field(default=300, ge=72)
@@ -69,6 +69,9 @@ class ApiSettings(BaseSettings):
     ocr_service_timeout: float = Field(default=300.0, gt=0)
     internal_json_timeout: float = Field(default=120.0, gt=0)
     asset_storage_dir: str = "/app/storage/assets"
+    asset_pending_batch_ttl_seconds: int = Field(default=24 * 60 * 60, ge=60)
+    manual_dispatch_recovery_delay_seconds: int = Field(default=5 * 60, ge=60)
+    manual_dispatch_recovery_batch_size: int = Field(default=100, ge=1, le=1_000)
 
     rag_retrieval_multiplier: int = Field(default=4, ge=1)
 
@@ -89,12 +92,12 @@ class ApiSettings(BaseSettings):
     manual_reprocess_rate_limit: str = STRICT_ACTION_RATE_LIMIT
 
     auth_session_days: int = Field(default=7, ge=1)
-    auth_cookie_secure: bool = False
+    auth_cookie_secure: bool = True
     auth_session_cookie_name: str | None = None
     auth_csrf_cookie_name: str | None = None
     auth_csrf_header_name: str = "X-CSRF-Token"
 
-    frontend_public_url: str = "http://localhost:5173"
+    frontend_public_url: str = "https://localhost"
     smtp_host: str = "mailpit"
     smtp_port: int = Field(default=1025, ge=1, le=65535)
     smtp_username: str | None = None
@@ -247,6 +250,9 @@ CELERY_MAINTENANCE_HARD_TIME_LIMIT = settings.celery_maintenance_hard_time_limit
 OCR_SERVICE_TIMEOUT = settings.ocr_service_timeout
 INTERNAL_JSON_TIMEOUT = settings.internal_json_timeout
 ASSET_STORAGE_DIR = settings.asset_storage_dir
+ASSET_PENDING_BATCH_TTL_SECONDS = settings.asset_pending_batch_ttl_seconds
+MANUAL_DISPATCH_RECOVERY_DELAY_SECONDS = settings.manual_dispatch_recovery_delay_seconds
+MANUAL_DISPATCH_RECOVERY_BATCH_SIZE = settings.manual_dispatch_recovery_batch_size
 RAG_RETRIEVAL_MULTIPLIER = settings.rag_retrieval_multiplier
 
 BGG_EXTERNAL_SEARCH_MIN_LENGTH = settings.bgg_external_search_min_length

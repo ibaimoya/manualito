@@ -13,7 +13,7 @@ from api import config
 from api.auth import passwords as password_helpers
 from api.auth import service
 from api.auth.audit import record_security_event
-from api.auth.cookies import set_auth_cookies
+from api.auth.cookies import clear_auth_cookies, set_auth_cookies
 from api.auth.dependencies import client_ip, get_current_auth, require_admin, require_csrf
 from api.auth.exceptions import (
     AdminRequiredError,
@@ -203,25 +203,55 @@ async def test_password_async_wrappers_use_limited_worker_thread(monkeypatch):
     ]
 
 
-def test_set_auth_cookies_pins_security_flags():
-    """La cookie de sesión es HttpOnly y la de CSRF queda legible por el frontend."""
+def test_set_auth_cookies_pins_secure_host_only_contract():
+    """Las cookies de auth se emiten Secure y limitadas al host completo."""
     response = Response()
 
     set_auth_cookies(response, session_token="session-token", csrf_token="csrf-token")
 
     set_cookie_headers = response.headers.getlist("set-cookie")
-    session_cookie = next(
-        header for header in set_cookie_headers if config.AUTH_SESSION_COOKIE_NAME in header
-    )
-    csrf_cookie = next(
-        header for header in set_cookie_headers if config.AUTH_CSRF_COOKIE_NAME in header
-    )
+    assert len(set_cookie_headers) == 2
+    cookies_by_name = {header.partition("=")[0]: header for header in set_cookie_headers}
+    assert set(cookies_by_name) == {
+        "__Host-manualito_session",
+        "__Host-manualito_csrf",
+    }
+    session_cookie = cookies_by_name["__Host-manualito_session"]
+    csrf_cookie = cookies_by_name["__Host-manualito_csrf"]
+    for cookie in (session_cookie, csrf_cookie):
+        assert "Secure" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Path=/" in cookie
+        assert "Max-Age=604800" in cookie
+        assert "domain=" not in cookie.lower()
     assert "HttpOnly" in session_cookie
-    assert "SameSite=lax" in session_cookie
-    assert "Path=/" in session_cookie
-    assert f"Max-Age={config.AUTH_SESSION_MAX_AGE_SECONDS}" in session_cookie
     assert "HttpOnly" not in csrf_cookie
-    assert "SameSite=lax" in csrf_cookie
+
+
+def test_clear_auth_cookies_preserves_secure_host_only_contract():
+    """Al cerrar sesión se expiran las dos cookies con su mismo ámbito seguro."""
+    response = Response()
+
+    clear_auth_cookies(response)
+
+    set_cookie_headers = response.headers.getlist("set-cookie")
+    assert len(set_cookie_headers) == 2
+    cookies_by_name = {header.partition("=")[0]: header for header in set_cookie_headers}
+    assert set(cookies_by_name) == {
+        "__Host-manualito_session",
+        "__Host-manualito_csrf",
+    }
+    session_cookie = cookies_by_name["__Host-manualito_session"]
+    csrf_cookie = cookies_by_name["__Host-manualito_csrf"]
+    for cookie in (session_cookie, csrf_cookie):
+        assert "Secure" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Path=/" in cookie
+        assert "Max-Age=0" in cookie
+        assert "expires=" in cookie.lower()
+        assert "domain=" not in cookie.lower()
+    assert "HttpOnly" in session_cookie
+    assert "HttpOnly" not in csrf_cookie
 
 
 def test_record_security_event_strips_sensitive_event_data():
@@ -253,10 +283,11 @@ async def test_login_missing_user_uses_dummy_hash_and_writes_uniform_failure(mon
     dummy_verify = AsyncMock()
 
     monkeypatch.setattr(service, "verify_password_against_dummy_async", dummy_verify)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
-            cast(AsyncSession, fake_session),
+            session,
             identifier="missing@example.com",
             password="valid-password",
             ip_address="127.0.0.1",
@@ -441,10 +472,11 @@ async def test_register_user_maps_integrity_error_to_duplicate(monkeypatch):
             raise IntegrityError("INSERT", {}, ValueError("duplicate key"))
 
     fake_session = DuplicateSession()
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(service.DuplicateIdentityError):
         await service.register_user(
-            cast(AsyncSession, fake_session),
+            session,
             email="user@example.com",
             username="Nora",
             password="valid-password",
@@ -567,10 +599,11 @@ async def test_verify_email_token_rejects_missing_or_expired(monkeypatch):
     )
     fake_session = FakeSession(row_result=(expired_token, user))
     monkeypatch.setattr(service, "utc_now", lambda: now)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidEmailVerificationTokenError):
         await service.verify_email_token(
-            cast(AsyncSession, fake_session),
+            session,
             token="verify-token",
             ip_address=None,
         )
@@ -650,10 +683,11 @@ async def test_reset_password_with_token_rejects_consumed_token(monkeypatch):
     )
     fake_session = FakeSession(row_result=(reset_token, user))
     monkeypatch.setattr(service, "utc_now", lambda: now)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidPasswordResetTokenError):
         await service.reset_password_with_token(
-            cast(AsyncSession, fake_session),
+            session,
             token="reset-token",
             password="valid-password",
             ip_address=None,
@@ -670,10 +704,11 @@ async def test_login_wrong_password_fails_uniformly_with_audit(monkeypatch):
         "verify_password_async",
         AsyncMock(return_value=(False, None)),
     )
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
-            cast(AsyncSession, fake_session),
+            session,
             identifier="user@example.com",
             password="bad-password",
             ip_address="127.0.0.1",
@@ -736,10 +771,11 @@ async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
     fake_session = FakeSession(scalar_result=None)
     dummy = AsyncMock()
     monkeypatch.setattr(service, "verify_password_against_dummy_async", dummy)
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(InvalidCredentialsError):
         await service.login_user(
-            cast(AsyncSession, fake_session),
+            session,
             identifier="x" * 200,
             password="valid-password",
             ip_address=None,
@@ -752,11 +788,10 @@ async def test_login_with_unparseable_username_fails_uniformly(monkeypatch):
 async def test_authenticate_session_without_token_requires_auth():
     """Sin token de sesión no se intenta tocar la base de datos."""
     fake_session = FakeSession()
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(AuthenticationRequiredError):
-        await service.authenticate_session(
-            cast(AsyncSession, fake_session), session_token=None, csrf_token=None
-        )
+        await service.authenticate_session(session, session_token=None, csrf_token=None)
 
     assert fake_session.statements == []
 
@@ -766,10 +801,11 @@ async def test_authenticate_session_without_matching_row_requires_auth():
     """Una sesión inexistente, revocada o expirada exige reautenticación."""
     fake_session = FakeSession()
     fake_session.execute = AsyncMock(return_value=FakeRowResult(None))
+    session = cast(AsyncSession, fake_session)
 
     with pytest.raises(AuthenticationRequiredError):
         await service.authenticate_session(
-            cast(AsyncSession, fake_session), session_token="session-token", csrf_token="csrf-token"
+            session, session_token="session-token", csrf_token="csrf-token"
         )
 
 

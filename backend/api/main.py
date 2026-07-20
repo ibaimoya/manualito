@@ -13,7 +13,6 @@ from api.exceptions import register_exception_handlers
 from api.games.router import router as games_router
 from api.health.router import router as health_router
 from api.manuals.router import router as manuals_router
-from api.ocr.router import router as ocr_router
 from api.rate_limit import limiter
 from api.ratings.router import router as ratings_router
 from api.root.router import router as root_router
@@ -47,7 +46,6 @@ app.include_router(root_router)
 app.include_router(health_router, tags=["Health"])
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(account_router, tags=["Account"])
-app.include_router(ocr_router, tags=["OCR"])
 app.include_router(games_router, tags=["Games"])
 app.include_router(manuals_router, tags=["Manuals"])
 app.include_router(conversations_router, tags=["Conversations"])

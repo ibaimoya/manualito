@@ -11,15 +11,16 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import UploadFile
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from starlette.datastructures import Headers
 
 from api import config
-from api.assets.storage import LocalAssetStore
+from api.assets.storage import AssetWriteBatch, LocalAssetStore
 from api.auth.service import AuthenticatedSession
 from api.exceptions import InvalidImageError
+from api.manuals import service as manuals_service
 from api.manuals.repository import (
     get_user_manual_detail,
     get_user_manual_page_image_asset,
@@ -169,6 +170,82 @@ async def test_create_manual_commits_queryable_image_and_adopts_assets(
     assert not (stored_path.parent / ".pending").exists()
     assert not list(world.asset_root.rglob("*.part"))
     assert upload.file.closed
+
+
+@pytest.mark.anyio
+async def test_create_manual_tolera_fallo_al_adoptar(
+    postgres_upload_world: PostgresUploadWorld,
+    valid_jpeg_bytes: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Un fallo inyectado del sistema de archivos no invalida el manual confirmado."""
+
+    async def fail_adopt(_batch: AssetWriteBatch) -> None:
+        raise OSError("fallo de adopción inyectado")
+
+    monkeypatch.setattr(AssetWriteBatch, "adopt", fail_adopt)
+    world = postgres_upload_world
+
+    async with world.sessions() as session:
+        created = await create_manual(
+            session,
+            auth=world.auth,
+            game_id=world.game_id,
+            title="Persistido tras fallo de adopción",
+            visibility="private",
+            language="es",
+            images=[_image_upload(valid_jpeg_bytes)],
+            pdf=None,
+        )
+
+    async with world.sessions() as session:
+        detail = await get_user_manual_detail(
+            session,
+            owner_user_id=world.owner_user_id,
+            manual_id=created.manual_id,
+        )
+
+    assert detail.title == "Persistido tras fallo de adopción"
+
+
+@pytest.mark.anyio
+async def test_create_manual_tolera_fallo_al_autoseguir(
+    postgres_upload_world: PostgresUploadWorld,
+    valid_jpeg_bytes: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Un error real de PostgreSQL en el auto-follow se revierte tras el commit."""
+
+    async def fail_auto_follow(
+        session: AsyncSession,
+        *,
+        user_id: UUID,
+        game_id: UUID,
+    ) -> None:
+        del user_id, game_id
+        await session.execute(text("SELECT 1 / 0"))
+
+    monkeypatch.setattr(manuals_service.games_repository, "auto_follow_game", fail_auto_follow)
+    world = postgres_upload_world
+
+    async with world.sessions() as session:
+        created = await create_manual(
+            session,
+            auth=world.auth,
+            game_id=world.game_id,
+            title="Persistido sin auto-follow",
+            visibility="private",
+            language="es",
+            images=[_image_upload(valid_jpeg_bytes)],
+            pdf=None,
+        )
+        detail = await get_user_manual_detail(
+            session,
+            owner_user_id=world.owner_user_id,
+            manual_id=created.manual_id,
+        )
+
+    assert detail.title == "Persistido sin auto-follow"
 
 
 @pytest.mark.anyio

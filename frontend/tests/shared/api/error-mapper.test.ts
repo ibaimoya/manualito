@@ -3,7 +3,7 @@ import { mapApiError, mapHttpStatus } from '@/shared/api/error-mapper';
 
 describe('error-mapper · mapHttpStatus', () => {
   it.each([
-    [413, 'Foto demasiado grande'],
+    [413, 'Archivo demasiado grande'],
     [415, 'Formato no soportado'],
     [422, 'No conseguimos leer el manual'],
     [404, 'Manual no encontrado'],
@@ -30,12 +30,12 @@ describe('error-mapper · mapHttpStatus', () => {
     expect(v.retryable).toBe(true);
   });
 
-  it('413 NO es retryable transparente para que el usuario reduzca el tamaño', () => {
-    // 413 es "retryable=true" en nuestra tabla porque la siguiente acción
-    // (hacer foto más pequeña) tiene sentido.  Pero NO es transparente:
-    // no debemos auto-retry el mismo file.  Aquí solo verificamos la copy.
+  it('413 usa un fallback neutral cuando el proxy no aporta un código de dominio', () => {
+    // No debemos asumir si el cuerpo rechazado era imagen o PDF: un proxy
+    // puede emitir el 413 antes de que la API llegue a clasificar la subida.
     const v = mapHttpStatus(413);
-    expect(v.hint).toContain('resolución');
+    expect(v.message).toBe('La subida supera el tamaño permitido.');
+    expect(v.hint).toContain('archivo');
   });
 
   it('404 NO es retryable (el manual ya no existe)', () => {
@@ -73,15 +73,30 @@ describe('error-mapper · mapApiError', () => {
     const v = mapApiError({
       status: 413,
       raw: {
-        detail: 'El PDF no puede superar 200 MB.',
-        errors: [
-          { field: null, code: 'pdf_too_large', message: 'El PDF no puede superar 200 MB.' },
-        ],
+        detail: 'El PDF no puede superar 95 MB.',
+        errors: [{ field: null, code: 'pdf_too_large', message: 'El PDF no puede superar 95 MB.' }],
       },
     });
 
     expect(v.code).toBe('pdf_too_large');
     expect(v.title).toBe('PDF demasiado grande');
+    expect(v.message).toBe('El PDF puede ocupar como máximo 95 MB.');
+  });
+
+  it('explica el límite agregado de 95 MB para un manual de imágenes', () => {
+    const v = mapApiError({
+      status: 413,
+      raw: {
+        detail: 'El manual no puede superar 95 MB.',
+        errors: [
+          { field: null, code: 'manual_too_large', message: 'El manual no puede superar 95 MB.' },
+        ],
+      },
+    });
+
+    expect(v.code).toBe('manual_too_large');
+    expect(v.title).toBe('Manual demasiado grande');
+    expect(v.message).toBe('El conjunto de imágenes puede ocupar como máximo 95 MB.');
   });
 
   it('objeto con response.status → usa tabla', () => {

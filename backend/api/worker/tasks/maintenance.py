@@ -5,7 +5,7 @@ import anyio
 from api import config
 from api.manuals import service as manuals_service
 from api.worker.celery import celery_app
-from api.worker.tasks.manuals import finalize_manual_task
+from api.worker.tasks.manuals import finalize_manual_task, process_manual_task
 
 MAINTENANCE_TASK_OPTIONS = {
     "soft_time_limit": config.CELERY_MAINTENANCE_SOFT_TIME_LIMIT,
@@ -31,3 +31,14 @@ def recover_stale_manual_pages() -> None:
     manual_ids = anyio.run(manuals_service.recover_stale_manual_pages)
     for manual_id in manual_ids:
         finalize_manual_task.delay(str(manual_id))
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="api.worker.tasks.maintenance.recover_manuals_pending_dispatch",
+    **MAINTENANCE_TASK_OPTIONS,
+)
+def recover_manuals_pending_dispatch() -> None:
+    """Reenvía manuales confirmados que no llegaron a Celery."""
+    manual_ids = anyio.run(manuals_service.recover_manuals_pending_dispatch)
+    for manual_id in manual_ids:
+        process_manual_task.delay(str(manual_id))

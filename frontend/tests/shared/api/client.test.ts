@@ -128,7 +128,7 @@ describe('api createManual', () => {
     expect(result.source_type).toBe('pdf');
   });
 
-  it('413 se mapea a Foto demasiado grande', async () => {
+  it('413 sin código de dominio usa un mensaje de archivo neutral', async () => {
     server.use(http.post('/api/manuals', () => HttpResponse.json({}, { status: 413 })));
 
     await expect(
@@ -137,7 +137,7 @@ describe('api createManual', () => {
         gameId: 'g-1',
         images: [new File(['x'], 'm.jpg', { type: 'image/jpeg' })],
       }),
-    ).rejects.toMatchObject({ view: { title: 'Foto demasiado grande' } });
+    ).rejects.toMatchObject({ view: { title: 'Archivo demasiado grande' } });
   });
 });
 

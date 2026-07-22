@@ -3,6 +3,7 @@
 from api.games.exceptions import GameNotFoundError, GameUnavailableError
 
 __all__ = [
+    "AssetStorageUnavailableError",
     "GameNotFoundError",
     "GameUnavailableError",
     "GeneratedAnswerTooLongError",
@@ -11,6 +12,7 @@ __all__ = [
     "ManualDuplicateError",
     "ManualNotEditableError",
     "ManualNotFoundError",
+    "ManualRequestTooLargeError",
     "ManualTooLargeError",
     "ManualUploadSelectionError",
     "ManualsError",
@@ -21,12 +23,20 @@ class ManualsError(Exception):
     """Clase base para errores esperados de manuales."""
 
 
+class AssetStorageUnavailableError(ManualsError):
+    """El almacenamiento local no puede aceptar o publicar la subida."""
+
+
 class ManualUploadSelectionError(ManualsError):
     """La subida no contiene exactamente una fuente de manual."""
 
 
 class ManualTooLargeError(ManualsError):
     """El conjunto de ficheros del manual supera el límite permitido."""
+
+
+class ManualRequestTooLargeError(ManualsError):
+    """El cuerpo multipart excede el límite defensivo de transporte."""
 
 
 class ManualNotFoundError(ManualsError):

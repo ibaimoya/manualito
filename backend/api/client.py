@@ -1,8 +1,10 @@
 import asyncio
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
+from pathlib import Path
 from typing import NotRequired, TypedDict
 
+import anyio
 import httpx
 from pydantic import ValidationError
 
@@ -16,33 +18,35 @@ from api.ocr.schemas import OcrLinesResponse
 
 logger = logging.getLogger(__name__)
 
-type JsonValue = (
-    None | bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
-)
+type JsonValue = None | bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
 type JsonObject = dict[str, JsonValue]
 
 
 class _PostRequestKwargs(TypedDict):
     url: str
     json: NotRequired[Mapping[str, JsonValue]]
-    files: NotRequired[dict[str, tuple[str | None, bytes, str | None]]]
+    content: NotRequired[AsyncIterator[bytes]]
+    headers: NotRequired[Mapping[str, str]]
+
+
+_UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 async def call_ocr_service(
     *,
     client: httpx.AsyncClient,
-    filename: str | None,
-    content: bytes,
-    content_type: str | None,
+    image_path: Path,
+    byte_size: int,
+    content_type: str,
 ) -> list[dict[str, object]]:
     """
     Reenvía una imagen validada al servicio OCR interno.
 
     Args:
         client (httpx.AsyncClient): Cliente HTTP compartido.
-        filename (str | None): Nombre del fichero original.
-        content (bytes): Bytes de la imagen.
-        content_type (str | None): MIME type declarado por el cliente.
+        image_path (Path): Ruta interna de la imagen validada.
+        byte_size (int): Tamaño persistido usado como ``Content-Length``.
+        content_type (str): MIME type real de la imagen validada.
 
     Returns:
         list[dict[str, object]]: Líneas OCR devueltas por el servicio interno.
@@ -52,7 +56,11 @@ async def call_ocr_service(
         service_name="OCR",
         request_kwargs={
             "url": f"{config.OCR_URL}/extract",
-            "files": {"image": (filename, content, content_type)},
+            "content": _stream_file(image_path),
+            "headers": {
+                "Content-Type": content_type,
+                "Content-Length": str(byte_size),
+            },
         },
         timeout_seconds=config.OCR_SERVICE_TIMEOUT,
         unavailable_detail="Servicio OCR no disponible.",
@@ -64,6 +72,13 @@ async def call_ocr_service(
         raise InternalServiceError(
             "Error interno al procesar la imagen con OCR."
         ) from validation_err
+
+
+async def _stream_file(path: Path) -> AsyncIterator[bytes]:
+    """Transmite un fichero interno sin materializarlo entero en memoria."""
+    async with await anyio.open_file(path, "rb") as image:
+        while chunk := await image.read(_UPLOAD_CHUNK_SIZE):
+            yield chunk
 
 
 async def post_json(

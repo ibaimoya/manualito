@@ -11,6 +11,7 @@ dependencies = [
 [dependency-groups]
 common-web = [
     "fastapi==0.139.0",
+    "starlette==1.3.1",
     "uvicorn[standard]==0.49.0",
 ]
 common-validation = [
@@ -43,7 +44,7 @@ common-worker = [
     "redis==6.4.0",
 ]
 common-async = [
-    "anyio==4.14.1",
+    "anyio==4.14.2",
 ]
 common-auth = [
     "pwdlib[argon2]==0.3.0",
@@ -105,7 +106,12 @@ llm = [
 monitoring = [
     "flower==2.0.1",
 ]
+commit-policy = [
+    "conventional-pre-commit==4.4.0",
+    "emoji==2.15.0",
+]
 test = [
+    { include-group = "commit-policy" },
     { include-group = "common-web" },
     { include-group = "common-settings" },
     { include-group = "common-http-client" },
@@ -128,6 +134,10 @@ test = [
 typecheck = [
     { include-group = "test" },
     "mypy==2.1.0",
+]
+dev = [
+    { include-group = "commit-policy" },
+    "pre-commit==4.6.0",
 ]
 
 [tool.uv]
@@ -162,7 +172,7 @@ explicit = true
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["backend"]
+src = ["backend", "scripts"]
 extend-exclude = [
     "htmlcov",
     "backend/ocr/.ocr_cache",
@@ -199,6 +209,7 @@ module = [
     "paddle",
     "paddleocr",
     "pypdfium2",
+    "pypdfium2.*",
     "pytesseract",
     "sentence_transformers",
 ]
@@ -213,13 +224,18 @@ warn_required_dynamic_aliases = true
 testpaths = ["backend/tests"]
 log_cli = false
 log_level = "WARNING"
+strict_markers = true
 
 [tool.coverage.run]
 branch = true
 relative_files = true
-source = ["backend"]
+source = ["backend", "scripts/hooks"]
 # Alembic se valida en su job de migraciones.
-omit = ["backend/database/alembic/*", "backend/tests/*"]
+omit = [
+    "backend/database/alembic/*",
+    "backend/tests/*",
+    "scripts/hooks/tests/*",
+]
 
 [tool.coverage.report]
 show_missing = true

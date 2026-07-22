@@ -14,6 +14,7 @@
 .env.local
 !config/*.env
 !secrets/*.txt
+secrets/tunnel_token.txt
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -424,6 +425,13 @@ FodyWeavers.xsd
 # Ficheros locales auxiliares
 notimportant/
 deploy/local/
+
+# Terraform
+/deploy/terraform/.terraform/
+/deploy/terraform/*.tfstate*
+/deploy/terraform/terraform.tfvars
+/deploy/terraform/crash.log
+/deploy/terraform/crash.*.log
 
 # Caché de modelos de OCR
 .paddleocr_cache/

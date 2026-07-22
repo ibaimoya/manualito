@@ -38,10 +38,10 @@ export const Route = createFileRoute('/_app/capture/source')({
   component: NewManualScreen,
 });
 
-const MB = 1024 * 1024;
+const MB = 1_000_000;
 const MAX_IMAGE_MB = 30;
-const MAX_PDF_MB = 200;
-const MAX_TOTAL_MB = 200;
+const MAX_PDF_MB = 95;
+const MAX_TOTAL_MB = 95;
 const MAX_IMAGE_BYTES = MAX_IMAGE_MB * MB;
 const MAX_PDF_BYTES = MAX_PDF_MB * MB;
 const MAX_TOTAL_BYTES = MAX_TOTAL_MB * MB;
@@ -55,6 +55,12 @@ type CreateManualVariables = Readonly<{
   mode: Mode;
   visibility: 'shared' | 'private';
 }>;
+
+function deriveUploadMode(pages: readonly File[]): Mode | null {
+  const firstPage = pages[0];
+  if (!firstPage) return null;
+  return firstPage.type === 'application/pdf' ? 'pdf' : 'images';
+}
 
 /** Reduce el detalle del hub a la forma que consume el paso 1. */
 function toGameSearchItem(detail: GameDetail): GameSearchItem {
@@ -76,16 +82,13 @@ function NewManualScreen() {
     ...gameDetailQueryOptions(gameId ?? ''),
     enabled: Boolean(gameId),
   });
-  const presetGame = useMemo(
-    () => (presetDetail.data ? toGameSearchItem(presetDetail.data) : null),
-    [presetDetail.data],
-  );
+  const presetGame = presetDetail.data ? toGameSearchItem(presetDetail.data) : null;
   // "undefined" ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
   const [chosenGame, setChosenGame] = useState<GameSearchItem | null | undefined>(undefined);
   const game = chosenGame === undefined ? presetGame : chosenGame;
   const [pages, setPages] = useState<File[]>([]);
   // Un manual usa imágenes XOR un PDF, nunca ambos.
-  const [mode, setMode] = useState<Mode | null>(null);
+  const mode = deriveUploadMode(pages);
   // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
   const [share, setShare] = useState(true);
 
@@ -188,7 +191,6 @@ function NewManualScreen() {
       return;
     }
     setPages(next);
-    setMode('images');
   }
 
   function addPdf(file: File | undefined): void {
@@ -204,15 +206,10 @@ function NewManualScreen() {
       return;
     }
     setPages([file]);
-    setMode('pdf');
   }
 
   function removePage(index: number): void {
-    setPages((current) => {
-      const next = current.filter((_, i) => i !== index);
-      if (next.length === 0) setMode(null);
-      return next;
-    });
+    setPages((current) => current.filter((_, i) => i !== index));
   }
 
   function movePage(index: number, delta: -1 | 1): void {
@@ -513,7 +510,7 @@ function PageRow({
           {isPdf ? 'PDF' : `Página ${index + 1}`}
         </p>
         <p className="truncate text-sm font-semibold text-fg">{file.name}</p>
-        <p className="mono text-xs text-fg-3">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+        <p className="mono text-xs text-fg-3">{(file.size / MB).toFixed(2)} MB</p>
       </div>
       <div className="flex shrink-0 gap-1">
         {isPdf ? null : (

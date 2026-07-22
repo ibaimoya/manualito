@@ -10,7 +10,7 @@ from api.main import app
 @pytest.fixture(scope="session")
 def client():
     """Cliente HTTP síncrono reutilizable para toda la sesión de tests."""
-    return TestClient(app)
+    return TestClient(app, base_url="https://testserver")
 
 
 @pytest.fixture(autouse=True)

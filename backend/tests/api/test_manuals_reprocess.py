@@ -158,13 +158,14 @@ def test_reprocess_is_rate_limited(
 def test_reprocess_service_claims_and_schedules_pipeline(monkeypatch):
     """El servicio reclama el manual y devuelve los chunks que limpiará Celery."""
     stale_ids = [uuid4(), uuid4()]
+    session = SimpleNamespace(commit=AsyncMock(), rollback=AsyncMock())
     begin_mock = AsyncMock(return_value=stale_ids)
     monkeypatch.setattr(manual_service, "begin_manual_reprocessing", begin_mock)
 
     result = anyio.run(
         partial(
             reprocess_manual,
-            _FAKE_SESSION,
+            session,
             auth=SimpleNamespace(user=SimpleNamespace(id=_USER_ID)),
             manual_id=_MANUAL_ID,
             page_number=None,
@@ -173,6 +174,8 @@ def test_reprocess_service_claims_and_schedules_pipeline(monkeypatch):
 
     assert begin_mock.await_args.kwargs["owner_user_id"] == _USER_ID
     assert result == stale_ids
+    session.commit.assert_awaited_once_with()
+    session.rollback.assert_not_awaited()
 
 
 def test_reprocess_cleans_stale_chunks_before_pipeline(monkeypatch):
@@ -227,7 +230,7 @@ def test_begin_reprocessing_claim_is_a_conditional_update():
     )
 
     assert len(stale) == 1
-    assert session.commits == 1
+    assert session.commits == 0
     claim = _compile(statements[0])
     assert "UPDATE manuals" in claim
     assert "manuals.status IN" in claim
@@ -264,19 +267,18 @@ def test_begin_reprocessing_busy_when_already_indexing():
             self.commits += 1
 
     session = FakeSession()
+    action = partial(
+        begin_manual_reprocessing,
+        session,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=None,
+    )
 
     with pytest.raises(ManualBusyError):
-        anyio.run(
-            partial(
-                begin_manual_reprocessing,
-                session,
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=None,
-            )
-        )
+        anyio.run(action)
 
-    assert session.rollbacks == 1
+    assert session.rollbacks == 0
     assert session.commits == 0
 
 
@@ -295,16 +297,15 @@ def test_begin_reprocessing_missing_manual_raises_404():
         async def rollback(self):
             await anyio.lowlevel.checkpoint()
 
+    action = partial(
+        begin_manual_reprocessing,
+        FakeSession(),
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=None,
+    )
     with pytest.raises(ManualNotFoundError):
-        anyio.run(
-            partial(
-                begin_manual_reprocessing,
-                FakeSession(),
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=None,
-            )
-        )
+        anyio.run(action)
 
 
 def test_begin_reprocessing_single_page_scopes_reset_and_chunks():
@@ -352,8 +353,8 @@ def test_begin_reprocessing_single_page_scopes_reset_and_chunks():
     assert "manual_chunks.page_id =" in stale_query
 
 
-def test_begin_reprocessing_missing_page_releases_claim():
-    """Una página inexistente deshace el claim para no dejar el manual colgado."""
+def test_begin_reprocessing_missing_page_leaves_rollback_to_service():
+    """Una página inexistente deja el rollback al propietario de la transacción."""
 
     class FakeSession:
         def __init__(self):
@@ -377,19 +378,18 @@ def test_begin_reprocessing_missing_page_releases_claim():
             self.commits += 1
 
     session = FakeSession()
+    action = partial(
+        begin_manual_reprocessing,
+        session,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=99,
+    )
 
     with pytest.raises(ManualNotFoundError):
-        anyio.run(
-            partial(
-                begin_manual_reprocessing,
-                session,
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=99,
-            )
-        )
+        anyio.run(action)
 
-    assert session.rollbacks == 1
+    assert session.rollbacks == 0
     assert session.commits == 0
 
 

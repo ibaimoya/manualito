@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import re
 from contextlib import closing
-from io import BytesIO
 from math import sqrt
+from pathlib import Path
 from typing import Protocol
 
 import pypdfium2 as pdfium
 from PIL import Image
 
 from api import config
+from api.assets.storage import AssetSizeExceededError, AssetWriteBatch
 from api.exceptions import InvalidPdfError
 from api.manuals.dto import ValidatedManualImage
 from api.manuals.pdfium import run_pdfium
 from api.manuals.validation import JPEG_MIME_TYPE
-from common.crypto import sha256_hex
 
 PDF_POINTS_PER_INCH = 72
 JPEG_EXTENSION = ".jpg"
@@ -35,65 +35,77 @@ class _PdfPage(Protocol):
     def render(self, *, scale: float) -> _PdfBitmap: ...
 
 
-async def extract_pdf_page_text(content: bytes, *, page_number: int) -> str:
+async def extract_pdf_page_text(pdf_path: Path, *, page_number: int) -> str:
     """Extrae texto embebido de una página PDF concreta."""
-    return await run_pdfium(_extract_pdf_page_text, content, page_number)
+    return await run_pdfium(_extract_pdf_page_text, pdf_path, page_number)
 
 
-async def render_pdf_page(content: bytes, *, page_number: int) -> ValidatedManualImage:
+async def render_pdf_page(
+    pdf_path: Path,
+    *,
+    page_number: int,
+    batch: AssetWriteBatch,
+) -> ValidatedManualImage:
     """Convierte una página PDF a JPEG para pasarla por OCR."""
-    return await run_pdfium(_render_pdf_page, content, page_number)
+    image = await run_pdfium(_render_pdf_page_image, pdf_path, page_number)
+    width, height = image.size
+    try:
+        staged = await batch.stage_generated(
+            lambda destination: image.save(destination, format="JPEG", quality=90),
+            max_bytes=config.MAX_IMAGE_SIZE,
+        )
+    except AssetSizeExceededError:
+        raise InvalidPdfError from None
+    finally:
+        image.close()
+    return ValidatedManualImage(
+        path=staged.path,
+        byte_size=staged.byte_size,
+        mime_type=JPEG_MIME_TYPE,
+        extension=JPEG_EXTENSION,
+        width=width,
+        height=height,
+        sha256=staged.sha256,
+    )
 
 
 def pdf_text_is_usable(text: str) -> bool:
     """Decide si la capa de texto PDF es suficientemente aprovechable."""
     stripped = text.strip()
-    if len(stripped) < config.PDF_TEXT_MIN_CHARS:
-        return False
-    if len(WORD_RE.findall(stripped)) < config.PDF_TEXT_MIN_WORDS:
-        return False
     return (
-        _bad_char_ratio(stripped) <= config.PDF_TEXT_MAX_BAD_CHAR_RATIO
+        len(stripped) >= config.PDF_TEXT_MIN_CHARS
+        and len(WORD_RE.findall(stripped)) >= config.PDF_TEXT_MIN_WORDS
+        and _bad_char_ratio(stripped) <= config.PDF_TEXT_MAX_BAD_CHAR_RATIO
         and _alnum_ratio(stripped) >= config.PDF_TEXT_MIN_ALNUM_RATIO
     )
 
 
-def _extract_pdf_page_text(content: bytes, page_number: int) -> str:
+def _extract_pdf_page_text(pdf_path: Path, page_number: int) -> str:
     """Lee la capa de texto de una página PDF, si existe."""
     try:
-        with pdfium.PdfDocument(content) as document, closing(
-            document.get_page(page_number - 1)
-        ) as page, closing(page.get_textpage()) as text_page:
+        with (
+            pdfium.PdfDocument(pdf_path) as document,
+            closing(document.get_page(page_number - 1)) as page,
+            closing(page.get_textpage()) as text_page,
+        ):
             text = text_page.get_text_range()
             return text.strip() if isinstance(text, str) else ""
     except (pdfium.PdfiumError, OSError, ValueError):
         return ""
 
 
-def _render_pdf_page(content: bytes, page_number: int) -> ValidatedManualImage:
+def _render_pdf_page_image(pdf_path: Path, page_number: int) -> Image.Image:
     """Renderiza una página PDF validada como imagen JPEG."""
     try:
-        with pdfium.PdfDocument(content) as document, closing(
-            document.get_page(page_number - 1)
-        ) as page:
-            image = _render_page_image(page)
-            width, height = image.size
+        with (
+            pdfium.PdfDocument(pdf_path) as document,
+            closing(document.get_page(page_number - 1)) as page,
+        ):
+            return _render_page_image(page)
     except InvalidPdfError:
         raise
     except (pdfium.PdfiumError, OSError, ValueError):
         raise InvalidPdfError from None
-
-    output = BytesIO()
-    image.save(output, format="JPEG", quality=90)
-    content = output.getvalue()
-    return ValidatedManualImage(
-        content=content,
-        mime_type=JPEG_MIME_TYPE,
-        extension=JPEG_EXTENSION,
-        width=width,
-        height=height,
-        sha256=sha256_hex(content),
-    )
 
 
 def _render_page_image(page: _PdfPage) -> Image.Image:
@@ -102,7 +114,7 @@ def _render_page_image(page: _PdfPage) -> Image.Image:
     for _ in range(3):
         bitmap = page.render(scale=scale)
         try:
-            image = bitmap.to_pil().convert("RGB").copy()
+            image = bitmap.to_pil().convert("RGB")
         finally:
             bitmap.close()
         width, height = image.size

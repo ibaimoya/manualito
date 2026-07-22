@@ -74,10 +74,10 @@ x-celery-base: &celery-base
     - postgres_password
     - redis_password
   networks:
-    - manualito-net
+    - backend-net
 
-# Variante para nginx
-x-service-hardening-nginx: &service-hardening-nginx
+# Variante para Caddy.
+x-service-hardening-caddy: &service-hardening-caddy
   security_opt:
     - no-new-privileges:true
   cap_drop:
@@ -86,9 +86,7 @@ x-service-hardening-nginx: &service-hardening-nginx
   read_only: true
   tmpfs:
     - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777,uid=1001,gid=1001
-    - /var/cache/nginx:rw,noexec,nosuid,nodev,size=64m,uid=1001,gid=1001
-    - /var/run:rw,noexec,nosuid,nodev,size=4m,uid=1001,gid=1001
-    - /var/log/nginx:rw,noexec,nosuid,nodev,size=32m,uid=1001,gid=1001
+    - /config:rw,noexec,nosuid,nodev,size=16m,uid=1001,gid=1001
   pids_limit: 100
 
 services:
@@ -111,7 +109,8 @@ services:
     container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-asset-storage-init
     image: ${PROJECT_NAME:?PROJECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
-    user: "0:0"
+    # El GID de appuser permite repetir el init sin conceder DAC_OVERRIDE.
+    user: "0:${APP_GID:-65532}"
     entrypoint: ["/usr/bin/install"]
     command:
       - "-d"
@@ -120,10 +119,51 @@ services:
       - "-g"
       - "${APP_GID:-65532}"
       - "-m"
-      - "0750"
+      - "0770"
       - "/app/storage/assets"
+      - "/app/storage/assets/.spool"
     volumes:
       - assets-data:/app/storage/assets
+    restart: "no"
+    network_mode: none
+
+  caddy-data-init:
+    <<: *volume-init-hardening
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-caddy-data-init
+    image: caddy:${CADDY_VERSION:?CADDY_VERSION no definida}@${CADDY_DIGEST:?CADDY_DIGEST no definido}
+    # Conserva la inicialización repetible sin dar acceso al material de la CA.
+    user: "0:1001"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        chown 1001:1001 /data
+        chmod 0700 /data
+    volumes:
+      - caddy-data:/data
+    restart: "no"
+    network_mode: none
+
+  edge-ca-init:
+    <<: *volume-init-hardening
+    profiles: ["tunnel"]
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-edge-ca-init
+    image: caddy:${CADDY_VERSION:?CADDY_VERSION no definida}@${CADDY_DIGEST:?CADDY_DIGEST no definido}
+    user: "0:0"
+    cap_add:
+      - DAC_READ_SEARCH
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        test -s /data/caddy/pki/authorities/local/root.crt
+        install -m 0444 /data/caddy/pki/authorities/local/root.crt /edge-ca/root.crt
+    volumes:
+      - caddy-data:/data:ro
+      - edge-ca:/edge-ca
+    depends_on:
+      frontend:
+        condition: service_healthy
     restart: "no"
     network_mode: none
 
@@ -137,7 +177,9 @@ services:
       - ./config/database.env
     environment:
       APP_VERSION: ${APP_VERSION:?APP_VERSION no definida}
+      FORWARDED_ALLOW_IPS: ${GATEWAY_NET_SUBNET}
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      TMPDIR: /app/storage/assets/.spool
     image: ${PROJECT_NAME:?PROJECT_NAME no definida}-api:${API_IMAGE_VERSION:?API_IMAGE_VERSION no definida}
     build: *api-build
     secrets:
@@ -146,15 +188,11 @@ services:
       - redis_password
     volumes:
       - assets-data:/app/storage/assets
-    ports:
-      - "127.0.0.1:8000:8000"
     depends_on:
       asset-storage-init:
         condition: service_completed_successfully
       database-migrate:
         condition: service_completed_successfully
-      ocr:
-        condition: service_healthy
       rag:
         condition: service_healthy
       llm:
@@ -164,7 +202,8 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - manualito-net
+      - backend-net
+      - gateway-net
 
   celery-worker-manuals:
     <<: *celery-base
@@ -310,7 +349,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - manualito-net
+      - backend-net
 
   database-migrate:
     <<: *service-hardening
@@ -327,7 +366,7 @@ services:
         condition: service_healthy
     restart: "no"
     networks:
-      - manualito-net
+      - backend-net
 
   database:
     <<: *third-party-hardening
@@ -348,7 +387,7 @@ services:
     volumes:
       - database-data:/var/lib/postgresql
     networks:
-      - manualito-net
+      - backend-net
 
   redis:
     <<: *third-party-hardening
@@ -387,7 +426,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - manualito-net
+      - backend-net
 
   ocr:
     <<: *service-hardening
@@ -408,7 +447,7 @@ services:
     environment:
       OCR_ENGINE: ${OCR_RUNTIME_STAGE:?OCR_RUNTIME_STAGE no definida}
     networks:
-      - manualito-net
+      - backend-net
 
   rag:
     <<: *service-hardening
@@ -428,7 +467,7 @@ services:
     depends_on:
       - chroma
     networks:
-      - manualito-net
+      - backend-net
 
   chroma:
     <<: *third-party-hardening
@@ -438,7 +477,7 @@ services:
     volumes:
       - chromadb-data:/data
     networks:
-      - manualito-net
+      - backend-net
 
   llm:
     <<: *service-hardening
@@ -467,7 +506,7 @@ services:
       ollama-init:
         condition: service_completed_successfully
     networks:
-      - manualito-net
+      - backend-net
 
   mailpit:
     <<: *third-party-hardening
@@ -479,7 +518,7 @@ services:
     ports:
       - "127.0.0.1:8025:8025"
     networks:
-      - manualito-net
+      - backend-net
 
   ollama:
     <<: *third-party-hardening
@@ -495,7 +534,7 @@ services:
       retries: 10
       start_period: 20s
     networks:
-      - manualito-net
+      - backend-net
 
   # Descarga el modelo si falta.
   ollama-init:
@@ -516,29 +555,83 @@ services:
     command: ["ollama pull $$OLLAMA_MODEL"]
     restart: "no"
     networks:
-      - manualito-net
+      - backend-net
 
   frontend:
-    <<: *service-hardening-nginx
+    <<: *service-hardening-caddy
     container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-frontend
     build:
       context: ./frontend
       args:
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
         NODE_VARIANT: ${NODE_VARIANT:-}
-        NGINX_VERSION: ${NGINX_VERSION:?NGINX_VERSION no definida}
-        NGINX_VARIANT: ${NGINX_VARIANT:-}
+        CADDY_VERSION: ${CADDY_VERSION:?CADDY_VERSION no definida}
+        CADDY_DIGEST: ${CADDY_DIGEST:?CADDY_DIGEST no definido}
+        EDGE_NET_SUBNET: ${EDGE_NET_SUBNET:-172.30.250.8/29}
+    environment:
+      APP_HOSTNAME: ${APP_HOSTNAME:?APP_HOSTNAME no definido}
+      EDGE_NET_SUBNET: ${EDGE_NET_SUBNET:-172.30.250.8/29}
     ports:
-      - "5173:8080"
+      - "127.0.0.1:80:8080"
+      - "127.0.0.1:443:8443"
+    volumes:
+      - caddy-data:/data
     depends_on:
       api:
         condition: service_started
+      caddy-data-init:
+        condition: service_completed_successfully
+    stop_grace_period: 130s
     networks:
-      - manualito-net
+      gateway-net:
+      edge-net:
+        aliases:
+          - ${APP_HOSTNAME:?APP_HOSTNAME no definido}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+
+  cloudflared:
+    <<: *service-hardening
+    profiles: ["tunnel"]
+    container_name: ${PROJECT_NAME:?PROJECT_NAME no definida}-cloudflared
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:?CLOUDFLARED_VERSION no definida}@${CLOUDFLARED_DIGEST:?CLOUDFLARED_DIGEST no definido}
+    user: "65532:65532"
+    entrypoint: ["cloudflared", "--output", "json"]
+    command:
+      - tunnel
+      - --no-autoupdate
+      - run
+      - --token-file
+      - /run/secrets/tunnel_token
+    secrets:
+      - tunnel_token
+    volumes:
+      - edge-ca:/etc/cloudflared/ca:ro
+    depends_on:
+      edge-ca-init:
+        condition: service_completed_successfully
+    networks:
+      - edge-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
 
 networks:
-  manualito-net:
+  backend-net:
     driver: bridge
+  gateway-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${GATEWAY_NET_SUBNET:-172.30.250.0/29}
+  edge-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${EDGE_NET_SUBNET:-172.30.250.8/29}
 
 volumes:
   database-data:
@@ -546,6 +639,8 @@ volumes:
   ollama-data:
   rag-hf-cache:
   assets-data:
+  caddy-data:
+  edge-ca:
   ocr-paddlex-cpu-cache:
   ocr-paddlex-gpu-cache:
   redis-data:
@@ -559,3 +654,5 @@ secrets:
     file: ./secrets/redis_password.txt
   flower_basic_auth:
     file: ./secrets/flower_basic_auth.txt
+  tunnel_token:
+    file: ./secrets/tunnel_token.txt

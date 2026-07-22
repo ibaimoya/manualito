@@ -7,11 +7,11 @@
 [![TanStack](https://img.shields.io/badge/TanStack-FF4154?logo=tanstack&logoColor=white)](https://tanstack.com/)
 [![Vitest 4](https://img.shields.io/badge/Vitest%204-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![pnpm 11](https://img.shields.io/badge/pnpm%2011-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
-[![NGINX](https://img.shields.io/badge/NGINX-009639?logo=nginx&logoColor=white)](https://nginx.org/)
+[![Caddy 2](https://img.shields.io/badge/Caddy%202-1F88C0?logo=caddy&logoColor=white)](https://caddyserver.com/)
 
 Interfaz web de Manualito. Está desarrollada con React, TypeScript y Vite; en
 desarrollo se sirve con el dev server de Vite y en Docker se compila como SPA
-estática servida por Nginx.
+estática servida por Caddy.
 
 El flujo recomendado para ejecutar la aplicación completa está en el
 [README de la raíz](../README.md) o [aquí](../deploy/README.md). Este documento resume la
@@ -30,9 +30,11 @@ pnpm dev
 El dev server escucha en `http://localhost:5173` por defecto. Si ese puerto ya
 está ocupado, Vite escogerá otro porque `strictPort` está desactivado.
 
-El frontend espera que la API esté disponible en `http://localhost:8000`. Ese
-destino se define en [`../config/frontend.env`](../config/frontend.env) mediante
-`VITE_API_TARGET`.
+El proxy de desarrollo apunta por defecto a `http://localhost:8000`. Ese destino
+se define en [`../config/frontend.env`](../config/frontend.env) mediante
+`VITE_API_TARGET` y presupone que la API se ejecuta directamente para desarrollo.
+El stack de Compose no publica el puerto 8000: la aplicación completa se usa en
+`https://localhost` a través de Caddy.
 
 Requisitos locales:
 
@@ -60,7 +62,7 @@ paquetes no declarados explícitamente.
 | Notificaciones  | Sonner                                            |
 | PWA             | `vite-plugin-pwa` con caché offline               |
 | Tests           | Vitest, Testing Library, MSW y jest-axe           |
-| Runtime Docker  | Nginx Alpine, puerto interno `8080`               |
+| Runtime Docker  | Caddy Alpine, HTTPS interno `8443`                |
 
 ## Estructura
 
@@ -106,17 +108,17 @@ normal de desarrollo.
 
 Las llamadas HTTP del cliente usan rutas relativas (`/api/...` y `/health`).
 Durante desarrollo, Vite las proxifica hacia `VITE_API_TARGET`; en Docker,
-Nginx las proxifica hacia el servicio `api` de Compose.
+Caddy las proxifica hacia el servicio `api` de Compose.
 
-El flujo habitual es:
+El flujo habitual al trabajar solo en la interfaz es:
 
-1. Arrancar la API y servicios auxiliares con los scripts de la raíz.
+1. Arrancar la API directamente en el host o definir un `VITE_API_TARGET`
+   alcanzable.
 2. Ejecutar `pnpm dev` dentro de `frontend/`.
 3. Abrir la URL que imprima Vite.
 
-Si la aplicación completa ya está levantada por Docker, el contenedor
-`frontend` puede estar usando `5173`. En ese caso Vite elegirá otro puerto y la
-API seguirá siendo la misma (`localhost:8000`).
+Para probar la aplicación completa, usa los scripts de la raíz y abre
+`https://localhost`; ese flujo no necesita el servidor de desarrollo de Vite.
 
 ## Docker
 
@@ -124,13 +126,18 @@ El servicio `frontend` se define en [`../compose.yaml`](../compose.yaml). El
 build usa [`Dockerfile`](Dockerfile):
 
 1. Etapa `builder`: instala dependencias con pnpm y ejecuta `pnpm build`.
-2. Etapa `runtime`: copia `dist/` a Nginx y sirve la SPA desde el puerto `8080`.
+2. Etapa `runtime`: copia `dist/` a Caddy y ejecuta el gateway como usuario
+   non-root sobre un filesystem read-only.
 
-Compose publica ese puerto como `http://localhost:5173`.
+Compose publica `127.0.0.1:443` hacia el listener TLS interno `8443` y
+`127.0.0.1:80` hacia el listener `8080`, que solo redirige a
+`https://localhost`. El liveness usa `8082`; el listener `8444` queda reservado
+para Cloudflare Tunnel y no se publica al host.
 
-[`nginx.conf`](nginx.conf) aplica el fallback de SPA, caché largo para assets
-hasheados, no-caché para `index.html`, proxy de `/api/` a `api:8000` y proxy de
-`/health` al healthcheck del backend.
+[`Caddyfile`](Caddyfile) aplica el fallback de SPA, contratos de caché por tipo
+de recurso, cabeceras de seguridad, compresión, logs JSON redactados y el proxy
+de `/api/` y `/health` a `api:8000`. La documentación de FastAPI solo se publica
+en el site local; el origen del túnel responde 404 para esas rutas.
 
 ## Estado local
 

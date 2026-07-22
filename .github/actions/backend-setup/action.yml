@@ -1,0 +1,33 @@
+name: Preparar backend
+description: Instala uv con cache y el grupo de dependencias indicado, leyendo las versiones del .env.
+
+inputs:
+  dependency-group:
+    description: Grupo de dependencias de uv a sincronizar.
+    required: false
+    default: test
+
+runs:
+  using: composite
+  steps:
+    - name: Cargar versiones
+      id: versions
+      shell: bash
+      run: |
+        . ./.env
+        {
+          echo "uv_version=$UV_VERSION"
+          echo "python_version=$PYTHON_CI_VERSION"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Instalar uv y Python
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        version: ${{ steps.versions.outputs.uv_version }}
+        python-version: ${{ steps.versions.outputs.python_version }}
+        enable-cache: true
+        cache-dependency-glob: uv.lock
+
+    - name: Instalar dependencias
+      shell: bash
+      run: uv sync --locked --no-default-groups --only-group "${{ inputs.dependency-group }}"

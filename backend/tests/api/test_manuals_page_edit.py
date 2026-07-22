@@ -248,18 +248,17 @@ def test_edit_page_text_service_rejects_concurrent_processing(monkeypatch):
     replace_mock = AsyncMock()
     monkeypatch.setattr(manual_service, "manual_lock", busy_lock)
     monkeypatch.setattr(manual_service, "_replace_page_text", replace_mock)
+    action = partial(
+        edit_page_text,
+        auth=_auth(),
+        manual_id=_MANUAL_ID,
+        page_number=1,
+        text="Texto",
+        ip_address=None,
+    )
 
     with pytest.raises(ManualBusyError):
-        anyio.run(
-            partial(
-                edit_page_text,
-                auth=_auth(),
-                manual_id=_MANUAL_ID,
-                page_number=1,
-                text="Texto",
-                ip_address=None,
-            )
-        )
+        anyio.run(action)
 
     replace_mock.assert_not_called()
 
@@ -273,18 +272,17 @@ def test_edit_page_text_service_rejects_indexing_manual(monkeypatch):
         "get_page_for_edit",
         AsyncMock(return_value=_page_context(status="indexing")),
     )
+    action = partial(
+        edit_page_text,
+        auth=_auth(),
+        manual_id=_MANUAL_ID,
+        page_number=1,
+        text="Texto",
+        ip_address=None,
+    )
 
     with pytest.raises(ManualBusyError):
-        anyio.run(
-            partial(
-                edit_page_text,
-                auth=_auth(),
-                manual_id=_MANUAL_ID,
-                page_number=1,
-                text="Texto",
-                ip_address=None,
-            )
-        )
+        anyio.run(action)
 
 
 def test_edit_page_text_service_rejects_shared_manual(monkeypatch):
@@ -298,18 +296,17 @@ def test_edit_page_text_service_rejects_shared_manual(monkeypatch):
         AsyncMock(return_value=_page_context(visibility="shared")),
     )
     monkeypatch.setattr(manual_service, "_replace_page_text", replace_mock)
+    action = partial(
+        edit_page_text,
+        auth=_auth(),
+        manual_id=_MANUAL_ID,
+        page_number=1,
+        text="Texto",
+        ip_address=None,
+    )
 
     with pytest.raises(ManualNotEditableError):
-        anyio.run(
-            partial(
-                edit_page_text,
-                auth=_auth(),
-                manual_id=_MANUAL_ID,
-                page_number=1,
-                text="Texto",
-                ip_address=None,
-            )
-        )
+        anyio.run(action)
 
     replace_mock.assert_not_called()
 
@@ -400,17 +397,16 @@ def test_get_page_for_edit_embeds_ownership_in_query():
             return FakeResult()
 
     session = FakeSession()
+    action = partial(
+        get_page_for_edit,
+        session,
+        owner_user_id=_USER_ID,
+        manual_id=_MANUAL_ID,
+        page_number=3,
+    )
 
     with pytest.raises(ManualNotFoundError):
-        anyio.run(
-            partial(
-                get_page_for_edit,
-                session,
-                owner_user_id=_USER_ID,
-                manual_id=_MANUAL_ID,
-                page_number=3,
-            )
-        )
+        anyio.run(action)
 
     compiled = _compile(session.statement)
     assert "manuals.owner_user_id =" in compiled
@@ -428,6 +424,7 @@ def test_mark_page_chunks_indexed_recounts_and_resolves_status(monkeypatch):
     class FakeSession:
         def __init__(self):
             self.commits = 0
+            self.flushes = 0
             self.calls = 0
 
         async def execute(self, _statement):
@@ -444,6 +441,10 @@ def test_mark_page_chunks_indexed_recounts_and_resolves_status(monkeypatch):
         async def commit(self):
             await anyio.lowlevel.checkpoint()
             self.commits += 1
+
+        async def flush(self):
+            await anyio.lowlevel.checkpoint()
+            self.flushes += 1
 
     session = FakeSession()
     monkeypatch.setattr(
@@ -467,7 +468,8 @@ def test_mark_page_chunks_indexed_recounts_and_resolves_status(monkeypatch):
     assert manual.chunks_indexed == 5
     assert manual.status == "active"
     assert manual.indexed_at == indexed_at
-    assert session.commits == 1
+    assert session.flushes == 1
+    assert session.commits == 0
 
 
 def _patch_lock(monkeypatch, session) -> None:

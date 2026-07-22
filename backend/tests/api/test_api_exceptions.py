@@ -32,7 +32,13 @@ from api.exceptions import (
     validation_exception_handler,
 )
 from api.games.exceptions import GameUnavailableError
-from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualDuplicateError
+from api.manuals.exceptions import (
+    AssetStorageUnavailableError,
+    GeneratedAnswerTooLongError,
+    ManualDuplicateError,
+    ManualRequestTooLargeError,
+    ManualTooLargeError,
+)
 
 
 def test_api_exceptions_inherit_from_api_error():
@@ -127,6 +133,8 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
         (ImageTooLargeError(), 413, "image_too_large"),
         (InvalidImageError(), 415, "invalid_image"),
         (PdfTooLargeError(), 413, "pdf_too_large"),
+        (ManualTooLargeError(), 413, "manual_too_large"),
+        (ManualRequestTooLargeError(), 413, "manual_request_too_large"),
         (InvalidPdfError(), 415, "invalid_pdf"),
         (ManualPageLimitExceededError(), 413, "manual_too_many_pages"),
         (
@@ -146,6 +154,7 @@ def test_request_validation_handler_maps_invalid_body_to_public_code(loc):
         ),
         (GameUnavailableError(), 409, "game_unavailable"),
         (ManualDuplicateError(), 409, "manual_duplicate"),
+        (AssetStorageUnavailableError(), 503, "asset_storage_unavailable"),
         (GeneratedAnswerTooLongError(), 502, "generated_answer_too_long"),
         (
             InvalidEmailVerificationTokenError(),
@@ -171,6 +180,21 @@ def test_operational_handlers_keep_same_error_envelope(
     assert response.status_code == status_code
     assert body["errors"][0]["field"] is None
     assert body["errors"][0]["code"] == code
+
+
+@pytest.mark.parametrize(
+    ("exception", "detail"),
+    [
+        (ImageTooLargeError(), "La imagen no puede superar 30 MB."),
+        (PdfTooLargeError(), "El PDF no puede superar 95 MB."),
+        (ManualTooLargeError(), "El manual no puede superar 95 MB."),
+    ],
+)
+def test_upload_limit_errors_use_decimal_megabytes(exception, detail):
+    """Los mensajes muestran los mismos MB decimales que aplica el backend."""
+    response = domain_exception_handler(None, exception)
+
+    assert _json_body(response)["detail"] == detail
 
 
 def test_domain_exception_handler_accepts_registered_base_subclasses():

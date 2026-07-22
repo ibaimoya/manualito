@@ -48,4 +48,3 @@ def _strip_sensitive_event_data(event_data: dict[str, object]) -> dict[str, obje
         for key, value in event_data.items()
         if key.lower() not in SENSITIVE_EVENT_KEYS
     }
-

@@ -37,6 +37,54 @@ from database.models.manual import Manual, ManualChunk, ManualPage
 REPROCESSABLE_MANUAL_STATUSES = ("active", "pending_review", "failed")
 
 
+async def asset_storage_prefix_is_referenced(
+    session: AsyncSession,
+    *,
+    storage_prefix: str,
+) -> bool:
+    """Comprueba si alguna fila Asset conserva una clave dentro del lote."""
+    result = await session.execute(
+        select(Asset.id)
+        .where(Asset.storage_key.startswith(storage_prefix, autoescape=True))
+        .limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def list_manual_ids_pending_dispatch(
+    session: AsyncSession,
+    *,
+    cutoff: datetime,
+    limit: int,
+) -> list[UUID]:
+    """Lista manuales viejos cuyas páginas siguen todas pendientes."""
+    page_counts = (
+        select(
+            ManualPage.manual_id.label("manual_id"),
+            func.count(ManualPage.id).label("total"),
+            func.count(ManualPage.id)
+            .filter(ManualPage.ocr_status != "pending")
+            .label("not_pending"),
+        )
+        .group_by(ManualPage.manual_id)
+        .subquery()
+    )
+    result = await session.execute(
+        select(Manual.id)
+        .join(page_counts, page_counts.c.manual_id == Manual.id)
+        .where(
+            Manual.status == "indexing",
+            Manual.deleted_at.is_(None),
+            Manual.created_at <= cutoff,
+            page_counts.c.total == Manual.page_count,
+            page_counts.c.not_pending == 0,
+        )
+        .order_by(Manual.created_at, Manual.id)
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+
 async def create_manual_with_pending_pages(
     session: AsyncSession,
     *,
@@ -72,9 +120,9 @@ async def create_manual_with_pending_pages(
             owner_user_id=owner_user_id,
             kind="manual_source_pdf",
             storage_key=source_pdf.storage_key,
-            mime_type=source_pdf.pdf.mime_type,
-            byte_size=len(source_pdf.pdf.content),
-            sha256=source_pdf.pdf.sha256,
+            mime_type=source_pdf.mime_type,
+            byte_size=source_pdf.byte_size,
+            sha256=source_pdf.sha256,
             width=None,
             height=None,
         )
@@ -87,11 +135,11 @@ async def create_manual_with_pending_pages(
             owner_user_id=owner_user_id,
             kind="manual_page_image",
             storage_key=item.storage_key,
-            mime_type=item.image.mime_type,
-            byte_size=len(item.image.content),
-            sha256=item.image.sha256,
-            width=item.image.width,
-            height=item.image.height,
+            mime_type=item.mime_type,
+            byte_size=item.byte_size,
+            sha256=item.sha256,
+            width=item.width,
+            height=item.height,
         )
         session.add(asset)
         await session.flush()
@@ -100,7 +148,7 @@ async def create_manual_with_pending_pages(
                 manual_id=manual.id,
                 page_number=item.page_number,
                 image_asset_id=asset.id,
-                source_fingerprint=item.image.sha256,
+                source_fingerprint=item.sha256,
                 source_fingerprint_kind="image",
                 ocr_status="pending",
                 text_source="none",
@@ -118,7 +166,7 @@ async def create_manual_with_pending_pages(
             for page_number in range(1, page_count + 1)
         )
 
-    await session.commit()
+    await session.flush()
     return manual
 
 
@@ -205,26 +253,7 @@ async def get_user_manual_detail(
         raise ManualNotFoundError
 
     pages_result = await session.execute(
-        select(
-            ManualPage.page_number,
-            ManualPage.ocr_status,
-            ManualPage.text_source,
-            ManualPage.text_quality,
-            ManualPage.ocr_confidence_mean,
-            ManualPage.ocr_lines,
-            Asset.id.is_not(None).label("image_available"),
-            Asset.width.label("image_width"),
-            Asset.height.label("image_height"),
-            _manual_page_dedup_status(),
-        )
-        .outerjoin(
-            Asset,
-            and_(
-                ManualPage.image_asset_id == Asset.id,
-                Asset.kind == "manual_page_image",
-                Asset.deleted_at.is_(None),
-            ),
-        )
+        _manual_page_detail_query()
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
     )
@@ -347,6 +376,7 @@ async def get_page_for_processing(
             ManualPage.page_number,
             Asset.storage_key,
             Asset.mime_type,
+            Asset.byte_size,
             Asset.width,
             Asset.height,
             Asset.sha256,
@@ -388,7 +418,6 @@ async def claim_page_for_processing(
         .returning(ManualPage.id)
     )
     claimed = result.scalar_one_or_none() is not None
-    await session.commit()
     return claimed
 
 
@@ -431,7 +460,6 @@ async def mark_stale_processing_pages_failed(
         .returning(ManualPage.manual_id)
     )
     manual_ids = list(dict.fromkeys(result.scalars()))
-    await session.commit()
     return manual_ids
 
 
@@ -462,14 +490,14 @@ async def attach_page_image_asset(
     """Asocia a una página PDF la imagen renderizada para OCR/reintentos."""
     page = await session.get(ManualPage, page_id)
     if page is None:
-        return
+        raise ManualContextNotFoundError
 
     asset = Asset(
         owner_user_id=owner_user_id,
         kind="manual_page_image",
         storage_key=storage_key,
         mime_type=image.mime_type,
-        byte_size=len(image.content),
+        byte_size=image.byte_size,
         sha256=image.sha256,
         width=image.width,
         height=image.height,
@@ -480,7 +508,7 @@ async def attach_page_image_asset(
     if source_fingerprint_kind is not None:
         page.source_fingerprint = image.sha256
         page.source_fingerprint_kind = source_fingerprint_kind
-    await session.commit()
+    await session.flush()
 
 
 async def begin_manual_reprocessing(
@@ -507,7 +535,6 @@ async def begin_manual_reprocessing(
         .returning(Manual.id)
     )
     if claim.scalar_one_or_none() is None:
-        await session.rollback()
         status_result = await session.execute(
             select(Manual.status).where(
                 Manual.id == manual_id,
@@ -529,7 +556,6 @@ async def begin_manual_reprocessing(
         )
         page_id = page_result.scalar_one_or_none()
         if page_id is None:
-            await session.rollback()
             raise ManualNotFoundError
 
     pages_update = update(ManualPage).where(ManualPage.manual_id == manual_id)
@@ -545,7 +571,6 @@ async def begin_manual_reprocessing(
     )
     stale_result = await session.execute(stale_chunks_query)
     stale_chunk_ids = list(stale_result.scalars())
-    await session.commit()
     return stale_chunk_ids
 
 
@@ -599,29 +624,7 @@ async def list_page_chunks_for_ingest(
 
 async def get_manual_page_detail(session: AsyncSession, *, page_id: UUID) -> ManualPageDetail:
     """Relee los campos públicos de una página tras editarla."""
-    result = await session.execute(
-        select(
-            ManualPage.page_number,
-            ManualPage.ocr_status,
-            ManualPage.text_source,
-            ManualPage.text_quality,
-            ManualPage.ocr_confidence_mean,
-            ManualPage.ocr_lines,
-            Asset.id.is_not(None).label("image_available"),
-            Asset.width.label("image_width"),
-            Asset.height.label("image_height"),
-            _manual_page_dedup_status(),
-        )
-        .outerjoin(
-            Asset,
-            and_(
-                ManualPage.image_asset_id == Asset.id,
-                Asset.kind == "manual_page_image",
-                Asset.deleted_at.is_(None),
-            ),
-        )
-        .where(ManualPage.id == page_id)
-    )
+    result = await session.execute(_manual_page_detail_query().where(ManualPage.id == page_id))
     return ManualPageDetail(**result.mappings().one())
 
 
@@ -656,7 +659,7 @@ async def mark_page_chunks_indexed(
     manual.status = await resolve_manual_processed_status(session, manual_id=manual_id)
     if indexed_at is not None:
         manual.indexed_at = indexed_at
-    await session.commit()
+    await session.flush()
 
 
 async def replace_page_result(
@@ -699,7 +702,7 @@ async def replace_page_result(
         )
         for chunk in chunks
     )
-    await session.commit()
+    await session.flush()
 
 
 async def mark_page_failed(session: AsyncSession, *, page_id: UUID) -> None:
@@ -708,7 +711,7 @@ async def mark_page_failed(session: AsyncSession, *, page_id: UUID) -> None:
     if page is None:
         return
     page.ocr_status = "failed"
-    await session.commit()
+    await session.flush()
 
 
 async def list_manual_chunks_for_ingest(
@@ -795,7 +798,7 @@ async def soft_delete_user_manual(
     for asset in assets:
         asset.deleted_at = deleted_at
 
-    await session.commit()
+    await session.flush()
     return DeletedManualAssets(
         manual_id=manual_id,
         chunk_ids=chunk_ids,
@@ -831,7 +834,7 @@ async def mark_manual_indexed(
     manual.status = status
     manual.chunks_indexed = len(chunks)
     manual.indexed_at = indexed_at
-    await session.commit()
+    await session.flush()
 
 
 async def mark_manual_failed(session: AsyncSession, *, manual_id: UUID) -> None:
@@ -840,7 +843,7 @@ async def mark_manual_failed(session: AsyncSession, *, manual_id: UUID) -> None:
     if manual is None:
         return
     manual.status = "failed"
-    await session.commit()
+    await session.flush()
 
 
 async def load_authorized_chunks(
@@ -936,6 +939,28 @@ def _manual_summary_query(owner_user_id: UUID) -> Select[Any]:
             Manual.deleted_at.is_(None),
         )
         .order_by(Manual.created_at.desc(), Manual.id.desc())
+    )
+
+
+def _manual_page_detail_query() -> Select[Any]:
+    return select(
+        ManualPage.page_number,
+        ManualPage.ocr_status,
+        ManualPage.text_source,
+        ManualPage.text_quality,
+        ManualPage.ocr_confidence_mean,
+        ManualPage.ocr_lines,
+        Asset.id.is_not(None).label("image_available"),
+        Asset.width.label("image_width"),
+        Asset.height.label("image_height"),
+        _manual_page_dedup_status(),
+    ).outerjoin(
+        Asset,
+        and_(
+            ManualPage.image_asset_id == Asset.id,
+            Asset.kind == "manual_page_image",
+            Asset.deleted_at.is_(None),
+        ),
     )
 
 

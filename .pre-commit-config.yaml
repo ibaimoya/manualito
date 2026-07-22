@@ -1,0 +1,28 @@
+minimum_pre_commit_version: "4.6.0"
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^(uv\.lock|frontend/pnpm-lock\.yaml)$
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        exclude: ^(uv\.lock|frontend/pnpm-lock\.yaml)$
+        stages: [pre-commit]
+      - id: check-merge-conflict
+        args: [--assume-in-merge]
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: manualito-commit-msg
+        name: validate commit message
+        entry: >-
+          uv run --frozen --no-default-groups --only-group commit-policy
+          python scripts/hooks/commit_message.py
+        language: unsupported
+        stages: [commit-msg]
+        always_run: true

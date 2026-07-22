@@ -48,4 +48,3 @@ def clear_auth_cookies(response: Response) -> None:
         httponly=False,
         samesite="lax",
     )
-

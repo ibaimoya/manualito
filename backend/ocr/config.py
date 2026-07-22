@@ -5,6 +5,7 @@ PADDLE_GPU = "paddle_gpu"
 TESSERACT = "tesseract"
 
 DEFAULT_OCR_ENGINE = TESSERACT
+OCR_MAX_IMAGE_SIZE = 30_000_000
 
 
 def _positive_int_env(name: str, default: int) -> int:

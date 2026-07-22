@@ -62,7 +62,7 @@ def test_api_settings_parses_environment_types(monkeypatch, tmp_path):
     assert settings.asset_storage_dir == str(asset_dir)
 
 
-def test_upload_limits_are_generous_by_default(monkeypatch):
+def test_upload_limits_use_inclusive_decimal_bytes_by_default(monkeypatch):
     """Los límites de subida aceptan manuales reales sin desactivar protecciones."""
     monkeypatch.delenv("MAX_IMAGE_SIZE", raising=False)
     monkeypatch.delenv("MAX_MANUAL_PDF_SIZE", raising=False)
@@ -77,11 +77,29 @@ def test_upload_limits_are_generous_by_default(monkeypatch):
         app_version="1.0.0",
     )
 
-    assert settings.max_image_size == 30 * 1024 * 1024
-    assert settings.max_manual_pdf_size == 200 * 1024 * 1024
-    assert settings.max_manual_total_size == 200 * 1024 * 1024
+    assert settings.max_image_size == 30_000_000
+    assert settings.max_manual_pdf_size == 95_000_000
+    assert settings.max_manual_total_size == 95_000_000
     assert settings.max_manual_pages == 30
     assert settings.max_image_pixels == 60_000_000
+
+
+@pytest.mark.parametrize(
+    "field",
+    ("max_image_size", "max_manual_pdf_size", "max_manual_total_size"),
+)
+def test_upload_byte_limits_must_be_positive(field: str) -> None:
+    """Una configuración inválida falla al arrancar y no durante una subida."""
+    with pytest.raises(ValueError):
+        ApiSettings.model_validate(
+            {
+                "ocr_url": "http://ocr:8000",
+                "rag_url": "http://rag:8000",
+                "llm_url": "http://llm:8000",
+                "app_version": "1.0.0",
+                field: 0,
+            }
+        )
 
 
 def test_ocr_postprocess_defaults_match_ocr_env(monkeypatch):

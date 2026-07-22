@@ -13,7 +13,7 @@ set -e
 
 if [[ "$status" -eq 42 ]]; then
     set +e
-    "$BASH_BIN" "$ROOT/start.sh"
+    MANUALITO_SETUP_TRUST_PROMPT=1 "$BASH_BIN" "$ROOT/start.sh"
     status=$?
     set -e
 fi

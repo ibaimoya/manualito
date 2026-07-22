@@ -22,6 +22,7 @@ from api.auth.exceptions import (
 )
 from api.conversations.exceptions import ConversationNotFoundError, NoManualSourcesError
 from api.manuals.exceptions import (
+    AssetStorageUnavailableError,
     GameNotFoundError,
     GameUnavailableError,
     GeneratedAnswerTooLongError,
@@ -30,6 +31,7 @@ from api.manuals.exceptions import (
     ManualDuplicateError,
     ManualNotEditableError,
     ManualNotFoundError,
+    ManualRequestTooLargeError,
     ManualTooLargeError,
     ManualUploadSelectionError,
 )
@@ -45,7 +47,7 @@ INVALID_DATA_DETAIL = "Datos inválidos."
 RATE_LIMITED_DETAIL = "Demasiados intentos. Inténtalo más tarde."
 NOT_FOUND_DETAIL = "Recurso no encontrado."
 METHOD_NOT_ALLOWED_DETAIL = "Método no permitido."
-_MB = 1024 * 1024
+_MB = 1_000_000
 
 
 def _format_megabytes(byte_count: int) -> str:
@@ -193,6 +195,11 @@ def validation_exception_handler(_request: Request, _exc: Exception) -> JSONResp
 
 
 _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
+    AssetStorageUnavailableError: ErrorResponseConfig(
+        status_code=503,
+        detail="El almacenamiento de archivos no está disponible.",
+        code="asset_storage_unavailable",
+    ),
     ImageTooLargeError: ErrorResponseConfig(
         status_code=413,
         detail=f"La imagen no puede superar {_format_megabytes(config.MAX_IMAGE_SIZE)} MB.",
@@ -282,8 +289,16 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
     ),
     ManualTooLargeError: ErrorResponseConfig(
         status_code=413,
-        detail="El manual supera el tamaño máximo permitido.",
+        detail=(
+            "El manual no puede superar "
+            f"{_format_megabytes(config.MAX_MANUAL_TOTAL_SIZE)} MB."
+        ),
         code="manual_too_large",
+    ),
+    ManualRequestTooLargeError: ErrorResponseConfig(
+        status_code=413,
+        detail="La petición de subida supera el tamaño permitido.",
+        code="manual_request_too_large",
     ),
     ManualNotFoundError: ErrorResponseConfig(
         status_code=404,

@@ -1,0 +1,61 @@
+/* Fuentes y colores tomados de frontend/src/styles/tokens.css. */
+:root {
+  --sl-font: 'Inter Variable';
+  --sl-font-mono: 'JetBrains Mono Variable';
+  --sl-content-width: 46rem;
+
+  --sl-color-white: #f7eddc;
+  --sl-color-gray-1: #f7eddc;
+  --sl-color-gray-2: #d3c2a8;
+  --sl-color-gray-3: #a28f75;
+  --sl-color-gray-4: #6f604d;
+  --sl-color-gray-5: #3e301c;
+  --sl-color-gray-6: #231b11;
+  --sl-color-black: #15100b;
+
+  --sl-color-accent-low: #4a2d10;
+  --sl-color-accent: #f6953b;
+  --sl-color-accent-high: #ffb46a;
+  --sl-color-text-accent: #ffb46a;
+  --sl-color-text-invert: #1f1611;
+  --sl-color-bg: #15100b;
+  --sl-color-bg-nav: #231b11;
+  --sl-color-bg-sidebar: #231b11;
+  --sl-color-bg-inline-code: #3e301c;
+  --sl-color-bg-accent: #ffb46a;
+  --sl-color-hairline-light: #3e301c;
+  --sl-color-hairline: #231b11;
+  --sl-color-hairline-shade: #15100b;
+}
+
+:root[data-theme='light'] {
+  --sl-color-white: #1f1611;
+  --sl-color-gray-1: #1f1611;
+  --sl-color-gray-2: #5c4a3e;
+  --sl-color-gray-3: #705d50;
+  --sl-color-gray-4: #8a7565;
+  --sl-color-gray-5: #ebddc4;
+  --sl-color-gray-6: #f5e9d7;
+  --sl-color-gray-7: #fff8f0;
+  --sl-color-black: #fff8f0;
+
+  --sl-color-accent-low: #fbd5b0;
+  --sl-color-accent: #c46514;
+  --sl-color-accent-high: #a8431f;
+  --sl-color-text-accent: #a8431f;
+  --sl-color-text-invert: #fff8f0;
+  --sl-color-bg: #fff8f0;
+  --sl-color-bg-nav: #fff8f0;
+  --sl-color-bg-sidebar: #fff8f0;
+  --sl-color-bg-inline-code: #f5e9d7;
+  --sl-color-bg-accent: #a8431f;
+  --sl-color-hairline-light: #ebddc4;
+  --sl-color-hairline: #ebddc4;
+  --sl-color-hairline-shade: #f5e9d7;
+}
+
+:where(h1, h2, h3, h4, h5, h6),
+.site-title {
+  font-family: 'Manrope Variable', var(--__sl-font);
+  letter-spacing: -0.02em;
+}

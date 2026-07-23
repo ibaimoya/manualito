@@ -12,7 +12,7 @@
     "check": "astro check",
     "build": "astro build",
     "preview": "astro preview",
-    "verify": "pnpm check && pnpm build"
+    "verify": "astro check && astro build"
   },
   "dependencies": {
     "@astrojs/starlight": "0.41.4",

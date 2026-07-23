@@ -9,8 +9,20 @@ hero:
     file: ../../assets/manualito.svg
     alt: Icono de Manualito
   actions:
+    - text: Subir un manual
+      link: /usuarios/subir-un-manual/
+      icon: right-arrow
+      variant: primary
     - text: Abrir Manualito
       link: https://manualito.dev/
       icon: external
-      variant: primary
+      variant: secondary
 ---
+
+import FlujoManual from '../../components/FlujoManual.astro';
+
+## Del manual a la respuesta
+
+Manualito separa el procesamiento en varias fases. De este modo, el texto extraído puede utilizarse para localizar las reglas relacionadas con cada consulta.
+
+<FlujoManual />

@@ -13,7 +13,7 @@ export default defineConfig({
       favicon: '/favicon.svg',
       logo: {
         src: './src/assets/manualito.svg',
-        alt: 'Manualito',
+        alt: '',
       },
       locales: {
         root: {
@@ -21,7 +21,13 @@ export default defineConfig({
           lang: 'es',
         },
       },
-      sidebar: [{ label: 'Inicio', link: '/' }],
+      sidebar: [
+        { label: 'Inicio', link: '/' },
+        {
+          label: 'Usuarios',
+          items: [{ label: 'Subir un manual', slug: 'usuarios/subir-un-manual' }],
+        },
+      ],
       pagefind: true,
       customCss: [
         '@fontsource-variable/manrope',

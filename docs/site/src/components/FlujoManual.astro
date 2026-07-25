@@ -20,7 +20,7 @@
       <span class="manual-flow__number" aria-hidden="true">01</span>
       <div>
         <h3>Imagen o PDF</h3>
-        <p>El manual se añade con el orden y la visibilidad que has revisado.</p>
+        <p>El manual se añade con el orden y la visibilidad que has indicado.</p>
       </div>
     </li>
     <li class="manual-flow__step">
@@ -45,9 +45,6 @@
       </div>
     </li>
   </ol>
-  <p class="manual-flow__note">
-    Es un esquema del proceso, no un indicador del estado de una subida.
-  </p>
 </section>
 
 <script>
@@ -102,7 +99,7 @@
     min-width: 0;
     padding: 1rem;
     border: 1px solid var(--sl-color-hairline-light);
-    border-radius: 1rem;
+    border-radius: var(--m-r-lg);
     background:
       linear-gradient(
         135deg,
@@ -155,12 +152,6 @@
     color: var(--sl-color-gray-2);
     font-size: var(--sl-text-sm);
     line-height: 1.55;
-  }
-
-  .manual-flow__note {
-    margin: 0.875rem 0 0;
-    color: var(--sl-color-gray-3);
-    font-size: var(--sl-text-xs);
   }
 
   .manual-flow__step:nth-child(1) {

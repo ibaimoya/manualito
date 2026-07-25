@@ -35,6 +35,9 @@ export default defineConfig({
         '@fontsource-variable/jetbrains-mono',
         './src/styles/custom.css',
       ],
+      components: {
+        ThemeSelect: './src/components/ThemeSelect.astro',
+      },
       plugins: [starlightLinksValidator()],
     }),
   ],

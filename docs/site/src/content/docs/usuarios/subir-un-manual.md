@@ -32,5 +32,3 @@ Cuando termina el procesamiento, Manualito abre la página del juego. Si alguna 
 - Si utilizas un PDF, confirma que no está cifrado, protegido con contraseña o dañado.
 - Si una imagen se rechaza por su resolución, redúcela por debajo de 60 millones de píxeles.
 - Si falla el procesamiento, revisa el archivo o prueba con otro manual.
-
-[Consulta el esquema del procesamiento](/#del-manual-a-la-respuesta).

@@ -1,28 +1,12 @@
 ---
-title: Manualito
-description: Aprende a usar Manualito y consulta cómo se procesan los manuales de juegos de mesa.
+title: Documentación de Manualito
+description: Guías y recursos de Manualito. Descubre cómo usar la aplicación y cómo funciona por debajo.
 template: splash
-hero:
-  title: '<span class="manualito-wordmark" translate="no">Manualito</span>'
-  tagline: Añade imágenes o un PDF de un manual. Manualito extrae el texto y lo utiliza para generar explicaciones y responder preguntas sobre el juego.
-  image:
-    file: ../../assets/manualito.svg
-    alt: Icono de Manualito
-  actions:
-    - text: Subir un manual
-      link: /usuarios/subir-un-manual/
-      icon: right-arrow
-      variant: primary
-    - text: Abrir Manualito
-      link: https://manualito.dev/
-      icon: external
-      variant: secondary
 ---
 
-import FlujoManual from '../../components/FlujoManual.astro';
+import PortadaDocumentacion from '../../components/PortadaDocumentacion.astro';
+import '../../styles/portada-documentacion.css';
 
-## Del manual a la respuesta
-
-Manualito separa el procesamiento en varias fases. De este modo, el texto extraído puede utilizarse para localizar las reglas relacionadas con cada consulta.
-
-<FlujoManual />
+<div class="pd-lienzo not-content">
+  <PortadaDocumentacion />
+</div>

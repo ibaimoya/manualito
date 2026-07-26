@@ -146,6 +146,7 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
     private trigger: HTMLButtonElement | null = null;
     private menu: HTMLElement | null = null;
     private options: HTMLButtonElement[] = [];
+    private cierreTimer: number | undefined;
 
     connectedCallback(): void {
       if (this.dataset.initialized === 'true') return;
@@ -187,7 +188,13 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
         picker.querySelector<HTMLElement>('.theme-trigger')?.setAttribute('aria-expanded', 'false');
       });
 
+      // Las aperturas por teclado no se animan: focus solo llega con flechas o Enter.
+      this.menu.toggleAttribute('data-instant', focus !== null);
+      clearTimeout(this.cierreTimer);
       this.menu.hidden = false;
+      // Reflow para que el navegador tome el estado cerrado como punto de partida.
+      void this.menu.offsetWidth;
+      this.menu.setAttribute('data-open', '');
       this.trigger.setAttribute('aria-expanded', 'true');
 
       if (focus === null) return;
@@ -205,9 +212,22 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
 
     private closeMenu(restoreFocus = false): void {
       if (!this.menu || !this.trigger) return;
-      this.menu.hidden = true;
+      const menu = this.menu;
+      menu.removeAttribute('data-open');
       this.trigger.setAttribute('aria-expanded', 'false');
       if (restoreFocus) this.trigger.focus();
+
+      clearTimeout(this.cierreTimer);
+      const instantaneo =
+        menu.hasAttribute('data-instant') ||
+        matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (instantaneo) {
+        menu.hidden = true;
+        return;
+      }
+      this.cierreTimer = window.setTimeout(() => {
+        menu.hidden = true;
+      }, 180);
     }
 
     private focusOption(index: number): void {
@@ -299,6 +319,7 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
   }
 
   starlight-theme-select {
+    --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
     position: relative;
     display: inline-flex;
   }
@@ -323,11 +344,27 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
     border-radius: 0.625rem;
     background: transparent;
     color: var(--sl-color-gray-2);
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      scale 160ms var(--ease-salida);
   }
 
   .theme-trigger:hover {
     background: var(--sl-color-gray-6);
     color: var(--sl-color-white);
+  }
+
+  .theme-trigger:active {
+    scale: 0.96;
+  }
+
+  .theme-trigger__caret {
+    transition: rotate 180ms var(--ease-salida);
+  }
+
+  .theme-trigger[aria-expanded='true'] .theme-trigger__caret {
+    rotate: 180deg;
   }
 
   .theme-trigger:focus-visible {
@@ -358,10 +395,30 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
     border-radius: var(--m-r-lg);
     background: var(--sl-color-bg-nav);
     box-shadow: var(--sl-shadow-md);
+    transform-origin: top right;
+    opacity: 0;
+    scale: 0.94;
+    translate: 0 -4px;
+    pointer-events: none;
+    transition:
+      opacity 180ms var(--ease-salida),
+      scale 180ms var(--ease-salida),
+      translate 180ms var(--ease-salida);
+  }
+
+  .theme-menu[data-open] {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    pointer-events: auto;
   }
 
   .theme-menu[hidden] {
     display: none;
+  }
+
+  .theme-menu[data-instant] {
+    transition-duration: 0ms;
   }
 
   .theme-option {
@@ -415,6 +472,21 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
       inset-block-end: calc(100% + 0.5rem);
       inset-inline-start: 0;
       inset-inline-end: auto;
+      transform-origin: bottom left;
+      /* El menú sale hacia arriba, así que nace por debajo, junto al botón. */
+      translate: 0 4px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-trigger,
+    .theme-trigger__caret,
+    .theme-menu {
+      transition: none;
+    }
+
+    .theme-trigger:active {
+      scale: 1;
     }
   }
 </style>

@@ -1,0 +1,1046 @@
+---
+import { anexos, memoria, DESTINO_PROVISIONAL } from './portada-documentacion';
+---
+
+<div class="pr" data-pr-motion>
+  <div class="pr-fondo" aria-hidden="true">
+    <span class="pr-fondo__campo"></span><span class="pr-fondo__extra"></span>
+  </div>
+
+  <header class="pr-cabecera">
+    <div class="pr-cabecera__principal">
+    <p class="pr-cabecera__titulo pd-punto anim">Documentación</p>
+
+    <p class="pr-cabecera__alcance anim">
+      Guías y recursos de Manualito. Descubre cómo usar la aplicación y cómo funciona por debajo.
+    </p>
+
+    <button class="pr-buscar anim" type="button" data-pr-buscar>
+      <svg class="pr-buscar__icono" viewBox="0 0 20 20" aria-hidden="true">
+        <circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
+        <path
+          d="M13.2 13.2 17 17"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"></path>
+      </svg>
+      Buscar en la documentación
+    </button>
+    </div>
+
+    <a class="pr-volver anim" href="https://manualito.dev/" aria-label="Volver a Manualito">
+      <svg class="pr-volver__borde" aria-hidden="true"><rect x="0.75" y="0.75" width="100%" height="100%" rx="12" pathLength="1" style="width: calc(100% - 1.5px); height: calc(100% - 1.5px)"></rect></svg>
+      <span class="pr-volver__texto" aria-hidden="true">Volver a Manualito</span>
+      <span class="pr-volver__mono" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 4c2.8 0 5 2.2 5 5 0 1.6-.7 3-1.9 4 .1.1 5.4 3 5.4 8.5V25c0 1.7-1.3 3-3 3h-3c-.6 0-1-.4-1-1l-.5-4c0-.3-.2-.5-.5-.5h-1c-.3 0-.5.2-.5.5L14.5 27c0 .6-.4 1-1 1h-3c-1.7 0-3-1.3-3-3v-3.5c0-5.5 5.3-8.4 5.4-8.5C11.7 12 11 10.6 11 9c0-2.8 2.2-5 5-5z" fill="currentColor"></path></svg></span>
+    </a>
+  </header>
+
+  <div class="pr-corpus">
+    <section class="pr-parte" aria-labelledby="pr-memoria">
+      <div class="pr-parte__encabezado anim">
+        <h2 class="pr-parte__titulo" id="pr-memoria">Memoria</h2>
+        <p class="pr-parte__alcance">Siete capítulos, del planteamiento a las conclusiones.</p>
+      </div>
+
+      <ul class="pr-entradas" role="list">
+        {
+          memoria.map((entrada) => (
+            <li class="anim">
+              <a class="pr-entrada" href={DESTINO_PROVISIONAL}>
+                <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
+                <span class="pr-entrada__titulo">
+                  <span class="pd-sr">{entrada.etiqueta}, </span>
+                  {entrada.titulo}
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="pr-parte" aria-labelledby="pr-anexos">
+      <div class="pr-parte__encabezado anim">
+        <h2 class="pr-parte__titulo" id="pr-anexos">Anexos</h2>
+        <p class="pr-parte__alcance">Seis documentos de apoyo, incluidos los dos manuales.</p>
+      </div>
+
+      <ul class="pr-entradas" role="list">
+        {
+          anexos.map((entrada) => (
+            <li class="anim">
+              <a class="pr-entrada" href={DESTINO_PROVISIONAL}>
+                <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
+                <span class="pr-entrada__titulo">
+                  <span class="pd-sr">{entrada.etiqueta}, </span>
+                  {entrada.titulo}
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+
+  <section class="pr-arranque" aria-labelledby="pr-arranque-titulo">
+    <div class="pr-arranque__cabecera anim">
+      <div>
+        <h2 class="pr-arranque__titulo" id="pr-arranque-titulo">Por dónde empezar</h2>
+        <p class="pr-arranque__nota">Quiero saber...</p>
+      </div>
+      <div class="pr-arranque__controles" data-pr-controles>
+        <button class="pr-flecha" type="button" data-pr-anterior aria-label="Tarjeta anterior"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 5 6.5 10l5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <button class="pr-flecha" type="button" data-pr-siguiente aria-label="Tarjeta siguiente"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8.5 5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <button class="pr-flecha" type="button" data-pr-sentido aria-label="Cambiar el sentido de la cinta" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7.5h10M11.5 5 14 7.5 11.5 10M16 12.5H6M8.5 15 6 12.5 8.5 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+      </div>
+    </div>
+    <div class="pr-arranque__visor">
+    <div class="pr-arranque__rutas">
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL}>
+        <span class="pr-ruta__titulo">Quiero usar la aplicación</span>
+        <span class="pr-ruta__detalle">
+          El manual de usuario cubre la instalación y el uso habitual.
+        </span>
+      </a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL}>
+        <span class="pr-ruta__titulo">Quiero entender cómo funciona</span>
+        <span class="pr-ruta__detalle">
+          El apartado de diseño detalla la arquitectura de la aplicación.
+        </span>
+      </a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL}>
+        <span class="pr-ruta__titulo">Quiero conocer la metodología de trabajo</span>
+        <span class="pr-ruta__detalle">
+          El plan de proyecto describe cuál ha sido el flujo de trabajo del proyecto.
+        </span>
+      </a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL} aria-hidden="true" tabindex="-1"><span class="pr-ruta__titulo">Quiero usar la aplicación</span><span class="pr-ruta__detalle">El manual de usuario cubre la instalación y el uso habitual.</span></a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL} aria-hidden="true" tabindex="-1"><span class="pr-ruta__titulo">Quiero entender cómo funciona</span><span class="pr-ruta__detalle">El apartado de diseño detalla la arquitectura de la aplicación.</span></a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL} aria-hidden="true" tabindex="-1"><span class="pr-ruta__titulo">Quiero conocer la metodología de trabajo</span><span class="pr-ruta__detalle">El plan de proyecto describe cuál ha sido el flujo de trabajo del proyecto.</span></a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL} aria-hidden="true" tabindex="-1"><span class="pr-ruta__titulo">Quiero usar la aplicación</span><span class="pr-ruta__detalle">El manual de usuario cubre la instalación y el uso habitual.</span></a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL} aria-hidden="true" tabindex="-1"><span class="pr-ruta__titulo">Quiero entender cómo funciona</span><span class="pr-ruta__detalle">El apartado de diseño detalla la arquitectura de la aplicación.</span></a>
+      <a class="pr-ruta anim" href={DESTINO_PROVISIONAL} aria-hidden="true" tabindex="-1"><span class="pr-ruta__titulo">Quiero conocer la metodología de trabajo</span><span class="pr-ruta__detalle">El plan de proyecto describe cuál ha sido el flujo de trabajo del proyecto.</span></a>
+    </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-pr-buscar]').forEach((disparador) => {
+    disparador.addEventListener('click', () => {
+      document.querySelector<HTMLButtonElement>('button[data-open-modal]')?.click();
+    });
+  });
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-pr-motion]').forEach((raiz) => {
+      raiz.dataset.prMotion = 'play';
+    });
+
+    // Presentación de llegada: en cada carga, tras la cascada (~950 ms), el
+    // botón de volver se abre solo, se deja leer 2,6 s y se cierra.
+    const volver = document.querySelector<HTMLElement>('.pr-volver');
+    if (volver) {
+      window.setTimeout(() => {
+        volver.classList.add('pr-volver--abierto');
+        window.setTimeout(() => {
+          volver.classList.add('pr-volver--cerrando');
+          volver.classList.remove('pr-volver--abierto');
+          window.setTimeout(() => volver.classList.remove('pr-volver--cerrando'), 600);
+        }, 2600);
+      }, 950);
+    }
+
+    // Marquesina de rutas con una rodadura calmada. Al pasar o enfocar una tarjeta,
+    // la pista gira rápido hasta centrarla. Al salir retoma la rodadura.
+    const visor = document.querySelector<HTMLElement>('.pr-arranque__visor');
+    const pistaRutas = document.querySelector<HTMLElement>('.pr-arranque__rutas');
+    if (visor && pistaRutas) {
+      const GAP = 20;
+      let offset = 0;
+      let tercio = 0;
+      let vel = 0;
+      let quieto = true; // arranca tras la cascada de carga
+      let tween: { de: number; a: number; t0: number; dur: number } | null = null;
+      let ultimo = performance.now();
+      let finCentrado = 0;
+      let sentido = 1;
+      let ultimoClickFlecha = 0;
+      let sobreVisor = false;
+      let sobreControles = false;
+      let temporizador: number | null = null;
+      window.setTimeout(() => {
+        if (!ultimoClickFlecha && !sobreVisor && !sobreControles) {
+          quieto = false;
+          ultimo = performance.now();
+        }
+      }, 1500);
+      const medir = () => {
+        tercio = (pistaRutas.scrollWidth + GAP) / 3;
+        vel = tercio / 30000; // una copia entera cada 30 s
+      };
+      const pintar = () => {
+        pistaRutas.style.transform = `translateX(${-offset}px)`;
+      };
+      const centrar = (carta: HTMLElement) => {
+        quieto = true;
+        let destino = carta.offsetLeft - (visor.clientWidth - carta.offsetWidth) / 2;
+        // Círculo infinito: cerca de un extremo saltamos una copia entera junto
+        // con el offset (píxeles idénticos, salto invisible), nunca clampamos.
+        const tope = pistaRutas.scrollWidth - visor.clientWidth;
+        if (destino > tope) {
+          destino -= tercio;
+          offset -= tercio;
+          pintar();
+        } else if (destino < 0) {
+          destino += tercio;
+          offset += tercio;
+          pintar();
+        }
+        tween = { de: offset, a: destino, t0: performance.now(), dur: 420 };
+      };
+      const paso = (t: number) => {
+        const dt = Math.min(t - ultimo, 64);
+        ultimo = t;
+        if (tween) {
+          const p = Math.min(1, (t - tween.t0) / tween.dur);
+          const e = 1 - Math.pow(1 - p, 3); // ease-out cúbico
+          offset = tween.de + (tween.a - tween.de) * e;
+          if (p >= 1) {
+            tween = null;
+            finCentrado = t;
+          }
+          pintar();
+        } else if (!quieto) {
+          offset += vel * dt * sentido;
+          if (offset >= tercio * 2) offset -= tercio;
+          else if (offset < 0) offset += tercio;
+          pintar();
+        }
+        requestAnimationFrame(paso);
+      };
+      medir();
+      pintar();
+      requestAnimationFrame(paso);
+      window.addEventListener('resize', medir);
+      // La intención se lee del mousemove: se centra cuando el puntero VISITA
+      // una tarjeta distinta moviéndose de verdad. Si es la pista la que se
+      // desliza bajo un cursor quieto no hay mousemove, y mientras viaja el
+      // tween solo se actualiza la referencia — así no hay cadenas ni pérdidas.
+      let cartaActual: HTMLElement | null = null;
+      visor.addEventListener('mouseenter', () => {
+        sobreVisor = true;
+        quieto = true;
+      });
+      visor.addEventListener('mousemove', (ev) => {
+        const objetivo = ev.target as HTMLElement | null;
+        const carta = objetivo?.closest<HTMLElement>('.pr-ruta') ?? null;
+        if (!carta) {
+          cartaActual = null;
+          return;
+        }
+        if (tween || performance.now() - finCentrado < 300) {
+          cartaActual = carta;
+          return;
+        }
+        if (carta === cartaActual) return;
+        cartaActual = carta;
+        ultimoClickFlecha = 0; // el hover releva al modo manual
+        desmarcar();
+        centrar(carta);
+      });
+      pistaRutas.querySelectorAll<HTMLElement>('.pr-ruta').forEach((carta) => {
+        carta.addEventListener('focusin', () => centrar(carta));
+      });
+      const cartas = Array.from(pistaRutas.querySelectorAll<HTMLElement>('.pr-ruta'));
+      const controles = document.querySelector<HTMLElement>('[data-pr-controles]');
+      const desmarcar = () => {
+        cartas.forEach((c) => c.classList.remove('pr-ruta--marcada'));
+      };
+      // Reanuda solo si se cumplen las tres condiciones: +5 s desde el último
+      // clic, puntero fuera de las tarjetas y fuera de las flechas. Cada
+      // mouseleave reintenta. El temporizador se reprograma con lo que falte.
+      const intentaReanudar = () => {
+        if (temporizador) {
+          window.clearTimeout(temporizador);
+          temporizador = null;
+        }
+        const resta = ultimoClickFlecha ? 5000 - (performance.now() - ultimoClickFlecha) : 0;
+        if (resta > 0) {
+          temporizador = window.setTimeout(intentaReanudar, resta + 50);
+          return;
+        }
+        if (sobreVisor || sobreControles) return;
+        desmarcar();
+        ultimoClickFlecha = 0;
+        quieto = false;
+        tween = null;
+        ultimo = performance.now();
+      };
+      const pasar = (delta: number) => {
+        ultimoClickFlecha = performance.now();
+        quieto = true;
+        // Referencia: la tarjeta más cercana al centro. Destino: su vecina.
+        const vc = visor.getBoundingClientRect();
+        const centro = vc.left + vc.width / 2;
+        let idx = 0;
+        let dist = Infinity;
+        cartas.forEach((c, i) => {
+          const r = c.getBoundingClientRect();
+          const d = Math.abs(r.left + r.width / 2 - centro);
+          if (d < dist) {
+            dist = d;
+            idx = i;
+          }
+        });
+        idx += delta;
+        // Círculo: si nos salimos de la tira, salto invisible de una copia.
+        if (idx < 0) {
+          offset += tercio;
+          pintar();
+          idx += 3;
+        } else if (idx >= cartas.length) {
+          offset -= tercio;
+          pintar();
+          idx -= 3;
+        }
+        // Se marcan las tres instancias equivalentes: la visible queda
+        // resaltada aunque centrar() haga su propio salto de copia.
+        cartas.forEach((c, i) => c.classList.toggle('pr-ruta--marcada', i % 3 === idx % 3));
+        centrar(cartas[idx]);
+        intentaReanudar();
+      };
+      if (controles) {
+        controles.addEventListener('mouseenter', () => {
+          sobreControles = true;
+          quieto = true;
+        });
+        controles.addEventListener('mouseleave', () => {
+          sobreControles = false;
+          intentaReanudar();
+        });
+        controles.querySelector('[data-pr-anterior]')?.addEventListener('click', () => pasar(-1));
+        controles.querySelector('[data-pr-siguiente]')?.addEventListener('click', () => pasar(1));
+        const btnSentido = controles.querySelector('[data-pr-sentido]');
+        btnSentido?.addEventListener('click', () => {
+          sentido = -sentido;
+          btnSentido.setAttribute('aria-pressed', sentido === -1 ? 'true' : 'false');
+        });
+      }
+      visor.addEventListener('mouseleave', () => {
+        sobreVisor = false;
+        cartaActual = null;
+        intentaReanudar();
+      });
+    }
+  }
+</script>
+
+<style>
+  .pr {
+    --pr-campo: rgba(246, 149, 59, 0.06);
+    --pr-campo-frio: rgba(124, 192, 232, 0.045);
+    isolation: isolate;
+    text-align: start;
+  }
+
+  :root[data-theme='light'] .pr {
+    --pr-campo: rgba(224, 122, 31, 0.05);
+    --pr-campo-frio: rgba(44, 110, 145, 0.035);
+  }
+
+  /* En claro bg-nav coincide con el fondo de página y las superficies desaparecen. */
+  :root[data-theme='light'] .pr-ruta,
+  :root[data-theme='light'] .pr-buscar {
+    background: var(--m-surface);
+    box-shadow: var(--sl-shadow-sm);
+  }
+
+  .pr-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .pr-fondo__campo {
+    position: absolute;
+    inset: 0;
+    opacity: 1;
+    background-image:
+      linear-gradient(to right, var(--pr-campo) 0%, transparent 22%),
+      linear-gradient(to left, var(--pr-campo-frio) 0%, transparent 22%);
+  }
+
+  .pr[data-pr-motion='play'] .pr-fondo__campo {
+    animation: pr-respirar 60s ease-in-out infinite alternate;
+  }
+
+  @keyframes pr-respirar {
+    from {
+      opacity: 1;
+    }
+    /* Sobre un alpha del 6 % son 1,5 puntos visibles. Con 0,98 no se percibía. */
+    to {
+      opacity: 0.75;
+    }
+  }
+
+  /* ── Fondo "Papel + puntos": grano, luz anclada y banda de sección ── */
+  .pr {
+    --fx-cima: #1b140c;
+    --fx-banio: rgba(246, 149, 59, 0.08);
+    --fx-banda: rgba(35, 27, 17, 0.7);
+    --fx-puntos: 16%;
+  }
+
+  :root[data-theme='light'] .pr {
+    --fx-cima: #f9ead4;
+    --fx-banio: rgba(224, 122, 31, 0.1);
+    --fx-banda: #f6ebd8;
+    --fx-puntos: 19%;
+  }
+
+  /* Luz tonal: crema profundo arriba que aclara + calor tras el título */
+  .pr-fondo__extra {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(56rem 24rem at 28% -6rem, var(--fx-banio), transparent 70%),
+      linear-gradient(to bottom, var(--fx-cima), var(--sl-color-bg) 30rem);
+  }
+
+  /* Rejilla de tablero: solo en la cabecera y muy tenue */
+  .pr-fondo__extra::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(color-mix(in srgb, var(--sl-color-gray-3) var(--fx-puntos), transparent) 1px, transparent 1.3px);
+    background-size: 26px 26px;
+    mask-image: radial-gradient(110% 30rem at 50% 0%, black 20%, transparent 80%);
+  }
+
+  /* Grano de papel: quita el "plano digital" sin leerse como textura */
+  .pr-fondo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.06;
+    mix-blend-mode: soft-light;
+  }
+
+  :root[data-theme='light'] .pr-fondo::after {
+    opacity: 0.07;
+    mix-blend-mode: multiply;
+  }
+
+  /* Despliegue de carga: cada pieza entra una vez, en orden de lectura. */
+  @keyframes pd-alzar {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .pr[data-pr-motion='play'] .anim {
+    animation: pd-alzar 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+
+  .pr-cabecera__alcance { --d: 60ms; }
+  .pr-buscar { --d: 120ms; }
+  .pr-parte__encabezado { --d: 200ms; }
+  .pr-entradas li { --d: 260ms; }
+  .pr-entradas li:nth-child(2) { --d: 315ms; }
+  .pr-entradas li:nth-child(3) { --d: 370ms; }
+  .pr-entradas li:nth-child(4) { --d: 425ms; }
+  .pr-entradas li:nth-child(5) { --d: 480ms; }
+  .pr-entradas li:nth-child(6) { --d: 535ms; }
+  .pr-entradas li:nth-child(7) { --d: 590ms; }
+  .pr-arranque__cabecera { --d: 620ms; }
+  .pr-arranque__rutas .pr-ruta { --d: 680ms; }
+  .pr-arranque__rutas .pr-ruta:nth-child(3n + 2) { --d: 740ms; }
+  .pr-arranque__rutas .pr-ruta:nth-child(3n) { --d: 800ms; }
+
+  /* Es un <p>, así que la regla de encabezados de custom.css no le llega. */
+  .pr-cabecera__titulo {
+    margin: 0;
+    font-family: var(--m-font-display);
+    font-size: clamp(2.25rem, 5.5vw, 3rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--sl-color-white);
+  }
+
+  .pr-cabecera__alcance {
+    max-inline-size: 60ch;
+    margin-block: 1.25rem 0;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-md);
+    line-height: 1.65;
+    text-wrap: balance;
+  }
+
+  .pr-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem 2rem;
+  }
+
+  .pr-cabecera__principal {
+    flex: 1 1 30rem;
+    min-inline-size: 0;
+  }
+
+  /* Volver a la app (4a «Trazo y escritura»): en reposo solo el monograma.
+     al pasar, el borde se traza naciendo junto al logo y el texto se escribe
+     hacia la izquierda. Hueco reservado: nada se realinea. Flex-end lo alinea
+     con el borde derecho del corpus. Con poco ancho cae debajo del texto. */
+  .pr-volver {
+    /* Centrado vertical respecto a la caja del título (line-height 1 = font-size). */
+    margin-block-start: calc((clamp(2.25rem, 5.5vw, 3rem) - var(--m-hit)) / 2);
+    /* El texto oculto sigue ocupando 116 px, así que el sello vive en el borde
+       derecho de la pastilla. Al envolver hay que seguir anclándolo a la derecha
+       o el sello queda flotando a media línea. */
+    margin-inline-start: auto;
+    /* Compensa el padding derecho para que el sello quede a ras del borde
+       derecho de Anexos, sin quitarle aire al trazo del borde en hover. */
+    margin-inline-end: -0.375rem;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: var(--m-hit);
+    padding: 0.375rem 0.375rem 0.375rem 0.875rem;
+    border-radius: var(--m-r-md);
+    color: var(--sl-color-white);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    pointer-events: none; /* en reposo solo el sello es interactivo */
+    --d: 120ms;
+  }
+
+  .pr-volver__borde {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: none;
+  }
+
+  .pr-volver__borde rect {
+    fill: none;
+    stroke: var(--sl-color-gray-4);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    /* Nace en el punto medio del lado derecho (~44 % del perímetro, junto al
+       logo) y crece hacia ambos lados. En reposo queda oculto. */
+    stroke-dasharray: 0.001 1;
+    stroke-dashoffset: -0.4395;
+    opacity: 0;
+    transition: stroke-dasharray 200ms ease, stroke-dashoffset 200ms ease, opacity 120ms ease;
+  }
+
+  .pr-volver__texto {
+    margin-inline-end: 0.625rem;
+    clip-path: inset(0 0 0 100%);
+    filter: blur(2px);
+    opacity: 0;
+    transition: clip-path 160ms ease, filter 140ms ease, opacity 140ms ease;
+  }
+
+  .pr-volver__mono {
+    position: relative;
+    pointer-events: auto;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 0.5rem;
+    background: var(--sl-color-accent);
+    color: #fff8f0;
+    box-shadow: 0 1px 2px rgba(53, 28, 12, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2); /* literal: --sl-shadow-sm no resuelve en oscuro */
+  }
+
+  /* Amplía el objetivo del sello a 44 px sin crecer visualmente. */
+  .pr-volver__mono::after {
+    content: '';
+    position: absolute;
+    inset: -0.375rem;
+  }
+
+  /* El sello «saluda» al arrancar: disimula el nacimiento del trazo. */
+  @keyframes pr-volver-sello {
+    0% { transform: rotate(0) scale(1); }
+    35% { transform: rotate(-8deg) scale(0.94); }
+    100% { transform: rotate(0) scale(1); }
+  }
+
+  /* Presentación de llegada: el botón se abre solo, se deja leer y se cierra. */
+  .pr-volver--abierto {
+    pointer-events: auto;
+  }
+
+  .pr-volver--abierto .pr-volver__borde rect {
+    stroke-dasharray: 1.12 1;
+    stroke-dashoffset: 0.12;
+    opacity: 1;
+    transition: stroke-dasharray 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms, stroke-dashoffset 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms, opacity 60ms ease 80ms;
+  }
+
+  .pr-volver--abierto .pr-volver__texto {
+    clip-path: inset(0);
+    filter: none;
+    opacity: 1;
+    transition: clip-path 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 220ms, filter 260ms ease 220ms, opacity 200ms ease 220ms;
+  }
+
+  .pr-volver--abierto .pr-volver__mono {
+    animation: pr-volver-sello 360ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms;
+  }
+
+  /* Cierre de la presentación: al no iniciarlo el usuario, puede ser más
+     pausado que un hover-out. El texto se repliega hacia el logo y después
+     el trazo se deshace. */
+  .pr-volver--cerrando .pr-volver__borde rect {
+    transition: stroke-dasharray 360ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms, stroke-dashoffset 360ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms, opacity 260ms ease 220ms;
+  }
+
+  .pr-volver--cerrando .pr-volver__texto {
+    transition: clip-path 280ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 240ms ease, opacity 220ms ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pr-volver:hover {
+      pointer-events: auto; /* abierto, toda la pastilla mantiene el hover */
+    }
+
+    .pr-volver:hover .pr-volver__borde rect {
+      stroke-dasharray: 1.12 1;
+      stroke-dashoffset: 0.12;
+      opacity: 1;
+      transition: stroke-dasharray 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms, stroke-dashoffset 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms, opacity 60ms ease 80ms; /* 80 ms de intención: evita activaciones al pasar de largo */
+    }
+
+    .pr-volver:hover .pr-volver__texto {
+      clip-path: inset(0);
+      filter: none;
+      opacity: 1;
+      transition: clip-path 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 220ms, filter 260ms ease 220ms, opacity 200ms ease 220ms;
+    }
+
+    .pr-volver:hover .pr-volver__mono {
+      animation: pr-volver-sello 360ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms;
+    }
+  }
+
+  .pr-volver:active {
+    transform: scale(0.98);
+  }
+
+  .pr-volver:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  /* Con foco de teclado el botón se muestra completo, sin esperar al hover. */
+  .pr-volver:focus-visible .pr-volver__borde rect {
+    stroke-dasharray: 1.12 1;
+    stroke-dashoffset: 0.12;
+    opacity: 1;
+  }
+
+  .pr-volver:focus-visible .pr-volver__texto {
+    clip-path: inset(0);
+    filter: none;
+    opacity: 1;
+  }
+
+  .pr-buscar {
+    display: flex;
+    gap: 0.625rem;
+    align-items: center;
+    inline-size: 100%;
+    max-inline-size: 26rem;
+    min-height: var(--m-hit);
+    margin-block-start: 1.5rem;
+    padding-inline: 1.125rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-3) 65%, transparent);
+    border-radius: var(--m-r-md);
+    background: var(--sl-color-bg-nav);
+    color: var(--sl-color-gray-2);
+    font-family: inherit;
+    font-size: var(--sl-text-sm);
+    text-align: start;
+    cursor: pointer;
+    transition: border-color 200ms ease;
+  }
+
+  .pr-buscar__icono {
+    flex-shrink: 0;
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    color: var(--sl-color-text-accent);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pr-buscar:hover {
+      border-color: var(--sl-color-text-accent);
+    }
+  }
+
+  .pr-buscar:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  .pr-corpus {
+    display: grid;
+    gap: 2.5rem;
+    margin-block-start: 3.5rem;
+  }
+
+  .pr-parte__encabezado {
+    padding-block-end: 0.75rem;
+    border-block-end: 1px solid var(--sl-color-hairline-light);
+  }
+
+  .pr-parte__titulo {
+    margin: 0;
+    font-size: var(--sl-text-xl);
+    line-height: 1.2;
+  }
+
+  .pr-parte__alcance {
+    margin: 0.35rem 0 0;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+  }
+
+  .pr-entradas {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pr-entradas li + li {
+    border-block-start: 1px solid var(--sl-color-hairline-light);
+  }
+
+  .pr-entrada {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+    min-height: var(--m-hit);
+    padding: 0.5rem 0.75rem;
+    margin-inline: -0.75rem;
+    border-radius: 0.625rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* gray-3, no gray-4: en claro gray-4 es un borde con alpha 0,18. */
+  .pr-entrada__indice {
+    color: var(--sl-color-gray-3);
+    font-family: var(--sl-font-mono);
+    font-size: var(--sl-text-xs);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pr-entrada__titulo {
+    color: var(--sl-color-gray-1);
+    font-size: var(--sl-text-sm);
+    line-height: 1.45;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pr-entrada:hover {
+      background: var(--sl-color-bg-sidebar);
+    }
+
+    .pr-entrada:hover .pr-entrada__titulo,
+    .pr-entrada:hover .pr-entrada__indice {
+      color: var(--sl-color-text-accent);
+    }
+  }
+
+  .pr-entrada:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  .pr-arranque {
+    position: relative;
+    margin-block-start: 3.5rem;
+    padding-block-start: 1.75rem;
+  }
+
+  .pr-arranque::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    /* Baja hasta cubrir el enlace de paginación, que mide unos 92 px y va
+       separado 18 px, más 2rem de aire por debajo. */
+    inset-block: -2.5rem -13rem;
+    inset-inline-start: 50%;
+    inline-size: 100vw;
+    transform: translateX(-50%);
+    background: var(--fx-banda);
+    border-block-start: 1px solid var(--sl-color-hairline-light);
+  }
+
+  .pr-arranque__cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-block-end: 1.25rem;
+  }
+
+  .pr-arranque__titulo {
+    margin: 0;
+    font-size: var(--sl-text-xl);
+    line-height: 1.2;
+  }
+
+  .pr-arranque__nota {
+    margin: 0.35rem 0 0;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+  }
+
+  .pr-arranque__controles {
+    display: flex;
+    gap: 0.375rem;
+  }
+
+  .pr-flecha {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 0.625rem;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    transition: color 200ms ease, border-color 200ms ease;
+  }
+
+  /* Objetivo táctil de 44 px sin crecer visualmente. */
+  .pr-flecha::after {
+    content: '';
+    position: absolute;
+    inset: -0.25rem;
+  }
+
+  .pr-flecha svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pr-flecha:hover {
+      border-color: color-mix(in srgb, var(--sl-color-gray-3) 45%, transparent);
+      color: var(--sl-color-white);
+    }
+  }
+
+  .pr-flecha:active {
+    transform: scale(0.92);
+  }
+
+  .pr-flecha:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  .pr-flecha[aria-pressed='true'] svg {
+    transform: scaleX(-1);
+  }
+
+  /* Al pulsar, el chevrón empuja en su dirección (mismo lenguaje que el
+     volteo del botón de sentido). */
+  .pr-flecha[data-pr-anterior]:active svg {
+    transform: translateX(-2px);
+  }
+
+  .pr-flecha[data-pr-siguiente]:active svg {
+    transform: translateX(2px);
+  }
+
+  /* Marcada por flecha: mismo estado visual que el hover. */
+  .pr-ruta--marcada {
+    border-color: var(--sl-color-text-accent);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 10px 28px -10px rgba(31, 22, 17, 0.3);
+  }
+
+  .pr-ruta--marcada .pr-ruta__titulo {
+    color: var(--sl-color-text-accent);
+  }
+
+  .pr-arranque__visor {
+    overflow: hidden;
+    /* Holgura: el alzado (4px) + escala + sombra del hover no deben recortarse. */
+    padding: 0.875rem 0.25rem;
+    margin: -0.875rem -0.25rem;
+    mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  }
+
+  .pr-arranque__rutas {
+    display: flex;
+    gap: 1.25rem;
+    inline-size: max-content;
+    will-change: transform;
+  }
+
+  .pr-ruta {
+    display: grid;
+    gap: 0.4rem;
+    align-content: start;
+    flex: 0 0 24rem;
+    min-height: var(--m-hit);
+    padding: 1.125rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-gray-3) 65%, transparent);
+    border-radius: var(--m-r-md);
+    background: color-mix(in srgb, var(--sl-color-bg-nav) 96%, transparent);
+    color: inherit;
+    text-decoration: none;
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 200ms ease, box-shadow 200ms ease;
+  }
+
+  .pr-ruta__titulo {
+    color: var(--sl-color-white);
+    font-family: var(--m-font-display);
+    font-size: var(--sl-text-base);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .pr-ruta__detalle {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pr-ruta:hover {
+      border-color: var(--sl-color-text-accent);
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 10px 28px -10px rgba(31, 22, 17, 0.3); /* literal: las sombras --m solo existen en claro */
+    }
+
+    .pr-ruta:hover .pr-ruta__titulo {
+      color: var(--sl-color-text-accent);
+    }
+  }
+
+  .pr-ruta:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 3px;
+  }
+
+  @media (min-width: 50rem) {
+    .pr-corpus {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pr-fondo__campo {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    .pr .anim {
+      animation: none !important;
+      opacity: 1;
+      transform: none;
+    }
+
+    .pr-buscar,
+    .pr-ruta,
+    .pr-volver,
+    .pr-volver__texto,
+    .pr-volver__borde rect {
+      transition: none;
+    }
+
+    .pr-volver:active {
+      transform: none;
+    }
+
+    .pr-volver:hover .pr-volver__mono,
+    .pr-volver--abierto .pr-volver__mono {
+      animation: none;
+    }
+
+    /* Marquesina quieta: lista estática sin duplicados */
+    .pr-arranque__rutas {
+      inline-size: auto;
+      flex-wrap: wrap;
+    }
+
+    .pr-ruta[aria-hidden='true'] {
+      display: none;
+    }
+
+    .pr-ruta:hover,
+    .pr-ruta--marcada {
+      transform: none;
+    }
+
+    .pr-arranque__nota,
+    .pr-arranque__controles {
+      display: none;
+    }
+
+    .pr-flecha,
+    .pr-flecha svg {
+      transition: none;
+    }
+
+    /* Sin animación no hay revelado: el botón se muestra completo y clicable entero. */
+    .pr-volver {
+      pointer-events: auto;
+    }
+
+    .pr-volver__texto {
+      clip-path: none;
+      filter: none;
+      opacity: 1;
+    }
+
+    .pr-volver__borde rect {
+      stroke-dasharray: none;
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+  }
+</style>

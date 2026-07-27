@@ -21,6 +21,9 @@ export default defineConfig({
           lang: 'es',
         },
       },
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/ibaimoya/manualito' },
+      ],
       sidebar: [
         { label: 'Inicio', link: '/' },
         {

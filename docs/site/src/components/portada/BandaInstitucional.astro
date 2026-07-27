@@ -1,0 +1,140 @@
+---
+import logoUbu from '../../assets/logo-ubu.webp';
+import logoHp from '../../assets/logo-hp-scds.svg';
+---
+
+<aside class="bi">
+  <p class="bi__rotulo">Trabajo de Fin de Grado</p>
+  <div class="bi__logos">
+    <a
+      class="bi__enlace"
+      href="https://www.ubu.es/"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Universidad de Burgos, se abre en una pestaña nueva"
+    >
+      <span class="bi__marca bi__marca--ubu" style={`--bi-src: url('${logoUbu.src}')`}></span>
+    </a>
+
+    <span class="bi__sep" aria-hidden="true"></span>
+
+    <a
+      class="bi__enlace"
+      href="https://hpscds.com/innovacion/observatorio-tecnologico/"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Observatorio Tecnológico HP SCDS, se abre en una pestaña nueva"
+    >
+      <span class="bi__marca bi__marca--hp" style={`--bi-src: url('${logoHp.src}')`}></span>
+    </a>
+  </div>
+</aside>
+
+<style>
+  .bi {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.875rem;
+    margin-block-start: 3.25rem;
+  }
+
+  .bi__rotulo {
+    margin: 0;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .bi__logos {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    margin-inline: -7px 7px;
+  }
+
+  .bi__enlace {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--m-hit);
+    padding-inline: 0.25rem;
+    border-radius: 0.5rem;
+    color: var(--sl-color-gray-2);
+    transition: color 200ms ease;
+  }
+
+  /* La url va entrecomillada: en desarrollo la ruta del proyecto lleva espacios
+     y un url() sin comillas sería inválido. */
+  .bi__marca {
+    display: block;
+    background-color: currentColor;
+    mask-image: var(--bi-src);
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    mask-position: center;
+    opacity: 0.75;
+    scale: 1;
+    transition:
+      opacity 180ms ease,
+      scale 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .bi__marca--ubu {
+    inline-size: 105px;
+    block-size: 38px;
+    margin-block: -1px 1px;
+    transform-origin: 43.55% 53.62%;
+  }
+
+  .bi__marca--hp {
+    inline-size: 86px;
+    block-size: 32px;
+    transform-origin: 39.48% 50.02%;
+  }
+
+  .bi__sep {
+    inline-size: 1px;
+    block-size: 1.75rem;
+    background: var(--sl-color-hairline-light);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .bi__enlace:hover {
+      color: var(--sl-color-white);
+    }
+
+    .bi__enlace:hover .bi__marca {
+      opacity: 1;
+      scale: 1.03;
+    }
+  }
+
+  .bi__enlace:active .bi__marca {
+    scale: 0.98;
+  }
+
+  .bi__enlace:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 29.999rem) {
+    .bi__logos {
+      gap: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bi__enlace,
+    .bi__marca {
+      transition: none;
+    }
+
+    .bi__enlace:hover .bi__marca,
+    .bi__enlace:active .bi__marca {
+      scale: 1;
+    }
+  }
+</style>

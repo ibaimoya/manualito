@@ -248,3 +248,53 @@
     box-shadow: var(--m-shadow-xs);
   }
 }
+
+/* El diálogo de búsqueda nace del botón que lo abre, no del centro de la pantalla.
+   Origen arriba y a la izquierda en escritorio, que es donde vive el buscador. */
+site-search dialog {
+  transform-origin: top center;
+  opacity: 0;
+  scale: 0.96;
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    display 180ms allow-discrete,
+    overlay 180ms allow-discrete;
+}
+
+site-search dialog[open] {
+  opacity: 1;
+  scale: 1;
+}
+
+@starting-style {
+  site-search dialog[open] {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+site-search dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    display 180ms allow-discrete,
+    overlay 180ms allow-discrete;
+}
+
+site-search dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  site-search dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  site-search dialog,
+  site-search dialog::backdrop {
+    transition: none;
+  }
+}

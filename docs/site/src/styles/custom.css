@@ -228,13 +228,40 @@
   line-height: 1;
 }
 
+:root starlight-theme-select .theme-trigger:focus-visible {
+  outline-color: var(--sl-color-text-accent);
+}
+
 @media (min-width: 50rem) {
   .page > header > .header {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem) minmax(0, 1fr);
   }
 
   .page > header > .header > .right-group {
+    gap: 0.625rem;
     justify-self: end;
+  }
+
+  .page > header .social-icons a {
+    color: var(--sl-color-gray-2);
+  }
+
+  .page > header .social-icons a:is(:hover, :focus-visible) {
+    color: var(--sl-color-white);
+  }
+
+  .page > header .theme-trigger {
+    gap: 0.1875rem;
+    inline-size: 2.75rem;
+  }
+
+  .page > header .label-icon {
+    translate: 0 -0.5px;
+  }
+
+  .page > header .theme-trigger__caret {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
   }
 
   button[data-open-modal] {

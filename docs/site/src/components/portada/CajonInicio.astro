@@ -156,35 +156,37 @@ const rutas = [
   }
 
   .cj-panel {
+    --cj-bote: 0px;
+    --cj-fondo-bote: 1.5rem;
     position: fixed;
     inset-inline: 0;
     inset-block-end: 0;
     z-index: 41;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     block-size: auto;
     max-block-size: min(78svh, 50rem);
     padding-inline: clamp(1rem, 4vw, 2.5rem);
     padding-block-end: 1.5rem;
+    translate: 0 calc(100% - var(--cj-tirador));
+    transition: translate var(--cj-dur) var(--cj-curva);
+  }
+
+  .cj-panel::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block: calc(0px - var(--cj-fondo-bote)) 0;
+    z-index: -1;
     border-start-start-radius: 1.25rem;
     border-start-end-radius: 1.25rem;
     border-block-start: 1px solid var(--cj-borde-vivo);
     background: var(--sl-color-bg-nav);
     box-shadow: 0 -24px 60px -24px rgba(0, 0, 0, 0.55);
-    translate: 0 calc(100% - var(--cj-tirador));
-    transition: translate var(--cj-dur) var(--cj-curva);
-  }
-
-  /* Faldón: al estirar de más el panel se despega del borde inferior y sin esto
-     asomaría la página por debajo. */
-  .cj-panel::after {
-    content: '';
-    position: absolute;
-    inset-inline: 0;
-    inset-block-start: 100%;
-    block-size: 50vh;
-    background: var(--sl-color-bg-nav);
+    transform: translateY(calc(var(--cj-fondo-bote) - var(--cj-bote)));
     pointer-events: none;
+    transition: transform var(--cj-dur) var(--cj-curva);
   }
 
   .cj[data-abierto] .cj-panel {
@@ -192,6 +194,9 @@ const rutas = [
   }
 
   .cj[data-arrastrando] .cj-panel,
+  .cj[data-arrastrando] .cj-panel::before,
+  .cj[data-arrastrando] .cj-cabecera,
+  .cj[data-arrastrando] .cj-tirador,
   .cj[data-arrastrando] .cj-velo {
     transition: none;
   }
@@ -207,6 +212,7 @@ const rutas = [
     background: transparent;
     cursor: grab;
     touch-action: none;
+    transition: translate var(--cj-dur) var(--cj-curva);
   }
 
   .cj[data-arrastrando] .cj-tirador {
@@ -264,6 +270,7 @@ const rutas = [
     margin-block-end: 1.25rem;
     cursor: grab;
     touch-action: none;
+    transition: translate var(--cj-dur) var(--cj-curva);
   }
 
   .cj-cabecera :is(h2, p, button) {
@@ -537,7 +544,10 @@ const rutas = [
     .pr-flecha svg,
     .cj-velo,
     .cj-panel,
+    .cj-panel::before,
+    .cj-cabecera,
     .cj-cuerpo,
+    .cj-tirador,
     .cj-tirador__barra,
     .cj-siguiente,
     .cj-siguiente__destino svg {
@@ -577,6 +587,7 @@ const rutas = [
     let tiempoRueda = 0;
     let entradaPendienteRueda = false;
     let finRueda: number | null = null;
+    let agarreActivo: HTMLElement | null = null;
 
     // Se mide una vez por gesto: remedirla en cada frame introduce saltos de
     // algún píxel cuando el contenido reacomoda.
@@ -605,12 +616,29 @@ const rutas = [
 
     const opacidadCuerpo = (p: number) => Math.min(1, Math.max(0, (p - 0.12) / 0.38));
 
+    const pintarBote = (px: number) => {
+      const bote = menosMovimiento.matches ? 0 : Math.max(0, px);
+      panel.style.setProperty('--cj-bote', `${bote}px`);
+      tirador.style.translate = bote ? `0 ${-bote}px` : '';
+      if (agarreActivo && agarreActivo !== tirador) {
+        agarreActivo.style.translate = bote ? `0 ${-bote}px` : '';
+      }
+    };
+
+    const soltarBote = () => {
+      panel.style.removeProperty('--cj-bote');
+      tirador.style.translate = '';
+      if (agarreActivo && agarreActivo !== tirador) agarreActivo.style.translate = '';
+      agarreActivo = null;
+    };
+
     const pintar = (px: number) => {
       const r = recorrido();
       const p = 1 - Math.max(0, Math.min(r, px)) / r;
-      panel.style.translate = `0 ${px}px`;
+      panel.style.translate = `0 ${Math.max(0, px)}px`;
       velo.style.opacity = String(p);
       cuerpo.style.opacity = String(opacidadCuerpo(p));
+      pintarBote(-px);
       moverFondo(p, false);
     };
 
@@ -628,6 +656,7 @@ const rutas = [
       abierto = p > 0.5;
       gesto = 'ninguno';
       raiz.removeAttribute('data-arrastrando');
+      soltarBote();
       raiz.toggleAttribute('data-abierto', abierto);
       tirador.setAttribute('aria-expanded', String(abierto));
       velo.style.pointerEvents = abierto ? 'auto' : 'none';
@@ -665,6 +694,7 @@ const rutas = [
       inicioPx = abierto ? 0 : recorrido();
       inicioTiempo = performance.now();
       arrastrando = false;
+      agarreActivo = origen;
       origen.setPointerCapture(ev.pointerId);
     };
 
@@ -687,7 +717,10 @@ const rutas = [
     const soltar = (ev: PointerEvent) => {
       if (ev.pointerId !== punteroId) return;
       punteroId = null;
-      if (!arrastrando) return;
+      if (!arrastrando) {
+        agarreActivo = null;
+        return;
+      }
       arrastrando = false;
       const r = recorrido();
       const dy = ev.clientY - inicioY;
@@ -702,6 +735,7 @@ const rutas = [
       agarre.addEventListener('pointermove', mover);
       agarre.addEventListener('pointerup', soltar);
       agarre.addEventListener('pointercancel', soltar);
+      agarre.addEventListener('lostpointercapture', soltar);
     }
 
     tirador.addEventListener('click', () => {
@@ -795,6 +829,10 @@ const rutas = [
 
     window.addEventListener('resize', () => {
       if (gesto === 'ninguno') aplicar(abierto ? 1 : 0);
+    });
+
+    menosMovimiento.addEventListener('change', () => {
+      if (menosMovimiento.matches) soltarBote();
     });
 
     if (!menosMovimiento.matches) {

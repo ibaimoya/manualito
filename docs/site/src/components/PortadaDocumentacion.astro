@@ -99,7 +99,8 @@ const { variante = 'simple' } = Astro.props;
   if (fondo) document.body.appendChild(fondo);
 
   document.querySelectorAll<HTMLButtonElement>('[data-pr-buscar]').forEach((disparador) => {
-    disparador.addEventListener('click', () => {
+    disparador.addEventListener('click', (evento) => {
+      evento.stopPropagation();
       document.querySelector<HTMLButtonElement>('button[data-open-modal]')?.click();
     });
   });

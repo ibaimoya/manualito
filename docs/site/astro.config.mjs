@@ -43,6 +43,7 @@ export default defineConfig({
         './src/styles/custom.css',
       ],
       components: {
+        Header: './src/components/Header.astro',
         ThemeSelect: './src/components/ThemeSelect.astro',
       },
       plugins: [starlightLinksValidator()],

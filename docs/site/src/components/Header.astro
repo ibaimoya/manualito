@@ -1,0 +1,10 @@
+---
+import StarlightHeader from '@astrojs/starlight/components/Header.astro';
+
+import ProgresoLectura from './ProgresoLectura.astro';
+
+const mostrarProgreso = Astro.locals.starlightRoute.id !== '';
+---
+
+<StarlightHeader />
+{mostrarProgreso && <ProgresoLectura />}

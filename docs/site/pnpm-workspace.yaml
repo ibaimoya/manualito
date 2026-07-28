@@ -1,3 +1,7 @@
 allowBuilds:
   esbuild: true
   sharp: true
+minimumReleaseAgeExclude:
+  - framer-motion@12.43.0
+  - motion-dom@12.43.0
+  - motion@12.43.0

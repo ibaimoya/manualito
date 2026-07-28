@@ -1,5 +1,5 @@
 ---
-import { DESTINO_PROVISIONAL } from '../portada-documentacion';
+import { DESTINO_PROVISIONAL, RUTA_INTRODUCCION } from '../portada-documentacion';
 import BandaInstitucional from './BandaInstitucional.astro';
 
 interface Props {
@@ -103,7 +103,7 @@ const rutas = [
 
         <BandaInstitucional />
 
-        <a class="cj-siguiente" href={DESTINO_PROVISIONAL}>
+        <a class="cj-siguiente" href={RUTA_INTRODUCCION}>
           <span class="cj-siguiente__rotulo">Siguiente</span>
           <span class="cj-siguiente__destino">
             Introducción

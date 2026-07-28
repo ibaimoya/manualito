@@ -54,7 +54,7 @@ const { variante = 'simple' } = Astro.props;
         {
           memoria.map((entrada) => (
             <li class="anim">
-              <a class="pr-entrada" href={DESTINO_PROVISIONAL}>
+              <a class="pr-entrada" href={entrada.enlace ?? DESTINO_PROVISIONAL}>
                 <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
                 <span class="pr-entrada__titulo">
                   <span class="pd-sr">{entrada.etiqueta}, </span>

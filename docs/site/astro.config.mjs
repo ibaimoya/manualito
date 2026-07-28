@@ -27,6 +27,10 @@ export default defineConfig({
       sidebar: [
         { label: 'Inicio', link: '/' },
         {
+          label: 'Memoria',
+          items: [{ label: 'Introducción', slug: 'memoria/introduccion' }],
+        },
+        {
           label: 'Usuarios',
           items: [{ label: 'Subir un manual', slug: 'usuarios/subir-un-manual' }],
         },

@@ -1,10 +1,12 @@
 export const DESTINO_PROVISIONAL = '/usuarios/subir-un-manual/';
+export const RUTA_INTRODUCCION = '/memoria/introduccion/';
 
 export interface EntradaDocumento {
   indice: string;
   etiqueta: string;
   titulo: string;
   resumen: string;
+  enlace?: string;
 }
 
 export const memoria: EntradaDocumento[] = [
@@ -13,6 +15,7 @@ export const memoria: EntradaDocumento[] = [
     etiqueta: 'Capítulo 1',
     titulo: 'Introducción',
     resumen: 'Qué problema resuelve Manualito y por qué merece la pena resolverlo.',
+    enlace: RUTA_INTRODUCCION,
   },
   {
     indice: '02',

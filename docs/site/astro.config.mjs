@@ -41,9 +41,11 @@ export default defineConfig({
         '@fontsource-variable/inter',
         '@fontsource-variable/jetbrains-mono',
         './src/styles/custom.css',
+        './src/styles/laterales-redimensionables.css',
       ],
       components: {
         Header: './src/components/Header.astro',
+        PageFrame: './src/components/PageFrame.astro',
         ThemeSelect: './src/components/ThemeSelect.astro',
       },
       plugins: [starlightLinksValidator()],

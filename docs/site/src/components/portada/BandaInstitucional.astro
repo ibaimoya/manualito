@@ -1,5 +1,5 @@
 ---
-import logoUbu from '../../assets/logo-ubu.webp';
+import logoUbu from '../../assets/logo-ubu.svg?url';
 import logoHp from '../../assets/logo-hp-scds.svg';
 ---
 
@@ -13,7 +13,7 @@ import logoHp from '../../assets/logo-hp-scds.svg';
       rel="noopener noreferrer"
       aria-label="Universidad de Burgos, se abre en una pestaña nueva"
     >
-      <span class="bi__marca bi__marca--ubu" style={`--bi-src: url('${logoUbu.src}')`}></span>
+      <span class="bi__marca bi__marca--ubu" style={`--bi-src: url('${logoUbu}')`}></span>
     </a>
 
     <span class="bi__sep" aria-hidden="true"></span>
@@ -52,17 +52,25 @@ import logoHp from '../../assets/logo-hp-scds.svg';
     display: flex;
     align-items: center;
     gap: 2.5rem;
-    margin-inline: -7px 7px;
   }
 
   .bi__enlace {
     display: inline-flex;
     align-items: center;
+    inline-size: 7.5rem;
     min-height: var(--m-hit);
     padding-inline: 0.25rem;
     border-radius: 0.5rem;
     color: var(--sl-color-gray-2);
     transition: color 200ms ease;
+  }
+
+  .bi__enlace:first-child {
+    justify-content: flex-end;
+  }
+
+  .bi__enlace:last-child {
+    justify-content: flex-start;
   }
 
   /* La url va entrecomillada: en desarrollo la ruta del proyecto lleva espacios
@@ -71,6 +79,7 @@ import logoHp from '../../assets/logo-hp-scds.svg';
     display: block;
     background-color: currentColor;
     mask-image: var(--bi-src);
+    mask-mode: alpha;
     mask-repeat: no-repeat;
     mask-size: contain;
     mask-position: center;
@@ -82,10 +91,10 @@ import logoHp from '../../assets/logo-hp-scds.svg';
   }
 
   .bi__marca--ubu {
-    inline-size: 105px;
-    block-size: 38px;
-    margin-block: -1px 1px;
-    transform-origin: 43.55% 53.62%;
+    inline-size: 113px;
+    block-size: 43px;
+    translate: 0 -4px;
+    transform-origin: 44% 58.47%;
   }
 
   .bi__marca--hp {

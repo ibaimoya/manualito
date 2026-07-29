@@ -44,6 +44,7 @@ export default defineConfig({
         './src/styles/laterales-redimensionables.css',
       ],
       components: {
+        Head: './src/components/Head.astro',
         Header: './src/components/Header.astro',
         PageFrame: './src/components/PageFrame.astro',
         ThemeSelect: './src/components/ThemeSelect.astro',

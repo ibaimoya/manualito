@@ -49,6 +49,7 @@ export default defineConfig({
         PageFrame: './src/components/PageFrame.astro',
         ThemeSelect: './src/components/ThemeSelect.astro',
       },
+      routeMiddleware: './src/routeData.ts',
       plugins: [starlightLinksValidator()],
     }),
   ],

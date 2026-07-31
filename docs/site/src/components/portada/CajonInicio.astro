@@ -36,68 +36,75 @@ const rutas = [
       aria-controls="cj-cuerpo"
     >
       <span class="cj-tirador__barra" aria-hidden="true"></span>
-      <span class="pd-sr">Abrir por dónde empezar</span>
+      <span class="pd-sr" data-cj-etiqueta>Abrir por dónde empezar</span>
     </button>
 
-    <div class="cj-cuerpo" id="cj-cuerpo" data-cj-cuerpo>
+    <div class="cj-cuerpo" id="cj-cuerpo" data-cj-cuerpo inert>
       <div class="cj-marco">
-        <header class="cj-cabecera" data-cj-agarre>
-          <div>
-            <h2 class="cj-titulo" id="cj-titulo">Por dónde empezar</h2>
-            <p class="cj-nota">Quiero saber...</p>
-          </div>
-          <div class="cj-controles" data-pr-controles>
-            <button class="pr-flecha" type="button" data-pr-anterior aria-label="Tarjeta anterior"
-              ><svg viewBox="0 0 20 20" aria-hidden="true"
-                ><path
-                  d="M11.5 5 6.5 10l5 5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path></svg
-              ></button
-            >
-            <button class="pr-flecha" type="button" data-pr-siguiente aria-label="Tarjeta siguiente"
-              ><svg viewBox="0 0 20 20" aria-hidden="true"
-                ><path
-                  d="m8.5 5 5 5-5 5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path></svg
-              ></button
-            >
-            <button
-              class="pr-flecha"
-              type="button"
-              data-pr-sentido
-              aria-label="Cambiar el sentido de la cinta"
-              aria-pressed="false"
-              ><svg viewBox="0 0 20 20" aria-hidden="true"
-                ><path
-                  d="M4 7.5h10M11.5 5 14 7.5 11.5 10M16 12.5H6M8.5 15 6 12.5 8.5 10"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path></svg
-              ></button
-            >
-          </div>
-        </header>
+        <div class="cj-carrusel" role="group" aria-roledescription="carrusel" aria-labelledby="cj-titulo">
+          <header class="cj-cabecera" data-cj-agarre>
+            <div>
+              <h2 class="cj-titulo" id="cj-titulo">Por dónde empezar</h2>
+              <p class="cj-nota">Quiero saber...</p>
+            </div>
+            <div class="cj-controles" data-pr-controles>
+              <button class="pr-flecha" type="button" data-pr-pausa aria-label="Pausar el carrusel"
+                ><svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path class="pr-icono-pausa" d="M7 5.5v9M13 5.5v9"></path>
+                  <path class="pr-icono-reanudar" d="m7.5 5 7 5-7 5Z"></path></svg
+                ></button
+              >
+              <button class="pr-flecha" type="button" data-pr-anterior aria-label="Tarjeta anterior"
+                ><svg viewBox="0 0 20 20" aria-hidden="true"
+                  ><path
+                    d="M11.5 5 6.5 10l5 5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path></svg
+                ></button
+              >
+              <button class="pr-flecha" type="button" data-pr-siguiente aria-label="Tarjeta siguiente"
+                ><svg viewBox="0 0 20 20" aria-hidden="true"
+                  ><path
+                    d="m8.5 5 5 5-5 5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path></svg
+                ></button
+              >
+              <button
+                class="pr-flecha"
+                type="button"
+                data-pr-sentido
+                aria-label="Cambiar el sentido hacia la derecha"
+                ><svg viewBox="0 0 20 20" aria-hidden="true"
+                  ><path
+                    d="M4 7.5h10M11.5 5 14 7.5 11.5 10M16 12.5H6M8.5 15 6 12.5 8.5 10"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path></svg
+                ></button
+              >
+            </div>
+          </header>
 
-        <div class="pr-arranque__visor">
-          <div class="pr-arranque__rutas">
-            {
-              rutas.map((r) => (
-                <a class="pr-ruta" href={DESTINO_PROVISIONAL}>
-                  <span class="pr-ruta__titulo">{r.titulo}</span>
-                  <span class="pr-ruta__detalle">{r.detalle}</span>
-                </a>
-              ))
-            }
+          <div class="pr-arranque__visor" data-pr-visor aria-live="off">
+            <div class="pr-arranque__rutas" data-pr-pista>
+              {
+                rutas.map((r, indice) => (
+                  <a class="pr-ruta" href={DESTINO_PROVISIONAL} data-pr-indice={indice}>
+                    <span class="pr-ruta__titulo">{r.titulo}</span>
+                    <span class="pr-ruta__detalle">{r.detalle}</span>
+                  </a>
+                ))
+              }
+            </div>
           </div>
         </div>
 
@@ -137,6 +144,12 @@ const rutas = [
     --cj-borde: rgba(31, 22, 17, 0.12);
     --cj-borde-vivo: rgba(31, 22, 17, 0.22);
     --cj-alto: rgba(255, 255, 255, 0.85);
+  }
+
+  :global(html[data-cj-abierto]) {
+    overflow: hidden;
+    overscroll-behavior: none;
+    scrollbar-gutter: stable;
   }
 
   .cj-velo {
@@ -237,9 +250,12 @@ const rutas = [
   }
 
   .cj-tirador:focus-visible {
+    outline: none;
+  }
+
+  .cj[data-entrada-teclado] .cj-tirador:focus-visible .cj-tirador__barra {
     outline: 2px solid var(--sl-color-text-accent);
-    outline-offset: -4px;
-    border-radius: 0.5rem;
+    outline-offset: 4px;
   }
 
   .cj-cuerpo {
@@ -296,7 +312,7 @@ const rutas = [
 
   .cj-controles {
     display: flex;
-    gap: 0.375rem;
+    gap: 0.5rem;
   }
 
   .pr-flecha {
@@ -328,6 +344,24 @@ const rutas = [
     transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
+  .pr-icono-pausa,
+  .pr-icono-reanudar {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .pr-icono-reanudar,
+  .pr-flecha[data-pausado] .pr-icono-pausa {
+    display: none;
+  }
+
+  .pr-flecha[data-pausado] .pr-icono-reanudar {
+    display: block;
+  }
+
   @media (hover: hover) and (pointer: fine) {
     .pr-flecha:hover {
       border-color: color-mix(in srgb, var(--sl-color-gray-3) 45%, transparent);
@@ -336,16 +370,12 @@ const rutas = [
   }
 
   .pr-flecha:active {
-    transform: scale(0.92);
+    transform: scale(0.96);
   }
 
   .pr-flecha:focus-visible {
     outline: 2px solid var(--sl-color-text-accent);
     outline-offset: 2px;
-  }
-
-  .pr-flecha[aria-pressed='true'] svg {
-    transform: scaleX(-1);
   }
 
   .pr-flecha[data-pr-anterior]:active svg {
@@ -356,7 +386,12 @@ const rutas = [
     transform: translateX(2px);
   }
 
+  .pr-flecha[data-pr-sentido][data-invertido] svg {
+    transform: scaleX(-1);
+  }
+
   .pr-arranque__visor {
+    container-type: inline-size;
     overflow: hidden;
     padding: 0.75rem 0.25rem;
     margin: -0.75rem -0.25rem;
@@ -367,6 +402,10 @@ const rutas = [
     display: flex;
     gap: 1.25rem;
     inline-size: max-content;
+    will-change: auto;
+  }
+
+  .cj[data-abierto] .pr-arranque__rutas {
     will-change: transform;
   }
 
@@ -374,7 +413,7 @@ const rutas = [
     display: grid;
     gap: 0.4rem;
     align-content: start;
-    flex: 0 0 19rem;
+    flex: 0 0 min(19rem, calc(100cqi - 1rem));
     min-block-size: 9.5rem;
     padding: 1.25rem;
     border: 1px solid var(--cj-borde);
@@ -382,6 +421,7 @@ const rutas = [
     background: var(--sl-color-bg-nav);
     box-shadow: inset 0 1px 0 var(--cj-alto);
     color: inherit;
+    cursor: pointer;
     text-decoration: none;
     /* Propiedades independientes: la marquesina mueve la pista con transform y
        así el hover de la tarjeta no se lo pisa. */
@@ -524,9 +564,15 @@ const rutas = [
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .pr-arranque__visor {
+      overflow: visible;
+      mask-image: none;
+    }
+
     .pr-arranque__rutas {
       inline-size: auto;
       flex-wrap: wrap;
+      will-change: auto;
     }
 
     .pr-ruta:hover,
@@ -558,19 +604,20 @@ const rutas = [
 
 <script>
   const raiz = document.querySelector<HTMLElement>('[data-cj]');
-  const panel = document.querySelector<HTMLElement>('[data-cj-panel]');
-  const velo = document.querySelector<HTMLElement>('[data-cj-velo]');
-  const tirador = document.querySelector<HTMLButtonElement>('[data-cj-tirador]');
-  const cuerpo = document.querySelector<HTMLElement>('[data-cj-cuerpo]');
+  const panel = raiz?.querySelector<HTMLElement>('[data-cj-panel]');
+  const velo = raiz?.querySelector<HTMLElement>('[data-cj-velo]');
+  const tirador = raiz?.querySelector<HTMLButtonElement>('[data-cj-tirador]');
+  const cuerpo = raiz?.querySelector<HTMLElement>('[data-cj-cuerpo]');
+  const etiqueta = raiz?.querySelector<HTMLElement>('[data-cj-etiqueta]');
 
-  if (raiz && panel && velo && tirador && cuerpo) {
+  if (raiz && panel && velo && tirador && cuerpo && etiqueta) {
     const variante = raiz.dataset.variante ?? 'simple';
     const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
     const lienzo = document.querySelector<HTMLElement>('.pd-lienzo');
 
-    // El fondo se escala, y un ancestro transformado convertiría el position:fixed
-    // del panel en relativo. Fuera del lienzo el cajón conserva su anclaje.
     document.body.appendChild(raiz);
+    document.addEventListener('pointerdown', () => raiz.removeAttribute('data-entrada-teclado'), true);
+    document.addEventListener('keydown', () => raiz.setAttribute('data-entrada-teclado', ''), true);
 
     const VELOCIDAD_DESCARTE = 0.11;
     const RESISTENCIA = 20;
@@ -578,6 +625,8 @@ const rutas = [
     const TAU_RUEDA = 100;
     const REPOSO_RUEDA = 0.5;
     const ESPERA_RUEDA = 100;
+    const SELECTOR_FOCO =
+      'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
     let abierto = false;
     let y = 0;
@@ -588,9 +637,12 @@ const rutas = [
     let entradaPendienteRueda = false;
     let finRueda: number | null = null;
     let agarreActivo: HTMLElement | null = null;
+    let focoAnterior: HTMLElement | null = null;
+    let notificarApertura = (_estado: boolean) => {};
+    let carruselPausadoUsuario = false;
+    let sentidoCarrusel: 1 | -1 = 1;
+    const fondoInerte = new Map<HTMLElement, boolean>();
 
-    // Se mide una vez por gesto: remedirla en cada frame introduce saltos de
-    // algún píxel cuando el contenido reacomoda.
     let rCache = 0;
     const recorrido = () => {
       if (gesto === 'ninguno' || !rCache) rCache = panel.offsetHeight - tirador.offsetHeight;
@@ -598,8 +650,57 @@ const rutas = [
     };
     const paradas = () => (variante === 'escalones' ? [0, 0.55, 1] : [0, 1]);
     const escalaFondo = variante === 'fondo' ? 44 : 26;
-
     const goma = (exceso: number) => RESISTENCIA * (1 - 1 / (exceso / RESISTENCIA + 1));
+
+    const elementosEnfocables = () =>
+      Array.from(panel.querySelectorAll<HTMLElement>(SELECTOR_FOCO)).filter(
+        (elemento) =>
+          elemento.tabIndex >= 0 && !elemento.closest('[inert]') && elemento.getClientRects().length > 0,
+      );
+
+    const cambiarFondoInerte = (estado: boolean) => {
+      if (estado) {
+        for (const hijo of document.body.children) {
+          if (!(hijo instanceof HTMLElement) || hijo === raiz) continue;
+          fondoInerte.set(hijo, hijo.inert);
+          hijo.inert = true;
+        }
+        return;
+      }
+      for (const [hijo, eraInerte] of fondoInerte) {
+        if (hijo.isConnected) hijo.inert = eraInerte;
+      }
+      fondoInerte.clear();
+    };
+
+    const actualizarModal = (estado: boolean) => {
+      if (estado) {
+        const activo = document.activeElement;
+        focoAnterior = activo instanceof HTMLElement && !raiz.contains(activo) ? activo : tirador;
+        cuerpo.inert = false;
+        cambiarFondoInerte(true);
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        document.documentElement.setAttribute('data-cj-abierto', '');
+        etiqueta.textContent = 'Cerrar por dónde empezar';
+        window.requestAnimationFrame(() => {
+          if (abierto) tirador.focus({ preventScroll: true });
+        });
+        return;
+      }
+
+      cuerpo.inert = true;
+      panel.removeAttribute('role');
+      panel.removeAttribute('aria-modal');
+      document.documentElement.removeAttribute('data-cj-abierto');
+      etiqueta.textContent = 'Abrir por dónde empezar';
+      cambiarFondoInerte(false);
+      const destino = focoAnterior?.isConnected ? focoAnterior : tirador;
+      focoAnterior = null;
+      window.requestAnimationFrame(() => {
+        if (!abierto) destino.focus({ preventScroll: true });
+      });
+    };
 
     const moverFondo = (p: number, conTransicion: boolean) => {
       if (!lienzo) return;
@@ -607,7 +708,6 @@ const rutas = [
         conTransicion && !menosMovimiento.matches
           ? 'scale var(--cj-dur, 500ms) cubic-bezier(0.32, 0.72, 0, 1), translate var(--cj-dur, 500ms) cubic-bezier(0.32, 0.72, 0, 1)'
           : 'none';
-      // Misma proporción que Vaul: el ancho se reduce en unos píxeles fijos.
       const escala = 1 - (escalaFondo / window.innerWidth) * p;
       lienzo.style.transformOrigin = 'top center';
       lienzo.style.scale = String(escala);
@@ -653,6 +753,7 @@ const rutas = [
       detenerSuavizadoRueda();
       if (finRueda !== null) window.clearTimeout(finRueda);
       finRueda = null;
+      const estabaAbierto = abierto;
       abierto = p > 0.5;
       gesto = 'ninguno';
       raiz.removeAttribute('data-arrastrando');
@@ -662,7 +763,6 @@ const rutas = [
       velo.style.pointerEvents = abierto ? 'auto' : 'none';
       moverFondo(p, true);
       if (p === 0 || p === 1) {
-        // Sin estilos en línea el CSS recupera el mando de la transición.
         panel.style.translate = '';
         velo.style.opacity = '';
         cuerpo.style.opacity = '';
@@ -670,6 +770,10 @@ const rutas = [
         panel.style.translate = `0 ${(1 - p) * recorrido()}px`;
         velo.style.opacity = String(p);
         cuerpo.style.opacity = String(opacidadCuerpo(p));
+      }
+      if (abierto !== estabaAbierto) {
+        actualizarModal(abierto);
+        notificarApertura(abierto);
       }
     };
 
@@ -679,7 +783,6 @@ const rutas = [
     };
 
     const cerrar = () => aplicar(0);
-
     let punteroId: number | null = null;
     let arrastrando = false;
     let inicioY = 0;
@@ -701,7 +804,7 @@ const rutas = [
     const mover = (ev: PointerEvent) => {
       if (ev.pointerId !== punteroId) return;
       const dy = ev.clientY - inicioY;
-      if (!arrastrando && Math.abs(dy) < 4) return; // histéresis: evita falsos arrastres
+      if (!arrastrando && Math.abs(dy) < 4) return;
       if (!arrastrando) {
         arrastrando = true;
         gesto = 'puntero';
@@ -727,10 +830,10 @@ const rutas = [
       const velocidad = Math.abs(dy) / Math.max(performance.now() - inicioTiempo, 1);
       const p = 1 - Math.max(0, Math.min(r, y)) / r;
       const destino = soltarEn(p, velocidad, dy < 0);
-      requestAnimationFrame(() => aplicar(destino));
+      window.requestAnimationFrame(() => aplicar(destino));
     };
 
-    for (const agarre of [tirador, ...document.querySelectorAll<HTMLElement>('[data-cj-agarre]')]) {
+    for (const agarre of [tirador, ...raiz.querySelectorAll<HTMLElement>('[data-cj-agarre]')]) {
       agarre.addEventListener('pointerdown', (ev) => empezar(ev, agarre));
       agarre.addEventListener('pointermove', mover);
       agarre.addEventListener('pointerup', soltar);
@@ -751,7 +854,6 @@ const rutas = [
     const pasoRueda = (ahora: number) => {
       cuadroRueda = null;
       if (gesto !== 'rueda') return;
-
       const dt = ahora - tiempoRueda;
       tiempoRueda = ahora;
       const avance = 1 - Math.exp(-dt / TAU_RUEDA);
@@ -804,7 +906,6 @@ const rutas = [
         }
         const nuevo = objetivoRueda - ev.deltaY * RUEDA;
         if (nuevo >= r) {
-          // Cerrado del todo: se suelta la rueda para que la página vuelva a scrollear.
           objetivoRueda = r;
           cerrarGestoRueda();
           return;
@@ -821,211 +922,378 @@ const rutas = [
     velo.addEventListener('click', cerrar);
 
     document.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Escape' && abierto) {
+      if (!abierto) return;
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
         cerrar();
-        tirador.focus();
+        return;
+      }
+      if (ev.key !== 'Tab') return;
+      const enfocables = elementosEnfocables();
+      if (!enfocables.length) return;
+      const primero = enfocables[0];
+      const ultimo = enfocables.at(-1)!;
+      const activo = document.activeElement;
+      if (ev.shiftKey && (activo === primero || !panel.contains(activo))) {
+        ev.preventDefault();
+        ultimo.focus();
+      } else if (!ev.shiftKey && (activo === ultimo || !panel.contains(activo))) {
+        ev.preventDefault();
+        primero.focus();
       }
     });
 
     window.addEventListener('resize', () => {
+      rCache = 0;
       if (gesto === 'ninguno') aplicar(abierto ? 1 : 0);
     });
 
-    menosMovimiento.addEventListener('change', () => {
-      if (menosMovimiento.matches) soltarBote();
-    });
+    const visor = raiz.querySelector<HTMLElement>('[data-pr-visor]');
+    const pistaRutas = raiz.querySelector<HTMLElement>('[data-pr-pista]');
+    const controles = raiz.querySelector<HTMLElement>('[data-pr-controles]');
+    const carrusel = visor?.closest<HTMLElement>('.cj-carrusel');
+    let desmontarCarrusel = () => {};
 
-    if (!menosMovimiento.matches) {
-      const visor = document.querySelector<HTMLElement>('.pr-arranque__visor');
-      const pistaRutas = document.querySelector<HTMLElement>('.pr-arranque__rutas');
-      if (visor && pistaRutas) {
-        const GAP = 20;
-        const originales = Array.from(pistaRutas.children) as HTMLElement[];
-        const unidad = originales.length;
-        let tercio = (pistaRutas.scrollWidth + GAP) / 1;
+    const crearCarrusel = () => {
+      if (!carrusel || !visor || !pistaRutas || !controles) return () => {};
+      const abortador = new AbortController();
+      const { signal } = abortador;
+      const originales = Array.from(
+        pistaRutas.querySelectorAll<HTMLElement>('.pr-ruta:not([data-pr-copia])'),
+      );
+      const unidad = originales.length;
+      if (!unidad) return () => abortador.abort();
 
-        // Copias suficientes para cubrir el visor más el margen que consume un
-        // centrado (±1 unidad). Con menos, la cinta deja huecos en pantallas anchas.
-        const clonar = () => {
-          while (
-            pistaRutas.children.length < unidad * 12 &&
-            pistaRutas.scrollWidth < visor.clientWidth + 3 * tercio
-          ) {
-            for (const original of originales) {
-              const copia = original.cloneNode(true) as HTMLElement;
-              copia.setAttribute('aria-hidden', 'true');
-              copia.setAttribute('tabindex', '-1');
-              pistaRutas.appendChild(copia);
-            }
-          }
-        };
-        clonar();
+      const modulo = (valor: number, base: number) => ((valor % base) + base) % base;
+      const medirGrupo = () => {
+        const primera = originales[0];
+        const ultima = originales.at(-1)!;
+        const estilos = getComputedStyle(pistaRutas);
+        const separacion = Number.parseFloat(estilos.columnGap || estilos.gap) || 0;
+        return ultima.offsetLeft + ultima.offsetWidth - primera.offsetLeft + separacion;
+      };
 
-        let offset = 0;
-        let vel = tercio / 30000;
-        let quieto = true;
-        let tween: { de: number; a: number; t0: number; dur: number } | null = null;
-        let ultimo = performance.now();
-        let finCentrado = 0;
-        let sentido = 1;
-        let ultimoClickFlecha = 0;
-        let sobreVisor = false;
-        let sobreControles = false;
-        let temporizador: number | null = null;
-        window.setTimeout(() => {
-          if (!ultimoClickFlecha && !sobreVisor && !sobreControles) {
-            quieto = false;
-            ultimo = performance.now();
+      let periodo = 0;
+      const copias: HTMLElement[] = [];
+      const reconstruirCopias = () => {
+        for (const copia of copias) copia.remove();
+        copias.length = 0;
+        periodo = medirGrupo();
+        if (periodo <= 0) return;
+        const gruposNecesarios = Math.max(3, Math.ceil(visor.clientWidth / periodo) + 2);
+        for (let grupo = 0; grupo < gruposNecesarios; grupo += 1) {
+          for (const original of originales) {
+            const copia = original.cloneNode(true) as HTMLElement;
+            copia.dataset.prCopia = '';
+            copia.setAttribute('aria-hidden', 'true');
+            copia.tabIndex = -1;
+            copia.removeAttribute('href');
+            pistaRutas.appendChild(copia);
+            copias.push(copia);
           }
-        }, 1500);
-
-        const pintarCinta = () => {
-          pistaRutas.style.transform = `translateX(${-offset}px)`;
-        };
-        const centrar = (carta: HTMLElement) => {
-          quieto = true;
-          let destino = carta.offsetLeft - (visor.clientWidth - carta.offsetWidth) / 2;
-          // Círculo infinito: se elige la copia equivalente más cercana, así el
-          // recorrido es siempre corto y nunca se llega al final de la tira.
-          while (destino - offset > tercio / 2) destino -= tercio;
-          while (offset - destino > tercio / 2) destino += tercio;
-          if (destino < 0) {
-            destino += tercio;
-            offset += tercio;
-            pintarCinta();
-          }
-          tween = { de: offset, a: destino, t0: performance.now(), dur: 420 };
-        };
-        const paso = (t: number) => {
-          const dt = Math.min(t - ultimo, 64);
-          ultimo = t;
-          if (tween) {
-            const p = Math.min(1, (t - tween.t0) / tween.dur);
-            const e = 1 - Math.pow(1 - p, 3);
-            offset = tween.de + (tween.a - tween.de) * e;
-            if (p >= 1) {
-              tween = null;
-              finCentrado = t;
-            }
-            pintarCinta();
-          } else if (!quieto) {
-            offset += vel * dt * sentido;
-            pintarCinta();
-          }
-          // Con la cinta parada el offset vuelve al primer periodo: los píxeles
-          // son idénticos, así que el salto no se ve y nunca se agota la tira.
-          if (!tween) offset = ((offset % tercio) + tercio) % tercio;
-          requestAnimationFrame(paso);
-        };
-        pintarCinta();
-        requestAnimationFrame(paso);
-        window.addEventListener('resize', () => {
-          clonar();
-          vel = tercio / 30000;
-        });
-
-        const cartas = () => Array.from(pistaRutas.querySelectorAll<HTMLElement>('.pr-ruta'));
-        const desmarcar = () => {
-          for (const c of cartas()) c.classList.remove('pr-ruta--realce');
-        };
-
-        // La intención se lee del mousemove: se centra cuando el puntero VISITA
-        // una tarjeta distinta moviéndose de verdad. Si es la pista la que se
-        // desliza bajo un cursor quieto no hay mousemove, y mientras viaja el
-        // tween solo se actualiza la referencia.
-        let cartaActual: HTMLElement | null = null;
-        visor.addEventListener('mouseenter', () => {
-          sobreVisor = true;
-          quieto = true;
-        });
-        visor.addEventListener('mousemove', (ev) => {
-          const carta = (ev.target as HTMLElement | null)?.closest<HTMLElement>('.pr-ruta') ?? null;
-          if (!carta) {
-            cartaActual = null;
-            return;
-          }
-          if (tween || performance.now() - finCentrado < 300) {
-            cartaActual = carta;
-            return;
-          }
-          if (carta === cartaActual) return;
-          cartaActual = carta;
-          ultimoClickFlecha = 0;
-          desmarcar();
-          centrar(carta);
-        });
-        pistaRutas.addEventListener('focusin', (ev) => {
-          const carta = (ev.target as HTMLElement).closest<HTMLElement>('.pr-ruta');
-          if (carta) centrar(carta);
-        });
-
-        // Reanuda solo si se cumplen las tres condiciones: +5 s desde el último
-        // clic, puntero fuera de las tarjetas y fuera de las flechas.
-        const intentaReanudar = () => {
-          if (temporizador) {
-            window.clearTimeout(temporizador);
-            temporizador = null;
-          }
-          const resta = ultimoClickFlecha ? 5000 - (performance.now() - ultimoClickFlecha) : 0;
-          if (resta > 0) {
-            temporizador = window.setTimeout(intentaReanudar, resta + 50);
-            return;
-          }
-          if (sobreVisor || sobreControles) return;
-          desmarcar();
-          ultimoClickFlecha = 0;
-          quieto = false;
-          tween = null;
-          ultimo = performance.now();
-        };
-        const pasar = (delta: number) => {
-          ultimoClickFlecha = performance.now();
-          quieto = true;
-          const lista = cartas();
-          const vc = visor.getBoundingClientRect();
-          const centro = vc.left + vc.width / 2;
-          let idx = 0;
-          let dist = Infinity;
-          lista.forEach((c, i) => {
-            const r = c.getBoundingClientRect();
-            const d = Math.abs(r.left + r.width / 2 - centro);
-            if (d < dist) {
-              dist = d;
-              idx = i;
-            }
-          });
-          idx = Math.max(0, Math.min(lista.length - 1, idx + delta));
-          // Se marcan todas las instancias equivalentes: la visible queda
-          // resaltada aunque centrar() salte de copia.
-          lista.forEach((c, i) => c.classList.toggle('pr-ruta--realce', i % unidad === idx % unidad));
-          centrar(lista[idx]);
-          intentaReanudar();
-        };
-
-        const controles = document.querySelector<HTMLElement>('[data-pr-controles]');
-        if (controles) {
-          controles.addEventListener('mouseenter', () => {
-            sobreControles = true;
-            quieto = true;
-          });
-          controles.addEventListener('mouseleave', () => {
-            sobreControles = false;
-            intentaReanudar();
-          });
-          controles.querySelector('[data-pr-anterior]')?.addEventListener('click', () => pasar(-1));
-          controles.querySelector('[data-pr-siguiente]')?.addEventListener('click', () => pasar(1));
-          const btnSentido = controles.querySelector('[data-pr-sentido]');
-          btnSentido?.addEventListener('click', () => {
-            sentido = -sentido;
-            btnSentido.setAttribute('aria-pressed', sentido === -1 ? 'true' : 'false');
-          });
         }
-        visor.addEventListener('mouseleave', () => {
-          sobreVisor = false;
-          cartaActual = null;
-          intentaReanudar();
-        });
+        const equivalente = pistaRutas.children.item(unidad) as HTMLElement | null;
+        if (equivalente) periodo = equivalente.offsetLeft - originales[0].offsetLeft;
+      };
+      reconstruirCopias();
+
+      let offset = 0;
+      let transicion: { desde: number; hasta: number; inicio: number; indice: number } | null = null;
+      let cuadro: number | null = null;
+      let ultimo = performance.now();
+      let sobreCarrusel = false;
+      let inicioHasta = 0;
+      let realceHasta = 0;
+      let temporizador: number | null = null;
+      const botonPausa = controles.querySelector<HTMLButtonElement>('[data-pr-pausa]');
+      const botonSentido = controles.querySelector<HTMLButtonElement>('[data-pr-sentido]');
+
+      const cartas = () => [...originales, ...copias];
+      const pintarCinta = () => {
+        const posicion = periodo > 0 ? modulo(offset, periodo) : 0;
+        pistaRutas.style.transform = `translateX(${-posicion}px)`;
+      };
+      const pintarPausa = () => {
+        if (!botonPausa) return;
+        botonPausa.toggleAttribute('data-pausado', carruselPausadoUsuario);
+        botonPausa.setAttribute(
+          'aria-label',
+          carruselPausadoUsuario ? 'Reanudar el carrusel' : 'Pausar el carrusel',
+        );
+      };
+      const pintarSentido = () => {
+        if (!botonSentido) return;
+        botonSentido.toggleAttribute('data-invertido', sentidoCarrusel === -1);
+        botonSentido.setAttribute(
+          'aria-label',
+          sentidoCarrusel === 1
+            ? 'Cambiar el sentido hacia la derecha'
+            : 'Cambiar el sentido hacia la izquierda',
+        );
+      };
+      const desmarcar = () => {
+        for (const carta of cartas()) carta.classList.remove('pr-ruta--realce');
+      };
+      const debeReproducir = () =>
+        periodo > 0 &&
+        abierto &&
+        !document.hidden &&
+        !sobreCarrusel &&
+        !carruselPausadoUsuario &&
+        !inicioHasta &&
+        !realceHasta;
+      const solicitarCuadro = () => {
+        if (cuadro === null && (transicion || debeReproducir())) {
+          ultimo = performance.now();
+          cuadro = window.requestAnimationFrame(paso);
+        }
+      };
+      const detenerCuadro = () => {
+        if (cuadro !== null) window.cancelAnimationFrame(cuadro);
+        cuadro = null;
+      };
+      const pausarPorUsuario = () => {
+        carruselPausadoUsuario = true;
+        pintarPausa();
+        if (!transicion) detenerCuadro();
+      };
+
+      const procesarPlazos = () => {
+        if (temporizador !== null) window.clearTimeout(temporizador);
+        temporizador = null;
+        const ahora = performance.now();
+        if (inicioHasta && inicioHasta <= ahora) inicioHasta = 0;
+        if (realceHasta && realceHasta <= ahora) {
+          realceHasta = 0;
+          desmarcar();
+        }
+        const siguiente = Math.min(...[inicioHasta, realceHasta].filter((plazo) => plazo > ahora));
+        if (Number.isFinite(siguiente)) {
+          temporizador = window.setTimeout(procesarPlazos, Math.max(0, siguiente - ahora));
+        }
+        solicitarCuadro();
+      };
+
+      const desplazarA = (indice: number, direccion: number) => {
+        if (periodo <= 0) return;
+        const carta = originales[indice];
+        const posicionActual = modulo(offset, periodo);
+        const posicionCarta = modulo(
+          carta.offsetLeft - (visor.clientWidth - carta.offsetWidth) / 2,
+          periodo,
+        );
+        const diferencia =
+          direccion > 0
+            ? modulo(posicionCarta - posicionActual, periodo)
+            : -modulo(posicionActual - posicionCarta, periodo);
+        transicion = {
+          desde: posicionActual,
+          hasta: posicionActual + diferencia,
+          inicio: performance.now(),
+          indice,
+        };
+        offset = posicionActual;
+        solicitarCuadro();
+      };
+
+      const mostrarElementoEnfocado = (carta: HTMLElement) => {
+        if (periodo <= 0) return;
+        transicion = null;
+        offset = modulo(carta.offsetLeft - (visor.clientWidth - carta.offsetWidth) / 2, periodo);
+        pintarCinta();
+        detenerCuadro();
+      };
+
+      const paso = (ahora: number) => {
+        cuadro = null;
+        const dt = Math.min(ahora - ultimo, 64);
+        ultimo = ahora;
+        if (transicion) {
+          const p = Math.min(1, (ahora - transicion.inicio) / 300);
+          const suavizado = 1 - Math.pow(1 - p, 3);
+          offset = transicion.desde + (transicion.hasta - transicion.desde) * suavizado;
+          if (p >= 1) {
+            offset = modulo(offset, periodo);
+            transicion = null;
+          }
+        } else if (debeReproducir()) {
+          offset = modulo(offset + (periodo / 30000) * dt * sentidoCarrusel, periodo);
+        }
+        pintarCinta();
+        solicitarCuadro();
+      };
+
+      const pasar = (delta: number) => {
+        const lista = cartas();
+        let indiceBase = transicion?.indice;
+        if (indiceBase === undefined) {
+          const cajaVisor = visor.getBoundingClientRect();
+          const centro = cajaVisor.left + cajaVisor.width / 2;
+          let cartaActual = lista[0];
+          let distancia = Infinity;
+          for (const carta of lista) {
+            const caja = carta.getBoundingClientRect();
+            const nuevaDistancia = Math.abs(caja.left + caja.width / 2 - centro);
+            if (nuevaDistancia < distancia) {
+              distancia = nuevaDistancia;
+              cartaActual = carta;
+            }
+          }
+          indiceBase = Number(cartaActual.dataset.prIndice);
+        }
+        if (!Number.isInteger(indiceBase)) return;
+        const indiceDestino = modulo(indiceBase + delta, unidad);
+        for (const carta of lista) {
+          carta.classList.toggle(
+            'pr-ruta--realce',
+            Number(carta.dataset.prIndice) === indiceDestino,
+          );
+        }
+        realceHasta = performance.now() + 5000;
+        desplazarA(indiceDestino, delta);
+        procesarPlazos();
+      };
+
+      const cambiarApertura = (estado: boolean) => {
+        if (estado) inicioHasta = performance.now() + 1500;
+        else {
+          inicioHasta = 0;
+          transicion = null;
+          detenerCuadro();
+        }
+        procesarPlazos();
+      };
+
+      carrusel.addEventListener(
+        'mouseenter',
+        () => {
+          sobreCarrusel = true;
+          if (!transicion) detenerCuadro();
+        },
+        { signal },
+      );
+      carrusel.addEventListener(
+        'mouseleave',
+        () => {
+          sobreCarrusel = false;
+          solicitarCuadro();
+        },
+        { signal },
+      );
+      controles.addEventListener(
+        'focusin',
+        (ev) => {
+          if (
+            raiz.hasAttribute('data-entrada-teclado') &&
+            (ev.target as HTMLElement).matches(':focus-visible')
+          ) {
+            pausarPorUsuario();
+          }
+        },
+        { signal },
+      );
+      pistaRutas.addEventListener(
+        'click',
+        (ev) => {
+          const copia = (ev.target as HTMLElement).closest<HTMLElement>('[data-pr-copia]');
+          const original = originales[Number(copia?.dataset.prIndice)];
+          if (copia && original) original.click();
+        },
+        { signal },
+      );
+      pistaRutas.addEventListener(
+        'focusin',
+        (ev) => {
+          const carta = (ev.target as HTMLElement).closest<HTMLElement>('.pr-ruta:not([data-pr-copia])');
+          if (!carta) return;
+          pausarPorUsuario();
+          mostrarElementoEnfocado(carta);
+        },
+        { signal },
+      );
+      controles.addEventListener(
+        'click',
+        (ev) => {
+          const boton = (ev.target as HTMLElement).closest<HTMLButtonElement>('button');
+          if (!boton || !controles.contains(boton)) return;
+          if (boton.hasAttribute('data-pr-anterior')) return pasar(-1);
+          if (boton.hasAttribute('data-pr-siguiente')) return pasar(1);
+          if (boton.hasAttribute('data-pr-pausa')) {
+            carruselPausadoUsuario = !carruselPausadoUsuario;
+            if (!carruselPausadoUsuario) inicioHasta = 0;
+            pintarPausa();
+            procesarPlazos();
+            return;
+          }
+          if (boton.hasAttribute('data-pr-sentido')) {
+            sentidoCarrusel = sentidoCarrusel === 1 ? -1 : 1;
+            pintarSentido();
+            solicitarCuadro();
+          }
+        },
+        { signal },
+      );
+      document.addEventListener(
+        'visibilitychange',
+        () => {
+          if (document.hidden) detenerCuadro();
+          else procesarPlazos();
+        },
+        { signal },
+      );
+
+      let anchoVisor = visor.clientWidth;
+      const observadorTamano = new ResizeObserver(() => {
+        const periodoAnterior = periodo;
+        const nuevoAncho = visor.clientWidth;
+        const nuevoPeriodo = medirGrupo();
+        if (
+          nuevoPeriodo <= 0 ||
+          (Math.abs(nuevoPeriodo - periodoAnterior) < 0.5 && Math.abs(nuevoAncho - anchoVisor) < 0.5)
+        ) {
+          return;
+        }
+        const avance = periodoAnterior > 0 ? modulo(offset, periodoAnterior) / periodoAnterior : 0;
+        anchoVisor = nuevoAncho;
+        reconstruirCopias();
+        offset = avance * periodo;
+        transicion = null;
+        pintarCinta();
+      });
+      observadorTamano.observe(visor);
+
+      notificarApertura = cambiarApertura;
+      pintarPausa();
+      pintarSentido();
+      pintarCinta();
+      cambiarApertura(abierto);
+
+      return () => {
+        abortador.abort();
+        observadorTamano.disconnect();
+        detenerCuadro();
+        if (temporizador !== null) window.clearTimeout(temporizador);
+        transicion = null;
+        for (const copia of copias) copia.remove();
+        desmarcar();
+        pistaRutas.style.transform = '';
+        botonPausa?.removeAttribute('data-pausado');
+        botonSentido?.removeAttribute('data-invertido');
+        notificarApertura = () => {};
+      };
+    };
+
+    const actualizarMovimiento = () => {
+      desmontarCarrusel();
+      desmontarCarrusel = () => {};
+      if (menosMovimiento.matches) {
+        soltarBote();
+        return;
       }
-    }
+      desmontarCarrusel = crearCarrusel();
+    };
+
+    menosMovimiento.addEventListener('change', actualizarMovimiento);
+    actualizarMovimiento();
   }
 </script>

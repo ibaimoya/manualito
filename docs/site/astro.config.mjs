@@ -1,10 +1,16 @@
 import starlight from '@astrojs/starlight';
+import { unified } from '@astrojs/markdown-remark';
 import { defineConfig } from 'astro/config';
 import starlightLinksValidator from 'starlight-links-validator';
+
+import rehypeAcronimos from './src/plugins/rehype-acronimos.ts';
 
 export default defineConfig({
   site: 'https://docs.manualito.dev',
   trailingSlash: 'always',
+  markdown: {
+    processor: unified({ rehypePlugins: [rehypeAcronimos] }),
+  },
   integrations: [
     starlight({
       title: 'Manualito',

@@ -8,6 +8,8 @@ next: false
 
 ## Contexto
 
+Manualito digitaliza manuales de juegos de mesa: extrae el texto con OCR, lo indexa para RAG y un LLM local redacta la explicación. La aplicación se instala como PWA y apoya la parte de IA en la GPU. Cuando el OCR termina, las páginas quedan guardadas.
+
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere, justo vitae aliquet tincidunt, neque augue faucibus erat, vel tincidunt libero mauris sed neque. Donec vitae purus non enim convallis aliquet. Suspendisse potenti. Cras at dui eget nibh porttitor feugiat. Vivamus ullamcorper, lacus vitae pellentesque commodo, justo arcu consequat nisi, sed vulputate arcu velit sed mauris.
 
 Praesent non erat vitae sapien tristique faucibus. Curabitur interdum, augue at cursus interdum, urna sapien faucibus tellus, sit amet feugiat orci justo ut nibh. Nulla facilisi. Aliquam erat volutpat. Mauris feugiat metus vel mi sollicitudin, ac interdum risus consequat. Sed quis lacus vel neque placerat malesuada eget id sem.
@@ -15,6 +17,8 @@ Praesent non erat vitae sapien tristique faucibus. Curabitur interdum, augue at 
 Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Duis suscipit, erat sed varius tempor, nisl justo luctus metus, quis malesuada risus turpis et enim. Integer dignissim sem vel nisi tincidunt, vel vestibulum nulla consequat.
 
 ## Motivación
+
+El punto de partida fue comprobar si un LLM podía explicar reglas de juegos sin inventarlas.
 
 Fusce eget ligula sed velit vulputate dignissim. Morbi vitae feugiat odio. Aenean nec neque vitae risus fermentum vulputate. Etiam id augue a mauris blandit malesuada. Proin vitae purus non erat tempus interdum. Quisque luctus risus eu tortor vulputate, eget feugiat ligula faucibus. Nam malesuada mi non nisl porta, vitae hendrerit metus luctus.
 

@@ -423,8 +423,8 @@ const rutas = [
     color: inherit;
     cursor: pointer;
     text-decoration: none;
-    /* Propiedades independientes: la marquesina mueve la pista con transform y
-       así el hover de la tarjeta no se lo pisa. */
+    /* La marquesina mueve la pista con transform. Las propiedades independientes
+       evitan que el hover de la tarjeta lo sobrescriba. */
     transition:
       scale 200ms var(--cj-curva),
       translate 200ms var(--cj-curva),
@@ -617,7 +617,15 @@ const rutas = [
 
     document.body.appendChild(raiz);
     document.addEventListener('pointerdown', () => raiz.removeAttribute('data-entrada-teclado'), true);
-    document.addEventListener('keydown', () => raiz.setAttribute('data-entrada-teclado', ''), true);
+    // Solo Tab marca la navegación por teclado.
+    // Otras teclas no encienden el anillo de un foco alcanzado con el ratón.
+    document.addEventListener(
+      'keydown',
+      (ev) => {
+        if (ev.key === 'Tab') raiz.setAttribute('data-entrada-teclado', '');
+      },
+      true,
+    );
 
     const VELOCIDAD_DESCARTE = 0.11;
     const RESISTENCIA = 20;

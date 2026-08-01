@@ -90,7 +90,7 @@
   color-scheme: light;
 }
 
-/* En claro bg-nav coincide con el fondo de página: el cromo necesita surface. */
+/* En claro bg-nav coincide con el fondo de página. La cabecera necesita otra superficie. */
 :root[data-theme='light'] .page > header {
   border-color: var(--m-border-strong);
   background-color: color-mix(in srgb, var(--m-surface) 92%, transparent);
@@ -245,7 +245,7 @@
   gap: 1.125rem;
 }
 
-.page > header > .header > .right-group {
+.page > header .header .right-group {
   gap: 0.625rem;
 }
 
@@ -272,7 +272,7 @@
     margin-inline-end: auto;
   }
 
-  :root:not([data-has-sidebar]) .page > header > .header > .right-group {
+  :root:not([data-has-sidebar]) .page > header .header .right-group {
     display: flex;
   }
 
@@ -306,7 +306,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem) minmax(0, 1fr);
   }
 
-  .page > header > .header > .right-group {
+  .page > header > .header > .acciones-cabecera {
     justify-self: end;
   }
 

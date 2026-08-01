@@ -1,5 +1,5 @@
 ---
-import { DESTINO_PROVISIONAL, RUTA_INTRODUCCION } from '../portada-documentacion';
+import { RUTA_INTRODUCCION, RUTA_PLAN_PROYECTO } from '../portada-documentacion';
 import BandaInstitucional from './BandaInstitucional.astro';
 
 interface Props {
@@ -20,6 +20,7 @@ const rutas = [
   {
     titulo: 'Quiero conocer la metodología de trabajo',
     detalle: 'El plan de proyecto describe cuál ha sido el flujo de trabajo del proyecto.',
+    enlace: RUTA_PLAN_PROYECTO,
   },
 ];
 ---
@@ -97,12 +98,19 @@ const rutas = [
           <div class="pr-arranque__visor" data-pr-visor aria-live="off">
             <div class="pr-arranque__rutas" data-pr-pista>
               {
-                rutas.map((r, indice) => (
-                  <a class="pr-ruta" href={DESTINO_PROVISIONAL} data-pr-indice={indice}>
-                    <span class="pr-ruta__titulo">{r.titulo}</span>
-                    <span class="pr-ruta__detalle">{r.detalle}</span>
-                  </a>
-                ))
+                rutas.map((r, indice) => {
+                  const Elemento = r.enlace ? 'a' : 'article';
+                  return (
+                    <Elemento
+                      class="pr-ruta"
+                      data-pr-indice={indice}
+                      {...(r.enlace ? { href: r.enlace } : {})}
+                    >
+                      <span class="pr-ruta__titulo">{r.titulo}</span>
+                      <span class="pr-ruta__detalle">{r.detalle}</span>
+                    </Elemento>
+                  );
+                })
               }
             </div>
           </div>
@@ -421,7 +429,7 @@ const rutas = [
     background: var(--sl-color-bg-nav);
     box-shadow: inset 0 1px 0 var(--cj-alto);
     color: inherit;
-    cursor: pointer;
+    cursor: default;
     text-decoration: none;
     /* La marquesina mueve la pista con transform. Las propiedades independientes
        evitan que el hover de la tarjeta lo sobrescriba. */
@@ -431,6 +439,10 @@ const rutas = [
       border-color 200ms ease,
       background-color 200ms ease,
       box-shadow 200ms ease;
+  }
+
+  a.pr-ruta {
+    cursor: pointer;
   }
 
   :root[data-theme='light'] .pr-ruta {
@@ -476,18 +488,18 @@ const rutas = [
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .pr-ruta:hover {
+    a.pr-ruta:hover {
       scale: 1.025;
       translate: 0 -2px;
       border-color: color-mix(in srgb, var(--sl-color-accent) 60%, transparent);
       background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg-nav));
     }
 
-    .pr-ruta:hover .pr-ruta__titulo {
+    a.pr-ruta:hover .pr-ruta__titulo {
       color: var(--sl-color-text-accent);
     }
 
-    :root[data-theme='light'] .pr-ruta:hover {
+    :root[data-theme='light'] a.pr-ruta:hover {
       background: color-mix(in srgb, var(--m-primary-50) 55%, var(--m-surface));
       box-shadow:
         inset 0 1px 0 var(--cj-alto),
@@ -495,11 +507,11 @@ const rutas = [
     }
   }
 
-  .pr-ruta:active {
+  a.pr-ruta:active {
     scale: 0.995;
   }
 
-  .pr-ruta:focus-visible {
+  a.pr-ruta:focus-visible {
     outline: 2px solid var(--sl-color-text-accent);
     outline-offset: 3px;
   }
@@ -575,7 +587,7 @@ const rutas = [
       will-change: auto;
     }
 
-    .pr-ruta:hover,
+    a.pr-ruta:hover,
     .pr-ruta--realce {
       scale: 1;
       translate: none;

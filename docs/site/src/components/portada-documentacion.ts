@@ -1,5 +1,5 @@
-export const DESTINO_PROVISIONAL = '/usuarios/subir-un-manual/';
 export const RUTA_INTRODUCCION = '/memoria/introduccion/';
+export const RUTA_PLAN_PROYECTO = '/anexos/plan-de-proyecto-software/';
 
 export interface EntradaDocumento {
   indice: string;
@@ -61,6 +61,7 @@ export const anexos: EntradaDocumento[] = [
     etiqueta: 'Anexo A',
     titulo: 'Plan de proyecto',
     resumen: 'Planificación temporal y viabilidad económica y legal.',
+    enlace: RUTA_PLAN_PROYECTO,
   },
   {
     indice: 'B',

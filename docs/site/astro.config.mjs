@@ -37,8 +37,10 @@ export default defineConfig({
           items: [{ label: 'Introducción', slug: 'memoria/introduccion' }],
         },
         {
-          label: 'Usuarios',
-          items: [{ label: 'Subir un manual', slug: 'usuarios/subir-un-manual' }],
+          label: 'Anexos',
+          items: [
+            { label: 'Plan de proyecto', slug: 'anexos/plan-de-proyecto-software' },
+          ],
         },
       ],
       pagefind: true,
@@ -52,6 +54,7 @@ export default defineConfig({
       components: {
         Head: './src/components/Head.astro',
         Header: './src/components/Header.astro',
+        MarkdownContent: './src/components/MarkdownContent.astro',
         PageFrame: './src/components/PageFrame.astro',
         ThemeSelect: './src/components/ThemeSelect.astro',
       },

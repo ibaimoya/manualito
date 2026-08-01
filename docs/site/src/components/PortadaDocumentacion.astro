@@ -1,5 +1,5 @@
 ---
-import { anexos, memoria, DESTINO_PROVISIONAL } from './portada-documentacion';
+import { anexos, memoria } from './portada-documentacion';
 import CajonInicio from './portada/CajonInicio.astro';
 
 interface Props {
@@ -52,17 +52,20 @@ const { variante = 'simple' } = Astro.props;
 
       <ul class="pr-entradas" role="list">
         {
-          memoria.map((entrada) => (
-            <li class="anim">
-              <a class="pr-entrada" href={entrada.enlace ?? DESTINO_PROVISIONAL}>
-                <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
-                <span class="pr-entrada__titulo">
-                  <span class="pd-sr">{entrada.etiqueta}, </span>
-                  {entrada.titulo}
-                </span>
-              </a>
-            </li>
-          ))
+          memoria.map((entrada) => {
+            const Elemento = entrada.enlace ? 'a' : 'span';
+            return (
+              <li class="anim">
+                <Elemento class="pr-entrada" {...(entrada.enlace ? { href: entrada.enlace } : {})}>
+                  <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
+                  <span class="pr-entrada__titulo">
+                    <span class="pd-sr">{entrada.etiqueta}, </span>
+                    {entrada.titulo}
+                  </span>
+                </Elemento>
+              </li>
+            );
+          })
         }
       </ul>
     </section>
@@ -75,17 +78,20 @@ const { variante = 'simple' } = Astro.props;
 
       <ul class="pr-entradas" role="list">
         {
-          anexos.map((entrada) => (
-            <li class="anim">
-              <a class="pr-entrada" href={DESTINO_PROVISIONAL}>
-                <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
-                <span class="pr-entrada__titulo">
-                  <span class="pd-sr">{entrada.etiqueta}, </span>
-                  {entrada.titulo}
-                </span>
-              </a>
-            </li>
-          ))
+          anexos.map((entrada) => {
+            const Elemento = entrada.enlace ? 'a' : 'span';
+            return (
+              <li class="anim">
+                <Elemento class="pr-entrada" {...(entrada.enlace ? { href: entrada.enlace } : {})}>
+                  <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
+                  <span class="pr-entrada__titulo">
+                    <span class="pd-sr">{entrada.etiqueta}, </span>
+                    {entrada.titulo}
+                  </span>
+                </Elemento>
+              </li>
+            );
+          })
         }
       </ul>
     </section>
@@ -574,17 +580,17 @@ const { variante = 'simple' } = Astro.props;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    .pr-entrada:hover {
+    a.pr-entrada:hover {
       background: var(--sl-color-bg-sidebar);
     }
 
-    .pr-entrada:hover .pr-entrada__titulo,
-    .pr-entrada:hover .pr-entrada__indice {
+    a.pr-entrada:hover .pr-entrada__titulo,
+    a.pr-entrada:hover .pr-entrada__indice {
       color: var(--sl-color-text-accent);
     }
   }
 
-  .pr-entrada:focus-visible {
+  a.pr-entrada:focus-visible {
     outline: 2px solid var(--sl-color-text-accent);
     outline-offset: 2px;
     border-radius: 0.5rem;

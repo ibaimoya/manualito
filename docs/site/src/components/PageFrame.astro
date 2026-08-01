@@ -43,6 +43,7 @@ const mostrarRedimensionadores = id !== '' && hasSidebar;
 
         const pxRaiz = Number.parseFloat(getComputedStyle(raiz).fontSize) || 16;
         const anchoDisponible = innerWidth - anchoScrollbar;
+        raiz.style.setProperty('--m-ancho-disponible', `${anchoDisponible}px`);
         const maximo = Math.floor(
           Math.min(
             anchoMaximo,

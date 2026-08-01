@@ -119,6 +119,14 @@
   color: var(--m-text);
 }
 
+@media (min-width: 50rem) {
+  .sl-markdown-content.documento-academico > p {
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+}
+
 :root[data-theme='light'] .sl-link-button.primary {
   border-color: var(--m-primary-500);
   background: var(--m-primary-500);

@@ -1,5 +1,8 @@
 :root {
   --m-ancho-navegacion: 18.75rem;
+  --m-ancho-indice: 18.75rem;
+  --m-ancho-lectura-minimo: 45rem;
+  --m-ancho-lectura-maximo: 50rem;
   --m-exceso-navegacion: 0px;
 }
 
@@ -90,6 +93,18 @@
   :root[data-laterales-preparados][data-has-sidebar] {
     --sl-sidebar-width: var(--m-ancho-navegacion);
     --sl-content-inline-start: var(--m-ancho-navegacion);
+    --sl-content-width: clamp(
+      var(--m-ancho-lectura-minimo),
+      min(
+        var(--m-ancho-lectura-maximo),
+        calc(
+          var(--m-ancho-disponible) - 2 * var(--m-ancho-navegacion) - 4 *
+            var(--sl-content-pad-x)
+        ),
+        calc(var(--m-ancho-disponible) - 2 * var(--m-ancho-indice))
+      ),
+      var(--m-ancho-lectura-maximo)
+    );
   }
 
   :root[data-laterales-preparados][data-has-sidebar] .sidebar-pane {
@@ -116,13 +131,13 @@
     inset-inline-start: auto;
     inset-inline-end: 0;
     box-sizing: border-box;
-    width: 18.75rem;
+    width: var(--m-ancho-indice);
   }
 
   :root[data-laterales-preparados][data-has-toc]
     .right-sidebar-panel
     .sl-container {
-    width: calc(18.75rem - 2 * var(--sl-sidebar-pad-x));
+    width: calc(var(--m-ancho-indice) - 2 * var(--sl-sidebar-pad-x));
     max-width: none;
   }
 }

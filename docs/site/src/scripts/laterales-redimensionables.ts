@@ -134,6 +134,7 @@ export const iniciarRedimensionadoresLaterales = () => {
     const pxRaiz = Number.parseFloat(getComputedStyle(raiz).fontSize) || 16;
     anchoScrollbar = Math.max(anchoScrollbar, innerWidth - raiz.clientWidth);
     const anchoDisponible = innerWidth - anchoScrollbar;
+    raiz.style.setProperty('--m-ancho-disponible', `${anchoDisponible}px`);
     maximo = Math.floor(
       Math.min(
         ANCHO_MAXIMO,

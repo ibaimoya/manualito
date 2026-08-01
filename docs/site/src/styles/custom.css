@@ -232,36 +232,82 @@
   outline-color: var(--sl-color-text-accent);
 }
 
+.page > header .social-icons a {
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: var(--m-hit);
+  color: var(--sl-color-gray-2);
+}
+
+.page > header .social-icons {
+  gap: 1.125rem;
+}
+
+.page > header > .header > .right-group {
+  gap: 0.625rem;
+}
+
+.page > header .social-icons a:is(:hover, :focus-visible) {
+  color: var(--sl-color-white);
+}
+
+.page > header .theme-trigger {
+  gap: 0.1875rem;
+  inline-size: 2.75rem;
+}
+
+.page > header .theme-trigger__caret {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+}
+
+@media (max-width: 49.999rem) {
+  :root:not([data-has-sidebar]) .page > header > .header {
+    gap: 1.125rem;
+  }
+
+  :root:not([data-has-sidebar]) .page > header > .header > .title-wrapper {
+    margin-inline-end: auto;
+  }
+
+  :root:not([data-has-sidebar]) .page > header > .header > .right-group {
+    display: flex;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .social-icons a,
+  :root:not([data-has-sidebar]) .page > header .theme-trigger {
+    block-size: 2.5rem;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .label-icon {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .theme-menu {
+    inset-block: calc(100% + 0.5rem) auto;
+    inset-inline: auto 0;
+    transform-origin: top right;
+    translate: 0 -4px;
+  }
+}
+
+@media (max-width: 23rem) {
+  :root:not([data-has-sidebar]) .right-group starlight-theme-select,
+  :root:not([data-has-sidebar]) .right-group .social-icons::after {
+    display: none;
+  }
+}
+
 @media (min-width: 50rem) {
   .page > header > .header {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem) minmax(0, 1fr);
   }
 
   .page > header > .header > .right-group {
-    gap: 0.625rem;
     justify-self: end;
-  }
-
-  .page > header .social-icons a {
-    color: var(--sl-color-gray-2);
-  }
-
-  .page > header .social-icons a:is(:hover, :focus-visible) {
-    color: var(--sl-color-white);
-  }
-
-  .page > header .theme-trigger {
-    gap: 0.1875rem;
-    inline-size: 2.75rem;
-  }
-
-  .page > header .label-icon {
-    translate: 0 -0.5px;
-  }
-
-  .page > header .theme-trigger__caret {
-    inline-size: 0.75rem;
-    block-size: 0.75rem;
   }
 
   button[data-open-modal] {

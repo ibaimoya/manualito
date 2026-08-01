@@ -625,6 +625,7 @@ const rutas = [
     const TAU_RUEDA = 100;
     const REPOSO_RUEDA = 0.5;
     const ESPERA_RUEDA = 100;
+    const ESPERA_INICIAL_CARRUSEL = 800;
     const SELECTOR_FOCO =
       'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
@@ -1001,7 +1002,7 @@ const rutas = [
       let transicion: { desde: number; hasta: number; inicio: number; indice: number } | null = null;
       let cuadro: number | null = null;
       let ultimo = performance.now();
-      let sobreCarrusel = false;
+      let sobreVisor = false;
       let inicioHasta = 0;
       let realceHasta = 0;
       let temporizador: number | null = null;
@@ -1038,7 +1039,7 @@ const rutas = [
         periodo > 0 &&
         abierto &&
         !document.hidden &&
-        !sobreCarrusel &&
+        !sobreVisor &&
         !carruselPausadoUsuario &&
         !inicioHasta &&
         !realceHasta;
@@ -1155,7 +1156,7 @@ const rutas = [
       };
 
       const cambiarApertura = (estado: boolean) => {
-        if (estado) inicioHasta = performance.now() + 1500;
+        if (estado) inicioHasta = performance.now() + ESPERA_INICIAL_CARRUSEL;
         else {
           inicioHasta = 0;
           transicion = null;
@@ -1164,18 +1165,18 @@ const rutas = [
         procesarPlazos();
       };
 
-      carrusel.addEventListener(
+      visor.addEventListener(
         'mouseenter',
         () => {
-          sobreCarrusel = true;
+          sobreVisor = true;
           if (!transicion) detenerCuadro();
         },
         { signal },
       );
-      carrusel.addEventListener(
+      visor.addEventListener(
         'mouseleave',
         () => {
-          sobreCarrusel = false;
+          sobreVisor = false;
           solicitarCuadro();
         },
         { signal },

@@ -4,7 +4,10 @@ import { getCollection } from 'astro:content';
 
 /* Expone cada entrada de documentación bajo su misma ruta con extensión .md. */
 export async function getStaticPaths() {
-  const entradas = await getCollection('docs');
+  const entradas = await getCollection(
+    'docs',
+    ({ data }) => import.meta.env.MODE !== 'production' || !data.draft,
+  );
   return entradas
     .filter((entrada) => entrada.id !== '' && entrada.id !== 'index')
     .map((entrada) => ({ params: { ruta: entrada.id }, props: { entrada } }));

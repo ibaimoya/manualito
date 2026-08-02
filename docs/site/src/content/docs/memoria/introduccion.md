@@ -1,7 +1,8 @@
 ---
 title: Introducción
 description: Página provisional para probar la estructura, la navegación y el desplazamiento de la documentación.
-next: false
+sidebar:
+  order: 1
 ---
 
 > Este contenido es provisional. Su única finalidad es permitir comprobar la navegación y el desplazamiento de la página.

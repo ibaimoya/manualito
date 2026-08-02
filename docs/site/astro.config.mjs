@@ -31,16 +31,13 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: 'https://github.com/ibaimoya/manualito' },
       ],
       sidebar: [
-        { label: 'Inicio', link: '/' },
         {
           label: 'Memoria',
-          items: [{ label: 'Introducción', slug: 'memoria/introduccion' }],
+          items: [{ autogenerate: { directory: 'memoria' } }],
         },
         {
           label: 'Anexos',
-          items: [
-            { label: 'Plan de proyecto', slug: 'anexos/plan-de-proyecto-software' },
-          ],
+          items: [{ autogenerate: { directory: 'anexos' } }],
         },
       ],
       pagefind: true,

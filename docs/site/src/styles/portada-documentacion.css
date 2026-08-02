@@ -1,0 +1,81 @@
+/* custom.css solo ensancha las páginas con hero, y esta no lo lleva. */
+:root:has(.pd-lienzo) {
+  --sl-content-width: clamp(67.5rem, 70vw, 87.5rem);
+}
+
+/* La banda de ancho completo no debe incluir el espacio de la barra vertical. */
+main:has(.pd-lienzo) {
+  overflow-x: clip;
+}
+
+.pd-lienzo {
+  position: relative;
+  z-index: 1;
+}
+
+/* Oculto solo visualmente: es el destino del enlace de salto, no usar display:none. */
+main:has(.pd-lienzo) h1#_top {
+  position: absolute;
+  overflow: hidden;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+/* El primer panel solo lleva el h1 oculto: sin esto deja una franja vacía con filete. */
+main:has(.pd-lienzo) > .content-panel:first-of-type {
+  padding-block: 0;
+  border: 0;
+}
+
+main:has(.pd-lienzo) > .content-panel + .content-panel {
+  border-block-start: 0;
+}
+
+/* La banda de la portada llega hasta aquí, y .pd-lienzo crea contexto propio:
+   sin esto el enlace queda debajo y ni se ve ni se puede pulsar. */
+main:has(.pd-lienzo) .pagination-links {
+  position: relative;
+  z-index: 2;
+}
+
+/* Modo cajón (pd-solo): el fondo vive como último hijo de body y .main-pane
+   aísla, así que sin subir el pane entero el fondo pintaría encima del texto. */
+.main-pane:has(.pd-solo) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sin footer vacío ni padding sobrante: la portada encaja en el viewport y la
+   rueda dispara el cajón sin scroll previo. */
+main:has(.pd-solo) footer {
+  display: none;
+}
+
+main:has(.pd-solo) .content-panel {
+  padding-block-end: 0;
+}
+
+.pd-punto::after {
+  content: '.' / '';
+  margin-inline-start: 1px;
+  color: var(--m-primary-500);
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.pd-sr {
+  position: absolute;
+  overflow: hidden;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}

@@ -1,0 +1,198 @@
+:root {
+  --m-ancho-navegacion: 18.75rem;
+  --m-ancho-indice: 18.75rem;
+  --m-ancho-lateral-derecho: 0px;
+  --m-ancho-lectura-minimo: 45rem;
+  --m-ancho-lectura-maximo: 50rem;
+  --m-exceso-navegacion: 0px;
+}
+
+.redimensionadores-laterales {
+  display: none;
+}
+
+.redimensionadores-laterales::before,
+.redimensionadores-laterales::after {
+  content: '';
+  position: fixed;
+  z-index: calc(var(--sl-z-index-menu) + 1);
+  inset-block: var(--sl-nav-height) 0;
+  pointer-events: none;
+}
+
+.redimensionadores-laterales::before {
+  inset-inline-start: var(--m-ancho-navegacion);
+  width: max(0px, var(--m-exceso-navegacion));
+  background: var(--sl-color-bg-sidebar);
+}
+
+.redimensionadores-laterales::after {
+  inset-inline-start: calc(
+    var(--m-ancho-navegacion) + min(0px, var(--m-exceso-navegacion))
+  );
+  inset-inline-end: calc(100% - var(--m-ancho-navegacion));
+  background: var(--sl-color-bg);
+}
+
+/* Banda de agarre estrecha y centrada, ancha invadía el margen donde reposa el cursor. */
+.redimensionador-lateral {
+  position: fixed;
+  z-index: calc(var(--sl-z-index-menu) + 2);
+  inset-block: var(--sl-nav-height) 0;
+  inset-inline-start: calc(
+    var(--m-ancho-navegacion) + var(--m-exceso-navegacion) - 0.375rem
+  );
+  width: 0.75rem;
+  border: 0;
+  outline: 0;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.redimensionador-lateral::before,
+.redimensionador-lateral::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0.375rem;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+/* En reposo el raíl es invisible, la separación la dan los fondos de cada zona. */
+.redimensionador-lateral::before {
+  inset-block: 0;
+  width: 1px;
+  background: transparent;
+  transition: background-color 140ms ease;
+}
+
+.redimensionador-lateral::after {
+  inset-block-start: 50%;
+  width: 0.1875rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: var(--sl-color-text-accent);
+  opacity: 0;
+  scale: 1 0.65;
+  translate: -50% -50%;
+  transition:
+    opacity 140ms ease,
+    scale 180ms var(--m-ease-salida);
+}
+
+/* El asa solo se enseña arrastrando o con foco de teclado, el hover se limita al cursor. */
+.redimensionador-lateral:is(:focus-visible, [data-arrastrando])::before {
+  width: 2px;
+  background: var(--sl-color-hairline-light);
+}
+
+.redimensionador-lateral:is(:focus-visible, [data-arrastrando])::after {
+  opacity: 1;
+  scale: 1;
+}
+
+:root[data-redimensionando] {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Acoplamiento con PageFrame, TwoColumnContent y PageSidebar de Starlight 0.41.4.
+   Revisar estos selectores al actualizar Starlight. */
+@media (min-width: 90rem) and (hover: hover) and (pointer: fine) {
+  :root[data-laterales-preparados] .redimensionadores-laterales {
+    display: block;
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar] {
+    --sl-sidebar-width: var(--m-ancho-navegacion);
+    --sl-content-inline-start: var(--m-ancho-navegacion);
+    --sl-content-width: clamp(
+      var(--m-ancho-lectura-minimo),
+      calc(
+        var(--m-ancho-disponible) - 2 *
+          max(
+            var(--m-ancho-navegacion),
+            var(--m-ancho-lateral-derecho)
+          ) - 2 * var(--sl-content-pad-x)
+      ),
+      var(--m-ancho-lectura-maximo)
+    );
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar][data-has-toc] {
+    --m-ancho-lateral-derecho: var(--m-ancho-indice);
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar] .sidebar-pane {
+    border-inline-end: 0;
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar] .main-pane {
+    --sl-content-margin-inline: auto;
+
+    flex: none;
+    width: calc(100% - var(--m-ancho-lateral-derecho));
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar]
+    .main-pane
+    .content-panel {
+    padding-inline-start: calc(
+      var(--sl-content-pad-x) +
+        max(
+          0px,
+          var(--m-ancho-lateral-derecho) - var(--m-ancho-navegacion)
+        )
+    );
+    padding-inline-end: calc(
+      var(--sl-content-pad-x) +
+        max(
+          0px,
+          var(--m-ancho-navegacion) - var(--m-ancho-lateral-derecho)
+        )
+    );
+  }
+
+  :root[data-laterales-preparados][data-has-toc] .right-sidebar-container {
+    flex: none;
+    width: var(--m-ancho-lateral-derecho);
+  }
+
+  :root[data-laterales-preparados][data-has-toc] .right-sidebar {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    box-sizing: border-box;
+    width: var(--m-ancho-indice);
+  }
+
+  :root[data-laterales-preparados][data-has-toc]
+    .right-sidebar-panel
+    .sl-container {
+    width: calc(var(--m-ancho-indice) - 2 * var(--sl-sidebar-pad-x));
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .redimensionador-lateral::before,
+  .redimensionador-lateral::after {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .redimensionador-lateral::before {
+    background: CanvasText;
+  }
+
+  .redimensionador-lateral:is(:hover, :focus-visible, [data-arrastrando])::before,
+  .redimensionador-lateral::after {
+    background: Highlight;
+  }
+}
+
+@media print {
+  .redimensionadores-laterales {
+    display: none;
+  }
+}

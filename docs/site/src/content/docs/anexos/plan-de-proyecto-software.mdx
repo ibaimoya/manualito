@@ -1,0 +1,528 @@
+---
+title: Plan de Proyecto Software
+description: La fase de planificación es una de las más críticas de cualquier proyecto software.
+sidebar:
+  order: 1
+---
+
+import Figura from '../../../components/Figura.astro';
+import demoFrontendSprint4 from '../../../assets/anexos/plan-proyecto/DemoFrontendSprint4.png';
+import sprint0 from '../../../assets/anexos/plan-proyecto/Sprint0.png';
+import sprint1 from '../../../assets/anexos/plan-proyecto/Sprint1.png';
+import sprint2 from '../../../assets/anexos/plan-proyecto/Sprint2.png';
+import sprint3 from '../../../assets/anexos/plan-proyecto/Sprint3.png';
+import sprint4 from '../../../assets/anexos/plan-proyecto/Sprint4.png';
+import sprint5 from '../../../assets/anexos/plan-proyecto/Sprint5.png';
+import sprint6 from '../../../assets/anexos/plan-proyecto/Sprint6.png';
+
+## Introducción
+
+La fase de planificación es una de las más críticas de cualquier proyecto
+software. En ella se estima el trabajo, el tiempo y el coste que puede
+suponer su realización, para lo cual es necesario analizar con detalle cada
+una de las partes que lo componen. Además de permitir estimar los recursos
+necesarios, este análisis facilita y agiliza la toma de decisiones en las
+etapas futuras del desarrollo.
+
+Normalmente, la planificación de un proyecto se separa en dos partes:
+
+- A la parte que organiza el trabajo a lo largo del tiempo se le denomina **planificación temporal**.
+- A la parte que evalúa si el proyecto es realista y factible se le denomina **estudio de viabilidad**.
+
+En la planificación temporal se elabora un programa de tiempos en el que se
+estima la duración de cada tarea del proyecto. Además, se fijan una **fecha
+de inicio**, una **fecha de finalización estimada**, que se suele fijar
+algo antes de la fecha límite para congelar el desarrollo de nuevas
+funcionalidades y poner como objetivo probar el producto y detectar errores y,
+por último, la **fecha límite**, que coincide con la fecha pactada con el
+cliente para entregar el producto finalizado de acuerdo con los requisitos
+indicados por este.
+
+A la hora de estimar tiempos es importante no solo basarse en experiencias
+previas con tareas similares, sino también tener en cuenta que ciertas
+tareas pueden estar en una situación de bloqueo hasta que otras terminen.
+
+Por otra parte, el estudio de viabilidad determina si completar el proyecto,
+tanto a nivel legal, como dentro de los plazos establecidos con ciertos límites económicos es algo
+realista, por lo tanto, se divide en dos apartados:
+
+- La parte que estima los costes que conlleva desarrollar el proyecto y sus posibles beneficios se conoce como **viabilidad económica**.
+- La parte que analiza los apartados legales que pudiesen reportar conflictos, como por ejemplo las licencias de las diferentes herramientas que se van a usar, se conoce como **viabilidad legal**.
+
+## Planificación temporal
+
+Para la planificación temporal se ha seguido una **metodología ágil**
+adaptada a las características y necesidades del proyecto. El desarrollo
+se ha dividido en iteraciones, denominadas *Sprints*. Cada una de
+ellas se estructuraba en torno a una reunión de equipo en la que se exponían
+**los puntos tratados** durante dicha iteración, **los problemas**
+que habían surgido a raíz del desarrollo de las tareas y, por último,
+**los objetivos previstos** de cara al cierre de la siguiente iteración.
+
+La duración de cada *Sprint* ha sido de **2 semanas**, salvo en
+algunas iteraciones concretas, en las que surgieron imprevistos.
+
+Para organizar las tareas propuestas en cada *Sprint* se ha usado un
+***tablero Kanban*** en el que se iba marcando cuando se estaba
+trabajando en una tarea o cuando se podía dar por finalizada.
+
+Adicionalmente, se ha hecho uso de ***diagramas de burndown***,
+basados en los registros de tiempos, para seguir el progreso de cada
+*Sprint*, comparando el trabajo restante con el estimado para comprobar
+si se avanzaba al ritmo previsto.
+**[PENDIENTE: Preparar los diagramas de burndown]**
+
+En los siguientes apartados se detalla cada uno de los *Sprints* por
+separado.
+
+### Sprint 0: Planteamiento inicial e investigación
+
+**Duración:** del 26 de febrero al 12 de marzo de 2026.
+Este *Sprint* dio comienzo oficialmente al proyecto, aunque es cierto
+que se realizó un estudio de viabilidad mínimo previo a este proyecto. En la
+reunión inicial se explicó la idea más a fondo y se debatió qué dirección se
+quería que tomase el proyecto desde el principio. Por tanto, este *Sprint*
+se centró en investigar y recopilar información útil para asentar una buena base
+y en empezar a montar el principio del *pipeline*, comenzando por el
+**reconocimiento óptico de caracteres** (OCR, del inglés *Optical Character
+Recognition*).
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [1](#fig-sprint0).
+
+<Figura id="fig-sprint0" src={sprint0} alt="Tablero del Sprint 0">
+  Tablero del Sprint 0.
+</Figura>
+
+Se emplearon 13 horas y media de las 17 estimadas, y se completaron todas las
+tareas previstas.
+
+### Sprint 1: Arquitectura base, CI y módulo OCR
+
+**Duración:** del 12 de marzo al 26 de marzo de 2026.
+Con una idea más asentada acerca de la dirección del proyecto, este *Sprint*
+se centró en configurar el repositorio y su **integración continua** (CI, del
+inglés *Continuous Integration*). Además, se creó una base de
+arquitectura sobre la que empezar a desarrollar las funcionalidades.
+Por otro lado, se investigaron y probaron diferentes opciones de OCR, de
+**generación aumentada por recuperación**
+(RAG, del inglés *Retrieval-Augmented Generation*)
+y de **grandes modelos de lenguaje**
+(LLM, del inglés *Large Language Model*).
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [2](#fig-sprint1).
+
+<Figura id="fig-sprint1" src={sprint1} alt="Tablero del Sprint 1">
+  Tablero del Sprint 1.
+</Figura>
+
+Se emplearon 24 horas de las 24 estimadas, y se completaron todas las
+tareas previstas.
+
+### Sprint 2: Migración a microservicios, RAG y LLM
+
+**Duración:** del 26 de marzo al 16 de abril de 2026.
+Este *Sprint* se centró en pulir la estructura base del proyecto
+y migrar la arquitectura monolítica a una arquitectura de
+microservicios, en la que se planteó mover cada elemento lo
+suficientemente grande, como por ejemplo, el LLM o el OCR,
+a su propio módulo en el que poder modificarse o instalar dependencias
+sin afectar al resto del sistema [[1](https://martinfowler.com/articles/microservices.html)].
+Adicionalmente, se hizo uso de esta nueva arquitectura para montar la
+primera versión del *pipeline*, conectando el RAG con el LLM.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [3](#fig-sprint2).
+
+<Figura id="fig-sprint2" src={sprint2} alt="Tablero del Sprint 2">
+  Tablero del Sprint 2.
+</Figura>
+
+Se emplearon 28 horas frente a las 20 estimadas, y se completaron todas las
+tareas previstas.
+
+### Sprint 3: Estabilización y optimización del motor de IA
+
+**Duración:** del 16 de abril al 23 de abril de 2026.
+
+Este *Sprint* se centró en mejorar la estabilidad y optimizar el motor de
+IA de la aplicación, formado por el RAG y el LLM. Para ello, se
+establecieron una serie de requisitos y se siguió un enfoque de desarrollo guiado
+por pruebas (TDD, del inglés *Test-Driven Development*) [[2](https://agilealliance.org/glossary/tdd/)],
+con el objetivo de validar el comportamiento esperado de dichos módulos.
+
+Por otro lado, se hizo un análisis del estado del arte de **modelos de
+síntesis de voz** (TTS, del inglés *Text-To-Speech*) y un
+estudio de viabilidad mínimo, sobre todo de cara a las limitaciones a nivel de
+*hardware* disponible.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [4](#fig-sprint3).
+
+<Figura id="fig-sprint3" src={sprint3} alt="Tablero del Sprint 3">
+  Tablero del Sprint 3.
+</Figura>
+
+Se emplearon 15 horas frente a las 12 estimadas, y se completaron todas las
+tareas previstas.
+
+### Sprint 4: Creación de un frontend básico funcional
+
+**Duración:** del 23 de abril al 12 de mayo de 2026.
+
+Este *Sprint* se centró en refactorizar el *backend*, aplicando
+patrones de diseño y buenas prácticas. Por ejemplo, se emplearon patrones como ***Strategy*** y ***Factory*** [3]. El
+primero sirve para encapsular los distintos motores de OCR tras una interfaz
+común e intercambiarlos sin afectar al resto del sistema, y el segundo para
+instanciar el motor adecuado según la configuración.
+
+Por otro lado, se implementaron en el flujo de CI herramientas como
+***Ruff*** [[4](https://docs.astral.sh/ruff/)] para mejorar la calidad del código.
+
+Sobre esa base, se conectó una interfaz sencilla en HTML (del inglés
+*HyperText Markup Language*) con la que disponer de una demo y probar el *pipeline* de **extremo a
+extremo** (E2E, del inglés *End-to-End*).
+
+La primera interfaz web de demostración se muestra en la figura [5](#fig-demofrontendsprint4).
+
+<Figura
+  id="fig-demofrontendsprint4"
+  src={demoFrontendSprint4}
+  alt="Interfaz web de demostración desarrollada para probar el pipeline de extremo a extremo"
+>
+  Interfaz web de demostración desarrollada para probar el *pipeline* de extremo a extremo.
+</Figura>
+
+En la reunión se debatió acerca del estudio de viabilidad del módulo de TTS
+y, finalmente, se decidió dejarlo fuera debido a las limitaciones de
+*hardware* y a la complejidad y la pérdida de calidad en
+la experiencia de usuario que supondría un sistema de carga y descarga de modelos
+para gestionar los recursos.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [6](#fig-sprint4).
+
+<Figura id="fig-sprint4" src={sprint4} alt="Tablero del Sprint 4">
+  Tablero del Sprint 4.
+</Figura>
+
+Se emplearon 20 horas y 40 minutos frente a las 20 estimadas, y se
+completaron todas las tareas previstas.
+
+### Sprint 5: Refinamiento del backend y diseño del frontend
+
+**Duración:** del 12 de mayo al 26 de mayo de 2026.
+
+Este *Sprint* se centró principalmente en desarrollar la primera versión de
+una **aplicación web progresiva** (PWA, del inglés
+*Progressive Web App*) y sentar las bases para mejorarla en
+futuras iteraciones [[5](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)].
+
+Adicionalmente, como resultado de haber realizado la demo, se observó que, pese a
+que el motor ***PaddleOCR*** [[6](https://arxiv.org/abs/2507.05595)] que se estaba
+utilizando era muy fiable en cuanto a los resultados, era considerablemente lento. Además,
+su variante adaptada para la ***Unidad de Procesamiento Gráfico***
+(GPU, del inglés Graphics Processing Unit), con la que se reducía el
+problema de rendimiento, es muy dependiente de las versiones de CUDA (del inglés
+*Compute Unified Device Architecture*), *PaddlePaddle* y de los
+*drivers* de la GPU [[7](https://www.paddlepaddle.org.cn/documentation/docs/en/install/index_en.html)]. Por motivos de compatibilidad,
+se decidió añadir el motor OCR ***Tesseract*** [[8](https://tesseract-ocr.github.io/tessdoc/Installation.html)] como
+opción por defecto y haciendo uso de los patrones de diseño aplicados que permiten tener
+varias opciones configurables [3], tras haber sido el mejor motor en promedio
+en las medidas tomadas en los *benchmarks* realizados.
+**[PENDIENTE: ligar a los benchmarks cuando se suban y mirar si en otros sitios renta]**
+**[PENDIENTE: valorar si vale la pena meter foto de la primera version del pwa]**
+
+Por último, se implementó *SonarQube* [[9](https://docs.sonarsource.com/sonarqube-server/analyzing-source-code/ci-integration)] como un paso más de
+CI con el objetivo de
+reducir *code smells* [[10](https://docs.sonarsource.com/sonarqube-server/2026.2/user-guide/code-metrics/metrics-definition)] y malas prácticas en el código.
+Utilizando esta nueva herramienta, en este mismo *Sprint* se aprovechó para
+corregir la **deuda técnica** [[10](https://docs.sonarsource.com/sonarqube-server/2026.2/user-guide/code-metrics/metrics-definition)] detectada por
+*SonarQube*.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [7](#fig-sprint5).
+
+<Figura id="fig-sprint5" src={sprint5} alt="Tablero del Sprint 5">
+  Tablero del Sprint 5.
+</Figura>
+
+Se emplearon 81 horas y 7 minutos frente a las 58 estimadas, y se
+completaron todas las tareas previstas.
+
+### Sprint 6: Finalización del MVP
+
+**Duración:** del 26 de mayo al 13 de junio de 2026.
+
+Este *Sprint* se centró en montar ***una base de datos relacional en
+PostgreSQL*** [[11](https://www.postgresql.org/about/)], sobre la que almacenar manuales, *assets*,
+conversaciones, etc.
+
+La parte más importante de este paso se encontraba en crear un **sistema de usuarios**,
+haciendo especial énfasis en su **seguridad** teniendo en cuenta apartados
+como **la gestión de sesiones** [[12](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)], o la **protección
+contra falsificación de peticiones entre sitios web** (CSRF, del inglés *Cross-Site
+Request Forgery*) [[13](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)] entre otros.
+**[PENDIENTE: poner que se amplia la info de esto donde se amplie la info de esto]**
+
+Al mismo tiempo, se puso como objetivo mejorar el *frontend* y la experiencia de
+usuario mediante iteraciones hasta llegar a tener un **producto mínimo viable**
+(MVP, del inglés *Minimum Viable Product*) [[14](https://agilealliance.org/glossary/mvp/)], incluyendo
+apartados como el rendimiento, la flexibilidad y la robustez, tal como se puede ver en el
+desglose de tareas al ampliar la cantidad de *assets* y formatos soportados o al reducir
+el tamaño y tiempo de construcción de las imágenes *Docker*.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura [8](#fig-sprint6).
+
+<Figura id="fig-sprint6" src={sprint6} alt="Tablero del Sprint 6">
+  Tablero del Sprint 6.
+</Figura>
+
+Se emplearon 151 horas y 40 minutos frente a las 77 estimadas, y se
+completaron todas las tareas previstas.
+**[PENDIENTE: No se completaron todas]**
+
+### Sprint 7: **[PENDIENTE: Acabar Sprint 7 cuando se acerque el final]**
+
+**Duración:** del 13 de junio al 30 de junio de 2026.
+
+**[PENDIENTE: Tiempo dedicado a los distintos tipos de tareas]**
+
+## Estudio de viabilidad
+
+Una vez planificado el trabajo en el tiempo, queda comprobar que el proyecto
+se puede realizar. Para ello se analizan los dos apartados que mencionados
+anteriormente: la **viabilidad económica**, que estima los costes de
+desarrollo y los contrasta con los beneficios esperables, y la **viabilidad
+legal**, que revisa las licencias de las herramientas empleadas y el cumplimiento
+normativo aplicable.
+
+### Viabilidad económica
+
+En este apartado se estiman los **costes de desarrollo** del proyecto y los
+**posibles beneficios** que se obtendrían en caso de comercializar la
+aplicación.
+**[PENDIENTE: revisar coherencia del párrafo anterior]**
+
+Es importante remarcar que al haberse realizado el proyecto bajo una perspectiva
+académica y no empresarial ni comercial, todos los siguientes análisis son
+estimaciones, aunque se ha intentado que fuesen lo más realistas
+posible.
+
+#### Costes
+
+A continuación, se presentan los costes que se hubieran generado a raíz del
+desarrollo de la aplicación.
+
+**Costes de personal**
+Como **costes de personal** se considera el salario de un
+único desarrollador de perfil junior, empleado a tiempo
+completo durante cinco meses. Dicho periodo incluye la fase de investigación y planteamiento previa al inicio de los *Sprints* y la redacción final de la memoria y documentación técnica.
+
+Además, se toma como referencia el **Salario Mínimo
+Interprofesional** vigente en 2026 [[15](https://www.boe.es/buscar/act.php?id=BOE-A-2026-3815)], sobre el que
+se aplica la **cotización empresarial a la Seguridad Social** para obtener
+el coste real para la empresa.
+
+Respecto a este último punto, dicha cotización se ha calculado con
+los tipos vigentes en 2026, que en total suponen un 30.65 %.
+Este porcentaje se compone de las contingencias comunes (23.60 %), el desempleo para contrato indefinido (5.50 %),
+el Mecanismo de Equidad Intergeneracional (0.75 %), el Fondo
+de Garantía Salarial (0.20 %) y la formación profesional
+(0.60 %) [[16](https://www.boe.es/eli/es/o/2026/03/30/pjc297)]. No se incluye la
+cotización por accidentes de trabajo y enfermedades profesionales, ya que
+depende de la actividad concreta de la empresa.
+
+Con estos datos, el desglose de los costes de personal queda recogido en la
+tabla [1](#tabla-costes-personal).
+
+<a id="tabla-costes-personal"></a>
+
+Costes de personal.
+
+| **Concepto** | **Coste (€)** |
+| --- | --- |
+| Salario bruto anual | 17094.00 |
+| Cotización empresarial (30.65 %) | 5239.31 |
+| Coste empresarial anual | 22333.31 |
+| Coste empresarial mensual | 1861.11 |
+| **Total (5 meses)** | **9305.55** |
+
+Esta estimación se basa en una jornada completa estándar, sin contemplar horas
+extraordinarias ni complementos salariales.
+
+**Costes de componentes hardware**
+
+ El siguiente paso es revisar todos los gastos derivados de componentes *hardware*
+ que se necesitan para desarrollar y probar un producto *software* de este tipo. En
+ este caso es especialmente relevante, ya que a la hora de tratar con modelos IA
+ como los LLM se necesitan ciertas capacidades de computación que idealmente se
+ obtienen de una GPU que cuente con la suficiente potencia.
+
+A continuación se desglosan los componentes y costes asociados que podría tener un equipo
+con la potencia necesaria [2](#tabla-costes-hardware).
+
+<a id="tabla-costes-hardware"></a>
+
+Costes de componentes hardware.
+
+| **Componente** | **Precio (€)** | **Amortizado (€)** |
+| --- | --- | --- |
+| Procesador AMD Ryzen 5 7600 | 174.90 | 18.22 |
+| GPU NVIDIA RTX 4070 Super | 639.90 | 66.66 |
+| Memoria RAM 32 GB DDR5 | 184.98 | 19.27 |
+| Placa base AM5 (B850) | 129.90 | 13.53 |
+| SSD NVMe PCIe 4.0 1 TB | 154.95 | 16.14 |
+| Fuente 750 W 80+ Gold | 112.99 | 11.77 |
+| Disipador por aire AM5 | 21.95 | 2.29 |
+| Caja ATX | 79.90 | 8.32 |
+| **Total** | **1499.47** | **156.20** |
+
+Los precios se han consultado en PcComponentes a fecha de 20 de junio de 2026  [[17](https://www.pccomponentes.com/amd-ryzen-5-7600-38-51-ghz-box), [18](https://www.pccomponentes.com/zotac-gaming-geforce-rtx-4070-super-twin-edge-12gb-gddr6x-dlss3), [19](https://www.pccomponentes.com/kingston-fury-beast-ddr5-6000mhz-32gb-2x16gb-cl30), [20](https://www.pccomponentes.com/placa-base-msi-pro-b850-s-wifi6e-atx-am5-pro-ddr5-m-2-dual-lan-rgb), [21](https://www.pccomponentes.com/disco-duro-kingston-nv3-1tb-disco-ssd-6000mb-s-nvme-pcie-4-0-m-2-gen4-2280-3d-nand), [22](https://www.pccomponentes.com/msi-mag-a750gl-pcie5-750w-80-plus-gold-modular), [23](https://www.pccomponentes.com/cooler-master-hyper-212-black-am5-ventilador-cpu-120mm-negro), [24](https://www.pccomponentes.com/torre-pc-corsair-3000d-airflow-cristal-templado-usb-3-0-negra)].
+
+Respecto a la amortización, se ha calculado de forma lineal, suponiendo una vida útil de
+48 meses conforme a las tablas oficiales de amortización [[17](https://www.boe.es/buscar/act.php?id=BOE-A-2014-12328)], y
+teniendo en cuenta que el equipo se ha usado durante 5 meses. Por tanto, para cada
+componente el coste imputado al proyecto se obtiene como:
+
+  Coste amortizado = Precio ×
+  (meses de uso / vida útil en meses)
+  = Precio × (5 / 48).
+
+**Costes de licencias software**
+
+Otro punto importante es revisar los gastos en licencias de programas, si bien la
+gran mayoría de *software* utilizado es de código abierto (OSS, del
+inglés *Open Source Software*), el desarrollo y las pruebas
+se han realizado sobre *Windows*, lo que requiere una licencia de
+*Windows 11 Pro* [[26](https://www.microsoft.com/es-es/d/windows-11-pro/dg7gmgf0d8h4)].
+
+Los precios de las licencias de *software* se desglosan en la siguiente
+tabla [3](#tabla-costes-software).
+
+<a id="tabla-costes-software"></a>
+
+Costes de las licencias software.
+
+| **Software** | **Precio (€)** | **Amortizado (€)** |
+| --- | --- | --- |
+| Windows 11 Pro | 259.00 | 35.97 |
+| **Total** | **259.00** | **35.97** |
+
+La amortización se calcula igual que en el apartado anterior, con la diferencia
+de que las tablas oficiales [[17](https://www.boe.es/buscar/act.php?id=BOE-A-2014-12328)] asignan a los programas
+informáticos una vida útil de 36 meses en lugar de los 48 del
+*hardware*.
+
+**Otros costes**
+Por último, se agrupan en este apartado los gastos que no corresponden a personal,
+equipo ni licencias. El más significativo es el consumo eléctrico del equipo, que en este
+proyecto cobra cierta relevancia por el uso de la GPU al ejecutar los
+modelos. Suponiendo una potencia media aproximada de 250 W, las
+334 horas de trabajo registradas y un precio de la electricidad en torno a
+0.15 €/kWh [[27](https://www.ocu.org/vivienda-y-energia/gas-luz/informe/precio-luz)], el coste estimado ronda los 12.53 €.
+
+También se ha tenido en cuenta la conexión a internet, empleada durante todo el
+desarrollo. Partiendo de una cuota de fibra de unos 30 € mensuales [[28](https://www.jazztel.com/ofertas-fibra/fibra-1gb)]
+a lo largo de los cinco meses, e imputando al proyecto un 30 % del uso
+al tratarse de una conexión compartida con el uso personal, el coste estimado asciende a
+unos 45 €.
+
+Por último, se incluyen la impresión y encuadernación de la memoria, estimadas en
+50 €, y el registro de un dominio web para el despliegue de la aplicación,
+en torno a 12 € anuales.
+
+**[PENDIENTE: Actualizar parte del dominio cuando se compre]**
+
+Todo esto se desglosa en la tabla [4](#tabla-otros-costes).
+
+<a id="tabla-otros-costes"></a>
+
+Otros costes.
+
+| **Concepto** | **Coste (€)** |
+| --- | --- |
+| Consumo eléctrico | 12.53 |
+| Conexión a internet | 45.00 |
+| Impresión y encuadernación de la memoria | 50.00 |
+| Dominio web | 12.00 |
+| **Total** | **119.53** |
+
+**Costes operativos**
+Además de los costes de desarrollo estimados anteriormente, un futuro
+despliegue de la aplicación tendría asociados costes operativos mensuales.
+Estos costes dependerían principalmente del uso real: número de usuarios
+activos, mensajes procesados, modelo LLM, almacenamiento de manuales y *assets* e infraestructura de despliegue.
+
+Por este motivo, no se fija una cifra cerrada para dichos costes en esta fase del
+proyecto. Al depender directamente del uso real de la aplicación, deberían
+estimarse mediante pruebas de carga y métricas de uso antes de un despliegue
+real.
+
+Hay que tener en cuenta que estos costes condicionarían tanto los límites de uso
+de cada plan como el precio final de las suscripciones.
+
+**Coste efectivo del proyecto**
+Una vez estimados los costes de personal, *hardware*, *software* y
+otros gastos asociados, se obtiene el coste imputado al desarrollo del proyecto.
+En este cálculo no se incluye el coste completo de adquisición del equipo, sino
+únicamente la parte amortizada correspondiente a los cinco meses de desarrollo,
+ya que dicho equipo podría seguir utilizándose una vez finalizado el proyecto.
+
+El total de coste imputado al proyecto se desglosa en la
+tabla [5](#tabla-coste-imputado-proyecto).
+
+<a id="tabla-coste-imputado-proyecto"></a>
+
+Coste imputado al proyecto.
+
+| **Concepto** | **Coste (€)** |
+| --- | --- |
+| Costes de personal | 9305.55 |
+| Costes de hardware | 156.20 |
+| Costes de software | 35.97 |
+| Otros costes | 119.53 |
+| **Total** | **9617.25** |
+
+Con este dato, ya podemos estimar los beneficios que podemos obtener con el producto.
+
+#### Beneficios
+
+Esta aplicación **no está pensada para ser comercializada**, principalmente porque su
+código fuente ha sido publicado y, adicionalmente, se han detallado los mecanismos de seguridad
+que se usan en ella. Por este motivo, sería imprudente, no solo comercializar la aplicación
+a corto plazo, sino incluso desplegarla fuera del contexto académico con el objetivo de
+utilizar datos reales de usuarios.
+
+Dicho esto y una vez se han comprendido los riesgos, sí que se podría llegar a comercializar
+la aplicación en una segunda fase, tras haber cambiado y mejorado los sistemas actuales de
+seguridad para corregir vulnerabilidades y tras haber pasado las auditorías de seguridad
+necesarias.
+
+En este caso, se distribuiría bajo un modelo de ***software* como servicio**
+(SaaS, del inglés *Software as a Service*) [[29](https://doi.org/10.6028/NIST.SP.800-145)] en el que se ofrecerían planes tanto para acceder a mejores modelos LLM, como para aumentar
+los límites de mensajes diarios por cuenta. En cualquier caso, los datos y *assets* se
+guardarían en la nube.
+
+Si se llegase a comercializar se plantearían tres tipos de suscripciones mensuales detallados
+en la tabla [6](#tabla-suscripciones).
+
+<a id="tabla-suscripciones"></a>
+
+Planes de suscripción.
+
+|  | **Aprendiz** | **Estratega** | **Gran Maestro** |
+| --- | --- | --- | --- |
+| Precio mensual | Gratis | 4.99 € | 9.99 € |
+| Juegos patrocinados | Sí | No | No |
+| Modelo LLM | granite3.3:2b | gemma4:e4b | gemma4:e4b |
+| Mensajes diarios | 20 | 200 | Ilimitados |
+| Manuales | 5 | 50 | Ilimitados |
+| Almacenamiento | 100 MB | 2 GB | 20 GB |
+| Soporte | Comunidad | Correo | Prioritario |
+
+### Viabilidad legal
+
+**[PENDIENTE: falta entera]**

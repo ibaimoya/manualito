@@ -1,0 +1,89 @@
+---
+import StarlightPageFrame from '@astrojs/starlight/components/PageFrame.astro';
+
+import {
+  ANCHO_CONTENIDO_REM,
+  ANCHO_MAXIMO,
+  ANCHO_MINIMO,
+  CLAVE_ANCHO,
+  CONSULTA_ESCRITORIO,
+  MARGEN_CONTENIDO,
+  RANGO_REDIMENSIONABLE_MINIMO,
+} from '../scripts/configuracion-laterales';
+import Acronimos from './Acronimos.astro';
+import RedimensionadoresLaterales from './RedimensionadoresLaterales.astro';
+
+const { hasSidebar, id } = Astro.locals.starlightRoute;
+const mostrarRedimensionadores = id !== '' && hasSidebar;
+---
+
+{
+  mostrarRedimensionadores && (
+    <script
+      is:inline
+      define:vars={{
+        anchoContenidoRem: ANCHO_CONTENIDO_REM,
+        anchoMaximo: ANCHO_MAXIMO,
+        anchoMinimo: ANCHO_MINIMO,
+        claveAncho: CLAVE_ANCHO,
+        consultaEscritorio: CONSULTA_ESCRITORIO,
+        margenContenido: MARGEN_CONTENIDO,
+        rangoRedimensionableMinimo: RANGO_REDIMENSIONABLE_MINIMO,
+      }}
+    >
+      const raiz = document.documentElement;
+
+      if (matchMedia(consultaEscritorio).matches) {
+        const medidor = document.createElement('div');
+        medidor.style.cssText =
+          'position:absolute;visibility:hidden;overflow:scroll;width:100px;height:100px';
+        document.body.append(medidor);
+        const anchoScrollbar = medidor.offsetWidth - medidor.clientWidth;
+        medidor.remove();
+
+        const pxRaiz = Number.parseFloat(getComputedStyle(raiz).fontSize) || 16;
+        const anchoDisponible = innerWidth - anchoScrollbar;
+        raiz.style.setProperty('--m-ancho-disponible', `${anchoDisponible}px`);
+        const maximo = Math.floor(
+          Math.min(
+            anchoMaximo,
+            (anchoDisponible - anchoContenidoRem * pxRaiz) / 2 - margenContenido,
+          ),
+        );
+
+        if (maximo - anchoMinimo >= rangoRedimensionableMinimo) {
+          raiz.setAttribute('data-laterales-preparados', '');
+          try {
+            const guardado = Number.parseFloat(localStorage.getItem(claveAncho) ?? '');
+            if (Number.isFinite(guardado)) {
+              const ancho = Math.min(Math.max(guardado, anchoMinimo), maximo);
+              raiz.style.setProperty('--m-ancho-navegacion', `${ancho}px`);
+            }
+          } catch {}
+        }
+      }
+    </script>
+  )
+}
+
+<script is:inline>
+  // Las transiciones de la sidebar se habilitan cuando la carga ya pinta estable.
+  addEventListener('load', () => {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document.documentElement.setAttribute('data-transiciones-listas', ''),
+      ),
+    );
+  });
+</script>
+
+<!-- Se envuelve el componente oficial para añadir el tirador sin copiar su estructura. -->
+<StarlightPageFrame>
+  <slot name="header" slot="header" />
+  <slot name="sidebar" slot="sidebar" />
+  <slot />
+</StarlightPageFrame>
+
+{mostrarRedimensionadores && <RedimensionadoresLaterales />}
+
+<Acronimos />

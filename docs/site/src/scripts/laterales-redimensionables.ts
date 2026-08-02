@@ -123,6 +123,8 @@ export const iniciarRedimensionadoresLaterales = () => {
     if (tirador.hasPointerCapture(anterior.puntero)) {
       tirador.releasePointerCapture(anterior.puntero);
     }
+    // El focus programático del agarre queda como focus-visible y dejaría la pastilla encendida.
+    if (document.activeElement === tirador) tirador.blur();
   };
 
   const actualizarEntorno = () => {
@@ -209,6 +211,13 @@ export const iniciarRedimensionadoresLaterales = () => {
   resize(actualizarEntorno);
   escritorio.addEventListener('change', actualizarEntorno);
   menosMovimiento.addEventListener('change', () => exceso.jump(0));
+  // Con la pestaña oculta el muelle se congela y la franja elástica quedaría pintada.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !arrastre) {
+      rebote?.stop();
+      exceso.jump(0);
+    }
+  });
   addEventListener('blur', () => terminar(true));
   addEventListener('pageshow', actualizarEntorno);
   actualizarEntorno();

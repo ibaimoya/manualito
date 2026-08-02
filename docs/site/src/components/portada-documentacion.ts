@@ -89,7 +89,7 @@ export const anexos: EntradaDocumento[] = [
   {
     indice: 'F',
     etiqueta: 'Anexo F',
-    titulo: 'Anexo de sostenibilización curricular',
+    titulo: 'Sostenibilización curricular',
     enlace: rutaBorrador('/anexos/anexo-de-sostenibilizacion-curricular/'),
   },
 ];

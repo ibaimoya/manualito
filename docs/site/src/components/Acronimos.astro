@@ -8,9 +8,9 @@
   const RETRASO_SALIDA = 80;
   const DURACION_SALIDA = 140;
   const FUNDIDO_TEXTO = 70;
-  const TOLERANCIA_TRIANGULO = 24;
+  const TOLERANCIA_ZONA = 24;
   const MARGEN_ORIGEN = 56;
-  const QUIETO_TRIANGULO = 400;
+  const QUIETO_ZONA = 400;
 
   interface Medidas {
     ancho: number;
@@ -34,6 +34,7 @@
       sigla.setAttribute('aria-describedby', popover.id);
     }
     document.body.append(popover);
+    const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
 
     interface Punto {
       x: number;
@@ -47,7 +48,7 @@
     let timerMorph: number | undefined;
     let timerQuieto: number | undefined;
     let ultimoCierre = -Infinity;
-    let triangulo: Punto[] | null = null;
+    let zona: Punto[] | null = null;
     let ultimoPunto: Punto = { x: 0, y: 0 };
     let focoDesdePuntero = false;
 
@@ -132,7 +133,7 @@
     };
 
     const ocultar = (): void => {
-      limpiarTriangulo();
+      limpiarZona();
       clearTimeout(timerMostrar);
       clearTimeout(timerSalida);
       clearTimeout(timerOcultar);
@@ -141,7 +142,7 @@
       popover.removeAttribute('data-visible');
       popover.removeAttribute('data-instant');
       objetivo = null;
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (menosMovimiento.matches) {
         popover.hidden = true;
         return;
       }
@@ -156,21 +157,21 @@
       return abbr instanceof HTMLElement ? abbr : null;
     };
 
-    const limpiarTriangulo = (): void => {
-      if (!triangulo) return;
-      triangulo = null;
+    const limpiarZona = (): void => {
+      if (!zona) return;
+      zona = null;
       clearTimeout(timerQuieto);
-      document.removeEventListener('pointermove', handleTrianguloMove);
+      document.removeEventListener('pointermove', handleZonaMove);
     };
 
-    const enTriangulo = (p: Punto): boolean => {
-      if (!triangulo) return false;
+    const enZona = (p: Punto): boolean => {
+      if (!zona) return false;
       const signo = (a: Punto, b: Punto, c: Punto): number =>
         (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
       let negativo = false;
       let positivo = false;
-      for (let i = 0; i < triangulo.length; i++) {
-        const d = signo(triangulo[i]!, triangulo[(i + 1) % triangulo.length]!, p);
+      for (let i = 0; i < zona.length; i++) {
+        const d = signo(zona[i]!, zona[(i + 1) % zona.length]!, p);
         if (d < 0) negativo = true;
         if (d > 0) positivo = true;
       }
@@ -182,30 +183,30 @@
       const debajo = document.elementFromPoint(ultimoPunto.x, ultimoPunto.y);
       const abbr = buscarAbbr(debajo);
       if (abbr && abbr !== objetivo) {
-        limpiarTriangulo();
+        limpiarZona();
         mostrar(abbr);
       }
     };
 
-    const handleTrianguloMove = (ev: PointerEvent): void => {
+    const handleZonaMove = (ev: PointerEvent): void => {
       ultimoPunto = { x: ev.clientX, y: ev.clientY };
       const destino = ev.target instanceof Element ? ev.target : null;
       if (destino && popover.contains(destino)) {
-        limpiarTriangulo();
+        limpiarZona();
         return;
       }
       const abbr = buscarAbbr(destino);
       if (abbr === objetivo && objetivo !== null) {
-        limpiarTriangulo();
+        limpiarZona();
         return;
       }
-      if (enTriangulo(ultimoPunto)) {
+      if (enZona(ultimoPunto)) {
         clearTimeout(timerQuieto);
-        timerQuieto = window.setTimeout(resolverQuieto, QUIETO_TRIANGULO);
+        timerQuieto = window.setTimeout(resolverQuieto, QUIETO_ZONA);
         return;
       }
       // Fuera de la zona de tolerancia el cambio de objetivo es inmediato.
-      limpiarTriangulo();
+      limpiarZona();
       if (abbr) {
         mostrar(abbr);
       } else {
@@ -215,23 +216,21 @@
     };
 
     /* Trapecio con banda ancha en el origen, un vértice puntual expulsa las salidas rasantes. */
-    const iniciarTriangulo = (x: number, y: number): void => {
-      limpiarTriangulo();
+    const iniciarZona = (x: number, y: number): void => {
+      limpiarZona();
       const caja = popover.getBoundingClientRect();
       const desdeAbajo = y >= caja.bottom;
       // El polígono solapa hacia dentro del popover, hacia fuera dejaría una franja muerta.
       const borde = desdeAbajo ? caja.bottom - 4 : caja.top + 4;
       const holgura = desdeAbajo ? 8 : -8;
-      triangulo = [
+      zona = [
         { x: x - MARGEN_ORIGEN, y: y + holgura },
-        { x: caja.left - TOLERANCIA_TRIANGULO, y: borde },
-        { x: caja.right + TOLERANCIA_TRIANGULO, y: borde },
+        { x: caja.left - TOLERANCIA_ZONA, y: borde },
+        { x: caja.right + TOLERANCIA_ZONA, y: borde },
         { x: x + MARGEN_ORIGEN, y: y + holgura },
       ];
       ultimoPunto = { x, y };
-      document.addEventListener('pointermove', handleTrianguloMove);
-      clearTimeout(timerQuieto);
-      timerQuieto = window.setTimeout(resolverQuieto, QUIETO_TRIANGULO);
+      document.addEventListener('pointermove', handleZonaMove);
     };
 
     document.addEventListener('pointerover', (ev) => {
@@ -239,7 +238,7 @@
       if (abbr) {
         clearTimeout(timerSalida);
         // Con el triángulo activo decide el movimiento, no el elemento pisado.
-        if (triangulo && abbr !== objetivo) return;
+        if (zona && abbr !== objetivo) return;
         if (objetivo !== abbr || popover.hidden) mostrar(abbr);
         return;
       }
@@ -257,7 +256,7 @@
       clearTimeout(timerSalida);
       // La salida del propio popover también entra en gracia, un roce del borde no debe cerrar.
       if (ev.pointerType === 'mouse' && popover.hasAttribute('data-visible')) {
-        iniciarTriangulo(ev.clientX, ev.clientY);
+        iniciarZona(ev.clientX, ev.clientY);
         return;
       }
       timerSalida = window.setTimeout(ocultar, RETRASO_SALIDA);
@@ -300,8 +299,14 @@
       if (ev.key === 'Escape') ocultar();
     });
 
-    document.addEventListener('scroll', () => ocultar(), { passive: true, capture: true });
-    window.addEventListener('resize', ocultar);
+    // Guarda barata para el hot path, durante el scroll normal no hay nada que cerrar.
+    const cerrarSiActivo = (): void => {
+      if (objetivo === null && popover.hidden) return;
+      ocultar();
+    };
+
+    document.addEventListener('scroll', cerrarSiActivo, { passive: true, capture: true });
+    window.addEventListener('resize', cerrarSiActivo);
   }
 </script>
 
@@ -338,7 +343,7 @@
   }
 
   abbr.acronimo:hover {
-    background: var(--sl-color-gray-6);
+    background: var(--m-hover);
   }
 
   abbr.acronimo:hover::after,
@@ -348,18 +353,12 @@
   }
 
   abbr.acronimo:focus-visible {
-    background: var(--sl-color-gray-6);
+    background: var(--m-hover);
     outline: 2px solid var(--sl-color-accent);
     outline-offset: 2px;
   }
 
-  :root[data-theme='light'] abbr.acronimo:hover,
-  :root[data-theme='light'] abbr.acronimo:focus-visible {
-    background: var(--m-surface-2);
-  }
-
   .acronimo-popover {
-    --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
     box-sizing: border-box;
     position: fixed;
     inset-block-start: 0;
@@ -377,11 +376,11 @@
     opacity: 0;
     scale: 0.96;
     transition:
-      opacity 160ms var(--ease-salida),
-      scale 180ms var(--ease-salida),
-      translate 200ms var(--ease-salida),
-      width 200ms var(--ease-salida),
-      height 200ms var(--ease-salida);
+      opacity 160ms var(--m-ease-salida),
+      scale 180ms var(--m-ease-salida),
+      translate 200ms var(--m-ease-salida),
+      width 200ms var(--m-ease-salida),
+      height 200ms var(--m-ease-salida);
   }
 
   .acronimo-popover[data-visible] {

@@ -5,6 +5,8 @@
   --m-hit: 2.75rem;
   --m-r-md: 0.75rem;
   --m-r-lg: 1.25rem;
+  --m-ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --m-hover: var(--sl-color-gray-6);
   --m-font-display:
     'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -60,6 +62,7 @@
   --m-shadow-lg:
     0 24px 48px -16px rgba(53, 28, 12, 0.22),
     0 6px 14px rgba(53, 28, 12, 0.08);
+  --m-hover: var(--m-surface-2);
 
   --sl-color-white: var(--m-text);
   --sl-color-gray-1: var(--m-text);
@@ -201,6 +204,83 @@
   .site-title:hover,
   .site-title:active {
     scale: 1;
+  }
+}
+
+/* Cascada de la sidebar vía ::details-content (Chrome 131, Firefox 143, Safari 18.4), antes corte seco.
+   Acoplada al markup interno de la sidebar de Starlight 0.41.4, revisar al actualizar. */
+@media (prefers-reduced-motion: no-preference) {
+  #starlight__sidebar {
+    interpolate-size: allow-keywords;
+  }
+
+  #starlight__sidebar details::details-content {
+    height: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      height 180ms var(--m-ease-salida),
+      opacity 140ms var(--m-ease-salida),
+      content-visibility 180ms allow-discrete;
+  }
+
+  #starlight__sidebar details[open]::details-content {
+    height: auto;
+    opacity: 1;
+    transition-duration: 300ms, 260ms, 300ms;
+  }
+
+  #starlight__sidebar summary .caret {
+    transition: transform 240ms var(--m-ease-salida);
+  }
+
+  #starlight__sidebar details > ul > li {
+    opacity: 0;
+    translate: 0 -0.25rem;
+  }
+
+  /* La transición vive en el estado abierto, así el cierre recoge todo de golpe. */
+  #starlight__sidebar details[open] > ul > li {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 160ms var(--m-ease-salida),
+      translate 160ms var(--m-ease-salida);
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(2) {
+    transition-delay: 60ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(3) {
+    transition-delay: 120ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(4) {
+    transition-delay: 180ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(5) {
+    transition-delay: 240ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(6) {
+    transition-delay: 300ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(7) {
+    transition-delay: 360ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(n + 8) {
+    transition-delay: 420ms;
+  }
+
+  /* Hasta que la página pinta estable nada transiciona, evita el estirón en plena carga. */
+  :root:not([data-transiciones-listas]) #starlight__sidebar details::details-content,
+  :root:not([data-transiciones-listas]) #starlight__sidebar summary .caret,
+  :root:not([data-transiciones-listas]) #starlight__sidebar details > ul > li {
+    transition: none;
   }
 }
 

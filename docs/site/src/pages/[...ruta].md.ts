@@ -2,15 +2,12 @@ import type { APIRoute, ImageMetadata, InferGetStaticPropsType } from 'astro';
 import { getImage } from 'astro:assets';
 import { getCollection } from 'astro:content';
 
+import { tieneVersionMd } from '../datos/paginas-md';
+
 /* Expone cada entrada de documentación bajo su misma ruta con extensión .md. */
 export async function getStaticPaths() {
-  const entradas = await getCollection(
-    'docs',
-    ({ data }) => import.meta.env.MODE !== 'production' || !data.draft,
-  );
-  return entradas
-    .filter((entrada) => entrada.id !== '' && entrada.id !== 'index')
-    .map((entrada) => ({ params: { ruta: entrada.id }, props: { entrada } }));
+  const entradas = await getCollection('docs', tieneVersionMd);
+  return entradas.map((entrada) => ({ params: { ruta: entrada.id }, props: { entrada } }));
 }
 
 type Props = InferGetStaticPropsType<typeof getStaticPaths>;

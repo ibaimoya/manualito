@@ -66,6 +66,17 @@ const mostrarRedimensionadores = id !== '' && hasSidebar;
   )
 }
 
+<script is:inline>
+  // Las transiciones de la sidebar se habilitan cuando la carga ya pinta estable.
+  addEventListener('load', () => {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document.documentElement.setAttribute('data-transiciones-listas', ''),
+      ),
+    );
+  });
+</script>
+
 <!-- Se envuelve el componente oficial para añadir el tirador sin copiar su estructura. -->
 <StarlightPageFrame>
   <slot name="header" slot="header" />

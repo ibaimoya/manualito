@@ -4,13 +4,14 @@ import Search from '@astrojs/starlight/components/Search.astro';
 import SiteTitle from '@astrojs/starlight/components/SiteTitle.astro';
 import SocialIcons from '@astrojs/starlight/components/SocialIcons.astro';
 
+import { tieneVersionMd } from '../datos/paginas-md';
 import CopiarPagina from './CopiarPagina.astro';
 import ProgresoLectura from './ProgresoLectura.astro';
 import ThemeSelect from './ThemeSelect.astro';
 
-const { id } = Astro.locals.starlightRoute;
+const { entry, id } = Astro.locals.starlightRoute;
 const mostrarProgreso = id !== '';
-const mostrarCopiar = id !== '' && id !== '404';
+const mostrarCopiar = tieneVersionMd(entry);
 ---
 
 <div class="header">
@@ -40,7 +41,7 @@ const mostrarCopiar = id !== '' && id !== '404';
     gap: 1rem;
   }
 
-  /* Réplica de los estilos del Header oficial, que se pierden al recomponerlo. */
+  /* Réplica parcial del Header oficial de Starlight 0.41.4, revisar al actualizar. */
   @layer starlight.core {
     .header {
       display: flex;
@@ -69,32 +70,10 @@ const mostrarCopiar = id !== '' && id !== '404';
       border-inline-end: 1px solid var(--sl-color-gray-5);
     }
 
+    /* El reparto de columnas lo fija custom.css, aquí solo queda el modo grid. */
     @media (min-width: 50rem) {
-      :global(:root[data-has-sidebar]) {
-        --__sidebar-pad: calc(2 * var(--sl-nav-pad-x));
-      }
-
-      :global(:root:not([data-has-toc])) {
-        --__toc-width: 0rem;
-      }
-
       .header {
-        --__sidebar-width: max(0rem, var(--sl-content-inline-start, 0rem) - var(--sl-nav-pad-x));
-        --__main-column-fr: calc(
-          (
-              100% + var(--__sidebar-pad, 0rem) - var(--__toc-width, var(--sl-sidebar-width)) -
-                (2 * var(--__toc-width, var(--sl-nav-pad-x))) - var(--sl-content-inline-start, 0rem) -
-                var(--sl-content-width)
-            ) / 2
-        );
         display: grid;
-        grid-template-columns:
-          minmax(
-            calc(var(--__sidebar-width) + max(0rem, var(--__main-column-fr) - var(--sl-nav-gap))),
-            auto
-          )
-          1fr
-          auto;
         align-content: center;
       }
     }

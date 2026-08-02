@@ -1,5 +1,5 @@
 ---
-title: Anexo de sostenibilización curricular
+title: Sostenibilización curricular
 description: La sostenibilidad se ha convertido en un criterio de gran importancia tanto en la formación universitaria como en el mundo profesional.
 sidebar:
   order: 6

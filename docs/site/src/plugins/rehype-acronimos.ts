@@ -50,7 +50,7 @@ function marcarSiglas(valor: string, vistas: Set<string>): Nodo[] | null {
   let ultimo = 0;
   let coincidencia: RegExpExecArray | null;
   while ((coincidencia = PATRON.exec(valor))) {
-    const sigla = coincidencia[1] as keyof typeof ACRONIMOS & string;
+    const sigla = coincidencia[1] as string;
     if (vistas.has(sigla)) continue;
     vistas.add(sigla);
     if (coincidencia.index > ultimo) {

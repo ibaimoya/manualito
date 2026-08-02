@@ -6,6 +6,11 @@ interface Props {
 }
 
 const { rutaMd } = Astro.props;
+
+/* Glifos compartidos por el botón, el menú y los avisos. */
+const trazoCopiar =
+  '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>';
+const trazoCorrecto = '<path d="M20 6 9 17l-5-5"></path>';
 ---
 
 <manualito-copiar-pagina data-ruta-md={rutaMd}>
@@ -25,10 +30,8 @@ const { rutaMd } = Astro.props;
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-        >
-          <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-        </svg>
+          set:html={trazoCopiar}
+        />
         <svg
           class="icono-copiado"
           viewBox="0 0 24 24"
@@ -37,9 +40,8 @@ const { rutaMd } = Astro.props;
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-        >
-          <path d="M20 6 9 17l-5-5"></path>
-        </svg>
+          set:html={trazoCorrecto}
+        />
       </span>
     </button>
 
@@ -65,10 +67,8 @@ const { rutaMd } = Astro.props;
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-      >
-        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-      </svg>
+        set:html={trazoCopiar}
+      />
       <span class="opcion__textos">
         <span class="opcion__titulo">Copiar página</span>
         <span class="opcion__detalle">Copia la página en Markdown</span>
@@ -124,9 +124,8 @@ const { rutaMd } = Astro.props;
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-      >
-        <path d="M20 6 9 17l-5-5"></path>
-      </svg>
+        set:html={trazoCorrecto}
+      />
       <svg
         class="toast__error"
         viewBox="0 0 24 24"
@@ -154,6 +153,7 @@ const { rutaMd } = Astro.props;
   const VISIBLES_TOAST = 3;
   const UMBRAL_DESLIZAR = 45;
   const VELOCIDAD_DESLIZAR = 0.11;
+  const MENOS_MOVIMIENTO = matchMedia('(prefers-reduced-motion: reduce)');
 
   interface ToastVivo {
     el: HTMLElement;
@@ -165,7 +165,11 @@ const { rutaMd } = Astro.props;
 
   class ToasterCopiar {
     private toasts: ToastVivo[] = [];
-    private expandido = false;
+
+    /* El atributo del contenedor es la única fuente del estado expandido. */
+    private get expandido(): boolean {
+      return this.contenedor.hasAttribute('data-expandido');
+    }
 
     constructor(
       private contenedor: HTMLElement,
@@ -202,9 +206,9 @@ const { rutaMd } = Astro.props;
       };
       this.toasts.unshift(toast);
       this.aplicar();
-      // Reflow y una vuelta de frame para que la entrada transicione desde abajo.
+      // Reflow para que la entrada transicione desde abajo.
       void el.offsetWidth;
-      requestAnimationFrame(() => el.removeAttribute('data-entrando'));
+      el.removeAttribute('data-entrando');
 
       this.prepararDeslizamiento(toast);
       // Con el ratón encima o la pestaña oculta el aviso nace pausado.
@@ -252,12 +256,8 @@ const { rutaMd } = Astro.props;
       toast.el.style.translate = '';
       toast.el.setAttribute('data-saliendo', '');
       this.aplicar();
-      const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      window.setTimeout(() => toast.el.remove(), menosMovimiento ? 150 : SALIDA_TOAST);
-      if (this.toasts.length === 0) {
-        this.expandido = false;
-        this.contenedor.removeAttribute('data-expandido');
-      }
+      window.setTimeout(() => toast.el.remove(), MENOS_MOVIMIENTO.matches ? 150 : SALIDA_TOAST);
+      if (this.toasts.length === 0) this.contenedor.removeAttribute('data-expandido');
     }
 
     private prepararDeslizamiento(toast: ToastVivo): void {
@@ -298,7 +298,6 @@ const { rutaMd } = Astro.props;
 
     private handlePointerOver = (): void => {
       if (this.expandido || this.toasts.length === 0) return;
-      this.expandido = true;
       this.contenedor.setAttribute('data-expandido', '');
       this.pausarTodos();
     };
@@ -306,7 +305,6 @@ const { rutaMd } = Astro.props;
     private handlePointerOut = (ev: PointerEvent): void => {
       if (!this.expandido) return;
       if (ev.relatedTarget instanceof Node && this.contenedor.contains(ev.relatedTarget)) return;
-      this.expandido = false;
       this.contenedor.removeAttribute('data-expandido');
       this.reanudarTodos();
     };
@@ -356,8 +354,8 @@ const { rutaMd } = Astro.props;
       this.opciones.forEach((opcion) => opcion.addEventListener('click', this.handleOpcionClick));
       this.addEventListener('pointerenter', this.precargar);
       this.addEventListener('focusin', this.precargar);
-      document.addEventListener('pointerdown', this.handleOutsidePointerDown);
-      document.addEventListener('focusin', this.handleDocumentFocus);
+      document.addEventListener('pointerdown', this.handleFuera);
+      document.addEventListener('focusin', this.handleFuera);
     }
 
     disconnectedCallback(): void {
@@ -370,8 +368,8 @@ const { rutaMd } = Astro.props;
       );
       this.removeEventListener('pointerenter', this.precargar);
       this.removeEventListener('focusin', this.precargar);
-      document.removeEventListener('pointerdown', this.handleOutsidePointerDown);
-      document.removeEventListener('focusin', this.handleDocumentFocus);
+      document.removeEventListener('pointerdown', this.handleFuera);
+      document.removeEventListener('focusin', this.handleFuera);
       this.toaster?.destruir();
       this.toaster = null;
       clearTimeout(this.copiadoTimer);
@@ -446,9 +444,7 @@ const { rutaMd } = Astro.props;
       if (restoreFocus) this.gatillo.focus();
 
       clearTimeout(this.cierreTimer);
-      const instantaneo =
-        menu.hasAttribute('data-instant') ||
-        matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const instantaneo = menu.hasAttribute('data-instant') || MENOS_MOVIMIENTO.matches;
       if (instantaneo) {
         menu.hidden = true;
         return;
@@ -525,11 +521,9 @@ const { rutaMd } = Astro.props;
       if (opcion.dataset.accion === 'copiar') void this.copiar();
     };
 
-    private handleOutsidePointerDown = (event: PointerEvent): void => {
-      if (event.target instanceof Node && !this.contains(event.target)) this.closeMenu();
-    };
-
-    private handleDocumentFocus = (event: FocusEvent): void => {
+    /* Un solo handler para pointerdown y focusin exteriores, inactivo con el menú cerrado. */
+    private handleFuera = (event: Event): void => {
+      if (!this.menu?.hasAttribute('data-open')) return;
       if (event.target instanceof Node && !this.contains(event.target)) this.closeMenu();
     };
   }
@@ -541,7 +535,6 @@ const { rutaMd } = Astro.props;
 
 <style>
   manualito-copiar-pagina {
-    --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
     position: relative;
     display: inline-flex;
   }
@@ -552,15 +545,11 @@ const { rutaMd } = Astro.props;
     border-radius: 0.625rem;
     transition:
       background-color 160ms ease,
-      scale 160ms var(--ease-salida);
+      scale 160ms var(--m-ease-salida);
   }
 
   .grupo:hover {
-    background: var(--sl-color-gray-6);
-  }
-
-  :global(:root[data-theme='light']) .grupo:hover {
-    background: var(--m-surface-2);
+    background: var(--m-hover);
   }
 
   .grupo:active {
@@ -582,15 +571,8 @@ const { rutaMd } = Astro.props;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    inline-size: 1.5rem;
     transition: color 160ms ease;
-  }
-
-  .accion {
-    inline-size: 1.5rem;
-  }
-
-  .gatillo {
-    inline-size: 1.5rem;
   }
 
   .grupo:hover .accion,
@@ -607,7 +589,7 @@ const { rutaMd } = Astro.props;
   .gatillo :global(.gatillo__caret) {
     inline-size: 0.75rem;
     block-size: 0.75rem;
-    transition: rotate 180ms var(--ease-salida);
+    transition: rotate 180ms var(--m-ease-salida);
   }
 
   .gatillo[aria-expanded='true'] :global(.gatillo__caret) {
@@ -626,8 +608,8 @@ const { rutaMd } = Astro.props;
     inline-size: 1rem;
     block-size: 1rem;
     transition:
-      opacity 180ms var(--ease-salida),
-      scale 180ms var(--ease-salida);
+      opacity 180ms var(--m-ease-salida),
+      scale 180ms var(--m-ease-salida);
   }
 
   .icono-copiado {
@@ -665,9 +647,9 @@ const { rutaMd } = Astro.props;
     translate: 0 -4px;
     pointer-events: none;
     transition:
-      opacity 180ms var(--ease-salida),
-      scale 180ms var(--ease-salida),
-      translate 180ms var(--ease-salida);
+      opacity 180ms var(--m-ease-salida),
+      scale 180ms var(--m-ease-salida),
+      translate 180ms var(--m-ease-salida);
   }
 
   .menu[data-open] {
@@ -706,12 +688,7 @@ const { rutaMd } = Astro.props;
 
   .opcion:hover,
   .opcion:focus-visible {
-    background: var(--sl-color-gray-6);
-  }
-
-  :global(:root[data-theme='light']) .opcion:hover,
-  :global(:root[data-theme='light']) .opcion:focus-visible {
-    background: var(--m-surface-2);
+    background: var(--m-hover);
   }
 
   .opcion:focus-visible {
@@ -753,7 +730,7 @@ const { rutaMd } = Astro.props;
     inline-size: 0.75rem;
     block-size: 0.75rem;
     color: var(--sl-color-gray-3);
-    transition: translate 160ms var(--ease-salida);
+    transition: translate 160ms var(--m-ease-salida);
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -767,6 +744,7 @@ const { rutaMd } = Astro.props;
   }
 
   .toaster {
+    --hueco-toast: 14px; /* espejo de HUECO_TOAST en el script */
     position: fixed;
     z-index: 60;
     inset-block-end: calc(1.25rem + env(safe-area-inset-bottom, 0px));
@@ -792,8 +770,7 @@ const { rutaMd } = Astro.props;
     color: var(--sl-color-gray-1);
     font-size: var(--sl-text-sm);
     touch-action: none;
-    opacity: 1;
-    translate: 0 calc(var(--n) * -14px);
+    translate: 0 calc(var(--n) * -1 * var(--hueco-toast));
     scale: calc(1 - var(--n) * 0.05);
     transform-origin: bottom center;
     transition:
@@ -808,7 +785,7 @@ const { rutaMd } = Astro.props;
     position: absolute;
     inset-inline: 0;
     inset-block-end: 100%;
-    block-size: 15px;
+    block-size: calc(var(--hueco-toast) + 1px);
   }
 
   .toaster[data-expandido] .toast {
@@ -891,7 +868,7 @@ const { rutaMd } = Astro.props;
 
     .toast[data-entrando],
     .toast[data-saliendo][data-frente] {
-      translate: 0 calc(var(--n) * -14px);
+      translate: 0 calc(var(--n) * -1 * var(--hueco-toast));
     }
   }
 </style>

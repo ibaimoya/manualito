@@ -4,12 +4,13 @@ import { defineConfig } from 'astro/config';
 import starlightLinksValidator from 'starlight-links-validator';
 
 import rehypeAcronimos from './src/plugins/rehype-acronimos.ts';
+import rehypeCitas from './src/plugins/rehype-citas.ts';
 
 export default defineConfig({
   site: 'https://docs.manualito.dev',
   trailingSlash: 'always',
   markdown: {
-    processor: unified({ rehypePlugins: [rehypeAcronimos] }),
+    processor: unified({ rehypePlugins: [rehypeAcronimos, rehypeCitas] }),
   },
   integrations: [
     starlight({

@@ -54,7 +54,7 @@ const { rutaMd } = Astro.props;
     </button>
   </div>
 
-  <div class="menu" role="menu" aria-label="Opciones de copia" hidden>
+  <div class="menu" role="menu" aria-label="Opciones de copia" hidden inert>
     <button class="opcion" type="button" role="menuitem" tabindex="-1" data-accion="copiar">
       <svg
         class="opcion__icono"
@@ -426,6 +426,7 @@ const { rutaMd } = Astro.props;
       // Al abrir con teclado se omite la animación para que el foco llegue de inmediato.
       this.menu.toggleAttribute('data-instant', focus !== null);
       clearTimeout(this.cierreTimer);
+      this.menu.inert = false;
       this.menu.hidden = false;
       // Reflow para que el navegador tome el estado cerrado como punto de partida.
       void this.menu.offsetWidth;
@@ -440,6 +441,7 @@ const { rutaMd } = Astro.props;
       if (!this.menu || !this.gatillo) return;
       const menu = this.menu;
       menu.removeAttribute('data-open');
+      menu.inert = true;
       this.gatillo.setAttribute('aria-expanded', 'false');
       if (restoreFocus) this.gatillo.focus();
 
@@ -471,10 +473,10 @@ const { rutaMd } = Astro.props;
     };
 
     private handleGatilloClick = (event: MouseEvent): void => {
-      if (this.menu?.hidden) {
-        this.openMenu(event.detail === 0 ? 'first' : null);
-      } else {
+      if (this.menu?.hasAttribute('data-open')) {
         this.closeMenu();
+      } else {
+        this.openMenu(event.detail === 0 ? 'first' : null);
       }
     };
 
@@ -517,7 +519,9 @@ const { rutaMd } = Astro.props;
     private handleOpcionClick = (event: MouseEvent): void => {
       const opcion = event.currentTarget;
       if (!(opcion instanceof HTMLElement)) return;
-      this.closeMenu(opcion instanceof HTMLButtonElement);
+      const cerrar = () => this.closeMenu(true);
+      if (opcion instanceof HTMLAnchorElement) setTimeout(cerrar, 0);
+      else cerrar();
       if (opcion.dataset.accion === 'copiar') void this.copiar();
     };
 
@@ -586,7 +590,7 @@ const { rutaMd } = Astro.props;
   }
 
   .gatillo {
-    inline-size: 1.25rem;
+    inline-size: 1.5rem;
   }
 
   .grupo:hover .accion,

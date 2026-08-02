@@ -309,6 +309,21 @@
   }
 }
 
+@media (max-width: 22.999rem) {
+  :root[data-has-sidebar] .site-title {
+    gap: 0;
+  }
+
+  :root[data-has-sidebar] .site-title > span {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+}
+
 @media (min-width: 50rem) {
   .page > header > .header {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem) minmax(0, 1fr);

@@ -25,7 +25,7 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
     <Icon name="down-caret" class="theme-trigger__caret" />
   </button>
 
-  <div class="theme-menu" role="menu" aria-label={accessibleLabel} hidden>
+  <div class="theme-menu" role="menu" aria-label={accessibleLabel} hidden inert>
     <button
       class="theme-option"
       type="button"
@@ -184,13 +184,17 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
 
       document.querySelectorAll<HTMLElement>('starlight-theme-select').forEach((picker) => {
         if (picker === this) return;
-        picker.querySelector<HTMLElement>('.theme-menu')?.setAttribute('hidden', '');
+        const menu = picker.querySelector<HTMLElement>('.theme-menu');
+        menu?.removeAttribute('data-open');
+        menu?.setAttribute('inert', '');
+        menu?.setAttribute('hidden', '');
         picker.querySelector<HTMLElement>('.theme-trigger')?.setAttribute('aria-expanded', 'false');
       });
 
-      // Las aperturas por teclado no se animan: focus solo llega con flechas o Enter.
+      // Las aperturas por teclado no se animan porque el foco solo llega con flechas o Enter.
       this.menu.toggleAttribute('data-instant', focus !== null);
       clearTimeout(this.cierreTimer);
+      this.menu.inert = false;
       this.menu.hidden = false;
       // Reflow para que el navegador tome el estado cerrado como punto de partida.
       void this.menu.offsetWidth;
@@ -214,6 +218,7 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
       if (!this.menu || !this.trigger) return;
       const menu = this.menu;
       menu.removeAttribute('data-open');
+      menu.inert = true;
       this.trigger.setAttribute('aria-expanded', 'false');
       if (restoreFocus) this.trigger.focus();
 
@@ -240,10 +245,10 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
     }
 
     private handleTriggerClick = (event: MouseEvent): void => {
-      if (this.menu?.hidden) {
-        this.openMenu(event.detail === 0 ? 'selected' : null);
-      } else {
+      if (this.menu?.hasAttribute('data-open')) {
         this.closeMenu();
+      } else {
+        this.openMenu(event.detail === 0 ? 'selected' : null);
       }
     };
 
@@ -390,6 +395,9 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
     display: grid;
     gap: 0.125rem;
     min-inline-size: 11rem;
+    max-block-size: calc(100svh - var(--sl-nav-height) - 0.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 0.375rem;
     border: 1px solid var(--sl-color-gray-5);
     border-radius: var(--m-r-lg);

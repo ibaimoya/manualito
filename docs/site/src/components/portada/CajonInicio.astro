@@ -261,7 +261,7 @@ const rutas = [
     outline: none;
   }
 
-  .cj[data-entrada-teclado] .cj-tirador:focus-visible .cj-tirador__barra {
+  .cj-tirador:focus-visible .cj-tirador__barra {
     outline: 2px solid var(--sl-color-text-accent);
     outline-offset: 4px;
   }
@@ -294,6 +294,7 @@ const rutas = [
     margin-block-end: 1.25rem;
     cursor: grab;
     touch-action: none;
+    user-select: none;
     transition: translate var(--cj-dur) var(--cj-curva);
   }
 
@@ -628,16 +629,6 @@ const rutas = [
     const lienzo = document.querySelector<HTMLElement>('.pd-lienzo');
 
     document.body.appendChild(raiz);
-    document.addEventListener('pointerdown', () => raiz.removeAttribute('data-entrada-teclado'), true);
-    // Solo Tab marca la navegación por teclado.
-    // Otras teclas no encienden el anillo de un foco alcanzado con el ratón.
-    document.addEventListener(
-      'keydown',
-      (ev) => {
-        if (ev.key === 'Tab') raiz.setAttribute('data-entrada-teclado', '');
-      },
-      true,
-    );
 
     const VELOCIDAD_DESCARTE = 0.11;
     const RESISTENCIA = 20;
@@ -811,7 +802,7 @@ const rutas = [
     let inicioTiempo = 0;
 
     const empezar = (ev: PointerEvent, origen: HTMLElement) => {
-      if (punteroId !== null || gesto === 'rueda') return;
+      if (!ev.isPrimary || ev.button !== 0 || punteroId !== null || gesto === 'rueda') return;
       if (origen !== tirador && (ev.target as HTMLElement).closest('button, a')) return;
       punteroId = ev.pointerId;
       inicioY = ev.clientY;
@@ -913,19 +904,26 @@ const rutas = [
       'wheel',
       (ev) => {
         if (arrastrando) return;
+        const factorDelta =
+          ev.deltaMode === WheelEvent.DOM_DELTA_LINE
+            ? Number.parseFloat(getComputedStyle(raiz).fontSize) || 16
+            : ev.deltaMode === WheelEvent.DOM_DELTA_PAGE
+              ? innerHeight
+              : 1;
+        const deltaY = ev.deltaY * factorDelta;
         const r = recorrido();
         if (gesto !== 'rueda') {
           const alFinal =
             window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
-          const puedeAbrir = !abierto && ev.deltaY > 0 && alFinal;
-          const puedeCerrar = abierto && ev.deltaY < 0 && cuerpo.scrollTop <= 0;
+          const puedeAbrir = !abierto && deltaY > 0 && alFinal;
+          const puedeCerrar = abierto && deltaY < 0 && cuerpo.scrollTop <= 0;
           if (!puedeAbrir && !puedeCerrar) return;
           gesto = 'rueda';
           y = abierto ? 0 : r;
           objetivoRueda = y;
           raiz.setAttribute('data-arrastrando', '');
         }
-        const nuevo = objetivoRueda - ev.deltaY * RUEDA;
+        const nuevo = objetivoRueda - deltaY * RUEDA;
         if (nuevo >= r) {
           objetivoRueda = r;
           cerrarGestoRueda();
@@ -1204,10 +1202,7 @@ const rutas = [
       controles.addEventListener(
         'focusin',
         (ev) => {
-          if (
-            raiz.hasAttribute('data-entrada-teclado') &&
-            (ev.target as HTMLElement).matches(':focus-visible')
-          ) {
+          if ((ev.target as HTMLElement).matches(':focus-visible')) {
             pausarPorUsuario();
           }
         },

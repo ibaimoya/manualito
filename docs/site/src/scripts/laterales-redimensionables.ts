@@ -126,11 +126,9 @@ export const iniciarRedimensionadoresLaterales = () => {
   };
 
   const actualizarEntorno = () => {
-    if (arrastre) {
-      terminar(true);
-      rebote?.stop();
-      exceso.jump(0);
-    }
+    if (arrastre) terminar(true);
+    rebote?.stop();
+    exceso.jump(0);
     const pxRaiz = Number.parseFloat(getComputedStyle(raiz).fontSize) || 16;
     anchoScrollbar = Math.max(anchoScrollbar, innerWidth - raiz.clientWidth);
     const anchoDisponible = innerWidth - anchoScrollbar;
@@ -148,11 +146,7 @@ export const iniciarRedimensionadoresLaterales = () => {
 
     tirador.hidden = !disponible;
     raiz.toggleAttribute('data-laterales-preparados', disponible);
-    if (!disponible) {
-      terminar(true);
-      exceso.jump(0);
-      return;
-    }
+    if (!disponible) return;
     aplicarAncho(anchoPreferido);
   };
 

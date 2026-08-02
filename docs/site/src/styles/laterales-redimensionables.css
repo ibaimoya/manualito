@@ -1,9 +1,14 @@
 :root {
   --m-ancho-navegacion: 18.75rem;
   --m-ancho-indice: 18.75rem;
+  --m-ancho-lateral-derecho: 0px;
   --m-ancho-lectura-minimo: 45rem;
   --m-ancho-lectura-maximo: 50rem;
   --m-exceso-navegacion: 0px;
+}
+
+.redimensionadores-laterales {
+  display: none;
 }
 
 .redimensionadores-laterales::before,
@@ -90,6 +95,10 @@
 /* Acoplamiento con PageFrame, TwoColumnContent y PageSidebar de Starlight 0.41.4.
    Revisar estos selectores al actualizar Starlight. */
 @media (min-width: 90rem) and (hover: hover) and (pointer: fine) {
+  :root[data-laterales-preparados] .redimensionadores-laterales {
+    display: block;
+  }
+
   :root[data-laterales-preparados][data-has-sidebar] {
     --sl-sidebar-width: var(--m-ancho-navegacion);
     --sl-content-inline-start: var(--m-ancho-navegacion);
@@ -98,13 +107,19 @@
       min(
         var(--m-ancho-lectura-maximo),
         calc(
-          var(--m-ancho-disponible) - 2 * var(--m-ancho-navegacion) - 4 *
-            var(--sl-content-pad-x)
-        ),
-        calc(var(--m-ancho-disponible) - 2 * var(--m-ancho-indice))
+          var(--m-ancho-disponible) - 2 *
+            max(
+              var(--m-ancho-navegacion),
+              var(--m-ancho-lateral-derecho)
+            ) - 2 * var(--sl-content-pad-x)
+        )
       ),
       var(--m-ancho-lectura-maximo)
     );
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar][data-has-toc] {
+    --m-ancho-lateral-derecho: var(--m-ancho-indice);
   }
 
   :root[data-laterales-preparados][data-has-sidebar] .sidebar-pane {
@@ -112,19 +127,34 @@
   }
 
   :root[data-laterales-preparados][data-has-sidebar] .main-pane {
-    --sl-content-margin-inline: auto 0;
+    --sl-content-margin-inline: auto;
 
     flex: none;
-    width: calc(
-      (100% + var(--sl-content-width) - var(--m-ancho-navegacion)) / 2
+    width: calc(100% - var(--m-ancho-lateral-derecho));
+  }
+
+  :root[data-laterales-preparados][data-has-sidebar]
+    .main-pane
+    .content-panel {
+    padding-inline-start: calc(
+      var(--sl-content-pad-x) +
+        max(
+          0px,
+          var(--m-ancho-lateral-derecho) - var(--m-ancho-navegacion)
+        )
+    );
+    padding-inline-end: calc(
+      var(--sl-content-pad-x) +
+        max(
+          0px,
+          var(--m-ancho-navegacion) - var(--m-ancho-lateral-derecho)
+        )
     );
   }
 
   :root[data-laterales-preparados][data-has-toc] .right-sidebar-container {
     flex: none;
-    width: calc(
-      (100% + var(--m-ancho-navegacion) - var(--sl-content-width)) / 2
-    );
+    width: var(--m-ancho-lateral-derecho);
   }
 
   :root[data-laterales-preparados][data-has-toc] .right-sidebar {

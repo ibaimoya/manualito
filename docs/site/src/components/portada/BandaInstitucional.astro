@@ -51,13 +51,15 @@ import logoHp from '../../assets/logo-hp-scds.svg';
   .bi__logos {
     display: flex;
     align-items: center;
+    inline-size: min(18.8125rem, 100%);
     gap: 2.5rem;
   }
 
   .bi__enlace {
     display: inline-flex;
+    flex: 1 1 0;
     align-items: center;
-    inline-size: 8.125rem;
+    min-inline-size: 0;
     min-height: var(--m-hit);
     padding-inline: 0.25rem;
     border-radius: 0.5rem;
@@ -73,11 +75,12 @@ import logoHp from '../../assets/logo-hp-scds.svg';
     justify-content: flex-start;
   }
 
-  /* La url va entrecomillada: en desarrollo la ruta del proyecto lleva espacios
+  /* La URL va entrecomillada porque en desarrollo la ruta del proyecto lleva espacios
      y un url() sin comillas sería inválido. */
   .bi__marca {
     display: block;
     flex: none;
+    max-inline-size: 100%;
     background-color: currentColor;
     mask-image: var(--bi-src);
     mask-mode: alpha;
@@ -106,6 +109,7 @@ import logoHp from '../../assets/logo-hp-scds.svg';
   }
 
   .bi__sep {
+    flex: none;
     inline-size: 1px;
     block-size: 1.75rem;
     background: var(--sl-color-hairline-light);

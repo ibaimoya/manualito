@@ -180,8 +180,12 @@
 }
 
 .site-title {
+  align-items: center;
   gap: 0.6375rem;
+  min-width: 0;
   color: var(--m-text);
+  text-decoration: none;
+  white-space: nowrap;
   transform-origin: left center;
   transition: scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -284,9 +288,11 @@
   }
 }
 
-.site-title > img {
+.site-title > svg {
   flex-shrink: 0;
   height: 2.55rem;
+  width: auto;
+  max-width: 100%;
 }
 
 .site-title > span,

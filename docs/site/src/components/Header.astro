@@ -1,22 +1,25 @@
 ---
 import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
 import Search from '@astrojs/starlight/components/Search.astro';
-import SiteTitle from '@astrojs/starlight/components/SiteTitle.astro';
 import SocialIcons from '@astrojs/starlight/components/SocialIcons.astro';
 
+import LogoManualito from '../assets/manualito.svg';
 import { tieneVersionMd } from '../datos/paginas-md';
 import CopiarPagina from './CopiarPagina.astro';
 import ProgresoLectura from './ProgresoLectura.astro';
 import ThemeSelect from './ThemeSelect.astro';
 
-const { entry, id } = Astro.locals.starlightRoute;
+const { entry, id, siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 const mostrarProgreso = id !== '';
 const mostrarCopiar = tieneVersionMd(entry);
 ---
 
 <div class="header">
   <div class="title-wrapper sl-flex">
-    <SiteTitle />
+    <a href={siteTitleHref} class="site-title sl-flex">
+      <LogoManualito aria-hidden="true" focusable="false" />
+      <span translate="no">{siteTitle}</span>
+    </a>
   </div>
   <div class="sl-flex print:hidden">
     <Search />

@@ -45,7 +45,12 @@ export const Route = createFileRoute('/_app/history')({
 
 type View = 'games' | 'manuals';
 type StatusTranslate = (
-  key: 'status.active' | 'status.failed' | 'status.hidden' | 'status.indexing' | 'status.pendingReview',
+  key:
+    | 'status.active'
+    | 'status.failed'
+    | 'status.hidden'
+    | 'status.indexing'
+    | 'status.pendingReview',
 ) => string;
 
 const GAME_GRID = 'grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(208px,1fr))]';
@@ -73,8 +78,18 @@ function HistoryScreen() {
           onChange={setView}
           ariaLabel={t('tabs.ariaLabel')}
           options={[
-            { value: 'games', label: t('tabs.games'), icon: <Dice5 strokeWidth={2} />, count: games.data?.games.length },
-            { value: 'manuals', label: t('tabs.manuals'), icon: <ScrollText strokeWidth={2} />, count: manuals.data?.length },
+            {
+              value: 'games',
+              label: t('tabs.games'),
+              icon: <Dice5 strokeWidth={2} />,
+              count: games.data?.games.length,
+            },
+            {
+              value: 'manuals',
+              label: t('tabs.manuals'),
+              icon: <ScrollText strokeWidth={2} />,
+              count: manuals.data?.length,
+            },
           ]}
         />
         <div className="sm:ml-auto sm:w-80">
@@ -262,7 +277,11 @@ function ManualDocCard({
 
   const meta: ReactElement[] = [
     <span key="format" className="inline-flex items-center gap-1 uppercase">
-      {isPdf ? <FileText size={12} aria-hidden="true" /> : <ImageIcon size={12} aria-hidden="true" />}
+      {isPdf ? (
+        <FileText size={12} aria-hidden="true" />
+      ) : (
+        <ImageIcon size={12} aria-hidden="true" />
+      )}
       {isPdf ? t('manualCard.format.pdf') : t('manualCard.format.photos')}
     </span>,
     <span key="pages">{t('manualCard.pageCount', { count: manual.page_count })}</span>,
@@ -270,7 +289,13 @@ function ManualDocCard({
       ? [<span key="chunks">{t('manualCard.chunks', { count: manual.chunks_indexed })}</span>]
       : []),
     <span key="date">{formatDate(manual.created_at)}</span>,
-    ...(manual.language ? [<span key="lang" className="uppercase">{manual.language}</span>] : []),
+    ...(manual.language
+      ? [
+          <span key="lang" className="uppercase">
+            {manual.language}
+          </span>,
+        ]
+      : []),
   ];
 
   return (
@@ -355,10 +380,15 @@ function ManualDocCard({
       {confirming ? (
         <div
           role="alertdialog"
-           aria-label={t('aria.confirmDeletion')}
+          aria-label={t('aria.confirmDeletion')}
           className="absolute inset-0 z-20 flex items-center gap-3 rounded-2xl border border-error bg-error-bg px-4"
         >
-          <AlertTriangle size={18} strokeWidth={2} className="shrink-0 text-error" aria-hidden="true" />
+          <AlertTriangle
+            size={18}
+            strokeWidth={2}
+            className="shrink-0 text-error"
+            aria-hidden="true"
+          />
           <span className="flex-1 text-[13.5px] font-medium text-fg">
             {t('manualCard.deleteConfirm', { game: manual.game_name })}
           </span>
@@ -376,7 +406,10 @@ function ManualDocCard({
 
 /** Miniatura de hoja con el formato (PDF/fotos) en una esquina. Indexándose,
  *  un barrido recorre la hoja (el sello de formato queda fuera del recorte). */
-function ManualThumb({ pdf, processing = false }: Readonly<{ pdf: boolean; processing?: boolean }>) {
+function ManualThumb({
+  pdf,
+  processing = false,
+}: Readonly<{ pdf: boolean; processing?: boolean }>) {
   return (
     <span aria-hidden="true" className="relative h-[66px] w-[52px] shrink-0 self-start">
       <span className="absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-[9px] border border-border-strong bg-surface px-[9px] pb-[9px] pt-[11px] shadow-xs">
@@ -481,9 +514,7 @@ function LibError({ tab, onRetry }: Readonly<{ tab: View; onRetry: () => void }>
       <span className="grid size-14 place-items-center rounded-[18px] bg-error-bg text-error">
         <AlertTriangle size={26} />
       </span>
-      <h2 className="mt-2.5 font-display text-[19px] font-bold text-fg">
-        {t('error.title')}
-      </h2>
+      <h2 className="mt-2.5 font-display text-[19px] font-bold text-fg">{t('error.title')}</h2>
       <p className="max-w-sm text-sm leading-relaxed text-fg-2">
         {t(tab === 'games' ? 'error.description.games' : 'error.description.manuals')}
       </p>

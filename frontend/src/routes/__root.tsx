@@ -94,9 +94,7 @@ function RootErrorComponent({ message }: Readonly<{ message?: string }>) {
         <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
           {t('error.title')}
         </h1>
-        <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">
-          {t('error.description')}
-        </p>
+        <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">{t('error.description')}</p>
         <div className="mt-6 flex w-full flex-col gap-2.5">
           <Button type="button" size="lg" block onClick={() => globalThis.location?.reload()}>
             <RefreshCw size={18} strokeWidth={2} />

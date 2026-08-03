@@ -194,7 +194,10 @@ function StatCards() {
             {item.icon}
           </span>
           {stats.isPending ? (
-            <span className="block h-8 w-10 animate-pulse rounded-lg bg-surface-2" aria-hidden="true" />
+            <span
+              className="block h-8 w-10 animate-pulse rounded-lg bg-surface-2"
+              aria-hidden="true"
+            />
           ) : (
             <span className="block font-display text-3xl font-extrabold tracking-tight text-fg">
               {item.value ?? '—'}

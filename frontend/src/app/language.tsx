@@ -94,10 +94,7 @@ export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>
     [],
   );
 
-  const value: LanguageState = useMemo(
-    () => ({ language, setLanguage }),
-    [language, setLanguage],
-  );
+  const value: LanguageState = useMemo(() => ({ language, setLanguage }), [language, setLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

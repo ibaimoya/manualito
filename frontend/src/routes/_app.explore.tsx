@@ -21,9 +21,7 @@ function ExploreScreen() {
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
           {t('header.title')}
         </h1>
-        <p className="max-w-md text-sm leading-relaxed text-fg-2">
-          {t('header.description')}
-        </p>
+        <p className="max-w-md text-sm leading-relaxed text-fg-2">{t('header.description')}</p>
       </header>
 
       <GameTypeahead

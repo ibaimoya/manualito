@@ -23,7 +23,9 @@ function SettingsScreen() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-[var(--m-space-5)] px-[var(--m-space-5)] pb-10 pt-[var(--m-space-4)] md:max-w-3xl md:px-[var(--m-space-8)] md:pt-[var(--m-space-8)]">
       <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">{t('heading')}</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+          {t('heading')}
+        </h1>
       </header>
 
       <AccountSection />
@@ -38,7 +40,11 @@ function SettingsScreen() {
             options={[
               { value: 'light', label: t('appearance.themeModes.light'), icon: <Sun size={14} /> },
               { value: 'dark', label: t('appearance.themeModes.dark'), icon: <Moon size={14} /> },
-              { value: 'auto', label: t('appearance.themeModes.auto'), icon: <SunMoon size={14} /> },
+              {
+                value: 'auto',
+                label: t('appearance.themeModes.auto'),
+                icon: <SunMoon size={14} />,
+              },
             ]}
           />
         </Row>

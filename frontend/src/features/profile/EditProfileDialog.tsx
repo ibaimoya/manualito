@@ -71,10 +71,7 @@ function updateError(error: unknown, takenMessage: string, fallbackMessage: stri
   return fallbackMessage;
 }
 
-function EditProfileForm({
-  user,
-  onClose,
-}: Readonly<{ user: AuthUser; onClose: () => void }>) {
+function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: () => void }>) {
   const { t } = useTranslation('profile');
   const qc = useQueryClient();
   const usernameId = useId();
@@ -155,7 +152,9 @@ function EditProfileForm({
                     onClick={() => setFigure(option.value)}
                     className={cn(
                       'grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 transition-colors',
-                      selected ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg' : 'hover:bg-surface-2',
+                      selected
+                        ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                        : 'hover:bg-surface-2',
                     )}
                   >
                     {option.value === 'initials' ? (
@@ -198,7 +197,12 @@ function EditProfileForm({
         />
         {emailChanged ? (
           <p className="mt-2 flex items-start gap-2 rounded-xl bg-accent-100 px-3 py-2.5 text-xs leading-relaxed text-fg">
-            <Info size={14} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
+            <Info
+              size={14}
+              strokeWidth={2}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-accent"
+            />
             {t('edit.emailChangeNotice')}
           </p>
         ) : null}

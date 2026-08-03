@@ -45,7 +45,9 @@ function SecurityScreen() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-7 px-5 pb-10 pt-5 md:px-8 md:pt-8">
       <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">{t('heading')}</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+          {t('heading')}
+        </h1>
       </header>
       <LastAccessSection lastLoginAt={user.last_login_at} />
       <ChangePasswordSection />

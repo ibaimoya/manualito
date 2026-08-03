@@ -225,7 +225,11 @@ function ResultsDropdown({
   const { t } = useTranslation('explore');
   return (
     <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
-      <ul id={listId} aria-label={t('typeahead.resultsAriaLabel')} className="max-h-64 overflow-y-auto">
+      <ul
+        id={listId}
+        aria-label={t('typeahead.resultsAriaLabel')}
+        className="max-h-64 overflow-y-auto"
+      >
         {status === 'loading' ? <ResultSkeleton /> : null}
 
         {status === 'results'
@@ -293,11 +297,18 @@ function EmptyResult({
             className="mx-auto mt-3 inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg bg-primary pl-2.5 pr-3 text-sm font-semibold text-fg-inv transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {creating ? (
-              <Loader2 size={15} strokeWidth={2.25} className="shrink-0 animate-spin" aria-hidden="true" />
+              <Loader2
+                size={15}
+                strokeWidth={2.25}
+                className="shrink-0 animate-spin"
+                aria-hidden="true"
+              />
             ) : (
               <Plus size={15} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
             )}
-            <span className="min-w-0 truncate">{t('typeahead.empty.create.button', { game: label })}</span>
+            <span className="min-w-0 truncate">
+              {t('typeahead.empty.create.button', { game: label })}
+            </span>
           </button>
         </>
       ) : (
@@ -498,7 +509,8 @@ export function SelectedGameChip({
         <div className="flex items-center gap-2">
           <span className="truncate font-display text-base font-bold text-fg">{game.name}</span>
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 text-xs font-bold text-success">
-            <Check size={13} strokeWidth={2.5} aria-hidden="true" /> {t('typeahead.selected.chosen')}
+            <Check size={13} strokeWidth={2.5} aria-hidden="true" />{' '}
+            {t('typeahead.selected.chosen')}
           </span>
         </div>
         <p className="mono mt-0.5 text-[11.5px] text-fg-3">

@@ -256,9 +256,7 @@ function NewManualScreen() {
           ) : (
             <GameTypeahead onSelect={setChosenGame} focusOnMount />
           )}
-          <p className="text-sm leading-relaxed text-fg-2">
-            {t('game.description')}
-          </p>
+          <p className="text-sm leading-relaxed text-fg-2">{t('game.description')}</p>
         </section>
 
         <section

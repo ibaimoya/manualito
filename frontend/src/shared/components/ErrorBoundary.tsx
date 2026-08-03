@@ -69,9 +69,7 @@ export function FullPageError({
         <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
           {t('boundary.title')}
         </h1>
-        <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">
-          {t('boundary.message')}
-        </p>
+        <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">{t('boundary.message')}</p>
         <div className="mt-6 flex w-full flex-col gap-2.5">
           <Button
             type="button"

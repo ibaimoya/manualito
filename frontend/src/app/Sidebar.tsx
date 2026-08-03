@@ -213,10 +213,7 @@ function MaybeTip({
   );
 }
 
-function UserCard({
-  user,
-  collapsed,
-}: Readonly<{ user: SidebarUser; collapsed: boolean }>) {
+function UserCard({ user, collapsed }: Readonly<{ user: SidebarUser; collapsed: boolean }>) {
   const { t } = useTranslation('shell');
   const name = user.username || user.email;
   const avatar = (

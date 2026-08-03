@@ -71,9 +71,7 @@ function ProcessingScreen() {
               {failed ? t('processing.failureTitle') : t('processing.title')}
             </h2>
             <p className="mt-1 max-w-xs text-sm text-fg-2">
-              {failed
-                ? t('processing.failureDescription')
-                : t('processing.description')}
+              {failed ? t('processing.failureDescription') : t('processing.description')}
             </p>
           </div>
         </div>
@@ -95,9 +93,7 @@ function ProcessingScreen() {
 
         <p className="flex items-center justify-center gap-2 text-xs text-fg-3">
           <Info size={14} />
-          {failed
-            ? t('processing.failureInfo')
-            : t('processing.info')}
+          {failed ? t('processing.failureInfo') : t('processing.info')}
         </p>
       </div>
     </div>

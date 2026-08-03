@@ -47,11 +47,7 @@ export function DeleteAccountSection({ username }: Readonly<{ username: string }
   return (
     <section aria-label={t('delete.sectionTitle')}>
       <SectionHead eyebrow={t('delete.dangerZone')} title={t('delete.sectionTitle')} />
-      <DeleteAccountForm
-        username={username}
-        stats={stats.data}
-        submitLabel={t('delete.submit')}
-      />
+      <DeleteAccountForm username={username} stats={stats.data} submitLabel={t('delete.submit')} />
     </section>
   );
 }

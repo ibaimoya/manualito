@@ -449,7 +449,10 @@ function ChatScreen() {
     <div className="flex h-dvh flex-col bg-bg">
       <ScreenTopBar
         crumb={tChat('navigation.chat')}
-        trail={[{ label: tShell('navigation.library'), link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
+        trail={[
+          { label: tShell('navigation.library'), link: linkOptions({ to: '/history' }) },
+          ...gameCrumb,
+        ]}
       />
 
       <ChatHeader
@@ -563,9 +566,7 @@ function ChatConversation({
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-5 md:px-6">
       {historyLoading ? <HistorySkeleton /> : null}
       {historyError ? (
-        <p className="py-6 text-center text-sm text-fg-3">
-          {t('error.history')}
-        </p>
+        <p className="py-6 text-center text-sm text-fg-3">{t('error.history')}</p>
       ) : null}
       {messages.map((message) => (
         <Bubble
@@ -780,9 +781,7 @@ function SourcesUnavailableNotice() {
         aria-hidden="true"
         className="mt-0.5 shrink-0 text-fg-3"
       />
-      <span>
-        {t('readOnly.notice')}
-      </span>
+      <span>{t('readOnly.notice')}</span>
     </div>
   );
 }
@@ -850,11 +849,7 @@ function BotBubble({
     return <BotStatusBubble label={t('status.generating')} visibleLabel={false} />;
   }
   if (msg.status === 'failed') {
-    return (
-      <BotStaticBubble tone="error">
-        {t('error.assistantFailed')}
-      </BotStaticBubble>
-    );
+    return <BotStaticBubble tone="error">{t('error.assistantFailed')}</BotStaticBubble>;
   }
 
   return (

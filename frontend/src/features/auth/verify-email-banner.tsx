@@ -61,7 +61,9 @@ export function VerifyEmailBanner() {
           ·
         </span>
         {cooldown > 0 ? (
-          <span className="text-xs font-semibold text-fg-3">{t('banner.resent', { seconds: cooldown })}</span>
+          <span className="text-xs font-semibold text-fg-3">
+            {t('banner.resent', { seconds: cooldown })}
+          </span>
         ) : (
           <button
             type="button"

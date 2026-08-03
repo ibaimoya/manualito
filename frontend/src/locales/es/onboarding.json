@@ -1,1 +1,78 @@
-{}
+{
+  "actions": {
+    "continue": "Continuar",
+    "next": "Siguiente",
+    "skip": "Saltar",
+    "start": "Empezar"
+  },
+  "aria": {
+    "authChoice": "Crear cuenta o entrar",
+    "goToSlide": "Ir a diapositiva {{n}}",
+    "hero": "Manualito · presentación",
+    "pager": "Pasos del onboarding",
+    "step": "Paso {{n}}: {{titulo}}"
+  },
+  "demo": {
+    "blocks": {
+      "setup": {
+        "meta": "6 pasos",
+        "steps": {
+          "placeTerrain": "Coloca los 19 hexágonos de terreno bocarriba.",
+          "takePieces": "Cada jugador toma 2 poblados, 2 carreteras y 4 ciudades.",
+          "tokenOrder": "Reparte los tokens de número en orden alfabético."
+        },
+        "title": "Preparación"
+      },
+      "specialCases": {
+        "meta": "Ladrón, puerto, cartas, etc.",
+        "title": "Casos especiales"
+      },
+      "turns": {
+        "meta": "3 fases",
+        "title": "¿Cómo van los turnos?"
+      },
+      "win": {
+        "meta": "Llegando a 10 puntos",
+        "title": "¿Cómo se gana?"
+      }
+    },
+    "capture": {
+      "detected": "Página detectada",
+      "heading": "3 · Los turnos",
+      "page": "P. 4"
+    },
+    "processing": {
+      "llmHint": "Generamos respuesta",
+      "ocrHint": "Leemos cada página",
+      "ragHint": "Buscamos contexto"
+    },
+    "summary": "En el juego del Catán los jugadores compiten por <strong>colonizar una isla</strong> recolectando recursos, comerciando y construyendo asentamientos.",
+    "summaryTitle": "RESUMEN"
+  },
+  "final": {
+    "createAccount": "Crear cuenta",
+    "description": "Crea tu cuenta para guardar los manuales que aprendas, o entra si ya eres de la casa.",
+    "privacyNote": "Al crear una cuenta aceptas la <privacy>Política de privacidad</privacy>.",
+    "signIn": "Ya tengo cuenta",
+    "title": "Todo listo"
+  },
+  "hero": {
+    "eyebrow": "UNA APP DE MESA",
+    "scrollHint": "Desliza · {{count}} pasos · 20 s",
+    "tagline": "Explica cualquier manual de juego de mesa en segundos."
+  },
+  "slides": {
+    "entiende": {
+      "description": "Resumen, preguntas frecuentes y un chat para resolver dudas mientras jugáis.",
+      "title": "Te lo explica con calma"
+    },
+    "foto": {
+      "description": "Captura las páginas del manual con la cámara. Da igual el orden. Manualito las cose por ti.",
+      "title": "Hazle una foto"
+    },
+    "procesa": {
+      "description": "Leemos el texto, buscamos contexto y generamos una explicación clara en segundos.",
+      "title": "Lo entiende por ti"
+    }
+  }
+}

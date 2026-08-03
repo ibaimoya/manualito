@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Check,
   ChevronDown,
@@ -23,13 +24,17 @@ const WORD_LETTERS = Array.from(WORD, (character, index) => ({
   order: index,
 }));
 
-interface Slide {
-  kind: 'hero' | 'step';
-  id: 'hero' | 'foto' | 'procesa' | 'entiende';
-  n?: number;
-  title?: string;
-  sub?: string;
-}
+type StepId = 'foto' | 'procesa' | 'entiende';
+
+type Slide =
+  | { kind: 'hero'; id: 'hero' }
+  | {
+      kind: 'step';
+      id: StepId;
+      n: number;
+      titleKey: `slides.${StepId}.title`;
+      descriptionKey: `slides.${StepId}.description`;
+    };
 
 const SLIDES: Slide[] = [
   { kind: 'hero', id: 'hero' },
@@ -37,22 +42,22 @@ const SLIDES: Slide[] = [
     kind: 'step',
     id: 'foto',
     n: 1,
-    title: 'Hazle una foto',
-    sub: 'Captura las páginas del manual con la cámara. Da igual el orden. Manualito las cose por ti.',
+    titleKey: 'slides.foto.title',
+    descriptionKey: 'slides.foto.description',
   },
   {
     kind: 'step',
     id: 'procesa',
     n: 2,
-    title: 'Lo entiende por ti',
-    sub: 'Leemos el texto, buscamos contexto y generamos una explicación clara en segundos.',
+    titleKey: 'slides.procesa.title',
+    descriptionKey: 'slides.procesa.description',
   },
   {
     kind: 'step',
     id: 'entiende',
     n: 3,
-    title: 'Te lo explica con calma',
-    sub: 'Resumen, preguntas frecuentes y un chat para resolver dudas mientras jugáis.',
+    titleKey: 'slides.entiende.title',
+    descriptionKey: 'slides.entiende.description',
   },
 ];
 
@@ -84,6 +89,7 @@ const THUMBNAILS = [
 ] as const;
 
 export function Onboarding() {
+  const { t } = useTranslation('onboarding');
   const [index, setIndex] = useState(0);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const navigate = useNavigate();
@@ -158,7 +164,7 @@ export function Onboarding() {
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className={styles.topbarLink} onClick={skip} type="button">
-            Saltar
+            {t('actions.skip')}
           </button>
         </div>
       </header>
@@ -168,37 +174,41 @@ export function Onboarding() {
         style={{ width: `${PANELS * 100}vw`, transform: `translateX(${-index * 100}vw)` }}
       >
         {/* — Slide 0: Hero — */}
-        <section className={styles.slide} aria-label="Manualito · presentación">
+        <section className={styles.slide} aria-label={t('aria.hero')}>
           <div className={styles.hero}>
-            <span className={cn(styles.eyebrowTop, styles.isIn)}>UNA APP DE MESA</span>
+            <span className={cn(styles.eyebrowTop, styles.isIn)}>{t('hero.eyebrow')}</span>
             <HeroWordmark playing />
-            <p className={cn(styles.tagline, styles.isIn)}>
-              Explica cualquier manual de juego de mesa en segundos.
-            </p>
+            <p className={cn(styles.tagline, styles.isIn)}>{t('hero.tagline')}</p>
             <button
               type="button"
               className={cn(styles.pill, styles.isIn)}
               onClick={next}
               style={{ '--vt': index === 0 ? 'cta-pill' : 'none' }}
             >
-              <span>Empezar</span>
+              <span>{t('actions.start')}</span>
               <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                 →
               </span>
             </button>
             <span className={cn(styles.scrollhint, styles.isIn)}>
-              Desliza · {STEP_COUNT} pasos · 20 s
+              {t('hero.scrollHint', { count: STEP_COUNT })}
             </span>
           </div>
         </section>
 
         {/* — Slides 1..3 — */}
         {SLIDES.slice(1).map((s, idx) => {
+          if (s.kind !== 'step') return null;
           const slideIdx = idx + 1;
           const shown = visited.has(slideIdx);
           const isLast = slideIdx === N - 1;
+          const title = t(s.titleKey);
           return (
-            <section key={s.id} className={styles.slide} aria-label={`Paso ${s.n}: ${s.title}`}>
+            <section
+              key={s.id}
+              className={styles.slide}
+              aria-label={t('aria.step', { n: s.n, titulo: title })}
+            >
               <div className={styles.step}>
                 <div className={styles.stepCopy}>
                   <span className={styles.stepNum}>
@@ -206,14 +216,14 @@ export function Onboarding() {
                     <span>/</span>
                     <span style={{ opacity: 0.5 }}>{String(STEP_COUNT).padStart(2, '0')}</span>
                   </span>
-                  <h2 className={cn(styles.stepTitle, shown && styles.isIn)}>{s.title}</h2>
-                  <p className={cn(styles.stepSub, shown && styles.isIn)}>{s.sub}</p>
+                  <h2 className={cn(styles.stepTitle, shown && styles.isIn)}>{title}</h2>
+                  <p className={cn(styles.stepSub, shown && styles.isIn)}>{t(s.descriptionKey)}</p>
                   <button
                     type="button"
                     className={cn(styles.pill, shown && styles.isIn)}
                     onClick={next}
                   >
-                    <span>{isLast ? 'Continuar' : 'Siguiente'}</span>
+                    <span>{t(isLast ? 'actions.continue' : 'actions.next')}</span>
                     <span aria-hidden="true" style={{ marginLeft: 8, fontSize: 22, lineHeight: 1 }}>
                       →
                     </span>
@@ -227,7 +237,7 @@ export function Onboarding() {
           );
         })}
         {/* — Última diapositiva: elección crear/entrar — */}
-        <section className={styles.slide} aria-label="Crear cuenta o entrar">
+        <section className={styles.slide} aria-label={t('aria.authChoice')}>
           <AuthChoice
             shown={visited.has(N)}
             onRegister={() => enterTo('/register')}
@@ -240,14 +250,14 @@ export function Onboarding() {
       <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
       {/* Un punto por panel: las diapositivas y la pantalla de elección final. */}
-      <div className={styles.pager} role="tablist" aria-label="Pasos del onboarding">
+      <div className={styles.pager} role="tablist" aria-label={t('aria.pager')}>
         {Array.from({ length: PANELS }, (_, k) => (
           <button
             key={SLIDES[k]?.id ?? 'final'}
             type="button"
             role="tab"
             aria-selected={index === k}
-            aria-label={`Ir a diapositiva ${k + 1}`}
+            aria-label={t('aria.goToSlide', { n: k + 1 })}
             onClick={() => go(k)}
             className={styles.dotHit}
           >
@@ -271,6 +281,8 @@ function AuthChoice({
   onLogin: () => void;
   onShowPrivacy: () => void;
 }>) {
+  const { t } = useTranslation('onboarding');
+
   return (
     <div className={cn(styles.choice, shown && styles.isIn)}>
       <span style={{ filter: 'drop-shadow(0 20px 36px rgba(0, 0, 0, 0.45))' }}>
@@ -278,25 +290,26 @@ function AuthChoice({
       </span>
       <div>
         <h1 className={styles.choiceTitle}>
-          Todo listo<span style={{ color: 'var(--m-primary-300)' }}>.</span>
+          {t('final.title')}
+          <span style={{ color: 'var(--m-primary-300)' }}>.</span>
         </h1>
-        <p className={styles.choiceLead}>
-          Crea tu cuenta para guardar los manuales que aprendas, o entra si ya eres de la casa.
-        </p>
+        <p className={styles.choiceLead}>{t('final.description')}</p>
       </div>
       <div className={styles.choiceActions}>
         <button type="button" className={styles.choiceCreate} onClick={onRegister}>
-          Crear cuenta
+          {t('final.createAccount')}
         </button>
         <button type="button" className={styles.choiceGhost} onClick={onLogin}>
-          Ya tengo cuenta
+          {t('final.signIn')}
         </button>
         <p className={styles.choiceNote}>
-          Al crear una cuenta aceptas la{' '}
-          <button type="button" className={styles.noteLink} onClick={onShowPrivacy}>
-            Política de privacidad
-          </button>
-          {'.'}
+          <Trans
+            ns="onboarding"
+            i18nKey="final.privacyNote"
+            components={{
+              privacy: <button type="button" className={styles.noteLink} onClick={onShowPrivacy} />,
+            }}
+          />
         </p>
       </div>
     </div>
@@ -325,6 +338,8 @@ function HeroWordmark({ playing }: Readonly<{ playing: boolean }>) {
 
 /* — Slide 1: Foto — viewfinder con página detectada — */
 function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
+  const { t } = useTranslation('onboarding');
+
   return (
     <div className={styles.phone} aria-hidden="true">
       <div
@@ -338,7 +353,7 @@ function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
         <span className={styles.mono} style={{ opacity: 0.85 }}>
           ● REC
         </span>
-        <span className={styles.mono}>P. 4</span>
+        <span className={styles.mono}>{t('demo.capture.page')}</span>
       </div>
 
       <div className={styles.viewfinder}>
@@ -351,7 +366,7 @@ function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
               color: '#2A211A',
             }}
           >
-            3 · Los turnos
+            {t('demo.capture.heading')}
           </div>
           <div style={{ height: 6 }} />
           {PAGE_LINE_WIDTHS.map(({ id, width }) => (
@@ -394,7 +409,7 @@ function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
               background: 'var(--m-success)',
             }}
           />
-          <span>Página detectada</span>
+          <span>{t('demo.capture.detected')}</span>
         </div>
       </div>
 
@@ -412,20 +427,21 @@ function StepFoto({ shown }: Readonly<{ shown: boolean }>) {
 
 /* — Slide 2: Procesa — pipeline OCR→RAG→LLM — */
 function StepProcesa({ shown }: Readonly<{ shown: boolean }>) {
+  const { t } = useTranslation('onboarding');
   const nodes: Array<{ label: string; hint: string; icon: ReactNode }> = [
     {
       label: 'OCR',
-      hint: 'Leemos cada página',
+      hint: t('demo.processing.ocrHint'),
       icon: <FileText size={26} strokeWidth={1.75} />,
     },
     {
       label: 'RAG',
-      hint: 'Buscamos contexto',
+      hint: t('demo.processing.ragHint'),
       icon: <SearchIcon size={26} strokeWidth={1.75} />,
     },
     {
       label: 'LLM',
-      hint: 'Generamos respuesta',
+      hint: t('demo.processing.llmHint'),
       icon: <Sparkles size={26} strokeWidth={1.75} />,
     },
   ];
@@ -471,31 +487,40 @@ function StepProcesa({ shown }: Readonly<{ shown: boolean }>) {
 
 /* — Slide 3: Entiende — preview de accordions — */
 function StepEntiende() {
+  const { t } = useTranslation('onboarding');
+
   return (
     <div className={styles.cardStack}>
       <div className={styles.summary}>
-        <span className={styles.eyebrow}>RESUMEN</span>
+        <span className={styles.eyebrow}>{t('demo.summaryTitle')}</span>
         <p>
-          En el juego del Catán los jugadores compiten por <strong>colonizar una isla</strong>{' '}
-          recolectando recursos, comerciando y construyendo asentamientos.
+          <Trans ns="onboarding" i18nKey="demo.summary" components={{ strong: <strong /> }} />
         </p>
       </div>
 
-      {DEMO_BLOCKS.map(({ icon: Icon, title, em, body }) => (
-        <div key={title} className={cn(styles.acc, body ? styles.accOpen : undefined)}>
+      {DEMO_BLOCKS.map(({ icon: Icon, titleKey, metaKey, hasBody }) => (
+        <div key={titleKey} className={cn(styles.acc, hasBody ? styles.accOpen : undefined)}>
           <div className={styles.accHead}>
             <span className={styles.accIc}>
               <Icon size={18} />
             </span>
             <div className={styles.accTitles}>
-              <strong>{title}</strong>
-              <em>{em}</em>
+              <strong>{t(titleKey)}</strong>
+              <em>{t(metaKey)}</em>
             </div>
             <span className={styles.accChev}>
               <ChevronDown size={18} />
             </span>
           </div>
-          {body ? <div className={styles.accBody}>{body}</div> : null}
+          {hasBody ? (
+            <div className={styles.accBody}>
+              <ol>
+                {DEMO_SETUP_STEPS.map((stepKey) => (
+                  <li key={stepKey}>{t(stepKey)}</li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -506,17 +531,32 @@ function StepEntiende() {
 const DEMO_BLOCKS = [
   {
     icon: Flag,
-    title: 'Preparación',
-    em: '6 pasos',
-    body: (
-      <ol>
-        <li>Coloca los 19 hexágonos de terreno bocarriba.</li>
-        <li>Reparte los tokens de número en orden alfabético.</li>
-        <li>Cada jugador toma 2 poblados, 2 carreteras y 4 ciudades.</li>
-      </ol>
-    ),
+    titleKey: 'demo.blocks.setup.title',
+    metaKey: 'demo.blocks.setup.meta',
+    hasBody: true,
   },
-  { icon: RefreshCw, title: '¿Cómo van los turnos?', em: '3 fases', body: null },
-  { icon: Crown, title: '¿Cómo se gana?', em: 'Llegando a 10 puntos', body: null },
-  { icon: Check, title: 'Casos especiales', em: 'Ladrón, puerto, cartas, etc.', body: null },
-];
+  {
+    icon: RefreshCw,
+    titleKey: 'demo.blocks.turns.title',
+    metaKey: 'demo.blocks.turns.meta',
+    hasBody: false,
+  },
+  {
+    icon: Crown,
+    titleKey: 'demo.blocks.win.title',
+    metaKey: 'demo.blocks.win.meta',
+    hasBody: false,
+  },
+  {
+    icon: Check,
+    titleKey: 'demo.blocks.specialCases.title',
+    metaKey: 'demo.blocks.specialCases.meta',
+    hasBody: false,
+  },
+] as const;
+
+const DEMO_SETUP_STEPS = [
+  'demo.blocks.setup.steps.placeTerrain',
+  'demo.blocks.setup.steps.tokenOrder',
+  'demo.blocks.setup.steps.takePieces',
+] as const;

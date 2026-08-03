@@ -1,1 +1,57 @@
-{}
+{
+  "header": {
+    "description": "Find a game someone has already explained and ask away without uploading your rulebook. The number beside each result shows how many rulebooks the community has shared.",
+    "eyebrow": "From the community",
+    "title": "Explore games"
+  },
+  "hints": {
+    "giveBack": {
+      "description": "Share your rulebooks and help other players understand their games.",
+      "title": "Pay it forward"
+    },
+    "instantQuestion": {
+      "description": "If the community has shared it, we'll answer with the exact page.",
+      "title": "Ask right away"
+    },
+    "withoutUpload": {
+      "description": "You don't need your own rulebook: lean on someone else's.",
+      "title": "No upload needed"
+    }
+  },
+  "typeahead": {
+    "attribution": "Powered by <strong>BoardGameGeek</strong>",
+    "clearSearch": "Clear search",
+    "empty": {
+      "create": {
+        "button": "Create “{{game}}”",
+        "description": "Add it yourself and you can upload its rulebook too.",
+        "title": "It's not on BoardGameGeek"
+      },
+      "search": {
+        "description": "Try another name or check the spelling.",
+        "title": "We couldn't find that game"
+      }
+    },
+    "error": {
+      "createDescription": "Try again in a moment.",
+      "createTitle": "We couldn't create the game",
+      "description": "Check your connection and try again.",
+      "retry": "Try again",
+      "title": "We couldn't search"
+    },
+    "inputAriaLabel": "Search for a game",
+    "placeholder": "Type the game name…",
+    "resultsAriaLabel": "Results",
+    "searchHint": {
+      "idle": "Type at least 3 letters to search the catalog.",
+      "typing": "Keep typing… (3 letters minimum)"
+    },
+    "selected": {
+      "change": "Change",
+      "chosen": "Selected"
+    },
+    "sharedManuals_one": "{{count}} shared rulebook",
+    "sharedManuals_other": "{{count}} shared rulebooks",
+    "yearNotAvailable": "n/a"
+  }
+}

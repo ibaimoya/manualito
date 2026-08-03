@@ -1,1 +1,100 @@
-{}
+{
+  "actions": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "exploreGames": "Explore games",
+    "retry": "Try again",
+    "uploadManual": "Upload a rulebook"
+  },
+  "aria": {
+    "confirmDeletion": "Confirm deletion",
+    "deleteManual": "Delete {{manual}}",
+    "openGame": "Open {{game}}",
+    "openGameProcessing": "Open {{game}} (manual processing)",
+    "openManual": "Open {{manual}}"
+  },
+  "duplicatePages": {
+    "detail_one": "One page is identical to another you already uploaded, so it won't be read again or included in the explanation.",
+    "detail_other": "{{count}} pages match pages you already uploaded, so they won't be read again or included in the explanation.",
+    "hintSuffix": "Open it to review it.",
+    "label_one": "1 duplicate page",
+    "label_other": "{{count}} duplicate pages"
+  },
+  "empty": {
+    "games": {
+      "hint": "Follow games from Explore; you'll also start following one when you upload its rulebook, open a chat, or rate it.",
+      "title": "You're not following any games yet"
+    },
+    "manuals": {
+      "hint": "Upload a PDF or photos of a game's rules and Manualito will read them for you.",
+      "title": "You haven't uploaded any rulebooks yet"
+    }
+  },
+  "error": {
+    "description": {
+      "games": "There was a connection problem. Your games are safe.",
+      "manuals": "There was a connection problem. Your rulebooks are safe."
+    },
+    "retry": "Try again",
+    "title": "We couldn't load your library"
+  },
+  "gameCard": {
+    "activity": "Activity · {{relative}}",
+    "chats_one": "{{count}} chat",
+    "chats_other": "{{count}} chats",
+    "manuals_one": "{{count}} rulebook",
+    "manuals_other": "{{count}} rulebooks",
+    "open": "Open {{game}}",
+    "openProcessing": "Open {{game}} (manual processing)",
+    "processing": "Reading the rulebook",
+    "progress": {
+      "available": "Available in a few seconds",
+      "page": "Page {{page}} of {{total}} · available in a few seconds"
+    }
+  },
+  "gameSearch": {
+    "clear": "Clear search",
+    "inputAriaLabel": "Jump to a game",
+    "listLabel": "Your games",
+    "noResults": "No games match “{{query}}”.",
+    "placeholder": "Search your games…",
+    "shortcut": "jump"
+  },
+  "manualCard": {
+    "chunks": "{{count}} chunks",
+    "deleteConfirm": "Delete this {{game}} manual?",
+    "format": {
+      "pdf": "PDF",
+      "photos": "Photos"
+    },
+    "manualOf": "Rulebook for {{game}}",
+    "pageCount_one": "{{count}} page",
+    "pageCount_other": "{{count}} pages",
+    "progress": {
+      "page": "Reading page {{page}} of {{total}}"
+    },
+    "visibility": {
+      "private": "Private",
+      "shared": "Shared"
+    }
+  },
+  "manualSearch": {
+    "clear": "Clear filter",
+    "inputAriaLabel": "Filter your rulebooks",
+    "noResults": "No rulebooks match “{{query}}”.",
+    "placeholder": "Search your rulebooks…"
+  },
+  "status": {
+    "active": "Ready",
+    "failed": "Error",
+    "hidden": "Hidden",
+    "indexing": "Processing…",
+    "pendingReview": "Needs review"
+  },
+  "tabs": {
+    "ariaLabel": "Switch between games and rulebooks",
+    "games": "Games",
+    "manuals": "Rulebooks"
+  },
+  "title": "My library"
+}

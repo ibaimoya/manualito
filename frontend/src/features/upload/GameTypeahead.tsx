@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   Check,
   Dice5,
@@ -35,6 +36,7 @@ type Status = 'idle' | 'typing' | 'loading' | 'results' | 'empty' | 'error';
  * Esc para limpiar. Muestra la atribución BGG que exige su ToU.
  */
 export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Props) {
+  const { t } = useTranslation('explore');
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -62,9 +64,9 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
     onSuccess: onSelect,
     onError: (error) =>
       toastApiError(error, 'create-game', {
-        title: 'No hemos podido crear el juego',
+        title: t('typeahead.error.createTitle'),
         id: 'create-game-error',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: t('typeahead.error.createDescription'),
       }),
   });
 
@@ -136,8 +138,8 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
             setHighlight(0);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Escribe el nombre del juego…"
-          aria-label="Buscar juego"
+          placeholder={t('typeahead.placeholder')}
+          aria-label={t('typeahead.inputAriaLabel')}
           // El foco lo pinta el contenedor: el outline global aquí queda descuadrado.
           className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
@@ -151,7 +153,7 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
           <button
             type="button"
             onClick={reset}
-            aria-label="Limpiar búsqueda"
+            aria-label={t('typeahead.clearSearch')}
             className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
           >
             <X size={16} aria-hidden="true" />
@@ -184,13 +186,12 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
 
 /** Pista bajo el input mientras aún no hay búsqueda lanzada. */
 function SearchHint({ status }: Readonly<{ status: Status }>) {
+  const { t } = useTranslation('explore');
   if (status !== 'idle' && status !== 'typing') return null;
   return (
     <p className="mt-2 flex items-center gap-1.5 pl-1 text-xs text-fg-3">
       <Info size={13} aria-hidden="true" />
-      {status === 'idle'
-        ? 'Escribe al menos 3 letras para buscar en el catálogo.'
-        : 'Sigue escribiendo… (mínimo 3 letras)'}
+      {status === 'idle' ? t('typeahead.searchHint.idle') : t('typeahead.searchHint.typing')}
     </p>
   );
 }
@@ -221,9 +222,10 @@ function ResultsDropdown({
   creating: boolean;
   onCreate: () => void;
 }>) {
+  const { t } = useTranslation('explore');
   return (
     <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
-      <ul id={listId} aria-label="Resultados" className="max-h-64 overflow-y-auto">
+      <ul id={listId} aria-label={t('typeahead.resultsAriaLabel')} className="max-h-64 overflow-y-auto">
         {status === 'loading' ? <ResultSkeleton /> : null}
 
         {status === 'results'
@@ -265,6 +267,7 @@ function EmptyResult({
   creating,
   onCreate,
 }: Readonly<{ query: string; allowCreate: boolean; creating: boolean; onCreate: () => void }>) {
+  const { t } = useTranslation('explore');
   // Acorta el nombre largo para que el botón no desborde; el truncate cubre el resto.
   const label = query.length > 32 ? `${query.slice(0, 32).trimEnd()}…` : query;
   return (
@@ -274,9 +277,9 @@ function EmptyResult({
       </span>
       {allowCreate ? (
         <>
-          <p className="text-sm font-semibold text-fg">No está en BoardGameGeek</p>
+          <p className="text-sm font-semibold text-fg">{t('typeahead.empty.create.title')}</p>
           <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
-            Añádelo tú y podrás subir su manual igualmente.
+            {t('typeahead.empty.create.description')}
           </p>
           <button
             type="button"
@@ -294,14 +297,14 @@ function EmptyResult({
             ) : (
               <Plus size={15} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
             )}
-            <span className="min-w-0 truncate">Crear «{label}»</span>
+            <span className="min-w-0 truncate">{t('typeahead.empty.create.button', { game: label })}</span>
           </button>
         </>
       ) : (
         <>
-          <p className="text-sm font-semibold text-fg">No encontramos ese juego</p>
+          <p className="text-sm font-semibold text-fg">{t('typeahead.empty.search.title')}</p>
           <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
-            Prueba con otro nombre o revisa la ortografía.
+            {t('typeahead.empty.search.description')}
           </p>
         </>
       )}
@@ -310,18 +313,19 @@ function EmptyResult({
 }
 
 function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
+  const { t } = useTranslation('explore');
   return (
     <li className="flex items-start gap-3 px-4 py-4">
       <WifiOff size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
       <div className="flex-1">
-        <p className="text-sm font-semibold text-fg">No pudimos buscar</p>
-        <p className="mt-0.5 text-xs text-fg-3">Revisa tu conexión e inténtalo de nuevo.</p>
+        <p className="text-sm font-semibold text-fg">{t('typeahead.error.title')}</p>
+        <p className="mt-0.5 text-xs text-fg-3">{t('typeahead.error.description')}</p>
         <button
           type="button"
           onClick={onRetry}
           className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg hover:bg-surface"
         >
-          <RotateCw size={14} aria-hidden="true" /> Reintentar
+          <RotateCw size={14} aria-hidden="true" /> {t('typeahead.error.retry')}
         </button>
       </div>
     </li>
@@ -408,6 +412,7 @@ function ResultRow({
   onPick: () => void;
   onHover: () => void;
 }>) {
+  const { t } = useTranslation('explore');
   return (
     <li>
       <button
@@ -433,13 +438,15 @@ function ResultRow({
         {game.manuals_count > 0 ? (
           <span
             className="mono inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-100 px-1.5 py-0.5 text-[10px] font-bold text-primary-700"
-            title={`${game.manuals_count} ${game.manuals_count === 1 ? 'manual compartido' : 'manuales compartidos'}`}
+            title={t('typeahead.sharedManuals', { count: game.manuals_count })}
           >
             <FileText size={10} strokeWidth={2.5} aria-hidden="true" />
             {game.manuals_count}
           </span>
         ) : null}
-        <span className="mono shrink-0 text-xs text-fg-3">{game.year_published ?? 's/f'}</span>
+        <span className="mono shrink-0 text-xs text-fg-3">
+          {game.year_published ?? t('typeahead.yearNotAvailable')}
+        </span>
       </button>
     </li>
   );
@@ -466,7 +473,11 @@ function BggAttribution() {
         BGG
       </span>
       <span className="text-[11.5px] font-medium text-fg-3">
-        Powered by <strong className="font-semibold text-fg-2">BoardGameGeek</strong>
+        <Trans
+          ns="explore"
+          i18nKey="typeahead.attribution"
+          components={{ strong: <strong className="font-semibold text-fg-2" /> }}
+        />
       </span>
     </div>
   );
@@ -477,6 +488,7 @@ export function SelectedGameChip({
   game,
   onChange,
 }: Readonly<{ game: GameSearchItem; onChange: () => void }>) {
+  const { t } = useTranslation('explore');
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-bg p-3.5 shadow-xs">
       <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-fg-inv">
@@ -486,17 +498,19 @@ export function SelectedGameChip({
         <div className="flex items-center gap-2">
           <span className="truncate font-display text-base font-bold text-fg">{game.name}</span>
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 text-xs font-bold text-success">
-            <Check size={13} strokeWidth={2.5} aria-hidden="true" /> Elegido
+            <Check size={13} strokeWidth={2.5} aria-hidden="true" /> {t('typeahead.selected.chosen')}
           </span>
         </div>
-        <p className="mono mt-0.5 text-[11.5px] text-fg-3">{game.year_published ?? 's/f'}</p>
+        <p className="mono mt-0.5 text-[11.5px] text-fg-3">
+          {game.year_published ?? t('typeahead.yearNotAvailable')}
+        </p>
       </div>
       <button
         type="button"
         onClick={onChange}
         className="h-9 shrink-0 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg-2 hover:bg-surface hover:text-fg"
       >
-        Cambiar
+        {t('typeahead.selected.change')}
       </button>
     </div>
   );

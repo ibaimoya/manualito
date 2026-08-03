@@ -46,6 +46,10 @@ function applyToHtml(language: Language): void {
   runtimeDocument.documentElement.lang = language;
   // Dentro del flushSync de la View Transition, el crossfade captura el texto nuevo
   if (i18n.language !== language) void i18n.changeLanguage(language);
+  runtimeDocument.title = i18n.t('shell:meta.title');
+  runtimeDocument
+    .querySelector('meta[name="description"]')
+    ?.setAttribute('content', i18n.t('shell:meta.description'));
 }
 
 /* Sin soporte o con reduced-motion aplica en seco */

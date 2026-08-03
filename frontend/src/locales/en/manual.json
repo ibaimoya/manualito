@@ -71,6 +71,7 @@
     },
     "edit": {
       "busy": "The rulebook is still processing",
+      "busyHint": "Hang on until it finishes, then try again.",
       "failedDescription": "Try again in a moment.",
       "failedTitle": "We couldn't save the text",
       "pendingIndex": "Text saved, indexing pending",

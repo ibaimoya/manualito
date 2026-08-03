@@ -71,6 +71,7 @@
     },
     "edit": {
       "busy": "El manual se está procesando",
+      "busyHint": "Espera a que termine e inténtalo de nuevo.",
       "failedDescription": "Inténtalo de nuevo en un momento.",
       "failedTitle": "No hemos podido guardar el texto",
       "pendingIndex": "Texto guardado, índice pendiente",

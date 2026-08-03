@@ -43,6 +43,14 @@ describe('LanguageProvider', () => {
     expect(localStorage.getItem('manualito.language')).toBe('"en"');
   });
 
+  it('el título del documento sigue al idioma activo', async () => {
+    const user = userEvent.setup();
+    renderProbe();
+    expect(document.title).toContain('Aprende juegos de mesa');
+    await user.click(screen.getByText('en'));
+    expect(document.title).toContain('Learn board games');
+  });
+
   it('lee el idioma persistido al montar', () => {
     localStorage.setItem('manualito.language', '"en"');
     renderProbe();

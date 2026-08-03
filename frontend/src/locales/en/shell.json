@@ -1,4 +1,12 @@
 {
+  "banner": {
+    "dismiss": "Dismiss notice",
+    "message": "Verify your email to keep your account safe.",
+    "openMail": "Open my inbox",
+    "resend": "Resend",
+    "resent": "Sent · {{seconds}}s",
+    "sending": "Sending…"
+  },
   "error": {
     "backHome": "Back to Home",
     "description": "We hit an unexpected problem. Try again, and if it keeps happening, reload the page.",
@@ -7,6 +15,10 @@
   "loading": {
     "ariaLabel": "Loading content",
     "text": "Loading…"
+  },
+  "meta": {
+    "description": "Explains any board game rulebook in seconds.",
+    "title": "Manualito · Learn board games without reading rulebooks"
   },
   "navigation": {
     "aria": {

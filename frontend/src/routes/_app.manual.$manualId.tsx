@@ -88,7 +88,7 @@ function editErrorToast(error: unknown): void {
   if (error instanceof ApiError && error.status === 409) {
     toast.error(i18n.t('feedback.edit.busy', { ns: 'manual' }), {
       id: 'page-edit-error',
-      description: 'Espera a que termine e inténtalo de nuevo.',
+      description: i18n.t('feedback.edit.busyHint', { ns: 'manual' }),
     });
     return;
   }

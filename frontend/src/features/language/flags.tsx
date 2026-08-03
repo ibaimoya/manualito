@@ -2,10 +2,7 @@ import { type CSSProperties } from 'react';
 import { cn } from '@/shared/lib/cn';
 import styles from './flags.module.css';
 
-/**
- * Banderas estilo juguete (esquinas redondas, borde interior sutil).
- * El inglés usa la híbrida diagonal USA+UK, un idioma sin país único.
- */
+/* El inglés lleva la híbrida USA+UK, un idioma sin país único */
 
 type FlagProps = Readonly<{
   width?: number;

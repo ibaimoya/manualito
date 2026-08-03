@@ -45,10 +45,7 @@ function applyToHtml(language: Language): void {
   runtimeDocument.documentElement.lang = language;
 }
 
-/**
- * Aplica el idioma dentro de una View Transition, igual que el tema, para
- * que el cambio se funda suave. Sin soporte o con reduced-motion, en seco.
- */
+/* Sin soporte o con reduced-motion aplica en seco */
 function applyWithViewTransition(language: Language): void {
   const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
   if (runtimeDocument === undefined || runtimeWindow === undefined) return;

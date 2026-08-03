@@ -13,10 +13,7 @@ const CARD_CLASS = [
   'data-[state=checked]:shadow-[0_0_0_1px_var(--m-primary-500),var(--m-shadow-sm)]',
 ].join(' ');
 
-/**
- * Control de idioma de Ajustes, dos tarjetas-bandera con ambas opciones a
- * la vista y la elegida marcada con el anillo del color de acento.
- */
+/* Con dos idiomas no hace falta menú, ambas opciones a la vista */
 export function LanguageCards() {
   const { language, setLanguage } = useLanguage();
   const sweepRef = useFlagSweep<HTMLButtonElement>();

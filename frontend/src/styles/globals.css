@@ -459,8 +459,7 @@ kbd {
   transform-origin: var(--radix-dropdown-menu-content-transform-origin);
 }
 
-/* — Menú de idioma — entra sin scale porque escalar texto lo re-rasteriza
-   al asentar y parpadea, solo fade más deslizamiento */
+/* — Menú de idioma — sin scale porque el texto re-rasteriza al asentar y parpadea */
 @keyframes mn-lang-in {
   from {
     opacity: 0;

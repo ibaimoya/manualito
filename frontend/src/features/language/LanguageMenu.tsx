@@ -14,12 +14,7 @@ const ITEM_CLASS =
 const CHECK_CLASS =
   'text-primary opacity-0 scale-90 transition-[opacity,scale] duration-[120ms] ease-[var(--ease-mn)] group-data-[state=checked]:opacity-100 group-data-[state=checked]:scale-100';
 
-/**
- * Selector de idioma de la topbar. Trigger monocromo (un pill con color
- * permanente competiría con el CTA de la pantalla) y banderas solo en el
- * menú. Cambiar de idioma no cierra el menú, se cierra clicando fuera,
- * con Escape o tras unos segundos sin volver a clicar.
- */
+/* Trigger monocromo, un pill de color permanente competiría con el CTA */
 export function LanguageMenu() {
   const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);

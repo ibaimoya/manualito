@@ -4,16 +4,9 @@ const SWEEP_MS = 1500;
 const RETURN_MS = 300;
 const EDGE = 0.98;
 
-/**
- * Barrido de la bandera híbrida al hacer hover sobre el host, la costura
- * sube a una esquina (UK entera), baja a la otra (USA entera) y vuelve.
- * Va por WAAPI porque una animación CSS de hover no es cancelable, aquí
- * entrada y vuelta parten siempre del valor actual de "--flag-s".
- *
- * Devuelve un ref callback con cleanup en vez de useEffect, el host puede
- * montarse tarde (los items de un menú en portal no existen hasta abrirlo).
- */
+/* Barrido en hover por WAAPI, una animación CSS de hover no es cancelable */
 export function useFlagSweep<T extends HTMLElement>() {
+  // Ref callback con cleanup, los items de un menú en portal montan tarde
   return useCallback((host: T | null) => {
     if (!host) return undefined;
     let anim: Animation | null = null;
@@ -24,7 +17,7 @@ export function useFlagSweep<T extends HTMLElement>() {
 
     const onEnter = () => {
       const mix = findMix();
-      // Sin WAAPI (jsdom, navegadores viejos) el barrido simplemente no corre
+      // Sin WAAPI (jsdom, navegadores viejos) no hay barrido
       if (!mix || typeof mix.animate !== 'function') return;
       if (globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const s = currentS(mix);

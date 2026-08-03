@@ -1,1 +1,67 @@
-{}
+{
+  "faq": {
+    "languages": {
+      "answer": "The app is available in Spanish and English, and you can switch languages in Settings.",
+      "question": "What languages does it support?"
+    },
+    "photos": {
+      "answer": "They're <strong>private by default</strong>: we only use them to extract the text. Sharing a rulebook with your game's community is optional and reversible. Read more in the <link>Privacy Policy</link>.",
+      "question": "What happens to my photos?"
+    },
+    "reliable": {
+      "answer": "Usually, but it's not infallible. Every answer includes a <strong>citation to the rulebook page</strong> so you can check the source in one tap. If something feels off, the original page wins.",
+      "question": "Can I trust what the AI says?"
+    }
+  },
+  "hero": {
+    "description": "Manualito reads your board game's rulebook and explains it in plain English. When a question comes up mid-game, ask it.",
+    "title": {
+      "line1": "From the box to the table",
+      "line2": "without reading a page"
+    }
+  },
+  "project": {
+    "academic": {
+      "description": "Final degree project in progress: you may run into a bug or two. Your reports are gold.",
+      "eyebrow": "Academic project",
+      "title": "Manualito is a TFG (final degree project)"
+    },
+    "contact": {
+      "description": "Questions, bugs, or games we haven't read quite right.",
+      "eyebrow": "Want to talk?"
+    }
+  },
+  "sections": {
+    "faq": {
+      "ariaLabel": "Frequently asked questions",
+      "eyebrow": "Straight answers",
+      "title": "FAQ"
+    },
+    "howItWorks": {
+      "ariaLabel": "How it works",
+      "eyebrow": "The journey",
+      "title": "How it works"
+    },
+    "project": {
+      "ariaLabel": "About the project"
+    }
+  },
+  "steps": {
+    "ask": {
+      "description": "Table-side questions mid-game: a short answer with the source right beside it.",
+      "title": "Ask it"
+    },
+    "capture": {
+      "description": "Snap the rulebook or upload the PDF. Multiple pages at once, in any order.",
+      "title": "Snap a photo"
+    },
+    "explain": {
+      "description": "AI sums up setup, turns, and how to win, with a citation to the original page.",
+      "title": "We explain it"
+    },
+    "read": {
+      "description": "OCR pulls the text from each page and flags any that aren't clear enough.",
+      "title": "We read it"
+    }
+  }
+}

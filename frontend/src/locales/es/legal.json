@@ -1,1 +1,37 @@
-{}
+{
+  "modal": {
+    "description": "Qué guardamos y para qué.",
+    "title": "Política de privacidad"
+  },
+  "page": {
+    "description": "Qué guardamos y para qué, sin pelearte con la letra pequeña. Si algo no se entiende, escríbenos.",
+    "eyebrow": "Legal",
+    "title": "Política de privacidad"
+  },
+  "sections": {
+    "academic": {
+      "body": "Manualito es un Trabajo de Fin de Grado con fines de investigación y demostración, no un servicio comercial.",
+      "heading": "Proyecto académico"
+    },
+    "data": {
+      "body": "Tu email, el nombre que elijas y las imágenes de los manuales que subes.",
+      "heading": "¿Qué datos tratamos?"
+    },
+    "images": {
+      "body": "Se procesan para extraer el texto. Si activas «borrar fotos tras procesar» en Ajustes, se eliminan al terminar; el texto extraído se guarda asociado a tu manual.",
+      "heading": "Las imágenes de tus manuales"
+    },
+    "processing": {
+      "body": "El OCR y el modelo de lenguaje se ejecutan en la infraestructura del proyecto. Tus datos no se ceden a terceros para entrenar sus modelos.",
+      "heading": "¿Dónde se procesan?"
+    },
+    "rights": {
+      "body": "Puedes consultar y borrar tu información desde Ajustes (borrar la cuenta o cerrar sesión). Si necesitas algo más, escríbenos.",
+      "heading": "Tus derechos"
+    },
+    "usage": {
+      "body": "Para darte acceso a tu cuenta, procesar las fotos (OCR) y generar las explicaciones del manual. No vendemos tus datos ni los usamos para publicidad.",
+      "heading": "¿Para qué los usamos?"
+    }
+  }
+}

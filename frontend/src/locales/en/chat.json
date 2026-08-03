@@ -1,1 +1,68 @@
-{}
+{
+  "actions": {
+    "new": "New",
+    "sendQuestion": "Send question"
+  },
+  "aria": {
+    "copyAnswer": "Copy answer",
+    "newConversation": "New conversation",
+    "page": "Page {{page}} ({{reason}})",
+    "pageLink": "Open page {{page}} in the rulebook"
+  },
+  "composer": {
+    "aria": {
+      "question": "Type your question"
+    },
+    "disabledPlaceholder": "No rulebooks are available to ask about",
+    "placeholder": "Ask about {{gameName}}…"
+  },
+  "error": {
+    "assistantFailed": "We couldn't generate this answer. Try again in a moment.",
+    "history": "We couldn't load this conversation. You can keep asking questions below.",
+    "request": {
+      "description": "Try again in a moment.",
+      "title": "We couldn't answer that"
+    }
+  },
+  "fallback": {
+    "conversationTitle": "New conversation",
+    "gameName": "the game"
+  },
+  "feedback": {
+    "copy": {
+      "failure": "Couldn't copy",
+      "success": "Copied"
+    }
+  },
+  "navigation": {
+    "chat": "Chat"
+  },
+  "readOnly": {
+    "description": "A source you used for {{gameName}} is no longer available, so you can't ask new questions. Upload the rulebook again to pick up where you left off.",
+    "notice": "A source you used is no longer available. You can read this conversation, but you can't ask new questions.",
+    "title": "This conversation is read-only"
+  },
+  "sources": {
+    "communityManual": "community rulebook",
+    "heading": "Sources",
+    "page": "p. {{page}}",
+    "unavailable": "no longer available"
+  },
+  "status": {
+    "generating": "Generating answer",
+    "writing": "Writing answer"
+  },
+  "welcome": {
+    "description": "I've read the whole rulebook. Ask me anything and I'll give you a clear answer with the exact page.",
+    "suggestions": {
+      "duration": "How long does a game take?",
+      "passTurn": "Can you pass your turn?",
+      "players": "How many players can play?",
+      "preparation": "How do you set it up?",
+      "start": "Who goes first?",
+      "victory": "How do you win?"
+    },
+    "title": "Ask me about {{gameName}}",
+    "try": "Try asking"
+  }
+}

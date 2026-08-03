@@ -1,7 +1,9 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ParseKeys } from 'i18next';
 import { BookOpen, Check, ChevronRight, Copy, FileText, Plus, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
@@ -44,13 +46,15 @@ function readChatSearch(search: Record<string, unknown>): ChatSearch {
 }
 
 // Tarjetas de la bienvenida: preguntas genéricas válidas para cualquier manual.
-const WELCOME_SUGGESTIONS = [
-  '¿Para cuántos jugadores?',
-  '¿Cómo se gana?',
-  '¿Quién empieza?',
-  '¿Cómo se prepara?',
-  '¿Cuánto dura una partida?',
-  '¿Se puede pasar el turno?',
+type ChatKey = ParseKeys<'chat'>;
+
+const WELCOME_SUGGESTIONS: ReadonlyArray<ChatKey> = [
+  'welcome.suggestions.players',
+  'welcome.suggestions.victory',
+  'welcome.suggestions.start',
+  'welcome.suggestions.preparation',
+  'welcome.suggestions.duration',
+  'welcome.suggestions.passTurn',
 ];
 
 export const PENDING_ASSISTANT_POLL_INTERVAL_MS = 1_500;
@@ -280,6 +284,7 @@ function useAskFlow(args: {
     clearConversationRoute,
   } = args;
   const queryClient = useQueryClient();
+  const { t } = useTranslation('chat');
   const [turns, setTurns] = useState<ConversationMessage[]>([]);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -306,9 +311,9 @@ function useAskFlow(args: {
       // Recupera la pregunta en el composer para reintentar sin reescribirla.
       setDraft((current) => (current.length > 0 ? current : question));
       toastApiError(err, 'ask-error', {
-        title: 'No hemos podido responder',
+        title: t('error.request.title'),
         id: 'ask-error-unknown',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: t('error.request.description'),
       });
     },
     onSuccess: (data) => {
@@ -360,6 +365,8 @@ export const Route = createFileRoute('/_app/chat/$gameId')({
 });
 
 function ChatScreen() {
+  const { t: tChat } = useTranslation('chat');
+  const { t: tShell } = useTranslation('shell');
   const { gameId } = Route.useParams();
   const { q: initialQ, c: initialC } = Route.useSearch();
   const [conversationId, setConversationId] = useState<string | null>(initialC ?? null);
@@ -431,7 +438,7 @@ function ChatScreen() {
   // Hasta que el backend nombra la conversación seguimos en "Nueva conversación",
   // así el título solo se reescribe una vez: cuando llega el nombre real.
   const convSummary = useConversationSummary(conversationId, conversations.data);
-  const titleTarget = convSummary?.title ?? 'Nueva conversación';
+  const titleTarget = convSummary?.title ?? tChat('fallback.conversationTitle');
 
   // Mirar el chat lo marca como leído (su updated_at actual); si la respuesta se
   // completa estando aquí, el poll lo actualiza y la conversación sigue leída.
@@ -441,8 +448,8 @@ function ChatScreen() {
   return (
     <div className="flex h-dvh flex-col bg-bg">
       <ScreenTopBar
-        crumb="Chat"
-        trail={[{ label: 'Biblioteca', link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
+        crumb={tChat('navigation.chat')}
+        trail={[{ label: tShell('navigation.library'), link: linkOptions({ to: '/history' }) }, ...gameCrumb]}
       />
 
       <ChatHeader
@@ -550,12 +557,14 @@ function ChatConversation({
   historyError,
   responsePending,
 }: ChatConversationProps) {
+  const { t } = useTranslation('chat');
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-5 md:px-6">
       {historyLoading ? <HistorySkeleton /> : null}
       {historyError ? (
         <p className="py-6 text-center text-sm text-fg-3">
-          No hemos podido recuperar esta conversación. Puedes seguir preguntando abajo.
+          {t('error.history')}
         </p>
       ) : null}
       {messages.map((message) => (
@@ -569,7 +578,7 @@ function ChatConversation({
       ))}
       {pendingQuestion ? <UserBubble content={pendingQuestion} /> : null}
       {responsePending ? (
-        <BotStatusBubble label="Escribiendo respuesta" visibleLabel={false} />
+        <BotStatusBubble label={t('status.writing')} visibleLabel={false} />
       ) : null}
     </div>
   );
@@ -592,9 +601,10 @@ function ChatComposerBar({
   disabled: boolean;
   sendPending: boolean;
 }>) {
+  const { t } = useTranslation('chat');
   const placeholder = canAsk
-    ? `Pregunta sobre ${gameName ?? 'el juego'}…`
-    : 'No hay manuales disponibles para preguntar';
+    ? t('composer.placeholder', { gameName: gameName ?? t('fallback.gameName') })
+    : t('composer.disabledPlaceholder');
 
   return (
     <div
@@ -650,6 +660,7 @@ function ChatHeader({
   onNew: () => void;
   processing: boolean;
 }>) {
+  const { t } = useTranslation('chat');
   // El título se reescribe (borrar + teclear) cuando el backend nombra la conversación.
   const shownTitle = useRetypingTitle(title);
   return (
@@ -662,7 +673,7 @@ function ChatHeader({
         </p>
         <p className="mono mt-0.5 flex items-center gap-1.5 text-[11px] text-fg-3">
           <Meeple size={11} color="currentColor" />
-          <span className="truncate">{gameName ?? 'Juego'}</span>
+          <span className="truncate">{gameName ?? t('fallback.gameName')}</span>
         </p>
       </div>
       {showNew ? (
@@ -671,10 +682,10 @@ function ChatHeader({
           size="sm"
           onClick={onNew}
           className="shrink-0"
-          aria-label="Nueva conversación"
+          aria-label={t('aria.newConversation')}
         >
           <Plus size={15} strokeWidth={2} />
-          <span className="hidden sm:inline">Nueva</span>
+          <span className="hidden sm:inline">{t('actions.new')}</span>
         </Button>
       ) : null}
     </div>
@@ -686,40 +697,50 @@ function ChatWelcome({
   gameName,
   onPick,
 }: Readonly<{ gameName: string | null; onPick: (q: string) => void }>) {
+  const { t } = useTranslation('chat');
+
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-8 text-center">
       <ChatBotAvatar size={64} />
       <h2 className="mt-3.5 font-display text-2xl font-extrabold tracking-tight text-fg">
-        Pregúntame sobre {gameName ?? 'el juego'}
+        <Trans
+          ns="chat"
+          i18nKey="welcome.title"
+          values={{ gameName: gameName ?? t('fallback.gameName') }}
+        />
       </h2>
       <p className="mt-1.5 max-w-md text-[15px] leading-relaxed text-fg-2">
-        He leído el manual entero. Pregunta lo que quieras y te respondo en claro, citando la página
-        exacta.
+        {t('welcome.description')}
       </p>
       <div className="mt-6 w-full max-w-xl">
         <p className="mono mb-3 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-fg-3">
-          Prueba con
+          {t('welcome.try')}
         </p>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          {WELCOME_SUGGESTIONS.map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => onPick(q)}
-              className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            >
-              <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-primary-100 text-primary-700">
-                <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
-              </span>
-              <span className="flex-1 transition-colors group-hover:text-primary-700">{q}</span>
-              <ChevronRight
-                size={16}
-                strokeWidth={2}
-                className="shrink-0 text-fg-3"
-                aria-hidden="true"
-              />
-            </button>
-          ))}
+          {WELCOME_SUGGESTIONS.map((key) => {
+            const question = t(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onPick(question)}
+                className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-primary-100 text-primary-700">
+                  <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
+                </span>
+                <span className="flex-1 transition-colors group-hover:text-primary-700">
+                  {question}
+                </span>
+                <ChevronRight
+                  size={16}
+                  strokeWidth={2}
+                  className="shrink-0 text-fg-3"
+                  aria-hidden="true"
+                />
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -728,15 +749,20 @@ function ChatWelcome({
 
 /** Conversación sin mensajes de un juego que ya no tiene manuales: solo lectura. */
 function ReadOnlyEmpty({ gameName }: Readonly<{ gameName: string | null }>) {
+  const { t } = useTranslation('chat');
+
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-6 py-8 text-center">
       <ChatBotAvatar size={64} />
       <h2 className="mt-3.5 font-display text-2xl font-extrabold tracking-tight text-fg">
-        Esta conversación es de solo lectura
+        {t('readOnly.title')}
       </h2>
       <p className="mt-1.5 max-w-md text-[15px] leading-relaxed text-fg-2">
-        Una fuente que usaste sobre {gameName ?? 'el juego'} ya no está disponible, así que no se
-        pueden hacer nuevas preguntas. Sube de nuevo el manual para retomarla.
+        <Trans
+          ns="chat"
+          i18nKey="readOnly.description"
+          values={{ gameName: gameName ?? t('fallback.gameName') }}
+        />
       </p>
     </div>
   );
@@ -744,6 +770,8 @@ function ReadOnlyEmpty({ gameName }: Readonly<{ gameName: string | null }>) {
 
 /** Aviso sobre el composer cuando el juego se quedó sin manuales que citar. */
 function SourcesUnavailableNotice() {
+  const { t } = useTranslation('chat');
+
   return (
     <div className="mb-2 flex items-start gap-2.5 rounded-xl border border-border-strong bg-surface px-3.5 py-2.5 text-[13px] leading-snug text-fg-2">
       <FileText
@@ -753,8 +781,7 @@ function SourcesUnavailableNotice() {
         className="mt-0.5 shrink-0 text-fg-3"
       />
       <span>
-        Una fuente que usaste ya no está disponible. Puedes leer esta conversación, pero no hacer
-        nuevas preguntas.
+        {t('readOnly.notice')}
       </span>
     </div>
   );
@@ -808,6 +835,7 @@ function BotBubble({
   onReveal: () => void;
   availableManualIds: ReadonlySet<string> | null;
 }>) {
+  const { t } = useTranslation('chat');
   // Solo las respuestas completadas se escriben letra a letra; los hooks van
   // siempre en el mismo orden (pending/failed se pintan abajo sin usarlos).
   const ready = msg.status === 'completed';
@@ -819,12 +847,12 @@ function BotBubble({
   }, [shown, animate, ready, onReveal]);
 
   if (msg.status === 'pending') {
-    return <BotStatusBubble label="Generando respuesta" visibleLabel={false} />;
+    return <BotStatusBubble label={t('status.generating')} visibleLabel={false} />;
   }
   if (msg.status === 'failed') {
     return (
       <BotStaticBubble tone="error">
-        No hemos podido generar esta respuesta. Prueba de nuevo en un momento.
+        {t('error.assistantFailed')}
       </BotStaticBubble>
     );
   }
@@ -899,16 +927,17 @@ function BotStaticBubble({
 
 /** Copia la respuesta (Markdown tal cual). Discreto hasta el hover en escritorio. */
 function CopyAnswer({ text }: Readonly<{ text: string }>) {
+  const { t } = useTranslation('chat');
   const [copied, setCopied] = useState(false);
 
   async function copy(): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success('Copiado', { id: 'copy-answer' });
+      toast.success(t('feedback.copy.success'), { id: 'copy-answer' });
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error('No se pudo copiar', { id: 'copy-answer' });
+      toast.error(t('feedback.copy.failure'), { id: 'copy-answer' });
     }
   }
 
@@ -918,7 +947,7 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
       onClick={() => {
         copy().catch(() => undefined);
       }}
-      aria-label="Copiar respuesta"
+      aria-label={t('aria.copyAnswer')}
       className="mt-1.5 grid size-7 place-items-center rounded-lg text-fg-3 transition-[color,background-color,opacity] hover:bg-surface-2 hover:text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-visible:opacity-100"
     >
       {copied ? (
@@ -935,6 +964,7 @@ function SourceChips({
   sources,
   availableManualIds,
 }: Readonly<{ sources: AnswerSource[]; availableManualIds: ReadonlySet<string> | null }>) {
+  const { t } = useTranslation('chat');
   const byPage = new Map<number, { manualId: string; title: string | null; isOwn: boolean }>();
   for (const source of sources) {
     if (!byPage.has(source.page)) {
@@ -950,7 +980,7 @@ function SourceChips({
     <div className="mt-[13px] border-t border-dashed border-border-strong pt-3">
       <p className="mono mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-3">
         <BookOpen size={12} strokeWidth={2} aria-hidden="true" />
-        Fuentes consultadas
+        {t('sources.heading')}
       </p>
       <div className="flex flex-wrap gap-[7px]">
         {pages.map(([page, source]) => (
@@ -987,6 +1017,7 @@ function SourceChip({
   isOwn: boolean;
   available: boolean;
 }>) {
+  const { t } = useTranslation('chat');
   const clickable = isOwn && available;
   const icon = (
     <span
@@ -1006,27 +1037,27 @@ function SourceChip({
         params={{ manualId }}
         search={{ page }}
         title={title ?? undefined}
-        aria-label={`Abrir página ${page} del manual`}
+        aria-label={t('aria.pageLink', { page })}
         className={cn(
           CHIP_BASE,
           'border-border-strong bg-card text-fg-2 transition-colors hover:border-primary hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         )}
       >
         {icon}
-        Pág. {page}
+        {t('sources.page', { page })}
       </Link>
     );
   }
 
-  const reason = isOwn ? 'ya no disponible' : 'manual de la comunidad';
+  const reason = isOwn ? t('sources.unavailable') : t('sources.communityManual');
   return (
     <span
       title={title ? `${title} · ${reason}` : reason}
-      aria-label={`Página ${page} (${reason})`}
+      aria-label={t('aria.page', { page, reason })}
       className={cn(CHIP_BASE, 'cursor-default border-border bg-card text-fg-3')}
     >
       {icon}
-      Pág. {page}
+      {t('sources.page', { page })}
     </span>
   );
 }

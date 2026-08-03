@@ -1,1 +1,107 @@
-{}
+{
+  "actions": {
+    "moveDown": "Move page {{page}} down",
+    "moveUp": "Move page {{page}} up",
+    "process": "Process",
+    "processPages_one": "Process {{count}} page",
+    "processPages_other": "Process {{count}} pages",
+    "processPdf": "Process 1 PDF",
+    "removePage": "Remove page {{page}}",
+    "removePdf": "Remove PDF"
+  },
+  "consent": {
+    "ariaLabel": "Share this rulebook with the community",
+    "description": "Help others ask questions without uploading their rulebook.",
+    "label": "Share with the community"
+  },
+  "empty": {
+    "pages": "No pages yet. Use the camera, your gallery, or upload a PDF."
+  },
+  "feedback": {
+    "chooseGame": {
+      "description": "Pick a game before you process the rulebook.",
+      "title": "Choose a game"
+    },
+    "unexpected": {
+      "description": "Please try again in a moment.",
+      "title": "Something went wrong"
+    }
+  },
+  "game": {
+    "description": "We look up the game on BoardGameGeek to connect the rulebook to its library and make answers better."
+  },
+  "pages": {
+    "counter_one": "{{count}} / {{max}} page",
+    "counter_other": "{{count}} / {{max}} pages",
+    "label": "Page {{page}}",
+    "pdfReady": "PDF ready to process"
+  },
+  "processing": {
+    "description": "It can take longer with PDFs or multiple pages. You can minimize the app if you'd like.",
+    "failureDescription": "Check the file or try again with another rulebook.",
+    "failureInfo": "No useful result was saved for this rulebook.",
+    "failureTitle": "We couldn't process it",
+    "info": "Your files are used to process and index this rulebook.",
+    "pageCount_one": "{{completed}}/{{count}} page",
+    "pageCount_other": "{{completed}}/{{count}} pages",
+    "progressLabel": "Progress: {{progress}} percent",
+    "title": "Reading your rulebook…",
+    "unnamed": "Unnamed rulebook"
+  },
+  "sources": {
+    "camera": {
+      "ariaLabel": "Take a photo with your camera",
+      "description": "One photo at a time",
+      "label": "Camera"
+    },
+    "gallery": {
+      "ariaLabel": "Choose images from your gallery",
+      "description": "Several photos at once",
+      "label": "Gallery"
+    },
+    "pdf": {
+      "ariaLabel": "Choose a PDF",
+      "description": "One document",
+      "label": "PDF"
+    }
+  },
+  "steps": {
+    "game": "Choose the game",
+    "pages": "Add your pages"
+  },
+  "title": "New rulebook",
+  "validation": {
+    "addPages": {
+      "description": "Use the camera, your gallery, or upload a PDF.",
+      "title": "Add some pages"
+    },
+    "imageTooLarge": {
+      "description": "Each image can be up to {{max}} MB.",
+      "title": "That image is too big"
+    },
+    "pdfAlreadyAdded": {
+      "description": "Remove it before adding images.",
+      "title": "You've already added a PDF"
+    },
+    "pdfTooLarge": {
+      "description": "The PDF can be up to {{max}} MB.",
+      "title": "That PDF is too big"
+    },
+    "tooManyPages": {
+      "description": "A rulebook can have up to {{max}} images.",
+      "title": "That's too many pages"
+    },
+    "totalTooLarge": {
+      "description": "The total can't be more than {{max}} MB.",
+      "title": "Those files are too big"
+    },
+    "unsupportedImage": {
+      "description": "Use JPG, PNG, or WebP.",
+      "title": "That file format isn't supported"
+    },
+    "unsupportedPdf": {
+      "description": "Choose a PDF.",
+      "title": "That file format isn't supported"
+    }
+  }
+}

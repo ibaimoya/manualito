@@ -19,6 +19,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,7 @@ function toGameSearchItem(detail: GameDetail): GameSearchItem {
 }
 
 function NewManualScreen() {
+  const { t } = useTranslation('capture');
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { gameId } = Route.useSearch();
@@ -128,9 +130,9 @@ function NewManualScreen() {
     onError: (err) => {
       if (isAbortApiError(err)) return;
       toastApiError(err, 'mutation-error', {
-        title: 'Error inesperado',
+        title: t('feedback.unexpected.title'),
         id: 'mutation-error-unknown',
-        description: 'Vuelve a intentarlo en un momento.',
+        description: t('feedback.unexpected.description'),
       });
     },
     onSuccess: (data, input) => {
@@ -151,11 +153,15 @@ function NewManualScreen() {
   function submitManual(): void {
     if (busy) return;
     if (game === null) {
-      toast.warning('Elige un juego', { description: 'Selecciona el juego antes de procesar.' });
+      toast.warning(t('feedback.chooseGame.title'), {
+        description: t('feedback.chooseGame.description'),
+      });
       return;
     }
     if (mode === null || pages.length === 0) {
-      toast.warning('Añade páginas', { description: 'Usa la cámara, la galería o sube un PDF.' });
+      toast.warning(t('validation.addPages.title'), {
+        description: t('validation.addPages.description'),
+      });
       return;
     }
     mutation.mutate({ game, pages: [...pages], mode, visibility: share ? 'shared' : 'private' });
@@ -164,29 +170,33 @@ function NewManualScreen() {
   function addImages(incoming: File[]): void {
     if (incoming.length === 0) return;
     if (mode === 'pdf') {
-      toast.warning('Ya has añadido un PDF', { description: 'Bórralo para subir imágenes.' });
+      toast.warning(t('validation.pdfAlreadyAdded.title'), {
+        description: t('validation.pdfAlreadyAdded.description'),
+      });
       return;
     }
     const valid = incoming.filter((file) => IMAGE_TYPES.has(file.type));
     if (valid.length < incoming.length) {
-      toast.warning('Formato no soportado', { description: 'Usa JPG, PNG o WebP.' });
+      toast.warning(t('validation.unsupportedImage.title'), {
+        description: t('validation.unsupportedImage.description'),
+      });
     }
     if (valid.some((file) => file.size > MAX_IMAGE_BYTES)) {
-      toast.warning('Imagen demasiado grande', {
-        description: `Cada imagen puede ocupar ${MAX_IMAGE_MB} MB.`,
+      toast.warning(t('validation.imageTooLarge.title'), {
+        description: t('validation.imageTooLarge.description', { max: MAX_IMAGE_MB }),
       });
       return;
     }
     const next = [...pages, ...valid];
     if (next.length > MAX_PAGES) {
-      toast.warning('Demasiadas páginas', {
-        description: `Máximo ${MAX_PAGES} imágenes por manual.`,
+      toast.warning(t('validation.tooManyPages.title'), {
+        description: t('validation.tooManyPages.description', { max: MAX_PAGES }),
       });
       return;
     }
     if (next.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_BYTES) {
-      toast.warning('Archivo demasiado grande', {
-        description: `El total no puede superar ${MAX_TOTAL_MB} MB.`,
+      toast.warning(t('validation.totalTooLarge.title'), {
+        description: t('validation.totalTooLarge.description', { max: MAX_TOTAL_MB }),
       });
       return;
     }
@@ -196,12 +206,14 @@ function NewManualScreen() {
   function addPdf(file: File | undefined): void {
     if (!file) return;
     if (file.type !== 'application/pdf') {
-      toast.warning('Formato no soportado', { description: 'Selecciona un PDF.' });
+      toast.warning(t('validation.unsupportedPdf.title'), {
+        description: t('validation.unsupportedPdf.description'),
+      });
       return;
     }
     if (file.size > MAX_PDF_BYTES) {
-      toast.warning('PDF demasiado grande', {
-        description: `El PDF puede ocupar ${MAX_PDF_MB} MB.`,
+      toast.warning(t('validation.pdfTooLarge.title'), {
+        description: t('validation.pdfTooLarge.description', { max: MAX_PDF_MB }),
       });
       return;
     }
@@ -226,23 +238,26 @@ function NewManualScreen() {
 
   const ready = game !== null && mode !== null && pages.length > 0;
   const busy = mutation.isPending;
-  const ctaLabel = ready ? `Procesar ${pages.length} ${pageWord(mode, pages.length)}` : 'Procesar';
+  const ctaLabel = ready
+    ? mode === 'pdf'
+      ? t('actions.processPdf')
+      : t('actions.processPages', { count: pages.length })
+    : t('actions.process');
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <ScreenTopBar crumb="Nuevo manual" />
+      <ScreenTopBar crumb={t('title')} />
 
       <div className="mx-auto grid w-full max-w-6xl flex-1 gap-8 p-5 md:grid-cols-2 md:gap-10 md:p-8">
         <section className="flex flex-col gap-5">
-          <StepHeader n={1} title="Elige el juego" done={game !== null} />
+          <StepHeader n={1} title={t('steps.game')} done={game !== null} />
           {game ? (
             <SelectedGameChip game={game} onChange={() => setChosenGame(null)} />
           ) : (
             <GameTypeahead onSelect={setChosenGame} focusOnMount />
           )}
           <p className="text-sm leading-relaxed text-fg-2">
-            Buscamos el juego en BoardGameGeek para asociar el manual a su biblioteca y mejorar las
-            respuestas.
+            {t('game.description')}
           </p>
         </section>
 
@@ -252,17 +267,17 @@ function NewManualScreen() {
             game ? 'opacity-100' : 'pointer-events-none opacity-45',
           )}
         >
-          <StepHeader n={2} title="Añade las páginas" done={pages.length > 0} />
+          <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
           <div className="grid grid-cols-3 gap-2.5">
             <SourceFileControl
               inputId={cameraInputId}
               icon={<Camera size={19} strokeWidth={2} />}
-              label="Cámara"
-              sub="Foto a foto"
+              label={t('sources.camera.label')}
+              sub={t('sources.camera.description')}
               disabled={busy || game === null || mode === 'pdf'}
               input={{
                 accept: 'image/jpeg,image/png,image/webp',
-                ariaLabel: 'Hacer foto con la cámara',
+                ariaLabel: t('sources.camera.ariaLabel'),
                 capture: 'environment',
                 testId: 'picker-camera',
                 onChange: (event) => {
@@ -274,12 +289,12 @@ function NewManualScreen() {
             <SourceFileControl
               inputId={galleryInputId}
               icon={<ImageIcon size={19} strokeWidth={2} />}
-              label="Galería"
-              sub="Varias a la vez"
+              label={t('sources.gallery.label')}
+              sub={t('sources.gallery.description')}
               disabled={busy || game === null || mode === 'pdf'}
               input={{
                 accept: 'image/jpeg,image/png,image/webp',
-                ariaLabel: 'Seleccionar imágenes de la galería',
+                ariaLabel: t('sources.gallery.ariaLabel'),
                 multiple: true,
                 testId: 'picker-gallery',
                 onChange: (event) => {
@@ -291,12 +306,12 @@ function NewManualScreen() {
             <SourceFileControl
               inputId={pdfInputId}
               icon={<FileText size={19} strokeWidth={2} />}
-              label="PDF"
-              sub="Un documento"
+              label={t('sources.pdf.label')}
+              sub={t('sources.pdf.description')}
               disabled={busy || game === null || mode === 'images'}
               input={{
                 accept: 'application/pdf',
-                ariaLabel: 'Seleccionar PDF',
+                ariaLabel: t('sources.pdf.ariaLabel'),
                 testId: 'picker-pdf',
                 onChange: (event) => {
                   addPdf(event.target.files?.[0]);
@@ -308,7 +323,7 @@ function NewManualScreen() {
 
           {pages.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-border-strong bg-surface px-4 py-8 text-center text-sm text-fg-3">
-              Aún no hay páginas. Usa la cámara, la galería o sube un PDF.
+              {t('empty.pages')}
             </p>
           ) : (
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
@@ -356,11 +371,6 @@ function NewManualScreen() {
   );
 }
 
-function pageWord(mode: Mode | null, count: number): string {
-  if (mode === 'pdf') return 'PDF';
-  return count === 1 ? 'página' : 'páginas';
-}
-
 function StepHeader({ n, title, done }: Readonly<{ n: number; title: string; done: boolean }>) {
   return (
     <div className="flex items-center gap-2.5">
@@ -387,13 +397,14 @@ function ShareToggle({
   onChange,
   disabled,
 }: Readonly<{ checked: boolean; onChange: (next: boolean) => void; disabled: boolean }>) {
+  const { t } = useTranslation('capture');
   const helpId = useId();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label="Compartir el manual con la comunidad"
+      aria-label={t('consent.ariaLabel')}
       aria-describedby={helpId}
       disabled={disabled}
       onClick={() => onChange(!checked)}
@@ -415,9 +426,9 @@ function ShareToggle({
         <Users size={18} strokeWidth={2} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold text-fg">Compartir con la comunidad</span>
+        <span className="block text-sm font-bold text-fg">{t('consent.label')}</span>
         <span id={helpId} className="mt-0.5 block text-xs leading-relaxed text-fg-3">
-          Ayuda a otros a preguntar sin subir su manual.
+          {t('consent.description')}
         </span>
       </span>
       <span
@@ -439,14 +450,15 @@ function ShareToggle({
 }
 
 function PageCounter({ count, mode }: Readonly<{ count: number; mode: Mode | null }>) {
+  const { t } = useTranslation('capture');
   if (mode === 'pdf') {
-    return <p className="text-sm font-semibold text-fg">PDF listo para procesar</p>;
+    return <p className="text-sm font-semibold text-fg">{t('pages.pdfReady')}</p>;
   }
   const over = count > MAX_PAGES;
   return (
     <div className="flex items-center gap-3">
       <span className={cn('text-sm font-semibold', over ? 'text-error' : 'text-fg')}>
-        {count} / {MAX_PAGES} páginas
+        {t('pages.counter', { count, max: MAX_PAGES })}
       </span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
         <div
@@ -475,6 +487,7 @@ function PageRow({
   onMove: (index: number, delta: -1 | 1) => void;
   onRemove: (index: number) => void;
 }>) {
+  const { t } = useTranslation('capture');
   const url = useMemo(() => {
     if (!file.type.startsWith('image/')) return null;
     return URL.createObjectURL(file);
@@ -507,7 +520,7 @@ function PageRow({
       )}
       <div className="min-w-0 flex-1">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-3">
-          {isPdf ? 'PDF' : `Página ${index + 1}`}
+          {isPdf ? t('sources.pdf.label') : t('pages.label', { page: index + 1 })}
         </p>
         <p className="truncate text-sm font-semibold text-fg">{file.name}</p>
         <p className="mono text-xs text-fg-3">{(file.size / MB).toFixed(2)} MB</p>
@@ -516,13 +529,13 @@ function PageRow({
         {isPdf ? null : (
           <>
             <IconButton
-              label={`Subir página ${index + 1}`}
+              label={t('actions.moveUp', { page: index + 1 })}
               disabled={disabled || index === 0}
               onClick={() => onMove(index, -1)}
               icon={<ChevronUp size={17} strokeWidth={2} />}
             />
             <IconButton
-              label={`Bajar página ${index + 1}`}
+              label={t('actions.moveDown', { page: index + 1 })}
               disabled={disabled || index === total - 1}
               onClick={() => onMove(index, 1)}
               icon={<ChevronDown size={17} strokeWidth={2} />}
@@ -531,7 +544,7 @@ function PageRow({
         )}
         <IconButton
           danger
-          label={isPdf ? 'Quitar PDF' : `Quitar página ${index + 1}`}
+          label={isPdf ? t('actions.removePdf') : t('actions.removePage', { page: index + 1 })}
           disabled={disabled}
           onClick={() => onRemove(index)}
           icon={<Trash2 size={17} strokeWidth={2} />}

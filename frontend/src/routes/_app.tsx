@@ -6,6 +6,7 @@ import { DesktopTopbar } from '@/app/Topbar';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { useAuth } from '@/features/auth/use-auth';
+import { LanguageMenu } from '@/features/language/LanguageMenu';
 import { cn } from '@/shared/lib/cn';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 
@@ -69,7 +70,13 @@ function AppLayout() {
           showNav ? 'pb-[72px] md:pb-0' : 'pb-0',
         )}
       >
-        {showNav ? <DesktopTopbar pathname={location.pathname} /> : null}
+        {/* En Ajustes el idioma ya tiene su propia fila, sin duplicarlo arriba */}
+        {showNav ? (
+          <DesktopTopbar
+            pathname={location.pathname}
+            actions={location.pathname === '/settings' ? undefined : <LanguageMenu />}
+          />
+        ) : null}
         {showNav ? <VerifyEmailBanner /> : null}
         <Outlet />
       </main>

@@ -459,6 +459,35 @@ kbd {
   transform-origin: var(--radix-dropdown-menu-content-transform-origin);
 }
 
+/* — Menú de idioma — entra sin scale porque escalar texto lo re-rasteriza
+   al asentar y parpadea, solo fade más deslizamiento */
+@keyframes mn-lang-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes mn-lang-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+[data-mn-lang-menu][data-state='open'] {
+  animation: mn-lang-in 150ms var(--m-easing);
+}
+[data-mn-lang-menu][data-state='closed'] {
+  animation: mn-lang-out 130ms var(--m-easing) forwards;
+}
+
 /* Respeta prefers-reduced-motion para todas las animaciones globales */
 @media (prefers-reduced-motion: reduce) {
   *,

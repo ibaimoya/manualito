@@ -7,6 +7,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { DeleteAccountButton } from '@/features/account/DeleteAccount';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
+import { LanguageCards } from '@/features/language/LanguageCards';
 import { Avatar } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
 
@@ -49,6 +50,9 @@ function SettingsScreen() {
               { value: 'blue', label: 'Azul' },
             ]}
           />
+        </Row>
+        <Row label="Idioma" hint="Español o inglés" stacked>
+          <LanguageCards />
         </Row>
       </Group>
 

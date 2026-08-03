@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster, toast } from 'sonner';
+import { LanguageProvider } from './language';
 import { ThemeProvider, useTheme } from './theme';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { handleSessionExpired } from '@/features/auth/session-expired';
@@ -86,11 +87,13 @@ export function Providers({ children }: Props) {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>{children}</TooltipProvider>
-        <AppToaster />
-        {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-right" />}
-      </QueryClientProvider>
+      <LanguageProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>{children}</TooltipProvider>
+          <AppToaster />
+          {import.meta.env.DEV && <ReactQueryDevtools buttonPosition="bottom-right" />}
+        </QueryClientProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

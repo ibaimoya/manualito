@@ -1,4 +1,6 @@
+import type { ParseKeys } from 'i18next';
 import { AlertTriangle, Check, Copy, LoaderCircle, Pencil, X, type LucideIcon } from 'lucide-react';
+import i18n from '@/app/i18n';
 import type { ManualDetailPage } from '@/shared/api/client';
 
 /** Estado de lectura de una página (fuente única para rail, chip y cajón). */
@@ -7,76 +9,98 @@ export type PageStatusTone = 'success' | 'warning' | 'accent' | 'error';
 
 export interface PageStatusMeta {
   key: PageStatusKey;
-  /** Texto largo del chip. */
   label: string;
-  /** Texto corto de la leyenda y miniaturas. */
   short: string;
   Icon: LucideIcon;
-  /** Mapea 1:1 con los tonos de <Badge>. */
   tone: PageStatusTone;
   tip: string;
 }
 
-const META: Record<PageStatusKey, PageStatusMeta> = {
-  ok: {
-    key: 'ok',
-    label: 'Escaneado correctamente',
-    short: 'OK',
-    Icon: Check,
-    tone: 'success',
-    tip: 'El OCR reconoció el texto de esta página con buena calidad.',
-  },
-  low: {
-    key: 'low',
-    label: 'Poco clara',
-    short: 'Poco clara',
-    Icon: AlertTriangle,
+type ManualKey = ParseKeys<'manual'>;
+
+type PageStatusDefinition = Omit<PageStatusMeta, 'label' | 'short' | 'tip'> & {
+  label: ManualKey;
+  short: ManualKey;
+  tip: ManualKey;
+};
+
+const META: Record<PageStatusKey, PageStatusDefinition> = {
+  duplicate: {
+    key: 'duplicate',
+    label: 'status.duplicate.label',
+    short: 'status.duplicate.short',
+    Icon: Copy,
     tone: 'warning',
-    tip: 'El OCR no está seguro de esta página. Puedes releerla o corregirla a mano.',
+    tip: 'status.duplicate.tip',
   },
   edited: {
     key: 'edited',
-    label: 'Editada a mano',
-    short: 'Editada',
+    label: 'status.edited.label',
+    short: 'status.edited.short',
     Icon: Pencil,
     tone: 'accent',
-    tip: 'Corregiste el texto de esta página a mano.',
-  },
-  duplicate: {
-    key: 'duplicate',
-    label: 'Duplicada',
-    short: 'Duplicada',
-    Icon: Copy,
-    tone: 'warning',
-    tip: 'Esta página es idéntica a otra que ya habías subido. No se vuelve a leer porque no aporta nada nuevo, así que esta copia no cuenta para la explicación.',
-  },
-  processing: {
-    key: 'processing',
-    label: 'Procesando',
-    short: 'Pendiente',
-    Icon: LoaderCircle,
-    tone: 'accent',
-    tip: 'Esta página sigue en la cola de lectura.',
+    tip: 'status.edited.tip',
   },
   failed: {
     key: 'failed',
-    label: 'Error de lectura',
-    short: 'Error',
+    label: 'status.failed.label',
+    short: 'status.failed.short',
     Icon: X,
     tone: 'error',
-    tip: 'No pudimos extraer texto de esta página. Reintenta o sube otra foto.',
+    tip: 'status.failed.tip',
+  },
+  low: {
+    key: 'low',
+    label: 'status.low.label',
+    short: 'status.low.short',
+    Icon: AlertTriangle,
+    tone: 'warning',
+    tip: 'status.low.tip',
+  },
+  ok: {
+    key: 'ok',
+    label: 'status.ok.label',
+    short: 'status.ok.short',
+    Icon: Check,
+    tone: 'success',
+    tip: 'status.ok.tip',
+  },
+  processing: {
+    key: 'processing',
+    label: 'status.processing.label',
+    short: 'status.processing.short',
+    Icon: LoaderCircle,
+    tone: 'accent',
+    tip: 'status.processing.tip',
   },
 };
 
+function resolveStatus(definition: PageStatusDefinition): PageStatusMeta {
+  return {
+    ...definition,
+    label: i18n.t(definition.label, { ns: 'manual' }),
+    short: i18n.t(definition.short, { ns: 'manual' }),
+    tip: i18n.t(definition.tip, { ns: 'manual' }),
+  };
+}
+
 export function pageStatus(page: ManualDetailPage): PageStatusMeta {
-  if (page.ocr_status === 'pending' || page.ocr_status === 'processing') return META.processing;
-  if (page.ocr_status === 'failed') return META.failed;
+  if (page.ocr_status === 'pending' || page.ocr_status === 'processing') {
+    return resolveStatus(META.processing);
+  }
+  if (page.ocr_status === 'failed') return resolveStatus(META.failed);
   // Reutilizada de otra página idéntica: prima sobre la calidad del texto copiado,
   // porque lo relevante es que esta copia no se procesa ni cuenta para la explicación.
-  if (page.dedup_status === 'reused') return META.duplicate;
-  if (page.text_source === 'user_edit') return META.edited;
-  if (page.text_quality === 'low_confidence') return META.low;
-  return META.ok;
+  if (page.dedup_status === 'reused') return resolveStatus(META.duplicate);
+  if (page.text_source === 'user_edit') return resolveStatus(META.edited);
+  if (page.text_quality === 'low_confidence') return resolveStatus(META.low);
+  return resolveStatus(META.ok);
+}
+
+export function pageStatusLegend(): readonly PageStatusMeta[] {
+  return [META.ok, META.low, META.edited, META.duplicate, META.processing, META.failed].map(
+    resolveStatus,
+  );
 }
 
 /** Clases fg/bg por tono, para los puntos de estado que no usan <Badge>. */
@@ -95,34 +119,45 @@ export const STATUS_FG_CLASS: Record<PageStatusTone, string> = {
   error: 'text-error',
 };
 
-export const PAGE_STATUS_LEGEND: readonly PageStatusMeta[] = [
-  META.ok,
-  META.low,
-  META.edited,
-  META.duplicate,
-  META.processing,
-  META.failed,
-];
-
-// ── Confianza OCR por línea ──────────────────────────────────────────────
 export type ConfidenceTone = 'success' | 'warning' | 'error';
+
+type ConfidenceDefinition = Readonly<{
+  label: ManualKey;
+  tone: ConfidenceTone;
+  range: ManualKey;
+}>;
+
+const CONFIDENCE_META: ReadonlyArray<ConfidenceDefinition> = [
+  { label: 'confidence.labels.high', tone: 'success', range: 'confidence.ranges.high' },
+  { label: 'confidence.labels.medium', tone: 'warning', range: 'confidence.ranges.medium' },
+  { label: 'confidence.labels.low', tone: 'error', range: 'confidence.ranges.low' },
+];
 
 /** Confianza OCR de una línea (0–1) → etiqueta + tono semántico por umbral. */
 export function confidenceTone(confidence: number): { label: string; tone: ConfidenceTone } {
-  if (confidence >= 0.9) return { label: 'Alta', tone: 'success' };
-  if (confidence >= 0.75) return { label: 'Media', tone: 'warning' };
-  return { label: 'Baja', tone: 'error' };
+  const definition =
+    confidence >= 0.9
+      ? CONFIDENCE_META[0]!
+      : confidence >= 0.75
+        ? CONFIDENCE_META[1]!
+        : CONFIDENCE_META[2]!;
+  return {
+    label: i18n.t(definition.label, { ns: 'manual' }),
+    tone: definition.tone,
+  };
 }
 
-export const CONFIDENCE_LEGEND: ReadonlyArray<{
+export function confidenceLegend(): ReadonlyArray<{
   label: string;
   tone: ConfidenceTone;
   range: string;
-}> = [
-  { label: 'Alta', tone: 'success', range: '≥ 90 %' },
-  { label: 'Media', tone: 'warning', range: '75–89 %' },
-  { label: 'Baja', tone: 'error', range: '< 75 %' },
-];
+}> {
+  return CONFIDENCE_META.map((definition) => ({
+    label: i18n.t(definition.label, { ns: 'manual' }),
+    tone: definition.tone,
+    range: i18n.t(definition.range, { ns: 'manual' }),
+  }));
+}
 
 /** Fondo suave + color del borde-acento izquierdo de la fila de confianza. */
 export const CONFIDENCE_ROW_CLASS: Record<ConfidenceTone, string> = {

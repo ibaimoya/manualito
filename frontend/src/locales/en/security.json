@@ -1,1 +1,38 @@
-{}
+{
+  "delete": {
+    "button": "Delete account",
+    "confirmUsername": "Type your username (@{{username}}) to confirm",
+    "contentsWithoutStats": "your profile, games, conversations, and manuals",
+    "contentsWithStats": "your profile, your {{games}} games, {{conversations}} conversations, and {{manuals}} manuals",
+    "dangerZone": "Danger zone",
+    "description": "Your account and its associated data will be deleted.",
+    "error": "Try again in a moment.",
+    "errorTitle": "We couldn't delete your account",
+    "sectionTitle": "Delete account",
+    "submit": "Delete my account",
+    "submitPermanently": "Delete account permanently",
+    "success": "Account deleted",
+    "successDescription": "We've signed you out on this device.",
+    "warning": "We'll permanently delete <strong>{{summary}}</strong>. Any manuals you've shared will no longer be available to other users. There's no way to undo this, and no backup will be kept."
+  },
+  "heading": "Account & security",
+  "lastAccess": {
+    "description": "Your account's most recent sign-in. If you don't recognize it, change your password.",
+    "eyebrow": "Activity",
+    "title": "Last access"
+  },
+  "password": {
+    "button": "Change password",
+    "current": "Current password",
+    "currentError": "Your current password is incorrect",
+    "currentPlaceholder": "Your password",
+    "currentRequired": "Enter your current password",
+    "errorBody": "Try again in a moment.",
+    "errorTitle": "We couldn't change your password",
+    "eyebrow": "Access",
+    "new": "New password",
+    "success": "Password updated",
+    "successDescription": "We've signed you out on your other devices.",
+    "title": "Change password"
+  }
+}

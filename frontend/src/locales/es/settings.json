@@ -1,1 +1,42 @@
-{}
+{
+  "account": {
+    "description": "Editar perfil, seguridad y verificación",
+    "group": "Cuenta",
+    "logout": "Cerrar sesión",
+    "logoutAction": "Salir",
+    "logoutHint": "En este dispositivo"
+  },
+  "appearance": {
+    "accentColor": "Color de acento",
+    "accentColorAriaLabel": "Color de acento",
+    "accentColorHint": "Color del CTA principal",
+    "accentColors": {
+      "amber": "Ámbar",
+      "blue": "Azul"
+    },
+    "group": "Apariencia",
+    "language": "Idioma",
+    "languageHint": "Español o inglés",
+    "theme": "Tema",
+    "themeHint": "Claro, oscuro o el del sistema",
+    "themeModeAriaLabel": "Modo de color",
+    "themeModes": {
+      "auto": "Auto",
+      "dark": "Oscuro",
+      "light": "Claro"
+    }
+  },
+  "footer": {
+    "privacyPolicy": "Política de privacidad"
+  },
+  "heading": "Ajustes",
+  "privacy": {
+    "deleteAccount": "Borrar cuenta",
+    "deleteAccountHint": "Elimina tu perfil, manuales, conversaciones y sesiones asociadas.",
+    "files": "Archivos del manual",
+    "filesBadge": "Servidor",
+    "filesBadgeAriaLabel": "Archivos gestionados por el servidor",
+    "filesHint": "Se guardan en el servidor y se eliminan al borrar el manual o la cuenta.",
+    "group": "Privacidad y datos"
+  }
+}

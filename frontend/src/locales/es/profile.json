@@ -1,1 +1,66 @@
-{}
+{
+  "actions": {
+    "edit": "Editar perfil",
+    "logout": "Cerrar sesión",
+    "security": "Cuenta y seguridad"
+  },
+  "activity": {
+    "conversations": "Conversaciones",
+    "games": "Juegos",
+    "manuals": "Manuales",
+    "section": "Tu actividad",
+    "title": "En números"
+  },
+  "avatar": {
+    "colors": {
+      "accent": "Azul petróleo",
+      "contrast": "Tostado",
+      "primary": "Ámbar",
+      "success": "Verde",
+      "warning": "Dorado"
+    },
+    "figures": {
+      "book": "Libro",
+      "bulb": "Idea",
+      "crown": "Corona",
+      "dice": "Dado",
+      "flag": "Bandera",
+      "ghost": "Fantasma",
+      "hourglass": "Reloj de arena",
+      "initials": "Iniciales",
+      "meeple": "Meeple",
+      "puzzle": "Puzle",
+      "rocket": "Cohete",
+      "shield": "Escudo",
+      "sparkle": "Chispa",
+      "swords": "Espadas",
+      "trophy": "Trofeo",
+      "zap": "Rayo"
+    }
+  },
+  "edit": {
+    "avatar": "Avatar",
+    "avatarColor": "Color del avatar",
+    "avatarFigure": "Figura del avatar",
+    "cancel": "Cancelar",
+    "description": "Tu identidad en Manualito.",
+    "email": "Email",
+    "emailChangeNotice": "Si cambias el email tendrás que volver a verificarlo: te enviaremos un enlace a la dirección nueva.",
+    "emailChangeSuccess": "Te hemos enviado un enlace para verificar el email nuevo.",
+    "save": "Guardar cambios",
+    "saveError": "No se han guardado los cambios",
+    "success": "Perfil actualizado",
+    "title": "Editar perfil",
+    "updateError": "No hemos podido guardar los cambios. Inténtalo de nuevo en un momento.",
+    "username": "Nombre de usuario",
+    "usernameTaken": "Ese email o nombre de usuario ya está en uso — prueba otro."
+  },
+  "memberSince": "Miembro desde {{date}}",
+  "verification": {
+    "resend": "Reenviar correo",
+    "resending": "Enviando…",
+    "resent": "Reenviado · {{count}}s",
+    "unverified": "Sin verificar",
+    "verified": "Email verificado"
+  }
+}

@@ -12,14 +12,16 @@ import {
   ScrollText,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tooltip } from '@/components/ui/tooltip';
-import { EditProfileDialog } from '@/features/profile/EditProfileDialog';
-import { accountStatsQueryOptions } from '@/features/profile/use-account';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { useResendVerification } from '@/features/auth/use-resend-verification';
+import { EditProfileDialog } from '@/features/profile/EditProfileDialog';
+import { accountStatsQueryOptions } from '@/features/profile/use-account';
 import type { AuthUser } from '@/shared/api/auth';
+import i18n from '@/app/i18n';
 import { Avatar } from '@/shared/components/Avatar';
 import { SectionHead } from '@/shared/components/SectionHead';
 import { elideEmail } from '@/shared/lib/elideEmail';
@@ -28,8 +30,14 @@ export const Route = createFileRoute('/_app/profile')({
   component: ProfileScreen,
 });
 
+function activeLocale(): string {
+  return i18n.language === 'en' ? 'en-US' : 'es-ES';
+}
+
 function memberSince(iso: string): string {
-  return new Intl.DateTimeFormat('es', { month: 'long', year: 'numeric' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(activeLocale(), { month: 'long', year: 'numeric' }).format(
+    new Date(iso),
+  );
 }
 
 function ProfileScreen() {
@@ -39,6 +47,7 @@ function ProfileScreen() {
 }
 
 function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
+  const { t } = useTranslation('profile');
   const logout = useLogout();
   const [editOpen, setEditOpen] = useState(false);
   const displayName = user.username || user.email;
@@ -59,11 +68,10 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
                 {displayName}
               </h1>
               {user.email_verified_at === null ? null : (
-                <Tooltip content="Email verificado">
-                  {/* translate-y: el nombre en minúsculas baja su centro óptico. */}
+                <Tooltip content={t('verification.verified')}>
                   <button
                     type="button"
-                    aria-label="Email verificado"
+                    aria-label={t('verification.verified')}
                     className="grid shrink-0 translate-y-[2px] cursor-help place-items-center rounded-full text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40"
                   >
                     <BadgeCheck size={22} strokeWidth={2.2} aria-hidden="true" />
@@ -80,18 +88,18 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               <VerificationBadge user={user} />
             </div>
             <p className="mono mt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-3">
-              Miembro desde {memberSince(user.created_at)}
+              {t('memberSince', { date: memberSince(user.created_at) })}
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52">
             <Button variant="secondary" onClick={() => setEditOpen(true)}>
               <Pencil size={16} strokeWidth={2} />
-              Editar perfil
+              {t('actions.edit')}
             </Button>
             <Button asChild variant="secondary">
               <Link to="/security">
                 <Lock size={16} strokeWidth={2} />
-                Cuenta y seguridad
+                {t('actions.security')}
               </Link>
             </Button>
             <Button
@@ -101,14 +109,14 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               onClick={() => logout.mutate()}
             >
               <LogOut size={16} strokeWidth={2} />
-              Cerrar sesión
+              {t('actions.logout')}
             </Button>
           </div>
         </div>
       </Card>
 
-      <section aria-label="Tu actividad">
-        <SectionHead eyebrow="Tu actividad" title="En números" />
+      <section aria-label={t('activity.section')}>
+        <SectionHead eyebrow={t('activity.section')} title={t('activity.title')} />
         <StatCards />
       </section>
 
@@ -117,8 +125,8 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
   );
 }
 
-/** Solo para email sin verificar: el verificado luce su tick junto al nombre. */
 function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
+  const { t } = useTranslation('profile');
   const { cooldown, resend } = useResendVerification(user.email);
 
   if (user.email_verified_at !== null) return null;
@@ -126,10 +134,12 @@ function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
     <span className="inline-flex items-center gap-2">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-1 text-xs font-semibold text-warning">
         <AlertTriangle size={12} strokeWidth={2.4} aria-hidden="true" />
-        Sin verificar
+        {t('verification.unverified')}
       </span>
       {cooldown > 0 ? (
-        <span className="text-xs font-semibold text-fg-3">Reenviado · {cooldown}s</span>
+        <span className="text-xs font-semibold text-fg-3">
+          {t('verification.resent', { count: cooldown })}
+        </span>
       ) : (
         <button
           type="button"
@@ -137,7 +147,7 @@ function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
           disabled={resend.isPending}
           className="text-xs font-semibold text-accent hover:underline disabled:opacity-60"
         >
-          {resend.isPending ? 'Enviando…' : 'Reenviar correo'}
+          {resend.isPending ? t('verification.resending') : t('verification.resend')}
         </button>
       )}
     </span>
@@ -145,6 +155,7 @@ function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
 }
 
 function StatCards() {
+  const { t } = useTranslation('profile');
   const stats = useQuery(accountStatsQueryOptions());
   const items: ReadonlyArray<{
     label: string;
@@ -153,19 +164,19 @@ function StatCards() {
     chipClass: string;
   }> = [
     {
-      label: 'Juegos',
+      label: t('activity.games'),
       value: stats.data?.games_count,
       icon: <Dices size={17} strokeWidth={2} />,
       chipClass: 'bg-primary-100 text-primary-700',
     },
     {
-      label: 'Conversaciones',
+      label: t('activity.conversations'),
       value: stats.data?.conversations_count,
       icon: <MessagesSquare size={17} strokeWidth={2} />,
       chipClass: 'bg-accent-100 text-accent',
     },
     {
-      label: 'Manuales',
+      label: t('activity.manuals'),
       value: stats.data?.manuals_count,
       icon: <ScrollText size={17} strokeWidth={2} />,
       chipClass: 'bg-primary-100 text-primary-700',

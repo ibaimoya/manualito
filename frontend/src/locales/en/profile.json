@@ -1,1 +1,66 @@
-{}
+{
+  "actions": {
+    "edit": "Edit profile",
+    "logout": "Sign out",
+    "security": "Account & security"
+  },
+  "activity": {
+    "conversations": "Conversations",
+    "games": "Games",
+    "manuals": "Manuals",
+    "section": "Your activity",
+    "title": "At a glance"
+  },
+  "avatar": {
+    "colors": {
+      "accent": "Teal",
+      "contrast": "Tan",
+      "primary": "Amber",
+      "success": "Green",
+      "warning": "Gold"
+    },
+    "figures": {
+      "book": "Book",
+      "bulb": "Lightbulb",
+      "crown": "Crown",
+      "dice": "Die",
+      "flag": "Flag",
+      "ghost": "Ghost",
+      "hourglass": "Hourglass",
+      "initials": "Initials",
+      "meeple": "Meeple",
+      "puzzle": "Puzzle piece",
+      "rocket": "Rocket",
+      "shield": "Shield",
+      "sparkle": "Sparkle",
+      "swords": "Swords",
+      "trophy": "Trophy",
+      "zap": "Lightning bolt"
+    }
+  },
+  "edit": {
+    "avatar": "Avatar",
+    "avatarColor": "Avatar color",
+    "avatarFigure": "Avatar figure",
+    "cancel": "Cancel",
+    "description": "Your identity in Manualito.",
+    "email": "Email",
+    "emailChangeNotice": "If you change your email, you'll need to verify it again. We'll send a link to the new address.",
+    "emailChangeSuccess": "We've sent you a link to verify your new email.",
+    "save": "Save changes",
+    "saveError": "We couldn't save your changes",
+    "success": "Profile updated",
+    "title": "Edit profile",
+    "updateError": "We couldn't save your changes. Try again in a moment.",
+    "username": "Username",
+    "usernameTaken": "That email or username is already in use — try another one."
+  },
+  "memberSince": "Member since {{date}}",
+  "verification": {
+    "resend": "Resend email",
+    "resending": "Sending…",
+    "resent": "Resent · {{count}}s",
+    "unverified": "Unverified",
+    "verified": "Email verified"
+  }
+}

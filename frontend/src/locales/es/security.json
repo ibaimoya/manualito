@@ -1,1 +1,38 @@
-{}
+{
+  "delete": {
+    "button": "Borrar cuenta",
+    "confirmUsername": "Escribe tu usuario (@{{username}}) para confirmar",
+    "contentsWithoutStats": "tu perfil, tus juegos, conversaciones y manuales",
+    "contentsWithStats": "tu perfil, tus {{games}} juegos, {{conversations}} conversaciones y {{manuals}} manuales",
+    "dangerZone": "Zona de peligro",
+    "description": "Se eliminarán tu cuenta y sus datos asociados.",
+    "error": "Inténtalo de nuevo en un momento.",
+    "errorTitle": "No hemos podido borrar la cuenta",
+    "sectionTitle": "Eliminar cuenta",
+    "submit": "Eliminar mi cuenta",
+    "submitPermanently": "Borrar cuenta definitivamente",
+    "success": "Cuenta borrada",
+    "successDescription": "Hemos cerrado tu sesión en este dispositivo.",
+    "warning": "Se borrarán <strong>para siempre</strong> {{summary}}. Los manuales que compartiste dejarán de estar disponibles para otros usuarios. No hay vuelta atrás ni copia de seguridad."
+  },
+  "heading": "Cuenta y seguridad",
+  "lastAccess": {
+    "description": "El inicio de sesión más reciente de tu cuenta. Si no lo reconoces, cambia la contraseña.",
+    "eyebrow": "Actividad",
+    "title": "Último acceso"
+  },
+  "password": {
+    "button": "Cambiar contraseña",
+    "current": "Contraseña actual",
+    "currentError": "La contraseña actual no es correcta",
+    "currentPlaceholder": "Tu contraseña",
+    "currentRequired": "Escribe tu contraseña actual",
+    "errorBody": "Inténtalo de nuevo en un momento.",
+    "errorTitle": "No hemos podido cambiar la contraseña",
+    "eyebrow": "Acceso",
+    "new": "Contraseña nueva",
+    "success": "Contraseña actualizada",
+    "successDescription": "Hemos cerrado la sesión en tus otros dispositivos.",
+    "title": "Cambiar contraseña"
+  }
+}

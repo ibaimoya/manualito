@@ -1,1 +1,118 @@
-{}
+{
+  "composer": {
+    "aria": {
+      "suggestedQuestions": "Suggested questions"
+    },
+    "placeholder": "Ask about {{gameName}}…"
+  },
+  "error": {
+    "backToHistory": "Go to history",
+    "notFoundDescription": "It may have been removed from the catalog. Go back to your history to see your games.",
+    "notFoundTitle": "We couldn't find this game"
+  },
+  "explanation": {
+    "aria": {
+      "game": "Game explanation",
+      "preparing": "Getting the explanation ready"
+    },
+    "blocks": {
+      "setup": "Setup",
+      "turns": "How do turns work?",
+      "victory": "How do you win?"
+    },
+    "empty": {
+      "description": "Upload this game's rulebook and we'll explain it in plain language: setup, turns, and how to win.",
+      "title": "No rulebooks yet"
+    },
+    "error": {
+      "failed": "We couldn't generate the explanation. Your rulebooks and conversations are safe.",
+      "notFound": "The rulebook is still being indexed. The explanation will be ready shortly."
+    },
+    "retry": "Try again",
+    "summary": "Quick summary"
+  },
+  "follow": {
+    "aria": {
+      "follow": "Follow this game",
+      "unfollow": "Unfollow this game"
+    },
+    "follow": "Follow",
+    "following": "Following"
+  },
+  "footer": {
+    "explanation_one": "Explanation generated from {{count}} rulebook",
+    "explanation_other": "Explanation generated from {{count}} rulebooks",
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages"
+  },
+  "header": {
+    "aiBadge": "AI-generated",
+    "aiTooltip": "AI-generated: it can be wrong. If something doesn't look right, check it against the original rulebook.",
+    "boardGame": "Board game",
+    "boardGameWithYear": "Board game · {{year}}"
+  },
+  "manuals": {
+    "add": "Add a rulebook",
+    "empty": "There aren't any rulebooks for {{gameName}} yet.",
+    "extracted": "Extracted text",
+    "heading": "Rulebooks · sources",
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "pdf": "PDF rulebook",
+    "photos": "Photo rulebook",
+    "shared": "Shared by the community",
+    "sourceLabel": "Where the explanation comes from",
+    "viewExtracted": "View extracted text from {{label}}"
+  },
+  "navigation": {
+    "game": "Game",
+    "library": "Library"
+  },
+  "questions": {
+    "ends": "When does the game end?",
+    "firstPlayer": "Who goes first?",
+    "passTurn": "Can you pass your turn?",
+    "tie": "What if we tie?"
+  },
+  "rating": {
+    "actions": {
+      "cancel": "Cancel",
+      "remove": "Remove rating",
+      "save": "Save",
+      "update": "Update"
+    },
+    "aria": {
+      "group": "Rate this game",
+      "rated": "Rating: {{score}} out of 5",
+      "star_one": "{{count}} star",
+      "star_other": "{{count}} stars",
+      "unrated": "Not rated yet"
+    },
+    "dialog": {
+      "editDescription": "You can change your rating anytime.",
+      "newDescription": "Your rating helps us get to know you a little better.",
+      "title": "What did you think of {{gameName}}?"
+    },
+    "labels": {
+      "absolutelyBonkers": "Absolutely bonkers",
+      "expectedMore": "I expected more",
+      "likedIt": "I like it",
+      "notForMe": "Not for me",
+      "reallyGood": "It's really good"
+    },
+    "note": {
+      "label": "Add a note",
+      "optional": "Optional",
+      "placeholder": "“Better with 4 players…”"
+    },
+    "prompt": "Tap a star",
+    "toast": {
+      "removed": "Rating removed",
+      "removeError": "Couldn't remove your rating",
+      "retry": "Try again in a moment.",
+      "saved": "Rating saved",
+      "saveError": "Couldn't save your rating",
+      "updated": "Rating updated"
+    }
+  }
+}

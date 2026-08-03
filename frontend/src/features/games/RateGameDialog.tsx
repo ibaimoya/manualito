@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Eraser } from 'lucide-react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,16 +36,14 @@ export function RateGameDialog({
   /** Estrella pulsada fuera del diálogo: se precarga sin tocar el servidor. */
   initialScore?: number | null;
 }>) {
+  const { t } = useTranslation('game');
+
   return (
     <ResponsiveModal
       open={open}
       onOpenChange={onOpenChange}
-      title={`¿Qué te ha parecido ${gameName}?`}
-      description={
-        current
-          ? 'Puedes cambiar tu valoración cuando quieras.'
-          : 'Tu valoración nos ayuda a conocerte un poco más.'
-      }
+      title={t('rating.dialog.title', { gameName })}
+      description={current ? t('rating.dialog.editDescription') : t('rating.dialog.newDescription')}
       contentClassName="max-w-lg"
     >
       <RateGameForm
@@ -71,6 +70,7 @@ function RateGameForm({
   initialScore: number | null;
   onClose: () => void;
 }>) {
+  const { t } = useTranslation('game');
   const qc = useQueryClient();
   const noteId = useId();
   const { gameIds } = useProcessingManuals();
@@ -95,14 +95,14 @@ function RateGameForm({
       // Valorar sigue el juego en el backend: refresca la biblioteca.
       qc.invalidateQueries({ queryKey: myGamesKey }).catch(() => undefined);
       onClose();
-      toast.success(current ? 'Valoración actualizada' : 'Valoración guardada', {
+      toast.success(current ? t('rating.toast.updated') : t('rating.toast.saved'), {
         id: 'rate-game',
       });
     },
     onError: () =>
-      toast.error('No hemos podido guardar la valoración', {
+      toast.error(t('rating.toast.saveError'), {
         id: 'rate-game',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: t('rating.toast.retry'),
       }),
   });
 
@@ -111,17 +111,18 @@ function RateGameForm({
     onSuccess: () => {
       applyRating(null);
       onClose();
-      toast.success('Valoración quitada', { id: 'rate-game' });
+      toast.success(t('rating.toast.removed'), { id: 'rate-game' });
     },
     onError: () =>
-      toast.error('No hemos podido quitar la valoración', {
+      toast.error(t('rating.toast.removeError'), {
         id: 'rate-game',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: t('rating.toast.retry'),
       }),
   });
 
   // Vaciar las estrellas solo cambia el borrador; el DELETE viaja al confirmar.
   const clearsExisting = current !== null && score === 0;
+  const ratingLabel = score > 0 ? RATE_LABELS[score] : null;
 
   return (
     <form
@@ -137,10 +138,10 @@ function RateGameForm({
         {/* Hueco simétrico a la goma: las estrellas quedan centradas. */}
         <span aria-hidden="true" className="size-9 shrink-0" />
         <RatingStars value={score} size={34} onSelect={setScore} />
-        <Tooltip content="Quitar valoración">
+        <Tooltip content={t('rating.actions.remove')}>
           <button
             type="button"
-            aria-label="Quitar valoración"
+            aria-label={t('rating.actions.remove')}
             onClick={() => setScore(0)}
             className={cn(
               'grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:bg-error-bg hover:text-error',
@@ -155,27 +156,27 @@ function RateGameForm({
         aria-live="polite"
         className="mt-1 min-h-6 font-display text-sm font-bold text-primary-700"
       >
-        {score > 0 ? RATE_LABELS[score] : 'Toca una estrella'}
+        {ratingLabel ? t(ratingLabel) : t('rating.prompt')}
       </p>
 
       <div className="mt-3 w-full max-w-sm text-left">
         {/* px-3: casi alineada con el texto interior del Input, sin meterse. */}
         <label htmlFor={noteId} className="mb-1.5 flex items-baseline justify-between px-3 text-sm">
-          <span className="font-semibold text-fg">Añade una nota</span>
-          <span className="text-xs text-fg-3">Opcional</span>
+          <span className="font-semibold text-fg">{t('rating.note.label')}</span>
+          <span className="text-xs text-fg-3">{t('rating.note.optional')}</span>
         </label>
         <Input
           id={noteId}
           value={note}
           maxLength={NOTE_MAX}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="«Mejor con 4 jugadores…»"
+          placeholder={t('rating.note.placeholder')}
         />
       </div>
 
       <div className="mt-5 flex w-full gap-2">
         <Button type="button" variant="ghost" block onClick={onClose}>
-          Cancelar
+          {t('rating.actions.cancel')}
         </Button>
         <Button
           type="submit"
@@ -184,15 +185,13 @@ function RateGameForm({
           disabled={score === 0 && current === null}
           loading={save.isPending || remove.isPending}
         >
-          {submitLabel(current !== null, clearsExisting)}
+          {clearsExisting
+            ? t('rating.actions.remove')
+            : current !== null
+              ? t('rating.actions.update')
+              : t('rating.actions.save')}
         </Button>
       </div>
     </form>
   );
-}
-
-/** Texto del botón principal según el borrador: guarda, actualiza o quita. */
-function submitLabel(hasCurrent: boolean, clearsExisting: boolean): string {
-  if (!hasCurrent) return 'Guardar';
-  return clearsExisting ? 'Quitar valoración' : 'Actualizar';
 }

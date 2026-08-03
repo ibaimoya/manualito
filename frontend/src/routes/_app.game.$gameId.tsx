@@ -1,13 +1,8 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ChevronRight,
-  FileText,
-  Plus,
-  RotateCw,
-  ScanText,
-  Sparkles,
-} from 'lucide-react';
+import type { ParseKeys } from 'i18next';
+import { ChevronRight, FileText, Plus, RotateCw, ScanText, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
@@ -38,22 +33,25 @@ export const Route = createFileRoute('/_app/game/$gameId')({
   component: GameHubScreen,
 });
 
-const SUGGESTED_QUESTIONS = [
-  '¿Quién empieza?',
-  '¿Se puede pasar el turno?',
-  '¿Y si empatamos?',
-  '¿Cuándo acaba la partida?',
+type GameKey = ParseKeys<'game'>;
+
+const SUGGESTED_QUESTIONS: readonly GameKey[] = [
+  'questions.firstPlayer',
+  'questions.passTurn',
+  'questions.tie',
+  'questions.ends',
 ];
 
 function GameHubScreen() {
+  const { t } = useTranslation('game');
   const { gameId } = Route.useParams();
   const detail = useQuery(gameDetailQueryOptions(gameId));
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar
-        crumb={detail.data?.name ?? 'Juego'}
-        trail={[{ label: 'Biblioteca', link: linkOptions({ to: '/history' }) }]}
+        crumb={detail.data?.name ?? t('navigation.game')}
+        trail={[{ label: t('navigation.library'), link: linkOptions({ to: '/history' }) }]}
       />
       {detail.isPending ? <HubSkeleton /> : null}
       {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
@@ -64,6 +62,7 @@ function GameHubScreen() {
 }
 
 function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
+  const { t } = useTranslation('game');
   const [rateOpen, setRateOpen] = useState(false);
   // Estrella pulsada en la cabecera: se precarga en el diálogo, no se guarda.
   const [presetScore, setPresetScore] = useState<number | null>(null);
@@ -88,11 +87,8 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
           {game.manuals.length > 0 ? (
             <p className="flex items-center gap-2 text-xs text-fg-3">
               <FileText size={14} strokeWidth={2} aria-hidden="true" />
-              Explicación generada de {game.manuals.length}{' '}
-              {game.manuals.length === 1 ? 'manual' : 'manuales'} ·{' '}
-              <span className="mono">
-                {totalPages} {totalPages === 1 ? 'página' : 'páginas'}
-              </span>
+              {t('footer.explanation', { count: game.manuals.length })} ·{' '}
+              <span className="mono">{t('footer.pages', { count: totalPages })}</span>
             </p>
           ) : null}
         </div>
@@ -116,23 +112,25 @@ function GameHeader({
   game,
   onRate,
 }: Readonly<{ game: GameDetail; onRate: (score?: number) => void }>) {
-  const yearSuffix = game.year_published === null ? '' : ` · ${game.year_published}`;
+  const { t } = useTranslation('game');
   const { gameIds } = useProcessingManuals();
   return (
     <header className="flex items-center gap-5 md:gap-6">
       <GameCover name={game.name} size={120} processing={gameIds.has(game.id)} />
       <div className="min-w-0 flex-1">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-          Juego de mesa{yearSuffix}
+          {game.year_published === null
+            ? t('header.boardGame')
+            : t('header.boardGameWithYear', { year: game.year_published })}
         </p>
         <h1 className="mt-1 font-display text-3xl font-extrabold leading-tight tracking-tight text-fg md:text-4xl">
           {game.name}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <Tooltip content="Generado por IA: puede equivocarse. Si algo no cuadra, contrástalo con el manual original.">
+          <Tooltip content={t('header.aiTooltip')}>
             <Badge tone="neutral" tabIndex={0} className="cursor-help">
               <Sparkles size={12} strokeWidth={2} aria-hidden="true" />
-              Generado con IA
+              {t('header.aiBadge')}
             </Badge>
           </Tooltip>
         </div>
@@ -154,6 +152,7 @@ function ExplanationSection({
   gameId,
   hasManuals,
 }: Readonly<{ gameId: string; hasManuals: boolean }>) {
+  const { t } = useTranslation('game');
   const explanation = useQuery({
     ...gameExplanationQueryOptions(gameId),
     enabled: hasManuals,
@@ -162,15 +161,14 @@ function ExplanationSection({
   if (!hasManuals) {
     return (
       <Card className="border-dashed border-border-strong bg-surface p-6 text-center">
-        <h2 className="font-display text-lg font-bold text-fg">Aún no hay manuales</h2>
+        <h2 className="font-display text-lg font-bold text-fg">{t('explanation.empty.title')}</h2>
         <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-fg-2">
-          Sube el manual de este juego y te lo explicamos en claro: preparación, turnos y cómo se
-          gana.
+          {t('explanation.empty.description')}
         </p>
         <Button asChild className="mt-4">
           <Link to="/capture/source" search={{ gameId }}>
             <Plus size={16} strokeWidth={2} />
-            Subir manual
+            {t('manuals.add')}
           </Link>
         </Button>
       </Card>
@@ -183,9 +181,7 @@ function ExplanationSection({
     return (
       <Card className="bg-surface p-5">
         <p className="text-sm leading-relaxed text-fg">
-          {notFound
-            ? 'El manual aún se está indexando: la explicación estará lista en un momento.'
-            : 'No hemos podido generar la explicación. Tus manuales y conversaciones están a salvo.'}
+          {notFound ? t('explanation.error.notFound') : t('explanation.error.failed')}
         </p>
         <Button
           variant="secondary"
@@ -196,7 +192,7 @@ function ExplanationSection({
           }}
         >
           <RotateCw size={14} strokeWidth={2} />
-          Reintentar
+          {t('explanation.retry')}
         </Button>
       </Card>
     );
@@ -209,9 +205,7 @@ function ExplanationSection({
   if (data?.status === 'failed' && Object.keys(sections).length === 0) {
     return (
       <Card className="border-error/30 bg-error-bg p-5">
-        <p className="text-sm leading-relaxed text-fg">
-          No hemos podido generar la explicación. Tus manuales y conversaciones están a salvo.
-        </p>
+        <p className="text-sm leading-relaxed text-fg">{t('explanation.error.failed')}</p>
         <Button
           variant="secondary"
           size="sm"
@@ -221,7 +215,7 @@ function ExplanationSection({
           }}
         >
           <RotateCw size={14} strokeWidth={2} />
-          Reintentar
+          {t('explanation.retry')}
         </Button>
       </Card>
     );
@@ -232,7 +226,7 @@ function ExplanationSection({
 
   return (
     <section
-      aria-label={busy ? 'Preparando la explicación' : 'Explicación del juego'}
+      aria-label={busy ? t('explanation.aria.preparing') : t('explanation.aria.game')}
       aria-busy={busy || undefined}
       className="space-y-3"
     >
@@ -245,27 +239,28 @@ function ExplanationSection({
 }
 
 function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
+  const { t } = useTranslation('game');
   return (
     <section aria-labelledby="game-manuals">
       <div className="mb-3 flex items-end justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-            De dónde sale la explicación
+            {t('manuals.sourceLabel')}
           </span>
           <h2 id="game-manuals" className="font-display text-lg font-bold tracking-tight text-fg">
-            Manuales · fuentes
+            {t('manuals.heading')}
           </h2>
         </div>
         <Button asChild variant="ghost">
           <Link to="/capture/source" search={{ gameId: game.id }}>
             <Plus size={15} strokeWidth={2} />
-            Añadir manual
+            {t('manuals.add')}
           </Link>
         </Button>
       </div>
       {game.manuals.length === 0 ? (
         <Card className="bg-surface/60 p-4">
-          <p className="text-sm text-fg-2">Todavía no hay manuales de {game.name}.</p>
+          <p className="text-sm text-fg-2">{t('manuals.empty', { gameName: game.name })}</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -309,16 +304,15 @@ function ManualThumb({ color, stacked }: Readonly<{ color: string; stacked: bool
 }
 
 function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
-  const label =
-    manual.title ?? (manual.source_type === 'pdf' ? 'Manual en PDF' : 'Manual en fotos');
+  const { t } = useTranslation('game');
+  const label = manual.title ?? t(manual.source_type === 'pdf' ? 'manuals.pdf' : 'manuals.photos');
   const body = (
     <>
       <ManualThumb color={gameColor(label)} stacked={manual.page_count > 1} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-display text-[15px] font-bold leading-tight text-fg">{label}</p>
         <p className="mono mt-1 text-[11px] text-fg-3">
-          {manual.page_count} {manual.page_count === 1 ? 'página' : 'páginas'} ·{' '}
-          {formatShortDate(manual.created_at)}
+          {t('manuals.pages', { count: manual.page_count })} · {formatShortDate(manual.created_at)}
         </p>
         {manual.duplicate_page_count > 0 ? (
           <div className="mt-1.5">
@@ -328,10 +322,10 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         {manual.is_own ? (
           <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent">
             <ScanText size={13} strokeWidth={2} aria-hidden="true" />
-            Texto extraído
+            {t('manuals.extracted')}
           </span>
         ) : (
-          <p className="mt-1.5 text-xs text-fg-3">Compartido por la comunidad</p>
+          <p className="mt-1.5 text-xs text-fg-3">{t('manuals.shared')}</p>
         )}
       </div>
     </>
@@ -344,7 +338,7 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         <Link
           to="/manual/$manualId"
           params={{ manualId: manual.id }}
-          aria-label={`Ver texto extraído de ${label}`}
+          aria-label={t('manuals.viewExtracted', { label })}
           className="group flex items-center gap-3.5 p-3.5"
         >
           {body}
@@ -362,6 +356,7 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
 }
 
 function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
+  const { t } = useTranslation('game');
   const navigate = useNavigate();
   const [question, setQuestion] = useState('');
   const canAsk = game.manuals.length > 0;
@@ -384,23 +379,29 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div className="mx-auto w-full max-w-4xl">
-        <div className="flex flex-wrap justify-center gap-2 pb-2" aria-label="Preguntas sugeridas">
-          {SUGGESTED_QUESTIONS.map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => ask(q)}
-              className="h-8 shrink-0 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg hover:bg-surface-2"
-            >
-              {q}
-            </button>
-          ))}
+        <div
+          className="flex flex-wrap justify-center gap-2 pb-2"
+          aria-label={t('composer.aria.suggestedQuestions')}
+        >
+          {SUGGESTED_QUESTIONS.map((questionKey) => {
+            const question = t(questionKey);
+            return (
+              <button
+                key={questionKey}
+                type="button"
+                onClick={() => ask(question)}
+                className="h-8 shrink-0 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg hover:bg-surface-2"
+              >
+                {question}
+              </button>
+            );
+          })}
         </div>
         <MessageComposer
           value={question}
           onChange={setQuestion}
           onSubmit={() => ask(question)}
-          placeholder={`Pregunta sobre ${game.name}…`}
+          placeholder={t('composer.placeholder', { gameName: game.name })}
           maxLength={QUESTION_MAX}
         />
       </div>
@@ -436,14 +437,13 @@ function HubSkeleton() {
 }
 
 function HubError() {
+  const { t } = useTranslation('game');
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center">
-      <h1 className="font-display text-xl font-bold text-fg">No hemos encontrado este juego</h1>
-      <p className="mt-2 text-sm leading-relaxed text-fg-2">
-        Puede que se haya retirado del catálogo. Vuelve al historial para ver tus juegos.
-      </p>
+      <h1 className="font-display text-xl font-bold text-fg">{t('error.notFoundTitle')}</h1>
+      <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('error.notFoundDescription')}</p>
       <Button asChild className="mt-5">
-        <Link to="/history">Ir al historial</Link>
+        <Link to="/history">{t('error.backToHistory')}</Link>
       </Button>
     </div>
   );

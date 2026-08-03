@@ -1,4 +1,6 @@
+import type { ParseKeys } from 'i18next';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -7,14 +9,16 @@ import { cn } from '@/shared/lib/cn';
  * como hueco (relleno surface + borde) en vez de contorno fino flotando.
  */
 
-export const RATE_LABELS = [
-  '',
-  'No me ha convencido',
-  'Me esperaba algo más',
-  'Me ha gustado',
-  'Es muy bueno',
-  'Es una locura',
-] as const;
+type GameKey = ParseKeys<'game'>;
+
+export const RATE_LABELS: ReadonlyArray<GameKey | null> = [
+  null,
+  'rating.labels.notForMe',
+  'rating.labels.expectedMore',
+  'rating.labels.likedIt',
+  'rating.labels.reallyGood',
+  'rating.labels.absolutelyBonkers',
+];
 
 const STAR_PATH =
   'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z';
@@ -57,13 +61,14 @@ export function RatingStars({
   /** "start": el glifo de la primera estrella se alinea al borde izquierdo. */
   align?: 'center' | 'start';
 }>) {
+  const { t } = useTranslation('game');
   const [hover, setHover] = useState(0);
   const shown = hover || value;
 
   if (!onSelect) {
     return (
       <div
-        aria-label={value > 0 ? `Valoración: ${value} de 5` : 'Sin valorar'}
+        aria-label={value > 0 ? t('rating.aria.rated', { score: value }) : t('rating.aria.unrated')}
         className={cn('inline-flex items-center gap-[3px]', className)}
       >
         {[1, 2, 3, 4, 5].map((n) => (
@@ -80,7 +85,7 @@ export function RatingStars({
   const startOffset = align === 'start' ? -((hitWidth - size) / 2) : 0;
   return (
     <fieldset
-      aria-label="Puntúa este juego"
+      aria-label={t('rating.aria.group')}
       className={cn('inline-flex items-center', className)}
       style={{ marginInlineStart: startOffset }}
       onMouseLeave={() => setHover(0)}
@@ -90,7 +95,7 @@ export function RatingStars({
           key={n}
           type="button"
           aria-pressed={value === n}
-          aria-label={`${n} ${n === 1 ? 'estrella' : 'estrellas'} — ${RATE_LABELS[n]}`}
+          aria-label={`${t('rating.aria.star', { count: n })} — ${t(RATE_LABELS[n]!)}`}
           onMouseEnter={() => setHover(n)}
           onFocus={() => setHover(n)}
           onBlur={() => setHover(0)}

@@ -2,6 +2,7 @@ import { type ReactNode, useEffect } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Mail, MailCheck, ShieldAlert } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/shared/api/auth';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
@@ -17,6 +18,7 @@ export const Route = createFileRoute('/verify-email')({
 });
 
 function VerifyEmailScreen() {
+  const { t } = useTranslation('auth');
   const { token } = Route.useSearch();
   const queryClient = useQueryClient();
   // Query, no useEffect: una sola ejecución pese al doble render de StrictMode.
@@ -41,11 +43,11 @@ function VerifyEmailScreen() {
       <AuthStatus
         tone="error"
         icon={ShieldAlert}
-        title="Enlace no válido"
-        body="Puede que ya lo hayas usado o que haya caducado. Inicia sesión y reenvíalo desde el aviso."
+        title={t('status.verify.invalid.title')}
+        body={t('status.verify.invalid.body')}
       >
         <Button asChild size="lg" block>
-          <Link to="/login">Volver a entrar</Link>
+          <Link to="/login">{t('actions.backToLogin')}</Link>
         </Button>
       </AuthStatus>
     );
@@ -54,8 +56,8 @@ function VerifyEmailScreen() {
       <AuthStatus
         tone="accent"
         icon={Mail}
-        title="Verificando…"
-        body="Un momento, estamos confirmando tu email."
+        title={t('status.verify.pending.title')}
+        body={t('status.verify.pending.body')}
       />
     );
   } else {
@@ -63,11 +65,11 @@ function VerifyEmailScreen() {
       <AuthStatus
         tone="success"
         icon={MailCheck}
-        title="¡Email verificado!"
-        body="Tu cuenta está lista. Vamos a aprender tu primer juego."
+        title={t('status.verify.success.title')}
+        body={t('status.verify.success.body')}
       >
         <Button asChild size="lg" block>
-          <Link to="/home">Continuar</Link>
+          <Link to="/home">{t('actions.continue')}</Link>
         </Button>
       </AuthStatus>
     );

@@ -2,6 +2,7 @@ import { type SyntheticEvent, useId, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2, ShieldAlert } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/shared/api/auth';
 import { AuthShell } from '@/features/auth/auth-shell';
@@ -22,24 +23,26 @@ function ResetPasswordScreen() {
 }
 
 function InvalidLink() {
+  const { t } = useTranslation('auth');
   return (
     <AuthStatus
       tone="warning"
       icon={ShieldAlert}
-      title="Enlace no válido"
-      body="Pide un enlace nuevo para restablecer tu contraseña."
+      title={t('status.reset.invalid.title')}
+      body={t('status.reset.invalid.body')}
     >
       <Button asChild size="lg" block>
-        <Link to="/forgot">Pedir otro enlace</Link>
+        <Link to="/forgot">{t('actions.requestAnotherLink')}</Link>
       </Button>
       <Button asChild size="lg" block variant="ghost">
-        <Link to="/login">Volver a entrar</Link>
+        <Link to="/login">{t('actions.backToLogin')}</Link>
       </Button>
     </AuthStatus>
   );
 }
 
 function ResetForm({ token }: Readonly<{ token: string }>) {
+  const { t } = useTranslation('auth');
   const fieldId = useId();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -51,11 +54,11 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
       <AuthStatus
         tone="success"
         icon={CheckCircle2}
-        title="Contraseña actualizada"
-        body="Ya puedes entrar con tu nueva contraseña. La anterior ha dejado de funcionar."
+        title={t('status.reset.success.title')}
+        body={t('status.reset.success.body')}
       >
         <Button asChild size="lg" block>
-          <Link to="/login">Entrar a Manualito</Link>
+          <Link to="/login">{t('actions.signInToManualito')}</Link>
         </Button>
       </AuthStatus>
     );
@@ -66,14 +69,14 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
       <AuthStatus
         tone="warning"
         icon={ShieldAlert}
-        title="Este enlace ya no vale"
-        body="Por seguridad los enlaces caducan. Pide uno nuevo y te lo enviamos al momento."
+        title={t('status.reset.expired.title')}
+        body={t('status.reset.expired.body')}
       >
         <Button asChild size="lg" block>
-          <Link to="/forgot">Pedir otro enlace</Link>
+          <Link to="/forgot">{t('actions.requestAnotherLink')}</Link>
         </Button>
         <Button asChild size="lg" block variant="ghost">
-          <Link to="/login">Volver a entrar</Link>
+          <Link to="/login">{t('actions.backToLogin')}</Link>
         </Button>
       </AuthStatus>
     );
@@ -99,14 +102,14 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
   return (
     <form onSubmit={submit} noValidate className="flex flex-col">
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        Crea una contraseña nueva
+        {t('forms.reset.heading')}
       </h1>
-      <p className="mt-1.5 text-sm text-fg-2">Elige una que no uses en otros sitios.</p>
+      <p className="mt-1.5 text-sm text-fg-2">{t('forms.reset.description')}</p>
 
       <div className="mt-5 flex flex-col gap-4">
         <NewPasswordFields
           fieldId={fieldId}
-          label="Nueva contraseña"
+          label={t('fields.password.new')}
           password={password}
           confirm={confirm}
           submitted={submitted}
@@ -115,7 +118,7 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
         />
 
         <Button type="submit" size="lg" block loading={reset.isPending}>
-          {reset.isPending ? 'Guardando…' : 'Guardar contraseña'}
+          {reset.isPending ? t('actions.savePasswordLoading') : t('actions.savePassword')}
         </Button>
       </div>
     </form>

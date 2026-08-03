@@ -1,1 +1,148 @@
-{}
+{
+  "boundary": {
+    "backHome": "Back to home",
+    "message": "Something unexpected happened. Try again. If it continues, reload the page.",
+    "retry": "Try again",
+    "title": "Something went wrong"
+  },
+  "code": {
+    "gameNotFound": {
+      "hint": "Search for the game again and link the manual again.",
+      "message": "The selected game no longer exists in the catalog.",
+      "title": "Game not found"
+    },
+    "gameUnavailable": {
+      "hint": "Return to the catalog and select another game.",
+      "message": "This game is no longer available for new questions.",
+      "title": "Game unavailable"
+    },
+    "identityUnavailable": {
+      "hint": "Sign in or try a different username.",
+      "message": "An account with that email or username already exists.",
+      "title": "Email or username unavailable"
+    },
+    "invalidPdf": {
+      "hint": "Export the manual as a PDF and try again.",
+      "message": "The file is not a valid PDF.",
+      "title": "Invalid PDF"
+    },
+    "manualContextNotFound": {
+      "hint": "Wait for processing to finish or upload a valid manual.",
+      "message": "No indexed manuals are available to answer questions about that game.",
+      "title": "Not enough context"
+    },
+    "manualDuplicate": {
+      "hint": "Open the existing manual or upload a different version.",
+      "message": "This manual is already in your library for this game.",
+      "title": "Duplicate manual"
+    },
+    "manualTooLarge": {
+      "hint": "Reduce the image files or split the manual into several uploads.",
+      "message": "The combined image files can be up to 95 MB.",
+      "title": "Manual too large"
+    },
+    "noManualSources": {
+      "hint": "Upload the game's manual again to ask questions.",
+      "message": "A source you used is no longer available, so you can't ask new questions in this conversation.",
+      "title": "Source unavailable"
+    },
+    "pdfTooLarge": {
+      "hint": "Reduce the PDF size or split the manual into a smaller file.",
+      "message": "The PDF can be up to 95 MB.",
+      "title": "PDF too large"
+    }
+  },
+  "http": {
+    "400": {
+      "hint": "Check the details and try again.",
+      "message": "Something in the request was incorrect.",
+      "title": "Invalid request"
+    },
+    "401": {
+      "hint": "Sign in again to continue.",
+      "message": "Your session has expired or you aren't signed in.",
+      "title": "Session expired"
+    },
+    "403": {
+      "hint": "Reload the page and try again.",
+      "message": "You don't have permission to perform this action, or the security token has expired.",
+      "title": "Action not allowed"
+    },
+    "404": {
+      "hint": "Go back to the home screen and upload the photos again.",
+      "message": "This manual no longer exists on the server.",
+      "title": "Manual not found"
+    },
+    "409": {
+      "hint": "Check the details and try again.",
+      "message": "That data is already in use or unavailable.",
+      "title": "Data unavailable"
+    },
+    "413": {
+      "hint": "Reduce the file size and try again.",
+      "message": "The upload exceeds the allowed size.",
+      "title": "File too large"
+    },
+    "415": {
+      "hint": "Convert the file and try again.",
+      "message": "The file is not a valid image (JPG, PNG) or PDF.",
+      "title": "Unsupported format"
+    },
+    "422": {
+      "hint": "Make sure the photos are in focus and well lit, then try again.",
+      "message": "We couldn't extract text from the pages.",
+      "title": "Couldn't read the manual"
+    },
+    "429": {
+      "hint": "Wait a moment before trying again.",
+      "message": "You've made too many requests in a short time.",
+      "title": "Too many attempts"
+    },
+    "500": {
+      "hint": "Try again. If the problem continues, report the error code.",
+      "message": "An internal server error occurred.",
+      "title": "Something went wrong"
+    },
+    "502": {
+      "hint": "Wait a few seconds and try again.",
+      "message": "An internal service is still starting up or unavailable.",
+      "title": "Service starting"
+    },
+    "503": {
+      "hint": "Try again in a moment.",
+      "message": "The server is temporarily unavailable.",
+      "title": "Service unavailable"
+    },
+    "504": {
+      "hint": "Try again or use fewer pages.",
+      "message": "The response took longer than expected.",
+      "title": "Request timed out"
+    },
+    "client": {
+      "hint": "Try again.",
+      "message": "The server rejected the request.",
+      "title": "Request rejected"
+    },
+    "server": {
+      "hint": "Try again in a few seconds.",
+      "message": "An unexpected server error occurred.",
+      "title": "Server error"
+    }
+  },
+  "network": {
+    "hint": "Check your internet connection and try again.",
+    "message": "We couldn't contact the server.",
+    "title": "No connection"
+  },
+  "session": {
+    "expired": {
+      "description": "Sign in again to continue.",
+      "title": "Your session has expired"
+    }
+  },
+  "unknown": {
+    "hint": "Reload the page or try again.",
+    "message": "Something unexpected happened.",
+    "title": "Unexpected error"
+  }
+}

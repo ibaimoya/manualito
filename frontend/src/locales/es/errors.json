@@ -1,1 +1,148 @@
-{}
+{
+  "boundary": {
+    "backHome": "Volver al inicio",
+    "message": "Hemos tenido un problema inesperado. Vuelve a intentarlo; si sigue pasando, recarga la página.",
+    "retry": "Reintentar",
+    "title": "Algo ha fallado"
+  },
+  "code": {
+    "gameNotFound": {
+      "hint": "Busca el juego otra vez y vuelve a asociar el manual.",
+      "message": "El juego seleccionado ya no existe en el catálogo.",
+      "title": "Juego no encontrado"
+    },
+    "gameUnavailable": {
+      "hint": "Vuelve al catálogo y selecciona otro juego.",
+      "message": "Este juego ya no está disponible para nuevas preguntas.",
+      "title": "Juego no disponible"
+    },
+    "identityUnavailable": {
+      "hint": "Inicia sesión o prueba con otro nombre de usuario.",
+      "message": "Ya existe una cuenta con ese email o nombre de usuario.",
+      "title": "Email o usuario no disponible"
+    },
+    "invalidPdf": {
+      "hint": "Exporta el manual de nuevo como PDF y vuelve a intentarlo.",
+      "message": "El archivo no es un PDF válido.",
+      "title": "PDF no válido"
+    },
+    "manualContextNotFound": {
+      "hint": "Espera a que termine el procesamiento o sube un manual válido.",
+      "message": "No hay manuales indexados disponibles para responder sobre ese juego.",
+      "title": "Sin contexto suficiente"
+    },
+    "manualDuplicate": {
+      "hint": "Abre el manual existente o sube una versión distinta.",
+      "message": "Ese manual ya está en tu biblioteca para este juego.",
+      "title": "Manual duplicado"
+    },
+    "manualTooLarge": {
+      "hint": "Reduce las imágenes o divide el manual en varias subidas.",
+      "message": "El conjunto de imágenes puede ocupar como máximo 95 MB.",
+      "title": "Manual demasiado grande"
+    },
+    "noManualSources": {
+      "hint": "Sube de nuevo el manual del juego para volver a preguntar.",
+      "message": "Una fuente que usaste ya no está disponible, así que no se pueden hacer nuevas preguntas en esta conversación.",
+      "title": "Fuente no disponible"
+    },
+    "pdfTooLarge": {
+      "hint": "Reduce el PDF o divide el manual en un archivo más pequeño.",
+      "message": "El PDF puede ocupar como máximo 95 MB.",
+      "title": "PDF demasiado grande"
+    }
+  },
+  "http": {
+    "400": {
+      "hint": "Revisa los datos y vuelve a intentarlo.",
+      "message": "Algo en la petición no era correcto.",
+      "title": "Petición inválida"
+    },
+    "401": {
+      "hint": "Vuelve a entrar para continuar.",
+      "message": "Tu sesión ha expirado o no has iniciado sesión.",
+      "title": "Sesión caducada"
+    },
+    "403": {
+      "hint": "Recarga la página y vuelve a intentarlo.",
+      "message": "No tienes permiso para esta acción o el token de seguridad caducó.",
+      "title": "Acción no permitida"
+    },
+    "404": {
+      "hint": "Vuelve a la pantalla principal y sube las fotos otra vez.",
+      "message": "Este manual ya no existe en el servidor.",
+      "title": "Manual no encontrado"
+    },
+    "409": {
+      "hint": "Revisa los datos e inténtalo de nuevo.",
+      "message": "Ese dato ya está en uso o no está disponible.",
+      "title": "Dato no disponible"
+    },
+    "413": {
+      "hint": "Reduce el tamaño del archivo e inténtalo de nuevo.",
+      "message": "La subida supera el tamaño permitido.",
+      "title": "Archivo demasiado grande"
+    },
+    "415": {
+      "hint": "Convierte el fichero y vuelve a intentarlo.",
+      "message": "El fichero no es una imagen válida (JPG, PNG) ni PDF.",
+      "title": "Formato no soportado"
+    },
+    "422": {
+      "hint": "Comprueba que las fotos estén enfocadas y con buena luz, y vuelve a intentarlo.",
+      "message": "No se ha podido extraer texto de las páginas.",
+      "title": "No conseguimos leer el manual"
+    },
+    "429": {
+      "hint": "Espera un momento antes de volver a intentarlo.",
+      "message": "Has hecho demasiadas peticiones en poco tiempo.",
+      "title": "Demasiados intentos"
+    },
+    "500": {
+      "hint": "Inténtalo de nuevo. Si persiste, repórtanos el código de error.",
+      "message": "Ha ocurrido un error interno en el servidor.",
+      "title": "Algo ha fallado"
+    },
+    "502": {
+      "hint": "Espera unos segundos y vuelve a intentarlo.",
+      "message": "Un servicio interno aún se está iniciando o no está disponible.",
+      "title": "Servicio cargando"
+    },
+    "503": {
+      "hint": "Vuelve a intentarlo en un momento.",
+      "message": "El servidor está temporalmente fuera de servicio.",
+      "title": "Servicio no disponible"
+    },
+    "504": {
+      "hint": "Inténtalo de nuevo o prueba con menos páginas.",
+      "message": "La respuesta tardó más de lo esperado.",
+      "title": "Tiempo de espera agotado"
+    },
+    "client": {
+      "hint": "Inténtalo de nuevo.",
+      "message": "El servidor ha rechazado la petición.",
+      "title": "Petición rechazada"
+    },
+    "server": {
+      "hint": "Inténtalo de nuevo en unos segundos.",
+      "message": "Ha ocurrido un error inesperado.",
+      "title": "Error del servidor"
+    }
+  },
+  "network": {
+    "hint": "Comprueba tu conexión a internet y vuelve a intentarlo.",
+    "message": "No hemos podido contactar con el servidor.",
+    "title": "Sin conexión"
+  },
+  "session": {
+    "expired": {
+      "description": "Vuelve a entrar para continuar.",
+      "title": "Tu sesión ha caducado"
+    }
+  },
+  "unknown": {
+    "hint": "Recarga la página o vuelve a intentarlo.",
+    "message": "Ha ocurrido algo que no esperábamos.",
+    "title": "Error inesperado"
+  }
+}

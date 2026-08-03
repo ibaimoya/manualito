@@ -69,6 +69,24 @@ describe('error-mapper · mapApiError', () => {
     expect(v.message).toContain('juego seleccionado');
   });
 
+  it('un status con mapeo local conserva el copy local frente al detail', () => {
+    const v = mapApiError({
+      status: 500,
+      raw: { detail: 'Detalle interno del backend' },
+    });
+
+    expect(v.message).toBe('Ha ocurrido un error interno en el servidor.');
+  });
+
+  it('un status sin TABLE ni override usa el detail del backend', () => {
+    const v = mapApiError({
+      status: 418,
+      raw: { detail: 'La tetera no puede procesar esta petición.' },
+    });
+
+    expect(v.message).toBe('La tetera no puede procesar esta petición.');
+  });
+
   it('distingue un PDF grande de una imagen grande aunque ambos sean 413', () => {
     const v = mapApiError({
       status: 413,

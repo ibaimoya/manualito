@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { router } from '@/app/AppRouter';
+import i18n from '@/app/i18n';
 import { ApiError } from '@/shared/api/http';
 import { dropSessionCaches } from './auth-queries';
 
@@ -21,9 +22,9 @@ export function handleSessionExpired(error: unknown, queryClient: QueryClient): 
   if (redirecting || router.state.location.pathname === '/login') return;
   redirecting = true;
 
-  toast.warning('Tu sesión ha caducado', {
+  toast.warning(i18n.t('session.expired.title', { ns: 'errors' }), {
     id: 'session-expired',
-    description: 'Vuelve a entrar para continuar.',
+    description: i18n.t('session.expired.description', { ns: 'errors' }),
   });
   const redirect = router.state.location.href;
   dropSessionCaches(queryClient)

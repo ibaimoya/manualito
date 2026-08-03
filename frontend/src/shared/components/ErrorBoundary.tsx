@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
 type Props = Readonly<{
@@ -57,16 +58,19 @@ export function FullPageError({
   message,
   onRetry,
 }: Readonly<{ message?: string; onRetry?: () => void }>) {
+  const { t } = useTranslation('errors');
+
   return (
     <div role="alert" className="grid min-h-dvh place-items-center bg-bg px-6 py-10">
       <div className="flex w-full max-w-sm flex-col items-center text-center">
         <div className="mb-5 grid size-[76px] place-items-center rounded-full bg-error-bg text-error">
           <AlertTriangle size={34} strokeWidth={1.7} aria-hidden="true" />
         </div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-fg">Algo ha fallado</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-fg">
+          {t('boundary.title')}
+        </h1>
         <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-2">
-          Hemos tenido un problema inesperado. Vuelve a intentarlo; si sigue pasando, recarga la
-          página.
+          {t('boundary.message')}
         </p>
         <div className="mt-6 flex w-full flex-col gap-2.5">
           <Button
@@ -76,10 +80,10 @@ export function FullPageError({
             onClick={onRetry ?? (() => globalThis.location?.reload())}
           >
             <RefreshCw size={18} strokeWidth={2} />
-            Reintentar
+            {t('boundary.retry')}
           </Button>
           <Button asChild size="lg" block variant="ghost">
-            <a href="/home">Volver al inicio</a>
+            <a href="/home">{t('boundary.backHome')}</a>
           </Button>
         </div>
         {import.meta.env.DEV && message ? (

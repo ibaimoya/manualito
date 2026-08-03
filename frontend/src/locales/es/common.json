@@ -1,4 +1,7 @@
 {
+  "accessibility": {
+    "languageSelector": "Idioma de la interfaz"
+  },
   "actions": {
     "back": "Atrás",
     "cancel": "Cancelar",

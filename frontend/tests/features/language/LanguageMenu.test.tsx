@@ -14,7 +14,7 @@ function renderMenu() {
 }
 
 function trigger() {
-  return screen.getByRole('button', { name: /Idioma de la interfaz/i });
+  return screen.getByRole('button', { name: /Idioma de la interfaz|Interface language/i });
 }
 
 describe('LanguageMenu', () => {

@@ -1,6 +1,7 @@
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronDown, Globe } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LANGUAGE_NAMES, useLanguage, type Language } from '@/app/language';
 import { cn } from '@/shared/lib/cn';
 import { EnglishFlag, SpainFlag } from './flags';
@@ -16,6 +17,7 @@ const CHECK_CLASS =
 
 /* Trigger monocromo, un pill de color permanente competiría con el CTA */
 export function LanguageMenu() {
+  const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
@@ -53,7 +55,7 @@ export function LanguageMenu() {
       }}
     >
       <DropdownMenuPrimitive.Trigger
-        aria-label="Idioma de la interfaz"
+        aria-label={t('accessibility.languageSelector')}
         className={cn(
           'group inline-flex h-8 items-center rounded-full text-fg-2',
           // Centrado óptico, el chevron trae 2.5px de aire interno por lado

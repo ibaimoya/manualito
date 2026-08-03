@@ -1,4 +1,5 @@
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
+import { useTranslation } from 'react-i18next';
 import { LANGUAGE_NAMES, useLanguage, type Language } from '@/app/language';
 import { EnglishFlag, SpainFlag } from './flags';
 import { useFlagSweep } from './useFlagSweep';
@@ -15,6 +16,7 @@ const CARD_CLASS = [
 
 /* Con dos idiomas no hace falta menú, ambas opciones a la vista */
 export function LanguageCards() {
+  const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const sweepRef = useFlagSweep<HTMLButtonElement>();
 
@@ -23,7 +25,7 @@ export function LanguageCards() {
       value={language}
       onValueChange={(next) => setLanguage(next as Language)}
       orientation="horizontal"
-      aria-label="Idioma de la interfaz"
+      aria-label={t('accessibility.languageSelector')}
       className="flex gap-2.5"
     >
       <RadioGroupPrimitive.Item value="es" lang="es" className={CARD_CLASS}>

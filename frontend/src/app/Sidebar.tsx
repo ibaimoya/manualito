@@ -10,6 +10,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -40,24 +41,37 @@ type Props = Readonly<{
   onToggle?: () => void;
 }>;
 
-type NavItem = { to: NavTo; icon: ReactNode; label: string };
+type NavKey =
+  | 'navigation.explore'
+  | 'navigation.help'
+  | 'navigation.home'
+  | 'navigation.library'
+  | 'navigation.settings';
+
+type NavItem = { to: NavTo; icon: ReactNode; label: NavKey };
 
 const NAV_MAIN: NavItem[] = [
-  { to: '/home', icon: <Home size={18} strokeWidth={1.75} />, label: 'Inicio' },
-  { to: '/history', icon: <BookOpen size={18} strokeWidth={1.75} />, label: 'Biblioteca' },
-  { to: '/explore', icon: <Compass size={18} strokeWidth={1.75} />, label: 'Explorar' },
+  { to: '/home', icon: <Home size={18} strokeWidth={1.75} />, label: 'navigation.home' },
+  { to: '/history', icon: <BookOpen size={18} strokeWidth={1.75} />, label: 'navigation.library' },
+  { to: '/explore', icon: <Compass size={18} strokeWidth={1.75} />, label: 'navigation.explore' },
 ];
 
 // Utilidades de soporte, ancladas abajo junto al perfil.
 const NAV_FOOTER: NavItem[] = [
-  { to: '/about', icon: <CircleHelp size={18} strokeWidth={1.75} />, label: 'Ayuda' },
-  { to: '/settings', icon: <SettingsIcon size={18} strokeWidth={1.75} />, label: 'Ajustes' },
+  { to: '/about', icon: <CircleHelp size={18} strokeWidth={1.75} />, label: 'navigation.help' },
+  {
+    to: '/settings',
+    icon: <SettingsIcon size={18} strokeWidth={1.75} />,
+    label: 'navigation.settings',
+  },
 ];
 
 export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) {
+  const { t } = useTranslation('shell');
+
   return (
     <aside
-      aria-label="Navegación principal"
+      aria-label={t('navigation.aria.main')}
       data-collapsed={collapsed || undefined}
       className={cn(
         'hidden md:flex',
@@ -75,11 +89,11 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         )}
       >
         {collapsed ? (
-          <Tooltip content="Expandir" side="right">
+          <Tooltip content={t('sidebar.tooltip.expand')} side="right">
             <button
               type="button"
               onClick={onToggle}
-              aria-label="Expandir menú"
+              aria-label={t('sidebar.toggle.expand')}
               className="group relative grid size-11 place-items-center rounded-xl transition-colors hover:bg-surface-2"
             >
               <span
@@ -98,14 +112,14 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
           </Tooltip>
         ) : (
           <>
-            <Link to="/home" aria-label="Manualito · ir al inicio">
+            <Link to="/home" aria-label={t('sidebar.aria.brandHome')}>
               <LockUp scale={0.85} withTagline={false} />
             </Link>
-            <Tooltip content="Contraer" side="right">
+            <Tooltip content={t('sidebar.tooltip.collapse')} side="right">
               <button
                 type="button"
                 onClick={onToggle}
-                aria-label="Contraer menú"
+                aria-label={t('sidebar.toggle.collapse')}
                 className="grid size-9 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg"
               >
                 <PanelLeftClose size={18} strokeWidth={1.75} />
@@ -116,17 +130,17 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
       </div>
 
       <div className={cn('pb-4', collapsed ? 'px-2' : 'px-3')}>
-        <Button asChild block aria-label={collapsed ? 'Nuevo manual' : undefined}>
-          <Link to="/capture/source" title={collapsed ? 'Nuevo manual' : undefined}>
+        <Button asChild block aria-label={collapsed ? t('navigation.newManual') : undefined}>
+          <Link to="/capture/source" title={collapsed ? t('navigation.newManual') : undefined}>
             <Plus size={18} strokeWidth={2} />
-            {collapsed ? null : 'Nuevo manual'}
+            {collapsed ? null : t('navigation.newManual')}
           </Link>
         </Button>
       </div>
 
       <nav
         className={cn('flex flex-1 flex-col', collapsed ? 'px-2' : 'px-3')}
-        aria-label="Secciones de la app"
+        aria-label={t('navigation.aria.sections')}
       >
         <NavList items={NAV_MAIN} pathname={pathname} collapsed={collapsed} />
         <NavList
@@ -152,30 +166,35 @@ function NavList({
   collapsed,
   className,
 }: Readonly<{ items: NavItem[]; pathname: string; collapsed: boolean; className?: string }>) {
+  const { t } = useTranslation('shell');
+
   return (
     <ul className={cn('flex flex-col gap-1', className)}>
-      {items.map((item) => (
-        <li key={item.to}>
-          <MaybeTip show={collapsed} label={item.label}>
-            <Link
-              to={item.to}
-              aria-current={pathname === item.to ? 'page' : undefined}
-              className={cn(
-                'flex min-h-11 items-center rounded-xl text-sm font-semibold transition-colors',
-                collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
-                pathname === item.to
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'text-fg-2 hover:bg-surface-2 hover:text-fg',
-              )}
-            >
-              <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center">
-                {item.icon}
-              </span>
-              <span className={cn(collapsed && 'sr-only')}>{item.label}</span>
-            </Link>
-          </MaybeTip>
-        </li>
-      ))}
+      {items.map((item) => {
+        const label = t(item.label);
+        return (
+          <li key={item.to}>
+            <MaybeTip show={collapsed} label={label}>
+              <Link
+                to={item.to}
+                aria-current={pathname === item.to ? 'page' : undefined}
+                className={cn(
+                  'flex min-h-11 items-center rounded-xl text-sm font-semibold transition-colors',
+                  collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
+                  pathname === item.to
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-fg-2 hover:bg-surface-2 hover:text-fg',
+                )}
+              >
+                <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center">
+                  {item.icon}
+                </span>
+                <span className={cn(collapsed && 'sr-only')}>{label}</span>
+              </Link>
+            </MaybeTip>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -198,6 +217,7 @@ function UserCard({
   user,
   collapsed,
 }: Readonly<{ user: SidebarUser; collapsed: boolean }>) {
+  const { t } = useTranslation('shell');
   const name = user.username || user.email;
   const avatar = (
     <Avatar name={name} size={34} color={user.avatar_color} figure={user.avatar_figure} />
@@ -208,7 +228,7 @@ function UserCard({
       <Tooltip content={name} side="right">
         <Link
           to="/profile"
-          aria-label="Tu perfil"
+          aria-label={t('sidebar.aria.profile')}
           className="mx-auto grid size-11 place-items-center rounded-xl transition-colors hover:bg-surface-2"
         >
           {avatar}
@@ -220,7 +240,7 @@ function UserCard({
   return (
     <Link
       to="/profile"
-      aria-label="Tu perfil"
+      aria-label={t('sidebar.aria.profile')}
       className="flex items-center gap-2.5 rounded-xl p-2 transition-colors hover:bg-surface-2"
     >
       {avatar}

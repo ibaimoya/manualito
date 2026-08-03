@@ -1,6 +1,7 @@
 import { Link, Outlet, createFileRoute, redirect, useLocation } from '@tanstack/react-router';
 import { BookOpen, Compass, Home, Settings } from 'lucide-react';
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sidebar } from '@/app/Sidebar';
 import { DesktopTopbar } from '@/app/Topbar';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -37,6 +38,7 @@ export const Route = createFileRoute('/_app')({
 });
 
 function AppLayout() {
+  const { t } = useTranslation('shell');
   const location = useLocation();
   const showNav = showsNav(location.pathname);
   const isDesktop = useNamedMediaQuery('desktop');
@@ -51,7 +53,7 @@ function AppLayout() {
         href="#main-content"
         className="fixed left-3 top-3 z-[60] -translate-y-20 rounded-xl bg-primary px-4 py-2 font-semibold text-fg-inv shadow-md transition-transform duration-200 ease-[var(--ease-mn)] focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
       >
-        Saltar al contenido
+        {t('skipLink')}
       </a>
 
       {/* La sidebar da shell de escritorio también a result/chat/capture. */}
@@ -87,28 +89,30 @@ function AppLayout() {
 }
 
 function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
+  const { t } = useTranslation('shell');
+
   return (
     <nav
-      aria-label="Navegación principal"
+      aria-label={t('navigation.aria.main')}
       className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-bg/95 backdrop-blur"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="mx-auto flex max-w-md justify-around">
         <NavItem to="/home" pathname={pathname} icon={<Home size={22} strokeWidth={1.75} />}>
-          Inicio
+          {t('navigation.home')}
         </NavItem>
         <NavItem to="/history" pathname={pathname} icon={<BookOpen size={22} strokeWidth={1.75} />}>
-          Biblioteca
+          {t('navigation.library')}
         </NavItem>
         <NavItem to="/explore" pathname={pathname} icon={<Compass size={22} strokeWidth={1.75} />}>
-          Explorar
+          {t('navigation.explore')}
         </NavItem>
         <NavItem
           to="/settings"
           pathname={pathname}
           icon={<Settings size={22} strokeWidth={1.75} />}
         >
-          Ajustes
+          {t('navigation.settings')}
         </NavItem>
       </ul>
     </nav>

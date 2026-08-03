@@ -1,1 +1,63 @@
-{}
+{
+  "error": {
+    "backHome": "Back to Home",
+    "description": "We hit an unexpected problem. Try again, and if it keeps happening, reload the page.",
+    "title": "Something went wrong"
+  },
+  "loading": {
+    "ariaLabel": "Loading content",
+    "text": "Loading…"
+  },
+  "navigation": {
+    "aria": {
+      "main": "Main navigation",
+      "sections": "App sections"
+    },
+    "explore": "Explore",
+    "help": "Help",
+    "home": "Home",
+    "library": "Library",
+    "newManual": "New manual",
+    "settings": "Settings"
+  },
+  "notFound": {
+    "backHome": "Back to Home",
+    "description": "The page fell off the board: the URL you're trying to open doesn't exist in Manualito.",
+    "title": "This page got lost"
+  },
+  "sidebar": {
+    "aria": {
+      "brandHome": "Manualito · go to Home",
+      "profile": "Your profile"
+    },
+    "toggle": {
+      "collapse": "Collapse menu",
+      "expand": "Expand menu"
+    },
+    "tooltip": {
+      "collapse": "Collapse",
+      "expand": "Expand"
+    }
+  },
+  "skipLink": "Skip to content",
+  "storage": {
+    "denied": {
+      "description": "Your browser is blocking local storage (private browsing or disabled cookies).",
+      "title": "Can't save locally"
+    },
+    "quota": {
+      "description": "Free up space from Settings → Clear local data.",
+      "title": "Local storage is full"
+    }
+  },
+  "topbar": {
+    "aria": {
+      "breadcrumb": "Breadcrumb navigation"
+    },
+    "titles": {
+      "privacy": "Privacy policy",
+      "profile": "Profile",
+      "security": "Account & security"
+    }
+  }
+}

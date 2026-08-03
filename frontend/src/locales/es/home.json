@@ -1,1 +1,33 @@
-{}
+{
+  "account": {
+    "ariaLabel": "Tu cuenta"
+  },
+  "empty": {
+    "description": "Aún no has consultado ningún manual. Pulsa <b>Nuevo manual</b> para empezar."
+  },
+  "error": {
+    "manuals": "No hemos podido cargar tus manuales. Reintenta en un momento."
+  },
+  "greeting": {
+    "anonymous": "Hola",
+    "description": "Saca foto al manual y te lo explico paso a paso, sin tener que leerlo entero.",
+    "named": "Hola, {{firstName}}",
+    "question": "¿Qué juego vamos a aprender?"
+  },
+  "hero": {
+    "description": "Sube las páginas del manual desde la cámara, la galería o un PDF, y yo te lo explico.",
+    "newManual": "Nuevo manual",
+    "title": "Aprende un juego nuevo"
+  },
+  "recent": {
+    "heading": "Recientes",
+    "viewAll": "Ver todo",
+    "viewAllAriaLabel": "Ver todos tus juegos"
+  },
+  "recommendations": {
+    "attribution": "Powered by <b>BoardGameGeek</b>",
+    "description": "Juegos que quizá quieras aprender, según tu biblioteca.",
+    "heading": "Para ti",
+    "learn": "Aprender {{game}}"
+  }
+}

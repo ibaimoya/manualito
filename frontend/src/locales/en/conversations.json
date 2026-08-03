@@ -1,1 +1,80 @@
-{}
+{
+  "actions": {
+    "cancel": "Cancel",
+    "clearSearch": "Clear search",
+    "delete": "Delete",
+    "deleteConversation": "Delete conversation",
+    "newConversation": "New conversation",
+    "open": "Open",
+    "rename": "Rename",
+    "save": "Save"
+  },
+  "aria": {
+    "deleteConversation": "Delete conversation {{title}}",
+    "optionsFor": "Options for “{{title}}”",
+    "unreadReply": "Unread reply"
+  },
+  "conversation": {
+    "openedOn": "Opened on {{date}}"
+  },
+  "counter": {
+    "filtered": "{{visible}} of {{total}}",
+    "saved_one": "{{count}} saved",
+    "saved_other": "{{count}} saved"
+  },
+  "deleteDialog": {
+    "body": "Deleting <b>“{{title}}”</b> removes all its messages. Your game explanation and rulebooks won't be touched.",
+    "description": "Confirm that you want to delete it.",
+    "irreversible": "This can't be undone.",
+    "title": "Delete conversation"
+  },
+  "empty": {
+    "pageDescription": "Ask anything about {{gameName}} and we'll save the conversation here with a short title so you can pick it up whenever you like.",
+    "sectionDescription": "You haven't asked anything about this game yet. Start a conversation and it'll be saved here.",
+    "title": "You haven't asked anything yet"
+  },
+  "error": {
+    "load": "We couldn't load your conversations. Try again in a moment."
+  },
+  "fallback": {
+    "conversationTitle": "Untitled conversation",
+    "gameName": "Game"
+  },
+  "header": {
+    "subtitle": "{{gameName}} · Ask away"
+  },
+  "noResults": {
+    "description": "Try another word, or ask the AI directly—it'll start a new conversation.",
+    "title": "Nothing matching “{{filter}}”"
+  },
+  "page": {
+    "breadcrumbLibrary": "Library",
+    "filterLabel": "Filter conversations by title",
+    "filterPlaceholder": "Filter by title…",
+    "listLabel": "Saved conversations",
+    "title": "Your conversations"
+  },
+  "renameDialog": {
+    "aiHint": "AI generated this title from your first question. Change it to make it easier to find.",
+    "description": "A good title helps you find it at a glance.",
+    "label": "Conversation title",
+    "maxLength": "Max. {{count}} characters",
+    "title": "Rename conversation"
+  },
+  "section": {
+    "confirmDelete": "Delete this conversation?",
+    "heading": "Your conversations",
+    "new": "New",
+    "viewAll": "View all ({{count}})"
+  },
+  "status": {
+    "answering": "Manualito is replying"
+  },
+  "toast": {
+    "deleteError": "We couldn't delete it",
+    "deleteSuccess": "Conversation deleted",
+    "renameError": "We couldn't rename it",
+    "renameSuccess": "Conversation renamed",
+    "retry": "Try again in a moment."
+  }
+}

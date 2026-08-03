@@ -1,0 +1,15 @@
+{
+  "actions": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "clearSearch": "Clear search",
+    "close": "Close",
+    "delete": "Delete",
+    "retry": "Try again",
+    "save": "Save"
+  },
+  "status": {
+    "justNow": "just now",
+    "loading": "Loading…"
+  }
+}

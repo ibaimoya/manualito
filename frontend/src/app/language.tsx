@@ -10,6 +10,7 @@ import {
   useTransition,
 } from 'react';
 import { flushSync } from 'react-dom';
+import i18n from '@/app/i18n';
 import { storage, type StoredLanguage } from '@/shared/lib/storage';
 
 export type Language = StoredLanguage;
@@ -43,6 +44,8 @@ function applyToHtml(language: Language): void {
   const runtimeDocument = getBrowserRuntime().document;
   if (runtimeDocument === undefined) return;
   runtimeDocument.documentElement.lang = language;
+  // Dentro del flushSync de la View Transition, el crossfade captura el texto nuevo
+  if (i18n.language !== language) void i18n.changeLanguage(language);
 }
 
 /* Sin soporte o con reduced-motion aplica en seco */

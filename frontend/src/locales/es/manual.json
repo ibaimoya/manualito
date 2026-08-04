@@ -75,7 +75,7 @@
       "failedDescription": "Inténtalo de nuevo en un momento.",
       "failedTitle": "No hemos podido guardar el texto",
       "pendingIndex": "Texto guardado, índice pendiente",
-      "pendingIndexDescription": "Tu texto ya está guardado; reprocesa el manual para sincronizar la IA.",
+      "pendingIndexDescription": "Tu texto ya está guardado. Reprocesa el manual para sincronizar la IA.",
       "saved": "Texto guardado",
       "savedDescription": "La IA usará tu versión a partir de ahora."
     },

@@ -9,7 +9,7 @@
   },
   "error": {
     "backHome": "Volver al inicio",
-    "description": "Hemos tenido un problema inesperado. Vuelve a intentarlo; si sigue pasando, recarga la página.",
+    "description": "Hemos tenido un problema inesperado. Vuelve a intentarlo y, si sigue pasando, recarga la página.",
     "title": "Algo ha fallado"
   },
   "loading": {

@@ -75,7 +75,7 @@
       "failedDescription": "Try again in a moment.",
       "failedTitle": "We couldn't save the text",
       "pendingIndex": "Text saved, indexing pending",
-      "pendingIndexDescription": "Your text is saved; reprocess the rulebook to sync the AI.",
+      "pendingIndexDescription": "Your text is saved. Reprocess the rulebook to sync the AI.",
       "saved": "Text saved",
       "savedDescription": "The AI will use your version from now on."
     },

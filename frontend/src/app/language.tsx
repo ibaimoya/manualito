@@ -52,19 +52,31 @@ function applyToHtml(language: Language): void {
     ?.setAttribute('content', i18n.t('shell:meta.description'));
 }
 
-/* Sin soporte o con reduced-motion aplica en seco */
+/* Sin soporte, con reduced-motion o en pestaña oculta aplica en seco */
 function applyWithViewTransition(language: Language): void {
   const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
   if (runtimeDocument === undefined || runtimeWindow === undefined) return;
   const reduced = runtimeWindow.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const docAny = runtimeDocument as Document & {
-    startViewTransition?: (cb: () => void) => unknown;
+    startViewTransition?: (cb: () => void) => {
+      finished?: Promise<unknown>;
+      ready?: Promise<unknown>;
+      updateCallbackDone?: Promise<unknown>;
+    };
   };
-  if (reduced || typeof docAny.startViewTransition !== 'function') {
+  if (
+    reduced ||
+    runtimeDocument.visibilityState === 'hidden' ||
+    typeof docAny.startViewTransition !== 'function'
+  ) {
     applyToHtml(language);
     return;
   }
-  docAny.startViewTransition(() => flushSync(() => applyToHtml(language)));
+  const transition = docAny.startViewTransition(() => flushSync(() => applyToHtml(language)));
+  // Saltarse la transición (otra en curso, pestaña oculta) es normal, no un error
+  void transition.updateCallbackDone?.catch(() => undefined);
+  void transition.ready?.catch(() => undefined);
+  void transition.finished?.catch(() => undefined);
 }
 
 export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>) {
@@ -73,15 +85,16 @@ export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>
   // useTransition, con spam de cambios React solo procesa el último
   const [, startTransition] = useTransition();
 
-  // En el primer mount no hay estado "from", se aplica sin View Transition
-  const mountedRef = useRef(false);
+  // Transicionar solo cuando el idioma cambia de verdad (el primer mount y el
+  // doble efecto de StrictMode aplican en seco)
+  const lastAppliedRef = useRef<Language | null>(null);
   useEffect(() => {
-    if (mountedRef.current) {
-      applyWithViewTransition(language);
-    } else {
+    if (lastAppliedRef.current === null || lastAppliedRef.current === language) {
       applyToHtml(language);
-      mountedRef.current = true;
+    } else {
+      applyWithViewTransition(language);
     }
+    lastAppliedRef.current = language;
     storage.writeLanguage(language);
   }, [language]);
 

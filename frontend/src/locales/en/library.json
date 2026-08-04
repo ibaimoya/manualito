@@ -22,7 +22,7 @@
   },
   "empty": {
     "games": {
-      "hint": "Follow games from Explore; you'll also start following one when you upload its rulebook, open a chat, or rate it.",
+      "hint": "Follow games from Explore. You'll also start following one when you upload its rulebook, open a chat, or rate it.",
       "title": "You're not following any games yet"
     },
     "manuals": {

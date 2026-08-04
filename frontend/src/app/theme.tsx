@@ -74,13 +74,25 @@ function applyWithViewTransition(state: Persisted): void {
   if (runtimeDocument === undefined || runtimeWindow === undefined) return;
   const reduced = runtimeWindow.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const docAny = runtimeDocument as Document & {
-    startViewTransition?: (cb: () => void) => unknown;
+    startViewTransition?: (cb: () => void) => {
+      finished?: Promise<unknown>;
+      ready?: Promise<unknown>;
+      updateCallbackDone?: Promise<unknown>;
+    };
   };
-  if (reduced || typeof docAny.startViewTransition !== 'function') {
+  if (
+    reduced ||
+    runtimeDocument.visibilityState === 'hidden' ||
+    typeof docAny.startViewTransition !== 'function'
+  ) {
     applyToHtml(state);
     return;
   }
-  docAny.startViewTransition(() => flushSync(() => applyToHtml(state)));
+  const transition = docAny.startViewTransition(() => flushSync(() => applyToHtml(state)));
+  // Saltarse la transición (otra en curso, pestaña oculta) es normal, no un error
+  void transition.updateCallbackDone?.catch(() => undefined);
+  void transition.ready?.catch(() => undefined);
+  void transition.finished?.catch(() => undefined);
 }
 
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
@@ -89,15 +101,17 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   // useTransition: con spam de toggles React solo procesa el último click.
   const [, startTransition] = useTransition();
 
-  // En el primer mount no hay estado "from": se aplica sin View Transition.
-  const mountedRef = useRef(false);
+  // Transicionar solo cuando el tema cambia de verdad (el primer mount y el
+  // doble efecto de StrictMode aplican en seco)
+  const lastAppliedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (mountedRef.current) {
-      applyWithViewTransition(state);
-    } else {
+    const applied = `${state.mode}/${state.accent}`;
+    if (lastAppliedRef.current === null || lastAppliedRef.current === applied) {
       applyToHtml(state);
-      mountedRef.current = true;
+    } else {
+      applyWithViewTransition(state);
     }
+    lastAppliedRef.current = applied;
   }, [state]);
 
   // Debounce: una ráfaga de clicks acaba en un solo setItem.

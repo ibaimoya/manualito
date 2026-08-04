@@ -1,7 +1,7 @@
 {
   "boundary": {
     "backHome": "Volver al inicio",
-    "message": "Hemos tenido un problema inesperado. Vuelve a intentarlo; si sigue pasando, recarga la página.",
+    "message": "Hemos tenido un problema inesperado. Vuelve a intentarlo y, si sigue pasando, recarga la página.",
     "retry": "Reintentar",
     "title": "Algo ha fallado"
   },

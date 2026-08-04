@@ -22,7 +22,7 @@
   },
   "empty": {
     "games": {
-      "hint": "Sigue juegos desde Explorar; también empiezas a seguir uno al subir su manual, abrir un chat o valorarlo.",
+      "hint": "Sigue juegos desde Explorar. También empiezas a seguir uno al subir su manual, abrir un chat o valorarlo.",
       "title": "Aún no sigues ningún juego"
     },
     "manuals": {

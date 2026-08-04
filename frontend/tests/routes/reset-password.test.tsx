@@ -12,6 +12,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { server } from '@tests/_helpers/server';
+import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
 import { Route as ResetRoute } from '@/routes/reset-password';
 
@@ -49,11 +50,13 @@ function renderReset(token?: string) {
     }),
   });
   return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
+    <LanguageProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </LanguageProvider>,
   );
 }
 

@@ -11,6 +11,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { server } from '@tests/_helpers/server';
+import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
 import { Route as VerifyRoute } from '@/routes/verify-email';
 
@@ -48,11 +49,13 @@ function renderVerify(token?: string) {
     }),
   });
   return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
+    <LanguageProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </LanguageProvider>,
   );
 }
 

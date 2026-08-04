@@ -12,6 +12,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { Monogram } from '@/shared/components/Brand';
+import { LanguagePill } from '@/features/language/LanguagePill';
 import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
 import { storage } from '@/shared/lib/storage';
 import { cn } from '@/shared/lib/cn';
@@ -163,6 +164,7 @@ export function Onboarding() {
           </span>
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
+          <LanguagePill tone="dark" className="pointer-events-auto" />
           <button className={styles.topbarLink} onClick={skip} type="button">
             {t('actions.skip')}
           </button>

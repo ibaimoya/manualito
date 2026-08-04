@@ -1,5 +1,7 @@
 import asyncio
+from functools import partial
 
+import anyio
 import httpx
 import pytest
 
@@ -30,3 +32,25 @@ def test_get_http_client_raises_before_startup():
     """Sin lifespan activo, la dependencia falla de forma explícita."""
     with pytest.raises(RuntimeError, match="no se ha inicializado"):
         dependencies.get_http_client()
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        (None, None),
+        ("es", "es"),
+        ("en", "en"),
+        ("ES", None),
+        ("en-US", None),
+        ("es-ES,en;q=0.9", None),
+        ("fr", None),
+        ("", None),
+    ],
+)
+def test_accept_language_dependency_validates_supported_values(header, expected):
+    """La dependencia solo admite los dos valores cerrados del contrato."""
+    result = anyio.run(
+        partial(dependencies.get_accept_language, accept_language=header)
+    )
+
+    assert result == expected

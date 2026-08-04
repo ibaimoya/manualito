@@ -23,10 +23,11 @@ _ASSISTANT_MESSAGE_ID = UUID("018fd000-0000-7000-8000-000000000014")
 
 def test_chat_task_marks_pending_reply_failed_when_lock_wait_expires(monkeypatch):
     """Si el lock no se libera tras los reintentos, el mensaje no queda pending."""
+    generate_mock = AsyncMock(return_value=False)
     monkeypatch.setattr(
         conversation_tasks.service,
         "generate_pending_reply",
-        AsyncMock(return_value=False),
+        generate_mock,
     )
     fail_mock = AsyncMock()
     monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
@@ -37,8 +38,116 @@ def test_chat_task_marks_pending_reply_failed_when_lock_wait_expires(monkeypatch
         str(_USER_MESSAGE_ID),
         str(_ASSISTANT_MESSAGE_ID),
         4,
+        "en",
         conversation_tasks.LOCK_BUSY_MAX_RETRIES,
         0,
+    )
+
+    generate_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _USER_MESSAGE_ID,
+        _ASSISTANT_MESSAGE_ID,
+        4,
+        "en",
+    )
+    fail_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _ASSISTANT_MESSAGE_ID,
+        "generation_failed",
+    )
+
+
+def test_chat_task_completes_without_retry(monkeypatch):
+    """Una respuesta completada conserva el idioma y no se reencola."""
+    generate_mock = AsyncMock(return_value=True)
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(conversation_tasks.service, "generate_pending_reply", generate_mock)
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    conversation_tasks.generate_chat_reply_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+    )
+
+    generate_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _USER_MESSAGE_ID,
+        _ASSISTANT_MESSAGE_ID,
+        4,
+        "en",
+    )
+    fail_mock.assert_not_awaited()
+    retry_mock.assert_not_called()
+
+
+def test_chat_task_retries_external_errors_with_language(monkeypatch):
+    """Un fallo externo reencola los mismos datos y conserva el idioma."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(side_effect=ConnectionError("llm caído")),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    with pytest.raises(Retry):
+        conversation_tasks.generate_chat_reply_task.run(
+            str(_USER_ID),
+            str(_CONVERSATION_ID),
+            str(_USER_MESSAGE_ID),
+            str(_ASSISTANT_MESSAGE_ID),
+            4,
+            "en",
+            7,
+            1,
+        )
+
+    fail_mock.assert_not_awaited()
+    assert retry_mock.call_args.kwargs["countdown"] == 10
+    assert retry_mock.call_args.kwargs["args"] == (
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+        7,
+        2,
+    )
+
+
+def test_chat_task_fails_when_external_retries_are_exhausted(monkeypatch):
+    """Al agotar fallos externos el mensaje pendiente queda marcado como fallido."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(side_effect=TimeoutError("llm caído")),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    conversation_tasks.generate_chat_reply_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "es",
+        0,
+        conversation_tasks.EXTERNAL_ERROR_MAX_RETRIES,
     )
 
     fail_mock.assert_awaited_once_with(
@@ -46,6 +155,103 @@ def test_chat_task_marks_pending_reply_failed_when_lock_wait_expires(monkeypatch
         _CONVERSATION_ID,
         _ASSISTANT_MESSAGE_ID,
         "generation_failed",
+    )
+    retry_mock.assert_not_called()
+
+
+def test_chat_task_marks_pending_reply_failed_on_soft_timeout(monkeypatch):
+    """Un límite blando agotado no deja el mensaje en estado pendiente."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(side_effect=SoftTimeLimitExceeded()),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    conversation_tasks.generate_chat_reply_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "es",
+    )
+
+    fail_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _ASSISTANT_MESSAGE_ID,
+        "generation_failed",
+    )
+    retry_mock.assert_not_called()
+
+
+def test_chat_task_retries_when_lock_is_temporarily_busy(monkeypatch):
+    """Un lock ocupado reencola el turno sin cambiar idioma ni contador externo."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(return_value=False),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    with pytest.raises(Retry):
+        conversation_tasks.generate_chat_reply_task.run(
+            str(_USER_ID),
+            str(_CONVERSATION_ID),
+            str(_USER_MESSAGE_ID),
+            str(_ASSISTANT_MESSAGE_ID),
+            4,
+            "en",
+            3,
+            1,
+        )
+
+    fail_mock.assert_not_awaited()
+    assert retry_mock.call_args.kwargs["countdown"] == (
+        conversation_tasks.LOCK_BUSY_RETRY_SECONDS
+    )
+    assert retry_mock.call_args.kwargs["args"] == (
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+        4,
+        1,
+    )
+
+
+def test_title_task_forwards_resolved_language(monkeypatch):
+    """La tarea de título recibe el mismo idioma que la respuesta del turno."""
+    refresh_mock = AsyncMock()
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "refresh_conversation_title",
+        refresh_mock,
+    )
+
+    conversation_tasks.refresh_conversation_title_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        "Fallback",
+        "en",
+    )
+
+    refresh_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _USER_MESSAGE_ID,
+        "Fallback",
+        "en",
     )
 
 

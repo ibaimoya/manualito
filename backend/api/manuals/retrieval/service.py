@@ -15,6 +15,7 @@ from api.manuals.repository import load_authorized_chunks
 from api.manuals.retrieval.deduplication import deduplicate_chunks
 from api.manuals.schemas import AnswerResponse, AnswerSource
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
+from common.language import Language
 
 
 async def generate_game_answer(
@@ -27,13 +28,9 @@ async def generate_game_answer(
     client: httpx.AsyncClient,
     chat_history: Sequence[Mapping[str, str]] = (),
     retrieval_question: str | None = None,
+    language: Language = "es",
 ) -> AnswerResponse:
-    """Responde usando RAG sin que RAG conozca el historial ni Postgres.
-
-    Recibe el id de usuario como valor plano a propósito: los llamantes
-    suelen haber soltado ya su transacción con rollback y tocar atributos
-    del ORM expirado dispararía un lazy-load síncrono (MissingGreenlet).
-    """
+    """Responde con RAG usando solo fragmentos autorizados para el juego."""
     search_question = retrieval_question or question
     retrieval_response = await internal_client.post_json(
         client=client,
@@ -69,6 +66,7 @@ async def generate_game_answer(
             "question": question,
             "context_chunks": context_chunks,
             "chat_history": list(chat_history),
+            "language": language,
         },
         unavailable_detail="Servicio LLM no disponible.",
         internal_detail="Error interno al generar la respuesta.",

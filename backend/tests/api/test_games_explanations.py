@@ -279,6 +279,7 @@ def test_worker_generates_all_sections_under_lock(monkeypatch):
     assert [
         call.kwargs["question"] for call in generate_mock.await_args_list
     ] == list(EXPLANATION_QUESTIONS.values())
+    assert {call.kwargs["language"] for call in generate_mock.await_args_list} == {"es"}
     assert generating_mock.await_args.kwargs["user_id"] == _USER_ID
     assert upsert_mock.await_args.kwargs["user_id"] == _USER_ID
     assert upsert_mock.await_args.kwargs["sections"]["summary"]["sources"][0]["page"] == 2

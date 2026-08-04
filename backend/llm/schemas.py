@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import Field
 
+from common.language import Language
 from common.schemas import StrictModel
 from llm.annotations import (
     Answer,
@@ -28,6 +29,7 @@ class GenerateRequest(StrictModel):
     context_chunks: ContextChunks
     chat_history: list[ChatHistoryMessage] = Field(default_factory=list, max_length=20)
     manual_id: str | None = None
+    language: Language = "es"
 
 
 class GenerateResponse(StrictModel):
@@ -54,6 +56,7 @@ class ConversationTitleRequest(StrictModel):
 
     game_name: ConversationTitleGameName
     messages: list[ChatHistoryMessage] = Field(min_length=1, max_length=20)
+    language: Language = "es"
 
 
 class ConversationTitleResponse(StrictModel):

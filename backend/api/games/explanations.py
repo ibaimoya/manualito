@@ -23,7 +23,7 @@ from database.session import get_sessionmaker
 
 EXPLANATION_TOP_K = 5
 GENERATION_STALE_AFTER = timedelta(seconds=config.CELERY_GPU_HARD_TIME_LIMIT + 30)
-# Orden de generación: el resumen primero y después los acordeones.
+# El resumen se genera antes que los acordeones para ofrecer contenido cuanto antes.
 EXPLANATION_QUESTIONS = {
     "summary": "Resume en dos frases de qué va este juego.",
     "setup": "Explica la preparación inicial del juego paso a paso.",
@@ -98,6 +98,8 @@ async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
                         question=EXPLANATION_QUESTIONS[key],
                         top_k=EXPLANATION_TOP_K,
                         client=client,
+                        # El idioma por petición se incorporará en una fase futura.
+                        language="es",
                     )
                     sections[key] = {
                         "answer": answer.answer,
@@ -201,7 +203,7 @@ def _sections_for(
     explanation: GameExplanationSnapshot | None,
     fingerprint: str,
 ) -> dict[str, object]:
-    """Apartados ya generados para esta huella; vacío si la caché es de otra."""
+    """Devuelve apartados de la huella y vacía el resultado si no coincide."""
     if explanation is not None and explanation.source_fingerprint == fingerprint:
         return dict(explanation.sections)
     return {}

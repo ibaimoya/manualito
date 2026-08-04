@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from common.language import Language
+
 
 @dataclass(frozen=True, slots=True)
 class ConversationSummary:
@@ -100,3 +102,4 @@ class SendMessageOutcome:
     user_message: StoredMessage
     assistant_message: StoredMessage
     title_job: ConversationTitleJob | None
+    language: Language

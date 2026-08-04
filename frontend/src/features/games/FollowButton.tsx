@@ -1,4 +1,5 @@
 import { BookmarkCheck, BookmarkPlus, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useToggleFollow } from '@/features/games/use-games';
 import { cn } from '@/shared/lib/cn';
 
@@ -11,6 +12,7 @@ export function FollowButton({
   gameId,
   following,
 }: Readonly<{ gameId: string; following: boolean }>) {
+  const { t } = useTranslation('game');
   const toggle = useToggleFollow(gameId);
   const pending = toggle.isPending;
 
@@ -19,7 +21,7 @@ export function FollowButton({
       type="button"
       aria-pressed={following}
       aria-busy={pending}
-      aria-label={following ? 'Dejar de seguir este juego' : 'Seguir este juego'}
+      aria-label={following ? t('follow.aria.unfollow') : t('follow.aria.follow')}
       disabled={pending}
       onClick={() => toggle.mutate(!following)}
       className={cn(
@@ -31,7 +33,7 @@ export function FollowButton({
       )}
     >
       <FollowIcon pending={pending} following={following} />
-      {following ? 'Siguiendo' : 'Seguir'}
+      {following ? t('follow.following') : t('follow.follow')}
     </button>
   );
 }

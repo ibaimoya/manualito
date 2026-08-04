@@ -1,0 +1,68 @@
+{
+  "actions": {
+    "new": "Nueva",
+    "sendQuestion": "Enviar pregunta"
+  },
+  "aria": {
+    "copyAnswer": "Copiar respuesta",
+    "newConversation": "Nueva conversación",
+    "page": "Página {{page}} ({{reason}})",
+    "pageLink": "Abrir página {{page}} del manual"
+  },
+  "composer": {
+    "aria": {
+      "question": "Escribe tu pregunta"
+    },
+    "disabledPlaceholder": "No hay manuales disponibles para preguntar",
+    "placeholder": "Pregunta sobre {{gameName}}…"
+  },
+  "error": {
+    "assistantFailed": "No hemos podido generar esta respuesta. Prueba de nuevo en un momento.",
+    "history": "No hemos podido recuperar esta conversación. Puedes seguir preguntando abajo.",
+    "request": {
+      "description": "Inténtalo de nuevo en un momento.",
+      "title": "No hemos podido responder"
+    }
+  },
+  "fallback": {
+    "conversationTitle": "Nueva conversación",
+    "gameName": "el juego"
+  },
+  "feedback": {
+    "copy": {
+      "failure": "No se pudo copiar",
+      "success": "Copiado"
+    }
+  },
+  "navigation": {
+    "chat": "Chat"
+  },
+  "readOnly": {
+    "description": "Una fuente que usaste sobre {{gameName}} ya no está disponible, así que no se pueden hacer nuevas preguntas. Sube de nuevo el manual para retomarla.",
+    "notice": "Una fuente que usaste ya no está disponible. Puedes leer esta conversación, pero no hacer nuevas preguntas.",
+    "title": "Esta conversación es de solo lectura"
+  },
+  "sources": {
+    "communityManual": "manual de la comunidad",
+    "heading": "Fuentes consultadas",
+    "page": "Pág. {{page}}",
+    "unavailable": "ya no disponible"
+  },
+  "status": {
+    "generating": "Generando respuesta",
+    "writing": "Escribiendo respuesta"
+  },
+  "welcome": {
+    "description": "He leído el manual entero. Pregunta lo que quieras y te respondo en claro, citando la página exacta.",
+    "suggestions": {
+      "duration": "¿Cuánto dura una partida?",
+      "passTurn": "¿Se puede pasar el turno?",
+      "players": "¿Para cuántos jugadores?",
+      "preparation": "¿Cómo se prepara?",
+      "start": "¿Quién empieza?",
+      "victory": "¿Cómo se gana?"
+    },
+    "title": "Pregúntame sobre {{gameName}}",
+    "try": "Prueba con"
+  }
+}

@@ -5,46 +5,48 @@ import {
   Server,
   ShieldCheck,
   Sparkles,
-  type LucideIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/shared/lib/cn';
 
 /** Contenido de la política, compartido entre la página /privacy y el modal in-app. */
-const SECTIONS: ReadonlyArray<{ icon: LucideIcon; h: string; body: string }> = [
+const SECTIONS = [
   {
     icon: Database,
-    h: '¿Qué datos tratamos?',
-    body: 'Tu email, el nombre que elijas y las imágenes de los manuales que subes.',
+    h: 'sections.data.heading',
+    body: 'sections.data.body',
   },
   {
     icon: Sparkles,
-    h: '¿Para qué los usamos?',
-    body: 'Para darte acceso a tu cuenta, procesar las fotos (OCR) y generar las explicaciones del manual. No vendemos tus datos ni los usamos para publicidad.',
+    h: 'sections.usage.heading',
+    body: 'sections.usage.body',
   },
   {
     icon: ImageIcon,
-    h: 'Las imágenes de tus manuales',
-    body: 'Se procesan para extraer el texto. Si activas «borrar fotos tras procesar» en Ajustes, se eliminan al terminar; el texto extraído se guarda asociado a tu manual.',
+    h: 'sections.images.heading',
+    body: 'sections.images.body',
   },
   {
     icon: Server,
-    h: '¿Dónde se procesan?',
-    body: 'El OCR y el modelo de lenguaje se ejecutan en la infraestructura del proyecto. Tus datos no se ceden a terceros para entrenar sus modelos.',
+    h: 'sections.processing.heading',
+    body: 'sections.processing.body',
   },
   {
     icon: ShieldCheck,
-    h: 'Tus derechos',
-    body: 'Puedes consultar y borrar tu información desde Ajustes (borrar la cuenta o cerrar sesión). Si necesitas algo más, escríbenos.',
+    h: 'sections.rights.heading',
+    body: 'sections.rights.body',
   },
   {
     icon: GraduationCap,
-    h: 'Proyecto académico',
-    body: 'Manualito es un Trabajo de Fin de Grado con fines de investigación y demostración, no un servicio comercial.',
+    h: 'sections.academic.heading',
+    body: 'sections.academic.body',
   },
-];
+] as const;
 
 export function PrivacySections({ className }: Readonly<{ className?: string }>) {
+  const { t } = useTranslation('legal');
+
   return (
     <Card className={cn('divide-y divide-border overflow-hidden', className)}>
       {SECTIONS.map(({ icon: Icon, h, body }) => (
@@ -56,8 +58,8 @@ export function PrivacySections({ className }: Readonly<{ className?: string }>)
             <Icon size={18} strokeWidth={2} />
           </span>
           <div className="min-w-0">
-            <h2 className="font-display text-base font-bold tracking-tight text-fg">{h}</h2>
-            <p className="mt-1 text-[15px] leading-relaxed text-fg-2">{body}</p>
+            <h2 className="font-display text-base font-bold tracking-tight text-fg">{t(h)}</h2>
+            <p className="mt-1 text-[15px] leading-relaxed text-fg-2">{t(body)}</p>
           </div>
         </div>
       ))}

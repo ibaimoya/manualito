@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { forwardRef, type ComponentRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
 type DialogDataKind = 'dialog' | 'sheet';
@@ -69,6 +70,7 @@ export function ModalFrame({
 
 export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>, ModalHeaderProps>(
   function ModalHeader({ title, description, onClose, className }, ref) {
+    const { t } = useTranslation();
     return (
       <header className={className}>
         <div className="flex-1">
@@ -88,7 +90,7 @@ export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={t('actions.close')}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 transition-colors hover:bg-error/10 hover:text-error focus-visible:bg-error/10 focus-visible:text-error focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-error/15"
           >
             <X size={20} strokeWidth={2} />

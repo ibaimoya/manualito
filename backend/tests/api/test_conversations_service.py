@@ -71,6 +71,7 @@ def test_send_message_persists_pending_pair_and_returns_title_job(monkeypatch):
             auth=_auth(),
             conversation_id=_CONVERSATION_ID,
             payload=SendMessageRequest(content="¿Y si empato?", top_k=4),
+            accept_language="en",
         )
     )
 
@@ -78,6 +79,7 @@ def test_send_message_persists_pending_pair_and_returns_title_job(monkeypatch):
     assert outcome.assistant_message.status == "pending"
     assert outcome.assistant_message.content == ""
     assert outcome.title_job is not None
+    assert outcome.language == "es"
     assert outcome.title_job.user_message_id == _USER_MESSAGE_ID
     assert outcome.title_job.expected_title == "¿Y si empato?"
     assert append_mock.await_args.kwargs["user_id"] == _USER_ID
@@ -120,10 +122,12 @@ def test_send_message_skips_title_job_when_conversation_already_has_title(monkey
             auth=_auth(),
             conversation_id=_CONVERSATION_ID,
             payload=SendMessageRequest(content="Primera pregunta"),
+            accept_language="en",
         )
     )
 
     assert outcome.title_job is None
+    assert outcome.language == "en"
     assert append_mock.await_args.kwargs["title"] is None
 
 
@@ -153,6 +157,7 @@ def test_send_message_blocks_when_game_has_no_sources(monkeypatch):
                 auth=_auth(),
                 conversation_id=_CONVERSATION_ID,
                 payload=SendMessageRequest(content="¿Y si empato?"),
+                accept_language=None,
             )
         )
 
@@ -207,6 +212,7 @@ def test_generate_pending_reply_uses_history_aware_retrieval_and_completes(monke
             _USER_MESSAGE_ID,
             _ASSISTANT_MESSAGE_ID,
             4,
+            "en",
         )
     )
 
@@ -219,6 +225,7 @@ def test_generate_pending_reply_uses_history_aware_retrieval_and_completes(monke
     assert answer_kwargs["question"] == "¿Y si empato?"
     assert answer_kwargs["retrieval_question"] == "Desempate al llegar a 10 puntos"
     assert answer_kwargs["chat_history"][0]["role"] == "user"
+    assert answer_kwargs["language"] == "en"
     complete_mock.assert_awaited_once()
     assert complete_mock.await_args.kwargs["content"] == "Gana quien tenga más oro."
     assert complete_mock.await_args.kwargs["sources"][0]["manual_id"] == str(_MANUAL_ID)
@@ -240,6 +247,7 @@ def test_generate_pending_reply_returns_false_when_lock_is_busy(monkeypatch):
             _USER_MESSAGE_ID,
             _ASSISTANT_MESSAGE_ID,
             4,
+            "es",
         )
     )
 
@@ -278,6 +286,7 @@ def test_generate_pending_reply_marks_overlong_answer_as_failed(monkeypatch):
             _USER_MESSAGE_ID,
             _ASSISTANT_MESSAGE_ID,
             4,
+            "es",
         )
     )
 
@@ -324,6 +333,7 @@ def test_refresh_conversation_title_uses_own_session(monkeypatch):
             _CONVERSATION_ID,
             _USER_MESSAGE_ID,
             "Fallback",
+            "en",
         )
     )
 
@@ -345,6 +355,7 @@ def test_refresh_conversation_title_uses_own_session(monkeypatch):
     assert title_payload == {
         "game_name": "Catan",
         "messages": [{"role": "user", "content": "¿Cómo se gana?"}],
+        "language": "en",
     }
 
 

@@ -994,6 +994,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         question="¿Cómo se gana?",
         top_k=2,
         client=object(),
+        language="en",
     )
 
     assert result == AnswerResponse(
@@ -1015,6 +1016,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     assert session.rollbacks == 1
     assert "manual_id" not in llm_payload
     assert llm_payload["context_chunks"] == ["Texto A", "Texto B"]
+    assert llm_payload["language"] == "en"
 
 
 @pytest.mark.anyio

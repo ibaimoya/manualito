@@ -1,0 +1,188 @@
+{
+  "buttons": {
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "continueEditing": "Keep editing",
+    "deleteManual": "Delete rulebook",
+    "editText": "Edit text",
+    "readAgain": "Read this page again",
+    "reprocess": "Reprocess",
+    "reprocessAll": "Reprocess everything",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "viewImage": "View image"
+  },
+  "card": {
+    "processing": "Processing…",
+    "ready": "Ready"
+  },
+  "confidence": {
+    "heading": "OCR confidence",
+    "labels": {
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "lineLabel": "Line-by-line OCR confidence: {{label}}, {{percent}} percent",
+    "noData": "OCR confidence: no data",
+    "ranges": {
+      "high": "≥ 90%",
+      "low": "< 75%",
+      "medium": "75–89%"
+    },
+    "shortNoData": "n/a",
+    "title": "OCR confidence: {{label}}",
+    "toggle": {
+      "disabledTitle": "This page has no OCR confidence data (the text was edited by hand)",
+      "label": "Line-by-line confidence",
+      "title": "Color each line by OCR confidence"
+    }
+  },
+  "dialogs": {
+    "delete": {
+      "description": "Are you sure you want to delete it?",
+      "header": "Delete rulebook",
+      "irreversible": "This action can't be undone.",
+      "shared": "It's <strong>shared</strong>: other people won't be able to access it in {{gameName}}.",
+      "warning_one": "This will delete <strong>“{{title}}”</strong> from {{gameName}}: its {{count}} page and extracted text. The game's explanation will be regenerated from the remaining rulebooks.",
+      "warning_other": "This will delete <strong>“{{title}}”</strong> from {{gameName}}: its {{count}} pages and extracted text. The game's explanation will be regenerated from the remaining rulebooks."
+    },
+    "reprocess": {
+      "description": "We'll read every page again with OCR and re-index the text. The game's explanation will be regenerated.",
+      "header": "Reprocess rulebook"
+    },
+    "save": {
+      "description": "This will replace what was read on page {{pageNumber}}: the AI will answer with your version, and the page will be marked as “Edited by hand”.",
+      "header": "Save changes?"
+    }
+  },
+  "errors": {
+    "load": {
+      "description": "It may have been deleted or could still be processing. Go back to your library and try again from there.",
+      "historyLink": "Go to library",
+      "title": "We couldn't open this rulebook"
+    }
+  },
+  "feedback": {
+    "delete": {
+      "error": "We couldn't delete the rulebook",
+      "errorDescription": "Try again in a moment.",
+      "success": "Rulebook deleted"
+    },
+    "edit": {
+      "busy": "The rulebook is still processing",
+      "busyHint": "Hang on until it finishes, then try again.",
+      "failedDescription": "Try again in a moment.",
+      "failedTitle": "We couldn't save the text",
+      "pendingIndex": "Text saved, indexing pending",
+      "pendingIndexDescription": "Your text is saved. Reprocess the rulebook to sync the AI.",
+      "saved": "Text saved",
+      "savedDescription": "The AI will use your version from now on."
+    },
+    "reprocess": {
+      "busy": "The rulebook is already processing",
+      "failedDescription": "Try again in a moment.",
+      "failedTitle": "We couldn't reprocess the rulebook",
+      "progress": "Reprocessing the rulebook…"
+    }
+  },
+  "image": {
+    "alt": "Page {{pageNumber}} of {{title}}",
+    "dialogDescription": "Page {{pageNumber}} of {{pageCount}} · {{title}}",
+    "dialogTitle": "Page image",
+    "expand": "Enlarge rulebook image",
+    "fit": "Zoom",
+    "missingDescription": "This page may still be processing or may not have a saved render yet.",
+    "missingTitle": "The image isn't available yet",
+    "resetViewport": "Reset image zoom",
+    "resetZoom": "Reset zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomValue": "Image zoom"
+  },
+  "meta": {
+    "duplicateLabel_one": "{{count}} duplicate",
+    "duplicateLabel_other": "{{count}} duplicates",
+    "duplicates_one": "{{count}} duplicate page that isn't processed.",
+    "duplicates_other": "{{count}} duplicate pages that aren't processed.",
+    "format": {
+      "pdf": "PDF",
+      "photos": "Photos"
+    },
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "uploaded": "Uploaded {{date}}"
+  },
+  "navigation": {
+    "extractedText": "Extracted text",
+    "library": "Library",
+    "manual": "Rulebook"
+  },
+  "page": {
+    "articleLabel": "Page {{pageNumber}} of {{pageCount}}",
+    "buttonLabel": "Page {{pageNumber}} · {{status}}{{hits}}",
+    "heading": "Pages",
+    "matches_one": ", {{count}} match",
+    "matches_other": ", {{count}} matches",
+    "navLabel": "Rulebook pages",
+    "next": "Next page",
+    "number": "Page {{pageNumber}}",
+    "previous": "Previous page",
+    "progress_one": "{{completed}} of {{count}} page",
+    "progress_other": "{{completed}} of {{count}} pages"
+  },
+  "search": {
+    "ariaLabel": "Search the rulebook text",
+    "clear": "Clear search",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches",
+    "next": "Next match",
+    "placeholder": "Search the whole rulebook…",
+    "previous": "Previous match"
+  },
+  "status": {
+    "duplicate": {
+      "label": "Duplicate",
+      "short": "Duplicate",
+      "tip": "This page is identical to another you already uploaded. It won't be read again because it doesn't add anything new, so this copy won't count toward the explanation."
+    },
+    "edited": {
+      "label": "Edited by hand",
+      "short": "Edited",
+      "tip": "You corrected this page by hand."
+    },
+    "failed": {
+      "label": "Reading error",
+      "short": "Error",
+      "tip": "We couldn't extract text from this page. Try again or upload another photo."
+    },
+    "low": {
+      "label": "Needs review",
+      "short": "Review",
+      "tip": "The OCR isn't sure about this page. You can read it again or correct it by hand."
+    },
+    "ok": {
+      "label": "Scanned successfully",
+      "short": "OK",
+      "tip": "The OCR recognized this page's text with good quality."
+    },
+    "processing": {
+      "label": "Processing",
+      "short": "Pending",
+      "tip": "This page is still in the reading queue."
+    },
+    "readingLabel": "Reading status: {{status}}"
+  },
+  "text": {
+    "duplicateDescription": "It's identical to another page you already uploaded. Since it doesn't add anything new, it won't be read again or count toward the explanation.",
+    "duplicateTitle": "Duplicate page",
+    "editCounter": "When you save, this page will become “Edited by hand” · {{current}} / {{max}}",
+    "edited": "You corrected this page by hand · the text no longer comes from OCR.",
+    "editLabel": "Text for page {{pageNumber}}",
+    "empty": "There isn't any readable text on this page. Write it by hand with “Edit text” or read it again.",
+    "failedDescription": "The photo was too dark or blurry. Try reading it again or upload the rulebook again with a sharper version.",
+    "failedTitle": "We couldn't read this page",
+    "lowDescription": "The photo is a little blurry, so some words may be wrong. Read it again or correct it by hand.",
+    "lowTitle": "The OCR isn't sure about this page."
+  }
+}

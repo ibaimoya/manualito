@@ -1,0 +1,75 @@
+{
+  "banner": {
+    "dismiss": "Descartar aviso",
+    "message": "Verifica tu email para asegurar tu cuenta.",
+    "openMail": "Abrir mi correo",
+    "resend": "Reenviar",
+    "resent": "Reenviado · {{seconds}}s",
+    "sending": "Enviando…"
+  },
+  "error": {
+    "backHome": "Volver al inicio",
+    "description": "Hemos tenido un problema inesperado. Vuelve a intentarlo y, si sigue pasando, recarga la página.",
+    "title": "Algo ha fallado"
+  },
+  "loading": {
+    "ariaLabel": "Cargando contenido",
+    "text": "Cargando…"
+  },
+  "meta": {
+    "description": "Explica cualquier manual de juego de mesa en segundos.",
+    "title": "Manualito · Aprende juegos de mesa sin leer manuales"
+  },
+  "navigation": {
+    "aria": {
+      "main": "Navegación principal",
+      "sections": "Secciones de la app"
+    },
+    "explore": "Explorar",
+    "help": "Ayuda",
+    "home": "Inicio",
+    "library": "Biblioteca",
+    "newManual": "Nuevo manual",
+    "settings": "Ajustes"
+  },
+  "notFound": {
+    "backHome": "Volver al inicio",
+    "description": "La ficha ha caído fuera del tablero: la URL que intentas abrir no existe en Manualito.",
+    "title": "Esta página se ha perdido"
+  },
+  "sidebar": {
+    "aria": {
+      "brandHome": "Manualito · ir al inicio",
+      "profile": "Tu perfil"
+    },
+    "toggle": {
+      "collapse": "Contraer menú",
+      "expand": "Expandir menú"
+    },
+    "tooltip": {
+      "collapse": "Contraer",
+      "expand": "Expandir"
+    }
+  },
+  "skipLink": "Saltar al contenido",
+  "storage": {
+    "denied": {
+      "description": "Tu navegador bloquea el almacenamiento (modo privado o cookies desactivadas).",
+      "title": "No podemos guardar localmente"
+    },
+    "quota": {
+      "description": "Libera espacio desde Ajustes → Borrar datos locales.",
+      "title": "Espacio local agotado"
+    }
+  },
+  "topbar": {
+    "aria": {
+      "breadcrumb": "Ruta de navegación"
+    },
+    "titles": {
+      "privacy": "Política de privacidad",
+      "profile": "Perfil",
+      "security": "Cuenta y seguridad"
+    }
+  }
+}

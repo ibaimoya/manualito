@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { FileText, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Progress } from '@/components/ui/progress';
@@ -17,10 +18,11 @@ export const Route = createFileRoute('/_app/processing/$manualId')({
 });
 
 function ProcessingScreen() {
+  const { t } = useTranslation('capture');
   const { manualId } = Route.useParams();
   const { name } = Route.useSearch();
   const navigate = useNavigate();
-  const safeName = name?.trim() ?? 'Manual sin nombre';
+  const safeName = name?.trim() ?? t('processing.unnamed');
 
   const processing = useQuery(manualProcessingQueryOptions(manualId));
   const status = processing.data?.status;
@@ -66,12 +68,10 @@ function ProcessingScreen() {
           </div>
           <div className="text-center">
             <h2 className="font-display text-xl font-bold tracking-tight text-fg">
-              {failed ? 'No se ha podido procesar' : 'Leyendo tu manual…'}
+              {failed ? t('processing.failureTitle') : t('processing.title')}
             </h2>
             <p className="mt-1 max-w-xs text-sm text-fg-2">
-              {failed
-                ? 'Revisa el archivo o vuelve a intentarlo con otro manual.'
-                : 'Puede tardar más con PDFs o varias páginas. Puedes minimizar la app si quieres.'}
+              {failed ? t('processing.failureDescription') : t('processing.description')}
             </p>
           </div>
         </div>
@@ -80,12 +80,12 @@ function ProcessingScreen() {
           <>
             <Progress
               value={progress}
-              aria-label={`Progreso: ${progress} por ciento`}
+              aria-label={t('processing.progressLabel', { progress })}
               aria-valuetext={`${progress}%`}
             />
             {pageCount > 0 ? (
               <p className="mono text-center text-xs text-fg-3">
-                {completedPages}/{pageCount} páginas
+                {t('processing.pageCount', { count: pageCount, completed: completedPages })}
               </p>
             ) : null}
           </>
@@ -93,9 +93,7 @@ function ProcessingScreen() {
 
         <p className="flex items-center justify-center gap-2 text-xs text-fg-3">
           <Info size={14} />
-          {failed
-            ? 'No se ha guardado ningun resultado util para este manual.'
-            : 'Tus archivos se usan para procesar e indexar este manual.'}
+          {failed ? t('processing.failureInfo') : t('processing.info')}
         </p>
       </div>
     </div>

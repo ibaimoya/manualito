@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
 import { History, Lock } from 'lucide-react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,19 +18,35 @@ import { useAuth } from '@/features/auth/use-auth';
 import { accountApi } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
 import { SectionHead } from '@/shared/components/SectionHead';
+import i18n from '@/app/i18n';
 
 export const Route = createFileRoute('/_app/security')({
   component: SecurityScreen,
 });
 
+function activeLocale(): string {
+  return i18n.language === 'en' ? 'en-US' : 'es-ES';
+}
+
+function formatLastAccessDate(iso: string): string {
+  return new Intl.DateTimeFormat(activeLocale(), {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
 function SecurityScreen() {
+  const { t } = useTranslation('security');
   const { user } = useAuth();
   if (!user) return null;
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-7 px-5 pb-10 pt-5 md:px-8 md:pt-8">
       <header>
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
-          Cuenta y seguridad
+          {t('heading')}
         </h1>
       </header>
       <LastAccessSection lastLoginAt={user.last_login_at} />
@@ -39,20 +56,12 @@ function SecurityScreen() {
   );
 }
 
-const LAST_ACCESS_DATE = new Intl.DateTimeFormat('es-ES', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
-/** El login más reciente de la cuenta en cualquier dispositivo. */
 function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | null }>) {
+  const { t } = useTranslation('security');
   if (lastLoginAt === null) return null;
   return (
-    <section aria-label="Último acceso">
-      <SectionHead eyebrow="Actividad" title="Último acceso" />
+    <section aria-label={t('lastAccess.title')}>
+      <SectionHead eyebrow={t('lastAccess.eyebrow')} title={t('lastAccess.title')} />
       <Card className="flex items-center gap-3.5 p-5">
         <span
           aria-hidden="true"
@@ -61,29 +70,16 @@ function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | nul
           <History size={17} strokeWidth={2} />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-fg">
-            {LAST_ACCESS_DATE.format(new Date(lastLoginAt))}
-          </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-fg-3">
-            El inicio de sesión más reciente de tu cuenta. Si no lo reconoces, cambia la contraseña.
-          </p>
+          <p className="text-sm font-semibold text-fg">{formatLastAccessDate(lastLoginAt)}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-fg-3">{t('lastAccess.description')}</p>
         </div>
       </Card>
     </section>
   );
 }
 
-function currentPasswordError(
-  wrongCurrent: boolean,
-  submitted: boolean,
-  current: string,
-): string | undefined {
-  if (wrongCurrent) return 'La contraseña actual no es correcta';
-  if (submitted && current.length === 0) return 'Escribe tu contraseña actual';
-  return undefined;
-}
-
 function ChangePasswordSection() {
+  const { t } = useTranslation('security');
   const fieldId = useId();
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
@@ -98,14 +94,19 @@ function ChangePasswordSection() {
       setPassword('');
       setConfirm('');
       setSubmitted(false);
-      toast.success('Contraseña actualizada', {
+      toast.success(t('password.success'), {
         id: 'password-change',
-        description: 'Hemos cerrado la sesión en tus otros dispositivos.',
+        description: t('password.successDescription'),
       });
     },
   });
 
   const wrongCurrent = change.error instanceof ApiError && change.error.status === 401;
+  const currentError = wrongCurrent
+    ? t('password.currentError')
+    : submitted && current.length === 0
+      ? t('password.currentRequired')
+      : undefined;
 
   function submit(event: { preventDefault: () => void }): void {
     event.preventDefault();
@@ -115,19 +116,19 @@ function ChangePasswordSection() {
   }
 
   return (
-    <section aria-label="Cambiar contraseña">
-      <SectionHead eyebrow="Acceso" title="Cambiar contraseña" />
+    <section aria-label={t('password.title')}>
+      <SectionHead eyebrow={t('password.eyebrow')} title={t('password.title')} />
       <Card className="p-5">
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
           <AuthField
-            label="Contraseña actual"
+            label={t('password.current')}
             htmlFor={`${fieldId}-current`}
-            error={currentPasswordError(wrongCurrent, submitted, current)}
+            error={currentError}
           >
             <PasswordInput
               id={`${fieldId}-current`}
               autoComplete="current-password"
-              placeholder="Tu contraseña"
+              placeholder={t('password.currentPlaceholder')}
               value={current}
               invalid={wrongCurrent}
               onChange={(event) => setCurrent(event.target.value)}
@@ -137,7 +138,7 @@ function ChangePasswordSection() {
 
           <NewPasswordFields
             fieldId={fieldId}
-            label="Contraseña nueva"
+            label={t('password.new')}
             password={password}
             confirm={confirm}
             submitted={submitted}
@@ -146,15 +147,13 @@ function ChangePasswordSection() {
           />
 
           {change.isError && !wrongCurrent ? (
-            <AuthAlert title="No hemos podido cambiar la contraseña">
-              Inténtalo de nuevo en un momento.
-            </AuthAlert>
+            <AuthAlert title={t('password.errorTitle')}>{t('password.errorBody')}</AuthAlert>
           ) : null}
 
           <div>
             <Button type="submit" loading={change.isPending}>
               <Lock size={16} strokeWidth={2} />
-              Cambiar contraseña
+              {t('password.button')}
             </Button>
           </div>
         </form>

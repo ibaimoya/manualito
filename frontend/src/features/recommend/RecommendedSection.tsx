@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Dice5 } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { gameColor } from '@/shared/lib/gameColor';
 import { type RecommendedGame } from '@/shared/api/client';
@@ -12,6 +13,7 @@ import { recommendationsQueryOptions } from './use-recommendations';
  * no se renderiza nada (no estorba ni mete ruido en la pantalla principal).
  */
 export function RecommendedSection() {
+  const { t } = useTranslation('home');
   const { data, isPending, isError } = useQuery(recommendationsQueryOptions());
   if (isPending || isError || !data || data.length === 0) return null;
 
@@ -19,9 +21,9 @@ export function RecommendedSection() {
     <section aria-labelledby="home-foryou">
       <div className="mb-3">
         <h2 id="home-foryou" className="font-display text-base font-bold text-fg md:text-lg">
-          Para ti
+          {t('recommendations.heading')}
         </h2>
-        <p className="text-sm text-fg-3">Juegos que quizá quieras aprender, según tu biblioteca.</p>
+        <p className="text-sm text-fg-3">{t('recommendations.description')}</p>
       </div>
       <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
         {data.map((game) => (
@@ -31,15 +33,27 @@ export function RecommendedSection() {
         ))}
       </ul>
       <p className="mt-2.5 text-[11.5px] font-medium text-fg-3">
-        Powered by <strong className="font-semibold text-fg-2">BoardGameGeek</strong>
+        <Trans
+          ns="home"
+          i18nKey="recommendations.attribution"
+          components={{
+            b: <strong className="font-semibold text-fg-2" />,
+          }}
+        />
       </p>
     </section>
   );
 }
 
 function RecommendationCard({ game }: Readonly<{ game: RecommendedGame }>) {
+  const { t } = useTranslation('home');
+
   return (
-    <Link to="/capture/source" aria-label={`Aprender ${game.name}`} className="block">
+    <Link
+      to="/capture/source"
+      aria-label={t('recommendations.learn', { game: game.name })}
+      className="block"
+    >
       <Card className="p-3 transition-shadow hover:shadow-sm">
         <div className="flex items-center gap-3">
           <div

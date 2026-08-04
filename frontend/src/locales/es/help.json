@@ -1,0 +1,67 @@
+{
+  "faq": {
+    "languages": {
+      "answer": "La app está disponible en español e inglés y puedes cambiarlo en Ajustes.",
+      "question": "¿En qué idiomas funciona?"
+    },
+    "photos": {
+      "answer": "Son <strong>privadas por defecto</strong>: solo se usan para extraer el texto. Compartir un manual con la comunidad de su juego es opcional y reversible. Más detalle en la <link>política de privacidad</link>.",
+      "question": "¿Qué pasa con mis fotos?"
+    },
+    "reliable": {
+      "answer": "Bastante, pero no infalible. Cada respuesta lleva una <strong>cita a la página del manual</strong> para que compruebes la fuente en un toque. Si algo huele raro, la página original manda.",
+      "question": "¿Es fiable lo que dice la IA?"
+    }
+  },
+  "hero": {
+    "description": "Manualito lee el manual de tu juego de mesa y te lo explica en claro. Y cuando surja una duda en mitad de la partida, se la preguntas.",
+    "title": {
+      "line1": "De la caja a la mesa",
+      "line2": "sin leer ni una página"
+    }
+  },
+  "project": {
+    "academic": {
+      "description": "Trabajo de Fin de Grado en desarrollo: puede aparecer algún bug. Tus avisos de errores valen oro.",
+      "eyebrow": "Proyecto académico",
+      "title": "Manualito es un TFG"
+    },
+    "contact": {
+      "description": "Dudas, fallos o juegos que no leemos bien.",
+      "eyebrow": "¿Hablamos?"
+    }
+  },
+  "sections": {
+    "faq": {
+      "ariaLabel": "Preguntas frecuentes",
+      "eyebrow": "Sin rodeos",
+      "title": "FAQ"
+    },
+    "howItWorks": {
+      "ariaLabel": "Cómo funciona",
+      "eyebrow": "El recorrido",
+      "title": "Cómo funciona"
+    },
+    "project": {
+      "ariaLabel": "Sobre el proyecto"
+    }
+  },
+  "steps": {
+    "ask": {
+      "description": "Dudas de mesa en plena partida: respuesta corta con su fuente al lado.",
+      "title": "Pregúntale"
+    },
+    "capture": {
+      "description": "Sácale una foto al manual o sube el PDF. Varias páginas a la vez, sin orden.",
+      "title": "Hazle una foto"
+    },
+    "explain": {
+      "description": "La IA resume preparación, turnos y cómo se gana, citando la página original.",
+      "title": "Te lo explicamos"
+    },
+    "read": {
+      "description": "El OCR extrae el texto de cada página y marca las que se ven poco claras.",
+      "title": "Lo leemos"
+    }
+  }
+}

@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { Fragment, useState, type ReactElement, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -36,18 +37,27 @@ import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
 import { type MyGame, type MyGamesResponse } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
-import { formatRelative } from '@/shared/lib/relativeDate';
+import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 
 export const Route = createFileRoute('/_app/history')({
   component: HistoryScreen,
 });
 
 type View = 'games' | 'manuals';
+type StatusTranslate = (
+  key:
+    | 'status.active'
+    | 'status.failed'
+    | 'status.hidden'
+    | 'status.indexing'
+    | 'status.pendingReview',
+) => string;
 
 const GAME_GRID = 'grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(208px,1fr))]';
 const MANUAL_GRID = 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]';
 
 function HistoryScreen() {
+  const { t } = useTranslation('library');
   const [view, setView] = useState<View>('games');
   const [manualQuery, setManualQuery] = useState('');
   const games = useQuery(myGamesQueryOptions());
@@ -59,17 +69,27 @@ function HistoryScreen() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 pb-12 pt-4 md:px-8 md:pt-8">
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg md:text-3xl">
-        Mi biblioteca
+        {t('title')}
       </h1>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <SegmentedControl
           value={view}
           onChange={setView}
-          ariaLabel="Cambiar entre juegos y manuales"
+          ariaLabel={t('tabs.ariaLabel')}
           options={[
-            { value: 'games', label: 'Juegos', icon: <Dice5 strokeWidth={2} />, count: games.data?.games.length },
-            { value: 'manuals', label: 'Manuales', icon: <ScrollText strokeWidth={2} />, count: manuals.data?.length },
+            {
+              value: 'games',
+              label: t('tabs.games'),
+              icon: <Dice5 strokeWidth={2} />,
+              count: games.data?.games.length,
+            },
+            {
+              value: 'manuals',
+              label: t('tabs.manuals'),
+              icon: <ScrollText strokeWidth={2} />,
+              count: manuals.data?.length,
+            },
           ]}
         />
         <div className="sm:ml-auto sm:w-80">
@@ -125,6 +145,7 @@ function ManualsView({
   query,
   filter,
 }: Readonly<{ query: UseQueryResult<ManualSummary[]>; filter: string }>) {
+  const { t } = useTranslation('library');
   const del = useDeleteManual();
   if (query.isPending) {
     return (
@@ -155,7 +176,7 @@ function ManualsView({
   if (shown.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-fg-2">
-        Ningún manual coincide con «{filter.trim()}».
+        {t('manualSearch.noResults', { query: filter.trim() })}
       </p>
     );
   }
@@ -170,6 +191,7 @@ function ManualsView({
 
 // ── Tarjeta de juego — estantería (portada arriba) ──────────────────────────
 function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
+  const { t } = useTranslation('library');
   const { gameIds, processingByGame } = useProcessingManuals();
   const processing = gameIds.has(game.id);
   const progress = useManualProgress(processingByGame.get(game.id));
@@ -177,7 +199,7 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
     <Link
       to="/game/$gameId"
       params={{ gameId: game.id }}
-      aria-label={`Abrir ${game.name}${processing ? ' (procesando un manual)' : ''}`}
+      aria-label={t(processing ? 'aria.openGameProcessing' : 'aria.openGame', { game: game.name })}
       className={cn(
         'group flex flex-col overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-xs',
         'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
@@ -204,17 +226,17 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
             <div className="flex items-center gap-2">
               <Spinner size={14} className="text-primary" />
               <span className="min-w-0 flex-1 text-[13px] font-semibold text-fg" aria-live="polite">
-                Leyendo el manual
+                {t('gameCard.processing')}
               </span>
               <span className="mono text-[11px] font-bold tabular-nums text-primary-700">
                 {progress?.pct ?? 0}%
               </span>
             </div>
             <ProgressBar pct={progress?.pct ?? 0} />
-            <span className="mono text-[10.5px] tracking-[0.06em] text-fg-3">
+            <span className="mono text-[10.5px] tracking-[0.06em] text-fg-3 uppercase">
               {progress
-                ? `PÁGINA ${progress.page} DE ${progress.total} · DISPONIBLE EN UNOS SEGUNDOS`
-                : 'DISPONIBLE EN UNOS SEGUNDOS'}
+                ? t('gameCard.progress.page', { page: progress.page, total: progress.total })
+                : t('gameCard.progress.available')}
             </span>
           </div>
         ) : (
@@ -222,16 +244,16 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
             <div className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[13px] text-fg-2">
               <span className="inline-flex items-center gap-[5px]">
                 <ScrollText size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
-                {game.manuals_count} {game.manuals_count === 1 ? 'manual' : 'manuales'}
+                {t('gameCard.manuals', { count: game.manuals_count })}
               </span>
               <Dot />
               <span className="inline-flex items-center gap-[5px]">
                 <Sparkles size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
-                {game.conversations_count} {game.conversations_count === 1 ? 'chat' : 'chats'}
+                {t('gameCard.chats', { count: game.conversations_count })}
               </span>
             </div>
             <div className="mono mt-1.5 text-[10.5px] uppercase tracking-[0.08em] text-fg-3">
-              Actividad · {formatRelative(game.last_activity_at)}
+              {t('gameCard.activity', { relative: formatRelative(game.last_activity_at) })}
             </div>
           </>
         )}
@@ -245,8 +267,9 @@ function ManualDocCard({
   manual,
   onDelete,
 }: Readonly<{ manual: ManualSummary; onDelete: () => void }>) {
+  const { t } = useTranslation('library');
   const [confirming, setConfirming] = useState(false);
-  const st = manualStatusView(manual.status);
+  const st = manualStatusView(manual.status, t);
   const indexing = manual.status === 'indexing';
   const progress = useManualProgress(indexing ? manual.id : undefined);
   const isPdf = manual.source_type === 'pdf';
@@ -254,15 +277,25 @@ function ManualDocCard({
 
   const meta: ReactElement[] = [
     <span key="format" className="inline-flex items-center gap-1 uppercase">
-      {isPdf ? <FileText size={12} aria-hidden="true" /> : <ImageIcon size={12} aria-hidden="true" />}
-      {isPdf ? 'PDF' : 'Fotos'}
+      {isPdf ? (
+        <FileText size={12} aria-hidden="true" />
+      ) : (
+        <ImageIcon size={12} aria-hidden="true" />
+      )}
+      {isPdf ? t('manualCard.format.pdf') : t('manualCard.format.photos')}
     </span>,
-    <span key="pages">{manual.page_count} pág.</span>,
+    <span key="pages">{t('manualCard.pageCount', { count: manual.page_count })}</span>,
     ...(manual.status === 'active'
-      ? [<span key="chunks">{manual.chunks_indexed} fragmentos</span>]
+      ? [<span key="chunks">{t('manualCard.chunks', { count: manual.chunks_indexed })}</span>]
       : []),
     <span key="date">{formatDate(manual.created_at)}</span>,
-    ...(manual.language ? [<span key="lang" className="uppercase">{manual.language}</span>] : []),
+    ...(manual.language
+      ? [
+          <span key="lang" className="uppercase">
+            {manual.language}
+          </span>,
+        ]
+      : []),
   ];
 
   return (
@@ -283,19 +316,23 @@ function ManualDocCard({
             tone={manual.visibility === 'shared' ? 'accent' : 'neutral'}
             icon={manual.visibility === 'shared' ? <Users /> : <Lock />}
           >
-            {manual.visibility === 'shared' ? 'Compartido' : 'Privado'}
+            {manual.visibility === 'shared'
+              ? t('manualCard.visibility.shared')
+              : t('manualCard.visibility.private')}
           </Badge>
         </div>
         <Link
           to={indexing ? '/processing/$manualId' : '/manual/$manualId'}
           params={{ manualId: manual.id }}
           search={indexing ? { name } : undefined}
-          aria-label={`Abrir ${name}`}
+          aria-label={t('aria.openManual', { manual: name })}
           className="mt-[7px] truncate font-display text-[15.5px] font-bold text-fg outline-none after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:after:shadow-[var(--m-shadow-ring-primary)]"
         >
           {name}
         </Link>
-        <div className="mt-px text-xs text-fg-3">Manual de {manual.game_name}</div>
+        <div className="mt-px text-xs text-fg-3">
+          {t('manualCard.manualOf', { game: manual.game_name })}
+        </div>
         {manual.duplicate_page_count > 0 ? (
           <div className="mt-2">
             <DuplicatePagesBadge count={manual.duplicate_page_count} openHint />
@@ -305,10 +342,13 @@ function ManualDocCard({
           <div className="mt-auto pt-[10px]">
             <div className="mb-[5px] flex items-center justify-between">
               <span
-                className="mono text-[10.5px] font-semibold tracking-[0.04em] text-fg-2"
+                className="mono text-[10.5px] font-semibold tracking-[0.04em] text-fg-2 uppercase"
                 aria-live="polite"
               >
-                LEYENDO PÁGINA {progress?.page ?? 1} DE {manual.page_count}
+                {t('manualCard.progress.page', {
+                  page: progress?.page ?? 1,
+                  total: manual.page_count,
+                })}
               </span>
               <span className="mono text-[10.5px] font-bold tabular-nums text-primary-700">
                 {progress?.pct ?? 0}%
@@ -331,7 +371,7 @@ function ManualDocCard({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        aria-label={`Borrar ${name}`}
+        aria-label={t('aria.deleteManual', { manual: name })}
         className="relative z-10 grid size-[30px] shrink-0 self-start place-items-center rounded-lg text-fg-3 transition-colors hover:bg-error-bg hover:text-error"
       >
         <Trash2 size={15} strokeWidth={2} />
@@ -340,18 +380,23 @@ function ManualDocCard({
       {confirming ? (
         <div
           role="alertdialog"
-          aria-label="Confirmar borrado"
+          aria-label={t('aria.confirmDeletion')}
           className="absolute inset-0 z-20 flex items-center gap-3 rounded-2xl border border-error bg-error-bg px-4"
         >
-          <AlertTriangle size={18} strokeWidth={2} className="shrink-0 text-error" aria-hidden="true" />
+          <AlertTriangle
+            size={18}
+            strokeWidth={2}
+            className="shrink-0 text-error"
+            aria-hidden="true"
+          />
           <span className="flex-1 text-[13.5px] font-medium text-fg">
-            ¿Borrar este manual de {manual.game_name}?
+            {t('manualCard.deleteConfirm', { game: manual.game_name })}
           </span>
           <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-            Cancelar
+            {t('actions.cancel')}
           </Button>
           <Button size="sm" variant="destructive" onClick={onDelete}>
-            Borrar
+            {t('actions.delete')}
           </Button>
         </div>
       ) : null}
@@ -361,7 +406,10 @@ function ManualDocCard({
 
 /** Miniatura de hoja con el formato (PDF/fotos) en una esquina. Indexándose,
  *  un barrido recorre la hoja (el sello de formato queda fuera del recorte). */
-function ManualThumb({ pdf, processing = false }: Readonly<{ pdf: boolean; processing?: boolean }>) {
+function ManualThumb({
+  pdf,
+  processing = false,
+}: Readonly<{ pdf: boolean; processing?: boolean }>) {
   return (
     <span aria-hidden="true" className="relative h-[66px] w-[52px] shrink-0 self-start">
       <span className="absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-[9px] border border-border-strong bg-surface px-[9px] pb-[9px] pt-[11px] shadow-xs">
@@ -391,6 +439,7 @@ function ManualFilter({
   value,
   onChange,
 }: Readonly<{ value: string; onChange: (next: string) => void }>) {
+  const { t } = useTranslation('library');
   return (
     <div className="flex h-11 w-full items-center gap-2.5 rounded-2xl border border-border-strong bg-bg px-3.5 shadow-xs focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
       <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
@@ -398,15 +447,15 @@ function ManualFilter({
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Buscar entre tus manuales…"
-        aria-label="Filtrar tus manuales"
+        placeholder={t('manualSearch.placeholder')}
+        aria-label={t('manualSearch.inputAriaLabel')}
         className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none"
       />
       {value ? (
         <button
           type="button"
           onClick={() => onChange('')}
-          aria-label="Limpiar filtro"
+          aria-label={t('manualSearch.clear')}
           className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
         >
           <X size={14} aria-hidden="true" />
@@ -418,16 +467,11 @@ function ManualFilter({
 
 // ── Estados vacío / error / carga ───────────────────────────────────────────
 function LibEmpty({ tab }: Readonly<{ tab: View }>) {
+  const { t } = useTranslation('library');
   const copy =
     tab === 'games'
-      ? {
-          title: 'Aún no sigues ningún juego',
-          hint: 'Sigue juegos desde Explorar; también empiezas a seguir uno al subir su manual, abrir un chat o valorarlo.',
-        }
-      : {
-          title: 'Aún no has subido manuales',
-          hint: 'Sube el PDF o las fotos de las reglas de un juego y Manualito las leerá por ti.',
-        };
+      ? { hint: t('empty.games.hint'), title: t('empty.games.title') }
+      : { hint: t('empty.manuals.hint'), title: t('empty.manuals.title') };
   return (
     <div className="mt-2 flex flex-col items-center gap-1.5 rounded-[20px] border-[1.5px] border-dashed border-border-strong bg-surface px-6 py-[52px] text-center">
       <div className="mb-2 flex items-end gap-1.5">
@@ -448,14 +492,14 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
         <Button asChild size="lg" className="mt-3.5">
           <Link to="/explore">
             <Search size={18} strokeWidth={2} />
-            Explorar juegos
+            {t('actions.exploreGames')}
           </Link>
         </Button>
       ) : (
         <Button asChild size="lg" className="mt-3.5">
           <Link to="/capture/source">
             <Plus size={18} strokeWidth={2} />
-            Subir un manual
+            {t('actions.uploadManual')}
           </Link>
         </Button>
       )}
@@ -464,20 +508,19 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
 }
 
 function LibError({ tab, onRetry }: Readonly<{ tab: View; onRetry: () => void }>) {
+  const { t } = useTranslation('library');
   return (
     <div className="flex flex-col items-center gap-1.5 px-6 py-12 text-center">
       <span className="grid size-14 place-items-center rounded-[18px] bg-error-bg text-error">
         <AlertTriangle size={26} />
       </span>
-      <h2 className="mt-2.5 font-display text-[19px] font-bold text-fg">
-        No pudimos cargar tu biblioteca
-      </h2>
+      <h2 className="mt-2.5 font-display text-[19px] font-bold text-fg">{t('error.title')}</h2>
       <p className="max-w-sm text-sm leading-relaxed text-fg-2">
-        Hubo un problema de conexión. Tus {tab === 'games' ? 'juegos' : 'manuales'} están a salvo.
+        {t(tab === 'games' ? 'error.description.games' : 'error.description.manuals')}
       </p>
       <Button className="mt-3.5" onClick={onRetry}>
         <RotateCw size={16} strokeWidth={2} />
-        Reintentar
+        {t('error.retry')}
       </Button>
     </div>
   );
@@ -536,23 +579,24 @@ function ProgressBar({ pct }: Readonly<{ pct: number }>) {
 
 function manualStatusView(
   status: ManualStatus,
+  t: StatusTranslate,
 ): { tone: 'success' | 'warning' | 'error' | 'neutral'; label: string; icon: ReactNode } {
   switch (status) {
     case 'active':
-      return { tone: 'success', label: 'Listo', icon: <CircleCheck /> };
+      return { tone: 'success', label: t('status.active'), icon: <CircleCheck /> };
     case 'indexing':
-      return { tone: 'warning', label: 'Procesando…', icon: <Clock /> };
+      return { tone: 'warning', label: t('status.indexing'), icon: <Clock /> };
     case 'failed':
-      return { tone: 'error', label: 'Error', icon: <AlertTriangle /> };
+      return { tone: 'error', label: t('status.failed'), icon: <AlertTriangle /> };
     case 'pending_review':
       // OCR dudoso en alguna página (fallo o baja confianza): no es moderación,
       // avisa de que conviene repasar el texto. Ámbar + triángulo = "algo pasa".
-      return { tone: 'warning', label: 'Revisar', icon: <AlertTriangle /> };
+      return { tone: 'warning', label: t('status.pendingReview'), icon: <AlertTriangle /> };
     default:
-      return { tone: 'neutral', label: 'Oculto', icon: <Clock /> };
+      return { tone: 'neutral', label: t('status.hidden'), icon: <Clock /> };
   }
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return formatShortDate(iso);
 }

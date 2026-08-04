@@ -1,0 +1,78 @@
+{
+  "actions": {
+    "continue": "Continue",
+    "next": "Next",
+    "skip": "Skip",
+    "start": "Get started"
+  },
+  "aria": {
+    "authChoice": "Create account or sign in",
+    "goToSlide": "Go to slide {{n}}",
+    "hero": "Manualito · introduction",
+    "pager": "Onboarding steps",
+    "step": "Step {{n}}: {{titulo}}"
+  },
+  "demo": {
+    "blocks": {
+      "setup": {
+        "meta": "6 steps",
+        "steps": {
+          "placeTerrain": "Place the 19 terrain hexes face up.",
+          "takePieces": "Each player takes 2 settlements, 2 roads, and 4 cities.",
+          "tokenOrder": "Deal the number tokens in alphabetical order."
+        },
+        "title": "Setup"
+      },
+      "specialCases": {
+        "meta": "Robber, ports, cards, etc.",
+        "title": "Special cases"
+      },
+      "turns": {
+        "meta": "3 phases",
+        "title": "How do turns work?"
+      },
+      "win": {
+        "meta": "Reach 10 points",
+        "title": "How do you win?"
+      }
+    },
+    "capture": {
+      "detected": "Page detected",
+      "heading": "3 · Turns",
+      "page": "p. 4"
+    },
+    "processing": {
+      "llmHint": "We generate an answer",
+      "ocrHint": "We read each page",
+      "ragHint": "We find the context"
+    },
+    "summary": "In Catan, players compete to <strong>colonize an island</strong> by gathering resources, trading, and building settlements.",
+    "summaryTitle": "SUMMARY"
+  },
+  "final": {
+    "createAccount": "Create account",
+    "description": "Create an account to save the rulebooks you learn, or sign in if you've been here before.",
+    "privacyNote": "By creating an account, you agree to the <privacy>Privacy Policy</privacy>.",
+    "signIn": "Sign in",
+    "title": "All set"
+  },
+  "hero": {
+    "eyebrow": "A BOARD GAME APP",
+    "scrollHint": "Swipe · {{count}} steps · 20 sec",
+    "tagline": "It explains any board game rulebook in seconds."
+  },
+  "slides": {
+    "entiende": {
+      "description": "A summary, FAQs, and a chat to answer questions while you play.",
+      "title": "It walks you through it"
+    },
+    "foto": {
+      "description": "Capture the rulebook pages with your camera. The order doesn't matter. Manualito stitches them together for you.",
+      "title": "Snap a photo"
+    },
+    "procesa": {
+      "description": "We read the text, find the right context, and build a clear explanation in seconds.",
+      "title": "It makes sense of it for you"
+    }
+  }
+}

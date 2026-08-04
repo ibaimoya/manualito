@@ -1,5 +1,6 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
@@ -17,6 +18,7 @@ import { AuthAlert } from './auth-alert';
 import { useRegister } from './use-auth';
 
 export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: () => void }>) {
+  const { t } = useTranslation('auth');
   const register = useRegister();
   const fieldId = useId();
   const [email, setEmail] = useState('');
@@ -29,7 +31,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
 
   const emailError = emailFieldError(email.trim(), submitted);
   const usernameError =
-    submitted && username.trim().length === 0 ? 'Escribe un nombre de usuario' : undefined;
+    submitted && username.trim().length === 0 ? t('validation.username.required') : undefined;
   const consentError = submitted && !consent;
 
   const submit = (event: SyntheticEvent) => {
@@ -58,18 +60,18 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   return (
     <form onSubmit={submit} noValidate className="flex flex-col">
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        Crea tu cuenta
+        {t('forms.register.heading')}
       </h1>
-      <p className="mt-1.5 text-sm text-fg-2">Gratis. Solo necesitas un email.</p>
+      <p className="mt-1.5 text-sm text-fg-2">{t('forms.register.description')}</p>
 
       <RegisterErrorAlert error={register.error} />
 
       <div className="mt-5 flex flex-col gap-4">
-        <AuthField label="Email" htmlFor={`${fieldId}-email`} error={emailError}>
+        <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
           <Input
             id={`${fieldId}-email`}
             preset="email"
-            placeholder="tu@email.com"
+            placeholder={t('placeholders.email')}
             value={email}
             aria-invalid={ariaInvalid(Boolean(emailError))}
             onChange={(event) => setEmail(event.target.value)}
@@ -77,11 +79,11 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
           />
         </AuthField>
 
-        <AuthField label="Nombre de usuario" htmlFor={`${fieldId}-name`} error={usernameError}>
+        <AuthField label={t('fields.username')} htmlFor={`${fieldId}-name`} error={usernameError}>
           <Input
             id={`${fieldId}-name`}
             preset="username"
-            placeholder="Tu nombre"
+            placeholder={t('placeholders.username')}
             value={username}
             aria-invalid={ariaInvalid(Boolean(usernameError))}
             onChange={(event) => setUsername(event.target.value)}
@@ -108,14 +110,14 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
         <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
         <Button type="submit" size="lg" block loading={register.isPending}>
-          {register.isPending ? 'Creando cuenta…' : 'Crear cuenta'}
+          {register.isPending ? t('actions.createAccountLoading') : t('actions.createAccount')}
         </Button>
       </div>
 
       <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
-        ¿Ya tienes cuenta?{' '}
+        {t('forms.register.haveAccount')}{' '}
         <Link to="/login" className="font-bold text-accent hover:underline">
-          Inicia sesión
+          {t('forms.register.signIn')}
         </Link>
       </p>
     </form>
@@ -128,24 +130,25 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
  * resto reutiliza el mensaje ya mapeado (p. ej. el detalle de un 422 de campo).
  */
 function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
+  const { t } = useTranslation('auth');
   if (error == null) return null;
   const isConflict = error instanceof ApiError && error.status === 409;
   const mappedMessage = error instanceof ApiError ? error.view.message : null;
   return (
     <AuthAlert
-      title={isConflict ? 'Ese email o usuario ya está en uso' : 'No hemos podido crear la cuenta'}
+      title={isConflict ? t('alerts.register.conflict.title') : t('alerts.register.failure.title')}
       className="mt-4"
     >
       {isConflict ? (
-        <>
-          Prueba a{' '}
-          <Link to="/login" className="font-semibold text-accent hover:underline">
-            iniciar sesión
-          </Link>{' '}
-          o usa otro email o nombre de usuario.
-        </>
+        <Trans
+          ns="auth"
+          i18nKey="alerts.register.conflict.body"
+          components={{
+            login: <Link to="/login" className="font-semibold text-accent hover:underline" />,
+          }}
+        />
       ) : (
-        (mappedMessage ?? 'Revisa los datos e inténtalo de nuevo en un momento.')
+        (mappedMessage ?? t('alerts.register.failure.body'))
       )}
     </AuthAlert>
   );
@@ -171,6 +174,7 @@ function ConsentField({
   onChange: (value: boolean) => void;
   onShowPrivacy: () => void;
 }>) {
+  const { t } = useTranslation('auth');
   return (
     <div>
       <label
@@ -188,24 +192,28 @@ function ConsentField({
           className="size-5 shrink-0 accent-primary"
         />
         <span className="text-sm leading-relaxed text-fg">
-          He leído y acepto la{' '}
-          <button
-            type="button"
-            onClick={(event) => {
-              // preventDefault: el click dentro del <label> alternaría el checkbox.
-              event.preventDefault();
-              event.stopPropagation();
-              onShowPrivacy();
+          <Trans
+            ns="auth"
+            i18nKey="consent.label"
+            components={{
+              privacy: (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    // Evita que el clic dentro del label alterne el checkbox
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onShowPrivacy();
+                  }}
+                  className="font-semibold text-accent hover:underline"
+                />
+              ),
             }}
-            className="font-semibold text-accent hover:underline"
-          >
-            Política de privacidad
-          </button>
-          {'.'}
+          />
         </span>
       </label>
       <p className="mt-1.5 min-h-[1.05rem] text-xs text-error" role="alert">
-        {error ? 'Debes aceptar la política de privacidad para continuar.' : ''}
+        {error ? t('consent.required') : ''}
       </p>
     </div>
   );

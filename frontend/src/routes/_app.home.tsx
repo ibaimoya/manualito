@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Plus, Settings as SettingsIcon } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Meeple, Monogram } from '@/shared/components/Brand';
 import { Avatar } from '@/shared/components/Avatar';
 import { Card } from '@/components/ui/card';
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/_app/home')({
 
 function HomeScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation('home');
   const firstName = user?.username?.split(/\s+/)[0];
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-10 pt-4 md:max-w-5xl md:px-8 md:pt-10">
@@ -30,7 +32,7 @@ function HomeScreen() {
         <Link
           to="/settings"
           className="grid size-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-          aria-label="Tu cuenta"
+          aria-label={t('account.ariaLabel')}
         >
           {user ? (
             <Avatar name={user.username || user.email} size={36} />
@@ -49,12 +51,13 @@ function HomeScreen() {
             id="home-hello"
             className="break-words font-display text-3xl font-bold leading-tight tracking-tight text-fg md:text-4xl"
           >
-            {firstName ? `Hola, ${firstName}` : 'Hola'} <span aria-hidden="true">👋</span>
+            {firstName ? t('greeting.named', { firstName }) : t('greeting.anonymous')}{' '}
+            <span aria-hidden="true">👋</span>
             <br />
-            ¿Qué juego vamos a aprender?
+            {t('greeting.question')}
           </h1>
           <p className="mt-2 text-base leading-relaxed text-fg-2 md:text-lg">
-            Saca foto al manual y te lo explico paso a paso, sin tener que leerlo entero.
+            {t('greeting.description')}
           </p>
         </div>
       </section>
@@ -69,6 +72,8 @@ function HomeScreen() {
 }
 
 function HeroCta() {
+  const { t } = useTranslation('home');
+
   // @container: el HeroCta se adapta a su contenedor, no al viewport.
   return (
     <Card
@@ -79,10 +84,8 @@ function HeroCta() {
     >
       <div className="relative flex flex-col gap-4 @md:flex-row @md:items-center @md:justify-between">
         <div className="@md:max-w-md">
-          <h2 className="font-display text-lg font-bold @md:text-xl">Aprende un juego nuevo</h2>
-          <p className="mt-1 text-sm opacity-90">
-            Sube las páginas del manual desde la cámara, la galería o un PDF, y yo te lo explico.
-          </p>
+          <h2 className="font-display text-lg font-bold @md:text-xl">{t('hero.title')}</h2>
+          <p className="mt-1 text-sm opacity-90">{t('hero.description')}</p>
         </div>
         <Button
           asChild
@@ -93,7 +96,7 @@ function HeroCta() {
         >
           <Link to="/capture/source">
             <Plus size={18} strokeWidth={2} />
-            Nuevo manual
+            {t('hero.newManual')}
             <ArrowRight size={16} strokeWidth={2} className="ml-auto @md:ml-2" />
           </Link>
         </Button>
@@ -112,18 +115,22 @@ function RecentSection() {
 }
 
 function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
+  const { t } = useTranslation('home');
+
   return (
     <section aria-labelledby="home-recent">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 id="home-recent" className="font-display text-base font-bold text-fg md:text-lg">
-          Recientes
+          {t('recent.heading')}
         </h2>
         <Link
           to="/history"
-          aria-label="Ver todos tus juegos"
+          aria-label={t('recent.viewAllAriaLabel')}
           className="group/all inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-accent transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
         >
-          <span className="underline-offset-4 group-hover/all:underline">Ver todo</span>
+          <span className="underline-offset-4 group-hover/all:underline">
+            {t('recent.viewAll')}
+          </span>
           <ArrowRight
             size={15}
             strokeWidth={2.25}
@@ -157,11 +164,11 @@ function RecentSkeleton() {
 }
 
 function RecentError() {
+  const { t } = useTranslation('home');
+
   return (
     <section className="rounded-2xl border border-border bg-surface/60 p-6 text-center">
-      <p className="text-sm text-fg-2">
-        No hemos podido cargar tus manuales. Reintenta en un momento.
-      </p>
+      <p className="text-sm text-fg-2">{t('error.manuals')}</p>
     </section>
   );
 }
@@ -176,7 +183,7 @@ function EmptyRecents() {
         <Meeple size={28} color="currentColor" />
       </div>
       <p className="max-w-xs text-sm text-fg-2">
-        Aún no has consultado ningún manual. Pulsa <strong>Nuevo manual</strong> para empezar.
+        <Trans ns="home" i18nKey="empty.description" components={{ b: <strong /> }} />
       </p>
     </section>
   );

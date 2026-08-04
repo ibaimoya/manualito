@@ -1,6 +1,7 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { CornerDownLeft, Search, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
 
@@ -15,6 +16,7 @@ const MAX_RESULTS = 8;
  * su hub. Combobox accesible (flechas, Enter, Esc), sin red ni atribución.
  */
 export function GameJumpSearch({ games }: Props) {
+  const { t } = useTranslation('library');
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -85,15 +87,15 @@ export function GameJumpSearch({ games }: Props) {
             setHighlight(0);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Buscar entre tus juegos…"
-          aria-label="Saltar a un juego"
+          placeholder={t('gameSearch.placeholder')}
+          aria-label={t('gameSearch.inputAriaLabel')}
           className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
         {query.length > 0 ? (
           <button
             type="button"
             onClick={reset}
-            aria-label="Limpiar búsqueda"
+            aria-label={t('gameSearch.clear')}
             className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
           >
             <X size={16} aria-hidden="true" />
@@ -103,14 +105,18 @@ export function GameJumpSearch({ games }: Props) {
             className="mono hidden shrink-0 items-center gap-1 text-[10px] text-fg-3 sm:flex"
             aria-hidden="true"
           >
-            <CornerDownLeft size={12} /> saltar
+            <CornerDownLeft size={12} /> {t('gameSearch.shortcut')}
           </span>
         )}
       </div>
 
       {open ? (
         <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
-          <ul id={listId} aria-label="Tus juegos" className="max-h-72 overflow-y-auto">
+          <ul
+            id={listId}
+            aria-label={t('gameSearch.listLabel')}
+            className="max-h-72 overflow-y-auto"
+          >
             {matches.length > 0 ? (
               matches.map((game, index) => (
                 <ResultRow
@@ -125,7 +131,7 @@ export function GameJumpSearch({ games }: Props) {
               ))
             ) : (
               <li className="px-4 py-6 text-center text-sm text-fg-3">
-                Ningún juego coincide con «{query.trim()}».
+                {t('gameSearch.noResults', { query: query.trim() })}
               </li>
             )}
           </ul>

@@ -78,7 +78,9 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Contraseña'), 'mala');
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(await screen.findByText(/Email o contraseña incorrectos/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Tu sesión ha expirado o no has iniciado sesión/i),
+    ).toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 

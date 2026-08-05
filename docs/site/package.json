@@ -28,6 +28,6 @@
     "@astrojs/check": "0.9.9",
     "starlight-links-validator": "0.25.2",
     "typescript": "6.0.3",
-    "wrangler": "4.118.0"
+    "wrangler": "4.119.0"
   }
 }

@@ -1,0 +1,43 @@
+# Verificación del site de docs. El despliegue corre en Cloudflare Workers Builds.
+
+name: Docs
+
+on:
+  push:
+    branches: ["master", "staging", "development"]
+    paths:
+      - ".env"
+      - ".github/actions/docs-setup/**"
+      - ".github/workflows/docs.yml"
+      - "docs/site/**"
+  pull_request:
+    branches: ["master", "staging", "development"]
+    paths:
+      - ".env"
+      - ".github/actions/docs-setup/**"
+      - ".github/workflows/docs.yml"
+      - "docs/site/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-verify:
+    name: Docs - Verificación
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Preparar docs
+        uses: ./.github/actions/docs-setup
+
+      - name: Verificar y construir
+        working-directory: docs/site
+        run: pnpm verify

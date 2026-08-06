@@ -2,9 +2,8 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
+engineStrict: true
 minimumReleaseAgeExclude:
-  - framer-motion@12.43.0
-  - motion-dom@12.43.0
-  - motion@12.43.0
+  - astro@7.2.0
   - miniflare@5.20260801.0-alpha
   - wrangler@4.119.0

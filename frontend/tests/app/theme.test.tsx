@@ -6,9 +6,7 @@ import { ThemeProvider, useTheme } from '@/app/theme';
 
 type ThemeApi = ReturnType<typeof useTheme>;
 
-function ThemeCapture({
-  onCapture,
-}: Readonly<{ onCapture: (api: ThemeApi) => void }>) {
+function ThemeCapture({ onCapture }: Readonly<{ onCapture: (api: ThemeApi) => void }>) {
   const api = useTheme();
   useEffect(() => {
     onCapture(api);
@@ -92,10 +90,7 @@ describe('ThemeProvider', () => {
   });
 
   it('lee preferencias persistidas del localStorage al montar', () => {
-    localStorage.setItem(
-      'manualito.settings',
-      JSON.stringify({ mode: 'dark', accent: 'blue' }),
-    );
+    localStorage.setItem('manualito.settings', JSON.stringify({ mode: 'dark', accent: 'blue' }));
     render(
       <ThemeProvider>
         <ThemeProbe />
@@ -121,7 +116,11 @@ describe('ThemeProvider', () => {
     let api: ThemeApi | undefined;
     render(
       <ThemeProvider>
-        <ThemeCapture onCapture={(value) => { api = value; }} />
+        <ThemeCapture
+          onCapture={(value) => {
+            api = value;
+          }}
+        />
       </ThemeProvider>,
     );
     act(() => api!.setMode('light'));
@@ -137,7 +136,11 @@ describe('ThemeProvider', () => {
       let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <ThemeCapture onCapture={(value) => { api = value; }} />
+          <ThemeCapture
+            onCapture={(value) => {
+              api = value;
+            }}
+          />
         </ThemeProvider>,
       );
 
@@ -170,7 +173,11 @@ describe('ThemeProvider', () => {
       let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <ThemeCapture onCapture={(value) => { api = value; }} />
+          <ThemeCapture
+            onCapture={(value) => {
+              api = value;
+            }}
+          />
         </ThemeProvider>,
       );
 
@@ -197,7 +204,11 @@ describe('ThemeProvider', () => {
       let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <ThemeCapture onCapture={(value) => { api = value; }} />
+          <ThemeCapture
+            onCapture={(value) => {
+              api = value;
+            }}
+          />
         </ThemeProvider>,
       );
 
@@ -243,7 +254,11 @@ describe('ThemeProvider', () => {
       let api: ThemeApi | undefined;
       render(
         <ThemeProvider>
-          <ThemeCapture onCapture={(value) => { api = value; }} />
+          <ThemeCapture
+            onCapture={(value) => {
+              api = value;
+            }}
+          />
         </ThemeProvider>,
       );
 
@@ -260,6 +275,5 @@ describe('ThemeProvider', () => {
       expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
       mmSpy.mockRestore();
     });
-
   });
 });

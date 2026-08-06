@@ -57,7 +57,10 @@ describe('handleSessionExpired (unidad)', () => {
 
   it('un 401 sin código del backend no redirige', async () => {
     const raw = { detail: 'Credenciales inválidas.' };
-    handleSessionExpired(new ApiError(mapApiError({ status: 401, raw }), 401, raw), new QueryClient());
+    handleSessionExpired(
+      new ApiError(mapApiError({ status: 401, raw }), 401, raw),
+      new QueryClient(),
+    );
     await flush();
     expect(fakeRouter.navigate).not.toHaveBeenCalled();
   });

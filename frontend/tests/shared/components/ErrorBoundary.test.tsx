@@ -41,7 +41,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('fallback custom recibe `reset` como función invocable', () => {
-
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     let receivedReset: (() => void) | null = null;
     render(

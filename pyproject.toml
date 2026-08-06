@@ -10,9 +10,9 @@ dependencies = [
 
 [dependency-groups]
 common-web = [
-    "fastapi==0.139.0",
-    "starlette==1.3.1",
-    "uvicorn[standard]==0.49.0",
+    "fastapi==0.141.1",
+    "starlette==1.4.1",
+    "uvicorn[standard]==0.52.1",
 ]
 common-validation = [
     "pydantic==2.13.4",
@@ -50,7 +50,7 @@ common-auth = [
     "pwdlib[argon2]==0.3.0",
 ]
 common-pdf = [
-    "pypdfium2==5.11.0",
+    "pypdfium2==5.12.1",
 ]
 common-rate-limit = [
     "slowapi==0.1.10",
@@ -70,7 +70,7 @@ api = [
 ]
 database = [
     { include-group = "common-database" },
-    "alembic==1.18.5",
+    "alembic==1.19.0",
 ]
 ocr = [
     { include-group = "common-web" },
@@ -95,8 +95,8 @@ rag = [
     { include-group = "common-validation" },
     { include-group = "common-numeric" },
     "chromadb-client==1.5.9",
-    "sentence-transformers==5.6.0",
-    "torch==2.12.1",
+    "sentence-transformers==5.7.0",
+    "torch==2.13.0",
 ]
 llm = [
     { include-group = "common-web" },
@@ -124,20 +124,20 @@ test = [
     { include-group = "common-auth" },
     { include-group = "common-pdf" },
     { include-group = "common-rate-limit" },
-    "alembic==1.18.5",
-    "httpx2==2.5.0",
+    "alembic==1.19.0",
+    "httpx2==2.9.1",
     "opencv-contrib-python==4.10.0.84",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "ruff==0.15.20",
+    "ruff==0.16.1",
 ]
 typecheck = [
     { include-group = "test" },
-    "mypy==2.1.0",
+    "mypy==2.3.0",
 ]
 dev = [
     { include-group = "commit-policy" },
-    "pre-commit==4.6.0",
+    "pre-commit==4.6.1",
 ]
 
 [tool.uv]

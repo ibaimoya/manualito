@@ -6,7 +6,10 @@ import { server } from '@tests/_helpers/server';
 import { ThemeProvider } from '@/app/theme';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
-import { resetResendCooldown, useResendVerification } from '@/features/auth/use-resend-verification';
+import {
+  resetResendCooldown,
+  useResendVerification,
+} from '@/features/auth/use-resend-verification';
 import type { AuthUser } from '@/shared/api/auth';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

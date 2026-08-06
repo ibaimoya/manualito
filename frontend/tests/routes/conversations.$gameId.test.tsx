@@ -156,9 +156,7 @@ describe('/conversations/$gameId', () => {
 
   it('sin conversaciones muestra el estado vacío con CTA', async () => {
     server.use(
-      http.get('/api/games/:gameId/conversations', () =>
-        HttpResponse.json({ conversations: [] }),
-      ),
+      http.get('/api/games/:gameId/conversations', () => HttpResponse.json({ conversations: [] })),
     );
     renderConversations();
     expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();

@@ -36,9 +36,7 @@ function mockViewport(initialDesktop: boolean) {
 
 function DraftProbe() {
   const [value, setValue] = useState('');
-  return (
-    <input aria-label="borrador" value={value} onChange={(e) => setValue(e.target.value)} />
-  );
+  return <input aria-label="borrador" value={value} onChange={(e) => setValue(e.target.value)} />;
 }
 
 afterEach(() => {

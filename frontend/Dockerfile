@@ -11,7 +11,7 @@ FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}${NODE_VARIANT:+-${NODE_VARIA
 
 WORKDIR /app
 
-COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN --mount=type=cache,target=/root/.npm \
     PNPM_VERSION="$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "")')" \

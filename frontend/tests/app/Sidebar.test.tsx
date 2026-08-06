@@ -62,12 +62,8 @@ describe('Sidebar (desktop)', () => {
     renderSidebar('/history');
     const biblioteca = await screen.findByRole('link', { name: 'Biblioteca' });
     expect(biblioteca).toHaveAttribute('aria-current', 'page');
-    expect(
-      screen.getByRole('link', { name: 'Inicio' }),
-    ).not.toHaveAttribute('aria-current');
-    expect(
-      screen.getByRole('link', { name: 'Ajustes' }),
-    ).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Ajustes' })).not.toHaveAttribute('aria-current');
   });
 
   it('cuando el pathname es /home, "Inicio" está activo', async () => {

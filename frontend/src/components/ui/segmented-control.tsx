@@ -39,10 +39,7 @@ export function SegmentedControl<T extends string>({
       onValueChange={(next) => onChange(next as T)}
       orientation="horizontal"
       aria-label={ariaLabel}
-      className={cn(
-        'inline-flex rounded-full border border-border bg-surface p-1',
-        className,
-      )}
+      className={cn('inline-flex rounded-full border border-border bg-surface p-1', className)}
     >
       {options.map((o) => {
         const active = o.value === value;

@@ -52,7 +52,6 @@ interface PageParams {
   offset?: number;
 }
 
-
 export const conversationsApi = {
   /** GET /api/games/{gameId}/conversations — conversaciones propias del juego. */
   async list(

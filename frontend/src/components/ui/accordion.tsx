@@ -1,10 +1,6 @@
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import {
-  forwardRef,
-  type ComponentPropsWithoutRef,
-  type ComponentRef,
-} from 'react';
+import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 export const Accordion = AccordionPrimitive.Root;
@@ -30,7 +26,10 @@ export const AccordionTrigger = forwardRef<
     /** En carga: spinner en vez de la flecha (combínalo con el item disabled). */
     loading?: boolean;
   }
->(function AccordionTrigger({ className, children, headingLevel = 3, loading = false, ...props }, ref) {
+>(function AccordionTrigger(
+  { className, children, headingLevel = 3, loading = false, ...props },
+  ref,
+) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <AccordionPrimitive.Header asChild>

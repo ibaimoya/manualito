@@ -27,9 +27,8 @@ function renderOnboarding() {
   const ob = createRoute({
     getParentRoute: () => root,
     path: '/onboarding',
-    beforeLoad: (
-      OnboardingRoute as unknown as { options: { beforeLoad: () => void } }
-    ).options.beforeLoad,
+    beforeLoad: (OnboardingRoute as unknown as { options: { beforeLoad: () => void } }).options
+      .beforeLoad,
     component: () => <div>OnboardingComponent</div>,
   });
   const home = createRoute({

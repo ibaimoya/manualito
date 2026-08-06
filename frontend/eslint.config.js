@@ -16,7 +16,7 @@ import prettier from 'eslint-config-prettier';
  *  1. Base JS/TS
  *  2. Plugins de React (JSX runtime + hooks + a11y + refresh)
  *  3. Prettier al final → desactiva reglas de formato que chocarían con prettier
-  */
+ */
 export default defineConfig([
   {
     ignores: [
@@ -34,7 +34,6 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
-
       ecmaVersion: 'latest',
       sourceType: 'module',
 
@@ -74,10 +73,7 @@ export default defineConfig([
       ],
 
       // A11y específicos relajados — algunos labels los gestiona Radix.
-      'jsx-a11y/label-has-associated-control': [
-        'error',
-        { required: { some: ['nesting', 'id'] } },
-      ],
+      'jsx-a11y/label-has-associated-control': ['error', { required: { some: ['nesting', 'id'] } }],
     },
   },
   {

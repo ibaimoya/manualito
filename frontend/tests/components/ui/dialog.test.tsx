@@ -40,7 +40,9 @@ describe('Dialog', () => {
     expect(overlay).toBeInTheDocument();
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveClass('fixed', 'left-1/2', 'top-1/2', 'rounded-2xl');
-    expect(dialog?.querySelector('.h-1.w-10.rounded-full.bg-border-strong')).not.toBeInTheDocument();
+    expect(
+      dialog?.querySelector('.h-1.w-10.rounded-full.bg-border-strong'),
+    ).not.toBeInTheDocument();
   });
 
   it('botón X dispara onOpenChange(false)', async () => {

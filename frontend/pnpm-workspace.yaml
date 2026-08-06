@@ -1,20 +1,26 @@
-# pnpm 11+ separa "permitir compilación nativa" (onlyBuiltDependencies) de
-# "permitir ejecución del install script" (allowBuilds).
-# Solo aprobamos lo estrictamente necesario.
-# https://pnpm.io/settings#onlybuiltdependencies
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - '@tailwindcss/oxide'
-  - esbuild
-  - msw
-
 allowBuilds:
   '@parcel/watcher': true
   '@tailwindcss/oxide': true
   esbuild: true
   msw: true
 
+autoInstallPeers: true
+strictPeerDependencies: false
+shamefullyHoist: false
+preferFrozenLockfile: true
+engineStrict: true
+
 overrides:
-  '@types/node': 26.0.1
-  '@typescript-eslint/tsconfig-utils': 8.62.1
-  '@typescript-eslint/types': 8.62.1
+  '@types/node': 26.1.2
+  '@typescript-eslint/tsconfig-utils': 8.66.0
+  '@typescript-eslint/types': 8.66.0
+
+minimumReleaseAgeExclude:
+  - '@tanstack/history@1.162.1'
+  - '@tanstack/react-router@1.170.21'
+  - '@tanstack/router-cli@1.167.24'
+  - '@tanstack/router-core@1.171.18'
+  - '@tanstack/router-generator@1.167.24'
+  - '@tanstack/router-plugin@1.168.26'
+  - lucide-react@1.29.0
+  - vite@8.2.1

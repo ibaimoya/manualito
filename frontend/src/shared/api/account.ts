@@ -25,7 +25,6 @@ export interface ChangePasswordInput {
   new_password: string;
 }
 
-
 export const accountApi = {
   /** GET /api/me/stats — juegos, conversaciones y manuales del usuario. */
   async stats(signal?: AbortSignal): Promise<AccountStats> {

@@ -66,14 +66,7 @@ describe('Input', () => {
     it('props del callsite sobrescriben el preset', () => {
       // Si el callsite pone autoCapitalize="none" explícito, gana
       // sobre el "words" del preset 'game-name'.
-      render(
-        <Input
-          aria-label="g"
-          preset="game-name"
-          autoCapitalize="none"
-          spellCheck
-        />,
-      );
+      render(<Input aria-label="g" preset="game-name" autoCapitalize="none" spellCheck />);
       const i = screen.getByRole('textbox', { name: 'g' });
       expect(i).toHaveAttribute('autocapitalize', 'none');
       expect(i).toHaveAttribute('spellcheck', 'true');

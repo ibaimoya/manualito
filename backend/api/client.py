@@ -18,7 +18,7 @@ from api.ocr.schemas import OcrLinesResponse
 
 logger = logging.getLogger(__name__)
 
-type JsonValue = None | bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
+type JsonValue = bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"] | None
 type JsonObject = dict[str, JsonValue]
 
 

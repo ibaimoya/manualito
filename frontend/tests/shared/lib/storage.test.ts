@@ -80,10 +80,9 @@ describe('storage', () => {
 
     it('dispara listener con reason="quota" cuando setItem tira QuotaExceededError', () => {
       setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        const err = new DOMException(
-          'Quota exceeded',
-          'QuotaExceededError',
-        ) as DOMException & { code: number };
+        const err = new DOMException('Quota exceeded', 'QuotaExceededError') as DOMException & {
+          code: number;
+        };
         Object.defineProperty(err, 'code', { value: 22, configurable: true });
         throw err;
       });

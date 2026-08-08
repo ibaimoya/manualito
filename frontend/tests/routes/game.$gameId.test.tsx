@@ -126,7 +126,9 @@ describe('/game/$gameId · explicación', () => {
     renderHub();
     // ready (revisita/cache) ⇒ sin animación: el resumen está en cuanto cargan los datos.
     // Si re-animara, este getByText síncrono fallaría (texto a medias).
-    await waitFor(() => expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled());
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Preparación/ })).toBeEnabled();
+    });
     expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /¿Cómo van los turnos\?/ })).toBeInTheDocument();
     // Las secciones arrancan cerradas: solo los triggers, sin su contenido.
@@ -162,9 +164,7 @@ describe('/game/$gameId · explicación', () => {
     );
     renderHub();
     await screen.findAllByRole('heading', { name: 'Catan' });
-    await waitFor(() =>
-      expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
-    );
+    expect(await screen.findByText('Catan va de construir y comerciar.')).toBeInTheDocument();
     // Lo que aún se está generando sigue bloqueado.
     expect(screen.getByRole('button', { name: /Preparación/ })).toBeDisabled();
   });
@@ -251,10 +251,9 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
   it('no tiene violaciones de accesibilidad', async () => {
     const { container } = renderHub();
     await screen.findAllByRole('heading', { name: 'Catan' });
-    await waitFor(
-      () => expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument(),
-      { timeout: 3000 },
-    );
+    expect(
+      await screen.findByText('Catan va de construir y comerciar.', undefined, { timeout: 3000 }),
+    ).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 });

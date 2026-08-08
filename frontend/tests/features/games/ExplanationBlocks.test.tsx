@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
@@ -36,10 +36,9 @@ describe('ExplanationBlocks', () => {
     const user = userEvent.setup();
     const setup = screen.getByRole('button', { name: /Preparación/ });
     await user.click(setup);
-    await waitFor(
-      () => expect(screen.getByText('Monta el tablero y reparte piezas.')).toBeInTheDocument(),
-      { timeout: 3000 },
-    );
+    expect(
+      await screen.findByText('Monta el tablero y reparte piezas.', undefined, { timeout: 3000 }),
+    ).toBeInTheDocument();
 
     await user.click(setup);
     await user.click(setup);

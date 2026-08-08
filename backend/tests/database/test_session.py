@@ -81,12 +81,12 @@ def test_get_db_session_yields_session_from_async_context(monkeypatch):
     assert session_context.exited is True
 
 
-def test_dispose_engine_closes_pool_and_resets_state():
+def test_dispose_engine_closes_pool_and_resets_state(monkeypatch):
     """El cierre de la app libera el pool y limpia singletons perezosos."""
     engine = MagicMock()
     engine.dispose = AsyncMock()
-    db_session._engine = engine
-    db_session._sessionmaker = object()
+    monkeypatch.setattr(db_session, "_engine", engine)
+    monkeypatch.setattr(db_session, "_sessionmaker", object())
 
     asyncio.run(db_session.dispose_engine())
 
@@ -95,9 +95,9 @@ def test_dispose_engine_closes_pool_and_resets_state():
     assert db_session._sessionmaker is None
 
 
-def test_dispose_engine_resets_state_without_created_engine():
+def test_dispose_engine_resets_state_without_created_engine(monkeypatch):
     """El cierre es inocuo si ninguna ruta ha creado todavía el engine."""
-    db_session._sessionmaker = object()
+    monkeypatch.setattr(db_session, "_sessionmaker", object())
 
     asyncio.run(db_session.dispose_engine())
 

@@ -148,18 +148,17 @@ def test_send_message_blocks_when_game_has_no_sources(monkeypatch):
         "api.conversations.service.games_repository.game_pool_has_manuals",
         AsyncMock(return_value=False),
     )
+    call = partial(
+        send_message,
+        session,
+        auth=_auth(),
+        conversation_id=_CONVERSATION_ID,
+        payload=SendMessageRequest(content="¿Y si empato?"),
+        accept_language=None,
+    )
 
     with pytest.raises(NoManualSourcesError):
-        anyio.run(
-            partial(
-                send_message,
-                session,
-                auth=_auth(),
-                conversation_id=_CONVERSATION_ID,
-                payload=SendMessageRequest(content="¿Y si empato?"),
-                accept_language=None,
-            )
-        )
+        anyio.run(call)
 
     append_mock.assert_not_awaited()
 

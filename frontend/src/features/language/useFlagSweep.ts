@@ -15,15 +15,16 @@ export function useFlagSweep<T extends HTMLElement>() {
     const currentS = (mix: HTMLElement) =>
       Number.parseFloat(getComputedStyle(mix).getPropertyValue('--flag-s')) || 0;
 
-    const onEnter = () => {
+    const onEnter = (e: MouseEvent) => {
       const mix = findMix();
       // Sin WAAPI (jsdom, navegadores viejos) no hay barrido
       if (!mix || typeof mix.animate !== 'function') return;
       if (globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const s = currentS(mix);
       anim?.cancel();
-      // Sentido aleatorio desde el centro, con desplazamiento previo sigue hacia su lado
-      const dir = Math.abs(s) > 0.05 ? Math.sign(s) : Math.random() < 0.5 ? -1 : 1;
+      const { left, width } = host.getBoundingClientRect();
+      // Desde el centro, el cursor empuja el barrido hacia el lado opuesto
+      const dir = Math.abs(s) > 0.05 ? Math.sign(s) : e.clientX < left + width / 2 ? 1 : -1;
       anim = mix.animate(
         [
           { '--flag-s': s },

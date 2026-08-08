@@ -223,7 +223,7 @@ function ManualShell({
   children,
 }: Readonly<{
   crumb: string;
-  trail?: Parameters<typeof ScreenTopBar>[0]['trail'];
+  trail?: NonNullable<Parameters<typeof ScreenTopBar>[0]['trail']>;
   children: ReactNode;
 }>) {
   return (

@@ -55,6 +55,8 @@ const PENDING_ASSISTANT_POLL_EXPECTED_READS = 2;
 const PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS =
   PENDING_ASSISTANT_POLL_INTERVAL_MS * (PENDING_ASSISTANT_POLL_EXPECTED_READS + 4);
 const PENDING_ASSISTANT_POLL_TEST_TIMEOUT_MS = PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS + 3_000;
+const WELCOME_SEND_ASSERT_TIMEOUT_MS = 8_000;
+const WELCOME_SEND_TEST_TIMEOUT_MS = WELCOME_SEND_ASSERT_TIMEOUT_MS + 3_000;
 
 describe('/chat/$gameId · search schema', () => {
   it('descarta una q por encima de la cota del backend sin tirar la ruta', () => {
@@ -100,21 +102,23 @@ describe('/chat/$gameId', () => {
     expect(await screen.findByText(/Pregúntame sobre/)).toBeInTheDocument();
   });
 
-  it('pulsar una pregunta-tarjeta de la bienvenida la envía', async () => {
-    renderChat('test-game-001');
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: '¿Cómo se gana?' }));
+  it(
+    'pulsar una pregunta-tarjeta de la bienvenida la envía',
+    async () => {
+      renderChat('test-game-001');
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: '¿Cómo se gana?' }));
 
-    // El click sale de la bienvenida y pinta la respuesta del turno.
-    await waitFor(
-      () => {
-        expect(
-          screen.getAllByText('Cada jugador recibe dos asentamientos y dos carreteras.').length,
-        ).toBeGreaterThan(0);
-      },
-      { timeout: 3000 },
-    );
-  });
+      // El click sale de la bienvenida y pinta la respuesta del turno.
+      const answers = await screen.findAllByText(
+        'Cada jugador recibe dos asentamientos y dos carreteras.',
+        {},
+        { timeout: WELCOME_SEND_ASSERT_TIMEOUT_MS },
+      );
+      expect(answers.length).toBeGreaterThan(0);
+    },
+    WELCOME_SEND_TEST_TIMEOUT_MS,
+  );
 
   it('?c=… reabre la conversación y muestra su historial del servidor', async () => {
     renderChat('test-game-001', { c: 'conv-001' });

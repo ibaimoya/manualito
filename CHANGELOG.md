@@ -58,3 +58,8 @@ la aplicación antes de la publicación estable `1.0.0`.
   persistencia segura del material.
 - Perfil opcional de Cloudflare Tunnel para app.manualito.dev, con origen TLS
   verificado, redes aisladas e infraestructura declarativa en Terraform.
+- Añadido soporte para español e inglés, con selector de idioma persistente y
+  respuestas del chat adaptadas al idioma seleccionado.
+- Publicada la documentación de Manualito en
+  [docs.manualito.dev](https://docs.manualito.dev), con buscador, navegación
+  propia y contenidos de la memoria y los anexos.

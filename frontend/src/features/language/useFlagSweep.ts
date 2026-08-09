@@ -24,7 +24,8 @@ export function useFlagSweep<T extends HTMLElement>() {
       anim?.cancel();
       const { left, width } = host.getBoundingClientRect();
       // Desde el centro, el cursor empuja el barrido hacia el lado opuesto
-      const dir = Math.abs(s) > 0.05 ? Math.sign(s) : e.clientX < left + width / 2 ? 1 : -1;
+      const pushDir = e.clientX < left + width / 2 ? 1 : -1;
+      const dir = Math.abs(s) > 0.05 ? Math.sign(s) : pushDir;
       anim = mix.animate(
         [
           { '--flag-s': s },

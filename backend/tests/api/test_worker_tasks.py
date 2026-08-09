@@ -100,13 +100,17 @@ def test_chat_task_retries_external_errors_with_language(monkeypatch):
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
     monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    conversation_id = str(_CONVERSATION_ID)
+    user_message_id = str(_USER_MESSAGE_ID)
+    assistant_message_id = str(_ASSISTANT_MESSAGE_ID)
 
     with pytest.raises(Retry):
         conversation_tasks.generate_chat_reply_task.run(
-            str(_USER_ID),
-            str(_CONVERSATION_ID),
-            str(_USER_MESSAGE_ID),
-            str(_ASSISTANT_MESSAGE_ID),
+            user_id,
+            conversation_id,
+            user_message_id,
+            assistant_message_id,
             4,
             "en",
             7,
@@ -200,13 +204,17 @@ def test_chat_task_retries_when_lock_is_temporarily_busy(monkeypatch):
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
     monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    conversation_id = str(_CONVERSATION_ID)
+    user_message_id = str(_USER_MESSAGE_ID)
+    assistant_message_id = str(_ASSISTANT_MESSAGE_ID)
 
     with pytest.raises(Retry):
         conversation_tasks.generate_chat_reply_task.run(
-            str(_USER_ID),
-            str(_CONVERSATION_ID),
-            str(_USER_MESSAGE_ID),
-            str(_ASSISTANT_MESSAGE_ID),
+            user_id,
+            conversation_id,
+            user_message_id,
+            assistant_message_id,
             4,
             "en",
             3,
@@ -302,9 +310,11 @@ def test_game_task_retries_external_errors_with_separate_counter(monkeypatch):
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    game_id = str(_GAME_ID)
 
     with pytest.raises(Retry):
-        game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), 7, 1)
+        game_tasks.generate_game_explanation_task.run(user_id, game_id, 7, 1)
 
     fail_mock.assert_not_awaited()
     retry_mock.assert_called_once()
@@ -364,9 +374,11 @@ def test_game_task_retries_when_gpu_lock_is_temporarily_busy(monkeypatch):
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    game_id = str(_GAME_ID)
 
     with pytest.raises(Retry):
-        game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), 4, 1)
+        game_tasks.generate_game_explanation_task.run(user_id, game_id, 4, 1)
 
     fail_mock.assert_not_awaited()
     retry_mock.assert_called_once()
@@ -541,9 +553,11 @@ def test_process_manual_page_task_marks_failed_on_soft_timeout(monkeypatch):
     finalize_delay = Mock()
     monkeypatch.setattr(manual_tasks.service, "fail_manual_page", fail_mock)
     monkeypatch.setattr(manual_tasks.finalize_manual_task, "delay", finalize_delay)
+    manual_id = str(_MANUAL_ID)
+    page_id_value = str(page_id)
 
     with pytest.raises(SoftTimeLimitExceeded):
-        manual_tasks.process_manual_page_task.run(str(_MANUAL_ID), str(page_id))
+        manual_tasks.process_manual_page_task.run(manual_id, page_id_value)
 
     fail_mock.assert_awaited_once_with(_MANUAL_ID, page_id)
     finalize_delay.assert_called_once_with(str(_MANUAL_ID))
@@ -558,9 +572,10 @@ def test_finalize_manual_task_marks_manual_failed_on_soft_timeout(monkeypatch):
     )
     fail_mock = AsyncMock()
     monkeypatch.setattr(manual_tasks.service, "fail_manual", fail_mock)
+    manual_id = str(_MANUAL_ID)
 
     with pytest.raises(SoftTimeLimitExceeded):
-        manual_tasks.finalize_manual_task.run(str(_MANUAL_ID))
+        manual_tasks.finalize_manual_task.run(manual_id)
 
     fail_mock.assert_awaited_once_with(_MANUAL_ID)
 

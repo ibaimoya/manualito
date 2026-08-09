@@ -396,20 +396,19 @@ def test_update_profile_service_duplicate_flush_raises_409(monkeypatch):
         "record_security_event",
         lambda _session, **_kwargs: None,
     )
+    call = partial(
+        update_profile,
+        session,
+        auth=_service_auth(user),
+        username="otra",
+        email=None,
+        avatar_color=None,
+        avatar_figure=None,
+        ip_address=None,
+    )
 
     with pytest.raises(DuplicateIdentityError):
-        anyio.run(
-            partial(
-                update_profile,
-                session,
-                auth=_service_auth(user),
-                username="otra",
-                email=None,
-                avatar_color=None,
-                avatar_figure=None,
-                ip_address=None,
-            )
-        )
+        anyio.run(call)
 
     assert session.rollbacks == 1
     assert session.commits == 0
@@ -431,17 +430,16 @@ def test_change_password_service_rejects_wrong_current(monkeypatch):
         "record_security_event",
         lambda _session, **kwargs: events.append((kwargs["event_type"], kwargs["success"])),
     )
+    call = partial(
+        change_password,
+        session,
+        auth=_service_auth(user),
+        **_credential_payload(current="equivocada", new=_VALID_CREDENTIAL),
+        ip_address=None,
+    )
 
     with pytest.raises(InvalidCredentialsError):
-        anyio.run(
-            partial(
-                change_password,
-                session,
-                auth=_service_auth(user),
-                **_credential_payload(current="equivocada", new=_VALID_CREDENTIAL),
-                ip_address=None,
-            )
-        )
+        anyio.run(call)
 
     assert user.password_hash == original_hash
     assert events == [("password_change_failed", False)]

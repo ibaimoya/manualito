@@ -280,7 +280,7 @@ def test_get_http_client_raises_without_lifespan():
         get_http_client()
 
 
-def test_prepare_model_on_startup_logs_info_when_model_exists_without_preload():
+def test_prepare_model_on_startup_logs_info_when_model_exists_without_preload(monkeypatch):
     """Si Ollama anuncia el modelo configurado, se registra un mensaje informativo."""
     client = AsyncMock()
     response = MagicMock()
@@ -288,19 +288,15 @@ def test_prepare_model_on_startup_logs_info_when_model_exists_without_preload():
     response.json.return_value = {"models": [{"name": config.OLLAMA_MODEL}]}
     client.get.return_value = response
 
-    previous_preload = config.OLLAMA_PRELOAD_ON_STARTUP
-    config.OLLAMA_PRELOAD_ON_STARTUP = False
-    try:
-        with patch.object(llm_client.logger, "info") as mock_info:
-            asyncio.run(llm_client.prepare_model_on_startup(client))
-    finally:
-        config.OLLAMA_PRELOAD_ON_STARTUP = previous_preload
+    monkeypatch.setattr(config, "OLLAMA_PRELOAD_ON_STARTUP", False)
+    with patch.object(llm_client.logger, "info") as mock_info:
+        asyncio.run(llm_client.prepare_model_on_startup(client))
 
     mock_info.assert_called_once()
     client.post.assert_not_called()
 
 
-def test_prepare_model_on_startup_preloads_model_when_enabled():
+def test_prepare_model_on_startup_preloads_model_when_enabled(monkeypatch):
     """Si la precarga está activa, Ollama recibe una carga sin prompt."""
     client = AsyncMock()
     tags_response = MagicMock()
@@ -311,15 +307,9 @@ def test_prepare_model_on_startup_preloads_model_when_enabled():
     client.get.return_value = tags_response
     client.post.return_value = preload_response
 
-    previous_preload = config.OLLAMA_PRELOAD_ON_STARTUP
-    previous_keep_alive = config.OLLAMA_KEEP_ALIVE
-    config.OLLAMA_PRELOAD_ON_STARTUP = True
-    config.OLLAMA_KEEP_ALIVE = "30m"
-    try:
-        asyncio.run(llm_client.prepare_model_on_startup(client))
-    finally:
-        config.OLLAMA_PRELOAD_ON_STARTUP = previous_preload
-        config.OLLAMA_KEEP_ALIVE = previous_keep_alive
+    monkeypatch.setattr(config, "OLLAMA_PRELOAD_ON_STARTUP", True)
+    monkeypatch.setattr(config, "OLLAMA_KEEP_ALIVE", "30m")
+    asyncio.run(llm_client.prepare_model_on_startup(client))
 
     client.post.assert_awaited_once_with(
         f"{config.OLLAMA_URL}/api/generate",
@@ -366,7 +356,7 @@ def test_prepare_model_on_startup_tolerates_startup_timeout():
     client.post.assert_not_called()
 
 
-def test_prepare_model_on_startup_tolerates_preload_failures():
+def test_prepare_model_on_startup_tolerates_preload_failures(monkeypatch):
     """Si la precarga falla, el servicio sigue arrancando con warning."""
     client = AsyncMock()
     response = MagicMock()
@@ -375,13 +365,9 @@ def test_prepare_model_on_startup_tolerates_preload_failures():
     client.get.return_value = response
     client.post.side_effect = httpx.TimeoutException("slow")
 
-    previous_preload = config.OLLAMA_PRELOAD_ON_STARTUP
-    config.OLLAMA_PRELOAD_ON_STARTUP = True
-    try:
-        with patch.object(llm_client.logger, "warning") as mock_warning:
-            asyncio.run(llm_client.prepare_model_on_startup(client))
-    finally:
-        config.OLLAMA_PRELOAD_ON_STARTUP = previous_preload
+    monkeypatch.setattr(config, "OLLAMA_PRELOAD_ON_STARTUP", True)
+    with patch.object(llm_client.logger, "warning") as mock_warning:
+        asyncio.run(llm_client.prepare_model_on_startup(client))
 
     mock_warning.assert_called_once()
 
@@ -666,43 +652,35 @@ def test_generate_logs_warning_when_prompt_drops_chunks(
     assert "Prompt recortado por presupuesto: 1/2 chunks incluidos." in caplog.text
 
 
-def test_generate_sends_configured_keep_alive(client, override_http_client):
+def test_generate_sends_configured_keep_alive(client, override_http_client, monkeypatch):
     """Si se configura OLLAMA_KEEP_ALIVE, se reenvía a Ollama."""
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"response": "Respuesta final"}
     override_http_client.post.return_value = mock_response
 
-    previous_keep_alive = config.OLLAMA_KEEP_ALIVE
-    config.OLLAMA_KEEP_ALIVE = "5m"
-    try:
-        response = client.post(
-            "/generate",
-            json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
-        )
-    finally:
-        config.OLLAMA_KEEP_ALIVE = previous_keep_alive
+    monkeypatch.setattr(config, "OLLAMA_KEEP_ALIVE", "5m")
+    response = client.post(
+        "/generate",
+        json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
+    )
 
     assert response.status_code == 200
     assert override_http_client.post.call_args.kwargs["json"]["keep_alive"] == "5m"
 
 
-def test_generate_omits_keep_alive_when_not_configured(client, override_http_client):
+def test_generate_omits_keep_alive_when_not_configured(client, override_http_client, monkeypatch):
     """Sin OLLAMA_KEEP_ALIVE, la petición a Ollama no fuerza retención del modelo."""
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
     mock_response.json.return_value = {"response": "Respuesta final"}
     override_http_client.post.return_value = mock_response
 
-    previous_keep_alive = config.OLLAMA_KEEP_ALIVE
-    config.OLLAMA_KEEP_ALIVE = None
-    try:
-        response = client.post(
-            "/generate",
-            json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
-        )
-    finally:
-        config.OLLAMA_KEEP_ALIVE = previous_keep_alive
+    monkeypatch.setattr(config, "OLLAMA_KEEP_ALIVE", None)
+    response = client.post(
+        "/generate",
+        json={"question": "Como se gana?", "context_chunks": ["Regla 1"]},
+    )
 
     assert response.status_code == 200
     assert "keep_alive" not in override_http_client.post.call_args.kwargs["json"]

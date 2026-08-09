@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { Route as ProcessingRoute } from '@/routes/_app.processing.$manualId';
 import { server } from '@tests/_helpers/server';
@@ -59,9 +59,9 @@ describe('/processing/$manualId', () => {
 
   it('al terminar el indexado navega al hub del juego', async () => {
     renderProcessing('test-manual-001', 'Catan');
-    await waitFor(() => expect(screen.getByText('GameHubScreen')).toBeInTheDocument(), {
-      timeout: 2500,
-    });
+    expect(
+      await screen.findByText('GameHubScreen', undefined, { timeout: 2500 }),
+    ).toBeInTheDocument();
   });
 
   it('sigue sondeando mientras indexa y salta al hub cuando termina', async () => {
@@ -81,9 +81,9 @@ describe('/processing/$manualId', () => {
     );
     renderProcessing('test-manual-001', 'Catan');
     expect(await screen.findByText('Leyendo tu manual…')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('GameHubScreen')).toBeInTheDocument(), {
-      timeout: 4500,
-    });
+    expect(
+      await screen.findByText('GameHubScreen', undefined, { timeout: 4500 }),
+    ).toBeInTheDocument();
     expect(calls).toBeGreaterThan(1);
   });
 

@@ -481,4 +481,8 @@ frontend/dev-dist/
 
 # Documentación interna generada o de trabajo
 /docs/architecture/
-/docs/benchmarks/
+/docs/benchmarks/ocr_preprocessing/dataset/**
+!/docs/benchmarks/ocr_preprocessing/dataset/manifest.json
+/docs/benchmarks/ocr_preprocessing/outputs/tmp_preprocessed/
+/docs/benchmarks/ocr_preprocessing/outputs/results.json
+/docs/benchmarks/rag/recuperacion/outputs/.ranx-runtime/

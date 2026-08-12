@@ -1,0 +1,218 @@
+[
+  {
+    "id": "pregunta-001",
+    "pregunta": "¿Dónde se puede construir un poblado en este escenario?",
+    "chunk_id": "019edb16-3b0c-7c17-80a2-284910b9157a",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-002",
+    "pregunta": "¿Qué hacer si ya conocía versiones anteriores de la ampliación?",
+    "chunk_id": "019edb15-745b-7e30-b111-3e46ff1caadf",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-003",
+    "pregunta": "¿Qué tipo de edificio se encuentra en Córdoba y qué función cumple?",
+    "chunk_id": "019edb16-9bd5-7561-a8b0-3972d4ce5472",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-004",
+    "pregunta": "¿Qué debe recibir cada jugador al empezar?",
+    "chunk_id": "019edb15-1cf7-710c-8d80-ec5a11901006",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-005",
+    "pregunta": "¿Cómo obtengo materias primas en mi turno?",
+    "chunk_id": "019edb15-1cf8-74ff-a867-9da469ad29b9",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-006",
+    "pregunta": "¿Qué ciudad fue erigida en 1690?",
+    "chunk_id": "019edb17-628a-7985-a721-ad84130fb982",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-007",
+    "pregunta": "¿Qué se necesita para construir una carretera?",
+    "chunk_id": "019edb15-1cf9-78bf-95a0-538c2b74abc3",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-008",
+    "pregunta": "¿Qué tipo de actividad es importante en Vigo?",
+    "chunk_id": "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-009",
+    "pregunta": "¿Qué se hace con las figuras de color rojo si solo juegan cuatro jugadores?",
+    "chunk_id": "019edb15-1cf7-790f-bcd7-dc3715196912",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-010",
+    "pregunta": "¿Qué ríos rodean a Fatehpur?",
+    "chunk_id": "019edb17-0394-7be6-8bd0-159005ddafd4",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-011",
+    "pregunta": "¿Qué se debe hacer con la tablilla de gremios al preparar el juego?",
+    "chunk_id": "019edb15-d71b-7341-8b91-a44b23f94fcb",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-012",
+    "pregunta": "¿Qué terreno de la isla de Catán no produce ninguna materia prima?",
+    "chunk_id": "019edb14-c71f-74cf-9eff-5f1d29add8a2",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-013",
+    "pregunta": "¿Qué se necesita para saber qué materiales producirán en un turno?",
+    "chunk_id": "019edb14-c720-7b09-a209-be78a68f762a",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-014",
+    "pregunta": "¿Qué significa el nombre de Deoghar?",
+    "chunk_id": "019edb17-0394-76ca-9a69-e850a74bb8a7",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-015",
+    "pregunta": "¿Qué pasa si me toca ir a la cárcel?",
+    "chunk_id": "019ed765-0d58-7686-867a-b2cf3548107e",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-016",
+    "pregunta": "¿Qué pasa si un jugador no puede pagar impuestos o multas?",
+    "chunk_id": "019ed764-f6fd-7697-9069-5f39c796a604",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-017",
+    "pregunta": "¿Qué sucede si el jugador saca un doble con los dados?",
+    "chunk_id": "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-018",
+    "pregunta": "¿Qué debo devolver para construir un hotel en un terreno completo?",
+    "chunk_id": "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-019",
+    "pregunta": "¿Qué sucede si saco un doble tres veces seguidas?",
+    "chunk_id": "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-020",
+    "pregunta": "¿Cómo se empieza a jugar?",
+    "chunk_id": "019ed764-f6ff-72ee-b561-bc2b12bea150",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "gemma"
+  },
+  {
+    "id": "pregunta-021",
+    "pregunta": "Para cuantos jugadores es el juego?",
+    "chunk_id": "019ed764-f6fe-7c50-bf10-c4a138a71218",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "auditoria"
+  },
+  {
+    "id": "pregunta-022",
+    "pregunta": "cuanta gente puede jugar a la vez?",
+    "chunk_id": "019ed764-f6fe-7c50-bf10-c4a138a71218",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "auditoria"
+  },
+  {
+    "id": "pregunta-023",
+    "pregunta": "Cuanto dinero recibe cada jugador al empezar?",
+    "chunk_id": "019ed764-f6ff-72ee-b561-bc2b12bea150",
+    "game_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+    "manual_id": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+    "juego": "Monopoly",
+    "origen": "auditoria"
+  },
+  {
+    "id": "pregunta-024",
+    "pregunta": "Cuantos jugadores pueden jugar con la ampliacion?",
+    "chunk_id": "019edb14-8347-73f2-810e-f17934546c29",
+    "game_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+    "manual_id": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+    "juego": "Catan",
+    "origen": "auditoria"
+  }
+]

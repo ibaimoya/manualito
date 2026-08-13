@@ -1,0 +1,273 @@
+{
+  "version": "1.0.0",
+  "fecha_curacion": "2026-08-09",
+  "archivo": "preguntas.json",
+  "sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+  "descripcion": "Conjunto dorado de preguntas reales para evaluar la recuperación de Manualito.",
+  "preguntas": [
+    {
+      "id": "pregunta-001",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb16-3b0c-7c17-80a2-284910b9157a",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-002",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb15-745b-7e30-b111-3e46ff1caadf",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-003",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb16-9bd5-7561-a8b0-3972d4ce5472",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-004",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb15-1cf7-710c-8d80-ec5a11901006",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-005",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb15-1cf8-74ff-a867-9da469ad29b9",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-006",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb17-628a-7985-a721-ad84130fb982",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-007",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb15-1cf9-78bf-95a0-538c2b74abc3",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-008",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-009",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb15-1cf7-790f-bcd7-dc3715196912",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-010",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb17-0394-7be6-8bd0-159005ddafd4",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-011",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb15-d71b-7341-8b91-a44b23f94fcb",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-012",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb14-c71f-74cf-9eff-5f1d29add8a2",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-013",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb14-c720-7b09-a209-be78a68f762a",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-014",
+      "origen": "gemma",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb17-0394-76ca-9a69-e850a74bb8a7",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-015",
+      "origen": "gemma",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed765-0d58-7686-867a-b2cf3548107e",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-016",
+      "origen": "gemma",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6fd-7697-9069-5f39c796a604",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-017",
+      "origen": "gemma",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-018",
+      "origen": "gemma",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-019",
+      "origen": "gemma",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-020",
+      "origen": "gemma",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6ff-72ee-b561-bc2b12bea150",
+      "modelo_generador": "gemma4:e4b",
+      "semilla": 7,
+      "fecha": "2026-08-09"
+    },
+    {
+      "id": "pregunta-021",
+      "origen": "auditoria",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6fe-7c50-bf10-c4a138a71218",
+      "modelo_generador": null,
+      "semilla": null,
+      "fecha": "2026-07-19"
+    },
+    {
+      "id": "pregunta-022",
+      "origen": "auditoria",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6fe-7c50-bf10-c4a138a71218",
+      "modelo_generador": null,
+      "semilla": null,
+      "fecha": "2026-07-19"
+    },
+    {
+      "id": "pregunta-023",
+      "origen": "auditoria",
+      "juego": "Monopoly",
+      "juego_id": "019ec5ef-d1f1-78a0-8c09-7f9e8cf072d3",
+      "manual": "019ed764-dae8-735e-adc6-49f7c7fe960e",
+      "chunk_esperado": "019ed764-f6ff-72ee-b561-bc2b12bea150",
+      "modelo_generador": null,
+      "semilla": null,
+      "fecha": "2026-07-19"
+    },
+    {
+      "id": "pregunta-024",
+      "origen": "auditoria",
+      "juego": "Catan",
+      "juego_id": "019ec5ef-d1f1-706a-b432-6885af10a1f8",
+      "manual": "019edb14-433a-74a5-8e7c-65bf1f35e065",
+      "chunk_esperado": "019edb14-8347-73f2-810e-f17934546c29",
+      "modelo_generador": null,
+      "semilla": null,
+      "fecha": "2026-07-19"
+    }
+  ]
+}

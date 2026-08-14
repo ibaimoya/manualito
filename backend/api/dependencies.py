@@ -6,7 +6,7 @@ from fastapi import Header
 from common.http_client import HttpClientState
 from common.language import Language
 
-_http_client_state = HttpClientState()
+_http_client_state = HttpClientState(timeout=None)
 
 
 async def start_http_client() -> None:

@@ -150,11 +150,11 @@ class ChromaRepository:
         """
         Recupera candidatos dentro de los manuales autorizados del juego.
 
-        API calcula en Postgres qué manuales puede consultar el usuario, por lo
-        que el filtro de la consulta son esos ids y no el juego completo.
+        La API decide en Postgres qué manuales puede consultar el usuario y la
+        búsqueda queda acotada a esos manuales, no al juego completo.
 
         Args:
-            game_id (str): Juego consultado, usado para log y errores.
+            game_id (str): Juego consultado. Solo aparece en trazas y errores.
             manual_ids (list[str]): Manuales autorizados que acotan la búsqueda.
             query_embedding (list[float]): Embedding de la pregunta del usuario.
             top_k (int): Número máximo de candidatos a devolver.

@@ -1071,7 +1071,7 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
 
 @pytest.mark.anyio
 async def test_answer_game_question_corta_sin_llamar_a_rag_si_no_hay_manuales(monkeypatch):
-    """Sin manuales autorizados no hay contexto posible ni viaje HTTP que hacer."""
+    """Sin manuales autorizados se corta en el acto, sin llamar siquiera a RAG."""
     post_json_mock = AsyncMock()
     monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
     monkeypatch.setattr(

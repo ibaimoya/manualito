@@ -112,7 +112,7 @@ def test_ids_autorizados_ordenados_y_completos():
 
 
 def _ejecuta(caso: Callable[[AsyncSession], Awaitable[None]]) -> None:
-    """Ejecuta un caso con un bucle selector, requisito de psycopg async en Windows.
+    """Ejecuta un caso con un bucle de eventos Selector, que psycopg async exige en Windows.
 
     Args:
         caso (Callable[[AsyncSession], Awaitable[None]]): Caso que recibe la sesión.

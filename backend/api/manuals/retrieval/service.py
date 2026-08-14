@@ -10,8 +10,8 @@ from api import client as internal_client
 from api import config
 from api.exceptions import InternalServiceError
 from api.manuals.dto import AuthorizedChunk
-from api.manuals.exceptions import GeneratedAnswerTooLongError
-from api.manuals.repository import load_authorized_chunks
+from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualContextNotFoundError
+from api.manuals.repository import load_authorized_chunks, load_authorized_manual_ids
 from api.manuals.retrieval.deduplication import deduplicate_chunks
 from api.manuals.schemas import AnswerResponse, AnswerSource
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
@@ -30,7 +30,13 @@ async def generate_game_answer(
     retrieval_question: str | None = None,
     language: Language = "es",
 ) -> AnswerResponse:
-    """Responde con RAG usando solo fragmentos autorizados para el juego."""
+    """Responde con RAG buscando solo dentro de los manuales autorizados."""
+    manual_ids = await load_authorized_manual_ids(
+        session, game_id=game_id, current_user_id=current_user_id
+    )
+    await session.rollback()
+    if not manual_ids:
+        raise ManualContextNotFoundError
     search_question = retrieval_question or question
     retrieval_response = await internal_client.post_json(
         client=client,
@@ -38,8 +44,9 @@ async def generate_game_answer(
         url=f"{config.RAG_URL}/retrieve",
         payload={
             "game_id": str(game_id),
+            "manual_ids": [str(manual_id) for manual_id in manual_ids],
             "question": search_question,
-            "top_k": top_k * config.RAG_RETRIEVAL_MULTIPLIER,
+            "top_k": top_k,
         },
         unavailable_detail="Servicio RAG no disponible.",
         internal_detail="Error interno al recuperar el contexto del juego.",

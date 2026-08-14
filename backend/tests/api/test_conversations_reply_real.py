@@ -1,15 +1,16 @@
-"""Tests del turno de chat contra Postgres real, con la red simulada en la frontera."""
+"""Tests de los turnos de chat contra Postgres real y respuestas HTTP simuladas."""
 
 import asyncio
 import json
 import os
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import anyio
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 import api.conversations.service as conversation_service
@@ -32,19 +33,21 @@ def test_turno_completo_deja_el_mensaje_respondido(monkeypatch):
     """Con RAG y LLM sanos, el mensaje del asistente termina completado."""
 
     async def caso() -> None:
-        turno = await _siembra_turno(con_chunk=True)
+        async with _turno_sembrado(con_chunk=True) as turno:
 
-        def _red(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/retrieve":
-                return httpx.Response(200, json={"chunks": [{"id": str(turno["chunk_id"])}]})
-            return httpx.Response(200, json={"answer": _RESPUESTA})
+            def _red(request: httpx.Request) -> httpx.Response:
+                if request.url.path == "/retrieve":
+                    return httpx.Response(
+                        200, json={"chunks": [{"id": str(turno["chunk_id"])}]}
+                    )
+                return httpx.Response(200, json={"answer": _RESPUESTA})
 
-        _simula_red(monkeypatch, _red)
-        completado = await _genera_respuesta(turno)
+            _simula_red(monkeypatch, _red)
+            completado = await _genera_respuesta(turno)
 
-        mensaje = await _mensaje_asistente(turno)
-        assert completado is True
-        assert (mensaje.status, mensaje.content) == ("completed", _RESPUESTA)
+            mensaje = await _mensaje_asistente(turno)
+            assert completado is True
+            assert (mensaje.status, mensaje.content) == ("completed", _RESPUESTA)
 
     _ejecuta(caso)
 
@@ -53,38 +56,40 @@ def test_un_404_interno_deja_el_mensaje_fallido(monkeypatch):
     """Un 404 de un servicio interno no puede dejar la respuesta pendiente."""
 
     async def caso() -> None:
-        turno = await _siembra_turno(con_chunk=False)
+        async with _turno_sembrado(con_chunk=False) as turno:
 
-        def _red(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(404, json={"detail": "Contexto no encontrado."})
+            def _red(request: httpx.Request) -> httpx.Response:
+                return httpx.Response(404, json={"detail": "Contexto no encontrado."})
 
-        _simula_red(monkeypatch, _red)
-        completado = await _genera_respuesta(turno)
+            _simula_red(monkeypatch, _red)
+            completado = await _genera_respuesta(turno)
 
-        mensaje = await _mensaje_asistente(turno)
-        assert completado is True
-        assert (mensaje.status, mensaje.error_code) == ("failed", "generation_failed")
+            mensaje = await _mensaje_asistente(turno)
+            assert completado is True
+            assert (mensaje.status, mensaje.error_code) == ("failed", "generation_failed")
 
     _ejecuta(caso)
 
 
-def test_sin_chunks_autorizados_el_mensaje_queda_fallido(monkeypatch):
-    """Si RAG devuelve ids que Postgres no autoriza, la respuesta acaba en error."""
+def test_un_chunk_ajeno_privado_deja_el_mensaje_fallido(monkeypatch):
+    """Si RAG devuelve el chunk privado de otro usuario, la respuesta acaba en error."""
 
     async def caso() -> None:
-        turno = await _siembra_turno(con_chunk=False)
+        async with _turno_sembrado(con_chunk=False, con_chunk_ajeno=True) as turno:
 
-        def _red(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/retrieve":
-                return httpx.Response(200, json={"chunks": [{"id": str(uuid4())}]})
-            return httpx.Response(200, json={"answer": _RESPUESTA})
+            def _red(request: httpx.Request) -> httpx.Response:
+                if request.url.path == "/retrieve":
+                    return httpx.Response(
+                        200, json={"chunks": [{"id": str(turno["chunk_ajeno_id"])}]}
+                    )
+                return httpx.Response(200, json={"answer": _RESPUESTA})
 
-        _simula_red(monkeypatch, _red)
-        completado = await _genera_respuesta(turno)
+            _simula_red(monkeypatch, _red)
+            completado = await _genera_respuesta(turno)
 
-        mensaje = await _mensaje_asistente(turno)
-        assert completado is True
-        assert (mensaje.status, mensaje.error_code) == ("failed", "generation_failed")
+            mensaje = await _mensaje_asistente(turno)
+            assert completado is True
+            assert (mensaje.status, mensaje.error_code) == ("failed", "generation_failed")
 
     _ejecuta(caso)
 
@@ -93,19 +98,21 @@ def test_un_error_imprevisto_deja_el_mensaje_fallido(monkeypatch):
     """Una excepción no contemplada tampoco puede dejar la respuesta pendiente."""
 
     async def caso() -> None:
-        turno = await _siembra_turno(con_chunk=True)
+        async with _turno_sembrado(con_chunk=True) as turno:
 
-        def _red(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/retrieve":
-                return httpx.Response(200, json={"chunks": [{"id": str(turno["chunk_id"])}]})
-            raise RuntimeError("fallo imprevisto en la generación")
+            def _red(request: httpx.Request) -> httpx.Response:
+                if request.url.path == "/retrieve":
+                    return httpx.Response(
+                        200, json={"chunks": [{"id": str(turno["chunk_id"])}]}
+                    )
+                raise RuntimeError("fallo imprevisto en la generación")
 
-        _simula_red(monkeypatch, _red)
-        completado = await _genera_respuesta(turno)
+            _simula_red(monkeypatch, _red)
+            completado = await _genera_respuesta(turno)
 
-        mensaje = await _mensaje_asistente(turno)
-        assert completado is True
-        assert (mensaje.status, mensaje.error_code) == ("failed", "generation_failed")
+            mensaje = await _mensaje_asistente(turno)
+            assert completado is True
+            assert (mensaje.status, mensaje.error_code) == ("failed", "generation_failed")
 
     _ejecuta(caso)
 
@@ -115,27 +122,29 @@ def test_reformulacion_fallida_usa_la_pregunta_original(monkeypatch, averia):
     """Si el condense falla de cualquier forma, se busca con la pregunta original."""
 
     async def caso() -> None:
-        turno = await _siembra_turno(con_chunk=True, con_historial=True)
-        preguntas_buscadas: list[str] = []
+        async with _turno_sembrado(con_chunk=True, con_historial=True) as turno:
+            preguntas_buscadas: list[str] = []
 
-        def _red(request: httpx.Request) -> httpx.Response:
-            if request.url.path == "/condense-question":
-                if averia == "desconexion":
-                    raise httpx.ConnectError("Ollama caído")
-                return httpx.Response(int(averia), json={"detail": "avería simulada"})
-            if request.url.path == "/retrieve":
-                cuerpo = json.loads(request.content)
-                preguntas_buscadas.append(cuerpo["question"])
-                return httpx.Response(200, json={"chunks": [{"id": str(turno["chunk_id"])}]})
-            return httpx.Response(200, json={"answer": _RESPUESTA})
+            def _red(request: httpx.Request) -> httpx.Response:
+                if request.url.path == "/condense-question":
+                    if averia == "desconexion":
+                        raise httpx.ConnectError("Ollama caído")
+                    return httpx.Response(int(averia), json={"detail": "avería simulada"})
+                if request.url.path == "/retrieve":
+                    cuerpo = json.loads(request.content)
+                    preguntas_buscadas.append(cuerpo["question"])
+                    return httpx.Response(
+                        200, json={"chunks": [{"id": str(turno["chunk_id"])}]}
+                    )
+                return httpx.Response(200, json={"answer": _RESPUESTA})
 
-        _simula_red(monkeypatch, _red)
-        completado = await _genera_respuesta(turno)
+            _simula_red(monkeypatch, _red)
+            completado = await _genera_respuesta(turno)
 
-        mensaje = await _mensaje_asistente(turno)
-        assert completado is True
-        assert (mensaje.status, mensaje.content) == ("completed", _RESPUESTA)
-        assert preguntas_buscadas == ["¿Cómo se gana?"]
+            mensaje = await _mensaje_asistente(turno)
+            assert completado is True
+            assert (mensaje.status, mensaje.content) == ("completed", _RESPUESTA)
+            assert preguntas_buscadas == ["¿Cómo se gana?"]
 
     _ejecuta(caso)
 
@@ -203,52 +212,73 @@ async def _mensaje_asistente(turno: dict[str, UUID]) -> Message:
         await engine.dispose()
 
 
-async def _siembra_turno(*, con_chunk: bool, con_historial: bool = False) -> dict[str, UUID]:
+@asynccontextmanager
+async def _turno_sembrado(
+    *,
+    con_chunk: bool,
+    con_historial: bool = False,
+    con_chunk_ajeno: bool = False,
+) -> AsyncIterator[dict[str, UUID]]:
+    """Siembra un turno pendiente y borra sus filas al terminar el caso.
+
+    Args:
+        con_chunk (bool): Si se crea un manual del propio usuario con un chunk.
+        con_historial (bool): Si se añade un turno anterior ya completado.
+        con_chunk_ajeno (bool): Si se crea el manual privado de otro usuario.
+
+    Yields:
+        dict[str, UUID]: Identificadores del turno sembrado.
+    """
+    turno = await _siembra_turno(
+        con_chunk=con_chunk,
+        con_historial=con_historial,
+        con_chunk_ajeno=con_chunk_ajeno,
+    )
+    try:
+        yield turno
+    finally:
+        await _limpia_turno(turno)
+
+
+async def _siembra_turno(
+    *,
+    con_chunk: bool,
+    con_historial: bool,
+    con_chunk_ajeno: bool,
+) -> dict[str, UUID]:
     """Persiste un turno de chat pendiente con sus filas mínimas reales.
 
     Args:
-        con_chunk (bool): Si se crea también un manual activo con un chunk.
+        con_chunk (bool): Si se crea un manual del propio usuario con un chunk.
         con_historial (bool): Si se añade un turno anterior ya completado.
+        con_chunk_ajeno (bool): Si se crea el manual privado de otro usuario.
 
     Returns:
-        dict[str, UUID]: Ids de usuario, conversación, mensajes y chunk opcional.
+        dict[str, UUID]: Ids de usuario, juego, conversación, mensajes y chunks.
     """
     engine = create_async_engine(DATABASE_URL)
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            clave = uuid4().hex[:16]
-            usuario = User(
-                email=f"{clave}@tests.local",
-                password_hash="hash-de-pruebas",
-                username=clave,
-                username_key=clave,
-            )
-            juego = Game(name=f"Juego {clave}", name_key=clave)
+            usuario = _usuario()
+            juego = _juego()
             session.add_all((usuario, juego))
             await session.flush()
+            user_ids = [usuario.id]
 
             chunk_id: UUID | None = None
             if con_chunk:
-                manual = Manual(
-                    owner_user_id=usuario.id,
-                    game_id=juego.id,
-                    source_type="images",
-                    page_count=1,
-                    status="active",
-                    visibility="private",
+                chunk_id = await _siembra_manual(
+                    session, owner_id=usuario.id, game_id=juego.id
                 )
-                session.add(manual)
+            chunk_ajeno_id: UUID | None = None
+            if con_chunk_ajeno:
+                otro = _usuario()
+                session.add(otro)
                 await session.flush()
-                chunk = ManualChunk(
-                    manual_id=manual.id,
-                    chunk_index=0,
-                    text="Gana la primera persona que consiga diez puntos.",
-                    source_page=1,
-                    content_hash="a" * 64,
+                user_ids.append(otro.id)
+                chunk_ajeno_id = await _siembra_manual(
+                    session, owner_id=otro.id, game_id=juego.id
                 )
-                session.add(chunk)
-                await session.flush()
-                chunk_id = chunk.id
 
             conversacion = Conversation(user_id=usuario.id, game_id=juego.id)
             session.add(conversacion)
@@ -292,10 +322,94 @@ async def _siembra_turno(*, con_chunk: bool, con_historial: bool = False) -> dic
 
             return {
                 "user_id": usuario.id,
+                "user_ids": user_ids,
+                "game_id": juego.id,
                 "conversation_id": conversacion.id,
                 "user_message_id": mensaje_usuario.id,
                 "assistant_message_id": asistente.id,
                 "chunk_id": chunk_id or uuid4(),
+                "chunk_ajeno_id": chunk_ajeno_id or uuid4(),
             }
     finally:
         await engine.dispose()
+
+
+async def _siembra_manual(session: AsyncSession, *, owner_id: UUID, game_id: UUID) -> UUID:
+    """Persiste un manual privado activo con un único chunk.
+
+    Args:
+        session (AsyncSession): Sesión de siembra abierta.
+        owner_id (UUID): Propietario del manual.
+        game_id (UUID): Juego al que pertenece.
+
+    Returns:
+        UUID: Id del chunk creado.
+    """
+    manual = Manual(
+        owner_user_id=owner_id,
+        game_id=game_id,
+        source_type="images",
+        page_count=1,
+        status="active",
+        visibility="private",
+    )
+    session.add(manual)
+    await session.flush()
+    chunk = ManualChunk(
+        manual_id=manual.id,
+        chunk_index=0,
+        text="Gana la primera persona que consiga diez puntos.",
+        source_page=1,
+        content_hash="a" * 64,
+    )
+    session.add(chunk)
+    await session.flush()
+    return chunk.id
+
+
+async def _limpia_turno(turno: dict[str, UUID]) -> None:
+    """Borra del Postgres de pruebas todas las filas sembradas para el turno.
+
+    Args:
+        turno (dict[str, UUID]): Identificadores devueltos por la siembra.
+    """
+    engine = create_async_engine(DATABASE_URL)
+    try:
+        async with AsyncSession(engine) as session:
+            await session.execute(
+                delete(Message).where(Message.conversation_id == turno["conversation_id"])
+            )
+            await session.execute(
+                delete(Conversation).where(Conversation.id == turno["conversation_id"])
+            )
+            await session.execute(delete(Manual).where(Manual.game_id == turno["game_id"]))
+            await session.execute(delete(Game).where(Game.id == turno["game_id"]))
+            await session.execute(delete(User).where(User.id.in_(turno["user_ids"])))
+            await session.commit()
+    finally:
+        await engine.dispose()
+
+
+def _usuario() -> User:
+    """Crea un usuario mínimo que cumple las restricciones de la tabla.
+
+    Returns:
+        User: Usuario sin persistir con identificadores únicos.
+    """
+    clave = uuid4().hex[:16]
+    return User(
+        email=f"{clave}@tests.local",
+        password_hash="hash-de-pruebas",
+        username=clave,
+        username_key=clave,
+    )
+
+
+def _juego() -> Game:
+    """Crea un juego mínimo que cumple las restricciones de la tabla.
+
+    Returns:
+        Game: Juego sin persistir con nombre único.
+    """
+    clave = uuid4().hex[:16]
+    return Game(name=f"Juego {clave}", name_key=clave)

@@ -996,7 +996,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         current_user_id=_USER_ID,
         game_id=_GAME_ID,
         question="¿Cómo se gana?",
-        top_k=2,
+        top_k=3,
         client=object(),
         language="en",
     )
@@ -1012,7 +1012,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["game_id"] == str(_GAME_ID)
     assert rag_payload["manual_ids"] == [str(_MANUAL_ID)]
-    assert rag_payload["top_k"] == 2
+    assert rag_payload["top_k"] == 3
     assert load_chunks_mock.await_args.kwargs["chunk_ids"] == [
         _CHUNK_ID,
         _DUPLICATE_CHUNK_ID,

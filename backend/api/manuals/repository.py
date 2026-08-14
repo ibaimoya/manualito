@@ -521,7 +521,7 @@ async def begin_manual_reprocessing(
     """Reclama un manual quieto para reindexar y devuelve chunks obsoletos.
 
     El UPDATE condicional sobre el estado es la barrera frente a peticiones
-    concurrentes: solo una pasa el manual a 'indexing'; el resto recibe 409.
+    concurrentes: solo una pasa el manual a 'indexing'. El resto recibe 409.
     """
     claim = await session.execute(
         update(Manual)

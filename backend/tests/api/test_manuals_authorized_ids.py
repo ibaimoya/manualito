@@ -4,7 +4,6 @@ import asyncio
 import os
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from functools import partial
 from uuid import uuid4
 
 import anyio
@@ -112,35 +111,29 @@ def test_ids_autorizados_ordenados_y_completos():
 
 
 def _ejecuta(caso: Callable[[AsyncSession], Awaitable[None]]) -> None:
-    """Ejecuta un caso con un bucle de eventos Selector, que psycopg async exige en Windows.
+    """Ejecuta un caso contra Postgres y revierte su transacción al final.
+
+    Usa un bucle de eventos Selector, que psycopg async exige en Windows.
 
     Args:
         caso (Callable[[AsyncSession], Awaitable[None]]): Caso que recibe la sesión.
     """
-    anyio.run(
-        partial(_con_sesion_temporal, caso),
-        backend_options={"loop_factory": asyncio.SelectorEventLoop},
-    )
 
+    async def con_sesion() -> None:
+        engine = create_async_engine(DATABASE_URL)
+        try:
+            async with engine.connect() as connection:
+                transaction = await connection.begin()
+                session = AsyncSession(bind=connection, expire_on_commit=False)
+                try:
+                    await caso(session)
+                finally:
+                    await session.close()
+                    await transaction.rollback()
+        finally:
+            await engine.dispose()
 
-async def _con_sesion_temporal(fn: Callable[[AsyncSession], Awaitable[None]]) -> None:
-    """Ejecuta un caso con una sesión cuya transacción se revierte al final.
-
-    Args:
-        fn (Callable[[AsyncSession], Awaitable[None]]): Caso que recibe la sesión.
-    """
-    engine = create_async_engine(DATABASE_URL)
-    try:
-        async with engine.connect() as connection:
-            transaction = await connection.begin()
-            session = AsyncSession(bind=connection, expire_on_commit=False)
-            try:
-                await fn(session)
-            finally:
-                await session.close()
-                await transaction.rollback()
-    finally:
-        await engine.dispose()
+    anyio.run(con_sesion, backend_options={"loop_factory": asyncio.SelectorEventLoop})
 
 
 async def _siembra_base(session: AsyncSession) -> tuple[User, User, Game]:

@@ -10,6 +10,11 @@ _REDIS_CREDENTIAL_ENV = f"REDIS_{_REDIS_CREDENTIAL_KEY}"
 _REDIS_ALLOW_EMPTY_CREDENTIAL_ENV = f"REDIS_ALLOW_EMPTY_{_REDIS_CREDENTIAL_KEY}"
 
 
+def test_internal_timeout_supera_la_ventana_de_generacion_del_llm():
+    """El presupuesto api-llm supera los 120 s que el llm concede a Ollama."""
+    assert ApiSettings().internal_json_timeout > 120.0
+
+
 def test_api_settings_parses_environment_types(monkeypatch, tmp_path):
     """BaseSettings convierte env vars a tipos reales al cargar config."""
     redis_credential = tmp_path / "redis_credential.txt"

@@ -6,7 +6,13 @@ import httpx
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 from common.language import Language
 from llm import config
-from llm.client import JsonValue, OllamaClient, OllamaResponseError, model_control_payload
+from llm.client import (
+    JsonValue,
+    OllamaClient,
+    OllamaResponseError,
+    model_control_payload,
+    model_options,
+)
 from llm.exceptions import (
     EmptyLlmAnswerError,
     InvalidLlmResponseError,
@@ -136,10 +142,7 @@ async def _generate_text(
         **model_control_payload(),
         "prompt": prompt,
         "stream": False,
-        "options": {
-            "temperature": config.OLLAMA_TEMPERATURE,
-            "num_ctx": config.OLLAMA_NUM_CTX,
-        },
+        "options": model_options(),
     }
 
     ollama = OllamaClient(client)

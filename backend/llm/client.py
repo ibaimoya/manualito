@@ -85,11 +85,7 @@ def model_control_payload() -> dict[str, JsonValue]:
 
 
 def model_options() -> dict[str, JsonValue]:
-    """Construye las opciones de inferencia que comparten precarga y generación.
-
-    Returns:
-        dict[str, JsonValue]: Opciones de Ollama con la ventana de contexto.
-    """
+    """Construye las opciones de inferencia comunes a precarga y generación."""
     return {
         "temperature": config.OLLAMA_TEMPERATURE,
         "num_ctx": config.OLLAMA_NUM_CTX,

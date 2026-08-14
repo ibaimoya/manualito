@@ -29,7 +29,7 @@ def test_http_client_lifecycle_exposes_shared_async_client():
 
 
 def test_http_client_delega_el_limite_de_tiempo_en_cada_llamada():
-    """El cliente compartido no impone timeout propio: el presupuesto lo pone send_request."""
+    """El cliente compartido no fija timeout: cada llamada interna define el suyo."""
     asyncio.run(dependencies.start_http_client())
 
     assert dependencies.get_http_client().timeout == httpx.Timeout(None)

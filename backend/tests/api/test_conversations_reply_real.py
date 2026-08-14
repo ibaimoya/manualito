@@ -1,6 +1,7 @@
 """Tests del turno de chat contra Postgres real, con la red simulada en la frontera."""
 
 import asyncio
+import json
 import os
 from collections.abc import Awaitable, Callable
 from uuid import UUID, uuid4
@@ -109,6 +110,36 @@ def test_un_error_imprevisto_deja_el_mensaje_fallido(monkeypatch):
     _ejecuta(caso)
 
 
+@pytest.mark.parametrize("averia", ("404", "500", "desconexion"))
+def test_reformulacion_fallida_usa_la_pregunta_original(monkeypatch, averia):
+    """Si el condense falla de cualquier forma, se busca con la pregunta original."""
+
+    async def caso() -> None:
+        turno = await _siembra_turno(con_chunk=True, con_historial=True)
+        preguntas_buscadas: list[str] = []
+
+        def _red(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/condense-question":
+                if averia == "desconexion":
+                    raise httpx.ConnectError("Ollama caído")
+                return httpx.Response(int(averia), json={"detail": "avería simulada"})
+            if request.url.path == "/retrieve":
+                cuerpo = json.loads(request.content)
+                preguntas_buscadas.append(cuerpo["question"])
+                return httpx.Response(200, json={"chunks": [{"id": str(turno["chunk_id"])}]})
+            return httpx.Response(200, json={"answer": _RESPUESTA})
+
+        _simula_red(monkeypatch, _red)
+        completado = await _genera_respuesta(turno)
+
+        mensaje = await _mensaje_asistente(turno)
+        assert completado is True
+        assert (mensaje.status, mensaje.content) == ("completed", _RESPUESTA)
+        assert preguntas_buscadas == ["¿Cómo se gana?"]
+
+    _ejecuta(caso)
+
+
 def _ejecuta(caso: Callable[[], Awaitable[None]]) -> None:
     """Ejecuta un caso con un bucle de eventos Selector, que psycopg async exige en Windows.
 
@@ -172,11 +203,12 @@ async def _mensaje_asistente(turno: dict[str, UUID]) -> Message:
         await engine.dispose()
 
 
-async def _siembra_turno(*, con_chunk: bool) -> dict[str, UUID]:
+async def _siembra_turno(*, con_chunk: bool, con_historial: bool = False) -> dict[str, UUID]:
     """Persiste un turno de chat pendiente con sus filas mínimas reales.
 
     Args:
         con_chunk (bool): Si se crea también un manual activo con un chunk.
+        con_historial (bool): Si se añade un turno anterior ya completado.
 
     Returns:
         dict[str, UUID]: Ids de usuario, conversación, mensajes y chunk opcional.
@@ -221,6 +253,25 @@ async def _siembra_turno(*, con_chunk: bool) -> dict[str, UUID]:
             conversacion = Conversation(user_id=usuario.id, game_id=juego.id)
             session.add(conversacion)
             await session.flush()
+            if con_historial:
+                pregunta_previa = Message(
+                    conversation_id=conversacion.id,
+                    role="user",
+                    status="completed",
+                    content="¿Cuántos dados se usan?",
+                )
+                session.add(pregunta_previa)
+                await session.flush()
+                session.add(
+                    Message(
+                        conversation_id=conversacion.id,
+                        role="assistant",
+                        status="completed",
+                        content="Se usan dos dados.",
+                        reply_to_message_id=pregunta_previa.id,
+                    )
+                )
+                await session.flush()
             mensaje_usuario = Message(
                 conversation_id=conversacion.id,
                 role="user",

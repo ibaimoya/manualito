@@ -353,7 +353,11 @@ async def _build_retrieval_question(
             unavailable_detail="Servicio LLM no disponible.",
             internal_detail="Error interno al reformular la pregunta.",
         )
-    except (InternalServiceError, InternalServiceUnavailableError):
+    except (
+        InternalServiceError,
+        InternalServiceUnavailableError,
+        InternalResourceNotFoundError,
+    ):
         logger.warning("No se pudo reformular la pregunta; se usa la original.")
         return question
 

@@ -238,6 +238,7 @@ async def generate_pending_reply(
             raise
         except Exception:
             logger.exception("Fallo imprevisto al generar una respuesta de chat.")
+            await session.rollback()
             await _fail_pending_reply(
                 session,
                 user_id=user_id,

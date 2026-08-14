@@ -6,7 +6,7 @@ from fastapi import Header
 from common.http_client import HttpClientState
 from common.language import Language
 
-# Sin timeout propio: cada llamada interna debe fijar el suyo (send_request o explícito).
+# Sin timeout propio: cada llamada interna fija su límite.
 _http_client_state = HttpClientState(timeout=None)
 
 

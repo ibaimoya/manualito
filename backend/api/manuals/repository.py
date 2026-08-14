@@ -846,6 +846,34 @@ async def mark_manual_failed(session: AsyncSession, *, manual_id: UUID) -> None:
     await session.flush()
 
 
+async def load_authorized_manual_ids(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    current_user_id: UUID,
+) -> list[UUID]:
+    """Lista los ids de manuales del juego que el usuario puede consultar.
+
+    Args:
+        session (AsyncSession): Sesión activa de la petición.
+        game_id (UUID): Juego cuyos manuales se consultan.
+        current_user_id (UUID): Usuario que hace la consulta.
+
+    Returns:
+        list[UUID]: Ids de manuales autorizados, ordenados por id.
+    """
+    result = await session.scalars(
+        select(Manual.id)
+        .where(
+            Manual.game_id == game_id,
+            Manual.deleted_at.is_(None),
+            _retrievable_manual_filter(current_user_id),
+        )
+        .order_by(Manual.id)
+    )
+    return list(result)
+
+
 async def load_authorized_chunks(
     session: AsyncSession,
     *,

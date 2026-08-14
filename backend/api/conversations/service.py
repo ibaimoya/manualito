@@ -25,11 +25,15 @@ from api.conversations.schemas import (
     MessageResponse,
     SendMessageRequest,
 )
-from api.exceptions import InternalServiceError, InternalServiceUnavailableError
+from api.exceptions import (
+    InternalResourceNotFoundError,
+    InternalServiceError,
+    InternalServiceUnavailableError,
+)
 from api.games import repository as games_repository
 from api.games.exceptions import GameUnavailableError
 from api.locks import advisory_session_lock
-from api.manuals.exceptions import GeneratedAnswerTooLongError
+from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
 from common.conversation_limits import CONVERSATION_TITLE_MAX_LENGTH
 from common.language import Language
@@ -215,8 +219,25 @@ async def generate_pending_reply(
                 error_code="answer_too_long",
             )
             return True
-        except (InternalServiceError, InternalServiceUnavailableError):
+        except (
+            InternalServiceError,
+            InternalServiceUnavailableError,
+            InternalResourceNotFoundError,
+            ManualContextNotFoundError,
+        ):
             logger.warning("No se pudo generar una respuesta de chat.", exc_info=True)
+            await _fail_pending_reply(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                assistant_message_id=assistant_message_id,
+                error_code="generation_failed",
+            )
+            return True
+        except (ConnectionError, TimeoutError):
+            raise
+        except Exception:
+            logger.exception("Fallo imprevisto al generar una respuesta de chat.")
             await _fail_pending_reply(
                 session,
                 user_id=user_id,

@@ -39,6 +39,7 @@ class RetrieveRequest(StrictModel):
     """Petición de recuperación de candidatos por juego."""
 
     game_id: str = Field(min_length=1)
+    manual_ids: list[ManualId] = Field(min_length=1)
     question: Question
     top_k: TopK = 10
 

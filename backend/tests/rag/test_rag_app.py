@@ -158,7 +158,11 @@ def test_retrieve_returns_chunks(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"game_id": _GAME_ID, "question": "¿Cómo se gana?"},
+            json={
+                "game_id": _GAME_ID,
+                "manual_ids": ["manual-1"],
+                "question": "¿Cómo se gana?",
+            },
         )
 
     assert response.status_code == 200
@@ -174,6 +178,7 @@ def test_retrieve_returns_chunks(client):
     }
     repository.query_game.assert_called_once_with(
         game_id=_GAME_ID,
+        manual_ids=["manual-1"],
         query_embedding=[0.3, 0.4],
         top_k=10,
     )
@@ -192,13 +197,19 @@ def test_retrieve_passes_custom_top_k(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"game_id": _GAME_ID, "question": "¿Cómo se gana?", "top_k": 5},
+            json={
+                "game_id": _GAME_ID,
+                "manual_ids": ["manual-1", "manual-2"],
+                "question": "¿Cómo se gana?",
+                "top_k": 5,
+            },
         )
 
     assert response.status_code == 200
     assert response.json() == {"chunks": []}
     repository.query_game.assert_called_once_with(
         game_id=_GAME_ID,
+        manual_ids=["manual-1", "manual-2"],
         query_embedding=[0.3, 0.4],
         top_k=5,
     )
@@ -208,6 +219,7 @@ def test_retrieve_request_allows_internal_overfetch_limit():
     """RAG acepta el límite interno necesario para deduplicar en API."""
     request = RetrieveRequest(
         game_id=_GAME_ID,
+        manual_ids=["manual-1"],
         question="¿Cómo se gana?",
         top_k=RAG_RETRIEVAL_TOP_K_MAX,
     )
@@ -220,9 +232,22 @@ def test_retrieve_request_rejects_values_above_internal_limit():
     with pytest.raises(ValidationError, match="top_k"):
         RetrieveRequest(
             game_id=_GAME_ID,
+            manual_ids=["manual-1"],
             question="¿Cómo se gana?",
             top_k=RAG_RETRIEVAL_TOP_K_MAX + 1,
         )
+
+
+def test_retrieve_request_requires_manual_ids():
+    """RAG no acepta consultas sin la lista de manuales autorizados."""
+    with pytest.raises(ValidationError, match="manual_ids"):
+        RetrieveRequest(game_id=_GAME_ID, question="¿Cómo se gana?")
+
+
+def test_retrieve_request_rejects_empty_manual_ids():
+    """Una lista vacía de manuales autorizados no es una consulta válida."""
+    with pytest.raises(ValidationError, match="manual_ids"):
+        RetrieveRequest(game_id=_GAME_ID, manual_ids=[], question="¿Cómo se gana?")
 
 
 def test_retrieve_returns_404_for_missing_game_context(client):
@@ -238,7 +263,11 @@ def test_retrieve_returns_404_for_missing_game_context(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"game_id": "game-missing", "question": "¿Algo?"},
+            json={
+                "game_id": "game-missing",
+                "manual_ids": ["manual-1"],
+                "question": "¿Algo?",
+            },
         )
 
     assert response.status_code == 404
@@ -258,7 +287,11 @@ def test_retrieve_returns_500_when_query_fails(client):
     ):
         response = client.post(
             "/retrieve",
-            json={"game_id": _GAME_ID, "question": "¿Cómo se gana?"},
+            json={
+                "game_id": _GAME_ID,
+                "manual_ids": ["manual-1"],
+                "question": "¿Cómo se gana?",
+            },
         )
 
     assert response.status_code == 500
@@ -282,7 +315,11 @@ def test_retrieve_error_log_sanitizes_game_id(client, caplog):
     ):
         response = client.post(
             "/retrieve",
-            json={"game_id": game_id, "question": "¿Cómo se gana?"},
+            json={
+                "game_id": game_id,
+                "manual_ids": ["manual-1"],
+                "question": "¿Cómo se gana?",
+            },
         )
 
     assert response.status_code == 500

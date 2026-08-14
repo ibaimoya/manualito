@@ -136,6 +136,7 @@ def test_query_game_returns_bounded_and_rounded_scores():
 
     chunks = repo.query_game(
         game_id="game-1",
+        manual_ids=["manual-1", "manual-2"],
         query_embedding=[0.4, 0.5],
         top_k=2,
     )
@@ -157,7 +158,7 @@ def test_query_game_returns_bounded_and_rounded_scores():
     collection.query.assert_called_once_with(
         query_embeddings=[[0.4, 0.5]],
         n_results=2,
-        where={"game_id": "game-1"},
+        where={"manual_id": {"$in": ["manual-1", "manual-2"]}},
     )
 
 
@@ -175,9 +176,15 @@ def test_query_game_raises_when_game_has_no_indexed_chunks():
     with pytest.raises(ContextNotFoundError, match="game-1"):
         repo.query_game(
             game_id="game-1",
+            manual_ids=["manual-9"],
             query_embedding=[0.4, 0.5],
             top_k=2,
         )
+    collection.query.assert_called_once_with(
+        query_embeddings=[[0.4, 0.5]],
+        n_results=2,
+        where={"manual_id": {"$in": ["manual-9"]}},
+    )
 
 
 # ---------------------------------------------------------------------------

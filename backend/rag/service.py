@@ -60,7 +60,7 @@ async def ingest_manual(payload: IngestRequest) -> IngestResponse:
 
 
 async def retrieve_chunks(payload: RetrieveRequest) -> RetrieveResponse:
-    """Recupera candidatos de Chroma filtrando por juego."""
+    """Recupera candidatos de Chroma dentro de los manuales autorizados."""
     try:
         query_embedding = await asyncio.to_thread(
             get_embedding_service().embed_query, payload.question
@@ -68,6 +68,7 @@ async def retrieve_chunks(payload: RetrieveRequest) -> RetrieveResponse:
         chunks = await asyncio.to_thread(
             query_sync,
             payload.game_id,
+            payload.manual_ids,
             query_embedding,
             payload.top_k,
         )
@@ -129,12 +130,14 @@ def upsert_sync(payload: IngestRequest, embeddings: list[list[float]]) -> int:
 
 def query_sync(
     game_id: str,
+    manual_ids: list[str],
     query_embedding: list[float],
     top_k: int,
 ) -> list[RetrievedChunkData]:
     """Wrapper síncrono para consultar Chroma desde ``asyncio.to_thread``."""
     return get_repository().query_game(
         game_id=game_id,
+        manual_ids=manual_ids,
         query_embedding=query_embedding,
         top_k=top_k,
     )

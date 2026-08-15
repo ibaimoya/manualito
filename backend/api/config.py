@@ -67,7 +67,7 @@ class ApiSettings(BaseSettings):
     celery_maintenance_soft_time_limit: int = Field(default=60, ge=1)
     celery_maintenance_hard_time_limit: int = Field(default=90, ge=1)
     ocr_service_timeout: float = Field(default=300.0, gt=0)
-    internal_json_timeout: float = Field(default=120.0, gt=0)
+    internal_json_timeout: float = Field(default=150.0, gt=0)
     asset_storage_dir: str = "/app/storage/assets"
     asset_pending_batch_ttl_seconds: int = Field(default=24 * 60 * 60, ge=60)
     manual_dispatch_recovery_delay_seconds: int = Field(default=5 * 60, ge=60)

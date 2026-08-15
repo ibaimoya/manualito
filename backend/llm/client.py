@@ -84,6 +84,14 @@ def model_control_payload() -> dict[str, JsonValue]:
     return payload
 
 
+def model_options() -> dict[str, JsonValue]:
+    """Construye las opciones de inferencia comunes a precarga y generación."""
+    return {
+        "temperature": config.OLLAMA_TEMPERATURE,
+        "num_ctx": config.OLLAMA_NUM_CTX,
+    }
+
+
 def _validate_json_response[ResponseModelT: BaseModel](
     response: httpx.Response,
     model_type: type[ResponseModelT],
@@ -126,7 +134,9 @@ async def prepare_model_on_startup(client: httpx.AsyncClient) -> None:
         return
 
     try:
-        await ollama.preload({**model_control_payload(), "stream": False})
+        await ollama.preload(
+            {**model_control_payload(), "stream": False, "options": model_options()}
+        )
     except (TimeoutError, httpx.HTTPError):
         logger.warning(
             "No se pudo precargar el modelo '%s' en Ollama.",

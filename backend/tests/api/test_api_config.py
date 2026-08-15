@@ -1,5 +1,7 @@
 """Tests de configuración validada de API."""
 
+from pathlib import Path
+
 import pytest
 
 from api.config import ApiSettings
@@ -8,6 +10,17 @@ _REDIS_CREDENTIAL_KEY = "PASS" + "WORD"
 _REDIS_CREDENTIAL_FILE_ENV = f"REDIS_{_REDIS_CREDENTIAL_KEY}_FILE"
 _REDIS_CREDENTIAL_ENV = f"REDIS_{_REDIS_CREDENTIAL_KEY}"
 _REDIS_ALLOW_EMPTY_CREDENTIAL_ENV = f"REDIS_ALLOW_EMPTY_{_REDIS_CREDENTIAL_KEY}"
+
+
+def test_internal_timeout_supera_la_ventana_de_generacion_del_llm():
+    """El límite interno de la API supera el tiempo de generación configurado del LLM."""
+    llm_env = Path(__file__).parents[3] / "config" / "llm.env"
+    lineas = llm_env.read_text(encoding="utf-8").splitlines()
+    ollama_timeout = float(
+        next(linea.split("=", 1)[1] for linea in lineas if linea.startswith("OLLAMA_TIMEOUT="))
+    )
+
+    assert ApiSettings().internal_json_timeout > ollama_timeout
 
 
 def test_api_settings_parses_environment_types(monkeypatch, tmp_path):

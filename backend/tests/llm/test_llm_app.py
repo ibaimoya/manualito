@@ -1,4 +1,5 @@
 import asyncio
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -280,6 +281,29 @@ def test_get_http_client_raises_without_lifespan():
         get_http_client()
 
 
+@pytest.mark.parametrize("num_ctx", (4096, 8192))
+def test_preload_carga_el_modelo_con_la_ventana_de_generacion(monkeypatch, num_ctx):
+    """La precarga fija el mismo num_ctx que la generación para evitar recargas."""
+    monkeypatch.setattr(llm_client.config, "OLLAMA_NUM_CTX", num_ctx)
+    monkeypatch.setattr(llm_client.config, "OLLAMA_PRELOAD_ON_STARTUP", True)
+    peticiones = []
+
+    def _ollama(request: httpx.Request) -> httpx.Response:
+        cuerpo = json.loads(request.content) if request.content else {}
+        peticiones.append((request.url.path, cuerpo))
+        if request.url.path == "/api/tags":
+            return httpx.Response(
+                200, json={"models": [{"name": llm_client.config.OLLAMA_MODEL}]}
+            )
+        return httpx.Response(200, json={"response": ""})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(_ollama))
+    asyncio.run(llm_client.prepare_model_on_startup(client))
+
+    generate = next(cuerpo for ruta, cuerpo in peticiones if ruta == "/api/generate")
+    assert generate["options"]["num_ctx"] == num_ctx
+
+
 def test_prepare_model_on_startup_logs_info_when_model_exists_without_preload(monkeypatch):
     """Si Ollama anuncia el modelo configurado, se registra un mensaje informativo."""
     client = AsyncMock()
@@ -313,7 +337,15 @@ def test_prepare_model_on_startup_preloads_model_when_enabled(monkeypatch):
 
     client.post.assert_awaited_once_with(
         f"{config.OLLAMA_URL}/api/generate",
-        json={"model": config.OLLAMA_MODEL, "keep_alive": "30m", "stream": False},
+        json={
+            "model": config.OLLAMA_MODEL,
+            "keep_alive": "30m",
+            "stream": False,
+            "options": {
+                "temperature": config.OLLAMA_TEMPERATURE,
+                "num_ctx": config.OLLAMA_NUM_CTX,
+            },
+        },
     )
 
 

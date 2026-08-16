@@ -64,6 +64,7 @@ async def generate_answer(
         question=payload.question,
         context_chunks=payload.context_chunks,
         chat_history=[message.model_dump() for message in payload.chat_history],
+        game_name=payload.game_name,
         language=payload.language,
     )
     total_chunks = len(payload.context_chunks)

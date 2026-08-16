@@ -10,9 +10,13 @@ import anyio
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from api.manuals.repository import load_authorized_manual_ids
+from api.manuals.repository import (
+    list_alive_manual_ids,
+    list_expected_chunk_ids,
+    load_authorized_manual_ids,
+)
 from database.models.game import Game
-from database.models.manual import Manual
+from database.models.manual import Manual, ManualChunk
 from database.models.user import User
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
@@ -33,6 +37,15 @@ _CASOS_VISIBILIDAD = (
     ("propio_compartido_oculto", "consultante", "shared", "hidden", False, False),
     ("propio_privado_fallido", "consultante", "private", "failed", False, False),
     ("ajeno_compartido_activo_borrado", "otro", "shared", "active", True, False),
+)
+
+_CASOS_MANUALES_VIVOS = (
+    ("indexando_vivo", "indexing", False, True),
+    ("activo_vivo", "active", False, True),
+    ("en_revision_vivo", "pending_review", False, True),
+    ("oculto_vivo", "hidden", False, True),
+    ("fallido_vivo", "failed", False, True),
+    ("activo_borrado", "active", True, False),
 )
 
 
@@ -95,7 +108,12 @@ def test_ids_autorizados_ordenados_y_completos():
         visibles = [
             _manual(owner=consultante, game=juego, visibility="private", status="active"),
             _manual(owner=otro, game=juego, visibility="shared", status="active"),
-            _manual(owner=consultante, game=juego, visibility="private", status="pending_review"),
+            _manual(
+                owner=consultante,
+                game=juego,
+                visibility="private",
+                status="pending_review",
+            ),
         ]
         session.add_all(visibles)
         session.add(_manual(owner=otro, game=juego, visibility="private", status="active"))
@@ -106,6 +124,128 @@ def test_ids_autorizados_ordenados_y_completos():
         )
 
         assert ids == sorted(manual.id for manual in visibles)
+
+    _ejecuta(caso)
+
+
+@pytest.mark.parametrize(
+    ("estado", "borrado", "esperado"),
+    [caso[1:] for caso in _CASOS_MANUALES_VIVOS],
+    ids=[caso[0] for caso in _CASOS_MANUALES_VIVOS],
+)
+def test_ids_de_manuales_vivos_ignoran_el_estado(
+    estado: str,
+    borrado: bool,
+    esperado: bool,
+) -> None:
+    """El inventario de Postgres incluye cualquier estado vivo y excluye borrados."""
+
+    async def caso(session: AsyncSession) -> None:
+        consultante, _, juego = await _siembra_base(session)
+        manual = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status=estado,
+            borrado=borrado,
+        )
+        session.add(manual)
+        await session.flush()
+
+        ids = await list_alive_manual_ids(session)
+
+        assert (manual.id in ids) == esperado
+
+    _ejecuta(caso)
+
+
+def test_ids_de_chunks_esperados_se_agrupan_por_manual_indexable() -> None:
+    """Los chunks esperados se agrupan solo para manuales vivos indexables."""
+
+    async def caso(session: AsyncSession) -> None:
+        consultante, _, juego = await _siembra_base(session)
+        activo = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status="active",
+        )
+        en_revision = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status="pending_review",
+        )
+        oculto = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status="hidden",
+        )
+        indexando = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status="indexing",
+        )
+        fallido = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status="failed",
+        )
+        borrado = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="private",
+            status="active",
+            borrado=True,
+        )
+        session.add_all(
+            (
+                activo,
+                en_revision,
+                oculto,
+                indexando,
+                fallido,
+                borrado,
+            )
+        )
+        await session.flush()
+
+        chunks_activos = [
+            _chunk(manual=activo, chunk_index=0),
+            _chunk(manual=activo, chunk_index=1),
+        ]
+        chunk_en_revision = _chunk(manual=en_revision, chunk_index=0)
+        chunk_oculto = _chunk(manual=oculto, chunk_index=0)
+        chunk_indexando = _chunk(manual=indexando, chunk_index=0)
+        chunk_fallido = _chunk(manual=fallido, chunk_index=0)
+        chunk_borrado = _chunk(manual=borrado, chunk_index=0)
+        session.add_all(
+            (
+                *chunks_activos,
+                chunk_en_revision,
+                chunk_oculto,
+                chunk_indexando,
+                chunk_fallido,
+                chunk_borrado,
+            )
+        )
+        await session.flush()
+
+        sin_chunks = _manual(owner=consultante, game=juego, visibility="shared", status="active")
+        session.add(sin_chunks)
+        await session.flush()
+
+        ids = await list_expected_chunk_ids(session)
+
+        assert ids == {
+            activo.id: {chunk.id for chunk in chunks_activos},
+            en_revision.id: {chunk_en_revision.id},
+            oculto.id: {chunk_oculto.id},
+            sin_chunks.id: set(),
+        }
 
     _ejecuta(caso)
 
@@ -204,4 +344,24 @@ def _manual(
         status=status,
         visibility=visibility,
         deleted_at=datetime(2026, 8, 1, tzinfo=UTC) if borrado else None,
+    )
+
+
+def _chunk(*, manual: Manual, chunk_index: int) -> ManualChunk:
+    """Crea un chunk mínimo asociado a un manual.
+
+    Args:
+        manual (Manual): Manual propietario del chunk.
+        chunk_index (int): Posición única del chunk dentro del manual.
+
+    Returns:
+        ManualChunk: Chunk sin persistir listo para añadir a la sesión.
+    """
+    clave = uuid4().hex
+    return ManualChunk(
+        manual_id=manual.id,
+        chunk_index=chunk_index,
+        text=f"Contenido de prueba {clave}",
+        source_page=1,
+        content_hash=clave * 2,
     )

@@ -8,6 +8,7 @@ from rag.exceptions import (
     ContextNotFoundError,
     RagDeletionError,
     RagIndexingError,
+    RagInventoryError,
     RagRetrievalError,
 )
 from rag.repository import RetrievedChunkData, get_repository
@@ -16,6 +17,7 @@ from rag.schemas import (
     DeleteResponse,
     IngestRequest,
     IngestResponse,
+    InventoryResponse,
     RetrievedChunk,
     RetrieveRequest,
     RetrieveResponse,
@@ -114,6 +116,27 @@ async def delete_manual(payload: DeleteRequest) -> DeleteResponse:
         chunks_deleted=chunks_deleted,
         status="deleted",
     )
+
+
+async def list_index_inventory() -> InventoryResponse:
+    """
+    Consulta todos los chunks indexados y los agrupa por manual.
+
+    Returns:
+        InventoryResponse: Inventario completo del índice derivado.
+
+    Raises:
+        RagInventoryError: Si Chroma no puede devolver el inventario.
+    """
+    try:
+        manuals = await asyncio.to_thread(
+            get_repository().list_indexed_chunk_ids
+        )
+    except Exception as rag_err:
+        logger.exception("Error al consultar el inventario del índice.")
+        raise RagInventoryError from rag_err
+
+    return InventoryResponse(manuals=manuals)
 
 
 def upsert_sync(payload: IngestRequest, embeddings: list[list[float]]) -> int:

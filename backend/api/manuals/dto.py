@@ -81,6 +81,14 @@ class AuthorizedChunk:
 
 
 @dataclass(frozen=True, slots=True)
+class ReconciliationPlan:
+    """Plan determinista para reparar el desfase del índice RAG."""
+
+    orphan_chunk_ids: dict[str, list[str]]
+    stale_manual_ids: list[str]
+
+
+@dataclass(frozen=True, slots=True)
 class ReusablePageResult:
     """Texto y chunks de una página canónica reutilizable."""
 

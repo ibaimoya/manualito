@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol, TypedDict, cast
+from typing import NotRequired, Protocol, TypedDict, cast
 from urllib.parse import urlparse
 
 from rag import config
@@ -10,12 +10,15 @@ from rag.schemas import IngestChunk
 
 logger = logging.getLogger(__name__)
 
+_INVENTORY_PAGE_SIZE = 500
+
 ChromaMetadata = dict[str, str | int]
 ChromaWhere = dict[str, str | dict[str, list[str]]]
 
 
 class ChromaGetResult(TypedDict):
     ids: list[str]
+    metadatas: NotRequired[list[ChromaMetadata] | None]
 
 
 class ChromaQueryResult(TypedDict):
@@ -44,9 +47,10 @@ class ChromaCollection(Protocol):
     def get(
         self,
         *,
-        where: dict[str, str],
         include: list[str],
+        where: ChromaWhere | None = None,
         limit: int | None = None,
+        offset: int | None = None,
     ) -> ChromaGetResult: ...
 
     def query(
@@ -187,6 +191,43 @@ class ChromaRepository:
                 }
             )
         return chunks
+
+    def list_indexed_chunk_ids(self) -> dict[str, list[str]]:
+        """
+        Lista todos los IDs indexados agrupados por su manual de origen.
+
+        Una mutación concurrente puede sesgar una pasada paginada. La
+        reconciliación es horaria e idempotente y la siguiente lo corrige.
+
+        Returns:
+            dict[str, list[str]]: IDs de chunks agrupados por ``manual_id``.
+        """
+        collection = self._get_collection()
+        manuals: dict[str, list[str]] = {}
+        offset = 0
+
+        while True:
+            page = collection.get(
+                include=["metadatas"],
+                limit=_INVENTORY_PAGE_SIZE,
+                offset=offset,
+            )
+            chunk_ids = page["ids"]
+            metadatas = page.get("metadatas")
+            if metadatas is None:
+                raise ValueError("ChromaDB no devolvió metadatos para el inventario.")
+
+            for chunk_id, metadata in zip(chunk_ids, metadatas, strict=True):
+                manual_id = metadata.get("manual_id")
+                if not isinstance(manual_id, str) or not manual_id:
+                    raise ValueError(
+                        "El chunk no contiene un manual_id válido en sus metadatos."
+                    )
+                manuals.setdefault(manual_id, []).append(chunk_id)
+
+            if len(chunk_ids) < _INVENTORY_PAGE_SIZE:
+                return manuals
+            offset += _INVENTORY_PAGE_SIZE
 
     def delete_manual(self, *, manual_id: str, chunk_ids: list[str]) -> int:
         """

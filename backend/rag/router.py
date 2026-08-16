@@ -6,10 +6,16 @@ from rag.schemas import (
     DeleteResponse,
     IngestRequest,
     IngestResponse,
+    InventoryResponse,
     RetrieveRequest,
     RetrieveResponse,
 )
-from rag.service import delete_manual, ingest_manual, retrieve_chunks
+from rag.service import (
+    delete_manual,
+    ingest_manual,
+    list_index_inventory,
+    retrieve_chunks,
+)
 
 router = APIRouter()
 
@@ -18,6 +24,22 @@ router = APIRouter()
 async def health() -> HealthResponse:
     """Comprueba que el servicio RAG está disponible."""
     return HealthResponse()
+
+
+@router.get(
+    "/inventory",
+    responses={
+        500: {"description": "Error interno al consultar el inventario del índice."},
+    },
+)
+async def inventory_endpoint() -> InventoryResponse:
+    """
+    Devuelve los IDs de chunks indexados agrupados por manual.
+
+    Returns:
+        InventoryResponse: Inventario interno completo del índice.
+    """
+    return await list_index_inventory()
 
 
 @router.post(

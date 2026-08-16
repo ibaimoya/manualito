@@ -1,4 +1,5 @@
 import hashlib
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
@@ -1429,6 +1430,18 @@ def _blank_pdf_bytes(tmp_path: Path) -> bytes:
             id="inventario_vacio_con_esperados",
         ),
         pytest.param(
+            {"manual-vaciado": ["chunk-viejo-b", "chunk-viejo-a"]},
+            {"manual-vaciado": set()},
+            {"manual-vaciado"},
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "manual-vaciado": ["chunk-viejo-a", "chunk-viejo-b"],
+                },
+                stale_manual_ids=[],
+            ),
+            id="esperado_sin_chunks_con_vectores",
+        ),
+        pytest.param(
             {"identificador-invalido": ["chunk-invalido"]},
             {},
             set(),
@@ -1456,6 +1469,25 @@ def test_plan_rag_reconciliation_clasifica_la_deriva(
     )
 
     assert plan == plan_esperado
+
+
+def _patch_manual_lock(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    session: object,
+) -> None:
+    """Sustituye el lock por manual por un contexto que entrega la sesión dada.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch): Parcheador del test.
+        session (object): Sesión falsa que debe recibir la reingesta.
+    """
+
+    @asynccontextmanager
+    async def lock(_manual_id):
+        yield session
+
+    monkeypatch.setattr(manual_service, "manual_lock", lock)
 
 
 def _patch_reindex_http_client(
@@ -1490,7 +1522,7 @@ async def test_reindex_manual_reingesta_chunks_y_persiste_indice(monkeypatch) ->
         "embedding_model": "test-embedding",
         "indexed_at": "2026-08-16T10:00:00+00:00",
     }
-    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_manual_lock(monkeypatch, session=session)
     _patch_reindex_http_client(monkeypatch, client=client)
     get_mock = AsyncMock(return_value=manual)
     chunks_mock = AsyncMock(return_value=chunks)
@@ -1539,7 +1571,7 @@ async def test_reindex_manual_ignora_manuales_fuera_del_indice(
 ) -> None:
     """Los manuales no indexables no consultan chunks ni abren la frontera HTTP."""
     session = _session()
-    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_manual_lock(monkeypatch, session=session)
     get_mock = AsyncMock(return_value=manual)
     chunks_mock = AsyncMock(return_value=[SimpleNamespace(id=uuid4())])
     index_mock = AsyncMock()
@@ -1568,7 +1600,7 @@ async def test_reindex_manual_sin_chunks_no_abre_la_frontera_http(monkeypatch) -
     """Un manual sin chunks termina sin llamar a RAG ni persistir cambios."""
     session = _session()
     manual = SimpleNamespace(status="active", deleted_at=None)
-    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_manual_lock(monkeypatch, session=session)
     get_mock = AsyncMock(return_value=manual)
     chunks_mock = AsyncMock(return_value=[])
     index_mock = AsyncMock()
@@ -1602,7 +1634,7 @@ async def test_reindex_manual_registra_api_error_y_permite_reintento(
     manual = SimpleNamespace(status="active", deleted_at=None)
     chunks = [SimpleNamespace(id=uuid4())]
     client = object()
-    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_manual_lock(monkeypatch, session=session)
     _patch_reindex_http_client(monkeypatch, client=client)
     get_mock = AsyncMock(return_value=manual)
     chunks_mock = AsyncMock(return_value=chunks)
@@ -1727,6 +1759,44 @@ async def test_plan_index_repair_construye_y_registra_el_plan(
     session_factory.assert_called_once_with()
     expected_query.assert_awaited_once_with(session)
     alive_query.assert_awaited_once_with(session)
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_respeta_el_lock_ocupado(monkeypatch) -> None:
+    """Si otro proceso tiene el manual, la reingesta se retira sin tocar nada."""
+
+    @asynccontextmanager
+    async def lock_ocupado(_manual_id):
+        yield None
+
+    monkeypatch.setattr(manual_service, "manual_lock", lock_ocupado)
+    get_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_plan_index_repair_ignora_inventario_malformado(monkeypatch, caplog) -> None:
+    """Un inventario sin la forma esperada deja aviso y un plan vacío."""
+    client = object()
+    _patch_reindex_http_client(monkeypatch, client=client)
+    monkeypatch.setattr(
+        manual_service.internal_client,
+        "get_json",
+        AsyncMock(return_value={"otra_clave": []}),
+    )
+    consulta_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "list_expected_chunk_ids", consulta_mock)
+
+    with caplog.at_level("WARNING", logger=manual_service.__name__):
+        plan = await manual_service.plan_index_repair()
+
+    assert plan == ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
+    consulta_mock.assert_not_awaited()
+    assert "malformado" in caplog.text
 
 
 @pytest.mark.anyio

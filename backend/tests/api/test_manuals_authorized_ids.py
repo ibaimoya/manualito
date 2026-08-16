@@ -234,12 +234,17 @@ def test_ids_de_chunks_esperados_se_agrupan_por_manual_indexable() -> None:
         )
         await session.flush()
 
+        sin_chunks = _manual(owner=consultante, game=juego, visibility="shared", status="active")
+        session.add(sin_chunks)
+        await session.flush()
+
         ids = await list_expected_chunk_ids(session)
 
         assert ids == {
             activo.id: {chunk.id for chunk in chunks_activos},
             en_revision.id: {chunk_en_revision.id},
             oculto.id: {chunk_oculto.id},
+            sin_chunks.id: set(),
         }
 
     _ejecuta(caso)

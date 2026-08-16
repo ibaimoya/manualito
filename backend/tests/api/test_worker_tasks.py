@@ -411,7 +411,7 @@ def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):
 
 
 def test_send_email_task_forwards_html_body(monkeypatch):
-    """La task de correo conserva la alternativa HTML al invocar el cliente SMTP."""
+    """La tarea de correo conserva la alternativa HTML al invocar el cliente SMTP."""
     send_mock = AsyncMock()
     monkeypatch.setattr(mail_tasks, "send_email", send_mock)
 
@@ -426,7 +426,7 @@ def test_send_email_task_forwards_html_body(monkeypatch):
 
 
 def test_send_email_task_retries_smtp_errors(monkeypatch):
-    """La task de correo reintenta errores SMTP transitorios."""
+    """La tarea de correo reintenta errores SMTP transitorios."""
     send_mock = AsyncMock(side_effect=mail_tasks.aiosmtplib.SMTPException("smtp down"))
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(mail_tasks, "send_email", send_mock)
@@ -445,7 +445,7 @@ def test_send_email_task_retries_smtp_errors(monkeypatch):
 
 
 def test_send_email_task_stops_when_retries_are_exhausted(monkeypatch):
-    """La task de correo registra el fallo final sin reintentar indefinidamente."""
+    """La tarea de correo registra el fallo final sin reintentar indefinidamente."""
     send_mock = AsyncMock(side_effect=OSError("network down"))
     retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
     monkeypatch.setattr(mail_tasks, "send_email", send_mock)
@@ -461,7 +461,7 @@ def test_send_email_task_stops_when_retries_are_exhausted(monkeypatch):
 
 
 def test_send_email_task_logs_soft_timeout(monkeypatch):
-    """La task de correo no reintenta si Celery corta por soft timeout."""
+    """La tarea de correo no reintenta si Celery corta por soft timeout."""
     send_mock = AsyncMock(side_effect=mail_tasks.SoftTimeLimitExceeded())
     retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
     monkeypatch.setattr(mail_tasks, "send_email", send_mock)
@@ -597,7 +597,7 @@ def test_recover_stale_manual_pages_enqueues_finalizers(monkeypatch):
 
 
 def test_reindex_manual_task_parsea_uuid(monkeypatch) -> None:
-    """La task entrega al servicio el UUID deserializado del manual."""
+    """La tarea entrega al servicio el UUID deserializado del manual."""
     reindex_mock = AsyncMock()
     monkeypatch.setattr(manual_tasks.service, "reindex_manual", reindex_mock)
 
@@ -653,7 +653,7 @@ def test_reconcile_rag_index_encola_el_plan(
     expected_deletions: dict[str, list[str]],
     expected_reindexes: list[str],
 ) -> None:
-    """La task encola exactamente las reparaciones incluidas en el plan."""
+    """La tarea encola exactamente las reparaciones incluidas en el plan."""
     plan_mock = AsyncMock(return_value=plan)
     delete_delay = Mock()
     reindex_delay = Mock()

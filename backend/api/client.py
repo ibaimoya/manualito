@@ -97,7 +97,7 @@ async def get_json(
         service_name (str): Nombre lógico del servicio destino.
         url (str): Endpoint completo a consultar.
         unavailable_detail (str): Mensaje a devolver si el servicio no responde.
-        internal_detail (str): Mensaje a devolver si el servicio responde error.
+        internal_detail (str): Mensaje a devolver si el servicio responde con un error.
 
     Returns:
         Any: JSON decodificado de la respuesta interna.
@@ -131,7 +131,7 @@ async def post_json(
         url (str): Endpoint completo a invocar.
         payload (Mapping[str, JsonValue]): Cuerpo JSON de la petición.
         unavailable_detail (str): Mensaje a devolver si el servicio no responde.
-        internal_detail (str): Mensaje a devolver si el servicio responde error.
+        internal_detail (str): Mensaje a devolver si el servicio responde con un error.
 
     Returns:
         JsonObject: JSON decodificado de la respuesta interna.

@@ -1173,7 +1173,7 @@ def plan_rag_reconciliation(
     expected: dict[str, set[str]],
     alive: set[str],
 ) -> ReconciliationPlan:
-    """Construye el plan de reparación de el desfase del índice RAG.
+    """Construye el plan de reparación del desfase del índice RAG.
 
     Args:
         inventory (dict[str, list[str]]): Chunks presentes en el índice por manual.
@@ -1188,11 +1188,14 @@ def plan_rag_reconciliation(
         for manual_id in sorted(inventory)
         if manual_id not in alive
     }
-    stale_manual_ids = sorted(
-        manual_id
-        for manual_id, expected_chunk_ids in expected.items()
-        if set(inventory.get(manual_id, [])) != expected_chunk_ids
-    )
+    stale_manual_ids = []
+    for manual_id, expected_chunk_ids in sorted(expected.items()):
+        indexed = set(inventory.get(manual_id, []))
+        if not expected_chunk_ids and indexed:
+            orphan_chunk_ids[manual_id] = sorted(indexed)
+        elif indexed != expected_chunk_ids:
+            stale_manual_ids.append(manual_id)
+    orphan_chunk_ids = dict(sorted(orphan_chunk_ids.items()))
     return ReconciliationPlan(
         orphan_chunk_ids=orphan_chunk_ids,
         stale_manual_ids=stale_manual_ids,
@@ -1208,7 +1211,13 @@ async def reindex_manual(manual_id: UUID) -> None:
     Returns:
         None: La operación no devuelve ningún valor.
     """
-    async with get_sessionmaker()() as session:
+    async with manual_lock(manual_id) as session:
+        if session is None:
+            logger.info(
+                "Manual '%s' ocupado por otro proceso, la reingesta espera.",
+                safe_for_log(str(manual_id)),
+            )
+            return
         manual = await get_manual_for_processing(session, manual_id=manual_id)
         if (
             manual is None
@@ -1268,6 +1277,11 @@ async def plan_index_repair() -> ReconciliationPlan:
         )
         return ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
 
+    manuals = payload.get("manuals") if isinstance(payload, dict) else None
+    if not isinstance(manuals, dict):
+        logger.warning("Inventario del índice RAG malformado. Se ignora esta pasada.")
+        return ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
+
     async with get_sessionmaker()() as session:
         expected_uuid_chunk_ids = await list_expected_chunk_ids(session)
         alive_uuid_manual_ids = await list_alive_manual_ids(session)
@@ -1278,16 +1292,17 @@ async def plan_index_repair() -> ReconciliationPlan:
     }
     alive = {str(manual_id) for manual_id in alive_uuid_manual_ids}
     plan = plan_rag_reconciliation(
-        inventory=payload["manuals"],
+        inventory=manuals,
         expected=expected,
         alive=alive,
     )
     orphan_manual_ids = sorted(plan.orphan_chunk_ids)
     stale_manual_ids = sorted(plan.stale_manual_ids)
     logger.info(
-        "Informe de sincronización del índice RAG: huérfanos=%d, desfasados=%d, "
-        "ids_huérfanos=%s, ids_desfasados=%s",
+        "Informe de sincronización del índice RAG: manuales_huérfanos=%d, "
+        "chunks_huérfanos=%d, desfasados=%d, ids_huérfanos=%s, ids_desfasados=%s",
         len(orphan_manual_ids),
+        sum(len(ids) for ids in plan.orphan_chunk_ids.values()),
         len(stale_manual_ids),
         orphan_manual_ids,
         stale_manual_ids,

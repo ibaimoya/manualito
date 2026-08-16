@@ -1043,8 +1043,8 @@ async def list_expected_chunk_ids(
         dict[UUID, set[UUID]]: Identificadores de chunks agrupados por manual.
     """
     result = await session.execute(
-        select(ManualChunk.manual_id, ManualChunk.id)
-        .join(Manual, Manual.id == ManualChunk.manual_id)
+        select(Manual.id, ManualChunk.id)
+        .join(ManualChunk, ManualChunk.manual_id == Manual.id, isouter=True)
         .where(
             Manual.deleted_at.is_(None),
             Manual.status.in_(INDEXED_MANUAL_STATUSES),
@@ -1052,5 +1052,7 @@ async def list_expected_chunk_ids(
     )
     expected: dict[UUID, set[UUID]] = {}
     for manual_id, chunk_id in result:
-        expected.setdefault(manual_id, set()).add(chunk_id)
+        chunk_ids = expected.setdefault(manual_id, set())
+        if chunk_id is not None:
+            chunk_ids.add(chunk_id)
     return expected

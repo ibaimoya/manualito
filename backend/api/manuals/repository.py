@@ -35,6 +35,7 @@ from database.models.game import Game
 from database.models.manual import Manual, ManualChunk, ManualPage
 
 REPROCESSABLE_MANUAL_STATUSES = ("active", "pending_review", "failed")
+INDEXED_MANUAL_STATUSES = ("active", "pending_review", "hidden")
 
 
 async def asset_storage_prefix_is_referenced(
@@ -1013,3 +1014,43 @@ def _manual_page_dedup_status() -> ColumnElement[str]:
         (ManualPage.source_reused_from_page_id.is_not(None), "reused"),
         else_="none",
     ).label("dedup_status")
+
+
+async def list_alive_manual_ids(session: AsyncSession) -> set[UUID]:
+    """Lista los identificadores de todos los manuales vivos.
+
+    Args:
+        session (AsyncSession): Sesión de base de datos activa.
+
+    Returns:
+        set[UUID]: Identificadores de manuales sin borrado lógico.
+    """
+    result = await session.scalars(
+        select(Manual.id).where(Manual.deleted_at.is_(None))
+    )
+    return set(result)
+
+
+async def list_expected_chunk_ids(
+    session: AsyncSession,
+) -> dict[UUID, set[UUID]]:
+    """Agrupa los chunks que deben existir en el índice por manual.
+
+    Args:
+        session (AsyncSession): Sesión de base de datos activa.
+
+    Returns:
+        dict[UUID, set[UUID]]: Identificadores de chunks agrupados por manual.
+    """
+    result = await session.execute(
+        select(ManualChunk.manual_id, ManualChunk.id)
+        .join(Manual, Manual.id == ManualChunk.manual_id)
+        .where(
+            Manual.deleted_at.is_(None),
+            Manual.status.in_(INDEXED_MANUAL_STATUSES),
+        )
+    )
+    expected: dict[UUID, set[UUID]] = {}
+    for manual_id, chunk_id in result:
+        expected.setdefault(manual_id, set()).add(chunk_id)
+    return expected

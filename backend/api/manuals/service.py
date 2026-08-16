@@ -830,7 +830,7 @@ async def _edit_page_text_locked(
     )
     await session.commit()
 
-    # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
+    # Postgres ya es la verdad. Chroma es índice derivado y se sincroniza después.
     page_detail = await get_manual_page_detail(session, page_id=context.page_id)
     return PageEditResult(
         page_detail=page_detail,
@@ -1078,7 +1078,7 @@ async def delete_chunks_from_rag(
             internal_detail="Error interno al borrar el manual del índice.",
         )
     except ApiError:
-        # Postgres es la verdad; un id huérfano en Chroma se descarta al rehidratar.
+        # Postgres es la verdad. Un id huérfano en Chroma se descarta al rehidratar.
         logger.warning(
             "No se pudo limpiar Chroma para manual '%s'.",
             safe_for_log(str(manual_id)),

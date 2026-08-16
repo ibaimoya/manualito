@@ -847,13 +847,13 @@ async def mark_manual_failed(session: AsyncSession, *, manual_id: UUID) -> None:
     await session.flush()
 
 
-async def load_authorized_manual_ids(
+async def load_game_retrieval_context(
     session: AsyncSession,
     *,
     game_id: UUID,
     current_user_id: UUID,
-) -> list[UUID]:
-    """Lista los ids de manuales del juego que el usuario puede consultar.
+) -> tuple[str, list[UUID]]:
+    """Carga el nombre del juego y sus manuales autorizados para recuperación.
 
     Args:
         session (AsyncSession): Sesión activa de la petición.
@@ -861,18 +861,24 @@ async def load_authorized_manual_ids(
         current_user_id (UUID): Usuario que hace la consulta.
 
     Returns:
-        list[UUID]: Ids de manuales autorizados, ordenados por id.
+        tuple[str, list[UUID]]: Nombre del juego e identificadores ordenados
+            de sus manuales, o valores vacíos si no hay manuales autorizados.
     """
-    result = await session.scalars(
-        select(Manual.id)
-        .where(
-            Manual.game_id == game_id,
-            Manual.deleted_at.is_(None),
-            _retrievable_manual_filter(current_user_id),
+    rows = (
+        await session.execute(
+            select(Game.name, Manual.id)
+            .join(Manual, Manual.game_id == Game.id)
+            .where(
+                Manual.game_id == game_id,
+                Manual.deleted_at.is_(None),
+                _retrievable_manual_filter(current_user_id),
+            )
+            .order_by(Manual.id)
         )
-        .order_by(Manual.id)
-    )
-    return list(result)
+    ).tuples().all()
+    if not rows:
+        return "", []
+    return rows[0][0], [manual_id for _, manual_id in rows]
 
 
 async def load_authorized_chunks(

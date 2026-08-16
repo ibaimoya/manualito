@@ -144,7 +144,8 @@ def test_reformulacion_fallida_usa_la_pregunta_original(monkeypatch, averia):
             mensaje = await _mensaje_asistente(turno)
             assert completado is True
             assert (mensaje.status, mensaje.content) == ("completed", _RESPUESTA)
-            assert preguntas_buscadas == ["¿Cómo se gana?"]
+            esperado = f"Manual de {turno['game_name']}: ¿Cómo se gana?"
+            assert preguntas_buscadas == [esperado]
 
     _ejecuta(caso)
 
@@ -173,11 +174,11 @@ def _simula_red(monkeypatch: pytest.MonkeyPatch, handler: Callable) -> None:
     monkeypatch.setattr(conversation_service.httpx, "AsyncClient", _cliente)
 
 
-async def _genera_respuesta(turno: dict[str, UUID]) -> bool:
+async def _genera_respuesta(turno: dict[str, UUID | str]) -> bool:
     """Lanza la generación pendiente del turno sembrado.
 
     Args:
-        turno (dict[str, UUID]): Identificadores devueltos por la siembra.
+        turno (dict[str, UUID | str]): Identificadores devueltos por la siembra.
 
     Returns:
         bool: Resultado de generate_pending_reply.
@@ -192,11 +193,11 @@ async def _genera_respuesta(turno: dict[str, UUID]) -> bool:
     )
 
 
-async def _mensaje_asistente(turno: dict[str, UUID]) -> Message:
+async def _mensaje_asistente(turno: dict[str, UUID | str]) -> Message:
     """Relee el mensaje del asistente desde una sesión nueva.
 
     Args:
-        turno (dict[str, UUID]): Identificadores devueltos por la siembra.
+        turno (dict[str, UUID | str]): Identificadores devueltos por la siembra.
 
     Returns:
         Message: Fila actual del mensaje del asistente.
@@ -218,7 +219,7 @@ async def _turno_sembrado(
     con_chunk: bool,
     con_historial: bool = False,
     con_chunk_ajeno: bool = False,
-) -> AsyncIterator[dict[str, UUID]]:
+) -> AsyncIterator[dict[str, UUID | str]]:
     """Siembra un turno pendiente y borra sus filas al terminar el caso.
 
     Args:
@@ -227,7 +228,7 @@ async def _turno_sembrado(
         con_chunk_ajeno (bool): Si se crea el manual privado de otro usuario.
 
     Yields:
-        dict[str, UUID]: Identificadores del turno sembrado.
+        dict[str, UUID | str]: Identificadores y nombre del juego sembrados.
     """
     turno = await _siembra_turno(
         con_chunk=con_chunk,
@@ -327,6 +328,7 @@ async def _siembra_turno(
                 "conversation_id": conversacion.id,
                 "user_message_id": mensaje_usuario.id,
                 "assistant_message_id": asistente.id,
+                "game_name": juego.name,
                 "chunk_id": chunk_id or uuid4(),
                 "chunk_ajeno_id": chunk_ajeno_id or uuid4(),
             }
@@ -367,11 +369,11 @@ async def _siembra_manual(session: AsyncSession, *, owner_id: UUID, game_id: UUI
     return chunk.id
 
 
-async def _limpia_turno(turno: dict[str, UUID]) -> None:
+async def _limpia_turno(turno: dict[str, UUID | str]) -> None:
     """Borra del Postgres de pruebas todas las filas sembradas para el turno.
 
     Args:
-        turno (dict[str, UUID]): Identificadores devueltos por la siembra.
+        turno (dict[str, UUID | str]): Identificadores devueltos por la siembra.
     """
     engine = create_async_engine(DATABASE_URL)
     try:

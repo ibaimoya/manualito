@@ -11,7 +11,7 @@ from api import config
 from api.exceptions import InternalServiceError
 from api.manuals.dto import AuthorizedChunk
 from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualContextNotFoundError
-from api.manuals.repository import load_authorized_chunks, load_authorized_manual_ids
+from api.manuals.repository import load_authorized_chunks, load_game_retrieval_context
 from api.manuals.retrieval.deduplication import deduplicate_chunks
 from api.manuals.schemas import AnswerResponse, AnswerSource
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
@@ -30,14 +30,36 @@ async def generate_game_answer(
     retrieval_question: str | None = None,
     language: Language = "es",
 ) -> AnswerResponse:
-    """Responde con RAG buscando solo dentro de los manuales autorizados."""
-    manual_ids = await load_authorized_manual_ids(
-        session, game_id=game_id, current_user_id=current_user_id
+    """Genera una respuesta RAG usando los manuales autorizados del juego.
+
+    Args:
+        session (AsyncSession): Sesión activa de la petición.
+        current_user_id (UUID): Usuario que realiza la pregunta.
+        game_id (UUID): Juego sobre el que se consulta.
+        question (str): Pregunta original enviada al LLM.
+        top_k (int): Número máximo de fragmentos usados como contexto.
+        client (httpx.AsyncClient): Cliente para los servicios internos.
+        chat_history (Sequence[Mapping[str, str]]): Historial enviado al LLM.
+        retrieval_question (str | None): Pregunta optimizada para la búsqueda.
+        language (Language): Idioma solicitado para la respuesta.
+
+    Returns:
+        AnswerResponse: Respuesta generada con sus fuentes autorizadas.
+
+    Raises:
+        ManualContextNotFoundError: Si no existen manuales autorizados.
+        InternalServiceError: Si RAG devuelve identificadores inválidos.
+        GeneratedAnswerTooLongError: Si la respuesta supera el límite permitido.
+    """
+    game_name, manual_ids = await load_game_retrieval_context(
+        session,
+        game_id=game_id,
+        current_user_id=current_user_id,
     )
     await session.rollback()
     if not manual_ids:
         raise ManualContextNotFoundError
-    search_question = retrieval_question or question
+    search_question = f"Manual de {game_name}: {retrieval_question or question}"
     retrieval_response = await internal_client.post_json(
         client=client,
         service_name="RAG",
@@ -73,6 +95,7 @@ async def generate_game_answer(
             "question": question,
             "context_chunks": context_chunks,
             "chat_history": list(chat_history),
+            "game_name": game_name,
             "language": language,
         },
         unavailable_detail="Servicio LLM no disponible.",

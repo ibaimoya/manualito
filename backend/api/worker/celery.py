@@ -40,6 +40,11 @@ celery_app.conf.update(
     },
     visibility_timeout=config.CELERY_VISIBILITY_TIMEOUT,
     beat_schedule={
+        "reconcile-rag-index": {
+            "task": "api.worker.tasks.maintenance.reconcile_rag_index",
+            "schedule": 3600.0,
+            "options": {"expires": 3600.0},
+        },
         "worker-healthcheck": {
             "task": "api.worker.tasks.maintenance.healthcheck",
             "schedule": 300.0,
@@ -65,6 +70,7 @@ celery_app.conf.update(
         Queue("maintenance"),
     ),
     task_routes={
+        "api.worker.tasks.maintenance.reconcile_rag_index": {"queue": "maintenance"},
         "api.worker.tasks.manuals.process_manual_task": {"queue": "manuals"},
         "api.worker.tasks.manuals.process_manual_page_task": {"queue": "manuals"},
         "api.worker.tasks.manuals.reprocess_manual_task": {"queue": "manuals"},

@@ -92,7 +92,7 @@ async def test_send_request_maps_internal_404_to_domain_error():
         response=response,
     )
     client = AsyncMock()
-    client.post.return_value = response
+    client.request.return_value = response
 
     with pytest.raises(InternalResourceNotFoundError) as exc_info:
         await api_client.send_request(
@@ -119,7 +119,7 @@ async def test_send_request_maps_internal_404_without_json_to_default_detail():
         response=response,
     )
     client = AsyncMock()
-    client.post.return_value = response
+    client.request.return_value = response
 
     with pytest.raises(InternalResourceNotFoundError) as exc_info:
         await api_client.send_request(
@@ -146,7 +146,7 @@ async def test_send_request_maps_internal_404_with_non_object_json_to_default_de
         response=response,
     )
     client = AsyncMock()
-    client.post.return_value = response
+    client.request.return_value = response
 
     with pytest.raises(InternalResourceNotFoundError) as exc_info:
         await api_client.send_request(
@@ -165,7 +165,7 @@ async def test_send_request_maps_internal_404_with_non_object_json_to_default_de
 async def test_send_request_maps_transport_errors_to_unavailable():
     """Timeouts y errores de red no escapan como excepciones de HTTPX."""
     client = AsyncMock()
-    client.post.side_effect = httpx.ReadTimeout("timeout")
+    client.request.side_effect = httpx.ReadTimeout("timeout")
 
     with pytest.raises(InternalServiceUnavailableError) as exc_info:
         await api_client.send_request(
@@ -187,7 +187,7 @@ async def test_send_request_maps_invalid_json_to_internal_error():
     response.raise_for_status.return_value = None
     response.json.side_effect = ValueError("not json")
     client = AsyncMock()
-    client.post.return_value = response
+    client.request.return_value = response
 
     with pytest.raises(InternalServiceError) as exc_info:
         await api_client.send_request(
@@ -209,7 +209,7 @@ async def test_send_request_maps_non_object_success_json_to_internal_error():
     response.raise_for_status.return_value = None
     response.json.return_value = ["not", "an", "object"]
     client = AsyncMock()
-    client.post.return_value = response
+    client.request.return_value = response
 
     with pytest.raises(InternalServiceError) as exc_info:
         await api_client.send_request(
@@ -248,3 +248,49 @@ async def test_call_ocr_service_maps_corrupt_payload_to_internal_error(tmp_path)
             )
 
     assert exc_info.value.detail == "Error interno al procesar la imagen con OCR."
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("helper_name", "expected_method"),
+    [
+        ("get_json", "GET"),
+        ("post_json", "POST"),
+    ],
+    ids=["get-json", "post-json"],
+)
+async def test_json_helpers_usan_su_metodo_http(
+    helper_name: str,
+    expected_method: str,
+) -> None:
+    """Los helpers JSON usan su método HTTP y devuelven el objeto recibido."""
+    response = MagicMock(spec=httpx.Response)
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"method": expected_method}
+    client = MagicMock(spec=httpx.AsyncClient)
+    client.request = AsyncMock(return_value=response)
+    url = "http://internal/resource"
+
+    if helper_name == "get_json":
+        result = await api_client.get_json(
+            client=client,
+            service_name="Interno",
+            url=url,
+            unavailable_detail="Servicio no disponible.",
+            internal_detail="Error interno.",
+        )
+        expected_request_kwargs: dict[str, object] = {"url": url}
+    else:
+        payload = {"source": "test"}
+        result = await api_client.post_json(
+            client=client,
+            service_name="Interno",
+            url=url,
+            payload=payload,
+            unavailable_detail="Servicio no disponible.",
+            internal_detail="Error interno.",
+        )
+        expected_request_kwargs = {"url": url, "json": payload}
+
+    assert result == {"method": expected_method}
+    client.request.assert_awaited_once_with(expected_method, **expected_request_kwargs)

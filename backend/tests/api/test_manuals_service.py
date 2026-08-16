@@ -1,9 +1,10 @@
 import hashlib
+import uuid
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import anyio
@@ -14,8 +15,10 @@ from fastapi import UploadFile
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.datastructures import Headers
 
+import api.exceptions as api_exceptions
 import api.manuals.retrieval.service as retrieval_service
 import api.manuals.service as manual_service
+import api.manuals.service as manuals_service
 from api.assets.storage import LocalAssetStore
 from api.exceptions import InternalServiceError, ManualPageLimitExceededError
 from api.manuals.dto import (
@@ -1620,3 +1623,146 @@ async def test_reindex_manual_registra_api_error_y_permite_reintento(
     assert session.commits == 0
     assert str(_MANUAL_ID) in caplog.text
     assert "No se pudo reindexar" in caplog.text
+
+
+_RECONCILIATION_MANUAL_A = uuid.UUID("11111111-1111-4111-8111-111111111111")
+_RECONCILIATION_MANUAL_B = uuid.UUID("22222222-2222-4222-8222-222222222222")
+_RECONCILIATION_ORPHAN = uuid.UUID("99999999-9999-4999-8999-999999999999")
+_RECONCILIATION_CHUNK_A = uuid.UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+_RECONCILIATION_CHUNK_B = uuid.UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+_RECONCILIATION_ORPHAN_CHUNK = uuid.UUID("cccccccc-cccc-4ccc-8ccc-cccccccccccc")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    (
+        "inventory",
+        "expected_rows",
+        "alive_rows",
+        "expected_orphan_chunk_ids",
+        "expected_stale_manual_ids",
+    ),
+    [
+        (
+            {
+                str(_RECONCILIATION_ORPHAN): [str(_RECONCILIATION_ORPHAN_CHUNK)],
+                str(_RECONCILIATION_MANUAL_A): [str(_RECONCILIATION_CHUNK_B)],
+            },
+            {
+                _RECONCILIATION_MANUAL_A: {_RECONCILIATION_CHUNK_A},
+            },
+            {_RECONCILIATION_MANUAL_A},
+            {
+                str(_RECONCILIATION_ORPHAN): [str(_RECONCILIATION_ORPHAN_CHUNK)],
+            },
+            [str(_RECONCILIATION_MANUAL_A)],
+        ),
+        (
+            {
+                str(_RECONCILIATION_MANUAL_A): [str(_RECONCILIATION_CHUNK_A)],
+                str(_RECONCILIATION_MANUAL_B): [],
+            },
+            {
+                _RECONCILIATION_MANUAL_A: {_RECONCILIATION_CHUNK_A},
+                _RECONCILIATION_MANUAL_B: set(),
+            },
+            {
+                _RECONCILIATION_MANUAL_A,
+                _RECONCILIATION_MANUAL_B,
+            },
+            {},
+            [],
+        ),
+    ],
+    ids=["indice-desfasado", "indice-sincronizado"],
+)
+async def test_plan_index_repair_construye_y_registra_el_plan(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    inventory: dict[str, list[str]],
+    expected_rows: dict[uuid.UUID, set[uuid.UUID]],
+    alive_rows: set[uuid.UUID],
+    expected_orphan_chunk_ids: dict[str, list[str]],
+    expected_stale_manual_ids: list[str],
+) -> None:
+    """La planificación combina RAG y Postgres y registra su informe."""
+    http_client = MagicMock()
+    http_context = MagicMock()
+    http_context.__aenter__.return_value = http_client
+    http_context.__aexit__.return_value = False
+    http_client_factory = MagicMock(return_value=http_context)
+    get_json_mock = AsyncMock(return_value={"manuals": inventory})
+
+    session = MagicMock()
+    session_context = MagicMock()
+    session_context.__aenter__.return_value = session
+    session_context.__aexit__.return_value = False
+    session_factory = MagicMock(return_value=session_context)
+    expected_query = AsyncMock(return_value=expected_rows)
+    alive_query = AsyncMock(return_value=alive_rows)
+
+    monkeypatch.setattr(manuals_service, "_internal_http_client", http_client_factory)
+    monkeypatch.setattr(manuals_service.internal_client, "get_json", get_json_mock)
+    monkeypatch.setattr(manuals_service, "get_sessionmaker", lambda: session_factory)
+    monkeypatch.setattr(manuals_service, "list_expected_chunk_ids", expected_query)
+    monkeypatch.setattr(manuals_service, "list_alive_manual_ids", alive_query)
+
+    with caplog.at_level("INFO", logger=manuals_service.__name__):
+        plan = await manuals_service.plan_index_repair()
+
+    assert plan.orphan_chunk_ids == expected_orphan_chunk_ids
+    assert plan.stale_manual_ids == expected_stale_manual_ids
+    assert f"huérfanos={len(expected_orphan_chunk_ids)}" in caplog.text
+    assert f"desfasados={len(expected_stale_manual_ids)}" in caplog.text
+    reported_ids = set(expected_orphan_chunk_ids) | set(expected_stale_manual_ids)
+    for manual_id in sorted(reported_ids):
+        assert manual_id in caplog.text
+
+    http_client_factory.assert_called_once_with()
+    get_json_mock.assert_awaited_once_with(
+        client=http_client,
+        service_name="RAG",
+        url=f"{manuals_service.config.RAG_URL}/inventory",
+        unavailable_detail="Servicio RAG no disponible.",
+        internal_detail="Error interno al consultar el inventario RAG.",
+    )
+    session_factory.assert_called_once_with()
+    expected_query.assert_awaited_once_with(session)
+    alive_query.assert_awaited_once_with(session)
+
+
+@pytest.mark.anyio
+async def test_plan_index_repair_devuelve_plan_vacio_si_rag_no_responde(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Un fallo transitorio de RAG aplaza la reparación sin consultar Postgres."""
+    http_client = MagicMock()
+    http_context = MagicMock()
+    http_context.__aenter__.return_value = http_client
+    http_context.__aexit__.return_value = False
+    http_client_factory = MagicMock(return_value=http_context)
+    get_json_mock = AsyncMock(
+        side_effect=api_exceptions.InternalServiceUnavailableError(
+            "Servicio RAG no disponible."
+        )
+    )
+    session_factory = MagicMock()
+    expected_query = AsyncMock()
+    alive_query = AsyncMock()
+
+    monkeypatch.setattr(manuals_service, "_internal_http_client", http_client_factory)
+    monkeypatch.setattr(manuals_service.internal_client, "get_json", get_json_mock)
+    monkeypatch.setattr(manuals_service, "get_sessionmaker", lambda: session_factory)
+    monkeypatch.setattr(manuals_service, "list_expected_chunk_ids", expected_query)
+    monkeypatch.setattr(manuals_service, "list_alive_manual_ids", alive_query)
+
+    with caplog.at_level("WARNING", logger=manuals_service.__name__):
+        plan = await manuals_service.plan_index_repair()
+
+    assert plan.orphan_chunk_ids == {}
+    assert plan.stale_manual_ids == []
+    assert "No se pudo consultar el inventario RAG" in caplog.text
+    session_factory.assert_not_called()
+    expected_query.assert_not_awaited()
+    alive_query.assert_not_awaited()

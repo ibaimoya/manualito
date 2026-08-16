@@ -64,6 +64,8 @@ from api.manuals.repository import (
     get_manual_page_detail,
     get_page_for_edit,
     get_page_for_processing,
+    list_alive_manual_ids,
+    list_expected_chunk_ids,
     list_manual_chunks_for_ingest,
     list_manual_ids_pending_dispatch,
     list_page_chunk_ids,
@@ -1241,3 +1243,53 @@ async def reindex_manual(manual_id: UUID) -> None:
             indexed_at=indexed_at,
         )
         await session.commit()
+
+
+async def plan_index_repair() -> ReconciliationPlan:
+    """
+    Calcula las reparaciones necesarias para sincronizar Postgres y RAG.
+
+    Returns:
+        ReconciliationPlan: Huérfanos que borrar y manuales que reindexar.
+    """
+    try:
+        async with _internal_http_client() as client:
+            payload = await internal_client.get_json(
+                client=client,
+                service_name="RAG",
+                url=f"{config.RAG_URL}/inventory",
+                unavailable_detail="Servicio RAG no disponible.",
+                internal_detail="Error interno al consultar el inventario RAG.",
+            )
+    except ApiError:
+        logger.warning(
+            "No se pudo consultar el inventario RAG. "
+            "Se reintentará en la próxima pasada horaria."
+        )
+        return ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
+
+    async with get_sessionmaker()() as session:
+        expected_uuid_chunk_ids = await list_expected_chunk_ids(session)
+        alive_uuid_manual_ids = await list_alive_manual_ids(session)
+
+    expected = {
+        str(manual_id): {str(chunk_id) for chunk_id in chunk_ids}
+        for manual_id, chunk_ids in expected_uuid_chunk_ids.items()
+    }
+    alive = {str(manual_id) for manual_id in alive_uuid_manual_ids}
+    plan = plan_rag_reconciliation(
+        inventory=payload["manuals"],
+        expected=expected,
+        alive=alive,
+    )
+    orphan_manual_ids = sorted(plan.orphan_chunk_ids)
+    stale_manual_ids = sorted(plan.stale_manual_ids)
+    logger.info(
+        "Informe de sincronización del índice RAG: huérfanos=%d, desfasados=%d, "
+        "ids_huérfanos=%s, ids_desfasados=%s",
+        len(orphan_manual_ids),
+        len(stale_manual_ids),
+        orphan_manual_ids,
+        stale_manual_ids,
+    )
+    return plan

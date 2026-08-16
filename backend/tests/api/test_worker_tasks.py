@@ -11,6 +11,7 @@ import api.worker.tasks.mail as mail_tasks
 import api.worker.tasks.maintenance as maintenance_tasks
 import api.worker.tasks.manuals as manual_tasks
 from api import config
+from api.manuals.dto import ReconciliationPlan
 from api.worker.celery import celery_app
 
 _USER_ID = UUID("018fd000-0000-7000-8000-000000000010")
@@ -603,3 +604,73 @@ def test_reindex_manual_task_parsea_uuid(monkeypatch) -> None:
     manual_tasks.reindex_manual_task.run(str(_MANUAL_ID))
 
     reindex_mock.assert_awaited_once_with(_MANUAL_ID)
+
+
+@pytest.mark.parametrize(
+    ("plan", "expected_deletions", "expected_reindexes"),
+    [
+        (
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "11111111-1111-4111-8111-111111111111": [
+                        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                    ],
+                    "22222222-2222-4222-8222-222222222222": [
+                        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    ],
+                },
+                stale_manual_ids=[
+                    "33333333-3333-4333-8333-333333333333",
+                    "44444444-4444-4444-8444-444444444444",
+                ],
+            ),
+            {
+                "11111111-1111-4111-8111-111111111111": [
+                    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                ],
+                "22222222-2222-4222-8222-222222222222": [
+                    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                ],
+            },
+            [
+                "33333333-3333-4333-8333-333333333333",
+                "44444444-4444-4444-8444-444444444444",
+            ],
+        ),
+        (
+            ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[]),
+            {},
+            [],
+        ),
+    ],
+    ids=["plan-poblado", "plan-vacio"],
+)
+def test_reconcile_rag_index_encola_el_plan(
+    monkeypatch: pytest.MonkeyPatch,
+    plan: ReconciliationPlan,
+    expected_deletions: dict[str, list[str]],
+    expected_reindexes: list[str],
+) -> None:
+    """La task encola exactamente las reparaciones incluidas en el plan."""
+    plan_mock = AsyncMock(return_value=plan)
+    delete_delay = Mock()
+    reindex_delay = Mock()
+    monkeypatch.setattr(maintenance_tasks.manuals_service, "plan_index_repair", plan_mock)
+    monkeypatch.setattr(
+        maintenance_tasks.delete_chunks_from_rag_task,
+        "delay",
+        delete_delay,
+    )
+    monkeypatch.setattr(maintenance_tasks.reindex_manual_task, "delay", reindex_delay)
+
+    maintenance_tasks.reconcile_rag_index.run()
+
+    plan_mock.assert_awaited_once_with()
+    assert delete_delay.call_count == len(expected_deletions)
+    for manual_id, chunk_ids in expected_deletions.items():
+        delete_delay.assert_any_call(manual_id, chunk_ids)
+    assert reindex_delay.call_count == len(expected_reindexes)
+    for manual_id in expected_reindexes:
+        reindex_delay.assert_any_call(manual_id)

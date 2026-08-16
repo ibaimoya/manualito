@@ -379,3 +379,43 @@ def test_delete_returns_500_when_chroma_delete_fails(client):
     assert response.json() == {
         "detail": "Error interno al borrar el manual del índice."
     }
+
+
+# ---------------------------------------------------------------------------
+# Partición de Equivalencia (EP) — inventario interno del índice
+#   Clase 9: El índice contiene chunks agrupables por manual.
+#   Clase 10: Falla inesperada de Chroma — 500.
+# ---------------------------------------------------------------------------
+def test_inventory_returns_chunk_ids_grouped_by_manual(client):
+    """El inventario devuelve los IDs indexados agrupados por manual."""
+    repository = MagicMock()
+    repository.list_indexed_chunk_ids.return_value = {
+        "manual-1": ["chunk-1", "chunk-2"],
+        "manual-2": ["chunk-3"],
+    }
+
+    with patch("rag.service.get_repository", return_value=repository):
+        response = client.get("/inventory")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "manuals": {
+            "manual-1": ["chunk-1", "chunk-2"],
+            "manual-2": ["chunk-3"],
+        }
+    }
+    repository.list_indexed_chunk_ids.assert_called_once_with()
+
+
+def test_inventory_returns_500_when_chroma_query_fails(client):
+    """Un fallo de Chroma al inventariar el índice se traduce a 500."""
+    repository = MagicMock()
+    repository.list_indexed_chunk_ids.side_effect = RuntimeError("fallo en Chroma")
+
+    with patch("rag.service.get_repository", return_value=repository):
+        response = client.get("/inventory")
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": "Error interno al consultar el inventario del índice."
+    }

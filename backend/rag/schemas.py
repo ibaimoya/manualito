@@ -83,3 +83,9 @@ class DeleteResponse(StrictModel):
     manual_id: ManualId
     chunks_deleted: int = Field(ge=0)
     status: str
+
+
+class InventoryResponse(StrictModel):
+    """Respuesta de ``GET /inventory`` agrupada por manual."""
+
+    manuals: dict[str, list[str]]

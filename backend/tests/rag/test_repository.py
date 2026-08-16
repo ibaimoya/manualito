@@ -1,7 +1,7 @@
 import os
 import sys
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 from urllib.parse import urlunparse
 
 import pytest
@@ -234,9 +234,139 @@ def test_delete_manual_is_idempotent_when_no_chunks_exist():
 
 
 # ---------------------------------------------------------------------------
+# Partición de Equivalencia (EP) y Valores Límite (BVA) — inventario del índice
+#   Clase 8: Una página contiene chunks de varios manuales.
+#   Clase 9: Una página completa obliga a consultar la siguiente.
+#   Clase 10: La primera página corta termina la consulta.
+#   Clase 11: El índice está vacío.
+# ---------------------------------------------------------------------------
+def test_list_indexed_chunk_ids_groups_one_page_by_manual():
+    """Una página con varios manuales agrupa sus chunks sin perder el orden."""
+    collection = MagicMock()
+    collection.get.return_value = {
+        "ids": ["chunk-1", "chunk-2", "chunk-3"],
+        "metadatas": [
+            {"manual_id": "manual-1"},
+            {"manual_id": "manual-2"},
+            {"manual_id": "manual-1"},
+        ],
+    }
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
+    repo._collection = collection
+
+    inventory = repo.list_indexed_chunk_ids()
+
+    assert inventory == {
+        "manual-1": ["chunk-1", "chunk-3"],
+        "manual-2": ["chunk-2"],
+    }
+    collection.get.assert_called_once_with(
+        include=["metadatas"],
+        limit=500,
+        offset=0,
+    )
+
+
+@pytest.mark.parametrize(
+    ("page_size", "pages", "expected", "expected_offsets"),
+    [
+        (
+            2,
+            [
+                {
+                    "ids": ["chunk-1", "chunk-2"],
+                    "metadatas": [
+                        {"manual_id": "manual-1"},
+                        {"manual_id": "manual-2"},
+                    ],
+                },
+                {
+                    "ids": ["chunk-3"],
+                    "metadatas": [{"manual_id": "manual-1"}],
+                },
+            ],
+            {
+                "manual-1": ["chunk-1", "chunk-3"],
+                "manual-2": ["chunk-2"],
+            },
+            [0, 2],
+        ),
+        (
+            3,
+            [
+                {
+                    "ids": ["chunk-4", "chunk-5"],
+                    "metadatas": [
+                        {"manual_id": "manual-3"},
+                        {"manual_id": "manual-4"},
+                    ],
+                }
+            ],
+            {
+                "manual-3": ["chunk-4"],
+                "manual-4": ["chunk-5"],
+            },
+            [0],
+        ),
+        (
+            2,
+            [
+                {
+                    "ids": ["chunk-6", "chunk-7"],
+                    "metadatas": [
+                        {"manual_id": "manual-5"},
+                        {"manual_id": "manual-5"},
+                    ],
+                },
+                {"ids": [], "metadatas": []},
+            ],
+            {"manual-5": ["chunk-6", "chunk-7"]},
+            [0, 2],
+        ),
+    ],
+    ids=["dos_paginas", "primera_pagina_corta", "total_multiplo_exacto"],
+)
+def test_list_indexed_chunk_ids_paginates_until_short_page(
+    monkeypatch,
+    page_size,
+    pages,
+    expected,
+    expected_offsets,
+):
+    """La paginación avanza por el límite configurado y termina en página corta."""
+    monkeypatch.setattr(repository, "_INVENTORY_PAGE_SIZE", page_size)
+    collection = MagicMock()
+    collection.get.side_effect = pages
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
+    repo._collection = collection
+
+    inventory = repo.list_indexed_chunk_ids()
+
+    assert inventory == expected
+    assert collection.get.call_args_list == [
+        call(
+            include=["metadatas"],
+            limit=page_size,
+            offset=offset,
+        )
+        for offset in expected_offsets
+    ]
+
+
+def test_list_indexed_chunk_ids_returns_empty_inventory():
+    """Un índice sin chunks devuelve un inventario vacío."""
+    collection = MagicMock()
+    collection.get.return_value = {"ids": [], "metadatas": []}
+    repo = ChromaRepository(_TEST_CHROMA_URL, "manuales")
+    repo._collection = collection
+
+    assert repo.list_indexed_chunk_ids() == {}
+
+
+# ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — consultas auxiliares del repositorio
-#   Clase 8: El manual existe.
-#   Clase 9: El manual no existe.
+#   Clase 12: El manual existe.
+#   Clase 13: El manual no existe.
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("ids", "expected"),
@@ -258,8 +388,8 @@ def test_manual_exists_consulta_la_coleccion(ids, expected):
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — inicialización perezosa de Chroma
-#   Clase 10: La colección aún no existe — se crea.
-#   Clase 11: El cliente aún no existe — se construye desde la URL.
+#   Clase 14: La colección aún no existe — se crea.
+#   Clase 15: El cliente aún no existe — se construye desde la URL.
 # ---------------------------------------------------------------------------
 def test_warm_up_creates_and_caches_collection():
     """El warmup crea la colección una sola vez con el espacio esperado."""

@@ -73,7 +73,6 @@ class ApiSettings(BaseSettings):
     manual_dispatch_recovery_delay_seconds: int = Field(default=5 * 60, ge=60)
     manual_dispatch_recovery_batch_size: int = Field(default=100, ge=1, le=1_000)
 
-    rag_retrieval_multiplier: int = Field(default=4, ge=1)
 
     bgg_external_search_min_length: int = Field(default=3, ge=1)
     bgg_cache_result_limit: int = Field(default=50, ge=1)
@@ -253,7 +252,6 @@ ASSET_STORAGE_DIR = settings.asset_storage_dir
 ASSET_PENDING_BATCH_TTL_SECONDS = settings.asset_pending_batch_ttl_seconds
 MANUAL_DISPATCH_RECOVERY_DELAY_SECONDS = settings.manual_dispatch_recovery_delay_seconds
 MANUAL_DISPATCH_RECOVERY_BATCH_SIZE = settings.manual_dispatch_recovery_batch_size
-RAG_RETRIEVAL_MULTIPLIER = settings.rag_retrieval_multiplier
 
 BGG_EXTERNAL_SEARCH_MIN_LENGTH = settings.bgg_external_search_min_length
 BGG_CACHE_RESULT_LIMIT = settings.bgg_cache_result_limit

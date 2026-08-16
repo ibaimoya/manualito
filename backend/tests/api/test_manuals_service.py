@@ -26,6 +26,7 @@ from api.manuals.dto import (
 )
 from api.manuals.exceptions import (
     GeneratedAnswerTooLongError,
+    ManualContextNotFoundError,
     ManualNotFoundError,
     ManualTooLargeError,
     ManualUploadSelectionError,
@@ -46,10 +47,8 @@ _OCR_LINES = [{"text": "Regla uno. Regla dos.", "confidence": 0.9}]
 
 
 def test_retrieval_top_k_limits_keep_api_and_rag_in_sync():
-    """El sobre-fetch que pide API nunca supera el máximo aceptado por RAG."""
-    assert GAME_QUESTION_TOP_K_MAX * manual_service.config.RAG_RETRIEVAL_MULTIPLIER <= (
-        RAG_RETRIEVAL_TOP_K_MAX
-    )
+    """El top_k máximo que pide API nunca supera el aceptado por RAG."""
+    assert GAME_QUESTION_TOP_K_MAX <= RAG_RETRIEVAL_TOP_K_MAX
 
 
 @pytest.mark.anyio
@@ -984,6 +983,11 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         ]
     )
     monkeypatch.setattr(retrieval_service, "load_authorized_chunks", load_chunks_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_manual_ids",
+        AsyncMock(return_value=[_MANUAL_ID]),
+    )
 
     session = _session()
 
@@ -992,7 +996,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         current_user_id=_USER_ID,
         game_id=_GAME_ID,
         question="¿Cómo se gana?",
-        top_k=2,
+        top_k=3,
         client=object(),
         language="en",
     )
@@ -1007,13 +1011,14 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["game_id"] == str(_GAME_ID)
-    assert rag_payload["top_k"] == 8
+    assert rag_payload["manual_ids"] == [str(_MANUAL_ID)]
+    assert rag_payload["top_k"] == 3
     assert load_chunks_mock.await_args.kwargs["chunk_ids"] == [
         _CHUNK_ID,
         _DUPLICATE_CHUNK_ID,
         _UNIQUE_CHUNK_ID,
     ]
-    assert session.rollbacks == 1
+    assert session.rollbacks == 2
     assert "manual_id" not in llm_payload
     assert llm_payload["context_chunks"] == ["Texto A", "Texto B"]
     assert llm_payload["language"] == "en"
@@ -1046,6 +1051,11 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
             ]
         ),
     )
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_manual_ids",
+        AsyncMock(return_value=[_MANUAL_ID]),
+    )
     session = _session()
 
     with pytest.raises(GeneratedAnswerTooLongError):
@@ -1060,12 +1070,43 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_answer_game_question_corta_sin_llamar_a_rag_si_no_hay_manuales(monkeypatch):
+    """Sin manuales autorizados se corta en el acto, sin llamar siquiera a RAG."""
+    post_json_mock = AsyncMock()
+    monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_manual_ids",
+        AsyncMock(return_value=[]),
+    )
+    session = _session()
+
+    with pytest.raises(ManualContextNotFoundError):
+        await retrieval_service.generate_game_answer(
+            session,
+            current_user_id=_USER_ID,
+            game_id=_GAME_ID,
+            question="¿Cómo se gana?",
+            top_k=3,
+            client=object(),
+        )
+
+    post_json_mock.assert_not_awaited()
+    assert session.rollbacks == 1
+
+
+@pytest.mark.anyio
 async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
     """Un vector corrupto en Chroma no provoca un crash sin controlar."""
     monkeypatch.setattr(
         retrieval_service.internal_client,
         "post_json",
         AsyncMock(return_value={"chunks": [{"id": "no-es-uuid"}]}),
+    )
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_manual_ids",
+        AsyncMock(return_value=[_MANUAL_ID]),
     )
     session = _session()
 

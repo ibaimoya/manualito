@@ -11,6 +11,7 @@ from rag.schemas import IngestChunk
 logger = logging.getLogger(__name__)
 
 ChromaMetadata = dict[str, str | int]
+ChromaWhere = dict[str, str | dict[str, list[str]]]
 
 
 class ChromaGetResult(TypedDict):
@@ -53,7 +54,7 @@ class ChromaCollection(Protocol):
         *,
         query_embeddings: list[list[float]],
         n_results: int,
-        where: dict[str, str],
+        where: ChromaWhere,
     ) -> ChromaQueryResult: ...
 
     def delete(self, *, ids: list[str]) -> None: ...
@@ -142,14 +143,19 @@ class ChromaRepository:
         self,
         *,
         game_id: str,
+        manual_ids: list[str],
         query_embedding: list[float],
         top_k: int,
     ) -> list[RetrievedChunkData]:
         """
-        Recupera candidatos por juego; API rehidrata el texto desde Postgres.
+        Recupera candidatos dentro de los manuales autorizados del juego.
+
+        La API decide en Postgres qué manuales puede consultar el usuario y la
+        búsqueda queda acotada a esos manuales, no al juego completo.
 
         Args:
-            game_id (str): Juego sobre el que se restringe la búsqueda.
+            game_id (str): Juego consultado. Solo aparece en trazas y errores.
+            manual_ids (list[str]): Manuales autorizados que acotan la búsqueda.
             query_embedding (list[float]): Embedding de la pregunta del usuario.
             top_k (int): Número máximo de candidatos a devolver.
 
@@ -160,7 +166,7 @@ class ChromaRepository:
         result = collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
-            where={"game_id": game_id},
+            where={"manual_id": {"$in": manual_ids}},
         )
         ids = result["ids"][0]
         if not ids:

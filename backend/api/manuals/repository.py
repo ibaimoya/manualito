@@ -521,7 +521,7 @@ async def begin_manual_reprocessing(
     """Reclama un manual quieto para reindexar y devuelve chunks obsoletos.
 
     El UPDATE condicional sobre el estado es la barrera frente a peticiones
-    concurrentes: solo una pasa el manual a 'indexing'; el resto recibe 409.
+    concurrentes: solo una pasa el manual a 'indexing'. El resto recibe 409.
     """
     claim = await session.execute(
         update(Manual)
@@ -846,6 +846,34 @@ async def mark_manual_failed(session: AsyncSession, *, manual_id: UUID) -> None:
     await session.flush()
 
 
+async def load_authorized_manual_ids(
+    session: AsyncSession,
+    *,
+    game_id: UUID,
+    current_user_id: UUID,
+) -> list[UUID]:
+    """Lista los ids de manuales del juego que el usuario puede consultar.
+
+    Args:
+        session (AsyncSession): Sesión activa de la petición.
+        game_id (UUID): Juego cuyos manuales se consultan.
+        current_user_id (UUID): Usuario que hace la consulta.
+
+    Returns:
+        list[UUID]: Ids de manuales autorizados, ordenados por id.
+    """
+    result = await session.scalars(
+        select(Manual.id)
+        .where(
+            Manual.game_id == game_id,
+            Manual.deleted_at.is_(None),
+            _retrievable_manual_filter(current_user_id),
+        )
+        .order_by(Manual.id)
+    )
+    return list(result)
+
+
 async def load_authorized_chunks(
     session: AsyncSession,
     *,
@@ -876,6 +904,27 @@ async def load_authorized_chunks(
     return ordered
 
 
+def _retrievable_manual_filter(current_user_id: UUID) -> ColumnElement[bool]:
+    """Construye la condición de manuales consultables por un usuario.
+
+    Un manual se puede consultar si está compartido y activo, o si es del
+    propio usuario y está activo o pendiente de revisión.
+
+    Args:
+        current_user_id (UUID): Usuario que hace la consulta.
+
+    Returns:
+        ColumnElement[bool]: Condición lista para un WHERE sobre Manual.
+    """
+    return or_(
+        ((Manual.visibility == "shared") & (Manual.status == "active")),
+        (
+            (Manual.owner_user_id == current_user_id)
+            & (Manual.status.in_(("active", "pending_review")))
+        ),
+    )
+
+
 def _authorized_chunks_query(
     game_id: UUID,
     current_user_id: UUID,
@@ -897,13 +946,7 @@ def _authorized_chunks_query(
             ManualChunk.id.in_(chunk_ids),
             Manual.game_id == game_id,
             Manual.deleted_at.is_(None),
-            or_(
-                ((Manual.visibility == "shared") & (Manual.status == "active")),
-                (
-                    (Manual.owner_user_id == current_user_id)
-                    & (Manual.status.in_(("active", "pending_review")))
-                ),
-            ),
+            _retrievable_manual_filter(current_user_id),
         )
     )
 

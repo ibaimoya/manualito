@@ -4,31 +4,32 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | auditoria-2026-08-09 | 2026-08-09T17:53:18Z | 24 | 0,7917 | 0,7917 | 0,4979 | 0 |
 | local-939812b83bbe | 2026-08-11T15:38:54Z | 24 | 0,7917 | 0,7917 | 0,4979 | 0 |
+| local-980801caf68c | 2026-08-14T06:10:59Z | 24 | 0,7917 | 0,8750 | 0,5184 | 0 |
 
-## Desglose de `local-939812b83bbe`
+## Desglose de `local-980801caf68c`
 
 ### Por juego
 
 | Grupo | Total | Recall@5 | Recall@10 | MRR |
 | --- | --- | --- | --- | --- |
 | Catan | 15 | 0,9333 | 0,9333 | 0,5800 |
-| Monopoly | 9 | 0,5556 | 0,5556 | 0,3611 |
+| Monopoly | 9 | 0,5556 | 0,7778 | 0,4157 |
 
 ### Por origen
 
 | Grupo | Total | Recall@5 | Recall@10 | MRR |
 | --- | --- | --- | --- | --- |
-| auditoria | 4 | 0,2500 | 0,2500 | 0,2500 |
-| gemma | 20 | 0,9000 | 0,9000 | 0,5475 |
+| auditoria | 4 | 0,2500 | 0,7500 | 0,3501 |
+| gemma | 20 | 0,9000 | 0,9000 | 0,5520 |
 
 ## Casos fallidos en recall@5
 
 | ID | Juego | Origen | Posición | Pregunta |
 | --- | --- | --- | --- | --- |
 | pregunta-004 | Catan | gemma | >20 | ¿Qué debe recibir cada jugador al empezar? |
-| pregunta-020 | Monopoly | gemma | >20 | ¿Cómo se empieza a jugar? |
-| pregunta-021 | Monopoly | auditoria | >20 | Para cuantos jugadores es el juego? |
-| pregunta-022 | Monopoly | auditoria | >20 | cuanta gente puede jugar a la vez? |
-| pregunta-023 | Monopoly | auditoria | >20 | Cuanto dinero recibe cada jugador al empezar? |
+| pregunta-020 | Monopoly | gemma | 11 | ¿Cómo se empieza a jugar? |
+| pregunta-021 | Monopoly | auditoria | 7 | Para cuantos jugadores es el juego? |
+| pregunta-022 | Monopoly | auditoria | 11 | cuanta gente puede jugar a la vez? |
+| pregunta-023 | Monopoly | auditoria | 6 | Cuanto dinero recibe cada jugador al empezar? |
 
 La línea histórica no conserva candidatos (`top_5 = null`). Las mediciones locales guardan como máximo cinco identificadores por pregunta.

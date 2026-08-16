@@ -71,6 +71,7 @@ celery_app.conf.update(
         "api.worker.tasks.manuals.finalize_manual_task": {"queue": "rag"},
         "api.worker.tasks.manuals.sync_page_rag_task": {"queue": "rag"},
         "api.worker.tasks.manuals.delete_chunks_from_rag_task": {"queue": "rag"},
+        "api.worker.tasks.manuals.reindex_manual_task": {"queue": "rag"},
         "api.worker.tasks.manuals.reconcile_pending_asset_batches": {"queue": "manuals"},
         "api.worker.tasks.conversations.generate_chat_reply_task": {"queue": "gpu"},
         "api.worker.tasks.conversations.refresh_conversation_title_task": {"queue": "gpu"},

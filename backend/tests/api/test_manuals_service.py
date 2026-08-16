@@ -22,6 +22,7 @@ from api.manuals.dto import (
     AuthorizedChunk,
     DeletedManualAssets,
     ManualPageForProcessing,
+    ReconciliationPlan,
     ValidatedManualImage,
 )
 from api.manuals.exceptions import (
@@ -1352,3 +1353,270 @@ def _blank_pdf_bytes(tmp_path: Path) -> bytes:
     finally:
         document.close()
     return path.read_bytes()
+
+
+@pytest.mark.parametrize(
+    ("inventory", "expected", "alive", "plan_esperado"),
+    [
+        pytest.param(
+            {"manual-sin-deriva": ["chunk-beta", "chunk-alfa"]},
+            {"manual-sin-deriva": {"chunk-alfa", "chunk-beta"}},
+            {"manual-sin-deriva"},
+            ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[]),
+            id="sin_deriva",
+        ),
+        pytest.param(
+            {"manual-borrado": ["chunk-zeta", "chunk-gamma"]},
+            {},
+            set(),
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "manual-borrado": ["chunk-gamma", "chunk-zeta"],
+                },
+                stale_manual_ids=[],
+            ),
+            id="manual_borrado_huerfano",
+        ),
+        pytest.param(
+            {"manual-indexando": ["chunk-temporal"]},
+            {},
+            {"manual-indexando"},
+            ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[]),
+            id="manual_vivo_en_zona_gris",
+        ),
+        pytest.param(
+            {"manual-incompleto": ["chunk-presente"]},
+            {
+                "manual-incompleto": {
+                    "chunk-presente",
+                    "chunk-ausente",
+                }
+            },
+            {"manual-incompleto"},
+            ReconciliationPlan(
+                orphan_chunk_ids={},
+                stale_manual_ids=["manual-incompleto"],
+            ),
+            id="chunk_faltante",
+        ),
+        pytest.param(
+            {
+                "manual-con-sobrante": [
+                    "chunk-valido",
+                    "chunk-sobrante",
+                ]
+            },
+            {"manual-con-sobrante": {"chunk-valido"}},
+            {"manual-con-sobrante"},
+            ReconciliationPlan(
+                orphan_chunk_ids={},
+                stale_manual_ids=["manual-con-sobrante"],
+            ),
+            id="chunk_sobrante",
+        ),
+        pytest.param(
+            {},
+            {
+                "manual-zeta": {"chunk-zeta"},
+                "manual-alfa": {"chunk-alfa"},
+            },
+            {"manual-zeta", "manual-alfa"},
+            ReconciliationPlan(
+                orphan_chunk_ids={},
+                stale_manual_ids=["manual-alfa", "manual-zeta"],
+            ),
+            id="inventario_vacio_con_esperados",
+        ),
+        pytest.param(
+            {"identificador-invalido": ["chunk-invalido"]},
+            {},
+            set(),
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "identificador-invalido": ["chunk-invalido"],
+                },
+                stale_manual_ids=[],
+            ),
+            id="identificador_malformado_huerfano",
+        ),
+    ],
+)
+def test_plan_rag_reconciliation_clasifica_la_deriva(
+    inventory: dict[str, list[str]],
+    expected: dict[str, set[str]],
+    alive: set[str],
+    plan_esperado: ReconciliationPlan,
+) -> None:
+    """El plan clasifica el desfase sin modificar manuales vivos de la zona gris."""
+    plan = manual_service.plan_rag_reconciliation(
+        inventory=inventory,
+        expected=expected,
+        alive=alive,
+    )
+
+    assert plan == plan_esperado
+
+
+def _patch_reindex_http_client(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    client: object,
+) -> None:
+    """Sustituye el cliente HTTP interno por un contexto asíncrono."""
+    monkeypatch.setattr(
+        manual_service,
+        "_internal_http_client",
+        lambda: _AsyncContext(client),
+    )
+
+
+def _fail_if_reindex_opens_http() -> _AsyncContext:
+    """Falla si la reindexación intenta abrir el cliente HTTP."""
+    raise AssertionError("No debía abrirse el cliente HTTP")
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_reingesta_chunks_y_persiste_indice(monkeypatch) -> None:
+    """Un manual indexable conserva en Postgres el resultado devuelto por RAG."""
+    session = _session()
+    manual = SimpleNamespace(status="active", deleted_at=None)
+    chunk_id = uuid4()
+    chunks = [SimpleNamespace(id=chunk_id)]
+    client = object()
+    response = {
+        "chunk_ids": [str(chunk_id)],
+        "chunks_indexed": 1,
+        "embedding_model": "test-embedding",
+        "indexed_at": "2026-08-16T10:00:00+00:00",
+    }
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_reindex_http_client(monkeypatch, client=client)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=chunks)
+    index_mock = AsyncMock(return_value=response)
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    chunks_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    index_mock.assert_awaited_once_with(client=client, manual=manual, chunks=chunks)
+    mark_mock.assert_awaited_once()
+    assert mark_mock.await_args.args == (session,)
+    assert mark_mock.await_args.kwargs["manual_id"] == _MANUAL_ID
+    assert mark_mock.await_args.kwargs["chunk_ids"] == {chunk_id}
+    assert mark_mock.await_args.kwargs["embedding_model"] == "test-embedding"
+    assert (
+        mark_mock.await_args.kwargs["indexed_at"].isoformat()
+        == "2026-08-16T10:00:00+00:00"
+    )
+    assert session.commits == 1
+
+
+@pytest.mark.parametrize(
+    "manual",
+    [
+        pytest.param(None, id="inexistente"),
+        pytest.param(
+            SimpleNamespace(status="active", deleted_at=object()),
+            id="borrado",
+        ),
+        pytest.param(
+            SimpleNamespace(status="indexing", deleted_at=None),
+            id="zona-gris",
+        ),
+    ],
+)
+@pytest.mark.anyio
+async def test_reindex_manual_ignora_manuales_fuera_del_indice(
+    monkeypatch,
+    manual: SimpleNamespace | None,
+) -> None:
+    """Los manuales no indexables no consultan chunks ni abren la frontera HTTP."""
+    session = _session()
+    _patch_sessionmaker(monkeypatch, session=session)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=[SimpleNamespace(id=uuid4())])
+    index_mock = AsyncMock()
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(
+        manual_service,
+        "_internal_http_client",
+        _fail_if_reindex_opens_http,
+    )
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    chunks_mock.assert_not_awaited()
+    index_mock.assert_not_awaited()
+    mark_mock.assert_not_awaited()
+    assert session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_sin_chunks_no_abre_la_frontera_http(monkeypatch) -> None:
+    """Un manual sin chunks termina sin llamar a RAG ni persistir cambios."""
+    session = _session()
+    manual = SimpleNamespace(status="active", deleted_at=None)
+    _patch_sessionmaker(monkeypatch, session=session)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=[])
+    index_mock = AsyncMock()
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(
+        manual_service,
+        "_internal_http_client",
+        _fail_if_reindex_opens_http,
+    )
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    chunks_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    index_mock.assert_not_awaited()
+    mark_mock.assert_not_awaited()
+    assert session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_registra_api_error_y_permite_reintento(
+    monkeypatch,
+    caplog,
+) -> None:
+    """Un fallo controlado de RAG se registra sin propagarse ni confirmar cambios."""
+    session = _session()
+    manual = SimpleNamespace(status="active", deleted_at=None)
+    chunks = [SimpleNamespace(id=uuid4())]
+    client = object()
+    _patch_sessionmaker(monkeypatch, session=session)
+    _patch_reindex_http_client(monkeypatch, client=client)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=chunks)
+    index_mock = AsyncMock(side_effect=InternalServiceError("detalle interno"))
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    with caplog.at_level("WARNING", logger=manual_service.__name__):
+        await manual_service.reindex_manual(_MANUAL_ID)
+
+    index_mock.assert_awaited_once_with(client=client, manual=manual, chunks=chunks)
+    mark_mock.assert_not_awaited()
+    assert session.commits == 0
+    assert str(_MANUAL_ID) in caplog.text
+    assert "No se pudo reindexar" in caplog.text

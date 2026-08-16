@@ -34,6 +34,7 @@ from api.manuals.dto import (
     ManualPageForProcessing,
     PageEditResult,
     PreparedChunk,
+    ReconciliationPlan,
     StoredManualImage,
     StoredManualPdf,
     ValidatedManualImage,
@@ -51,6 +52,7 @@ from api.manuals.exceptions import (
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
+    INDEXED_MANUAL_STATUSES,
     asset_storage_prefix_is_referenced,
     attach_page_image_asset,
     begin_manual_reprocessing,
@@ -1161,3 +1163,81 @@ async def reconcile_pending_asset_batches() -> tuple[int, int]:
             else:
                 deleted += 1
     return adopted, deleted
+
+
+def plan_rag_reconciliation(
+    *,
+    inventory: dict[str, list[str]],
+    expected: dict[str, set[str]],
+    alive: set[str],
+) -> ReconciliationPlan:
+    """Construye el plan de reparación de el desfase del índice RAG.
+
+    Args:
+        inventory (dict[str, list[str]]): Chunks presentes en el índice por manual.
+        expected (dict[str, set[str]]): Chunks que Postgres espera por manual.
+        alive (set[str]): Identificadores de todos los manuales vivos.
+
+    Returns:
+        ReconciliationPlan: Huérfanos y manuales desincronizados en orden estable.
+    """
+    orphan_chunk_ids = {
+        manual_id: sorted(inventory[manual_id])
+        for manual_id in sorted(inventory)
+        if manual_id not in alive
+    }
+    stale_manual_ids = sorted(
+        manual_id
+        for manual_id, expected_chunk_ids in expected.items()
+        if set(inventory.get(manual_id, [])) != expected_chunk_ids
+    )
+    return ReconciliationPlan(
+        orphan_chunk_ids=orphan_chunk_ids,
+        stale_manual_ids=stale_manual_ids,
+    )
+
+
+async def reindex_manual(manual_id: UUID) -> None:
+    """Reconstruye en RAG el índice de un manual persistido.
+
+    Args:
+        manual_id (UUID): Identificador del manual que debe reindexarse.
+
+    Returns:
+        None: La operación no devuelve ningún valor.
+    """
+    async with get_sessionmaker()() as session:
+        manual = await get_manual_for_processing(session, manual_id=manual_id)
+        if (
+            manual is None
+            or manual.deleted_at is not None
+            or manual.status not in INDEXED_MANUAL_STATUSES
+        ):
+            return
+        chunks = await list_manual_chunks_for_ingest(session, manual_id=manual_id)
+        if not chunks:
+            return
+        try:
+            async with _internal_http_client() as client:
+                chunk_ids, embedding_model, indexed_at = _parse_rag_ingest_response(
+                    await _index_manual_in_rag(
+                        client=client,
+                        manual=manual,
+                        chunks=chunks,
+                    )
+                )
+        except ApiError:
+            logger.warning(
+                "No se pudo reindexar el manual '%s' en RAG.",
+                safe_for_log(str(manual_id)),
+                exc_info=True,
+            )
+            return
+        await mark_manual_indexed(
+            session,
+            manual_id=manual_id,
+            chunk_ids=chunk_ids,
+            embedding_model=embedding_model,
+            indexed_at=indexed_at,
+        )
+        await session.commit()

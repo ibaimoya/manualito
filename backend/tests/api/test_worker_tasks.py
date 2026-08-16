@@ -593,3 +593,13 @@ def test_recover_stale_manual_pages_enqueues_finalizers(monkeypatch):
     maintenance_tasks.recover_stale_manual_pages.run()
 
     finalize_delay.assert_called_once_with(str(_MANUAL_ID))
+
+
+def test_reindex_manual_task_parsea_uuid(monkeypatch) -> None:
+    """La task entrega al servicio el UUID deserializado del manual."""
+    reindex_mock = AsyncMock()
+    monkeypatch.setattr(manual_tasks.service, "reindex_manual", reindex_mock)
+
+    manual_tasks.reindex_manual_task.run(str(_MANUAL_ID))
+
+    reindex_mock.assert_awaited_once_with(_MANUAL_ID)

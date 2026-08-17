@@ -1,4 +1,4 @@
-"""Tests de la consulta de manuales autorizados contra un Postgres migrado."""
+"""Tests del contexto de recuperación autorizado contra un Postgres migrado."""
 
 import asyncio
 import os
@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from api.manuals.repository import (
     list_alive_manual_ids,
     list_expected_chunk_ids,
-    load_authorized_manual_ids,
+    load_game_retrieval_context,
 )
 from database.models.game import Game
 from database.models.manual import Manual, ManualChunk
@@ -54,8 +54,14 @@ _CASOS_MANUALES_VIVOS = (
     [caso[1:] for caso in _CASOS_VISIBILIDAD],
     ids=[caso[0] for caso in _CASOS_VISIBILIDAD],
 )
-def test_manual_autorizado_segun_visibilidad(duenyo, visibilidad, estado, borrado, esperado):
-    """Un manual entra en la lista solo si el usuario que consulta puede verlo."""
+def test_manual_autorizado_segun_visibilidad(
+    duenyo: str,
+    visibilidad: str,
+    estado: str,
+    borrado: bool,
+    esperado: bool,
+) -> None:
+    """Un manual entra en el contexto solo si el usuario que consulta puede verlo."""
 
     async def caso(session: AsyncSession) -> None:
         consultante, otro, juego = await _siembra_base(session)
@@ -69,17 +75,20 @@ def test_manual_autorizado_segun_visibilidad(duenyo, visibilidad, estado, borrad
         session.add(manual)
         await session.flush()
 
-        ids = await load_authorized_manual_ids(
-            session, game_id=juego.id, current_user_id=consultante.id
+        game_name, ids = await load_game_retrieval_context(
+            session,
+            game_id=juego.id,
+            current_user_id=consultante.id,
         )
 
+        assert game_name == (juego.name if esperado else "")
         assert (manual.id in ids) == esperado
 
     _ejecuta(caso)
 
 
-def test_manuales_de_otro_juego_quedan_fuera():
-    """La lista se limita al juego consultado aunque haya manuales visibles en otros."""
+def test_manuales_de_otro_juego_quedan_fuera() -> None:
+    """El contexto se limita al juego consultado aunque existan otros visibles."""
 
     async def caso(session: AsyncSession) -> None:
         consultante, _, juego = await _siembra_base(session)
@@ -87,27 +96,61 @@ def test_manuales_de_otro_juego_quedan_fuera():
         session.add(otro_juego)
         await session.flush()
         session.add(
-            _manual(owner=consultante, game=otro_juego, visibility="shared", status="active")
+            _manual(
+                owner=consultante,
+                game=otro_juego,
+                visibility="shared",
+                status="active",
+            )
         )
         await session.flush()
 
-        ids = await load_authorized_manual_ids(
-            session, game_id=juego.id, current_user_id=consultante.id
+        context = await load_game_retrieval_context(
+            session,
+            game_id=juego.id,
+            current_user_id=consultante.id,
         )
 
-        assert ids == []
+        assert context == ("", [])
 
     _ejecuta(caso)
 
 
-def test_ids_autorizados_ordenados_y_completos():
-    """Con varios manuales visibles devuelve todos sus ids en orden estable."""
+def test_juego_sin_manuales_devuelve_contexto_vacio() -> None:
+    """Un juego sin manuales devuelve nombre e ids vacíos."""
+
+    async def caso(session: AsyncSession) -> None:
+        consultante, _, juego = await _siembra_base(session)
+
+        context = await load_game_retrieval_context(
+            session,
+            game_id=juego.id,
+            current_user_id=consultante.id,
+        )
+
+        assert context == ("", [])
+
+    _ejecuta(caso)
+
+
+def test_contexto_autorizado_devuelve_nombre_e_ids_ordenados() -> None:
+    """Con varios manuales visibles devuelve el nombre y todos los ids ordenados."""
 
     async def caso(session: AsyncSession) -> None:
         consultante, otro, juego = await _siembra_base(session)
         visibles = [
-            _manual(owner=consultante, game=juego, visibility="private", status="active"),
-            _manual(owner=otro, game=juego, visibility="shared", status="active"),
+            _manual(
+                owner=consultante,
+                game=juego,
+                visibility="private",
+                status="active",
+            ),
+            _manual(
+                owner=otro,
+                game=juego,
+                visibility="shared",
+                status="active",
+            ),
             _manual(
                 owner=consultante,
                 game=juego,
@@ -116,13 +159,23 @@ def test_ids_autorizados_ordenados_y_completos():
             ),
         ]
         session.add_all(visibles)
-        session.add(_manual(owner=otro, game=juego, visibility="private", status="active"))
+        session.add(
+            _manual(
+                owner=otro,
+                game=juego,
+                visibility="private",
+                status="active",
+            )
+        )
         await session.flush()
 
-        ids = await load_authorized_manual_ids(
-            session, game_id=juego.id, current_user_id=consultante.id
+        game_name, ids = await load_game_retrieval_context(
+            session,
+            game_id=juego.id,
+            current_user_id=consultante.id,
         )
 
+        assert game_name == juego.name
         assert ids == sorted(manual.id for manual in visibles)
 
     _ejecuta(caso)
@@ -234,7 +287,12 @@ def test_ids_de_chunks_esperados_se_agrupan_por_manual_indexable() -> None:
         )
         await session.flush()
 
-        sin_chunks = _manual(owner=consultante, game=juego, visibility="shared", status="active")
+        sin_chunks = _manual(
+            owner=consultante,
+            game=juego,
+            visibility="shared",
+            status="active",
+        )
         session.add(sin_chunks)
         await session.flush()
 

@@ -29,6 +29,7 @@ class GenerateRequest(StrictModel):
     context_chunks: ContextChunks
     chat_history: list[ChatHistoryMessage] = Field(default_factory=list, max_length=20)
     manual_id: str | None = None
+    game_name: str | None = None
     language: Language = "es"
 
 

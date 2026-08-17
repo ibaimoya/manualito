@@ -988,8 +988,8 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     monkeypatch.setattr(retrieval_service, "load_authorized_chunks", load_chunks_mock)
     monkeypatch.setattr(
         retrieval_service,
-        "load_authorized_manual_ids",
-        AsyncMock(return_value=[_MANUAL_ID]),
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Catan", [_MANUAL_ID])),
     )
 
     session = _session()
@@ -1015,6 +1015,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["game_id"] == str(_GAME_ID)
     assert rag_payload["manual_ids"] == [str(_MANUAL_ID)]
+    assert rag_payload["question"] == "Manual de Catan: ¿Cómo se gana?"
     assert rag_payload["top_k"] == 3
     assert load_chunks_mock.await_args.kwargs["chunk_ids"] == [
         _CHUNK_ID,
@@ -1023,6 +1024,8 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     ]
     assert session.rollbacks == 2
     assert "manual_id" not in llm_payload
+    assert llm_payload["game_name"] == "Catan"
+    assert llm_payload["question"] == "¿Cómo se gana?"
     assert llm_payload["context_chunks"] == ["Texto A", "Texto B"]
     assert llm_payload["language"] == "en"
 
@@ -1056,8 +1059,8 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
     )
     monkeypatch.setattr(
         retrieval_service,
-        "load_authorized_manual_ids",
-        AsyncMock(return_value=[_MANUAL_ID]),
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Catan", [_MANUAL_ID])),
     )
     session = _session()
 
@@ -1073,14 +1076,66 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_answer_game_question_prefija_la_reformulacion(monkeypatch) -> None:
+    """La búsqueda usa el juego y la pregunta reformulada, nunca la original."""
+    post_json_mock = AsyncMock(
+        side_effect=[
+            {"chunks": [{"id": str(_CHUNK_ID)}]},
+            {"answer": "Respuesta corta."},
+        ]
+    )
+    monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Rummikub", [_MANUAL_ID])),
+    )
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_chunks",
+        AsyncMock(
+            return_value=[
+                AuthorizedChunk(
+                    id=_CHUNK_ID,
+                    text="Texto A",
+                    content_hash="hash",
+                    manual_id=_MANUAL_ID,
+                    manual_title=None,
+                    source_page=1,
+                    is_own=True,
+                )
+            ]
+        ),
+    )
+    session = _session()
+
+    await retrieval_service.generate_game_answer(
+        session,
+        current_user_id=_USER_ID,
+        game_id=_GAME_ID,
+        question="¿Y con dos personas?",
+        top_k=2,
+        client=object(),
+        retrieval_question="¿Se puede jugar al Rummikub con dos personas?",
+    )
+
+    rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
+    llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
+    assert rag_payload["question"] == (
+        "Manual de Rummikub: ¿Se puede jugar al Rummikub con dos personas?"
+    )
+    assert llm_payload["question"] == "¿Y con dos personas?"
+
+
+@pytest.mark.anyio
 async def test_answer_game_question_corta_sin_llamar_a_rag_si_no_hay_manuales(monkeypatch):
     """Sin manuales autorizados se corta en el acto, sin llamar siquiera a RAG."""
     post_json_mock = AsyncMock()
     monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
     monkeypatch.setattr(
         retrieval_service,
-        "load_authorized_manual_ids",
-        AsyncMock(return_value=[]),
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Monopoly", [])),
     )
     session = _session()
 
@@ -1108,8 +1163,8 @@ async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
     )
     monkeypatch.setattr(
         retrieval_service,
-        "load_authorized_manual_ids",
-        AsyncMock(return_value=[_MANUAL_ID]),
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Catan", [_MANUAL_ID])),
     )
     session = _session()
 

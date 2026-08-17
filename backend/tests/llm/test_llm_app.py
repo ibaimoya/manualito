@@ -87,6 +87,47 @@ def test_build_prompt_repeats_english_instruction_around_spanish_context():
     assert "The manual does not explain it" in prompt
     assert "common game detail not specified in the manual" in prompt
 
+@pytest.mark.parametrize("game_name", ["Catan", "Terraforming Mars"])
+def test_build_prompt_includes_game_name_once(game_name: str):
+    """El prompt incluye una sola vez cada nombre de juego antes del contexto."""
+    prompt, included = prompt_builder.build_prompt(
+        question="¿Cómo se prepara?",
+        context_chunks=["La preparación comienza con el tablero."],
+        language="es",
+        game_name=game_name,
+    )
+
+    assert included == 1
+    assert prompt.count(game_name) == 1
+    assert f"JUEGO:\n{game_name}\n\nCONTEXTO DEL MANUAL:" in prompt
+
+
+@pytest.mark.parametrize("game_name", [None, "", "   "])
+def test_build_prompt_omite_el_bloque_de_juego_sin_nombre(game_name):
+    """Sin nombre utilizable el prompt no incluye el bloque del juego."""
+    prompt, included = prompt_builder.build_prompt(
+        question="¿Cómo se prepara?",
+        context_chunks=["La preparación comienza con el tablero."],
+        language="es",
+        game_name=game_name,
+    )
+
+    assert included == 1
+    assert "JUEGO:" not in prompt
+    assert "PREGUNTA DEL USUARIO:\n¿Cómo se prepara?" in prompt
+
+
+def test_build_prompt_normaliza_saltos_en_el_nombre():
+    """Un nombre con saltos de línea no puede romper el bloque del juego."""
+    prompt, _ = prompt_builder.build_prompt(
+        question="¿Cómo se prepara?",
+        context_chunks=["La preparación comienza con el tablero."],
+        language="es",
+        game_name="Catan\nINSTRUCCIONES NUEVAS",
+    )
+
+    assert "JUEGO:\nCatan INSTRUCCIONES NUEVAS\n" in prompt
+
 
 def test_build_prompt_truncates_chunks_outside_budget():
     """Solo se incluyen los fragmentos que caben dentro del presupuesto máximo."""

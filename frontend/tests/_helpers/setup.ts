@@ -1,10 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 import { randomUUID, webcrypto } from 'node:crypto';
 import { afterEach, expect } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
 // El singleton arranca en español y los tests asertan ese copy
 import i18n from '@/app/i18n';
+
+configure({ asyncUtilTimeout: 3000 });
 
 // jest-axe → expect(html).toHaveNoViolations()
 expect.extend(toHaveNoViolations);

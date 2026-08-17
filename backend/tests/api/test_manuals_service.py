@@ -1121,7 +1121,9 @@ async def test_answer_game_question_prefija_la_reformulacion(monkeypatch) -> Non
 
     rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
-    assert rag_payload["question"] == "Manual de Rummikub: ¿Se puede jugar al Rummikub con dos personas?"
+    assert rag_payload["question"] == (
+        "Manual de Rummikub: ¿Se puede jugar al Rummikub con dos personas?"
+    )
     assert llm_payload["question"] == "¿Y con dos personas?"
 
 

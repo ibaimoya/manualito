@@ -55,6 +55,7 @@ async def ingest_manual(payload: IngestRequest) -> IngestResponse:
         )
         raise RagIndexingError from rag_err
     finally:
+        # Ante una cancelación a mitad de escritura, la reconciliación periódica sana la deriva.
         get_lexical_cache().invalidate(payload.game_id)
 
     indexed_at = datetime.now(UTC).isoformat()

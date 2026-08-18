@@ -100,6 +100,7 @@ def test_rank_bm25_saturates_term_frequency() -> None:
     scores = dict(rank_bm25(index=index, query_tokens=["mader"]))
 
     assert scores[0] > scores[1] > 0.0
+    assert scores[0] < 3 * scores[1]
 
 
 def test_rank_bm25_normalizes_document_length() -> None:

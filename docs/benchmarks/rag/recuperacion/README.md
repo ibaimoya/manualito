@@ -87,7 +87,7 @@ El servicio RAG no publica su puerto en el host, así que no se puede consultar 
 docker exec -i manualito-rag python -
 ```
 
-Se usa el nombre fijo del contenedor por un motivo concreto. Docker Compose deduce el nombre de proyecto del directorio y en los worktrees ese nombre cambia, por lo que `docker compose exec` fallaría. El programa consulta `POST http://127.0.0.1:8002/retrieve` con los manuales autorizados del dataset y pide 20 candidatos. Desde la issue #84 el filtro de permisos se aplica en la propia consulta. Desde la issue #85 la pregunta de búsqueda lleva delante "Manual de {juego}", como hace la API. El programa solo replica la deduplicación por `content_hash` del producto.
+Se usa el nombre fijo del contenedor por un motivo concreto. Docker Compose deduce el nombre de proyecto del directorio y en los worktrees ese nombre cambia, por lo que `docker compose exec` fallaría. El programa consulta `POST http://127.0.0.1:8002/retrieve` con los manuales autorizados del dataset y pide 20 candidatos. Desde la issue #84 el filtro de permisos se aplica en la propia consulta. Desde la issue #85 la pregunta de búsqueda lleva delante "Manual de {juego}", como hace la API. Desde la issue #86 la búsqueda es híbrida: la pregunta con prefijo alimenta la pata semántica, la cruda alimenta la de palabras exactas y RRF fusiona sus resultados. El programa solo replica la deduplicación por `content_hash` del producto.
 
 Si Docker, el servicio RAG o Chroma fallan, la ejecución termina con `[!] ERROR:` y no persiste nada. Un fallo de infraestructura no debe quedar registrado como si fuera un fallo de relevancia.
 

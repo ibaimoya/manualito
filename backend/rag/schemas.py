@@ -41,6 +41,7 @@ class RetrieveRequest(StrictModel):
     game_id: str = Field(min_length=1)
     manual_ids: list[ManualId] = Field(min_length=1)
     question: Question
+    lexical_question: Question | None = None
     top_k: TopK = 10
 
 

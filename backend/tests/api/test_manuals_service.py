@@ -1016,6 +1016,7 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     assert rag_payload["game_id"] == str(_GAME_ID)
     assert rag_payload["manual_ids"] == [str(_MANUAL_ID)]
     assert rag_payload["question"] == "Manual de Catan: ¿Cómo se gana?"
+    assert rag_payload["lexical_question"] == "¿Cómo se gana?"
     assert rag_payload["top_k"] == 3
     assert load_chunks_mock.await_args.kwargs["chunk_ids"] == [
         _CHUNK_ID,
@@ -1123,6 +1124,9 @@ async def test_answer_game_question_prefija_la_reformulacion(monkeypatch) -> Non
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["question"] == (
         "Manual de Rummikub: ¿Se puede jugar al Rummikub con dos personas?"
+    )
+    assert rag_payload["lexical_question"] == (
+        "¿Se puede jugar al Rummikub con dos personas?"
     )
     assert llm_payload["question"] == "¿Y con dos personas?"
 

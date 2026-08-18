@@ -240,10 +240,6 @@ class FakeChromaCollection(ChromaCollection):
                 for record_id in self._query_order
                 if record_id in by_id
             ]
-            ordered_ids = set(self._query_order)
-            ordered.extend(
-                record for record in matching if record["id"] not in ordered_ids
-            )
             matching = ordered
 
         selected = matching[:n_results]

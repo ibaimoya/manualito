@@ -1689,6 +1689,7 @@ rag = [
     { name = "numpy" },
     { name = "pydantic" },
     { name = "sentence-transformers" },
+    { name = "snowballstemmer" },
     { name = "starlette" },
     { name = "torch", version = "2.13.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' or (extra == 'group-9-manualito-ocr-paddle-cpu' and extra == 'group-9-manualito-ocr-paddle-gpu')" },
     { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin' or (extra == 'group-9-manualito-ocr-paddle-cpu' and extra == 'group-9-manualito-ocr-paddle-gpu')" },
@@ -1719,6 +1720,7 @@ test = [
     { name = "redis" },
     { name = "ruff" },
     { name = "slowapi" },
+    { name = "snowballstemmer" },
     { name = "sqlalchemy" },
     { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1749,6 +1751,7 @@ typecheck = [
     { name = "redis" },
     { name = "ruff" },
     { name = "slowapi" },
+    { name = "snowballstemmer" },
     { name = "sqlalchemy" },
     { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1859,6 +1862,7 @@ rag = [
     { name = "numpy", specifier = "==2.3.5" },
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "sentence-transformers", specifier = "==5.7.0" },
+    { name = "snowballstemmer", specifier = "==3.1.1" },
     { name = "starlette", specifier = "==1.4.1" },
     { name = "torch", specifier = "==2.13.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.52.1" },
@@ -1888,6 +1892,7 @@ test = [
     { name = "redis", specifier = "==6.4.0" },
     { name = "ruff", specifier = "==0.16.1" },
     { name = "slowapi", specifier = "==0.1.10" },
+    { name = "snowballstemmer", specifier = "==3.1.1" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
     { name = "starlette", specifier = "==1.4.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.52.1" },
@@ -1918,6 +1923,7 @@ typecheck = [
     { name = "redis", specifier = "==6.4.0" },
     { name = "ruff", specifier = "==0.16.1" },
     { name = "slowapi", specifier = "==0.1.10" },
+    { name = "snowballstemmer", specifier = "==3.1.1" },
     { name = "sqlalchemy", specifier = "==2.0.51" },
     { name = "starlette", specifier = "==1.4.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.52.1" },
@@ -3722,6 +3728,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b9/52/24527cf25a8b508926aff53350b0136561dfe86c7125f61526653666e1b2/slowapi-0.1.10.tar.gz", hash = "sha256:d320d5bc04d9f171a77fb16700faf3036d85b00f420f22924c8a225f95bd14f9", size = 13841, upload-time = "2026-06-13T11:59:31.571Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/8b/1d359f38706b4097d9a943bf8bd22599f537de4cbaff1e622d3e3936e164/slowapi-0.1.10-py3-none-any.whl", hash = "sha256:3acb61561dc9d687e3d3669362ff6a439de9ba44e2fed3a9c165da26b4b83e28", size = 14921, upload-time = "2026-06-13T11:59:30.485Z" },
+]
+
+[[package]]
+name = "snowballstemmer"
+version = "3.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/f8/0a71edf031f03c40db17503cb8ca78a69a171254e568e7db241b0ab57ea1/snowballstemmer-3.1.1.tar.gz", hash = "sha256:e07bbc54a0d798fe6010a12398422e62a8bfbba95c394fd0956ef58cb4d3e260", size = 123314, upload-time = "2026-06-03T00:56:40.194Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/07/2ebca9b11fb9be7340a818d8d6f63feaebb146be2c4afbd6061701d6df6e/snowballstemmer-3.1.1-py3-none-any.whl", hash = "sha256:7e207fa178741da09cdee59d3ecec3827ad5f92b1fc5c9ff3755b639f71f5752", size = 104164, upload-time = "2026-06-03T00:56:38.614Z" },
 ]
 
 [[package]]

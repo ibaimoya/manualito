@@ -11,6 +11,7 @@ from rag.exceptions import (
     RagInventoryError,
     RagRetrievalError,
 )
+from rag.lexical_cache import get_lexical_cache
 from rag.repository import RetrievedChunkData, get_repository
 from rag.schemas import (
     DeleteRequest,
@@ -49,6 +50,8 @@ async def ingest_manual(payload: IngestRequest) -> IngestResponse:
             safe_for_log(payload.manual_id),
         )
         raise RagIndexingError from rag_err
+    finally:
+        get_lexical_cache().invalidate(payload.game_id)
 
     indexed_at = datetime.now(UTC).isoformat()
     return IngestResponse(
@@ -99,6 +102,14 @@ async def retrieve_chunks(payload: RetrieveRequest) -> RetrieveResponse:
 async def delete_manual(payload: DeleteRequest) -> DeleteResponse:
     """Limpia de Chroma los chunks derivados de un manual borrado en Postgres."""
     try:
+        game_id = await asyncio.to_thread(
+            get_repository().get_game_id_of_manual,
+            manual_id=payload.manual_id,
+        )
+    except Exception:
+        game_id = None
+
+    try:
         chunks_deleted = await asyncio.to_thread(
             delete_sync,
             payload.manual_id,
@@ -110,6 +121,12 @@ async def delete_manual(payload: DeleteRequest) -> DeleteResponse:
             safe_for_log(payload.manual_id),
         )
         raise RagDeletionError from rag_err
+    finally:
+        lexical_cache = get_lexical_cache()
+        if game_id is None:
+            lexical_cache.invalidate_all()
+        else:
+            lexical_cache.invalidate(game_id)
 
     return DeleteResponse(
         manual_id=payload.manual_id,

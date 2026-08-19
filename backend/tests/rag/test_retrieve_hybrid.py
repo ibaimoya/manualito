@@ -332,16 +332,16 @@ async def test_hybrid_retrieval_preserves_context_not_found(
         query_distances=[],
     )
 
+    request = RetrieveRequest(
+        game_id=_GAME_ID,
+        manual_ids=[_MANUAL_ID],
+        question=_DENSE_QUESTION,
+        lexical_question=_LEXICAL_QUESTION,
+        top_k=4,
+    )
+
     with pytest.raises(ContextNotFoundError):
-        await rag_service.retrieve_chunks(
-            RetrieveRequest(
-                game_id=_GAME_ID,
-                manual_ids=[_MANUAL_ID],
-                question=_DENSE_QUESTION,
-                lexical_question=_LEXICAL_QUESTION,
-                top_k=4,
-            )
-        )
+        await rag_service.retrieve_chunks(request)
 
     assert harness.collection.query_calls[0]["n_results"] == 20
     assert harness.collection.get_calls == []

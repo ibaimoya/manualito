@@ -69,6 +69,98 @@ async def ingest_manual(payload: IngestRequest) -> IngestResponse:
     )
 
 
+def _deduplicate_dense_chunks(
+    *,
+    chunks: list[RetrievedChunkData],
+) -> tuple[dict[str, RetrievedChunkData], list[str]]:
+    """Deduplica la pata densa por hash conservando el primer resultado."""
+    chunks_by_hash: dict[str, RetrievedChunkData] = {}
+    hashes: list[str] = []
+    for chunk in chunks:
+        content_hash = chunk["content_hash"]
+        if content_hash in chunks_by_hash:
+            continue
+        chunks_by_hash[content_hash] = chunk
+        hashes.append(content_hash)
+
+    return chunks_by_hash, hashes
+
+
+async def _rank_authorized_lexical_chunks(
+    *,
+    game_id: str,
+    manual_ids: list[str],
+    query_tokens: list[str],
+) -> tuple[dict[str, ChunkRef], list[str]]:
+    """Obtiene la pata léxica limitada a los manuales autorizados."""
+    lexical_index = await get_lexical_cache().get(game_id)
+    ranking = rank_bm25(
+        index=lexical_index.bm25,
+        query_tokens=query_tokens,
+    )
+    authorized_manual_ids = set(manual_ids)
+    chunks_by_hash: dict[str, ChunkRef] = {}
+    hashes: list[str] = []
+
+    for document_position, _lexical_score in ranking:
+        document = lexical_index.docs[document_position]
+        occurrence = next(
+            (
+                candidate
+                for candidate in document.occurrences
+                if candidate.manual_id in authorized_manual_ids
+            ),
+            None,
+        )
+        if occurrence is None:
+            continue
+
+        chunks_by_hash[document.content_hash] = occurrence
+        hashes.append(document.content_hash)
+        if len(hashes) == _FUSION_CANDIDATES:
+            break
+
+    return chunks_by_hash, hashes
+
+
+def _fuse_hybrid_chunks(
+    *,
+    semantic_chunks: dict[str, RetrievedChunkData],
+    semantic_hashes: list[str],
+    lexical_chunks: dict[str, ChunkRef],
+    lexical_hashes: list[str],
+    top_k: int,
+) -> list[RetrievedChunkData]:
+    """Fusiona ambas patas y construye los chunks recuperados."""
+    fused_chunks: list[RetrievedChunkData] = []
+    for content_hash, rrf_score in fuse_rrf(
+        semantic=semantic_hashes,
+        lexical=lexical_hashes,
+    )[:top_k]:
+        dense_chunk = semantic_chunks.get(content_hash)
+        if dense_chunk is not None:
+            chunk_id = dense_chunk["id"]
+            chunk_index = dense_chunk["chunk_index"]
+            source_page = dense_chunk["source_page"]
+        else:
+            lexical_chunk = lexical_chunks[content_hash]
+            chunk_id = lexical_chunk.id
+            chunk_index = lexical_chunk.chunk_index
+            source_page = lexical_chunk.source_page
+
+        fused_chunks.append(
+            {
+                "id": chunk_id,
+                "chunk_index": chunk_index,
+                "source_page": source_page,
+                "content_hash": content_hash,
+                "score": round(rrf_score, 4),
+            }
+        )
+
+    return fused_chunks
+
+
 async def retrieve_chunks(payload: RetrieveRequest) -> RetrieveResponse:
     """
     Recupera candidatos autorizados mediante búsqueda densa o híbrida.
@@ -107,66 +199,23 @@ async def retrieve_chunks(payload: RetrieveRequest) -> RetrieveResponse:
         )
 
         if lexical_tokens:
-            semantic_chunks: dict[str, RetrievedChunkData] = {}
-            semantic_hashes: list[str] = []
-            for chunk in chunks:
-                content_hash = chunk["content_hash"]
-                if content_hash in semantic_chunks:
-                    continue
-                semantic_chunks[content_hash] = chunk
-                semantic_hashes.append(content_hash)
-
-            lexical_index = await get_lexical_cache().get(payload.game_id)
-            ranking = rank_bm25(
-                index=lexical_index.bm25,
-                query_tokens=lexical_tokens,
+            semantic_chunks, semantic_hashes = _deduplicate_dense_chunks(
+                chunks=chunks
             )
-            authorized_manual_ids = set(payload.manual_ids)
-            lexical_chunks: dict[str, ChunkRef] = {}
-            lexical_hashes: list[str] = []
-            for document_position, _lexical_score in ranking:
-                document = lexical_index.docs[document_position]
-                occurrence = next(
-                    (
-                        candidate
-                        for candidate in document.occurrences
-                        if candidate.manual_id in authorized_manual_ids
-                    ),
-                    None,
+            lexical_chunks, lexical_hashes = (
+                await _rank_authorized_lexical_chunks(
+                    game_id=payload.game_id,
+                    manual_ids=payload.manual_ids,
+                    query_tokens=lexical_tokens,
                 )
-                if occurrence is None:
-                    continue
-                lexical_chunks[document.content_hash] = occurrence
-                lexical_hashes.append(document.content_hash)
-                if len(lexical_hashes) == _FUSION_CANDIDATES:
-                    break
-
-            fused_chunks: list[RetrievedChunkData] = []
-            for content_hash, rrf_score in fuse_rrf(
-                semantic=semantic_hashes,
-                lexical=lexical_hashes,
-            )[: payload.top_k]:
-                dense_chunk = semantic_chunks.get(content_hash)
-                if dense_chunk is not None:
-                    chunk_id = dense_chunk["id"]
-                    chunk_index = dense_chunk["chunk_index"]
-                    source_page = dense_chunk["source_page"]
-                else:
-                    lexical_chunk = lexical_chunks[content_hash]
-                    chunk_id = lexical_chunk.id
-                    chunk_index = lexical_chunk.chunk_index
-                    source_page = lexical_chunk.source_page
-
-                fused_chunks.append(
-                    {
-                        "id": chunk_id,
-                        "chunk_index": chunk_index,
-                        "source_page": source_page,
-                        "content_hash": content_hash,
-                        "score": round(rrf_score, 4),
-                    }
-                )
-            chunks = fused_chunks
+            )
+            chunks = _fuse_hybrid_chunks(
+                semantic_chunks=semantic_chunks,
+                semantic_hashes=semantic_hashes,
+                lexical_chunks=lexical_chunks,
+                lexical_hashes=lexical_hashes,
+                top_k=payload.top_k,
+            )
     except ContextNotFoundError:
         raise
     except Exception as rag_err:

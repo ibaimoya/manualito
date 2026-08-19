@@ -1,6 +1,5 @@
 import asyncio
 import threading
-from collections.abc import Iterator
 
 import pytest
 
@@ -25,10 +24,9 @@ _CHUNK_ID = "44444444-4444-4444-8444-444444444444"
 @pytest.fixture(autouse=True)
 def reset_lexical_cache(
     monkeypatch: pytest.MonkeyPatch,
-) -> Iterator[None]:
+) -> None:
     """Aísla el singleton de la caché entre tests."""
     monkeypatch.setattr(lexical_cache_module, "_lexical_cache", None)
-    yield
 
 
 def _corpus() -> list[CorpusChunkData]:
@@ -424,8 +422,10 @@ def test_ingest_manual_invalidates_the_game_after_upsert_failure(
         lexical_cache=lexical_cache,
     )
 
+    request = _ingest_request()
+
     with pytest.raises(RagIndexingError):
-        asyncio.run(service.ingest_manual(_ingest_request()))
+        asyncio.run(service.ingest_manual(request))
 
     assert repository.upsert_calls == 1
     assert lexical_cache.invalidated_game_ids == [_GAME_ID]

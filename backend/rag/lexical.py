@@ -149,7 +149,7 @@ def rank_bm25(
         list[tuple[int, float]]: Posiciones y scores positivos en orden
             descendente, con empates resueltos por orden del corpus.
     """
-    if not query_tokens or index.avgdl == 0.0:
+    if not query_tokens or not index.postings:
         return []
 
     scores = [0.0] * index.doc_count

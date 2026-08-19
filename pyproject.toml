@@ -100,6 +100,7 @@ rag = [
     { include-group = "common-numeric" },
     "chromadb-client==1.5.9",
     "sentence-transformers==5.7.0",
+    "snowballstemmer==3.1.1",
     "torch==2.13.0",
 ]
 llm = [
@@ -134,6 +135,7 @@ test = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "ruff==0.16.1",
+    "snowballstemmer==3.1.1",
 ]
 typecheck = [
     { include-group = "test" },
@@ -216,6 +218,7 @@ module = [
     "pypdfium2.*",
     "pytesseract",
     "sentence_transformers",
+    "snowballstemmer",
 ]
 ignore_missing_imports = true
 

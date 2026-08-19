@@ -9,7 +9,7 @@ y las versiones siguen [SemVer 2.0.0](https://semver.org/lang/es/).
 
 ---
 
-## [1.0.0-rc.1] - 2026-07-19
+## [1.0.0-rc.1] - 2026-08-19
 
 ---
 
@@ -31,6 +31,11 @@ la aplicación antes de la publicación estable `1.0.0`.
   indexarlo.
 - Sistema RAG con ChromaDB, embeddings multilingües y respuestas generadas por
   un LLM local mediante Ollama.
+- Búsqueda híbrida que combina el significado de la pregunta con sus términos
+  literales, acotada a los manuales autorizados de cada usuario y al juego
+  consultado.
+- Sincronización periódica que mantiene el índice de búsqueda alineado con los
+  manuales guardados y corrige las desviaciones de forma automática.
 - Chat por juego con conversaciones persistentes, fuentes utilizadas y
   explicaciones reutilizables.
 - Autenticación con sesiones, cookies HttpOnly, CSRF, verificación de email,

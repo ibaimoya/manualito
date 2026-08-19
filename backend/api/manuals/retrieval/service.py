@@ -68,6 +68,7 @@ async def generate_game_answer(
             "game_id": str(game_id),
             "manual_ids": [str(manual_id) for manual_id in manual_ids],
             "question": search_question,
+            "lexical_question": retrieval_question or question,
             "top_k": top_k,
         },
         unavailable_detail="Servicio RAG no disponible.",

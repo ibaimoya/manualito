@@ -18,6 +18,7 @@ ChromaWhere = dict[str, str | dict[str, list[str]]]
 
 class ChromaGetResult(TypedDict):
     ids: list[str]
+    documents: NotRequired[list[str] | None]
     metadatas: NotRequired[list[ChromaMetadata] | None]
 
 
@@ -31,7 +32,17 @@ class RetrievedChunkData(TypedDict):
     id: str
     chunk_index: int
     source_page: int
+    content_hash: str
     score: float
+
+
+class CorpusChunkData(TypedDict):
+    id: str
+    text: str
+    manual_id: str
+    content_hash: str
+    chunk_index: int
+    source_page: int
 
 
 class ChromaCollection(Protocol):
@@ -187,10 +198,101 @@ class ChromaRepository:
                     "id": chunk_id,
                     "chunk_index": int(metadata["chunk_index"]),
                     "source_page": int(metadata["source_page"]),
+                    "content_hash": cast(str, metadata["content_hash"]),
                     "score": round(score, 4),
                 }
             )
         return chunks
+
+    def get_game_corpus(self, *, game_id: str) -> list[CorpusChunkData]:
+        """
+        Recupera todos los chunks indexados de un juego.
+
+        El orden de los chunks coincide con el que entrega ChromaDB en cada
+        página y entre páginas consecutivas.
+
+        Args:
+            game_id (str): Identificador del juego cuyo corpus se recupera.
+
+        Returns:
+            list[CorpusChunkData]: Chunks completos indexados para el juego.
+
+        Raises:
+            ValueError: Si ChromaDB omite documentos o metadatos solicitados.
+        """
+        collection = self._get_collection()
+        chunks: list[CorpusChunkData] = []
+        offset = 0
+
+        while True:
+            page = collection.get(
+                where={"game_id": game_id},
+                include=["documents", "metadatas"],
+                limit=_INVENTORY_PAGE_SIZE,
+                offset=offset,
+            )
+            chunk_ids = page["ids"]
+            if not chunk_ids:
+                return chunks
+
+            documents = page.get("documents")
+            if documents is None:
+                raise ValueError(
+                    "ChromaDB no devolvió documentos para el corpus del juego."
+                )
+
+            metadatas = page.get("metadatas")
+            if metadatas is None:
+                raise ValueError(
+                    "ChromaDB no devolvió metadatos para el corpus del juego."
+                )
+
+            for chunk_id, text, metadata in zip(
+                chunk_ids,
+                documents,
+                metadatas,
+                strict=True,
+            ):
+                chunks.append(
+                    {
+                        "id": chunk_id,
+                        "text": text,
+                        "manual_id": cast(str, metadata["manual_id"]),
+                        "content_hash": cast(str, metadata["content_hash"]),
+                        "chunk_index": int(metadata["chunk_index"]),
+                        "source_page": int(metadata["source_page"]),
+                    }
+                )
+
+            if len(chunk_ids) < _INVENTORY_PAGE_SIZE:
+                return chunks
+            offset += _INVENTORY_PAGE_SIZE
+
+    def get_game_id_of_manual(self, *, manual_id: str) -> str | None:
+        """
+        Obtiene el juego asociado al primer chunk de un manual.
+
+        Args:
+            manual_id (str): Identificador del manual consultado.
+
+        Returns:
+            str | None: Identificador del juego o None si no puede determinarse.
+        """
+        collection = self._get_collection()
+        result = collection.get(
+            where={"manual_id": manual_id},
+            limit=1,
+            include=["metadatas"],
+        )
+        if not result["ids"]:
+            return None
+
+        metadatas = result.get("metadatas")
+        if not metadatas:
+            return None
+
+        game_id = metadatas[0].get("game_id")
+        return game_id if isinstance(game_id, str) else None
 
     def list_indexed_chunk_ids(self) -> dict[str, list[str]]:
         """

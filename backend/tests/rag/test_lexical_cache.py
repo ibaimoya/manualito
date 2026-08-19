@@ -422,10 +422,10 @@ def test_ingest_manual_invalidates_the_game_after_upsert_failure(
         lexical_cache=lexical_cache,
     )
 
-    request = _ingest_request()
+    ingest = service.ingest_manual(_ingest_request())
 
     with pytest.raises(RagIndexingError):
-        asyncio.run(service.ingest_manual(request))
+        asyncio.run(ingest)
 
     assert repository.upsert_calls == 1
     assert lexical_cache.invalidated_game_ids == [_GAME_ID]

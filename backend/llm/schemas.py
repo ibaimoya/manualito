@@ -39,6 +39,21 @@ class GenerateResponse(StrictModel):
     answer: Answer
 
 
+class CorrectLineRequest(StrictModel):
+    """Línea OCR a corregir con su ventana de contexto."""
+
+    text: str = Field(min_length=1, max_length=1000)
+    context_before: list[str] = Field(default_factory=list, max_length=2)
+    context_after: list[str] = Field(default_factory=list, max_length=2)
+    language: Language = "es"
+
+
+class CorrectLineResponse(StrictModel):
+    """Línea corregida por consenso de pasadas del LLM."""
+
+    text: str = Field(min_length=1)
+
+
 class CondenseQuestionRequest(StrictModel):
     """Pregunta actual e historial para recuperar contexto con más precisión."""
 

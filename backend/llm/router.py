@@ -7,11 +7,14 @@ from llm.schemas import (
     CondenseQuestionResponse,
     ConversationTitleRequest,
     ConversationTitleResponse,
+    CorrectLineRequest,
+    CorrectLineResponse,
     GenerateRequest,
     GenerateResponse,
 )
 from llm.service import (
     condense_question,
+    correct_line,
     generate_answer,
     generate_conversation_title,
 )
@@ -48,6 +51,32 @@ async def generate_endpoint(
         GenerateResponse: Respuesta final limpia generada por el LLM.
     """
     return await generate_answer(payload=payload, client=client)
+
+
+@router.post(
+    "/correct-line",
+    responses={
+        500: {"description": "Error interno al corregir la línea con el LLM."},
+        502: {"description": "Servicio LLM no disponible o respuesta inválida."},
+        503: {"description": "El modelo de corrección OCR no está configurado."},
+        504: {"description": "El LLM tardó demasiado en responder."},
+    },
+)
+async def correct_line_endpoint(
+    payload: CorrectLineRequest,
+    client: HttpClient,
+) -> CorrectLineResponse:
+    """
+    Corrige una línea OCR mediante consenso de tres pasadas del modelo corrector.
+
+    Args:
+        payload (CorrectLineRequest): Línea OCR y su ventana de contexto.
+        client (httpx.AsyncClient): Cliente HTTP compartido inyectado por FastAPI.
+
+    Returns:
+        CorrectLineResponse: Línea con las correcciones consensuadas aplicadas.
+    """
+    return await correct_line(payload=payload, client=client)
 
 
 @router.post(

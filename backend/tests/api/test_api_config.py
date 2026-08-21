@@ -47,6 +47,9 @@ def test_api_settings_parses_environment_types(monkeypatch, tmp_path):
     monkeypatch.setenv("OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS", "3")
     monkeypatch.setenv("OCR_POSTPROCESS_SYMBOL_NOISE_RATIO", "0.5")
     monkeypatch.setenv("OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP", "1")
+    monkeypatch.setenv("OCR_CORRECTION_DISCARD_BELOW", "0.45")
+    monkeypatch.setenv("OCR_CORRECTION_LLM_BELOW", "0.80")
+    monkeypatch.setenv("OLLAMA_CORRECTION_MODEL", "gemma4:e4b")
     monkeypatch.setenv("SMTP_PORT", "2525")
     monkeypatch.setenv("SMTP_STARTTLS", "true")
     monkeypatch.setenv("EMAIL_VERIFICATION_TOKEN_MINUTES", "60")
@@ -68,6 +71,9 @@ def test_api_settings_parses_environment_types(monkeypatch, tmp_path):
     assert settings.ocr_postprocess_very_short_text_max_chars == 3
     assert settings.ocr_postprocess_symbol_noise_ratio == pytest.approx(0.5)
     assert settings.ocr_postprocess_min_alnum_to_keep == 1
+    assert settings.ocr_correction_discard_below == pytest.approx(0.45)
+    assert settings.ocr_correction_llm_below == pytest.approx(0.80)
+    assert settings.ollama_correction_model == "gemma4:e4b"
     assert settings.smtp_port == 2525
     assert settings.smtp_starttls is True
     assert settings.email_verification_token_minutes == 60
@@ -122,6 +128,9 @@ def test_ocr_postprocess_defaults_match_ocr_env(monkeypatch):
     monkeypatch.delenv("OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS", raising=False)
     monkeypatch.delenv("OCR_POSTPROCESS_SYMBOL_NOISE_RATIO", raising=False)
     monkeypatch.delenv("OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP", raising=False)
+    monkeypatch.delenv("OCR_CORRECTION_DISCARD_BELOW", raising=False)
+    monkeypatch.delenv("OCR_CORRECTION_LLM_BELOW", raising=False)
+    monkeypatch.delenv("OLLAMA_CORRECTION_MODEL", raising=False)
 
     settings = ApiSettings(
         ocr_url="http://ocr:8000",
@@ -135,6 +144,9 @@ def test_ocr_postprocess_defaults_match_ocr_env(monkeypatch):
     assert settings.ocr_postprocess_very_short_text_max_chars == 4
     assert settings.ocr_postprocess_symbol_noise_ratio == pytest.approx(0.60)
     assert settings.ocr_postprocess_min_alnum_to_keep == 1
+    assert settings.ocr_correction_discard_below == pytest.approx(0.5)
+    assert settings.ocr_correction_llm_below == pytest.approx(0.85)
+    assert settings.ollama_correction_model == ""
 
 
 def test_redis_credential_is_required_by_default(monkeypatch):

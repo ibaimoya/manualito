@@ -1,0 +1,1120 @@
+{
+ "version": 2,
+ "mediciones": [
+  {
+   "id": "linea-base",
+   "tipo": "linea_base_sin_correccion",
+   "fecha": "2026-08-20T19:29:15Z",
+   "dataset_sha256_canonico": "fd730bedd93da847d8dccc7868aa48b89b0c481c31eb37d97778364a49d654de",
+   "configuracion_hash": null,
+   "revision_git": "7b66dd5",
+   "configuracion": null,
+   "metricas": {
+    "producto": {
+     "rotas": 25,
+     "evaluadas": 25,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 12,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.193,
+     "cer_despues": 0.193
+    },
+    "corrector": {
+     "rotas": 34,
+     "evaluadas": 34,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 2,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0272,
+     "cer_despues": 0.0272
+    }
+   },
+   "por_categoria": {
+    "align_alta": {
+     "rotas": 5,
+     "evaluadas": 5,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 11,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0363,
+     "cer_despues": 0.0363
+    },
+    "align_baja": {
+     "rotas": 9,
+     "evaluadas": 9,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 0,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.2408,
+     "cer_despues": 0.2408
+    },
+    "align_media": {
+     "rotas": 10,
+     "evaluadas": 10,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 1,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.2089,
+     "cer_despues": 0.2089
+    },
+    "align_muy_baja": {
+     "rotas": 1,
+     "evaluadas": 1,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 0,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.3871,
+     "cer_despues": 0.3871
+    },
+    "diacriticos": {
+     "rotas": 10,
+     "evaluadas": 10,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 1,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0277,
+     "cer_despues": 0.0277
+    },
+    "segmentacion": {
+     "rotas": 10,
+     "evaluadas": 10,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 0,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0309,
+     "cer_despues": 0.0309
+    },
+    "typos": {
+     "rotas": 14,
+     "evaluadas": 14,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 1,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0243,
+     "cer_despues": 0.0243
+    }
+   },
+   "casos": [
+    {
+     "id": "g3",
+     "salida": "Valencia. NIF B-96897251, Tel: (900) 180377. E-mail: consumidorahasbro.es.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g7",
+     "salida": "Ampliación 5-6 jugadores..........ccceo..nicinninocsioraciiprrnecerreien coc ¿Sl > = Viaje por la",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g8",
+     "salida": "Miniexpansión Entre amigos / CréditOS ......ooconoinoocnscecess SI India",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g9",
+     "salida": "Escenario Península ibérica ....................cocoormommmsmmmmmrssros:",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g11",
+     "salida": "19 hexágonos",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g14",
+     "salida": "Cerros (3) ' Arcilla =ladrillos = del cerro Ciudad Poblado Carretera",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g15",
+     "salida": "la palabra clave (indicada con una Mecha (>) en el manual.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g16",
+     "salida": "\"Disposición variable” (3).",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g19",
+     "salida": "bh) Comercio marítimo (comercio con la reserva) (>)",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g20",
+     "salida": "Comercio marílimo en un puerto 3:1 Comercio marílimo 2:1 en",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g23",
+     "salida": "deben rostarse antes de la",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g25",
+     "salida": "Cuando los dos jugadores havan terminado, el jugador 1 entregará la",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g26",
+     "salida": "e Construir",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g27",
+     "salida": "Phperstr $7, 701%4 atigar",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g28",
+     "salida": "Ihastraciones de los terrenos Michael Mente",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g29",
+     "salida": "hatraciones de les terrenos Michael Menzel",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g30",
+     "salida": "PREPARATIVOS",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g34",
+     "salida": "\"PREPARATIVOS",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g35",
+     "salida": "excepciones",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g36",
+     "salida": "+ a un hexágono de terreno, cada jugador que tenga 1 o más poblados/",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g38",
+     "salida": "2. Construcción de carreteras — Las carreteras sólo pueden",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g39",
+     "salida": "ciudad desde el noreste",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g40",
+     "salida": "| 0-00 colonia romana fue Eminium y después",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g41",
+     "salida": "FA N = Escenario: Viaje por la India",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g42",
+     "salida": "* ] tablero del norte de la India",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g43",
+     "salida": "jugadores, si corresponde—, excepto los hexágonos de terreno, las",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g44",
+     "salida": "Las fichas de rickshaw solo se consiguen con las carreteras que se",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g45",
+     "salida": "- Kanpur y Ganglok).",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g46",
+     "salida": "aproximadamente, se encuentra en la orilla del río",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g47",
+     "salida": "encuentra en una zona agrícola muy fértil situada",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g48",
+     "salida": "II y el templo de Narsingh, el lugar sagrado más",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g49",
+     "salida": "Shillong (bazar de Bara)",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g50",
+     "salida": "Varanasi (gbats)",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g52",
+     "salida": "El juego se juega con 106 fichas, incluyendo 2 comodines. Cada ficha (excepto los 2 comodines) tiene un número. Las fichas",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g53",
+     "salida": "aparecer una vez en una serie.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g54",
+     "salida": "formar dos escaleras rojas de 4, 5, 6 y de 6, 7, 8. Véase fig. C.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g55",
+     "salida": "eiding / Figure / Abblídung / Figura / Figura",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1000",
+     "salida": "Cuando los dos jugadares hayan terminado, el jugador 1 entregará la",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1001",
+     "salida": "El juego se juega con 106 fichas, incluyendo 2 comodines",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1002",
+     "salida": "Las carreteras sólo pueden construirse en los caminas señalados",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1003",
+     "salida": "Cada poblado vale 1 punto de victaria",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1004",
+     "salida": "El jugadar naranja podría construir una nueva carretera",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1005",
+     "salida": "Los bosques praducen madera",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1006",
+     "salida": "formar dos escaleros rojas de 4, 5, 6",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1007",
+     "salida": "Cada ficha tiene un númera",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1008",
+     "salida": "aparecer una vez en una serje",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1009",
+     "salida": "Se necesita arcilla y madora para construir",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1010",
+     "salida": "El comodín puede sustituir cada númoro y cada color",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1011",
+     "salida": "tira el dado y avanza esa cantidad de casilias",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1012",
+     "salida": "El primer jugador que consiga 10 puntos de victoria ganará la partída",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1013",
+     "salida": "Mezcla todas las cartos de desarrollo",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "t1014",
+     "salida": "cada jugador coloca dos pablados y dos carreteras",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2000",
+     "salida": "El numero del terreno en los dados obtendra 2 cartas",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2001",
+     "salida": "La ampliacion permite jugar hasta 6 jugadores",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2002",
+     "salida": "Cada hexagono produce una materia prima",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2003",
+     "salida": "El jugador mas joven empieza la partida",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2004",
+     "salida": "Coloca el ladron en el desierto",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2005",
+     "salida": "Las fichas estan numeradas del 1 al 13",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2006",
+     "salida": "construccion de carreteras y poblados",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2007",
+     "salida": "El comodin puede sustituir cualquier ficha",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2008",
+     "salida": "Ganara quien llegue a 10 puntos",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2009",
+     "salida": "La partida continua en el sentido del reloj",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "d2010",
+     "salida": "Cada ficha vale 1 punto de victoria",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2000",
+     "salida": "Lana =oveja = del pasto",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2001",
+     "salida": "Arcilla =ladrillos = del cerro",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2002",
+     "salida": "cada jugador recibe unacarta de materia prima",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2003",
+     "salida": "las cartas de de sarrollo se mezclan",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2004",
+     "salida": "elprimer jugador que consiga 10 puntos",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2005",
+     "salida": "Se puedenconstruir carreteras en los caminos",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2006",
+     "salida": "la am pliacion para 5 y 6 jugadores",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2007",
+     "salida": "tira los dados y su ma el resultado",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2008",
+     "salida": "El tablero se coloca enel centro de la mesa",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "s2009",
+     "salida": "Los poblados valen unpunto de victoria",
+     "descartada": false,
+     "llm": false
+    }
+   ]
+  },
+  {
+   "id": "local-515b643f689b",
+   "tipo": "medicion_local",
+   "fecha": "2026-08-20T19:35:02Z",
+   "dataset_sha256_canonico": "fd730bedd93da847d8dccc7868aa48b89b0c481c31eb37d97778364a49d654de",
+   "configuracion_hash": "515b643f689b1d18250c4714a3beced8930cae849361d7c61e8a97d8ffee2396",
+   "revision_git": "7b66dd5",
+   "configuracion": {
+    "dataset_sha256_canonico": "fd730bedd93da847d8dccc7868aa48b89b0c481c31eb37d97778364a49d654de",
+    "flujo_version": 1,
+    "umbral_descarte": 0.5,
+    "umbral_franja_llm": 0.85,
+    "contenedor": "manualito-llm",
+    "metricas": [
+     "exactas",
+     "sobrecorreccion",
+     "cer"
+    ]
+   },
+   "metricas": {
+    "producto": {
+     "rotas": 25,
+     "evaluadas": 24,
+     "descartadas": 1,
+     "exactas": 2,
+     "tasa_exactas": 0.0833,
+     "sanas": 12,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.1849,
+     "cer_despues": 0.1804
+    },
+    "corrector": {
+     "rotas": 34,
+     "evaluadas": 34,
+     "descartadas": 0,
+     "exactas": 31,
+     "tasa_exactas": 0.9118,
+     "sanas": 2,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0272,
+     "cer_despues": 0.0037
+    }
+   },
+   "por_categoria": {
+    "align_alta": {
+     "rotas": 5,
+     "evaluadas": 5,
+     "descartadas": 0,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 11,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0363,
+     "cer_despues": 0.0363
+    },
+    "align_baja": {
+     "rotas": 9,
+     "evaluadas": 9,
+     "descartadas": 0,
+     "exactas": 1,
+     "tasa_exactas": 0.1111,
+     "sanas": 0,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.2408,
+     "cer_despues": 0.249
+    },
+    "align_media": {
+     "rotas": 10,
+     "evaluadas": 10,
+     "descartadas": 0,
+     "exactas": 1,
+     "tasa_exactas": 0.1,
+     "sanas": 1,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.2089,
+     "cer_despues": 0.1908
+    },
+    "align_muy_baja": {
+     "rotas": 1,
+     "evaluadas": 0,
+     "descartadas": 1,
+     "exactas": 0,
+     "tasa_exactas": 0.0,
+     "sanas": 0,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0,
+     "cer_despues": 0.0
+    },
+    "diacriticos": {
+     "rotas": 10,
+     "evaluadas": 10,
+     "descartadas": 0,
+     "exactas": 10,
+     "tasa_exactas": 1.0,
+     "sanas": 1,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0277,
+     "cer_despues": 0.0
+    },
+    "segmentacion": {
+     "rotas": 10,
+     "evaluadas": 10,
+     "descartadas": 0,
+     "exactas": 10,
+     "tasa_exactas": 1.0,
+     "sanas": 0,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0309,
+     "cer_despues": 0.0
+    },
+    "typos": {
+     "rotas": 14,
+     "evaluadas": 14,
+     "descartadas": 0,
+     "exactas": 11,
+     "tasa_exactas": 0.7857,
+     "sanas": 1,
+     "sobrecorreccion": 0,
+     "cer_antes": 0.0243,
+     "cer_despues": 0.0089
+    }
+   },
+   "casos": [
+    {
+     "id": "g3",
+     "salida": "Valencia. NIF B-96897251, Tel: (900) 180377. E-mail: consumidorahasbro.es.",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g7",
+     "salida": "Ampliación 5-6 jugadores.ccceo..nicinninocsioraciiprrnecerreien coc ¿Sl >= Viaje por la",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g8",
+     "salida": "Miniexpansión Entre amigos / CréditOS .ooconoinoocnscecess SI India",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g9",
+     "salida": "Escenario Península ibérica .cocoormommmsmmmmmrssros:",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g11",
+     "salida": "19 hexágonos",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g14",
+     "salida": "Cerros (3) ' Arcilla = ladrillos = del cerro Ciudad Poblado Carretera",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g15",
+     "salida": "la palabra clave (indicada con una Mecha (>) en el manual.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g16",
+     "salida": "\"Disposición variable” (3).",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g19",
+     "salida": "bh) Comercio marítimo (comercio con la reserva) (>)",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g20",
+     "salida": "Comercio marílimo en un puerto 3:1 Comercio marílimo 2:1 en",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g23",
+     "salida": "deben rotarse antes de la",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g25",
+     "salida": "Cuando los dos jugadores havan terminado, el jugador 1 entregará la",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g26",
+     "salida": "Construir",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g27",
+     "salida": "",
+     "descartada": true,
+     "llm": false
+    },
+    {
+     "id": "g28",
+     "salida": "Ilustraciones de los terrenos Michael Mende",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g29",
+     "salida": "hatraciones de los terrenos Michael Menzel",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g30",
+     "salida": "PREPARATIVOS",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g34",
+     "salida": "PREPARATIVOS",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g35",
+     "salida": "excepciones",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g36",
+     "salida": "+ a un hexágono de terreno, cada jugador que tenga 1 o más poblados/",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g38",
+     "salida": "2. Construcción de carreteras — Las carreteras sólo pueden",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g39",
+     "salida": "ciudad desde el noreste",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g40",
+     "salida": "| 0-00 colonia romana fue Eminium y después",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g41",
+     "salida": "FAN = Escenario: Viaje por la India",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g42",
+     "salida": "* ] tablero del norte de la India",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g43",
+     "salida": "jugadores, si corresponde—, excepto los hexágonos de terreno, las",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g44",
+     "salida": "Las fichas de rickshaw solo se consiguen con las carreteras que se",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g45",
+     "salida": "- Kanpur y Ganglok).",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g46",
+     "salida": "aproximadamente, se encuentra en la orilla del río",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g47",
+     "salida": "encuentra en una zona agrícola muy fértil situada",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g48",
+     "salida": "II y el templo de Narsingh, el lugar sagrado más",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g49",
+     "salida": "Shillong (bazar de Bara)",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g50",
+     "salida": "Varanasi (India)",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "g52",
+     "salida": "El juego se juega con 106 fichas, incluyendo 2 comodines. Cada ficha (excepto los 2 comodines) tiene un número. Las fichas",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g53",
+     "salida": "aparecer una vez en una serie.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g54",
+     "salida": "formar dos escaleras rojas de 4, 5, 6 y de 6, 7, 8. Véase fig. C.",
+     "descartada": false,
+     "llm": false
+    },
+    {
+     "id": "g55",
+     "salida": "eiding / Figure / Abblídung / Figura / Figura",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1000",
+     "salida": "Cuando los dos jugadores hayan terminado, el jugador 1 entregará la",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1001",
+     "salida": "El juego se juega con 106 fichas, incluyendo 2 comodines",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1002",
+     "salida": "Las carreteras solo pueden construirse en los caminos señalados",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1003",
+     "salida": "Cada poblado vale 1 punto de victoria",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1004",
+     "salida": "El jugador naranja podría construir una nueva carretera",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1005",
+     "salida": "Los bosques producen madera",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1006",
+     "salida": "formar dos escaleros rojas de 4, 5, 6",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1007",
+     "salida": "Cada ficha tiene un número",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1008",
+     "salida": "aparecer una vez en una serie",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1009",
+     "salida": "Se necesita arcilla y madera para construir",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1010",
+     "salida": "El comodín puede sustituir cada número y cada color",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1011",
+     "salida": "tira el dado y avanza esa cantidad de casillas",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1012",
+     "salida": "El primer jugador que consiga 10 puntos de victoria ganará la partida",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1013",
+     "salida": "Mezcla todas las cartas de desarrollo",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "t1014",
+     "salida": "cada jugador coloca dos pueblos y dos carreteras",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2000",
+     "salida": "El número del terreno en los dados obtendrá 2 cartas",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2001",
+     "salida": "La ampliación permite jugar hasta 6 jugadores",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2002",
+     "salida": "Cada hexágono produce una materia prima",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2003",
+     "salida": "El jugador más joven empieza la partida",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2004",
+     "salida": "Coloca el ladrón en el desierto",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2005",
+     "salida": "Las fichas están numeradas del 1 al 13",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2006",
+     "salida": "construcción de carreteras y poblados",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2007",
+     "salida": "El comodín puede sustituir cualquier ficha",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2008",
+     "salida": "Ganará quien llegue a 10 puntos",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2009",
+     "salida": "La partida continúa en el sentido del reloj",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "d2010",
+     "salida": "Cada ficha vale 1 punto de victoria",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2000",
+     "salida": "Lana = oveja = del pasto",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2001",
+     "salida": "Arcilla = ladrillos = del cerro",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2002",
+     "salida": "cada jugador recibe una carta de materia prima",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2003",
+     "salida": "las cartas de desarrollo se mezclan",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2004",
+     "salida": "el primer jugador que consiga 10 puntos",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2005",
+     "salida": "Se pueden construir carreteras en los caminos",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2006",
+     "salida": "la ampliación para 5 y 6 jugadores",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2007",
+     "salida": "tira los dados y suma el resultado",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2008",
+     "salida": "El tablero se coloca en el centro de la mesa",
+     "descartada": false,
+     "llm": true
+    },
+    {
+     "id": "s2009",
+     "salida": "Los poblados valen un punto de victoria",
+     "descartada": false,
+     "llm": true
+    }
+   ]
+  }
+ ]
+}

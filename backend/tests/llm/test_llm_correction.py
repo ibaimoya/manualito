@@ -176,6 +176,7 @@ def test_correct_line_traduce_los_fallos_de_ollama(api, ollama_correction, reply
         {"text": ""},
         {"text": "linea", "context_before": ["a", "b", "c"]},
         {"text": "linea", "context_after": ["a", "b", "c"]},
+        {"text": "linea", "context_before": ["x" * 1001]},
         {"text": "linea", "modelo": "extra"},
     ],
 )

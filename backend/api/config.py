@@ -161,6 +161,16 @@ class ApiSettings(BaseSettings):
         return f"redis://{auth}{self.redis_host}:{self.redis_port}/{database}"
 
     @model_validator(mode="after")
+    def _validate_ocr_correction_thresholds(self) -> "ApiSettings":
+        """Evita una franja LLM vacía por umbrales de corrección cruzados."""
+        if self.ocr_correction_llm_below < self.ocr_correction_discard_below:
+            raise ValueError(
+                "OCR_CORRECTION_LLM_BELOW debe ser mayor o igual que "
+                "OCR_CORRECTION_DISCARD_BELOW."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _validate_celery_time_limits(self) -> "ApiSettings":
         """Evita tareas más largas que la ventana de visibilidad de Redis."""
         pairs = (

@@ -96,7 +96,10 @@ def _join_hyphenated(
     if fragment is None:
         return None
     first_token, _, remainder = next_text.strip().partition(" ")
-    candidate = (fragment.group(1) + first_token).lower()
+    letters = _WORD_PATTERN.match(first_token)
+    if letters is None:
+        return None
+    candidate = (fragment.group(1) + letters.group(0)).lower()
     if not _WORD_PATTERN.fullmatch(candidate) or candidate not in vocabulary:
         return None
     return current_text[:-1] + first_token, remainder.strip()

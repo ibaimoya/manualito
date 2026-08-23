@@ -149,6 +149,21 @@ def test_ocr_postprocess_defaults_match_ocr_env(monkeypatch):
     assert settings.ollama_correction_model == ""
 
 
+def test_umbrales_de_correccion_cruzados_fallan_al_arrancar():
+    """Una franja LLM vacía por umbrales cruzados se rechaza en el arranque."""
+    with pytest.raises(ValueError, match="OCR_CORRECTION_LLM_BELOW"):
+        ApiSettings.model_validate(
+            {
+                "ocr_url": "http://ocr:8000",
+                "rag_url": "http://rag:8000",
+                "llm_url": "http://llm:8000",
+                "app_version": "1.0.0",
+                "ocr_correction_discard_below": 0.85,
+                "ocr_correction_llm_below": 0.5,
+            }
+        )
+
+
 def test_redis_credential_is_required_by_default(monkeypatch):
     """Redis no arranca sin credencial salvo opt-in local explícito."""
     monkeypatch.delenv(_REDIS_CREDENTIAL_FILE_ENV, raising=False)

@@ -1,6 +1,6 @@
 """Schemas Pydantic del servicio LLM."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -43,8 +43,12 @@ class CorrectLineRequest(StrictModel):
     """Línea OCR a corregir con su ventana de contexto."""
 
     text: str = Field(min_length=1, max_length=1000)
-    context_before: list[str] = Field(default_factory=list, max_length=2)
-    context_after: list[str] = Field(default_factory=list, max_length=2)
+    context_before: list[Annotated[str, Field(max_length=1000)]] = Field(
+        default_factory=list, max_length=2
+    )
+    context_after: list[Annotated[str, Field(max_length=1000)]] = Field(
+        default_factory=list, max_length=2
+    )
     language: Language = "es"
 
 

@@ -184,6 +184,19 @@ def test_desguionado_vacia_y_elimina_la_linea_siguiente():
     ]
 
 
+def test_desguionado_une_aunque_siga_puntuacion():
+    """La puntuación pegada al fragmento no impide validar la unión."""
+    lines = [
+        {"text": "compra tus propie-", "confidence": 0.9},
+        {"text": "dades, después cobra", "confidence": 0.8},
+    ]
+
+    assert merge_hyphenated_lines(lines, vocabulary=frozenset({"propiedades"})) == [
+        {"text": "compra tus propiedades,", "confidence": 0.9},
+        {"text": "después cobra", "confidence": 0.8},
+    ]
+
+
 def test_desguionado_conserva_el_guion_fuera_de_vocabulario():
     """El salto de columna no se une porque la palabra resultante no es válida."""
     lines = [

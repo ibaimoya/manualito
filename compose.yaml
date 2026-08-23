@@ -560,7 +560,8 @@ services:
     command:
       - >-
         ollama pull $$OLLAMA_MODEL &&
-        { [ -z "$$OLLAMA_CORRECTION_MODEL" ] || ollama pull $$OLLAMA_CORRECTION_MODEL; }
+        { [ -z "$$OLLAMA_CORRECTION_MODEL" ] || [ "$$OLLAMA_CORRECTION_MODEL" = "$$OLLAMA_MODEL" ] ||
+        ollama pull $$OLLAMA_CORRECTION_MODEL; }
     restart: "no"
     networks:
       - backend-net

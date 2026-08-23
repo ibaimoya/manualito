@@ -19,18 +19,24 @@ from api.conversations.dto import (
     SendMessageOutcome,
 )
 from api.conversations.exceptions import ConversationNotFoundError, NoManualSourcesError
+from api.conversations.language import resolve_conversation_language
 from api.conversations.schemas import (
     ConversationResponse,
     MessageResponse,
     SendMessageRequest,
 )
-from api.exceptions import InternalServiceError, InternalServiceUnavailableError
+from api.exceptions import (
+    InternalResourceNotFoundError,
+    InternalServiceError,
+    InternalServiceUnavailableError,
+)
 from api.games import repository as games_repository
 from api.games.exceptions import GameUnavailableError
 from api.locks import advisory_session_lock
-from api.manuals.exceptions import GeneratedAnswerTooLongError
+from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
 from common.conversation_limits import CONVERSATION_TITLE_MAX_LENGTH
+from common.language import Language
 from database.session import get_sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -93,16 +99,21 @@ async def send_message(
     auth: AuthenticatedSession,
     conversation_id: UUID,
     payload: SendMessageRequest,
+    accept_language: Language | None,
 ) -> SendMessageOutcome:
     """Persiste un turno pendiente y deja la generación al worker GPU."""
-    # Copia plana antes del primer rollback: el rollback expira auth.user y
-    # tocarlo después dispararía un lazy-load síncrono (MissingGreenlet).
+    # El identificador plano evita cargar el usuario expirado después del rollback.
     user_id = auth.user.id
     user_content = payload.content.strip()
     context = await _load_turn_context(
         session,
         user_id=user_id,
         conversation_id=conversation_id,
+    )
+    language = resolve_conversation_language(
+        current_message=user_content,
+        history=context.history,
+        accept_language=accept_language,
     )
     await _ensure_game_has_sources(session, user_id=user_id, game_id=context.game_id)
     fallback_title = _fallback_title(user_content) if context.title is None else None
@@ -138,6 +149,7 @@ async def send_message(
         user_message=stored.user_message,
         assistant_message=stored.assistant_message,
         title_job=title_job,
+        language=language,
     )
 
 
@@ -147,6 +159,7 @@ async def generate_pending_reply(
     user_message_id: UUID,
     assistant_message_id: UUID,
     top_k: int,
+    language: Language,
 ) -> bool:
     """Completa una respuesta pendiente bajo lock por conversación."""
     async with advisory_session_lock(f"conversation:{conversation_id}") as session:
@@ -180,6 +193,7 @@ async def generate_pending_reply(
                     client=client,
                     chat_history=history_payload,
                     retrieval_question=retrieval_question,
+                    language=language,
                 )
             await repository.complete_assistant_message(
                 session,
@@ -205,8 +219,26 @@ async def generate_pending_reply(
                 error_code="answer_too_long",
             )
             return True
-        except (InternalServiceError, InternalServiceUnavailableError):
+        except (
+            InternalServiceError,
+            InternalServiceUnavailableError,
+            InternalResourceNotFoundError,
+            ManualContextNotFoundError,
+        ):
             logger.warning("No se pudo generar una respuesta de chat.", exc_info=True)
+            await _fail_pending_reply(
+                session,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                assistant_message_id=assistant_message_id,
+                error_code="generation_failed",
+            )
+            return True
+        except (ConnectionError, TimeoutError):
+            raise
+        except Exception:
+            logger.exception("Fallo imprevisto al generar una respuesta de chat.")
+            await session.rollback()
             await _fail_pending_reply(
                 session,
                 user_id=user_id,
@@ -322,7 +354,11 @@ async def _build_retrieval_question(
             unavailable_detail="Servicio LLM no disponible.",
             internal_detail="Error interno al reformular la pregunta.",
         )
-    except (InternalServiceError, InternalServiceUnavailableError):
+    except (
+        InternalServiceError,
+        InternalServiceUnavailableError,
+        InternalResourceNotFoundError,
+    ):
         logger.warning("No se pudo reformular la pregunta; se usa la original.")
         return question
 
@@ -335,6 +371,7 @@ async def refresh_conversation_title(
     conversation_id: UUID,
     user_message_id: UUID,
     expected_title: str,
+    language: Language,
 ) -> None:
     """Refina el título con sesión propia y sin bloquear la respuesta."""
     sessionmaker = get_sessionmaker()
@@ -363,6 +400,7 @@ async def refresh_conversation_title(
             game_name=context.game_name,
             question=context.question,
             history=_history_payload(context.history),
+            language=language,
         )
     if title is None or title == expected_title:
         return
@@ -390,6 +428,7 @@ async def _conversation_title(
     game_name: str,
     question: str,
     history: Sequence[Mapping[str, str]],
+    language: Language,
 ) -> str | None:
     """Genera título solo cuando la conversación todavía no lo tiene."""
     if current_title is not None:
@@ -404,7 +443,7 @@ async def _conversation_title(
             client=client,
             service_name="LLM",
             url=f"{config.LLM_URL}/conversation-title",
-            payload={"game_name": game_name, "messages": messages},
+            payload={"game_name": game_name, "messages": messages, "language": language},
             unavailable_detail="Servicio LLM no disponible.",
             internal_detail="Error interno al generar el título.",
         )

@@ -2,6 +2,7 @@ import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
 import { Mail } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/shared/api/auth';
@@ -9,6 +10,7 @@ import { ariaInvalid, AuthField, emailFieldError, isEmail } from './auth-control
 import { AuthStatus } from './auth-status';
 
 export function ForgotForm() {
+  const { t } = useTranslation('auth');
   const fieldId = useId();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -21,12 +23,12 @@ export function ForgotForm() {
       <AuthStatus
         tone="accent"
         icon={Mail}
-        title="Revisa tu correo"
-        body="Si existe una cuenta con ese email, te hemos enviado un enlace para crear una contraseña nueva."
-        footnote="¿No llega? Mira en spam y espera 2 min"
+        title={t('status.forgot.success.title')}
+        body={t('status.forgot.success.body')}
+        footnote={t('status.forgot.success.footnote')}
       >
         <Button asChild size="lg" block variant="secondary">
-          <Link to="/login">Volver a entrar</Link>
+          <Link to="/login">{t('actions.backToLogin')}</Link>
         </Button>
       </AuthStatus>
     );
@@ -45,18 +47,16 @@ export function ForgotForm() {
   return (
     <form onSubmit={submit} noValidate className="flex flex-col">
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        ¿Olvidaste tu contraseña?
+        {t('forms.forgot.heading')}
       </h1>
-      <p className="mt-1.5 text-sm text-fg-2">
-        Escribe tu email y te enviamos un enlace para crear una nueva.
-      </p>
+      <p className="mt-1.5 text-sm text-fg-2">{t('forms.forgot.description')}</p>
 
       <div className="mt-5 flex flex-col gap-4">
-        <AuthField label="Email" htmlFor={`${fieldId}-email`} error={emailError}>
+        <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
           <Input
             id={`${fieldId}-email`}
             preset="email"
-            placeholder="tu@email.com"
+            placeholder={t('placeholders.email')}
             value={email}
             aria-invalid={ariaInvalid(Boolean(emailError))}
             onChange={(event) => setEmail(event.target.value)}
@@ -64,14 +64,14 @@ export function ForgotForm() {
           />
         </AuthField>
         <Button type="submit" size="lg" block loading={forgot.isPending}>
-          {forgot.isPending ? 'Enviando…' : 'Enviar enlace'}
+          {forgot.isPending ? t('actions.sendLinkLoading') : t('actions.sendLink')}
         </Button>
       </div>
 
       <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
-        ¿Recuerdas tu contraseña?{' '}
+        {t('forms.forgot.rememberPassword')}{' '}
         <Link to="/login" className="font-bold text-accent hover:underline">
-          Inicia sesión
+          {t('forms.register.signIn')}
         </Link>
       </p>
     </form>

@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { LanguagePill } from '@/features/language/LanguagePill';
 import { LockUp, Meeple } from '@/shared/components/Brand';
 
 /**
@@ -25,6 +26,7 @@ export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
       >
         <Meeple size={400} />
       </div>
+      <LanguagePill className="fixed right-[22px] top-[18px] z-40" />
       <div className="relative mx-auto flex min-h-full w-full max-w-[420px] flex-col items-center justify-center gap-6 px-6 py-10">
         <LockUp withTagline={false} />
         <div className="w-full rounded-2xl border border-border bg-card p-7 shadow-md sm:p-8">

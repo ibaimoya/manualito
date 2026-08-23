@@ -27,7 +27,7 @@ jobs:
       CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Comprobar deriva de la imagen de Caddy
         run: |
@@ -80,7 +80,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Preparar backend
         uses: ./.github/actions/backend-setup
@@ -94,7 +94,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Preparar backend
         uses: ./.github/actions/backend-setup
@@ -114,7 +114,7 @@ jobs:
     services:
       postgres:
         # No puede leer el .env; el paso de deriva falla si no coincide con él.
-        image: postgres:18.4-alpine3.23
+        image: postgres:18.4-alpine3.24
         env:
           POSTGRES_DB: manualito_test
           POSTGRES_USER: manualito
@@ -129,11 +129,11 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Comprobar deriva de la imagen de postgres
         env:
-          SERVICE_IMAGE: postgres:18.4-alpine3.23
+          SERVICE_IMAGE: postgres:18.4-alpine3.24
         run: |
           . ./.env
           expected="postgres:${POSTGRES_VERSION}-${POSTGRES_VARIANT}"
@@ -174,7 +174,7 @@ jobs:
     services:
       postgres:
         # No puede leer el .env; el paso de deriva falla si no coincide con él.
-        image: postgres:18.4-alpine3.23
+        image: postgres:18.4-alpine3.24
         env:
           POSTGRES_DB: manualito
           POSTGRES_USER: manualito
@@ -189,11 +189,11 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Comprobar deriva de la imagen de postgres
         env:
-          SERVICE_IMAGE: postgres:18.4-alpine3.23
+          SERVICE_IMAGE: postgres:18.4-alpine3.24
         run: |
           . ./.env
           expected="postgres:${POSTGRES_VERSION}-${POSTGRES_VARIANT}"
@@ -220,7 +220,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Preparar frontend
         uses: ./.github/actions/frontend-setup
@@ -243,7 +243,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Preparar frontend
         uses: ./.github/actions/frontend-setup
@@ -271,7 +271,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Preparar frontend
         uses: ./.github/actions/frontend-setup
@@ -301,7 +301,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Preparar frontend
         uses: ./.github/actions/frontend-setup
@@ -322,7 +322,7 @@ jobs:
 
     steps:
       - name: Clonar repositorio
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -346,7 +346,7 @@ jobs:
           fi
 
       - name: Analizar con SonarQube Cloud
-        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         with:
           args: >
             -Dsonar.qualitygate.wait=true

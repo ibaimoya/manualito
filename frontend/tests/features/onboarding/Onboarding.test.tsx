@@ -10,6 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
+import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
 import { Onboarding } from '@/features/onboarding/Onboarding';
 
@@ -46,11 +47,13 @@ function renderOnboarding() {
     history: createMemoryHistory({ initialEntries: ['/onboarding'] }),
   });
   return render(
-    <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </ThemeProvider>,
+    <LanguageProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </LanguageProvider>,
   );
 }
 

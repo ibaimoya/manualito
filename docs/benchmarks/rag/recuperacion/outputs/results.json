@@ -1,0 +1,1479 @@
+{
+  "version": 2,
+  "mediciones": [
+    {
+      "id": "auditoria-2026-08-09",
+      "tipo": "linea_base_auditoria",
+      "fecha": "2026-08-09T17:53:18Z",
+      "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+      "top_5_disponibles": false,
+      "metricas": {
+        "total": 24,
+        "errores": 0,
+        "recall@5": 0.7916666666666666,
+        "recall@10": 0.7916666666666666,
+        "mrr": 0.4979166666666666
+      },
+      "por_juego": {
+        "Catan": {
+          "total": 15,
+          "errores": 0,
+          "recall@5": 0.9333333333333333,
+          "recall@10": 0.9333333333333333,
+          "mrr": 0.58
+        },
+        "Monopoly": {
+          "total": 9,
+          "errores": 0,
+          "recall@5": 0.5555555555555556,
+          "recall@10": 0.5555555555555556,
+          "mrr": 0.3611111111111111
+        }
+      },
+      "por_origen": {
+        "auditoria": {
+          "total": 4,
+          "errores": 0,
+          "recall@5": 0.25,
+          "recall@10": 0.25,
+          "mrr": 0.25
+        },
+        "gemma": {
+          "total": 20,
+          "errores": 0,
+          "recall@5": 0.9,
+          "recall@10": 0.9,
+          "mrr": 0.5475
+        }
+      },
+      "casos": [
+        {
+          "id": "pregunta-001",
+          "posicion": 4,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-002",
+          "posicion": 5,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-003",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-004",
+          "posicion": null,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-005",
+          "posicion": 4,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-006",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-007",
+          "posicion": 2,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-008",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-009",
+          "posicion": 3,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-010",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-011",
+          "posicion": 3,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-012",
+          "posicion": 2,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-013",
+          "posicion": 3,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-014",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-015",
+          "posicion": 4,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-016",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-017",
+          "posicion": 2,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-018",
+          "posicion": 2,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-019",
+          "posicion": 1,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-020",
+          "posicion": null,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-021",
+          "posicion": null,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-022",
+          "posicion": null,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-023",
+          "posicion": null,
+          "top_5": null
+        },
+        {
+          "id": "pregunta-024",
+          "posicion": 1,
+          "top_5": null
+        }
+      ]
+    },
+    {
+      "id": "local-939812b83bbe",
+      "tipo": "medicion_local",
+      "fecha": "2026-08-11T15:38:54Z",
+      "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+      "configuracion_hash": "939812b83bbeb4402f9159ebc089912430e3b4154c3ebd38d8b6515efafb81e9",
+      "revision_git": "476e8a9e7b8ffaece4245d3ac668283381d3fad2",
+      "ranx_version": "0.3.21",
+      "evaluador": "ranx; métricas verificadas por ranx contra trec_eval",
+      "top_5_disponibles": true,
+      "configuracion": {
+        "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+        "flujo_version": 1,
+        "top_k_recuperacion": 20,
+        "metricas": [
+          "recall@5",
+          "recall@10",
+          "mrr"
+        ],
+        "contenedor": "manualito-rag",
+        "postprocesado": "manuales autorizados y deduplicación por content_hash"
+      },
+      "metricas": {
+        "total": 24,
+        "errores": 0,
+        "recall@5": 0.7916666666666666,
+        "recall@10": 0.7916666666666666,
+        "mrr": 0.4979166666666666
+      },
+      "por_juego": {
+        "Catan": {
+          "total": 15,
+          "errores": 0,
+          "recall@5": 0.9333333333333333,
+          "recall@10": 0.9333333333333333,
+          "mrr": 0.58
+        },
+        "Monopoly": {
+          "total": 9,
+          "errores": 0,
+          "recall@5": 0.5555555555555556,
+          "recall@10": 0.5555555555555556,
+          "mrr": 0.3611111111111111
+        }
+      },
+      "por_origen": {
+        "auditoria": {
+          "total": 4,
+          "errores": 0,
+          "recall@5": 0.25,
+          "recall@10": 0.25,
+          "mrr": 0.25
+        },
+        "gemma": {
+          "total": 20,
+          "errores": 0,
+          "recall@5": 0.9,
+          "recall@10": 0.9,
+          "mrr": 0.5475
+        }
+      },
+      "casos": [
+        {
+          "id": "pregunta-001",
+          "posicion": 4,
+          "top_5": [
+            "019edb17-0392-7263-9510-4471f5964476",
+            "019edb14-c721-70b0-b9e2-0d592f19c49c",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb14-c71f-7eaf-bd34-43235e079fc1"
+          ]
+        },
+        {
+          "id": "pregunta-002",
+          "posicion": 5,
+          "top_5": [
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-745c-75e6-9a6b-9c297a89d737",
+            "019edb14-c721-70b0-b9e2-0d592f19c49c",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb15-745b-7e30-b111-3e46ff1caadf"
+          ]
+        },
+        {
+          "id": "pregunta-003",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd5-7561-a8b0-3972d4ce5472",
+            "019edb16-9bd6-783c-8b7e-030237c669be",
+            "019edb16-9bd4-7ff6-9242-6c524709d42f",
+            "019edb17-0394-71c2-badc-ca0e033d064b",
+            "019edb16-9bd4-7939-8912-e56dbce3543a"
+          ]
+        },
+        {
+          "id": "pregunta-004",
+          "posicion": null,
+          "top_5": [
+            "019edb15-d71c-73e2-b63f-619a14eb7fab",
+            "019edb15-d71b-7f69-b191-564293d54790",
+            "019edb15-745d-7077-b3d3-e332c9ee2011",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-1cf7-790f-bcd7-dc3715196912"
+          ]
+        },
+        {
+          "id": "pregunta-005",
+          "posicion": 4,
+          "top_5": [
+            "019edb14-c720-7550-8ff2-587afe67110a",
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-d71b-7f69-b191-564293d54790",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9",
+            "019edb14-c720-7b09-a209-be78a68f762a"
+          ]
+        },
+        {
+          "id": "pregunta-006",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb16-9bd4-7ff6-9242-6c524709d42f",
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb17-0394-71c2-badc-ca0e033d064b"
+          ]
+        },
+        {
+          "id": "pregunta-007",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb15-1cf9-78bf-95a0-538c2b74abc3",
+            "019edb15-1cf9-735c-a4cd-99d7cb7150d0",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb15-d71c-73e2-b63f-619a14eb7fab"
+          ]
+        },
+        {
+          "id": "pregunta-008",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb16-9bd7-723f-b101-314600d31374",
+            "019edb16-9bd6-7d14-afbf-131d090294e2",
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb17-628b-7812-aea0-a6b80905220c"
+          ]
+        },
+        {
+          "id": "pregunta-009",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-d71c-73e2-b63f-619a14eb7fab",
+            "019edb15-d71d-7569-89c3-fa2cc5d02953",
+            "019edb15-1cf7-790f-bcd7-dc3715196912",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-1cf9-7d27-92bd-2ba259070551"
+          ]
+        },
+        {
+          "id": "pregunta-010",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-0393-7c9f-a79f-a0d85369d79b",
+            "019edb17-628a-7264-adbe-3ae5c060b61e",
+            "019edb17-0395-70f4-b62d-27e4aa2c0ac9",
+            "019edb17-628a-7985-a721-ad84130fb982"
+          ]
+        },
+        {
+          "id": "pregunta-011",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-d71c-7cfc-9d85-f00a501f7a7f",
+            "019edb15-d71c-784d-adbe-49046ad051c1",
+            "019edb15-d71b-7341-8b91-a44b23f94fcb",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873"
+          ]
+        },
+        {
+          "id": "pregunta-012",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0c-7774-956c-e17b36649add",
+            "019edb14-c71f-74cf-9eff-5f1d29add8a2",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb15-1cfa-71b3-9eeb-ec46cc38b43b"
+          ]
+        },
+        {
+          "id": "pregunta-013",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9",
+            "019edb14-c720-7b09-a209-be78a68f762a",
+            "019edb15-745a-7a7d-9ba2-3d4989d273fe",
+            "019edb14-c720-7550-8ff2-587afe67110a"
+          ]
+        },
+        {
+          "id": "pregunta-014",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-0394-71c2-badc-ca0e033d064b",
+            "019edb15-d71a-778a-b030-05afc66bbfe8",
+            "019edb17-628a-7264-adbe-3ae5c060b61e"
+          ]
+        },
+        {
+          "id": "pregunta-015",
+          "posicion": 4,
+          "top_5": [
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed765-0d58-7686-867a-b2cf3548107e",
+            "019ed765-0d57-7291-8449-cf8152de91ec"
+          ]
+        },
+        {
+          "id": "pregunta-016",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d57-7291-8449-cf8152de91ec"
+          ]
+        },
+        {
+          "id": "pregunta-017",
+          "posicion": 2,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d56-7856-b5ff-aa77fce67d6a",
+            "019ed765-0d58-7f26-8817-5621a0eb0820"
+          ]
+        },
+        {
+          "id": "pregunta-018",
+          "posicion": 2,
+          "top_5": [
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+            "019ed765-0d57-783b-8b55-2de92c7001a2",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fd-7697-9069-5f39c796a604"
+          ]
+        },
+        {
+          "id": "pregunta-019",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d56-7856-b5ff-aa77fce67d6a",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c"
+          ]
+        },
+        {
+          "id": "pregunta-020",
+          "posicion": null,
+          "top_5": [
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7"
+          ]
+        },
+        {
+          "id": "pregunta-021",
+          "posicion": null,
+          "top_5": [
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955"
+          ]
+        },
+        {
+          "id": "pregunta-022",
+          "posicion": null,
+          "top_5": [
+            "019ed765-0d57-7291-8449-cf8152de91ec",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d57-783b-8b55-2de92c7001a2",
+            "019ed764-f6fd-7697-9069-5f39c796a604"
+          ]
+        },
+        {
+          "id": "pregunta-023",
+          "posicion": null,
+          "top_5": [
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed764-f6fc-7f71-b22a-314af528df06",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1"
+          ]
+        },
+        {
+          "id": "pregunta-024",
+          "posicion": 1,
+          "top_5": [
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-745c-75e6-9a6b-9c297a89d737",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "local-980801caf68c",
+      "tipo": "medicion_local",
+      "fecha": "2026-08-14T06:10:59Z",
+      "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+      "configuracion_hash": "980801caf68c37ef4b6df6207ee7658675adaf1c9fbf59343a4e28c84e9b8d98",
+      "revision_git": "882a2e31232d3143e1a85b77bd117a3158b328fb",
+      "ranx_version": "0.3.21",
+      "evaluador": "ranx; métricas verificadas por ranx contra trec_eval",
+      "top_5_disponibles": true,
+      "configuracion": {
+        "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+        "flujo_version": 2,
+        "top_k_recuperacion": 20,
+        "metricas": [
+          "recall@5",
+          "recall@10",
+          "mrr"
+        ],
+        "contenedor": "manualito-rag",
+        "postprocesado": "permisos filtrados en la consulta y deduplicación por content_hash"
+      },
+      "metricas": {
+        "total": 24,
+        "errores": 0,
+        "recall@5": 0.7916666666666666,
+        "recall@10": 0.875,
+        "mrr": 0.5183892496392496
+      },
+      "por_juego": {
+        "Catan": {
+          "total": 15,
+          "errores": 0,
+          "recall@5": 0.9333333333333333,
+          "recall@10": 0.9333333333333333,
+          "mrr": 0.58
+        },
+        "Monopoly": {
+          "total": 9,
+          "errores": 0,
+          "recall@5": 0.5555555555555556,
+          "recall@10": 0.7777777777777778,
+          "mrr": 0.4157046657046657
+        }
+      },
+      "por_origen": {
+        "auditoria": {
+          "total": 4,
+          "errores": 0,
+          "recall@5": 0.25,
+          "recall@10": 0.75,
+          "mrr": 0.3501082251082251
+        },
+        "gemma": {
+          "total": 20,
+          "errores": 0,
+          "recall@5": 0.9,
+          "recall@10": 0.9,
+          "mrr": 0.5520454545454545
+        }
+      },
+      "casos": [
+        {
+          "id": "pregunta-001",
+          "posicion": 4,
+          "top_5": [
+            "019edb17-0392-7263-9510-4471f5964476",
+            "019edb14-c721-70b0-b9e2-0d592f19c49c",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb14-c71f-7eaf-bd34-43235e079fc1"
+          ]
+        },
+        {
+          "id": "pregunta-002",
+          "posicion": 5,
+          "top_5": [
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-745c-75e6-9a6b-9c297a89d737",
+            "019edb14-c721-70b0-b9e2-0d592f19c49c",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb15-745b-7e30-b111-3e46ff1caadf"
+          ]
+        },
+        {
+          "id": "pregunta-003",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd5-7561-a8b0-3972d4ce5472",
+            "019edb16-9bd6-783c-8b7e-030237c669be",
+            "019edb16-9bd4-7ff6-9242-6c524709d42f",
+            "019edb17-0394-71c2-badc-ca0e033d064b",
+            "019edb16-9bd4-7939-8912-e56dbce3543a"
+          ]
+        },
+        {
+          "id": "pregunta-004",
+          "posicion": null,
+          "top_5": [
+            "019edb15-d71c-73e2-b63f-619a14eb7fab",
+            "019edb15-d71b-7f69-b191-564293d54790",
+            "019edb15-745d-7077-b3d3-e332c9ee2011",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-1cf7-790f-bcd7-dc3715196912"
+          ]
+        },
+        {
+          "id": "pregunta-005",
+          "posicion": 4,
+          "top_5": [
+            "019edb14-c720-7550-8ff2-587afe67110a",
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-d71b-7f69-b191-564293d54790",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9",
+            "019edb14-c720-7b09-a209-be78a68f762a"
+          ]
+        },
+        {
+          "id": "pregunta-006",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb16-9bd4-7ff6-9242-6c524709d42f",
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb17-0394-71c2-badc-ca0e033d064b"
+          ]
+        },
+        {
+          "id": "pregunta-007",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb15-1cf9-78bf-95a0-538c2b74abc3",
+            "019edb15-1cf9-735c-a4cd-99d7cb7150d0",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb15-d71c-73e2-b63f-619a14eb7fab"
+          ]
+        },
+        {
+          "id": "pregunta-008",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb16-9bd7-723f-b101-314600d31374",
+            "019edb16-9bd6-7d14-afbf-131d090294e2",
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb17-628b-7812-aea0-a6b80905220c"
+          ]
+        },
+        {
+          "id": "pregunta-009",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-d71c-73e2-b63f-619a14eb7fab",
+            "019edb15-d71d-7569-89c3-fa2cc5d02953",
+            "019edb15-1cf7-790f-bcd7-dc3715196912",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-1cf9-7d27-92bd-2ba259070551"
+          ]
+        },
+        {
+          "id": "pregunta-010",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-0393-7c9f-a79f-a0d85369d79b",
+            "019edb17-628a-7264-adbe-3ae5c060b61e",
+            "019edb17-0395-70f4-b62d-27e4aa2c0ac9",
+            "019edb17-628a-7985-a721-ad84130fb982"
+          ]
+        },
+        {
+          "id": "pregunta-011",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-d71c-7cfc-9d85-f00a501f7a7f",
+            "019edb15-d71c-784d-adbe-49046ad051c1",
+            "019edb15-d71b-7341-8b91-a44b23f94fcb",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873"
+          ]
+        },
+        {
+          "id": "pregunta-012",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0c-7774-956c-e17b36649add",
+            "019edb14-c71f-74cf-9eff-5f1d29add8a2",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb15-1cfa-71b3-9eeb-ec46cc38b43b"
+          ]
+        },
+        {
+          "id": "pregunta-013",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9",
+            "019edb14-c720-7b09-a209-be78a68f762a",
+            "019edb15-745a-7a7d-9ba2-3d4989d273fe",
+            "019edb14-c720-7550-8ff2-587afe67110a"
+          ]
+        },
+        {
+          "id": "pregunta-014",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-0394-71c2-badc-ca0e033d064b",
+            "019edb15-d71a-778a-b030-05afc66bbfe8",
+            "019edb17-628a-7264-adbe-3ae5c060b61e"
+          ]
+        },
+        {
+          "id": "pregunta-015",
+          "posicion": 4,
+          "top_5": [
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed765-0d58-7686-867a-b2cf3548107e",
+            "019ed765-0d57-7291-8449-cf8152de91ec"
+          ]
+        },
+        {
+          "id": "pregunta-016",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d57-7291-8449-cf8152de91ec"
+          ]
+        },
+        {
+          "id": "pregunta-017",
+          "posicion": 2,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d56-7856-b5ff-aa77fce67d6a",
+            "019ed765-0d58-7f26-8817-5621a0eb0820"
+          ]
+        },
+        {
+          "id": "pregunta-018",
+          "posicion": 2,
+          "top_5": [
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+            "019ed765-0d57-783b-8b55-2de92c7001a2",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fd-7697-9069-5f39c796a604"
+          ]
+        },
+        {
+          "id": "pregunta-019",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d56-7856-b5ff-aa77fce67d6a",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c"
+          ]
+        },
+        {
+          "id": "pregunta-020",
+          "posicion": 11,
+          "top_5": [
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed765-0d58-704f-a47d-516e95cd606d",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c"
+          ]
+        },
+        {
+          "id": "pregunta-021",
+          "posicion": 7,
+          "top_5": [
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4"
+          ]
+        },
+        {
+          "id": "pregunta-022",
+          "posicion": 11,
+          "top_5": [
+            "019ed765-0d57-7291-8449-cf8152de91ec",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d57-783b-8b55-2de92c7001a2",
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1"
+          ]
+        },
+        {
+          "id": "pregunta-023",
+          "posicion": 6,
+          "top_5": [
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed764-f6fc-7f71-b22a-314af528df06",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1"
+          ]
+        },
+        {
+          "id": "pregunta-024",
+          "posicion": 1,
+          "top_5": [
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-745c-75e6-9a6b-9c297a89d737",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "local-0e66aad3326a",
+      "tipo": "medicion_local",
+      "fecha": "2026-08-16T16:33:52Z",
+      "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+      "configuracion_hash": "0e66aad3326a3612477dc7803b1b6e018f7e58fbbe3cc06bf62f1fc5f8089854",
+      "revision_git": "4a74a9de7763dfc2147740bd376ffdd4d0a90730",
+      "ranx_version": "0.3.21",
+      "evaluador": "ranx; métricas verificadas por ranx contra trec_eval",
+      "top_5_disponibles": true,
+      "configuracion": {
+        "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+        "flujo_version": 3,
+        "top_k_recuperacion": 20,
+        "metricas": [
+          "recall@5",
+          "recall@10",
+          "mrr"
+        ],
+        "contenedor": "manualito-rag",
+        "postprocesado": "permisos filtrados en la consulta y deduplicación por content_hash"
+      },
+      "metricas": {
+        "total": 24,
+        "errores": 0,
+        "recall@5": 0.8333333333333334,
+        "recall@10": 0.9583333333333334,
+        "mrr": 0.6334694989106754
+      },
+      "por_juego": {
+        "Catan": {
+          "total": 15,
+          "errores": 0,
+          "recall@5": 0.7333333333333333,
+          "recall@10": 0.9333333333333333,
+          "mrr": 0.566884531590414
+        },
+        "Monopoly": {
+          "total": 9,
+          "errores": 0,
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "mrr": 0.7444444444444445
+        }
+      },
+      "por_origen": {
+        "auditoria": {
+          "total": 4,
+          "errores": 0,
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "mrr": 1.0
+        },
+        "gemma": {
+          "total": 20,
+          "errores": 0,
+          "recall@5": 0.8,
+          "recall@10": 0.95,
+          "mrr": 0.5601633986928104
+        }
+      },
+      "casos": [
+        {
+          "id": "pregunta-001",
+          "posicion": 2,
+          "top_5": [
+            "019edb17-0392-7263-9510-4471f5964476",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb14-c721-70b0-b9e2-0d592f19c49c",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        },
+        {
+          "id": "pregunta-002",
+          "posicion": 17,
+          "top_5": [
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        },
+        {
+          "id": "pregunta-003",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd5-7561-a8b0-3972d4ce5472",
+            "019edb16-9bd6-783c-8b7e-030237c669be",
+            "019edb15-d71a-7e32-b59c-d9cd0cdda8e9",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb17-628a-7264-adbe-3ae5c060b61e"
+          ]
+        },
+        {
+          "id": "pregunta-004",
+          "posicion": 6,
+          "top_5": [
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb15-d71b-7341-8b91-a44b23f94fcb",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb14-8347-73f2-810e-f17934546c29"
+          ]
+        },
+        {
+          "id": "pregunta-005",
+          "posicion": 6,
+          "top_5": [
+            "019edb14-c720-7550-8ff2-587afe67110a",
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-d71b-7f69-b191-564293d54790",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb16-3b0c-7774-956c-e17b36649add"
+          ]
+        },
+        {
+          "id": "pregunta-006",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb17-628b-7327-9e52-2d039f5b34a1",
+            "019edb17-628a-7264-adbe-3ae5c060b61e",
+            "019edb16-9bd4-7ff6-9242-6c524709d42f"
+          ]
+        },
+        {
+          "id": "pregunta-007",
+          "posicion": 4,
+          "top_5": [
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb15-1cf7-710c-8d80-ec5a11901006",
+            "019edb17-0392-7263-9510-4471f5964476",
+            "019edb15-1cf9-78bf-95a0-538c2b74abc3",
+            "019edb17-0392-7983-b642-3900b6f54403"
+          ]
+        },
+        {
+          "id": "pregunta-008",
+          "posicion": 4,
+          "top_5": [
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        },
+        {
+          "id": "pregunta-009",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-1cf7-790f-bcd7-dc3715196912",
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-1cf7-710c-8d80-ec5a11901006",
+            "019edb15-d71c-73e2-b63f-619a14eb7fab"
+          ]
+        },
+        {
+          "id": "pregunta-010",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-628a-7264-adbe-3ae5c060b61e",
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb17-0391-7aaa-904f-1fcc759555e9",
+            "019edb17-0393-7c9f-a79f-a0d85369d79b"
+          ]
+        },
+        {
+          "id": "pregunta-011",
+          "posicion": 1,
+          "top_5": [
+            "019edb15-d71b-7341-8b91-a44b23f94fcb",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873",
+            "019edb15-d71c-7cfc-9d85-f00a501f7a7f",
+            "019edb15-d71c-784d-adbe-49046ad051c1"
+          ]
+        },
+        {
+          "id": "pregunta-012",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0c-7774-956c-e17b36649add",
+            "019edb14-c71f-74cf-9eff-5f1d29add8a2",
+            "019edb15-1cfa-71b3-9eeb-ec46cc38b43b",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb14-c720-7b09-a209-be78a68f762a"
+          ]
+        },
+        {
+          "id": "pregunta-013",
+          "posicion": 9,
+          "top_5": [
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb17-0392-7983-b642-3900b6f54403",
+            "019edb16-3b0c-7774-956c-e17b36649add"
+          ]
+        },
+        {
+          "id": "pregunta-014",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb15-d71a-7e32-b59c-d9cd0cdda8e9",
+            "019edb15-d71a-778a-b030-05afc66bbfe8",
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb15-d71b-7341-8b91-a44b23f94fcb"
+          ]
+        },
+        {
+          "id": "pregunta-015",
+          "posicion": 5,
+          "top_5": [
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed765-0d58-7686-867a-b2cf3548107e"
+          ]
+        },
+        {
+          "id": "pregunta-016",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4"
+          ]
+        },
+        {
+          "id": "pregunta-017",
+          "posicion": 2,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d56-7856-b5ff-aa77fce67d6a",
+            "019ed765-0d58-7f26-8817-5621a0eb0820"
+          ]
+        },
+        {
+          "id": "pregunta-018",
+          "posicion": 2,
+          "top_5": [
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed765-0d57-783b-8b55-2de92c7001a2"
+          ]
+        },
+        {
+          "id": "pregunta-019",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6ff-72ee-b561-bc2b12bea150"
+          ]
+        },
+        {
+          "id": "pregunta-020",
+          "posicion": 2,
+          "top_5": [
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed764-f6ff-72ee-b561-bc2b12bea150",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955"
+          ]
+        },
+        {
+          "id": "pregunta-021",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6ff-72ee-b561-bc2b12bea150",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955"
+          ]
+        },
+        {
+          "id": "pregunta-022",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed764-f6ff-72ee-b561-bc2b12bea150",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7"
+          ]
+        },
+        {
+          "id": "pregunta-023",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6ff-72ee-b561-bc2b12bea150",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fd-7697-9069-5f39c796a604"
+          ]
+        },
+        {
+          "id": "pregunta-024",
+          "posicion": 1,
+          "top_5": [
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "local-957613c07305",
+      "tipo": "medicion_local",
+      "fecha": "2026-08-18T21:04:12Z",
+      "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+      "configuracion_hash": "957613c0730539da0af625a70b6628cc5c8f6b59a9a7f12ff871a8c81726a6f2",
+      "revision_git": "f52c6820efd01e72c75da12502ff19f7e8c683b0",
+      "ranx_version": "0.3.21",
+      "evaluador": "ranx; métricas verificadas por ranx contra trec_eval",
+      "top_5_disponibles": true,
+      "configuracion": {
+        "dataset_sha256_canonico": "36ddfefc3e42f02a7cde24f08393483ab8e47d59305deabf2952f992637a7d7d",
+        "flujo_version": 4,
+        "top_k_recuperacion": 20,
+        "metricas": [
+          "recall@5",
+          "recall@10",
+          "mrr"
+        ],
+        "contenedor": "manualito-rag",
+        "postprocesado": "permisos filtrados en la consulta y deduplicación por content_hash"
+      },
+      "metricas": {
+        "total": 24,
+        "errores": 0,
+        "recall@5": 0.9166666666666666,
+        "recall@10": 1.0,
+        "mrr": 0.7125
+      },
+      "por_juego": {
+        "Catan": {
+          "total": 15,
+          "errores": 0,
+          "recall@5": 0.9333333333333333,
+          "recall@10": 1.0,
+          "mrr": 0.7288888888888889
+        },
+        "Monopoly": {
+          "total": 9,
+          "errores": 0,
+          "recall@5": 0.8888888888888888,
+          "recall@10": 1.0,
+          "mrr": 0.6851851851851852
+        }
+      },
+      "por_origen": {
+        "auditoria": {
+          "total": 4,
+          "errores": 0,
+          "recall@5": 1.0,
+          "recall@10": 1.0,
+          "mrr": 0.6458333333333334
+        },
+        "gemma": {
+          "total": 20,
+          "errores": 0,
+          "recall@5": 0.9,
+          "recall@10": 1.0,
+          "mrr": 0.7258333333333333
+        }
+      },
+      "casos": [
+        {
+          "id": "pregunta-001",
+          "posicion": 2,
+          "top_5": [
+            "019edb17-0392-7263-9510-4471f5964476",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb14-c721-70b0-b9e2-0d592f19c49c",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb14-c71f-7eaf-bd34-43235e079fc1"
+          ]
+        },
+        {
+          "id": "pregunta-002",
+          "posicion": 4,
+          "top_5": [
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb15-d71b-7341-8b91-a44b23f94fcb",
+            "019edb15-745c-75e6-9a6b-9c297a89d737",
+            "019edb15-745b-7e30-b111-3e46ff1caadf",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        },
+        {
+          "id": "pregunta-003",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd5-7561-a8b0-3972d4ce5472",
+            "019edb17-628a-7264-adbe-3ae5c060b61e",
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb16-9bd6-783c-8b7e-030237c669be",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        },
+        {
+          "id": "pregunta-004",
+          "posicion": 10,
+          "top_5": [
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb15-d71d-715a-93cb-0a43644d2933",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb17-0392-7eec-8443-69549993fcfe",
+            "019edb17-0392-7263-9510-4471f5964476"
+          ]
+        },
+        {
+          "id": "pregunta-005",
+          "posicion": 4,
+          "top_5": [
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-d71b-7f69-b191-564293d54790",
+            "019edb14-c720-7550-8ff2-587afe67110a",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9",
+            "019edb15-d71d-715a-93cb-0a43644d2933"
+          ]
+        },
+        {
+          "id": "pregunta-006",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-628a-7985-a721-ad84130fb982",
+            "019edb17-628b-7327-9e52-2d039f5b34a1",
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb16-9bd4-7ff6-9242-6c524709d42f",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        },
+        {
+          "id": "pregunta-007",
+          "posicion": 1,
+          "top_5": [
+            "019edb15-1cf9-78bf-95a0-538c2b74abc3",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb15-1cf9-7d27-92bd-2ba259070551",
+            "019edb17-0392-7263-9510-4471f5964476",
+            "019edb15-1cf9-735c-a4cd-99d7cb7150d0"
+          ]
+        },
+        {
+          "id": "pregunta-008",
+          "posicion": 1,
+          "top_5": [
+            "019edb16-9bd3-7cd2-8755-aadf975ab11e",
+            "019edb16-3b0d-7178-aa97-0608ebc42b6f",
+            "019edb17-0392-7983-b642-3900b6f54403",
+            "019edb15-745a-7351-b623-0dc2f31b2980",
+            "019edb17-628a-7985-a721-ad84130fb982"
+          ]
+        },
+        {
+          "id": "pregunta-009",
+          "posicion": 1,
+          "top_5": [
+            "019edb15-1cf7-790f-bcd7-dc3715196912",
+            "019edb15-1cf7-710c-8d80-ec5a11901006",
+            "019edb15-d71c-73e2-b63f-619a14eb7fab",
+            "019edb16-3b0c-7c17-80a2-284910b9157a",
+            "019edb15-1cf9-7d27-92bd-2ba259070551"
+          ]
+        },
+        {
+          "id": "pregunta-010",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-0393-7c9f-a79f-a0d85369d79b",
+            "019edb17-628b-7812-aea0-a6b80905220c",
+            "019edb17-628a-7264-adbe-3ae5c060b61e",
+            "019edb17-628a-7985-a721-ad84130fb982"
+          ]
+        },
+        {
+          "id": "pregunta-011",
+          "posicion": 1,
+          "top_5": [
+            "019edb15-d71b-7341-8b91-a44b23f94fcb",
+            "019edb15-d71c-7cfc-9d85-f00a501f7a7f",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873",
+            "019edb15-d71c-784d-adbe-49046ad051c1",
+            "019edb15-d71d-715a-93cb-0a43644d2933"
+          ]
+        },
+        {
+          "id": "pregunta-012",
+          "posicion": 2,
+          "top_5": [
+            "019edb16-3b0c-7774-956c-e17b36649add",
+            "019edb14-c71f-74cf-9eff-5f1d29add8a2",
+            "019edb14-c71f-7eaf-bd34-43235e079fc1",
+            "019edb14-c720-7b09-a209-be78a68f762a",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9"
+          ]
+        },
+        {
+          "id": "pregunta-013",
+          "posicion": 1,
+          "top_5": [
+            "019edb14-c720-7b09-a209-be78a68f762a",
+            "019edb15-1cf8-74ff-a867-9da469ad29b9",
+            "019edb15-745a-7a7d-9ba2-3d4989d273fe",
+            "019edb15-1cf7-7fb1-b4d5-f9af2a5b4f65",
+            "019edb15-d71a-71a7-b838-243259d694f2"
+          ]
+        },
+        {
+          "id": "pregunta-014",
+          "posicion": 1,
+          "top_5": [
+            "019edb17-0394-76ca-9a69-e850a74bb8a7",
+            "019edb17-0394-7be6-8bd0-159005ddafd4",
+            "019edb17-0394-71c2-badc-ca0e033d064b",
+            "019edb15-d71a-7e32-b59c-d9cd0cdda8e9",
+            "019edb15-d71a-778a-b030-05afc66bbfe8"
+          ]
+        },
+        {
+          "id": "pregunta-015",
+          "posicion": 4,
+          "top_5": [
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c",
+            "019ed765-0d58-7686-867a-b2cf3548107e",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955"
+          ]
+        },
+        {
+          "id": "pregunta-016",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fd-7697-9069-5f39c796a604",
+            "019ed765-0d58-7686-867a-b2cf3548107e",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c"
+          ]
+        },
+        {
+          "id": "pregunta-017",
+          "posicion": 2,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d56-7856-b5ff-aa77fce67d6a",
+            "019ed765-0d58-704f-a47d-516e95cd606d",
+            "019ed765-0d59-74fc-8757-b73b0dc0a36c"
+          ]
+        },
+        {
+          "id": "pregunta-018",
+          "posicion": 1,
+          "top_5": [
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed765-0d5a-7476-ac58-8dd79cec1649",
+            "019ed765-0d57-783b-8b55-2de92c7001a2",
+            "019ed764-f6fe-7c50-bf10-c4a138a71218"
+          ]
+        },
+        {
+          "id": "pregunta-019",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d58-7f26-8817-5621a0eb0820",
+            "019ed765-0d58-7686-867a-b2cf3548107e",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1"
+          ]
+        },
+        {
+          "id": "pregunta-020",
+          "posicion": 6,
+          "top_5": [
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed764-f6ff-7fea-8599-1c0ef5355ffa",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4",
+            "019ed764-f6fe-7c50-bf10-c4a138a71218"
+          ]
+        },
+        {
+          "id": "pregunta-021",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed764-f6ff-72ee-b561-bc2b12bea150"
+          ]
+        },
+        {
+          "id": "pregunta-022",
+          "posicion": 4,
+          "top_5": [
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed764-f6ff-78a9-b1d0-4ec4e995a955",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fe-7c50-bf10-c4a138a71218",
+            "019ed765-0d59-7f84-a387-ca90fe4fdfd4"
+          ]
+        },
+        {
+          "id": "pregunta-023",
+          "posicion": 1,
+          "top_5": [
+            "019ed764-f6ff-72ee-b561-bc2b12bea150",
+            "019ed764-f6fd-7e7f-99b4-f2d49f403df7",
+            "019ed765-0d59-79ef-a688-ab20a3d2b4f1",
+            "019ed764-f6fe-740e-8c09-45af58b82e3d",
+            "019ed764-f6fe-7c50-bf10-c4a138a71218"
+          ]
+        },
+        {
+          "id": "pregunta-024",
+          "posicion": 3,
+          "top_5": [
+            "019edb15-d719-78de-8c67-3b2a8012f4f9",
+            "019edb15-745c-75e6-9a6b-9c297a89d737",
+            "019edb14-8347-73f2-810e-f17934546c29",
+            "019edb15-d71b-7aec-84f2-2d3eb1f05873",
+            "019edb15-745a-7351-b623-0dc2f31b2980"
+          ]
+        }
+      ]
+    }
+  ]
+}

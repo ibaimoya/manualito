@@ -1,0 +1,874 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+
+interface Props {
+  rutaMd: string;
+}
+
+const { rutaMd } = Astro.props;
+
+/* Glifos compartidos por el botón, el menú y los avisos. */
+const trazoCopiar =
+  '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>';
+const trazoCorrecto = '<path d="M20 6 9 17l-5-5"></path>';
+---
+
+<manualito-copiar-pagina data-ruta-md={rutaMd}>
+  <div class="grupo">
+    <button
+      class="accion"
+      type="button"
+      aria-label="Copiar la página como Markdown"
+      title="Copiar página"
+    >
+      <span class="iconos" aria-hidden="true">
+        <svg
+          class="icono-copiar"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          set:html={trazoCopiar}
+        />
+        <svg
+          class="icono-copiado"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          set:html={trazoCorrecto}
+        />
+      </span>
+    </button>
+
+    <button
+      class="gatillo"
+      type="button"
+      aria-haspopup="menu"
+      aria-expanded="false"
+      aria-label="Más opciones de copia"
+    >
+      <Icon name="down-caret" class="gatillo__caret" />
+    </button>
+  </div>
+
+  <div class="menu" role="menu" aria-label="Opciones de copia" hidden inert>
+    <button class="opcion" type="button" role="menuitem" tabindex="-1" data-accion="copiar">
+      <svg
+        class="opcion__icono"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        set:html={trazoCopiar}
+      />
+      <span class="opcion__textos">
+        <span class="opcion__titulo">Copiar página</span>
+        <span class="opcion__detalle">Copia la página en Markdown</span>
+      </span>
+    </button>
+
+    <a class="opcion" role="menuitem" tabindex="-1" href={rutaMd} target="_blank" rel="noopener">
+      <svg
+        class="opcion__icono"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+        <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+        <path d="M10 9H8"></path>
+        <path d="M16 13H8"></path>
+        <path d="M16 17H8"></path>
+      </svg>
+      <span class="opcion__textos">
+        <span class="opcion__titulo">Ver en Markdown</span>
+        <span class="opcion__detalle">Abre la página como texto plano</span>
+      </span>
+      <svg
+        class="opcion__externo"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M7 7h10v10"></path>
+        <path d="M7 17 17 7"></path>
+      </svg>
+    </a>
+  </div>
+
+  <div class="toaster" aria-hidden="true"></div>
+
+  <template class="toast-plantilla">
+    <div class="toast">
+      <svg
+        class="toast__check"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        set:html={trazoCorrecto}
+      />
+      <svg
+        class="toast__error"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="m15 9-6 6"></path>
+        <path d="m9 9 6 6"></path>
+      </svg>
+      <span class="toast__texto"></span>
+    </div>
+  </template>
+
+  <span class="sr-only" aria-live="polite"></span>
+</manualito-copiar-pagina>
+
+<script>
+  const DURACION_TOAST = 4000;
+  const SALIDA_TOAST = 400;
+  const HUECO_TOAST = 14;
+  const VISIBLES_TOAST = 3;
+  const UMBRAL_DESLIZAR = 45;
+  const VELOCIDAD_DESLIZAR = 0.11;
+  const MENOS_MOVIMIENTO = matchMedia('(prefers-reduced-motion: reduce)');
+
+  interface ToastVivo {
+    el: HTMLElement;
+    altura: number;
+    restante: number;
+    inicio: number;
+    timer: number | undefined;
+  }
+
+  class ToasterCopiar {
+    private toasts: ToastVivo[] = [];
+
+    /* El atributo del contenedor es la única fuente del estado expandido. */
+    private get expandido(): boolean {
+      return this.contenedor.hasAttribute('data-expandido');
+    }
+
+    constructor(
+      private contenedor: HTMLElement,
+      private plantilla: HTMLTemplateElement,
+    ) {
+      contenedor.addEventListener('pointerover', this.handlePointerOver);
+      contenedor.addEventListener('pointerout', this.handlePointerOut);
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+
+    destruir(): void {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+      this.toasts.forEach((toast) => clearTimeout(toast.timer));
+      this.toasts = [];
+      this.contenedor.remove();
+    }
+
+    mostrar(mensaje: string, esError: boolean): void {
+      const base = this.plantilla.content.firstElementChild;
+      if (!(base instanceof HTMLElement)) return;
+      const el = base.cloneNode(true) as HTMLElement;
+      el.toggleAttribute('data-error', esError);
+      const texto = el.querySelector<HTMLElement>('.toast__texto');
+      if (texto) texto.textContent = mensaje;
+
+      el.setAttribute('data-entrando', '');
+      this.contenedor.append(el);
+      const toast: ToastVivo = {
+        el,
+        altura: el.offsetHeight,
+        restante: DURACION_TOAST,
+        inicio: performance.now(),
+        timer: undefined,
+      };
+      this.toasts.unshift(toast);
+      this.aplicar();
+      // Reflow para que la entrada transicione desde abajo.
+      void el.offsetWidth;
+      el.removeAttribute('data-entrando');
+
+      this.prepararDeslizamiento(toast);
+      // Con el ratón encima o la pestaña oculta el aviso nace pausado.
+      if (!this.expandido && !document.hidden) this.programar(toast);
+    }
+
+    /* Recoloca la pila según el índice, el estado expandido y la visibilidad. */
+    private aplicar(): void {
+      let acumulado = 0;
+      this.toasts.forEach((toast, indice) => {
+        toast.el.style.setProperty('--n', String(indice));
+        toast.el.style.setProperty('--desplazamiento', `${acumulado}px`);
+        toast.el.toggleAttribute('data-oculto', indice >= VISIBLES_TOAST);
+        acumulado += toast.altura + HUECO_TOAST;
+      });
+    }
+
+    private programar(toast: ToastVivo): void {
+      clearTimeout(toast.timer);
+      toast.inicio = performance.now();
+      toast.timer = window.setTimeout(() => this.descartar(toast, false), toast.restante);
+    }
+
+    private pausarTodos(): void {
+      this.toasts.forEach((toast) => {
+        if (toast.timer === undefined) return;
+        clearTimeout(toast.timer);
+        toast.timer = undefined;
+        toast.restante = Math.max(500, toast.restante - (performance.now() - toast.inicio));
+      });
+    }
+
+    private reanudarTodos(): void {
+      if (this.expandido || document.hidden) return;
+      this.toasts.forEach((toast) => this.programar(toast));
+    }
+
+    private descartar(toast: ToastVivo, porGesto: boolean): void {
+      const indice = this.toasts.indexOf(toast);
+      if (indice < 0) return;
+      clearTimeout(toast.timer);
+      this.toasts.splice(indice, 1);
+      toast.el.toggleAttribute('data-frente', indice === 0 || porGesto);
+      toast.el.removeAttribute('data-deslizando');
+      toast.el.style.translate = '';
+      toast.el.setAttribute('data-saliendo', '');
+      this.aplicar();
+      window.setTimeout(() => toast.el.remove(), MENOS_MOVIMIENTO.matches ? 150 : SALIDA_TOAST);
+      if (this.toasts.length === 0) this.contenedor.removeAttribute('data-expandido');
+    }
+
+    private prepararDeslizamiento(toast: ToastVivo): void {
+      let origenY = 0;
+      let momento = 0;
+      let desplazado = 0;
+      const el = toast.el;
+
+      el.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0 || el.hasAttribute('data-saliendo')) return;
+        origenY = ev.clientY;
+        momento = performance.now();
+        desplazado = 0;
+        el.setPointerCapture(ev.pointerId);
+        el.setAttribute('data-deslizando', '');
+      });
+
+      el.addEventListener('pointermove', (ev) => {
+        if (!el.hasAttribute('data-deslizando')) return;
+        desplazado = Math.max(0, ev.clientY - origenY);
+        el.style.translate = desplazado ? `0 ${desplazado}px` : '';
+      });
+
+      const soltar = () => {
+        if (!el.hasAttribute('data-deslizando')) return;
+        const velocidad = desplazado / Math.max(1, performance.now() - momento);
+        if (desplazado >= UMBRAL_DESLIZAR || velocidad > VELOCIDAD_DESLIZAR) {
+          this.descartar(toast, true);
+          return;
+        }
+        el.removeAttribute('data-deslizando');
+        el.style.translate = '';
+      };
+
+      el.addEventListener('pointerup', soltar);
+      el.addEventListener('pointercancel', soltar);
+    }
+
+    private handlePointerOver = (): void => {
+      if (this.expandido || this.toasts.length === 0) return;
+      this.contenedor.setAttribute('data-expandido', '');
+      this.pausarTodos();
+    };
+
+    private handlePointerOut = (ev: PointerEvent): void => {
+      if (!this.expandido) return;
+      if (ev.relatedTarget instanceof Node && this.contenedor.contains(ev.relatedTarget)) return;
+      this.contenedor.removeAttribute('data-expandido');
+      this.reanudarTodos();
+    };
+
+    private handleVisibilityChange = (): void => {
+      if (document.hidden) {
+        this.pausarTodos();
+      } else {
+        this.reanudarTodos();
+      }
+    };
+  }
+
+  class ManualitoCopiarPagina extends HTMLElement {
+    private accion: HTMLButtonElement | null = null;
+    private gatillo: HTMLButtonElement | null = null;
+    private menu: HTMLElement | null = null;
+    private opciones: HTMLElement[] = [];
+    private vivo: HTMLElement | null = null;
+    private toaster: ToasterCopiar | null = null;
+    private promesaMarkdown: Promise<string> | null = null;
+    private copiadoTimer: number | undefined;
+    private cierreTimer: number | undefined;
+
+    connectedCallback(): void {
+      if (this.dataset.initialized === 'true') return;
+      this.dataset.initialized = 'true';
+
+      this.accion = this.querySelector<HTMLButtonElement>('.accion');
+      this.gatillo = this.querySelector<HTMLButtonElement>('.gatillo');
+      this.menu = this.querySelector<HTMLElement>('.menu');
+      this.opciones = Array.from(this.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+      this.vivo = this.querySelector<HTMLElement>('[aria-live]');
+
+      const contenedor = this.querySelector<HTMLElement>('.toaster');
+      const plantilla = this.querySelector<HTMLTemplateElement>('.toast-plantilla');
+      if (contenedor && plantilla) {
+        // Se mueve al body porque el backdrop-filter de la cabecera rompería el fixed.
+        document.body.append(contenedor);
+        this.toaster = new ToasterCopiar(contenedor, plantilla);
+      }
+
+      this.accion?.addEventListener('click', this.handleCopiarClick);
+      this.gatillo?.addEventListener('click', this.handleGatilloClick);
+      this.gatillo?.addEventListener('keydown', this.handleGatilloKeyDown);
+      this.menu?.addEventListener('keydown', this.handleMenuKeyDown);
+      this.opciones.forEach((opcion) => opcion.addEventListener('click', this.handleOpcionClick));
+      this.addEventListener('pointerenter', this.precargar);
+      this.addEventListener('focusin', this.precargar);
+      document.addEventListener('pointerdown', this.handleFuera);
+      document.addEventListener('focusin', this.handleFuera);
+    }
+
+    disconnectedCallback(): void {
+      this.accion?.removeEventListener('click', this.handleCopiarClick);
+      this.gatillo?.removeEventListener('click', this.handleGatilloClick);
+      this.gatillo?.removeEventListener('keydown', this.handleGatilloKeyDown);
+      this.menu?.removeEventListener('keydown', this.handleMenuKeyDown);
+      this.opciones.forEach((opcion) =>
+        opcion.removeEventListener('click', this.handleOpcionClick),
+      );
+      this.removeEventListener('pointerenter', this.precargar);
+      this.removeEventListener('focusin', this.precargar);
+      document.removeEventListener('pointerdown', this.handleFuera);
+      document.removeEventListener('focusin', this.handleFuera);
+      this.toaster?.destruir();
+      this.toaster = null;
+      clearTimeout(this.copiadoTimer);
+      clearTimeout(this.cierreTimer);
+    }
+
+    /* La descarga se cachea para que el clic copie al instante. */
+    private obtenerMarkdown(): Promise<string> {
+      this.promesaMarkdown ??= fetch(this.dataset.rutaMd ?? '')
+        .then((respuesta) => {
+          if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+          return respuesta.text();
+        })
+        .catch((error: unknown) => {
+          this.promesaMarkdown = null;
+          throw error;
+        });
+      return this.promesaMarkdown;
+    }
+
+    private precargar = (): void => {
+      this.obtenerMarkdown().catch(() => {});
+    };
+
+    private anunciar(mensaje: string): void {
+      if (!this.vivo) return;
+      // Se vacía primero para que los lectores anuncien mensajes repetidos.
+      this.vivo.textContent = '';
+      requestAnimationFrame(() => {
+        if (this.vivo) this.vivo.textContent = mensaje;
+      });
+    }
+
+    private async copiar(): Promise<void> {
+      try {
+        const markdown = await this.obtenerMarkdown();
+        await navigator.clipboard.writeText(markdown);
+        this.setAttribute('data-copiado', '');
+        clearTimeout(this.copiadoTimer);
+        this.copiadoTimer = window.setTimeout(() => this.removeAttribute('data-copiado'), 2000);
+        this.toaster?.mostrar('Página copiada como Markdown', false);
+        this.anunciar('Página copiada como Markdown');
+      } catch {
+        this.toaster?.mostrar('No se pudo copiar la página', true);
+        this.anunciar('No se pudo copiar la página');
+      }
+    }
+
+    private openMenu(focus: 'first' | 'last' | null = null): void {
+      if (!this.menu || !this.gatillo) return;
+
+      // Al abrir con teclado se omite la animación para que el foco llegue de inmediato.
+      this.menu.toggleAttribute('data-instant', focus !== null);
+      clearTimeout(this.cierreTimer);
+      this.menu.inert = false;
+      this.menu.hidden = false;
+      // Reflow para que el navegador tome el estado cerrado como punto de partida.
+      void this.menu.offsetWidth;
+      this.menu.setAttribute('data-open', '');
+      this.gatillo.setAttribute('aria-expanded', 'true');
+
+      if (focus === null) return;
+      this.focusOpcion(focus === 'first' ? 0 : this.opciones.length - 1);
+    }
+
+    private closeMenu(restoreFocus = false): void {
+      if (!this.menu || !this.gatillo) return;
+      const menu = this.menu;
+      menu.removeAttribute('data-open');
+      menu.inert = true;
+      this.gatillo.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) this.gatillo.focus();
+
+      clearTimeout(this.cierreTimer);
+      const instantaneo = menu.hasAttribute('data-instant') || MENOS_MOVIMIENTO.matches;
+      if (instantaneo) {
+        menu.hidden = true;
+        return;
+      }
+      this.cierreTimer = window.setTimeout(() => {
+        menu.hidden = true;
+      }, 180);
+    }
+
+    private focusOpcion(index: number): void {
+      if (this.opciones.length === 0) return;
+      const normalizado = (index + this.opciones.length) % this.opciones.length;
+      this.opciones.forEach((opcion, opcionIndex) => {
+        opcion.tabIndex = opcionIndex === normalizado ? 0 : -1;
+      });
+      this.opciones[normalizado]?.focus();
+    }
+
+    private handleCopiarClick = (): void => {
+      this.closeMenu();
+      void this.copiar();
+    };
+
+    private handleGatilloClick = (event: MouseEvent): void => {
+      if (this.menu?.hasAttribute('data-open')) {
+        this.closeMenu();
+      } else {
+        this.openMenu(event.detail === 0 ? 'first' : null);
+      }
+    };
+
+    private handleGatilloKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.openMenu(event.key === 'ArrowDown' ? 'first' : 'last');
+      } else if (event.key === 'Escape') {
+        this.closeMenu();
+      }
+    };
+
+    private handleMenuKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.closeMenu(true);
+        return;
+      }
+
+      const actual = this.opciones.indexOf(event.target as HTMLElement);
+      if (actual < 0) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.focusOpcion(actual + 1);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.focusOpcion(actual - 1);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        this.focusOpcion(0);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        this.focusOpcion(this.opciones.length - 1);
+      } else if (event.key === 'Tab') {
+        setTimeout(() => this.closeMenu(), 0);
+      }
+    };
+
+    private handleOpcionClick = (event: MouseEvent): void => {
+      const opcion = event.currentTarget;
+      if (!(opcion instanceof HTMLElement)) return;
+      const cerrar = () => this.closeMenu(true);
+      if (opcion instanceof HTMLAnchorElement) setTimeout(cerrar, 0);
+      else cerrar();
+      if (opcion.dataset.accion === 'copiar') void this.copiar();
+    };
+
+    /* Un solo handler para pointerdown y focusin exteriores, inactivo con el menú cerrado. */
+    private handleFuera = (event: Event): void => {
+      if (!this.menu?.hasAttribute('data-open')) return;
+      if (event.target instanceof Node && !this.contains(event.target)) this.closeMenu();
+    };
+  }
+
+  if (!customElements.get('manualito-copiar-pagina')) {
+    customElements.define('manualito-copiar-pagina', ManualitoCopiarPagina);
+  }
+</script>
+
+<style>
+  manualito-copiar-pagina {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .grupo {
+    display: inline-flex;
+    align-items: stretch;
+    border-radius: 0.625rem;
+    transition:
+      background-color 160ms ease,
+      scale 160ms var(--m-ease-salida);
+  }
+
+  .grupo:hover {
+    background: var(--m-hover);
+  }
+
+  .grupo:active {
+    scale: 0.96;
+  }
+
+  .accion,
+  .gatillo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    block-size: var(--m-hit);
+    border: 0;
+    padding: 0;
+    border-radius: 0.625rem;
+    background: transparent;
+    font: inherit;
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    inline-size: 1.5rem;
+    transition: color 160ms ease;
+  }
+
+  .grupo:hover .accion,
+  .grupo:hover .gatillo {
+    color: var(--sl-color-white);
+  }
+
+  .accion:focus-visible,
+  .gatillo:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  .gatillo :global(.gatillo__caret) {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    transition: rotate 180ms var(--m-ease-salida);
+  }
+
+  .gatillo[aria-expanded='true'] :global(.gatillo__caret) {
+    rotate: 180deg;
+  }
+
+  .iconos {
+    display: grid;
+    place-items: center;
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  .iconos > svg {
+    grid-area: 1 / 1;
+    inline-size: 1rem;
+    block-size: 1rem;
+    transition:
+      opacity 180ms var(--m-ease-salida),
+      scale 180ms var(--m-ease-salida);
+  }
+
+  .icono-copiado {
+    opacity: 0;
+    scale: 0.8;
+    color: var(--sl-color-text-accent);
+  }
+
+  manualito-copiar-pagina[data-copiado] .icono-copiar {
+    opacity: 0;
+    scale: 0.8;
+  }
+
+  manualito-copiar-pagina[data-copiado] .icono-copiado {
+    opacity: 1;
+    scale: 1;
+  }
+
+  .menu {
+    position: absolute;
+    z-index: 3;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-end: 0;
+    display: grid;
+    gap: 0.125rem;
+    min-inline-size: min(18.5rem, calc(100vw - 2rem));
+    padding: 0.375rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: var(--m-r-lg);
+    background: var(--sl-color-bg-nav);
+    box-shadow: var(--sl-shadow-md);
+    transform-origin: top right;
+    opacity: 0;
+    scale: 0.94;
+    translate: 0 -4px;
+    pointer-events: none;
+    transition:
+      opacity 180ms var(--m-ease-salida),
+      scale 180ms var(--m-ease-salida),
+      translate 180ms var(--m-ease-salida);
+  }
+
+  .menu[data-open] {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    pointer-events: auto;
+  }
+
+  .menu[hidden] {
+    display: none;
+  }
+
+  .menu[data-instant] {
+    transition-duration: 0ms;
+  }
+
+  .opcion {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.625rem;
+    min-block-size: 2.75rem;
+    padding: 0.5rem 0.625rem;
+    border: 0;
+    border-radius: var(--m-r-md);
+    background: transparent;
+    color: var(--sl-color-gray-1);
+    font: inherit;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .opcion:hover,
+  .opcion:focus-visible {
+    background: var(--m-hover);
+  }
+
+  .opcion:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: -2px;
+  }
+
+  .opcion__icono {
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin-inline: auto;
+    color: var(--sl-color-gray-3);
+    transition: color 160ms ease;
+  }
+
+  .opcion:hover .opcion__icono,
+  .opcion:focus-visible .opcion__icono {
+    color: var(--sl-color-gray-2);
+  }
+
+  .opcion__textos {
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  .opcion__titulo {
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .opcion__detalle {
+    font-size: var(--sl-text-xs);
+    line-height: 1.3;
+    color: var(--sl-color-gray-3);
+  }
+
+  .opcion__externo {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    color: var(--sl-color-gray-3);
+    transition: translate 160ms var(--m-ease-salida);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .opcion:hover .opcion__externo {
+      translate: 2px -2px;
+    }
+  }
+
+  .opcion:focus-visible .opcion__externo {
+    translate: 2px -2px;
+  }
+
+  .toaster {
+    --hueco-toast: 14px; /* espejo de HUECO_TOAST en el script */
+    position: fixed;
+    z-index: 60;
+    inset-block-end: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+    inset-inline-end: 1.25rem;
+    inline-size: min(22.25rem, calc(100vw - 2.5rem));
+  }
+
+  .toast {
+    --n: 0;
+    --desplazamiento: 0px;
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-end: 0;
+    inline-size: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: var(--m-r-md);
+    background: var(--sl-color-bg-nav);
+    box-shadow: var(--sl-shadow-lg);
+    color: var(--sl-color-gray-1);
+    font-size: var(--sl-text-sm);
+    touch-action: none;
+    translate: 0 calc(var(--n) * -1 * var(--hueco-toast));
+    scale: calc(1 - var(--n) * 0.05);
+    transform-origin: bottom center;
+    transition:
+      translate 400ms ease,
+      scale 400ms ease,
+      opacity 400ms ease;
+  }
+
+  /* El relleno superior conserva el hover al pasar entre avisos. */
+  .toast::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 100%;
+    block-size: calc(var(--hueco-toast) + 1px);
+  }
+
+  .toaster[data-expandido] .toast {
+    translate: 0 calc(var(--desplazamiento) * -1);
+    scale: 1;
+  }
+
+  .toast[data-oculto] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toast[data-entrando] {
+    translate: 0 100%;
+    scale: 1;
+    opacity: 0;
+  }
+
+  .toast[data-deslizando] {
+    transition: none;
+  }
+
+  .toast[data-saliendo] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toast[data-saliendo][data-frente] {
+    translate: 0 calc(100% + 1.25rem);
+  }
+
+  .toast__check,
+  .toast__error {
+    flex-shrink: 0;
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  .toast__check {
+    color: var(--sl-color-text-accent);
+  }
+
+  .toast__error {
+    display: none;
+    color: var(--sl-color-red, #f0625d);
+  }
+
+  .toast[data-error] .toast__check {
+    display: none;
+  }
+
+  .toast[data-error] .toast__error {
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grupo,
+    .accion,
+    .gatillo,
+    .gatillo :global(.gatillo__caret),
+    .iconos > svg,
+    .menu,
+    .opcion__externo {
+      transition: none;
+    }
+
+    .grupo:active {
+      scale: 1;
+    }
+
+    .opcion:hover .opcion__externo,
+    .opcion:focus-visible .opcion__externo {
+      translate: 0 0;
+    }
+
+    /* Con movimiento reducido los avisos solo cambian de opacidad. */
+    .toast {
+      transition: opacity 150ms ease;
+    }
+
+    .toast[data-entrando],
+    .toast[data-saliendo][data-frente] {
+      translate: 0 calc(var(--n) * -1 * var(--hueco-toast));
+    }
+  }
+</style>

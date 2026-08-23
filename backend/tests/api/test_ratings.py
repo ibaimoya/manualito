@@ -313,11 +313,10 @@ def test_delete_user_rating_raises_when_no_row_deleted():
             self.commits += 1
 
     session = FakeSession()
+    call = partial(delete_user_rating, session, user_id=_USER_ID, game_id=_GAME_ID)
 
     with pytest.raises(RatingNotFoundError):
-        anyio.run(
-            partial(delete_user_rating, session, user_id=_USER_ID, game_id=_GAME_ID)
-        )
+        anyio.run(call)
 
     assert session.commits == 0
 

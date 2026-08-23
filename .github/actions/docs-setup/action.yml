@@ -1,0 +1,27 @@
+name: Preparar docs
+description: Instala pnpm (versión del packageManager), Node con cache de pnpm y las dependencias del site de docs.
+
+runs:
+  using: composite
+  steps:
+    - name: Cargar versiones
+      id: versions
+      shell: bash
+      run: |
+        . ./.env
+        echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Preparar pnpm y Node
+      uses: pnpm/setup@c9883cc79df532ad1a7b81bf9ab944ceb090d65c # v2.0.0
+      with:
+        # La versión sale del campo packageManager de docs/site/package.json.
+        package-json-file: docs/site/package.json
+        runtime: node@${{ steps.versions.outputs.node_version }}
+        cache: true
+        cache-dependency-path: docs/site/pnpm-lock.yaml
+        install: false
+
+    - name: Instalar dependencias
+      shell: bash
+      working-directory: docs/site
+      run: pnpm install --frozen-lockfile

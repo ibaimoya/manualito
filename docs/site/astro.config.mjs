@@ -1,0 +1,63 @@
+import starlight from '@astrojs/starlight';
+import { unified } from '@astrojs/markdown-remark';
+import { defineConfig } from 'astro/config';
+import starlightLinksValidator from 'starlight-links-validator';
+
+import rehypeAcronimos from './src/plugins/rehype-acronimos.ts';
+import rehypeCitas from './src/plugins/rehype-citas.ts';
+
+export default defineConfig({
+  site: 'https://docs.manualito.dev',
+  trailingSlash: 'always',
+  markdown: {
+    processor: unified({ rehypePlugins: [rehypeAcronimos, rehypeCitas] }),
+  },
+  integrations: [
+    starlight({
+      title: 'Manualito',
+      description:
+        'Documentación para usar Manualito y entender cómo procesa los manuales de juegos de mesa.',
+      favicon: '/favicon.svg',
+      logo: {
+        src: './src/assets/manualito.svg',
+        alt: '',
+      },
+      locales: {
+        root: {
+          label: 'Español',
+          lang: 'es',
+        },
+      },
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/ibaimoya/manualito' },
+      ],
+      sidebar: [
+        {
+          label: 'Memoria',
+          items: [{ autogenerate: { directory: 'memoria' } }],
+        },
+        {
+          label: 'Anexos',
+          items: [{ autogenerate: { directory: 'anexos' } }],
+        },
+      ],
+      pagefind: true,
+      customCss: [
+        '@fontsource-variable/manrope',
+        '@fontsource-variable/inter',
+        '@fontsource-variable/jetbrains-mono',
+        './src/styles/custom.css',
+        './src/styles/laterales-redimensionables.css',
+      ],
+      components: {
+        Head: './src/components/Head.astro',
+        Header: './src/components/Header.astro',
+        MarkdownContent: './src/components/MarkdownContent.astro',
+        PageFrame: './src/components/PageFrame.astro',
+        ThemeSelect: './src/components/ThemeSelect.astro',
+      },
+      routeMiddleware: './src/routeData.ts',
+      plugins: [starlightLinksValidator()],
+    }),
+  ],
+});

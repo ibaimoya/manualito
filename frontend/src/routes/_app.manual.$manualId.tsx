@@ -30,7 +30,9 @@ import {
   type ReactNode,
 } from 'react';
 import { toast } from 'sonner';
+import { Trans, useTranslation } from 'react-i18next';
 import { ScreenTopBar } from '@/app/Topbar';
+import i18n from '@/app/i18n';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
@@ -84,23 +86,23 @@ const PROCESSING_POLL_MS = 1500;
 
 function editErrorToast(error: unknown): void {
   if (error instanceof ApiError && error.status === 409) {
-    toast.error('El manual se está procesando', {
+    toast.error(i18n.t('feedback.edit.busy', { ns: 'manual' }), {
       id: 'page-edit-error',
-      description: 'Espera a que termine e inténtalo de nuevo.',
+      description: i18n.t('feedback.edit.busyHint', { ns: 'manual' }),
     });
     return;
   }
   if (error instanceof ApiError && (error.status === 502 || error.status === 500)) {
-    toast.warning('Texto guardado, índice pendiente', {
+    toast.warning(i18n.t('feedback.edit.pendingIndex', { ns: 'manual' }), {
       id: 'page-edit-error',
-      description: 'Tu texto ya está guardado; reprocesa el manual para sincronizar la IA.',
+      description: i18n.t('feedback.edit.pendingIndexDescription', { ns: 'manual' }),
     });
     return;
   }
   toastApiError(error, 'page-edit-error', {
-    title: 'No hemos podido guardar el texto',
+    title: i18n.t('feedback.edit.failedTitle', { ns: 'manual' }),
     id: 'page-edit-error-unknown',
-    description: 'Inténtalo de nuevo en un momento.',
+    description: i18n.t('feedback.edit.failedDescription', { ns: 'manual' }),
   });
 }
 
@@ -154,10 +156,12 @@ function ManualMetaRow({
   pageCount: number;
   duplicateCount: number;
 }>) {
+  const { t } = useTranslation('manual');
   return (
     <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
       <span className="inline-flex items-center gap-1.5">
-        <Clock size={13} aria-hidden="true" /> Subido el {formatLongDate(createdAt)}
+        <Clock size={13} aria-hidden="true" />
+        {t('meta.uploaded', { date: formatLongDate(createdAt) })}
       </span>
       <span className="inline-flex items-center gap-1.5">
         {sourceIsPdf ? (
@@ -165,18 +169,18 @@ function ManualMetaRow({
         ) : (
           <Images size={13} aria-hidden="true" />
         )}{' '}
-        {sourceIsPdf ? 'PDF' : 'Fotos'}
+        {sourceIsPdf ? t('meta.format.pdf') : t('meta.format.photos')}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <Files size={13} aria-hidden="true" /> {pageCount} {pageCount === 1 ? 'página' : 'páginas'}
+        <Files size={13} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
       </span>
       {duplicateCount > 0 ? (
         <span
           className="inline-flex cursor-help items-center gap-1.5 text-warning"
-          title={`${duplicateCount} ${duplicateCount === 1 ? 'página duplicada que no se procesa' : 'páginas duplicadas que no se procesan'}.`}
+          title={t('meta.duplicates', { count: duplicateCount })}
         >
-          <Copy size={13} aria-hidden="true" /> {duplicateCount}{' '}
-          {duplicateCount === 1 ? 'duplicada' : 'duplicadas'}
+          <Copy size={13} aria-hidden="true" />{' '}
+          {t('meta.duplicateLabel', { count: duplicateCount })}
         </span>
       ) : null}
     </div>
@@ -184,30 +188,26 @@ function ManualMetaRow({
 }
 
 function ManualDetailScreen() {
+  const { t } = useTranslation('manual');
   const { manualId } = Route.useParams();
   const { page } = Route.useSearch();
   const detail = useQuery(manualDetailQueryOptions(manualId));
 
   if (detail.isPending) {
     return (
-      <ManualShell crumb="Manual">
+      <ManualShell crumb={t('navigation.manual')}>
         <DetailSkeleton />
       </ManualShell>
     );
   }
   if (detail.isError || detail.data.pages.length === 0) {
     return (
-      <ManualShell crumb="Manual">
+      <ManualShell crumb={t('navigation.manual')}>
         <div className="mx-auto max-w-md px-4 py-16 text-center">
-          <h1 className="font-display text-xl font-bold text-fg">
-            No hemos podido abrir este manual
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-fg-2">
-            Puede que se haya borrado o que aún se esté procesando. Vuelve al historial e inténtalo
-            desde allí.
-          </p>
+          <h1 className="font-display text-xl font-bold text-fg">{t('errors.load.title')}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('errors.load.description')}</p>
           <Button asChild className="mt-5">
-            <Link to="/history">Ir al historial</Link>
+            <Link to="/history">{t('errors.load.historyLink')}</Link>
           </Button>
         </div>
       </ManualShell>
@@ -223,7 +223,7 @@ function ManualShell({
   children,
 }: Readonly<{
   crumb: string;
-  trail?: Parameters<typeof ScreenTopBar>[0]['trail'];
+  trail?: NonNullable<Parameters<typeof ScreenTopBar>[0]['trail']>;
   children: ReactNode;
 }>) {
   return (
@@ -238,6 +238,7 @@ function ManualDetailLoaded({
   manual,
   initialPage,
 }: Readonly<{ manual: ManualDetailResponse; initialPage?: number }>) {
+  const { t } = useTranslation('manual');
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pages = manual.pages;
@@ -292,9 +293,9 @@ function ManualDetailLoaded({
       );
       qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
       setEditingPage(null);
-      toast.success('Texto guardado', {
+      toast.success(t('feedback.edit.saved'), {
         id: 'page-edit-ok',
-        description: 'La IA usará tu versión a partir de ahora.',
+        description: t('feedback.edit.savedDescription'),
       });
     },
     onError: (error) => {
@@ -321,12 +322,12 @@ function ManualDetailLoaded({
     onError: (error) => {
       setReprocessOpen(false);
       if (error instanceof ApiError && error.status === 409) {
-        toast.error('El manual ya se está procesando', { id: 'reprocess-error' });
+        toast.error(t('feedback.reprocess.busy'), { id: 'reprocess-error' });
         return;
       }
-      toast.error('No hemos podido reprocesar el manual', {
+      toast.error(t('feedback.reprocess.failedTitle'), {
         id: 'reprocess-error',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: t('feedback.reprocess.failedDescription'),
       });
     },
   });
@@ -336,13 +337,13 @@ function ManualDetailLoaded({
   function confirmDelete(): void {
     deleteManual.mutate(manual.id, {
       onSuccess: () => {
-        toast.success('Manual borrado', { id: 'manual-deleted' });
+        toast.success(t('feedback.delete.success'), { id: 'manual-deleted' });
         navigate({ to: '/history' }).catch(() => undefined);
       },
       onError: () =>
-        toast.error('No hemos podido borrar el manual', {
+        toast.error(t('feedback.delete.error'), {
           id: 'manual-delete-error',
-          description: 'Inténtalo de nuevo en un momento.',
+          description: t('feedback.delete.errorDescription'),
         }),
     });
   }
@@ -371,7 +372,7 @@ function ManualDetailLoaded({
 
   const title = manual.title ?? manual.game_name;
   // Sin esto, el manual titulado como el juego pinta "Monopoly > Monopoly".
-  const crumb = title === manual.game_name ? 'Texto extraído' : title;
+  const crumb = title === manual.game_name ? t('navigation.extractedText') : title;
   const sourceIsPdf = manual.source_type === 'pdf';
   const activeMatch =
     search.active !== null && search.active.pageNumber === page.page_number
@@ -389,7 +390,7 @@ function ManualDetailLoaded({
     <ManualShell
       crumb={crumb}
       trail={[
-        { label: 'Biblioteca', link: linkOptions({ to: '/history' }) },
+        { label: t('navigation.library'), link: linkOptions({ to: '/history' }) },
         {
           label: manual.game_name,
           link: linkOptions({ to: '/game/$gameId', params: { gameId: manual.game_id } }),
@@ -470,7 +471,7 @@ function ManualDetailLoaded({
                       onClick={() => setEditingPage(page.page_number)}
                     >
                       <Pencil size={15} strokeWidth={2} />
-                      Editar texto
+                      {t('buttons.editText')}
                     </Button>
                   ) : null}
                 </div>
@@ -567,70 +568,79 @@ function ManualDialogs({
   onDeleteConfirm: () => void;
   deleting: boolean;
 }>) {
+  const { t } = useTranslation('manual');
   return (
     <>
       {/* Confirmación antes de sustituir el texto leído por el editado. */}
       <Dialog open={saveOpen} onOpenChange={(open) => !open && onSaveClose()}>
         <DialogHeader
-          title="¿Guardar los cambios?"
-          description={`Sustituirá lo leído en la página ${pageNumber}: la IA responderá con tu versión y la página quedará como «Editada a mano».`}
+          title={t('dialogs.save.header')}
+          description={t('dialogs.save.description', { pageNumber })}
           onClose={onSaveClose}
         />
         <DialogBody className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onSaveClose}>
-            Seguir editando
+            {t('buttons.continueEditing')}
           </Button>
           <Button loading={saving} onClick={onSaveConfirm}>
-            Guardar
+            {t('buttons.save')}
           </Button>
         </DialogBody>
       </Dialog>
 
       <Dialog open={reprocessOpen} onOpenChange={onReprocessOpenChange}>
         <DialogHeader
-          title="Reprocesar manual"
-          description="Volveremos a leer todas las páginas con OCR y a indexar el texto. La explicación del juego se regenerará."
+          title={t('dialogs.reprocess.header')}
+          description={t('dialogs.reprocess.description')}
           onClose={() => onReprocessOpenChange(false)}
         />
         <DialogBody className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => onReprocessOpenChange(false)}>
-            Cancelar
+            {t('buttons.cancel')}
           </Button>
           <Button loading={reprocessing} onClick={onReprocessConfirm}>
             <RotateCw size={16} strokeWidth={2} />
-            Reprocesar
+            {t('buttons.reprocess')}
           </Button>
         </DialogBody>
       </Dialog>
 
       <Dialog open={deleteOpen} onOpenChange={onDeleteOpenChange}>
         <DialogHeader
-          title="Eliminar manual"
-          description="Confirma que quieres borrarlo."
+          title={t('dialogs.delete.header')}
+          description={t('dialogs.delete.description')}
           onClose={() => onDeleteOpenChange(false)}
         />
         <DialogBody>
           <div className="rounded-2xl border border-error bg-error-bg p-4 text-sm leading-relaxed text-fg">
-            <p className="font-semibold">Esta acción no se puede deshacer.</p>
+            <p className="font-semibold">{t('dialogs.delete.irreversible')}</p>
             <p className="mt-1">
-              Se borrará <strong>«{title}»</strong> de {gameName}: sus {pageCount}{' '}
-              {pageCount === 1 ? 'página' : 'páginas'} y su texto extraído. La explicación del juego
-              se regenerará con los manuales restantes.
+              <Trans
+                ns="manual"
+                i18nKey="dialogs.delete.warning"
+                count={pageCount}
+                values={{ gameName, title }}
+                components={{ strong: <strong /> }}
+              />
             </p>
             {shared ? (
               <p className="mt-2">
-                Es <strong>compartido</strong>: dejará de estar disponible para otras personas en{' '}
-                {gameName}.
+                <Trans
+                  ns="manual"
+                  i18nKey="dialogs.delete.shared"
+                  values={{ gameName }}
+                  components={{ strong: <strong /> }}
+                />
               </p>
             ) : null}
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => onDeleteOpenChange(false)}>
-              Cancelar
+              {t('buttons.cancel')}
             </Button>
             <Button variant="destructive" loading={deleting} onClick={onDeleteConfirm}>
               <Trash2 size={16} strokeWidth={2} />
-              Eliminar manual
+              {t('buttons.deleteManual')}
             </Button>
           </div>
         </DialogBody>
@@ -650,29 +660,30 @@ function ManualActionsMenu({
   onReprocess: () => void;
   onDelete: () => void;
 }>) {
+  const { t } = useTranslation('manual');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="secondary" size="sm" className="shrink-0">
-          Acciones
+          {t('buttons.actions')}
           <ChevronDown size={15} strokeWidth={2} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onSelect={onViewImage}>
           <Images size={16} strokeWidth={2} />
-          Ver imagen
+          {t('buttons.viewImage')}
         </DropdownMenuItem>
         <hr className="my-1 border-t border-border" />
         <DropdownMenuItem disabled={busy} onSelect={onReprocess}>
           <RotateCw size={16} strokeWidth={2} />
-          Reprocesar todo
+          {t('buttons.reprocessAll')}
         </DropdownMenuItem>
         <hr className="my-1 border-t border-border" />
         <DropdownMenuItem danger onSelect={onDelete}>
           {/* Ajuste óptico */}
           <Trash2 size={16} strokeWidth={2} className="-translate-y-[0.5px]" />
-          Eliminar manual
+          {t('buttons.deleteManual')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -706,6 +717,7 @@ function ManualImageDialog({
   onPrev: () => void;
   onNext: () => void;
 }>) {
+  const { t } = useTranslation('manual');
   const imageUrl = api.manualPageImageUrl(manualId, page.page_number);
 
   return (
@@ -715,8 +727,12 @@ function ManualImageDialog({
       contentClassName="max-w-5xl overflow-hidden bg-bg"
     >
       <DialogHeader
-        title="Imagen de la página"
-        description={`Página ${page.page_number} de ${pageCount} · ${title}`}
+        title={t('image.dialogTitle')}
+        description={t('image.dialogDescription', {
+          pageCount,
+          pageNumber: page.page_number,
+          title,
+        })}
         onClose={() => onOpenChange(false)}
       />
       <DialogBody className="px-4 pb-4 pt-0">
@@ -751,6 +767,7 @@ function ManualImageViewer({
   onPrev: () => void;
   onNext: () => void;
 }>) {
+  const { t } = useTranslation('manual');
   const [imageFailed, setImageFailed] = useState(false);
   const [zoom, setZoom] = useState<ImageZoom>('fit');
   const [dragging, setDragging] = useState(false);
@@ -870,8 +887,7 @@ function ManualImageViewer({
     zoom === 'fit' ? 'max-h-[70vh] max-w-full cursor-zoom-in' : 'max-w-none',
     zoom !== 'fit' && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
   );
-  const imageViewportLabel =
-    zoom === 'fit' ? 'Ampliar imagen del manual' : 'Restablecer zoom de la imagen';
+  const imageViewportLabel = zoom === 'fit' ? t('image.expand') : t('image.resetViewport');
 
   return (
     <>
@@ -880,27 +896,27 @@ function ManualImageViewer({
         {showImage ? (
           <div className="inline-flex h-10 items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
             <ImageZoomButton
-              label="Alejar imagen"
+              label={t('image.zoomOut')}
               disabled={zoom === 'fit'}
               onClick={() => focusZoom(previousImageZoom(zoom))}
             >
               <ZoomOut size={16} strokeWidth={2} />
             </ImageZoomButton>
             <output
-              aria-label="Zoom de imagen"
+              aria-label={t('image.zoomValue')}
               className="mono min-w-20 px-2 text-center text-xs font-bold text-fg"
             >
-              {imageZoomLabel(zoom)}
+              {zoom === 'fit' ? t('image.fit') : imageZoomLabel(zoom)}
             </output>
             <ImageZoomButton
-              label="Acercar imagen"
+              label={t('image.zoomIn')}
               disabled={zoom === MAX_IMAGE_ZOOM}
               onClick={() => focusZoom(nextImageZoom(zoom))}
             >
               <ZoomIn size={16} strokeWidth={2} />
             </ImageZoomButton>
             <ImageZoomButton
-              label="Restablecer zoom"
+              label={t('image.resetZoom')}
               disabled={zoom === 'fit'}
               onClick={() => focusZoom('fit')}
             >
@@ -928,7 +944,7 @@ function ManualImageViewer({
             <img
               ref={imageRef}
               src={imageUrl}
-              alt={`Página ${page.page_number} de ${title}`}
+              alt={t('image.alt', { pageNumber: page.page_number, title })}
               width={page.image_width ?? undefined}
               height={page.image_height ?? undefined}
               loading="lazy"
@@ -947,10 +963,10 @@ function ManualImageViewer({
                 <Images size={22} strokeWidth={2.2} aria-hidden="true" />
               </span>
               <p className="mt-4 font-display text-base font-bold text-fg">
-                La imagen todavía no está disponible
+                {t('image.missingTitle')}
               </p>
               <p className="mt-2 max-w-sm text-sm leading-relaxed text-fg-2">
-                Esta página puede seguir procesándose o no tener un render guardado todavía.
+                {t('image.missingDescription')}
               </p>
             </div>
           </div>
@@ -1015,20 +1031,21 @@ function onNextFrame(callback: () => void): void {
 function ReprocessBanner({
   data,
 }: Readonly<{ data: { completed_pages: number; page_count: number } | null }>) {
+  const { t } = useTranslation('manual');
   const pct = data ? (data.completed_pages / Math.max(data.page_count, 1)) * 100 : 5;
   return (
     <div className="md:px-6 md:pt-4">
       <output className="flex items-center gap-3 rounded-2xl border border-primary bg-primary-50 p-3.5">
         <Loader2 size={20} className="shrink-0 animate-spin text-primary" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-bold text-fg">Reprocesando el manual…</p>
+          <p className="text-[13.5px] font-bold text-fg">{t('feedback.reprocess.progress')}</p>
           <div className="mt-1.5">
             <Progress value={pct} />
           </div>
         </div>
         {data ? (
           <span className="mono shrink-0 text-xs font-semibold text-primary-700">
-            {data.completed_pages} de {data.page_count} páginas
+            {t('page.progress', { completed: data.completed_pages, count: data.page_count })}
           </span>
         ) : null}
       </output>
@@ -1042,15 +1059,17 @@ function PageNav({
   onPrev,
   onNext,
 }: Readonly<{ pageNumber: number; total: number; onPrev: () => void; onNext: () => void }>) {
+  const { t } = useTranslation('manual');
   return (
     <div className="flex items-center gap-1.5">
-      <NavButton label="Página anterior" disabled={pageNumber <= 1} onClick={onPrev}>
+      <NavButton label={t('page.previous')} disabled={pageNumber <= 1} onClick={onPrev}>
         <ChevronLeft size={18} strokeWidth={2} />
       </NavButton>
       <span className="min-w-[88px] text-center font-display text-sm font-bold text-fg">
-        Página {pageNumber} <span className="font-semibold text-fg-3">/ {total}</span>
+        {t('page.number', { pageNumber })}{' '}
+        <span className="font-semibold text-fg-3">/ {total}</span>
       </span>
-      <NavButton label="Página siguiente" disabled={pageNumber >= total} onClick={onNext}>
+      <NavButton label={t('page.next')} disabled={pageNumber >= total} onClick={onNext}>
         <ChevronRight size={18} strokeWidth={2} />
       </NavButton>
     </div>
@@ -1077,6 +1096,7 @@ function NavButton({
 }
 
 function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
+  const { t } = useTranslation('manual');
   const st = pageStatus(page);
   return (
     <Tooltip content={st.tip}>
@@ -1090,7 +1110,7 @@ function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
         }
         tabIndex={0}
         role="status"
-        aria-label={`Estado de lectura: ${st.label}`}
+        aria-label={t('status.readingLabel', { status: st.label })}
         className="h-[30px] cursor-help px-2.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         {st.label}
@@ -1104,17 +1124,14 @@ function ConfidenceToggle({
   disabled,
   onToggle,
 }: Readonly<{ pressed: boolean; disabled: boolean; onToggle: () => void }>) {
+  const { t } = useTranslation('manual');
   return (
     <button
       type="button"
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onToggle}
-      title={
-        disabled
-          ? 'Esta página no tiene confianza OCR (texto editado a mano)'
-          : 'Colorea cada línea según la confianza del OCR'
-      }
+      title={disabled ? t('confidence.toggle.disabledTitle') : t('confidence.toggle.title')}
       className={cn(
         'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-55',
         pressed
@@ -1123,7 +1140,7 @@ function ConfidenceToggle({
       )}
     >
       <Layers size={15} strokeWidth={2} aria-hidden="true" />
-      Confianza por línea
+      {t('confidence.toggle.label')}
       <ChevronDown
         size={14}
         strokeWidth={2}
@@ -1147,6 +1164,7 @@ function SearchField({
   position: number;
   onStep: (delta: 1 | -1) => void;
 }>) {
+  const { t } = useTranslation('manual');
   const hasQuery = query.trim().length > 0;
   return (
     <div
@@ -1163,8 +1181,8 @@ function SearchField({
         type="search"
         value={query}
         onChange={(event) => onSearch(event.target.value)}
-        placeholder="Buscar en todo el manual…"
-        aria-label="Buscar en el texto del manual"
+        placeholder={t('search.placeholder')}
+        aria-label={t('search.ariaLabel')}
         enterKeyHint="search"
         className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none [&::-webkit-search-cancel-button]:appearance-none"
       />
@@ -1177,20 +1195,20 @@ function SearchField({
             {position} / {total}
           </span>
           <SearchMiniButton
-            label="Coincidencia anterior"
+            label={t('search.previous')}
             disabled={total === 0}
             onClick={() => onStep(-1)}
           >
             <ChevronLeft size={15} strokeWidth={2} />
           </SearchMiniButton>
           <SearchMiniButton
-            label="Coincidencia siguiente"
+            label={t('search.next')}
             disabled={total === 0}
             onClick={() => onStep(1)}
           >
             <ChevronRight size={15} strokeWidth={2} />
           </SearchMiniButton>
-          <SearchMiniButton label="Limpiar búsqueda" disabled={false} onClick={() => onSearch('')}>
+          <SearchMiniButton label={t('search.clear')} disabled={false} onClick={() => onSearch('')}>
             <X size={14} strokeWidth={2} />
           </SearchMiniButton>
         </span>

@@ -1,4 +1,6 @@
 import { Flag, RefreshCw, Sparkles, type LucideIcon } from 'lucide-react';
+import type { ParseKeys } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import {
   Accordion,
   AccordionContent,
@@ -9,23 +11,29 @@ import { Card } from '@/components/ui/card';
 import { Markdown } from '@/shared/components/Markdown';
 
 export type ExplanationBlockKey = 'setup' | 'turns' | 'victory';
+type GameKey = ParseKeys<'game'>;
 
 const BLOCKS: ReadonlyArray<{
   key: ExplanationBlockKey;
-  title: string;
+  title: GameKey;
   icon: LucideIcon;
   chipClass: string;
 }> = [
-  { key: 'setup', title: 'Preparación', icon: Flag, chipClass: 'bg-primary-100 text-primary-700' },
+  {
+    key: 'setup',
+    title: 'explanation.blocks.setup',
+    icon: Flag,
+    chipClass: 'bg-primary-100 text-primary-700',
+  },
   {
     key: 'turns',
-    title: '¿Cómo van los turnos?',
+    title: 'explanation.blocks.turns',
     icon: RefreshCw,
     chipClass: 'bg-accent-100 text-accent',
   },
   {
     key: 'victory',
-    title: '¿Cómo se gana?',
+    title: 'explanation.blocks.victory',
     icon: Sparkles,
     chipClass: 'bg-warning-bg text-warning',
   },
@@ -45,11 +53,13 @@ export function ExplanationBlocks({
   /** Texto por apartado, o null mientras se genera. */
   content: Record<ExplanationBlockKey, string | null>;
 }>) {
+  const { t } = useTranslation('game');
+
   return (
     <>
       <Card className="bg-surface p-4">
         <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-          Resumen rápido
+          {t('explanation.summary')}
         </p>
         {summary === null ? (
           <SummaryShimmer />
@@ -68,7 +78,7 @@ export function ExplanationBlocks({
                   <span className={`grid h-8 w-8 place-items-center rounded-lg ${chipClass}`}>
                     <Icon size={16} strokeWidth={2} />
                   </span>
-                  <span>{title}</span>
+                  <span>{t(title)}</span>
                 </div>
               </AccordionTrigger>
               {pending ? null : (

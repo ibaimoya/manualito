@@ -1,5 +1,6 @@
-"""Tasks Celery para conversaciones."""
+"""Tareas Celery para conversaciones."""
 
+from collections.abc import Callable
 from typing import NoReturn, Protocol
 from uuid import UUID
 
@@ -9,6 +10,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from api import config
 from api.conversations import service
 from api.worker.celery import celery_app
+from common.language import Language
 
 EXTERNAL_ERROR_MAX_RETRIES = 2
 LOCK_BUSY_MAX_RETRIES = 60
@@ -17,7 +19,7 @@ TASK_MAX_RETRIES = EXTERNAL_ERROR_MAX_RETRIES + LOCK_BUSY_MAX_RETRIES
 
 
 class _RetryableTask(Protocol):
-    def retry(self, *args: object, **kwargs: object) -> NoReturn: ...
+    retry: Callable[..., NoReturn]
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]
@@ -35,6 +37,7 @@ def generate_chat_reply_task(
     user_message_id: str,
     assistant_message_id: str,
     top_k: int,
+    language: Language,
     lock_retry_count: int = 0,
     external_retry_count: int = 0,
 ) -> None:
@@ -50,6 +53,7 @@ def generate_chat_reply_task(
             UUID(user_message_id),
             parsed_assistant_message_id,
             top_k,
+            language,
         )
     except (ConnectionError, TimeoutError) as exc:
         if external_retry_count >= EXTERNAL_ERROR_MAX_RETRIES:
@@ -70,6 +74,7 @@ def generate_chat_reply_task(
                 user_message_id,
                 assistant_message_id,
                 top_k,
+                language,
                 lock_retry_count,
                 external_retry_count + 1,
             ),
@@ -102,6 +107,7 @@ def generate_chat_reply_task(
                 user_message_id,
                 assistant_message_id,
                 top_k,
+                language,
                 lock_retry_count + 1,
                 external_retry_count,
             ),
@@ -123,6 +129,7 @@ def refresh_conversation_title_task(
     conversation_id: str,
     user_message_id: str,
     expected_title: str,
+    language: Language,
 ) -> None:
     """Refina el título de una conversación fuera de la petición HTTP."""
     anyio.run(
@@ -131,4 +138,5 @@ def refresh_conversation_title_task(
         UUID(conversation_id),
         UUID(user_message_id),
         expected_title,
+        language,
     )

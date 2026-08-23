@@ -1,0 +1,1315 @@
+---
+import { RUTA_INTRODUCCION, RUTA_PLAN_PROYECTO } from '../portada-documentacion';
+import BandaInstitucional from './BandaInstitucional.astro';
+
+interface Props {
+  variante?: 'simple' | 'escalones' | 'fondo';
+}
+
+const { variante = 'simple' } = Astro.props;
+
+const rutas = [
+  {
+    titulo: 'Quiero usar la aplicación',
+    detalle: 'El manual de usuario cubre la instalación y el uso habitual.',
+  },
+  {
+    titulo: 'Quiero entender cómo funciona',
+    detalle: 'El apartado de diseño detalla la arquitectura de la aplicación.',
+  },
+  {
+    titulo: 'Quiero conocer la metodología de trabajo',
+    detalle: 'El plan de proyecto describe cuál ha sido el flujo de trabajo del proyecto.',
+    enlace: RUTA_PLAN_PROYECTO,
+  },
+];
+---
+
+<div class="cj" data-cj data-variante={variante}>
+  <div class="cj-velo" data-cj-velo aria-hidden="true"></div>
+
+  <section class="cj-panel" data-cj-panel aria-labelledby="cj-titulo">
+    <button
+      class="cj-tirador"
+      type="button"
+      data-cj-tirador
+      aria-expanded="false"
+      aria-controls="cj-cuerpo"
+    >
+      <span class="cj-tirador__barra" aria-hidden="true"></span>
+      <span class="pd-sr" data-cj-etiqueta>Abrir por dónde empezar</span>
+    </button>
+
+    <div class="cj-cuerpo" id="cj-cuerpo" data-cj-cuerpo inert>
+      <div class="cj-marco">
+        <div class="cj-carrusel" role="group" aria-roledescription="carrusel" aria-labelledby="cj-titulo">
+          <header class="cj-cabecera" data-cj-agarre>
+            <div>
+              <h2 class="cj-titulo" id="cj-titulo">Por dónde empezar</h2>
+              <p class="cj-nota">Quiero saber...</p>
+            </div>
+            <div class="cj-controles" data-pr-controles>
+              <button class="pr-flecha" type="button" data-pr-pausa aria-label="Pausar el carrusel"
+                ><svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path class="pr-icono-pausa" d="M7 5.5v9M13 5.5v9"></path>
+                  <path class="pr-icono-reanudar" d="m7.5 5 7 5-7 5Z"></path></svg
+                ></button
+              >
+              <button class="pr-flecha" type="button" data-pr-anterior aria-label="Tarjeta anterior"
+                ><svg viewBox="0 0 20 20" aria-hidden="true"
+                  ><path
+                    d="M11.5 5 6.5 10l5 5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path></svg
+                ></button
+              >
+              <button class="pr-flecha" type="button" data-pr-siguiente aria-label="Tarjeta siguiente"
+                ><svg viewBox="0 0 20 20" aria-hidden="true"
+                  ><path
+                    d="m8.5 5 5 5-5 5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path></svg
+                ></button
+              >
+              <button
+                class="pr-flecha"
+                type="button"
+                data-pr-sentido
+                aria-label="Cambiar el sentido hacia la derecha"
+                ><svg viewBox="0 0 20 20" aria-hidden="true"
+                  ><path
+                    d="M4 7.5h10M11.5 5 14 7.5 11.5 10M16 12.5H6M8.5 15 6 12.5 8.5 10"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path></svg
+                ></button
+              >
+            </div>
+          </header>
+
+          <div class="pr-arranque__visor" data-pr-visor aria-live="off">
+            <div class="pr-arranque__rutas" data-pr-pista>
+              {
+                rutas.map((r, indice) => {
+                  const Elemento = r.enlace ? 'a' : 'article';
+                  return (
+                    <Elemento
+                      class="pr-ruta"
+                      data-pr-indice={indice}
+                      {...(r.enlace ? { href: r.enlace } : {})}
+                    >
+                      <span class="pr-ruta__titulo">{r.titulo}</span>
+                      <span class="pr-ruta__detalle">{r.detalle}</span>
+                    </Elemento>
+                  );
+                })
+              }
+            </div>
+          </div>
+        </div>
+
+        <BandaInstitucional />
+
+        <a class="cj-siguiente" href={RUTA_INTRODUCCION}>
+          <span class="cj-siguiente__rotulo">Siguiente</span>
+          <span class="cj-siguiente__destino">
+            Introducción
+            <svg viewBox="0 0 20 20" aria-hidden="true"
+              ><path
+                d="m8.5 5 5 5-5 5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path></svg
+            >
+          </span>
+        </a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+  .cj {
+    --cj-curva: cubic-bezier(0.32, 0.72, 0, 1);
+    --cj-dur: 500ms;
+    --cj-tirador: 2.25rem;
+    --cj-borde: rgba(247, 236, 215, 0.11);
+    --cj-borde-vivo: rgba(247, 236, 215, 0.2);
+    --cj-alto: rgba(247, 236, 215, 0.055);
+  }
+
+  :root[data-theme='light'] .cj {
+    --cj-borde: rgba(31, 22, 17, 0.12);
+    --cj-borde-vivo: rgba(31, 22, 17, 0.22);
+    --cj-alto: rgba(255, 255, 255, 0.85);
+  }
+
+  :global(html[data-cj-abierto]) {
+    overflow: hidden;
+    overscroll-behavior: none;
+    scrollbar-gutter: stable;
+  }
+
+  .cj-velo {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    opacity: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    transition: opacity var(--cj-dur) var(--cj-curva);
+  }
+
+  .cj[data-abierto] .cj-velo {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .cj-panel {
+    --cj-bote: 0px;
+    --cj-fondo-bote: 1.5rem;
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 41;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    block-size: auto;
+    max-block-size: min(78svh, 50rem);
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+    padding-block-end: 1.5rem;
+    translate: 0 calc(100% - var(--cj-tirador));
+    transition: translate var(--cj-dur) var(--cj-curva);
+  }
+
+  .cj-panel::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block: calc(0px - var(--cj-fondo-bote)) 0;
+    z-index: -1;
+    border-start-start-radius: 1.25rem;
+    border-start-end-radius: 1.25rem;
+    border-block-start: 1px solid var(--cj-borde-vivo);
+    background: var(--sl-color-bg-nav);
+    box-shadow: 0 -24px 60px -24px rgba(0, 0, 0, 0.55);
+    transform: translateY(calc(var(--cj-fondo-bote) - var(--cj-bote)));
+    pointer-events: none;
+    transition: transform var(--cj-dur) var(--cj-curva);
+  }
+
+  .cj[data-abierto] .cj-panel {
+    translate: 0 0;
+  }
+
+  .cj[data-arrastrando] .cj-panel,
+  .cj[data-arrastrando] .cj-panel::before,
+  .cj[data-arrastrando] .cj-cabecera,
+  .cj[data-arrastrando] .cj-tirador,
+  .cj[data-arrastrando] .cj-velo {
+    transition: none;
+  }
+
+  .cj-tirador {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: 100%;
+    block-size: var(--cj-tirador);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: grab;
+    touch-action: none;
+    transition: translate var(--cj-dur) var(--cj-curva);
+  }
+
+  .cj[data-arrastrando] .cj-tirador {
+    cursor: grabbing;
+  }
+
+  .cj-tirador__barra {
+    inline-size: 2.5rem;
+    block-size: 4px;
+    border-radius: 999px;
+    background: var(--sl-color-gray-3);
+    transition:
+      background-color 200ms ease,
+      scale 200ms var(--cj-curva);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cj-tirador:hover .cj-tirador__barra {
+      background: var(--sl-color-gray-2);
+      scale: 1.15 1;
+    }
+  }
+
+  .cj-tirador:focus-visible {
+    outline: none;
+  }
+
+  .cj-tirador:focus-visible .cj-tirador__barra {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 4px;
+  }
+
+  .cj-cuerpo {
+    flex: 1;
+    min-block-size: 0;
+    overflow-y: auto;
+    overflow-x: clip;
+    overscroll-behavior: contain;
+    opacity: 0;
+    transition: opacity 240ms ease;
+  }
+
+  .cj[data-abierto] .cj-cuerpo {
+    opacity: 1;
+  }
+
+  .cj-marco {
+    max-inline-size: min(var(--sl-content-width), 100%);
+    margin-inline: auto;
+  }
+
+  .cj-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    margin-block-end: 1.25rem;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: translate var(--cj-dur) var(--cj-curva);
+  }
+
+  .cj-cabecera :is(h2, p, button) {
+    cursor: auto;
+  }
+
+  .cj-cabecera button {
+    cursor: pointer;
+  }
+
+  .cj-titulo {
+    margin: 0;
+    font-size: var(--sl-text-xl);
+    line-height: 1.2;
+  }
+
+  .cj-nota {
+    margin: 0.35rem 0 0;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+  }
+
+  .cj-controles {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .pr-flecha {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 0.625rem;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    transition:
+      color 200ms ease,
+      border-color 200ms ease;
+  }
+
+  .pr-flecha::after {
+    content: '';
+    position: absolute;
+    inset: -0.25rem;
+  }
+
+  .pr-flecha svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .pr-icono-pausa,
+  .pr-icono-reanudar {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .pr-icono-reanudar,
+  .pr-flecha[data-pausado] .pr-icono-pausa {
+    display: none;
+  }
+
+  .pr-flecha[data-pausado] .pr-icono-reanudar {
+    display: block;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pr-flecha:hover {
+      border-color: color-mix(in srgb, var(--sl-color-gray-3) 45%, transparent);
+      color: var(--sl-color-white);
+    }
+  }
+
+  .pr-flecha:active {
+    transform: scale(0.96);
+  }
+
+  .pr-flecha:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  .pr-flecha[data-pr-anterior]:active svg {
+    transform: translateX(-2px);
+  }
+
+  .pr-flecha[data-pr-siguiente]:active svg {
+    transform: translateX(2px);
+  }
+
+  .pr-flecha[data-pr-sentido][data-invertido] svg {
+    transform: scaleX(-1);
+  }
+
+  .pr-arranque__visor {
+    container-type: inline-size;
+    overflow: hidden;
+    padding: 0.75rem 0.25rem;
+    margin: -0.75rem -0.25rem;
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  }
+
+  .pr-arranque__rutas {
+    display: flex;
+    gap: 1.25rem;
+    inline-size: max-content;
+    will-change: auto;
+  }
+
+  .cj[data-abierto] .pr-arranque__rutas {
+    will-change: transform;
+  }
+
+  .pr-ruta {
+    display: grid;
+    gap: 0.4rem;
+    align-content: start;
+    flex: 0 0 min(19rem, calc(100cqi - 1rem));
+    min-block-size: 9.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--cj-borde);
+    border-radius: 0.875rem;
+    background: var(--sl-color-bg-nav);
+    box-shadow: inset 0 1px 0 var(--cj-alto);
+    color: inherit;
+    cursor: default;
+    text-decoration: none;
+    /* La marquesina mueve la pista con transform. Las propiedades independientes
+       evitan que el hover de la tarjeta lo sobrescriba. */
+    transition:
+      scale 200ms var(--cj-curva),
+      translate 200ms var(--cj-curva),
+      border-color 200ms ease,
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  a.pr-ruta {
+    cursor: pointer;
+  }
+
+  :root[data-theme='light'] .pr-ruta {
+    background: var(--m-surface);
+    box-shadow:
+      inset 0 1px 0 var(--cj-alto),
+      0 1px 2px rgba(53, 28, 12, 0.05);
+  }
+
+  .pr-ruta__titulo {
+    color: var(--sl-color-white);
+    font-family: var(--m-font-display);
+    font-size: var(--sl-text-base);
+    font-weight: 700;
+    line-height: 1.3;
+    transition: color 200ms ease;
+  }
+
+  .pr-ruta__detalle {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .pr-ruta--realce {
+    scale: 1.025;
+    translate: 0 -2px;
+    border-color: color-mix(in srgb, var(--sl-color-accent) 60%, transparent);
+    background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg-nav));
+    box-shadow: inset 0 1px 0 var(--cj-alto);
+  }
+
+  .pr-ruta--realce .pr-ruta__titulo {
+    color: var(--sl-color-text-accent);
+  }
+
+  :root[data-theme='light'] .pr-ruta--realce {
+    background: color-mix(in srgb, var(--m-primary-50) 55%, var(--m-surface));
+    box-shadow:
+      inset 0 1px 0 var(--cj-alto),
+      0 4px 12px -6px rgba(53, 28, 12, 0.18);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a.pr-ruta:hover {
+      scale: 1.025;
+      translate: 0 -2px;
+      border-color: color-mix(in srgb, var(--sl-color-accent) 60%, transparent);
+      background: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg-nav));
+    }
+
+    a.pr-ruta:hover .pr-ruta__titulo {
+      color: var(--sl-color-text-accent);
+    }
+
+    :root[data-theme='light'] a.pr-ruta:hover {
+      background: color-mix(in srgb, var(--m-primary-50) 55%, var(--m-surface));
+      box-shadow:
+        inset 0 1px 0 var(--cj-alto),
+        0 4px 12px -6px rgba(53, 28, 12, 0.18);
+    }
+  }
+
+  a.pr-ruta:active {
+    scale: 0.995;
+  }
+
+  a.pr-ruta:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 3px;
+  }
+
+  .cj-siguiente {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+    margin-block-start: 2.75rem;
+    padding: 0.875rem 1.125rem;
+    border: 1px solid var(--cj-borde);
+    border-radius: var(--m-r-lg);
+    color: inherit;
+    text-decoration: none;
+    transition:
+      border-color 200ms ease,
+      background-color 200ms ease;
+  }
+
+  .cj-siguiente__rotulo {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+  }
+
+  .cj-siguiente__destino {
+    display: inline-flex;
+    gap: 0.375rem;
+    align-items: center;
+    color: var(--sl-color-white);
+    font-family: var(--m-font-display);
+    font-size: var(--sl-text-lg);
+    font-weight: 700;
+  }
+
+  .cj-siguiente__destino svg {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+    transition: translate 200ms var(--cj-curva);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cj-siguiente:hover {
+      border-color: color-mix(in srgb, var(--sl-color-accent) 60%, transparent);
+      background: color-mix(in srgb, var(--sl-color-accent) 5%, transparent);
+    }
+
+    .cj-siguiente:hover .cj-siguiente__destino svg {
+      translate: 3px 0;
+    }
+  }
+
+  .cj-siguiente:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 50rem) {
+    .cj-panel {
+      max-block-size: min(88svh, 50rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pr-arranque__visor {
+      overflow: visible;
+      mask-image: none;
+    }
+
+    .pr-arranque__rutas {
+      inline-size: auto;
+      flex-wrap: wrap;
+      will-change: auto;
+    }
+
+    a.pr-ruta:hover,
+    .pr-ruta--realce {
+      scale: 1;
+      translate: none;
+    }
+
+    .cj-nota,
+    .cj-controles {
+      display: none;
+    }
+
+    .pr-flecha,
+    .pr-flecha svg,
+    .cj-velo,
+    .cj-panel,
+    .cj-panel::before,
+    .cj-cabecera,
+    .cj-cuerpo,
+    .cj-tirador,
+    .cj-tirador__barra,
+    .cj-siguiente,
+    .cj-siguiente__destino svg {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const raiz = document.querySelector<HTMLElement>('[data-cj]');
+  const panel = raiz?.querySelector<HTMLElement>('[data-cj-panel]');
+  const velo = raiz?.querySelector<HTMLElement>('[data-cj-velo]');
+  const tirador = raiz?.querySelector<HTMLButtonElement>('[data-cj-tirador]');
+  const cuerpo = raiz?.querySelector<HTMLElement>('[data-cj-cuerpo]');
+  const etiqueta = raiz?.querySelector<HTMLElement>('[data-cj-etiqueta]');
+
+  if (raiz && panel && velo && tirador && cuerpo && etiqueta) {
+    const variante = raiz.dataset.variante ?? 'simple';
+    const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
+    const lienzo = document.querySelector<HTMLElement>('.pd-lienzo');
+
+    document.body.appendChild(raiz);
+
+    const VELOCIDAD_DESCARTE = 0.11;
+    const RESISTENCIA = 20;
+    const RUEDA = 2.4;
+    const TAU_RUEDA = 100;
+    const REPOSO_RUEDA = 0.5;
+    const ESPERA_RUEDA = 100;
+    const ESPERA_INICIAL_CARRUSEL = 800;
+    const SELECTOR_FOCO =
+      'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
+    let abierto = false;
+    let y = 0;
+    let gesto: 'ninguno' | 'puntero' | 'rueda' = 'ninguno';
+    let objetivoRueda = 0;
+    let cuadroRueda: number | null = null;
+    let tiempoRueda = 0;
+    let entradaPendienteRueda = false;
+    let finRueda: number | null = null;
+    let agarreActivo: HTMLElement | null = null;
+    let focoAnterior: HTMLElement | null = null;
+    let notificarApertura = (_estado: boolean) => {};
+    let carruselPausadoUsuario = false;
+    let sentidoCarrusel: 1 | -1 = 1;
+    const fondoInerte = new Map<HTMLElement, boolean>();
+
+    let rCache = 0;
+    const recorrido = () => {
+      if (gesto === 'ninguno' || !rCache) rCache = panel.offsetHeight - tirador.offsetHeight;
+      return rCache;
+    };
+    const paradas = () => (variante === 'escalones' ? [0, 0.55, 1] : [0, 1]);
+    const escalaFondo = variante === 'fondo' ? 44 : 26;
+    const goma = (exceso: number) => RESISTENCIA * (1 - 1 / (exceso / RESISTENCIA + 1));
+
+    const elementosEnfocables = () =>
+      Array.from(panel.querySelectorAll<HTMLElement>(SELECTOR_FOCO)).filter(
+        (elemento) =>
+          elemento.tabIndex >= 0 && !elemento.closest('[inert]') && elemento.getClientRects().length > 0,
+      );
+
+    const cambiarFondoInerte = (estado: boolean) => {
+      if (estado) {
+        for (const hijo of document.body.children) {
+          if (!(hijo instanceof HTMLElement) || hijo === raiz) continue;
+          fondoInerte.set(hijo, hijo.inert);
+          hijo.inert = true;
+        }
+        return;
+      }
+      for (const [hijo, eraInerte] of fondoInerte) {
+        if (hijo.isConnected) hijo.inert = eraInerte;
+      }
+      fondoInerte.clear();
+    };
+
+    const actualizarModal = (estado: boolean) => {
+      if (estado) {
+        const activo = document.activeElement;
+        focoAnterior = activo instanceof HTMLElement && !raiz.contains(activo) ? activo : tirador;
+        cuerpo.inert = false;
+        cambiarFondoInerte(true);
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-modal', 'true');
+        document.documentElement.setAttribute('data-cj-abierto', '');
+        etiqueta.textContent = 'Cerrar por dónde empezar';
+        window.requestAnimationFrame(() => {
+          if (abierto) tirador.focus({ preventScroll: true });
+        });
+        return;
+      }
+
+      cuerpo.inert = true;
+      panel.removeAttribute('role');
+      panel.removeAttribute('aria-modal');
+      document.documentElement.removeAttribute('data-cj-abierto');
+      etiqueta.textContent = 'Abrir por dónde empezar';
+      cambiarFondoInerte(false);
+      const destino = focoAnterior?.isConnected ? focoAnterior : tirador;
+      focoAnterior = null;
+      window.requestAnimationFrame(() => {
+        if (!abierto) destino.focus({ preventScroll: true });
+      });
+    };
+
+    const moverFondo = (p: number, conTransicion: boolean) => {
+      if (!lienzo) return;
+      lienzo.style.transition =
+        conTransicion && !menosMovimiento.matches
+          ? 'scale var(--cj-dur, 500ms) cubic-bezier(0.32, 0.72, 0, 1), translate var(--cj-dur, 500ms) cubic-bezier(0.32, 0.72, 0, 1)'
+          : 'none';
+      const escala = 1 - (escalaFondo / window.innerWidth) * p;
+      lienzo.style.transformOrigin = 'top center';
+      lienzo.style.scale = String(escala);
+      lienzo.style.translate = `0 ${14 * p}px`;
+    };
+
+    const opacidadCuerpo = (p: number) => Math.min(1, Math.max(0, (p - 0.12) / 0.38));
+
+    const pintarBote = (px: number) => {
+      const bote = menosMovimiento.matches ? 0 : Math.max(0, px);
+      panel.style.setProperty('--cj-bote', `${bote}px`);
+      tirador.style.translate = bote ? `0 ${-bote}px` : '';
+      if (agarreActivo && agarreActivo !== tirador) {
+        agarreActivo.style.translate = bote ? `0 ${-bote}px` : '';
+      }
+    };
+
+    const soltarBote = () => {
+      panel.style.removeProperty('--cj-bote');
+      tirador.style.translate = '';
+      if (agarreActivo && agarreActivo !== tirador) agarreActivo.style.translate = '';
+      agarreActivo = null;
+    };
+
+    const pintar = (px: number) => {
+      const r = recorrido();
+      const p = 1 - Math.max(0, Math.min(r, px)) / r;
+      panel.style.translate = `0 ${Math.max(0, px)}px`;
+      velo.style.opacity = String(p);
+      cuerpo.style.opacity = String(opacidadCuerpo(p));
+      pintarBote(-px);
+      moverFondo(p, false);
+    };
+
+    const detenerSuavizadoRueda = () => {
+      if (cuadroRueda !== null) window.cancelAnimationFrame(cuadroRueda);
+      cuadroRueda = null;
+      tiempoRueda = 0;
+      entradaPendienteRueda = false;
+    };
+
+    const aplicar = (p: number) => {
+      detenerSuavizadoRueda();
+      if (finRueda !== null) window.clearTimeout(finRueda);
+      finRueda = null;
+      const estabaAbierto = abierto;
+      abierto = p > 0.5;
+      gesto = 'ninguno';
+      raiz.removeAttribute('data-arrastrando');
+      soltarBote();
+      raiz.toggleAttribute('data-abierto', abierto);
+      tirador.setAttribute('aria-expanded', String(abierto));
+      velo.style.pointerEvents = abierto ? 'auto' : 'none';
+      moverFondo(p, true);
+      if (p === 0 || p === 1) {
+        panel.style.translate = '';
+        velo.style.opacity = '';
+        cuerpo.style.opacity = '';
+      } else {
+        panel.style.translate = `0 ${(1 - p) * recorrido()}px`;
+        velo.style.opacity = String(p);
+        cuerpo.style.opacity = String(opacidadCuerpo(p));
+      }
+      if (abierto !== estabaAbierto) {
+        actualizarModal(abierto);
+        notificarApertura(abierto);
+      }
+    };
+
+    const soltarEn = (p: number, velocidad: number, haciaArriba: boolean) => {
+      if (velocidad > VELOCIDAD_DESCARTE) return haciaArriba ? 1 : 0;
+      return paradas().reduce((a, b) => (Math.abs(b - p) < Math.abs(a - p) ? b : a));
+    };
+
+    const cerrar = () => aplicar(0);
+    let punteroId: number | null = null;
+    let arrastrando = false;
+    let inicioY = 0;
+    let inicioPx = 0;
+    let inicioTiempo = 0;
+
+    const empezar = (ev: PointerEvent, origen: HTMLElement) => {
+      if (!ev.isPrimary || ev.button !== 0 || punteroId !== null || gesto === 'rueda') return;
+      if (origen !== tirador && (ev.target as HTMLElement).closest('button, a')) return;
+      punteroId = ev.pointerId;
+      inicioY = ev.clientY;
+      inicioPx = abierto ? 0 : recorrido();
+      inicioTiempo = performance.now();
+      arrastrando = false;
+      agarreActivo = origen;
+      origen.setPointerCapture(ev.pointerId);
+    };
+
+    const mover = (ev: PointerEvent) => {
+      if (ev.pointerId !== punteroId) return;
+      const dy = ev.clientY - inicioY;
+      if (!arrastrando && Math.abs(dy) < 4) return;
+      if (!arrastrando) {
+        arrastrando = true;
+        gesto = 'puntero';
+        raiz.setAttribute('data-arrastrando', '');
+      }
+      const r = recorrido();
+      y = inicioPx + dy;
+      if (y < 0) y = -goma(-y);
+      else if (y > r) y = r + goma(y - r);
+      pintar(y);
+    };
+
+    const soltar = (ev: PointerEvent) => {
+      if (ev.pointerId !== punteroId) return;
+      punteroId = null;
+      if (!arrastrando) {
+        agarreActivo = null;
+        return;
+      }
+      arrastrando = false;
+      const r = recorrido();
+      const dy = ev.clientY - inicioY;
+      const velocidad = Math.abs(dy) / Math.max(performance.now() - inicioTiempo, 1);
+      const p = 1 - Math.max(0, Math.min(r, y)) / r;
+      const destino = soltarEn(p, velocidad, dy < 0);
+      window.requestAnimationFrame(() => aplicar(destino));
+    };
+
+    for (const agarre of [tirador, ...raiz.querySelectorAll<HTMLElement>('[data-cj-agarre]')]) {
+      agarre.addEventListener('pointerdown', (ev) => empezar(ev, agarre));
+      agarre.addEventListener('pointermove', mover);
+      agarre.addEventListener('pointerup', soltar);
+      agarre.addEventListener('pointercancel', soltar);
+      agarre.addEventListener('lostpointercapture', soltar);
+    }
+
+    tirador.addEventListener('click', () => {
+      if (gesto === 'ninguno') aplicar(abierto ? 0 : 1);
+    });
+
+    const cerrarGestoRueda = () => {
+      const r = recorrido();
+      const p = 1 - Math.max(0, Math.min(r, objetivoRueda)) / r;
+      aplicar(soltarEn(p, 0, false));
+    };
+
+    const pasoRueda = (ahora: number) => {
+      cuadroRueda = null;
+      if (gesto !== 'rueda') return;
+      const dt = ahora - tiempoRueda;
+      tiempoRueda = ahora;
+      const avance = 1 - Math.exp(-dt / TAU_RUEDA);
+      y += (objetivoRueda - y) * avance;
+
+      if (Math.abs(objetivoRueda - y) < REPOSO_RUEDA) {
+        y = objetivoRueda;
+        pintar(y);
+        if (!entradaPendienteRueda) {
+          tiempoRueda = 0;
+          return;
+        }
+      } else {
+        pintar(y);
+      }
+
+      entradaPendienteRueda = false;
+      cuadroRueda = window.requestAnimationFrame(pasoRueda);
+    };
+
+    const suavizarHaciaObjetivo = () => {
+      entradaPendienteRueda = true;
+      if (menosMovimiento.matches) {
+        y = objetivoRueda;
+        pintar(y);
+        entradaPendienteRueda = false;
+        return;
+      }
+      if (cuadroRueda === null) {
+        tiempoRueda = performance.now();
+        cuadroRueda = window.requestAnimationFrame(pasoRueda);
+      }
+    };
+
+    window.addEventListener(
+      'wheel',
+      (ev) => {
+        if (arrastrando) return;
+        const factorDelta =
+          ev.deltaMode === WheelEvent.DOM_DELTA_LINE
+            ? Number.parseFloat(getComputedStyle(raiz).fontSize) || 16
+            : ev.deltaMode === WheelEvent.DOM_DELTA_PAGE
+              ? innerHeight
+              : 1;
+        const deltaY = ev.deltaY * factorDelta;
+        const r = recorrido();
+        if (gesto !== 'rueda') {
+          const alFinal =
+            window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+          const puedeAbrir = !abierto && deltaY > 0 && alFinal;
+          const puedeCerrar = abierto && deltaY < 0 && cuerpo.scrollTop <= 0;
+          if (!puedeAbrir && !puedeCerrar) return;
+          gesto = 'rueda';
+          y = abierto ? 0 : r;
+          objetivoRueda = y;
+          raiz.setAttribute('data-arrastrando', '');
+        }
+        const nuevo = objetivoRueda - deltaY * RUEDA;
+        if (nuevo >= r) {
+          objetivoRueda = r;
+          cerrarGestoRueda();
+          return;
+        }
+        ev.preventDefault();
+        objetivoRueda = nuevo < 0 ? -goma(-nuevo) : nuevo;
+        suavizarHaciaObjetivo();
+        if (finRueda) window.clearTimeout(finRueda);
+        finRueda = window.setTimeout(cerrarGestoRueda, ESPERA_RUEDA);
+      },
+      { passive: false },
+    );
+
+    velo.addEventListener('click', cerrar);
+
+    document.addEventListener('keydown', (ev) => {
+      if (!abierto) return;
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        cerrar();
+        return;
+      }
+      if (ev.key !== 'Tab') return;
+      const enfocables = elementosEnfocables();
+      if (!enfocables.length) return;
+      const primero = enfocables[0];
+      const ultimo = enfocables.at(-1)!;
+      const activo = document.activeElement;
+      if (ev.shiftKey && (activo === primero || !panel.contains(activo))) {
+        ev.preventDefault();
+        ultimo.focus();
+      } else if (!ev.shiftKey && (activo === ultimo || !panel.contains(activo))) {
+        ev.preventDefault();
+        primero.focus();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      rCache = 0;
+      if (gesto === 'ninguno') aplicar(abierto ? 1 : 0);
+    });
+
+    const visor = raiz.querySelector<HTMLElement>('[data-pr-visor]');
+    const pistaRutas = raiz.querySelector<HTMLElement>('[data-pr-pista]');
+    const controles = raiz.querySelector<HTMLElement>('[data-pr-controles]');
+    const carrusel = visor?.closest<HTMLElement>('.cj-carrusel');
+    let desmontarCarrusel = () => {};
+
+    const crearCarrusel = () => {
+      if (!carrusel || !visor || !pistaRutas || !controles) return () => {};
+      const abortador = new AbortController();
+      const { signal } = abortador;
+      const originales = Array.from(
+        pistaRutas.querySelectorAll<HTMLElement>('.pr-ruta:not([data-pr-copia])'),
+      );
+      const unidad = originales.length;
+      if (!unidad) return () => abortador.abort();
+
+      const modulo = (valor: number, base: number) => ((valor % base) + base) % base;
+      const medirGrupo = () => {
+        const primera = originales[0];
+        const ultima = originales.at(-1)!;
+        const estilos = getComputedStyle(pistaRutas);
+        const separacion = Number.parseFloat(estilos.columnGap || estilos.gap) || 0;
+        return ultima.offsetLeft + ultima.offsetWidth - primera.offsetLeft + separacion;
+      };
+
+      let periodo = 0;
+      const copias: HTMLElement[] = [];
+      const reconstruirCopias = () => {
+        for (const copia of copias) copia.remove();
+        copias.length = 0;
+        periodo = medirGrupo();
+        if (periodo <= 0) return;
+        const gruposNecesarios = Math.max(3, Math.ceil(visor.clientWidth / periodo) + 2);
+        for (let grupo = 0; grupo < gruposNecesarios; grupo += 1) {
+          for (const original of originales) {
+            const copia = original.cloneNode(true) as HTMLElement;
+            copia.dataset.prCopia = '';
+            copia.setAttribute('aria-hidden', 'true');
+            copia.tabIndex = -1;
+            copia.removeAttribute('href');
+            pistaRutas.appendChild(copia);
+            copias.push(copia);
+          }
+        }
+        const equivalente = pistaRutas.children.item(unidad) as HTMLElement | null;
+        if (equivalente) periodo = equivalente.offsetLeft - originales[0].offsetLeft;
+      };
+      reconstruirCopias();
+
+      let offset = 0;
+      let transicion: { desde: number; hasta: number; inicio: number; indice: number } | null = null;
+      let cuadro: number | null = null;
+      let ultimo = performance.now();
+      let sobreVisor = false;
+      let inicioHasta = 0;
+      let realceHasta = 0;
+      let temporizador: number | null = null;
+      const botonPausa = controles.querySelector<HTMLButtonElement>('[data-pr-pausa]');
+      const botonSentido = controles.querySelector<HTMLButtonElement>('[data-pr-sentido]');
+
+      const cartas = () => [...originales, ...copias];
+      const pintarCinta = () => {
+        const posicion = periodo > 0 ? modulo(offset, periodo) : 0;
+        pistaRutas.style.transform = `translateX(${-posicion}px)`;
+      };
+      const pintarPausa = () => {
+        if (!botonPausa) return;
+        botonPausa.toggleAttribute('data-pausado', carruselPausadoUsuario);
+        botonPausa.setAttribute(
+          'aria-label',
+          carruselPausadoUsuario ? 'Reanudar el carrusel' : 'Pausar el carrusel',
+        );
+      };
+      const pintarSentido = () => {
+        if (!botonSentido) return;
+        botonSentido.toggleAttribute('data-invertido', sentidoCarrusel === -1);
+        botonSentido.setAttribute(
+          'aria-label',
+          sentidoCarrusel === 1
+            ? 'Cambiar el sentido hacia la derecha'
+            : 'Cambiar el sentido hacia la izquierda',
+        );
+      };
+      const desmarcar = () => {
+        for (const carta of cartas()) carta.classList.remove('pr-ruta--realce');
+      };
+      const debeReproducir = () =>
+        periodo > 0 &&
+        abierto &&
+        !document.hidden &&
+        !sobreVisor &&
+        !carruselPausadoUsuario &&
+        !inicioHasta &&
+        !realceHasta;
+      const solicitarCuadro = () => {
+        if (cuadro === null && (transicion || debeReproducir())) {
+          ultimo = performance.now();
+          cuadro = window.requestAnimationFrame(paso);
+        }
+      };
+      const detenerCuadro = () => {
+        if (cuadro !== null) window.cancelAnimationFrame(cuadro);
+        cuadro = null;
+      };
+      const pausarPorUsuario = () => {
+        carruselPausadoUsuario = true;
+        pintarPausa();
+        if (!transicion) detenerCuadro();
+      };
+
+      const procesarPlazos = () => {
+        if (temporizador !== null) window.clearTimeout(temporizador);
+        temporizador = null;
+        const ahora = performance.now();
+        if (inicioHasta && inicioHasta <= ahora) inicioHasta = 0;
+        if (realceHasta && realceHasta <= ahora) {
+          realceHasta = 0;
+          desmarcar();
+        }
+        const siguiente = Math.min(...[inicioHasta, realceHasta].filter((plazo) => plazo > ahora));
+        if (Number.isFinite(siguiente)) {
+          temporizador = window.setTimeout(procesarPlazos, Math.max(0, siguiente - ahora));
+        }
+        solicitarCuadro();
+      };
+
+      const desplazarA = (indice: number, direccion: number) => {
+        if (periodo <= 0) return;
+        const carta = originales[indice];
+        const posicionActual = modulo(offset, periodo);
+        const posicionCarta = modulo(
+          carta.offsetLeft - (visor.clientWidth - carta.offsetWidth) / 2,
+          periodo,
+        );
+        const diferencia =
+          direccion > 0
+            ? modulo(posicionCarta - posicionActual, periodo)
+            : -modulo(posicionActual - posicionCarta, periodo);
+        transicion = {
+          desde: posicionActual,
+          hasta: posicionActual + diferencia,
+          inicio: performance.now(),
+          indice,
+        };
+        offset = posicionActual;
+        solicitarCuadro();
+      };
+
+      const mostrarElementoEnfocado = (carta: HTMLElement) => {
+        if (periodo <= 0) return;
+        transicion = null;
+        offset = modulo(carta.offsetLeft - (visor.clientWidth - carta.offsetWidth) / 2, periodo);
+        pintarCinta();
+        detenerCuadro();
+      };
+
+      const paso = (ahora: number) => {
+        cuadro = null;
+        const dt = Math.min(ahora - ultimo, 64);
+        ultimo = ahora;
+        if (transicion) {
+          const p = Math.min(1, (ahora - transicion.inicio) / 300);
+          const suavizado = 1 - Math.pow(1 - p, 3);
+          offset = transicion.desde + (transicion.hasta - transicion.desde) * suavizado;
+          if (p >= 1) {
+            offset = modulo(offset, periodo);
+            transicion = null;
+          }
+        } else if (debeReproducir()) {
+          offset = modulo(offset + (periodo / 30000) * dt * sentidoCarrusel, periodo);
+        }
+        pintarCinta();
+        solicitarCuadro();
+      };
+
+      const pasar = (delta: number) => {
+        const lista = cartas();
+        let indiceBase = transicion?.indice;
+        if (indiceBase === undefined) {
+          const cajaVisor = visor.getBoundingClientRect();
+          const centro = cajaVisor.left + cajaVisor.width / 2;
+          let cartaActual = lista[0];
+          let distancia = Infinity;
+          for (const carta of lista) {
+            const caja = carta.getBoundingClientRect();
+            const nuevaDistancia = Math.abs(caja.left + caja.width / 2 - centro);
+            if (nuevaDistancia < distancia) {
+              distancia = nuevaDistancia;
+              cartaActual = carta;
+            }
+          }
+          indiceBase = Number(cartaActual.dataset.prIndice);
+        }
+        if (!Number.isInteger(indiceBase)) return;
+        const indiceDestino = modulo(indiceBase + delta, unidad);
+        for (const carta of lista) {
+          carta.classList.toggle(
+            'pr-ruta--realce',
+            Number(carta.dataset.prIndice) === indiceDestino,
+          );
+        }
+        realceHasta = performance.now() + 5000;
+        desplazarA(indiceDestino, delta);
+        procesarPlazos();
+      };
+
+      const cambiarApertura = (estado: boolean) => {
+        if (estado) inicioHasta = performance.now() + ESPERA_INICIAL_CARRUSEL;
+        else {
+          inicioHasta = 0;
+          transicion = null;
+          detenerCuadro();
+        }
+        procesarPlazos();
+      };
+
+      visor.addEventListener(
+        'mouseenter',
+        () => {
+          sobreVisor = true;
+          if (!transicion) detenerCuadro();
+        },
+        { signal },
+      );
+      visor.addEventListener(
+        'mouseleave',
+        () => {
+          sobreVisor = false;
+          solicitarCuadro();
+        },
+        { signal },
+      );
+      controles.addEventListener(
+        'focusin',
+        (ev) => {
+          if ((ev.target as HTMLElement).matches(':focus-visible')) {
+            pausarPorUsuario();
+          }
+        },
+        { signal },
+      );
+      pistaRutas.addEventListener(
+        'click',
+        (ev) => {
+          const copia = (ev.target as HTMLElement).closest<HTMLElement>('[data-pr-copia]');
+          const original = originales[Number(copia?.dataset.prIndice)];
+          if (copia && original) original.click();
+        },
+        { signal },
+      );
+      pistaRutas.addEventListener(
+        'focusin',
+        (ev) => {
+          const carta = (ev.target as HTMLElement).closest<HTMLElement>('.pr-ruta:not([data-pr-copia])');
+          if (!carta) return;
+          pausarPorUsuario();
+          mostrarElementoEnfocado(carta);
+        },
+        { signal },
+      );
+      controles.addEventListener(
+        'click',
+        (ev) => {
+          const boton = (ev.target as HTMLElement).closest<HTMLButtonElement>('button');
+          if (!boton || !controles.contains(boton)) return;
+          if (boton.hasAttribute('data-pr-anterior')) return pasar(-1);
+          if (boton.hasAttribute('data-pr-siguiente')) return pasar(1);
+          if (boton.hasAttribute('data-pr-pausa')) {
+            carruselPausadoUsuario = !carruselPausadoUsuario;
+            if (!carruselPausadoUsuario) inicioHasta = 0;
+            pintarPausa();
+            procesarPlazos();
+            return;
+          }
+          if (boton.hasAttribute('data-pr-sentido')) {
+            sentidoCarrusel = sentidoCarrusel === 1 ? -1 : 1;
+            pintarSentido();
+            solicitarCuadro();
+          }
+        },
+        { signal },
+      );
+      document.addEventListener(
+        'visibilitychange',
+        () => {
+          if (document.hidden) detenerCuadro();
+          else procesarPlazos();
+        },
+        { signal },
+      );
+
+      let anchoVisor = visor.clientWidth;
+      const observadorTamano = new ResizeObserver(() => {
+        const periodoAnterior = periodo;
+        const nuevoAncho = visor.clientWidth;
+        const nuevoPeriodo = medirGrupo();
+        if (
+          nuevoPeriodo <= 0 ||
+          (Math.abs(nuevoPeriodo - periodoAnterior) < 0.5 && Math.abs(nuevoAncho - anchoVisor) < 0.5)
+        ) {
+          return;
+        }
+        const avance = periodoAnterior > 0 ? modulo(offset, periodoAnterior) / periodoAnterior : 0;
+        anchoVisor = nuevoAncho;
+        reconstruirCopias();
+        offset = avance * periodo;
+        transicion = null;
+        pintarCinta();
+      });
+      observadorTamano.observe(visor);
+
+      notificarApertura = cambiarApertura;
+      pintarPausa();
+      pintarSentido();
+      pintarCinta();
+      cambiarApertura(abierto);
+
+      return () => {
+        abortador.abort();
+        observadorTamano.disconnect();
+        detenerCuadro();
+        if (temporizador !== null) window.clearTimeout(temporizador);
+        transicion = null;
+        for (const copia of copias) copia.remove();
+        desmarcar();
+        pistaRutas.style.transform = '';
+        botonPausa?.removeAttribute('data-pausado');
+        botonSentido?.removeAttribute('data-invertido');
+        notificarApertura = () => {};
+      };
+    };
+
+    const actualizarMovimiento = () => {
+      desmontarCarrusel();
+      desmontarCarrusel = () => {};
+      if (menosMovimiento.matches) {
+        soltarBote();
+        return;
+      }
+      desmontarCarrusel = crearCarrusel();
+    };
+
+    menosMovimiento.addEventListener('change', actualizarMovimiento);
+    actualizarMovimiento();
+  }
+</script>

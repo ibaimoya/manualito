@@ -391,8 +391,11 @@ def test_ensure_active_game_raises_for_missing_game():
             await anyio.lowlevel.checkpoint()
             return None
 
+    session = FakeSession()
+    call = partial(ensure_active_game, session, game_id=_GAME_ID)
+
     with pytest.raises(GameNotFoundError):
-        anyio.run(partial(ensure_active_game, FakeSession(), game_id=_GAME_ID))
+        anyio.run(call)
 
 
 def test_valid_game_dependencies_return_validated_id(monkeypatch):
@@ -589,35 +592,39 @@ def test_bgg_search_raises_for_unusable_response(status_code: int, monkeypatch):
     """Errores no usables de BGG se quedan como excepción de dominio."""
     client = _bgg_client(status_code, "")
     monkeypatch.setattr(bgg_client.config, "BGG_MAX_ATTEMPTS", 1)
+    call = partial(search_board_games, client, query="cat")
 
     with pytest.raises(BggUnavailableError):
-        anyio.run(partial(search_board_games, client, query="cat"))
+        anyio.run(call)
 
 
 def test_bgg_search_raises_for_malformed_xml():
     """XML mal formado se traduce a excepción de dominio."""
     client = _bgg_client(200, "<items>")
+    call = partial(search_board_games, client, query="cat")
 
     with pytest.raises(BggUnavailableError):
-        anyio.run(partial(search_board_games, client, query="cat"))
+        anyio.run(call)
 
 
 def test_bgg_search_wraps_http_errors():
     """Errores de transporte HTTP no escapan del cliente BGG."""
     client = AsyncMock(spec=httpx.AsyncClient)
     client.get.side_effect = httpx.TimeoutException("timeout")
+    call = partial(search_board_games, client, query="cat")
 
     with pytest.raises(BggUnavailableError):
-        anyio.run(partial(search_board_games, client, query="cat"))
+        anyio.run(call)
 
 
 def test_bgg_search_rejects_empty_attempt_budget(monkeypatch):
     """Un presupuesto de reintentos vacío no hace llamadas externas."""
     client = _bgg_client(200, "<items />")
     monkeypatch.setattr(bgg_client.config, "BGG_MAX_ATTEMPTS", 0)
+    call = partial(search_board_games, client, query="cat")
 
     with pytest.raises(BggUnavailableError):
-        anyio.run(partial(search_board_games, client, query="cat"))
+        anyio.run(call)
 
     client.get.assert_not_called()
 

@@ -1,0 +1,57 @@
+{
+  "header": {
+    "description": "Busca un juego que alguien ya haya explicado y pregúntale sin subir su manual. El número junto a cada resultado son los manuales que la comunidad ha compartido.",
+    "eyebrow": "De la comunidad",
+    "title": "Explorar juegos"
+  },
+  "hints": {
+    "giveBack": {
+      "description": "Comparte tus manuales y ayuda a que otros entiendan sus juegos.",
+      "title": "Devuelve el favor"
+    },
+    "instantQuestion": {
+      "description": "Si la comunidad lo ha compartido, respondemos citando la página exacta.",
+      "title": "Pregunta al instante"
+    },
+    "withoutUpload": {
+      "description": "No necesitas tener el manual: te apoyas en el de otra persona.",
+      "title": "Sin subir nada"
+    }
+  },
+  "typeahead": {
+    "attribution": "Powered by <strong>BoardGameGeek</strong>",
+    "clearSearch": "Limpiar búsqueda",
+    "empty": {
+      "create": {
+        "button": "Crear «{{game}}»",
+        "description": "Añádelo tú y podrás subir su manual igualmente.",
+        "title": "No está en BoardGameGeek"
+      },
+      "search": {
+        "description": "Prueba con otro nombre o revisa la ortografía.",
+        "title": "No encontramos ese juego"
+      }
+    },
+    "error": {
+      "createDescription": "Inténtalo de nuevo en un momento.",
+      "createTitle": "No hemos podido crear el juego",
+      "description": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "title": "No pudimos buscar"
+    },
+    "inputAriaLabel": "Buscar juego",
+    "placeholder": "Escribe el nombre del juego…",
+    "resultsAriaLabel": "Resultados",
+    "searchHint": {
+      "idle": "Escribe al menos 3 letras para buscar en el catálogo.",
+      "typing": "Sigue escribiendo… (mínimo 3 letras)"
+    },
+    "selected": {
+      "change": "Cambiar",
+      "chosen": "Elegido"
+    },
+    "sharedManuals_one": "{{count}} manual compartido",
+    "sharedManuals_other": "{{count}} manuales compartidos",
+    "yearNotAvailable": "s/f"
+  }
+}

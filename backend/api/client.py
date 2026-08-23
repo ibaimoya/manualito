@@ -2,7 +2,7 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator, Mapping, Sequence
 from pathlib import Path
-from typing import NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 import anyio
 import httpx
@@ -18,11 +18,11 @@ from api.ocr.schemas import OcrLinesResponse
 
 logger = logging.getLogger(__name__)
 
-type JsonValue = None | bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
+type JsonValue = bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"] | None
 type JsonObject = dict[str, JsonValue]
 
 
-class _PostRequestKwargs(TypedDict):
+class _RequestKwargs(TypedDict):
     url: str
     json: NotRequired[Mapping[str, JsonValue]]
     content: NotRequired[AsyncIterator[bytes]]
@@ -81,6 +81,38 @@ async def _stream_file(path: Path) -> AsyncIterator[bytes]:
             yield chunk
 
 
+async def get_json(
+    *,
+    client: httpx.AsyncClient,
+    service_name: str,
+    url: str,
+    unavailable_detail: str,
+    internal_detail: str,
+) -> Any:
+    """
+    Consulta un servicio interno y devuelve su payload JSON.
+
+    Args:
+        client (httpx.AsyncClient): Cliente HTTP compartido.
+        service_name (str): Nombre lógico del servicio destino.
+        url (str): Endpoint completo a consultar.
+        unavailable_detail (str): Mensaje a devolver si el servicio no responde.
+        internal_detail (str): Mensaje a devolver si el servicio responde con un error.
+
+    Returns:
+        Any: JSON decodificado de la respuesta interna.
+    """
+    return await send_request(
+        client=client,
+        service_name=service_name,
+        request_kwargs={"url": url},
+        timeout_seconds=config.INTERNAL_JSON_TIMEOUT,
+        unavailable_detail=unavailable_detail,
+        internal_detail=internal_detail,
+        method="GET",
+    )
+
+
 async def post_json(
     *,
     client: httpx.AsyncClient,
@@ -99,7 +131,7 @@ async def post_json(
         url (str): Endpoint completo a invocar.
         payload (Mapping[str, JsonValue]): Cuerpo JSON de la petición.
         unavailable_detail (str): Mensaje a devolver si el servicio no responde.
-        internal_detail (str): Mensaje a devolver si el servicio responde error.
+        internal_detail (str): Mensaje a devolver si el servicio responde con un error.
 
     Returns:
         JsonObject: JSON decodificado de la respuesta interna.
@@ -121,21 +153,23 @@ async def send_request(
     *,
     client: httpx.AsyncClient,
     service_name: str,
-    request_kwargs: _PostRequestKwargs,
+    request_kwargs: _RequestKwargs,
     timeout_seconds: float,
     unavailable_detail: str,
     internal_detail: str,
+    method: str = "POST",
 ) -> JsonObject:
     """
-    Ejecuta una llamada POST a un servicio interno con manejo uniforme de errores.
+    Ejecuta una llamada HTTP a un servicio interno con manejo uniforme de errores.
 
     Args:
         client (httpx.AsyncClient): Cliente HTTP compartido (connection pooling).
         service_name (str): Nombre lógico del servicio.
-        request_kwargs (_PostRequestKwargs): Argumentos de ``httpx.AsyncClient.post``.
+        request_kwargs (_RequestKwargs): Argumentos de ``httpx.AsyncClient.request``.
         timeout_seconds (float): Límite máximo del bloque de petición.
         unavailable_detail (str): Mensaje para errores de conexión.
         internal_detail (str): Mensaje para errores HTTP del servicio.
+        method (str): Método HTTP de la petición.
 
     Returns:
         JsonObject: JSON de la respuesta exitosa.
@@ -147,7 +181,7 @@ async def send_request(
     """
     try:
         async with asyncio.timeout(timeout_seconds):
-            response = await client.post(**request_kwargs)
+            response = await client.request(method, **request_kwargs)
         response.raise_for_status()
     except (TimeoutError, httpx.RequestError):
         logger.error("No se pudo conectar con el servicio %s.", service_name)

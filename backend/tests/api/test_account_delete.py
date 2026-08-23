@@ -122,18 +122,17 @@ def test_delete_account_service_requires_matching_confirmation(monkeypatch):
     """Sin confirmación correcta no se ejecuta ninguna escritura."""
     purge_mock = AsyncMock()
     monkeypatch.setattr(account_service.repository, "purge_user_account", purge_mock)
+    call = partial(
+        delete_account,
+        _FAKE_SESSION,
+        auth=_service_auth(),
+        username_confirmation="Equivocado",
+        client=object(),
+        ip_address=None,
+    )
 
     with pytest.raises(AuthFormValidationError):
-        anyio.run(
-            partial(
-                delete_account,
-                _FAKE_SESSION,
-                auth=_service_auth(),
-                username_confirmation="Equivocado",
-                client=object(),
-                ip_address=None,
-            )
-        )
+        anyio.run(call)
 
     purge_mock.assert_not_called()
 
@@ -142,18 +141,17 @@ def test_delete_account_service_rejects_blank_confirmation(monkeypatch):
     """Una confirmación en blanco se trata como no coincidente, sin reventar."""
     purge_mock = AsyncMock()
     monkeypatch.setattr(account_service.repository, "purge_user_account", purge_mock)
+    call = partial(
+        delete_account,
+        _FAKE_SESSION,
+        auth=_service_auth(),
+        username_confirmation="   ",
+        client=object(),
+        ip_address=None,
+    )
 
     with pytest.raises(AuthFormValidationError):
-        anyio.run(
-            partial(
-                delete_account,
-                _FAKE_SESSION,
-                auth=_service_auth(),
-                username_confirmation="   ",
-                client=object(),
-                ip_address=None,
-            )
-        )
+        anyio.run(call)
 
     purge_mock.assert_not_called()
 

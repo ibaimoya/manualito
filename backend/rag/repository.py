@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol, TypedDict, cast
+from typing import NotRequired, Protocol, TypedDict, cast
 from urllib.parse import urlparse
 
 from rag import config
@@ -10,11 +10,16 @@ from rag.schemas import IngestChunk
 
 logger = logging.getLogger(__name__)
 
+_INVENTORY_PAGE_SIZE = 500
+
 ChromaMetadata = dict[str, str | int]
+ChromaWhere = dict[str, str | dict[str, list[str]]]
 
 
 class ChromaGetResult(TypedDict):
     ids: list[str]
+    documents: NotRequired[list[str] | None]
+    metadatas: NotRequired[list[ChromaMetadata] | None]
 
 
 class ChromaQueryResult(TypedDict):
@@ -27,7 +32,17 @@ class RetrievedChunkData(TypedDict):
     id: str
     chunk_index: int
     source_page: int
+    content_hash: str
     score: float
+
+
+class CorpusChunkData(TypedDict):
+    id: str
+    text: str
+    manual_id: str
+    content_hash: str
+    chunk_index: int
+    source_page: int
 
 
 class ChromaCollection(Protocol):
@@ -43,9 +58,10 @@ class ChromaCollection(Protocol):
     def get(
         self,
         *,
-        where: dict[str, str],
         include: list[str],
+        where: ChromaWhere | None = None,
         limit: int | None = None,
+        offset: int | None = None,
     ) -> ChromaGetResult: ...
 
     def query(
@@ -53,7 +69,7 @@ class ChromaCollection(Protocol):
         *,
         query_embeddings: list[list[float]],
         n_results: int,
-        where: dict[str, str],
+        where: ChromaWhere,
     ) -> ChromaQueryResult: ...
 
     def delete(self, *, ids: list[str]) -> None: ...
@@ -142,14 +158,19 @@ class ChromaRepository:
         self,
         *,
         game_id: str,
+        manual_ids: list[str],
         query_embedding: list[float],
         top_k: int,
     ) -> list[RetrievedChunkData]:
         """
-        Recupera candidatos por juego; API rehidrata el texto desde Postgres.
+        Recupera candidatos dentro de los manuales autorizados del juego.
+
+        La API decide en Postgres qué manuales puede consultar el usuario y la
+        búsqueda queda acotada a esos manuales, no al juego completo.
 
         Args:
-            game_id (str): Juego sobre el que se restringe la búsqueda.
+            game_id (str): Juego consultado. Solo aparece en trazas y errores.
+            manual_ids (list[str]): Manuales autorizados que acotan la búsqueda.
             query_embedding (list[float]): Embedding de la pregunta del usuario.
             top_k (int): Número máximo de candidatos a devolver.
 
@@ -160,7 +181,7 @@ class ChromaRepository:
         result = collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
-            where={"game_id": game_id},
+            where={"manual_id": {"$in": manual_ids}},
         )
         ids = result["ids"][0]
         if not ids:
@@ -177,10 +198,138 @@ class ChromaRepository:
                     "id": chunk_id,
                     "chunk_index": int(metadata["chunk_index"]),
                     "source_page": int(metadata["source_page"]),
+                    "content_hash": cast(str, metadata["content_hash"]),
                     "score": round(score, 4),
                 }
             )
         return chunks
+
+    def get_game_corpus(self, *, game_id: str) -> list[CorpusChunkData]:
+        """
+        Recupera todos los chunks indexados de un juego.
+
+        El orden de los chunks coincide con el que entrega ChromaDB en cada
+        página y entre páginas consecutivas.
+
+        Args:
+            game_id (str): Identificador del juego cuyo corpus se recupera.
+
+        Returns:
+            list[CorpusChunkData]: Chunks completos indexados para el juego.
+
+        Raises:
+            ValueError: Si ChromaDB omite documentos o metadatos solicitados.
+        """
+        collection = self._get_collection()
+        chunks: list[CorpusChunkData] = []
+        offset = 0
+
+        while True:
+            page = collection.get(
+                where={"game_id": game_id},
+                include=["documents", "metadatas"],
+                limit=_INVENTORY_PAGE_SIZE,
+                offset=offset,
+            )
+            chunk_ids = page["ids"]
+            if not chunk_ids:
+                return chunks
+
+            documents = page.get("documents")
+            if documents is None:
+                raise ValueError(
+                    "ChromaDB no devolvió documentos para el corpus del juego."
+                )
+
+            metadatas = page.get("metadatas")
+            if metadatas is None:
+                raise ValueError(
+                    "ChromaDB no devolvió metadatos para el corpus del juego."
+                )
+
+            for chunk_id, text, metadata in zip(
+                chunk_ids,
+                documents,
+                metadatas,
+                strict=True,
+            ):
+                chunks.append(
+                    {
+                        "id": chunk_id,
+                        "text": text,
+                        "manual_id": cast(str, metadata["manual_id"]),
+                        "content_hash": cast(str, metadata["content_hash"]),
+                        "chunk_index": int(metadata["chunk_index"]),
+                        "source_page": int(metadata["source_page"]),
+                    }
+                )
+
+            if len(chunk_ids) < _INVENTORY_PAGE_SIZE:
+                return chunks
+            offset += _INVENTORY_PAGE_SIZE
+
+    def get_game_id_of_manual(self, *, manual_id: str) -> str | None:
+        """
+        Obtiene el juego asociado al primer chunk de un manual.
+
+        Args:
+            manual_id (str): Identificador del manual consultado.
+
+        Returns:
+            str | None: Identificador del juego o None si no puede determinarse.
+        """
+        collection = self._get_collection()
+        result = collection.get(
+            where={"manual_id": manual_id},
+            limit=1,
+            include=["metadatas"],
+        )
+        if not result["ids"]:
+            return None
+
+        metadatas = result.get("metadatas")
+        if not metadatas:
+            return None
+
+        game_id = metadatas[0].get("game_id")
+        return game_id if isinstance(game_id, str) else None
+
+    def list_indexed_chunk_ids(self) -> dict[str, list[str]]:
+        """
+        Lista todos los IDs indexados agrupados por su manual de origen.
+
+        Una mutación concurrente puede sesgar una pasada paginada. La
+        reconciliación es horaria e idempotente y la siguiente lo corrige.
+
+        Returns:
+            dict[str, list[str]]: IDs de chunks agrupados por ``manual_id``.
+        """
+        collection = self._get_collection()
+        manuals: dict[str, list[str]] = {}
+        offset = 0
+
+        while True:
+            page = collection.get(
+                include=["metadatas"],
+                limit=_INVENTORY_PAGE_SIZE,
+                offset=offset,
+            )
+            chunk_ids = page["ids"]
+            metadatas = page.get("metadatas")
+            if metadatas is None:
+                raise ValueError("ChromaDB no devolvió metadatos para el inventario.")
+
+            for chunk_id, metadata in zip(chunk_ids, metadatas, strict=True):
+                manual_id = metadata.get("manual_id")
+                if not isinstance(manual_id, str) or not manual_id:
+                    raise ValueError(
+                        "El chunk no contiene un manual_id válido en sus metadatos."
+                    )
+                manuals.setdefault(manual_id, []).append(chunk_id)
+
+            if len(chunk_ids) < _INVENTORY_PAGE_SIZE:
+                return manuals
+            offset += _INVENTORY_PAGE_SIZE
 
     def delete_manual(self, *, manual_id: str, chunk_ids: list[str]) -> int:
         """

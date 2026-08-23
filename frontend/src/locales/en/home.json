@@ -1,0 +1,33 @@
+{
+  "account": {
+    "ariaLabel": "Your account"
+  },
+  "empty": {
+    "description": "You haven't looked up a rulebook yet. Tap <b>New manual</b> to get started."
+  },
+  "error": {
+    "manuals": "We couldn't load your rulebooks. Try again in a moment."
+  },
+  "greeting": {
+    "anonymous": "Hi",
+    "description": "Snap a photo of the rulebook and I'll walk you through it, no need to read the whole thing.",
+    "named": "Hi, {{firstName}}",
+    "question": "What game are we learning?"
+  },
+  "hero": {
+    "description": "Upload pages from the camera, your gallery, or a PDF, and I'll explain everything as we go.",
+    "newManual": "New manual",
+    "title": "Learn a new game"
+  },
+  "recent": {
+    "heading": "Recent",
+    "viewAll": "View all",
+    "viewAllAriaLabel": "View all your games"
+  },
+  "recommendations": {
+    "attribution": "Powered by <b>BoardGameGeek</b>",
+    "description": "Games you might want to learn next, based on your library.",
+    "heading": "For you",
+    "learn": "Learn {{game}}"
+  }
+}

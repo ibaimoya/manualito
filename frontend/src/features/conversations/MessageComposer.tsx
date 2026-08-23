@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ArrowUp, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -32,6 +33,7 @@ export function MessageComposer({
   sendPending?: boolean;
   autoFocus?: boolean;
 }>) {
+  const { t } = useTranslation('chat');
   const ref = useRef<HTMLTextAreaElement>(null);
 
   // El textarea crece con el texto hasta un máximo; pasado el tope, scrollea.
@@ -68,7 +70,7 @@ export function MessageComposer({
         maxLength={maxLength}
         disabled={disabled}
         placeholder={placeholder}
-        aria-label="Escribe tu pregunta"
+        aria-label={t('composer.aria.question')}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
         spellCheck
@@ -90,7 +92,7 @@ export function MessageComposer({
       <button
         type="submit"
         disabled={!canSend}
-        aria-label="Enviar pregunta"
+        aria-label={t('actions.sendQuestion')}
         aria-busy={sendPending || undefined}
         className={cn(
           'grid size-10 shrink-0 place-items-center rounded-full bg-primary text-fg-inv transition-[background-color,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',

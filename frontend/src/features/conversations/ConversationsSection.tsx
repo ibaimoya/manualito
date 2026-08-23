@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
@@ -25,6 +26,7 @@ export function ConversationsSection({
   canAsk,
   showViewAll = false,
 }: Readonly<{ gameId: string; canAsk: boolean; showViewAll?: boolean }>) {
+  const { t } = useTranslation('conversations');
   const qc = useQueryClient();
   const { data, isPending, isError } = useQuery(conversationsQueryOptions(gameId));
   const { isUnread } = useConversationsRead();
@@ -45,7 +47,7 @@ export function ConversationsSection({
           id="result-conversations"
           className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700"
         >
-          Tus conversaciones
+          {t('section.heading')}
         </h2>
         <div className="flex items-center gap-2">
           {showViewAll && conversations.length > 0 ? (
@@ -54,7 +56,7 @@ export function ConversationsSection({
               params={{ gameId }}
               className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-fg-2 transition-colors hover:text-fg"
             >
-              Ver todas ({conversations.length})
+              {t('section.viewAll', { count: conversations.length })}
             </Link>
           ) : null}
           {canAsk ? (
@@ -65,7 +67,7 @@ export function ConversationsSection({
               className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2"
             >
               <Plus size={13} strokeWidth={2.25} aria-hidden="true" />
-              Nueva
+              {t('section.new')}
             </Link>
           ) : null}
         </div>
@@ -104,8 +106,9 @@ function ConversationRow({
   deleting: boolean;
   onDelete: () => void;
 }>) {
+  const { t } = useTranslation('conversations');
   const [confirming, setConfirming] = useState(false);
-  const title = conversation.title ?? 'Conversación sin título';
+  const title = conversation.title ?? t('fallback.conversationTitle');
   const pending = conversation.has_pending_reply;
 
   return (
@@ -146,16 +149,16 @@ function ConversationRow({
           type="button"
           onClick={() => setConfirming((v) => !v)}
           className="grid size-[30px] shrink-0 self-center place-items-center rounded-lg text-fg-3 transition-colors hover:bg-error-bg hover:text-error"
-          aria-label={`Borrar conversación ${title}`}
+          aria-label={t('aria.deleteConversation', { title })}
         >
           <Trash2 size={15} strokeWidth={2} />
         </button>
       </div>
       {confirming ? (
         <div className="relative z-[1] flex items-center gap-2 rounded-b-2xl border-t border-border bg-error-bg p-3">
-          <span className="mr-auto text-sm text-error">¿Borrar esta conversación?</span>
+          <span className="mr-auto text-sm text-error">{t('section.confirmDelete')}</span>
           <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-            Cancelar
+            {t('actions.cancel')}
           </Button>
           <Button
             size="sm"
@@ -165,7 +168,7 @@ function ConversationRow({
               onDelete();
             }}
           >
-            Borrar
+            {t('actions.delete')}
           </Button>
         </div>
       ) : null}
@@ -185,12 +188,11 @@ function RowsSkeleton() {
 }
 
 function EmptyRows() {
+  const { t } = useTranslation('conversations');
+
   return (
     <Card className="bg-surface/60 p-4">
-      <p className="text-sm text-fg-2">
-        Aún no has preguntado nada sobre este juego. Empieza una conversación y quedará guardada
-        aquí.
-      </p>
+      <p className="text-sm text-fg-2">{t('empty.sectionDescription')}</p>
     </Card>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ExternalLink, Info, X } from 'lucide-react';
 import { useAuth } from './use-auth';
 import { useResendVerification } from './use-resend-verification';
@@ -20,6 +21,7 @@ function readDismissed(): boolean {
  * renderiza si hay verificación, no hay sesión o se descartó esta sesión.
  */
 export function VerifyEmailBanner() {
+  const { t } = useTranslation('shell');
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(readDismissed);
   const { cooldown, resend } = useResendVerification(user?.email ?? '');
@@ -43,7 +45,7 @@ export function VerifyEmailBanner() {
       {/* En pantallas estrechas la frase ocupa su línea y las acciones bajan. */}
       <div className="flex min-w-0 basis-full items-center gap-3 sm:flex-1 sm:basis-auto">
         <Info size={18} className="shrink-0 text-accent" aria-hidden="true" />
-        <p className="min-w-0 flex-1 text-fg">Verifica tu email para asegurar tu cuenta.</p>
+        <p className="min-w-0 flex-1 text-fg">{t('banner.message')}</p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <a
@@ -52,14 +54,16 @@ export function VerifyEmailBanner() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline"
         >
-          Abrir mi correo
+          {t('banner.openMail')}
           <ExternalLink size={13} strokeWidth={2.25} aria-hidden="true" />
         </a>
         <span aria-hidden="true" className="text-fg-3">
           ·
         </span>
         {cooldown > 0 ? (
-          <span className="text-xs font-semibold text-fg-3">Reenviado · {cooldown}s</span>
+          <span className="text-xs font-semibold text-fg-3">
+            {t('banner.resent', { seconds: cooldown })}
+          </span>
         ) : (
           <button
             type="button"
@@ -67,13 +71,13 @@ export function VerifyEmailBanner() {
             disabled={resend.isPending}
             className="text-sm font-semibold text-accent hover:underline disabled:opacity-60"
           >
-            {resend.isPending ? 'Enviando…' : 'Reenviar'}
+            {resend.isPending ? t('banner.sending') : t('banner.resend')}
           </button>
         )}
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Descartar aviso"
+          aria-label={t('banner.dismiss')}
           className="grid size-8 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
         >
           <X size={16} aria-hidden="true" />

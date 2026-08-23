@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -20,21 +21,21 @@ import { cn } from '@/shared/lib/cn';
 const TOPBAR_CHROME =
   'sticky top-0 z-30 h-14 items-center gap-4 border-b border-border bg-bg/95 px-4 backdrop-blur md:pl-5 md:pr-8';
 
-const TITLES: Record<string, string> = {
-  '/home': 'Inicio',
-  '/history': 'Biblioteca',
-  '/explore': 'Explorar',
-  '/settings': 'Ajustes',
-  '/profile': 'Perfil',
-  '/security': 'Cuenta y seguridad',
-  '/about': 'Ayuda',
-  '/privacy': 'Política de privacidad',
-};
+const TITLES = {
+  '/home': 'navigation.home',
+  '/history': 'navigation.library',
+  '/explore': 'navigation.explore',
+  '/settings': 'navigation.settings',
+  '/profile': 'topbar.titles.profile',
+  '/security': 'topbar.titles.security',
+  '/about': 'navigation.help',
+  '/privacy': 'topbar.titles.privacy',
+} as const;
 
 // Tramos intermedios para rutas que cuelgan de otra: Seguridad vive bajo Perfil,
 // así que su ruta es Inicio › Perfil › Cuenta y seguridad.
-const PARENTS: Record<string, readonly CrumbLink[]> = {
-  '/security': [{ label: 'Perfil', link: linkOptions({ to: '/profile' }) }],
+const PARENT_KEYS: Record<string, readonly ParentKey[]> = {
+  '/security': [{ labelKey: 'topbar.titles.profile', link: linkOptions({ to: '/profile' }) }],
 };
 
 // Mismo cuerpo en todos los tramos: con tamaños mezclados los baselines no casan.
@@ -43,9 +44,11 @@ const CRUMB_LINK_CLASS =
 const CRUMB_CURRENT_CLASS = 'truncate font-display text-sm font-bold tracking-tight text-fg';
 
 function HomeCrumb() {
+  const { t } = useTranslation('shell');
+
   return (
     <Link to="/home" className={CRUMB_LINK_CLASS}>
-      Inicio
+      {t('navigation.home')}
     </Link>
   );
 }
@@ -54,8 +57,12 @@ export function DesktopTopbar({
   pathname,
   actions,
 }: Readonly<{ pathname: string; actions?: ReactNode }>) {
-  const title = TITLES[pathname] ?? 'Inicio';
-  const parents = PARENTS[pathname] ?? [];
+  const { t } = useTranslation('shell');
+  const title = t(TITLES[pathname as keyof typeof TITLES] ?? 'navigation.home');
+  const parents = (PARENT_KEYS[pathname] ?? []).map(({ labelKey, link }) => ({
+    label: t(labelKey),
+    link,
+  }));
 
   return (
     <div className={cn(TOPBAR_CHROME, 'hidden md:flex')}>
@@ -68,7 +75,10 @@ export function DesktopTopbar({
       {pathname === '/home' ? (
         <span className={cn('min-w-0 flex-1', CRUMB_CURRENT_CLASS)}>{title}</span>
       ) : (
-        <nav aria-label="Ruta de navegación" className="flex min-w-0 flex-1 items-center gap-1.5">
+        <nav
+          aria-label={t('topbar.aria.breadcrumb')}
+          className="flex min-w-0 flex-1 items-center gap-1.5"
+        >
           <HomeCrumb />
           {parents.map((item) => (
             <Fragment key={item.label}>
@@ -98,12 +108,18 @@ interface CrumbLink {
   link: LinkOptions;
 }
 
+interface ParentKey {
+  labelKey: 'topbar.titles.profile';
+  link: LinkOptions;
+}
+
 /**
  * Botón atrás del topbar, antes de las migajas. Se apoya en la pila del router
  * ("history.back"). Si entraste directo (deep-link o recarga) y no hay nada detrás,
  * se muestra apagado y no clicable: la salida es por las migajas o el menú.
  */
 export function BackButton() {
+  const { t } = useTranslation();
   const router = useRouter();
   const canGoBack = useCanGoBack();
 
@@ -112,7 +128,7 @@ export function BackButton() {
       type="button"
       onClick={canGoBack ? () => router.history.back() : undefined}
       disabled={!canGoBack}
-      aria-label="Atrás"
+      aria-label={t('actions.back')}
       className={cn(
         'grid size-8 shrink-0 place-items-center rounded-full transition-[background-color,color,translate]',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
@@ -142,6 +158,8 @@ export function ScreenTopBar({
   trail?: readonly CrumbLink[];
   actions?: ReactNode;
 }>) {
+  const { t } = useTranslation('shell');
+
   return (
     <header className={cn(TOPBAR_CHROME, 'flex')}>
       <div className="flex shrink-0 items-center gap-3">
@@ -152,7 +170,7 @@ export function ScreenTopBar({
 
       {/* md+: breadcrumb. */}
       <nav
-        aria-label="Ruta de navegación"
+        aria-label={t('topbar.aria.breadcrumb')}
         className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex"
       >
         <HomeCrumb />

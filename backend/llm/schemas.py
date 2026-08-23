@@ -1,9 +1,10 @@
 """Schemas Pydantic del servicio LLM."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
+from common.language import Language
 from common.schemas import StrictModel
 from llm.annotations import (
     Answer,
@@ -28,12 +29,33 @@ class GenerateRequest(StrictModel):
     context_chunks: ContextChunks
     chat_history: list[ChatHistoryMessage] = Field(default_factory=list, max_length=20)
     manual_id: str | None = None
+    game_name: str | None = None
+    language: Language = "es"
 
 
 class GenerateResponse(StrictModel):
     """Respuesta de ``POST /generate`` tras invocar a Ollama."""
 
     answer: Answer
+
+
+class CorrectLineRequest(StrictModel):
+    """Línea OCR a corregir con su ventana de contexto."""
+
+    text: str = Field(min_length=1, max_length=1000)
+    context_before: list[Annotated[str, Field(max_length=1000)]] = Field(
+        default_factory=list, max_length=2
+    )
+    context_after: list[Annotated[str, Field(max_length=1000)]] = Field(
+        default_factory=list, max_length=2
+    )
+    language: Language = "es"
+
+
+class CorrectLineResponse(StrictModel):
+    """Línea corregida por consenso de pasadas del LLM."""
+
+    text: str = Field(min_length=1)
 
 
 class CondenseQuestionRequest(StrictModel):
@@ -54,6 +76,7 @@ class ConversationTitleRequest(StrictModel):
 
     game_name: ConversationTitleGameName
     messages: list[ChatHistoryMessage] = Field(min_length=1, max_length=20)
+    language: Language = "es"
 
 
 class ConversationTitleResponse(StrictModel):

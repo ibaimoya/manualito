@@ -479,5 +479,10 @@ frontend/src/routeTree.gen.ts
 frontend/src/shared/api/generated/
 frontend/dev-dist/
 
-# Temporalmente /docs queda excluido hasta que esté preparado
-/docs
+# Documentación interna generada o de trabajo
+/docs/architecture/
+/docs/benchmarks/ocr_preprocessing/dataset/**
+!/docs/benchmarks/ocr_preprocessing/dataset/manifest.json
+/docs/benchmarks/ocr_preprocessing/outputs/tmp_preprocessed/
+/docs/benchmarks/ocr_preprocessing/outputs/results.json
+/docs/benchmarks/rag/recuperacion/outputs/.ranx-runtime/

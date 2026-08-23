@@ -1,0 +1,18 @@
+{
+  "accessibility": {
+    "languageSelector": "Idioma de la interfaz"
+  },
+  "actions": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "clearSearch": "Limpiar búsqueda",
+    "close": "Cerrar",
+    "delete": "Borrar",
+    "retry": "Reintentar",
+    "save": "Guardar"
+  },
+  "status": {
+    "justNow": "ahora mismo",
+    "loading": "Cargando…"
+  }
+}

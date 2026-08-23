@@ -36,6 +36,9 @@ class ApiSettings(BaseSettings):
     ocr_postprocess_very_short_text_max_chars: int = Field(default=4, ge=0)
     ocr_postprocess_symbol_noise_ratio: float = Field(default=0.60, ge=0, le=1)
     ocr_postprocess_min_alnum_to_keep: int = Field(default=1, ge=0)
+    ocr_correction_discard_below: float = Field(default=0.5, ge=0, le=1)
+    ocr_correction_llm_below: float = Field(default=0.85, ge=0, le=1)
+    ollama_correction_model: str = ""
     ocr_url: str
     rag_url: str
     llm_url: str
@@ -67,13 +70,12 @@ class ApiSettings(BaseSettings):
     celery_maintenance_soft_time_limit: int = Field(default=60, ge=1)
     celery_maintenance_hard_time_limit: int = Field(default=90, ge=1)
     ocr_service_timeout: float = Field(default=300.0, gt=0)
-    internal_json_timeout: float = Field(default=120.0, gt=0)
+    internal_json_timeout: float = Field(default=150.0, gt=0)
     asset_storage_dir: str = "/app/storage/assets"
     asset_pending_batch_ttl_seconds: int = Field(default=24 * 60 * 60, ge=60)
     manual_dispatch_recovery_delay_seconds: int = Field(default=5 * 60, ge=60)
     manual_dispatch_recovery_batch_size: int = Field(default=100, ge=1, le=1_000)
 
-    rag_retrieval_multiplier: int = Field(default=4, ge=1)
 
     bgg_external_search_min_length: int = Field(default=3, ge=1)
     bgg_cache_result_limit: int = Field(default=50, ge=1)
@@ -159,6 +161,16 @@ class ApiSettings(BaseSettings):
         return f"redis://{auth}{self.redis_host}:{self.redis_port}/{database}"
 
     @model_validator(mode="after")
+    def _validate_ocr_correction_thresholds(self) -> "ApiSettings":
+        """Evita una franja LLM vacía por umbrales de corrección cruzados."""
+        if self.ocr_correction_llm_below < self.ocr_correction_discard_below:
+            raise ValueError(
+                "OCR_CORRECTION_LLM_BELOW debe ser mayor o igual que "
+                "OCR_CORRECTION_DISCARD_BELOW."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _validate_celery_time_limits(self) -> "ApiSettings":
         """Evita tareas más largas que la ventana de visibilidad de Redis."""
         pairs = (
@@ -228,6 +240,9 @@ OCR_POSTPROCESS_SHORT_TEXT_MAX_ALNUM = settings.ocr_postprocess_short_text_max_a
 OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS = settings.ocr_postprocess_very_short_text_max_chars
 OCR_POSTPROCESS_SYMBOL_NOISE_RATIO = settings.ocr_postprocess_symbol_noise_ratio
 OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP = settings.ocr_postprocess_min_alnum_to_keep
+OCR_CORRECTION_DISCARD_BELOW = settings.ocr_correction_discard_below
+OCR_CORRECTION_LLM_BELOW = settings.ocr_correction_llm_below
+OLLAMA_CORRECTION_MODEL = settings.ollama_correction_model
 OCR_URL = settings.ocr_url
 RAG_URL = settings.rag_url
 LLM_URL = settings.llm_url
@@ -253,7 +268,6 @@ ASSET_STORAGE_DIR = settings.asset_storage_dir
 ASSET_PENDING_BATCH_TTL_SECONDS = settings.asset_pending_batch_ttl_seconds
 MANUAL_DISPATCH_RECOVERY_DELAY_SECONDS = settings.manual_dispatch_recovery_delay_seconds
 MANUAL_DISPATCH_RECOVERY_BATCH_SIZE = settings.manual_dispatch_recovery_batch_size
-RAG_RETRIEVAL_MULTIPLIER = settings.rag_retrieval_multiplier
 
 BGG_EXTERNAL_SEARCH_MIN_LENGTH = settings.bgg_external_search_min_length
 BGG_CACHE_RESULT_LIMIT = settings.bgg_cache_result_limit

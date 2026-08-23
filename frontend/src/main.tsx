@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
+import './app/i18n';
 import '@fontsource-variable/manrope';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';

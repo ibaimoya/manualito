@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PrivacySections } from '@/features/legal/PrivacySections';
 
 /**
@@ -13,6 +14,8 @@ export const Route = createFileRoute('/_app/privacy')({
 });
 
 function PrivacyScreen() {
+  const { t } = useTranslation('legal');
+
   return (
     <div className="mx-auto w-full max-w-[720px] px-5 pb-14 pt-6 md:px-8 md:pt-10">
       <header className="text-center">
@@ -23,14 +26,13 @@ function PrivacyScreen() {
           <ShieldCheck size={26} strokeWidth={2} />
         </span>
         <p className="mono mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-700">
-          Legal
+          {t('page.eyebrow')}
         </p>
         <h1 className="mt-1.5 font-display text-3xl font-extrabold tracking-tight md:text-4xl">
-          Política de privacidad
+          {t('page.title')}
         </h1>
         <p className="mx-auto mt-3 max-w-[46ch] text-[15px] leading-relaxed text-fg-2">
-          Qué guardamos y para qué, sin pelearte con la letra pequeña. Si algo no se entiende,
-          escríbenos.
+          {t('page.description')}
         </p>
       </header>
 

@@ -1,4 +1,5 @@
 import { MessagesSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
 type ConversationActivitySize = 'sm' | 'md';
@@ -38,6 +39,7 @@ export function ConversationActivityIcon({
   tone?: ConversationActivityTone;
   className?: string;
 }>) {
+  const { t } = useTranslation('conversations');
   const iconSize = size === 'sm' ? 16 : 18;
   const unreadBadgeSize = size === 'sm' ? 'size-2.5' : 'size-3';
 
@@ -45,7 +47,7 @@ export function ConversationActivityIcon({
   return (
     <span
       aria-hidden={unread ? undefined : 'true'}
-      aria-label={unread ? 'Respuesta sin leer' : undefined}
+      aria-label={unread ? t('aria.unreadReply') : undefined}
       style={hasPendingReply ? { '--proc-halo': TONE_HALO[tone] } : undefined}
       className={cn(
         'relative grid shrink-0 place-items-center rounded-xl',
@@ -74,9 +76,11 @@ export function ConversationActivityIcon({
  * mientras se genera la respuesta; compartida por la banda del hub y la lista.
  */
 export function AnsweringLine() {
+  const { t } = useTranslation('conversations');
+
   return (
     <span className="flex items-center gap-2 text-[13px] font-semibold text-primary-700">
-      <span>Manualito está respondiendo</span>
+      <span>{t('status.answering')}</span>
       <span className="proc-dots" aria-hidden="true">
         {[0, 1, 2].map((i) => (
           <span key={i} className="proc-tinydot" style={{ animationDelay: `${i * 0.16}s` }} />

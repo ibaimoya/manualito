@@ -1,0 +1,42 @@
+{
+  "account": {
+    "description": "Edit your profile, security, and verification",
+    "group": "Account",
+    "logout": "Sign out",
+    "logoutAction": "Sign out",
+    "logoutHint": "On this device"
+  },
+  "appearance": {
+    "accentColor": "Accent color",
+    "accentColorAriaLabel": "Accent color",
+    "accentColorHint": "Color for the primary CTA",
+    "accentColors": {
+      "amber": "Amber",
+      "blue": "Blue"
+    },
+    "group": "Appearance",
+    "language": "Language",
+    "languageHint": "Spanish or English",
+    "theme": "Theme",
+    "themeHint": "Light, dark, or system",
+    "themeModeAriaLabel": "Color mode",
+    "themeModes": {
+      "auto": "Auto",
+      "dark": "Dark",
+      "light": "Light"
+    }
+  },
+  "footer": {
+    "privacyPolicy": "Privacy policy"
+  },
+  "heading": "Settings",
+  "privacy": {
+    "deleteAccount": "Delete account",
+    "deleteAccountHint": "Delete your profile, manuals, conversations, and associated sessions.",
+    "files": "Manual files",
+    "filesBadge": "Server",
+    "filesBadgeAriaLabel": "Files managed by the server",
+    "filesHint": "They're stored on the server and deleted when you delete the manual or your account.",
+    "group": "Privacy & data"
+  }
+}

@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
@@ -20,6 +21,7 @@ type Props = Readonly<{
  * Home (recientes) e History y se adapta al contenedor con "@container".
  */
 export function ManualCard({ manual, meta, className }: Props) {
+  const { t } = useTranslation('manual');
   const name = manual.title ?? manual.game_name;
   const indexing = manual.status === 'indexing';
   return (
@@ -47,7 +49,7 @@ export function ManualCard({ manual, meta, className }: Props) {
             icon={indexing ? <Spinner size={10} /> : undefined}
             className="hidden @sm:inline-flex"
           >
-            {indexing ? 'Procesando…' : 'Listo'}
+            {indexing ? t('card.processing') : t('card.ready')}
           </Badge>
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />
         </div>

@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 const KEY = {
   settings: 'manualito.settings',
+  language: 'manualito.language',
   onboardingSeen: 'manualito.onboarding.seen',
   conversationsSeen: 'manualito.conversations.seen',
 } as const;
@@ -29,6 +30,11 @@ const SettingsSchema = z.object({
 // z.output: los defaults rellenan huecos y el tipo runtime va completo.
 export type Settings = z.output<typeof SettingsSchema>;
 const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
+
+// Clave propia para que "writeSettings" no pise el idioma al persistir el tema.
+const LanguageSchema = z.enum(['es', 'en']);
+export type StoredLanguage = z.output<typeof LanguageSchema>;
+const DEFAULT_LANGUAGE: StoredLanguage = 'es';
 
 // Marca de lectura por conversación: el último "updated_at" que el usuario vio
 // al abrir el chat. Si el de la lista es más nuevo, hay respuesta sin leer.
@@ -128,6 +134,14 @@ export const storage = {
   },
   writeSettings(settings: Settings): void {
     safeWrite(KEY.settings, settings);
+  },
+
+  /* Idioma de la interfaz */
+  readLanguage(): StoredLanguage {
+    return safeRead(KEY.language, LanguageSchema, DEFAULT_LANGUAGE);
+  },
+  writeLanguage(language: StoredLanguage): void {
+    safeWrite(KEY.language, language);
   },
 
   /* Onboarding seen flag */

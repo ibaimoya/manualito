@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 import { randomUUID, webcrypto } from 'node:crypto';
 import { afterEach, expect } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
+// El singleton arranca en español y los tests asertan ese copy
+import i18n from '@/app/i18n';
+
+configure({ asyncUtilTimeout: 3000 });
 
 // jest-axe → expect(html).toHaveNoViolations()
 expect.extend(toHaveNoViolations);
@@ -79,6 +83,8 @@ if (testWindow !== undefined) {
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  // Un test que cambie de idioma no debe contaminar a los siguientes
+  if (i18n.language !== 'es') void i18n.changeLanguage('es');
 });
 
 // Fallback estándar para runtimes de test sin Web Crypto completa.

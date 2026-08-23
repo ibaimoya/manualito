@@ -7,9 +7,14 @@ y las versiones siguen [SemVer 2.0.0](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+
+- Añadida la corrección automática del texto OCR de los manuales, que elimina
+  el ruido del escaneo y arregla las erratas de lectura usando el LLM.
+
 ---
 
-## [1.0.0-rc.1] - 2026-07-19
+## [1.0.0-rc.1] - 2026-08-19
 
 ---
 
@@ -31,6 +36,11 @@ la aplicación antes de la publicación estable `1.0.0`.
   indexarlo.
 - Sistema RAG con ChromaDB, embeddings multilingües y respuestas generadas por
   un LLM local mediante Ollama.
+- Búsqueda híbrida que combina el significado de la pregunta con sus términos
+  literales, acotada a los manuales autorizados de cada usuario y al juego
+  consultado.
+- Sincronización periódica que mantiene el índice de búsqueda alineado con los
+  manuales guardados y corrige las desviaciones de forma automática.
 - Chat por juego con conversaciones persistentes, fuentes utilizadas y
   explicaciones reutilizables.
 - Autenticación con sesiones, cookies HttpOnly, CSRF, verificación de email,
@@ -58,3 +68,8 @@ la aplicación antes de la publicación estable `1.0.0`.
   persistencia segura del material.
 - Perfil opcional de Cloudflare Tunnel para app.manualito.dev, con origen TLS
   verificado, redes aisladas e infraestructura declarativa en Terraform.
+- Añadido soporte para español e inglés, con selector de idioma persistente y
+  respuestas del chat adaptadas al idioma seleccionado.
+- Publicada la documentación de Manualito en
+  [docs.manualito.dev](https://docs.manualito.dev), con buscador, navegación
+  propia y contenidos de la memoria y los anexos.

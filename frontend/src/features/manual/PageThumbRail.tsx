@@ -1,9 +1,10 @@
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ManualDetailPage } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import {
-  PAGE_STATUS_LEGEND,
   pageStatus,
+  pageStatusLegend,
   STATUS_FG_CLASS,
   STATUS_TONE_CLASS,
 } from '@/features/manual/pageStatus';
@@ -55,15 +56,20 @@ function PageButton({
   hits,
   onSelect,
 }: Readonly<{ page: ManualDetailPage; active: boolean; hits: number; onSelect: () => void }>) {
+  const { t } = useTranslation('manual');
   const st = pageStatus(page);
   const isDup = st.key === 'duplicate';
-  const hitsLabel = hits > 0 ? `, ${hits} coincidencias` : '';
+  const hitsLabel = hits > 0 ? t('page.matches', { count: hits }) : '';
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-current={active ? 'true' : undefined}
-      aria-label={`Página ${page.page_number} · ${st.label}${hitsLabel}`}
+      aria-label={t('page.buttonLabel', {
+        hits: hitsLabel,
+        pageNumber: page.page_number,
+        status: st.label,
+      })}
       className={cn(
         // border-2 constante: el grosor no cambia entre estados, así la tarjeta
         // no crece al activarse. La activa se distingue por color y fondo.
@@ -92,7 +98,7 @@ function PageButton({
           active ? 'text-fg' : 'text-fg-2',
         )}
       >
-        Página {page.page_number}
+        {t('page.number', { pageNumber: page.page_number })}
       </span>
 
       {hits > 0 ? (
@@ -106,7 +112,11 @@ function PageButton({
       <st.Icon
         size={12}
         strokeWidth={2.3}
-        className={cn('md:hidden', STATUS_FG_CLASS[st.tone], st.key === 'processing' && 'animate-spin')}
+        className={cn(
+          'md:hidden',
+          STATUS_FG_CLASS[st.tone],
+          st.key === 'processing' && 'animate-spin',
+        )}
         aria-hidden="true"
       />
       <span
@@ -137,7 +147,7 @@ function Legend() {
   // Cada celda lleva su icono en un punto de color del mismo tono que el chip.
   return (
     <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
-      {PAGE_STATUS_LEGEND.map((st) => (
+      {pageStatusLegend().map((st) => (
         <span
           key={st.key}
           className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-fg-2"
@@ -169,13 +179,19 @@ export function PageThumbRail({
   hitsByPage: ReadonlyMap<number, number>;
   onSelect: (pageNumber: number) => void;
 }>) {
+  const { t } = useTranslation('manual');
   // Un solo <nav> (landmark único); escritorio y móvil se alternan por media query.
   return (
-    <nav aria-label="Páginas del manual" className="min-w-0 md:flex md:min-h-0 md:flex-1 md:flex-col">
+    <nav
+      aria-label={t('page.navLabel')}
+      className="min-w-0 md:flex md:min-h-0 md:flex-1 md:flex-col"
+    >
       {/* cabecera + leyenda — solo escritorio */}
       <div className="hidden md:block">
         <div className="flex items-center justify-between px-1 pb-2.5">
-          <h2 className="font-display text-lg font-bold tracking-tight text-fg">Páginas</h2>
+          <h2 className="font-display text-lg font-bold tracking-tight text-fg">
+            {t('page.heading')}
+          </h2>
           <span className="mono rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold text-fg-3">
             {pages.length}
           </span>

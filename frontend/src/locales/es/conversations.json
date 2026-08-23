@@ -1,0 +1,80 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "clearSearch": "Limpiar búsqueda",
+    "delete": "Borrar",
+    "deleteConversation": "Borrar conversación",
+    "newConversation": "Nueva conversación",
+    "open": "Abrir",
+    "rename": "Renombrar",
+    "save": "Guardar"
+  },
+  "aria": {
+    "deleteConversation": "Borrar conversación {{title}}",
+    "optionsFor": "Opciones de «{{title}}»",
+    "unreadReply": "Respuesta sin leer"
+  },
+  "conversation": {
+    "openedOn": "abierta el {{date}}"
+  },
+  "counter": {
+    "filtered": "{{visible}} de {{total}}",
+    "saved_one": "{{count}} guardada",
+    "saved_other": "{{count}} guardadas"
+  },
+  "deleteDialog": {
+    "body": "Se borrará <b>«{{title}}»</b> con todos sus mensajes. La explicación del juego y tus manuales no se tocan.",
+    "description": "Confirma que quieres eliminarla.",
+    "irreversible": "Esta acción no se puede deshacer.",
+    "title": "Borrar conversación"
+  },
+  "empty": {
+    "pageDescription": "Cuando preguntes algo sobre {{gameName}}, guardaremos aquí la conversación con un título corto para que la retomes cuando quieras.",
+    "sectionDescription": "Aún no has preguntado nada sobre este juego. Empieza una conversación y quedará guardada aquí.",
+    "title": "Aún no has preguntado nada"
+  },
+  "error": {
+    "load": "No hemos podido cargar tus conversaciones. Inténtalo de nuevo en un momento."
+  },
+  "fallback": {
+    "conversationTitle": "Conversación sin título",
+    "gameName": "Juego"
+  },
+  "header": {
+    "subtitle": "{{gameName}} · Pregunta y repregunta"
+  },
+  "noResults": {
+    "description": "Prueba con otra palabra, o pregunta directamente: la IA crea una conversación nueva.",
+    "title": "Nada con «{{filter}}»"
+  },
+  "page": {
+    "breadcrumbLibrary": "Biblioteca",
+    "filterLabel": "Filtrar conversaciones por título",
+    "filterPlaceholder": "Filtra por título…",
+    "listLabel": "Conversaciones guardadas",
+    "title": "Tus conversaciones"
+  },
+  "renameDialog": {
+    "aiHint": "Este título lo generó la IA a partir de tu primera pregunta. Cámbialo por lo que te resulte más fácil de encontrar.",
+    "description": "Un buen título te la devuelve de un vistazo.",
+    "label": "Título de la conversación",
+    "maxLength": "máx. {{count}} caracteres",
+    "title": "Renombrar conversación"
+  },
+  "section": {
+    "confirmDelete": "¿Borrar esta conversación?",
+    "heading": "Tus conversaciones",
+    "new": "Nueva",
+    "viewAll": "Ver todas ({{count}})"
+  },
+  "status": {
+    "answering": "Manualito está respondiendo"
+  },
+  "toast": {
+    "deleteError": "No hemos podido borrarla",
+    "deleteSuccess": "Conversación borrada",
+    "renameError": "No hemos podido renombrarla",
+    "renameSuccess": "Conversación renombrada",
+    "retry": "Inténtalo de nuevo en un momento."
+  }
+}

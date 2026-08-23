@@ -76,10 +76,7 @@ describe('Providers', () => {
   });
 
   it('el Toaster sigue el tema de la app, no el del SO', async () => {
-    localStorage.setItem(
-      'manualito.settings',
-      JSON.stringify({ mode: 'dark', accent: 'amber' }),
-    );
+    localStorage.setItem('manualito.settings', JSON.stringify({ mode: 'dark', accent: 'amber' }));
     render(
       <Providers>
         <p>x</p>
@@ -126,9 +123,7 @@ describe('Providers', () => {
     storage.writeSettings({ mode: 'dark', accent: 'amber' });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/No podemos guardar localmente/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/No podemos guardar localmente/)).toBeInTheDocument();
     });
   });
 });

@@ -1,7 +1,12 @@
+import { type ParseKeys } from 'i18next';
 import { type ReactNode, useState } from 'react';
 import { AlertTriangle, Check, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Input, type InputProps } from '@/components/ui/input';
+import i18n from '@/app/i18n';
 import { cn } from '@/shared/lib/cn';
+
+type AuthKey = ParseKeys<'auth'>;
 
 /** Ayuda de cliente; la política real de contraseña la valida el backend. */
 export const MIN_PASSWORD = 12;
@@ -27,13 +32,15 @@ export function isEmail(value: string): boolean {
 /** Error del email: en vivo si ya hay texto, y siempre tras intentar enviar. */
 export function emailFieldError(email: string, submitted: boolean): string | undefined {
   if (isEmail(email)) return undefined;
-  return email.length > 0 || submitted ? 'Ese email no parece válido' : undefined;
+  return email.length > 0 || submitted
+    ? i18n.t('validation.email.invalid', { ns: 'auth' })
+    : undefined;
 }
 
 /** Error de longitud de contraseña; solo tras intentar enviar. */
 export function passwordTooShortError(password: string, submitted: boolean): string | undefined {
   return submitted && password.length < MIN_PASSWORD
-    ? `Mínimo ${MIN_PASSWORD} caracteres`
+    ? i18n.t('validation.password.minimum', { ns: 'auth', count: MIN_PASSWORD })
     : undefined;
 }
 
@@ -43,9 +50,11 @@ function confirmPasswordError(
   password: string,
   submitted: boolean,
 ): string | undefined {
-  if (confirm.length > 0 && confirm !== password) return 'Las contraseñas no coinciden';
+  if (confirm.length > 0 && confirm !== password) {
+    return i18n.t('validation.confirmPassword.mismatch', { ns: 'auth' });
+  }
   const matches = confirm.length > 0 && confirm === password;
-  if (submitted && !matches) return 'Repite la contraseña';
+  if (submitted && !matches) return i18n.t('validation.confirmPassword.required', { ns: 'auth' });
   return undefined;
 }
 
@@ -101,6 +110,7 @@ export function PasswordInput({
   className,
   ...props
 }: Readonly<Omit<InputProps, 'type' | 'preset'> & { invalid?: boolean }>) {
+  const { t } = useTranslation('auth');
   const [reveal, setReveal] = useState(false);
   return (
     <div className="relative">
@@ -115,7 +125,7 @@ export function PasswordInput({
       <button
         type="button"
         onClick={() => setReveal((value) => !value)}
-        aria-label={reveal ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        aria-label={reveal ? t('aria.hidePassword') : t('aria.showPassword')}
         className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
       >
         {reveal ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
@@ -127,7 +137,7 @@ export function PasswordInput({
 /** Par de campos para estrenar contraseña: nueva con medidor + confirmación. */
 export function NewPasswordFields({
   fieldId,
-  label = 'Contraseña',
+  label,
   password,
   confirm,
   submitted,
@@ -142,21 +152,22 @@ export function NewPasswordFields({
   onPasswordChange: (value: string) => void;
   onConfirmChange: (value: string) => void;
 }>) {
+  const { t } = useTranslation('auth');
   const passwordError = passwordTooShortError(password, submitted);
   const confirmError = confirmPasswordError(confirm, password, submitted);
   const passwordShort = submitted && password.length < MIN_PASSWORD;
   return (
     <>
       <AuthField
-        label={label}
+        label={label ?? t('fields.password.default')}
         htmlFor={`${fieldId}-pw`}
-        hint={passwordError ? undefined : `Mínimo ${MIN_PASSWORD} caracteres`}
+        hint={passwordError ? undefined : t('validation.password.minimum', { count: MIN_PASSWORD })}
         error={passwordError}
       >
         <PasswordInput
           id={`${fieldId}-pw`}
           autoComplete="new-password"
-          placeholder="Crea una contraseña"
+          placeholder={t('placeholders.newPassword')}
           value={password}
           invalid={passwordShort}
           aria-invalid={ariaInvalid(passwordShort)}
@@ -166,11 +177,15 @@ export function NewPasswordFields({
         {password ? <PasswordStrength score={passwordScore(password)} /> : null}
       </AuthField>
 
-      <AuthField label="Repite la contraseña" htmlFor={`${fieldId}-pw2`} error={confirmError}>
+      <AuthField
+        label={t('fields.password.confirm')}
+        htmlFor={`${fieldId}-pw2`}
+        error={confirmError}
+      >
         <PasswordInput
           id={`${fieldId}-pw2`}
           autoComplete="new-password"
-          placeholder="Repite la contraseña"
+          placeholder={t('placeholders.repeatPassword')}
           value={confirm}
           invalid={Boolean(confirmError)}
           aria-invalid={ariaInvalid(Boolean(confirmError))}
@@ -183,12 +198,20 @@ export function NewPasswordFields({
 }
 
 const STRENGTH = [
-  { label: '—', text: 'text-fg-3', bar: 'bg-surface-2' },
-  { label: 'Débil', text: 'text-error', bar: 'bg-error' },
-  { label: 'Mejorable', text: 'text-warning', bar: 'bg-warning' },
-  { label: 'Buena', text: 'text-[#6F9A1E]', bar: 'bg-[#6F9A1E]' },
-  { label: 'Fuerte', text: 'text-success', bar: 'bg-success' },
-] as const;
+  { label: 'validation.password.strength.empty', text: 'text-fg-3', bar: 'bg-surface-2' },
+  { label: 'validation.password.strength.weak', text: 'text-error', bar: 'bg-error' },
+  {
+    label: 'validation.password.strength.improvable',
+    text: 'text-warning',
+    bar: 'bg-warning',
+  },
+  {
+    label: 'validation.password.strength.good',
+    text: 'text-[#6F9A1E]',
+    bar: 'bg-[#6F9A1E]',
+  },
+  { label: 'validation.password.strength.strong', text: 'text-success', bar: 'bg-success' },
+] as const satisfies ReadonlyArray<{ label: AuthKey; text: string; bar: string }>;
 
 type StrengthScore = 0 | 1 | 2 | 3 | 4;
 
@@ -206,6 +229,7 @@ function passwordScore(value: string): StrengthScore {
 
 /** Medidor de fuerza: barras + adjetivo (contexto en sr-only para lectores). */
 function PasswordStrength({ score }: Readonly<{ score: StrengthScore }>) {
+  const { t } = useTranslation('auth');
   const meta = STRENGTH[score];
   return (
     <div className="mt-3">
@@ -218,8 +242,10 @@ function PasswordStrength({ score }: Readonly<{ score: StrengthScore }>) {
         ))}
       </div>
       <p className={cn('mt-1.5 text-xs font-bold', meta.text)}>
-        <span className="sr-only">Seguridad de la contraseña: </span>
-        {meta.label}
+        <span className="sr-only">
+          {t('validation.password.strength.screenReader', { label: t(meta.label) })}
+        </span>
+        {t(meta.label)}
       </p>
     </div>
   );

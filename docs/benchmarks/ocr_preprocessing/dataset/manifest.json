@@ -1,0 +1,164 @@
+{
+  "images": [
+    {
+      "id": "periodico_granma",
+      "name": "Periódico Granma",
+      "file": "periodico_granma.jpg",
+      "category": "prensa_real",
+      "role": "estrés: columnas, foto irregular y texto pequeño",
+      "split": "seed",
+      "difficulty": "media",
+      "source": "Wikimedia Commons",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Dos_ejemplares_del_Peri%C3%B3dico_Granma.jpg",
+      "rights": "CC BY-SA 4.0"
+    },
+    {
+      "id": "manual_merck_veterinaria",
+      "name": "Manual Merck Veterinaria",
+      "file": "manual_merck_veterinaria.jpg",
+      "category": "manual_real",
+      "role": "documento cercano al caso de uso: portada/manual con tipografías mixtas",
+      "split": "seed",
+      "difficulty": "media",
+      "source": "Wikimedia Commons",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Manual-merck-de-veterinaria-cuarta-edicion-folleto-1994.jpg",
+      "rights": "CC0 1.0"
+    },
+    {
+      "id": "diario_burgos_1928",
+      "name": "Diario de Burgos 1928",
+      "file": "diario_burgos_1928.jpg",
+      "category": "historico",
+      "role": "estrés: baja calidad, columnas y papel antiguo",
+      "split": "seed",
+      "difficulty": "alta",
+      "source": "Biblioteca Virtual de Prensa Histórica",
+      "source_url": "https://prensahistorica.mcu.es/en/publicaciones/verNumero.do?idNumero=1000474386",
+      "rights": "CC BY 4.0"
+    },
+    {
+      "id": "juego_mesa_palma_p1",
+      "name": "Juego de mesa Palma",
+      "file": "juego_mesa_palma_p1.jpg",
+      "category": "manual_juego_moderno",
+      "role": "caso cercano: reglas en español con fondo ilustrado",
+      "split": "validation",
+      "difficulty": "media",
+      "source": "Wikimedia Commons",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Juego_de_mesa_palma.pdf",
+      "raw_file": "raw/juego_mesa_palma.pdf",
+      "rights": "CC BY-SA 4.0"
+    },
+    {
+      "id": "juego_oca_met",
+      "name": "Juego de la Oca, MET",
+      "file": "juego_oca_met.jpg",
+      "category": "juego_historico",
+      "role": "estrés: reglas pequeñas dentro de un tablero",
+      "split": "stress",
+      "difficulty": "alta",
+      "source": "Metropolitan Museum of Art / Wikimedia Commons",
+      "source_url": "https://www.metmuseum.org/art/collection/search/717686",
+      "rights": "CC0 1.0"
+    },
+    {
+      "id": "juego_oca_loc",
+      "name": "Juego de la Oca, Library of Congress",
+      "file": "juego_oca_loc.jpg",
+      "category": "juego_historico",
+      "role": "estrés: texto pequeño y disposición no lineal",
+      "split": "stress",
+      "difficulty": "alta",
+      "source": "Library of Congress / Wikimedia Commons",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Juego_de_la_oca_LCCN99615951.jpg",
+      "rights": "Public Domain Mark 1.0"
+    },
+    {
+      "id": "croquet_manual_1865_p3",
+      "name": "How to play croquet, 1865",
+      "file": "croquet_manual_1865_p3.jpg",
+      "category": "manual_historico",
+      "role": "estrés: manual antiguo con papel degradado y tipografías mixtas",
+      "split": "stress",
+      "difficulty": "media",
+      "source": "Internet Archive / Wikimedia Commons",
+      "source_url": "https://commons.wikimedia.org/wiki/File:How_to_play_croqu%C3%AAt_-_a_new_pocket_manual_of_complete_instructions_for_American_players,_illustrated_with_engravings_and_diagrams,_together_with_all_the_rules_of_the_game_(IA_howtoplaycroqu00adam).pdf",
+      "raw_file": "raw/croquet_manual_1865_p3.jp2",
+      "rights": "dominio público"
+    },
+    {
+      "id": "sintetico_manual_limpio",
+      "name": "Manual sintético limpio",
+      "file": "sintetico_manual_limpio.png",
+      "category": "manual_sintetico",
+      "role": "control sintético: texto nítido y estructura de manual",
+      "split": "synthetic",
+      "difficulty": "baja",
+      "source": "benchmark.ipynb",
+      "source_url": "",
+      "rights": "sintético propio",
+      "generated": true
+    },
+    {
+      "id": "sintetico_manual_sombra",
+      "name": "Manual sintético con sombra",
+      "file": "sintetico_manual_sombra.png",
+      "category": "manual_sintetico",
+      "role": "control sintético: sombra lateral, ruido y desenfoque leve",
+      "split": "synthetic",
+      "difficulty": "media",
+      "source": "benchmark.ipynb",
+      "source_url": "",
+      "rights": "sintético propio",
+      "generated": true
+    },
+    {
+      "id": "sintetico_manual_perspectiva",
+      "name": "Manual sintético con perspectiva",
+      "file": "sintetico_manual_perspectiva.png",
+      "category": "manual_sintetico",
+      "role": "control sintético: perspectiva de captura con móvil",
+      "split": "synthetic",
+      "difficulty": "media",
+      "source": "benchmark.ipynb",
+      "source_url": "",
+      "rights": "sintético propio",
+      "generated": true
+    }
+  ],
+  "raw_sources": [
+    {
+      "file": "raw/croquet_manual_1865.pdf",
+      "source_url": "https://archive.org/download/howtoplaycroqu00adam/howtoplaycroqu00adam.pdf",
+      "rights": "dominio público",
+      "note": "PDF original descargado; el benchmark usa una página JP2 renderizada a JPG."
+    },
+    {
+      "file": "raw/croquet_manual_1865_p3.jp2",
+      "source_url": "https://archive.org/download/howtoplaycroqu00adam/howtoplaycroqu00adam_jp2.zip/howtoplaycroqu00adam_jp2%2Fhowtoplaycroqu00adam_0003.jp2",
+      "rights": "dominio público",
+      "note": "Página 3 original en JPEG 2000; convertida a croquet_manual_1865_p3.jpg."
+    },
+    {
+      "file": "raw/juego_mesa_palma.pdf",
+      "source_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juego_de_mesa_palma.pdf",
+      "rights": "CC BY-SA 4.0",
+      "note": "PDF original descargado; la página 1 se renderiza a JPG para el benchmark."
+    },
+    {
+      "file": "raw/rattfallan_rules_1819.pdf",
+      "source_url": "https://commons.wikimedia.org/wiki/Special:FilePath/R%C3%A5ttf%C3%A4llan_board_game_1819_rules.pdf",
+      "rights": "dominio público",
+      "note": "PDF original descargado, revisado y dejado fuera del benchmark por baja utilidad para Manualito."
+    }
+  ],
+  "candidate_sources": [
+    {
+      "name": "Rattfallan board game 1819 rules",
+      "type": "reglas de juego de mesa antiguas",
+      "url": "https://commons.wikimedia.org/wiki/File:R%C3%A5ttf%C3%A4llan_board_game_1819_rules.pdf",
+      "rights": "dominio público",
+      "note": "PDF real de reglas, pero no se incluye en el benchmark porque la resolución máxima publicada es baja"
+    }
+  ]
+}

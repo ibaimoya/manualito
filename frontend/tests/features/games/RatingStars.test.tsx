@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { RATE_LABELS, RatingStars } from '@/features/games/RatingStars';
+import { RatingStars } from '@/features/games/RatingStars';
 
 describe('RatingStars · solo lectura', () => {
   it('expone la puntuación como etiqueta accesible', () => {
@@ -26,7 +26,7 @@ describe('RatingStars · interactivo', () => {
     render(<RatingStars value={0} onSelect={() => undefined} />);
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(5);
-    expect(buttons[4]).toHaveAccessibleName(`5 estrellas — ${RATE_LABELS[5]}`);
+    expect(buttons[4]).toHaveAccessibleName('5 estrellas — Es una locura');
   });
 
   it('marca la puntuación actual con aria-pressed', () => {

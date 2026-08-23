@@ -1,4 +1,5 @@
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
+import { useTranslation } from 'react-i18next';
 import { PrivacySections } from '@/features/legal/PrivacySections';
 
 /**
@@ -9,11 +10,13 @@ export function PrivacyPolicyModal({
   open,
   onOpenChange,
 }: Readonly<{ open: boolean; onOpenChange: (open: boolean) => void }>) {
+  const { t } = useTranslation('legal');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} contentClassName="max-w-lg">
       <DialogHeader
-        title="Política de privacidad"
-        description="Qué guardamos y para qué."
+        title={t('modal.title')}
+        description={t('modal.description')}
         onClose={() => onOpenChange(false)}
       />
       <DialogBody className="max-h-[70dvh] overflow-y-auto">

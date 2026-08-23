@@ -232,9 +232,10 @@ def test_get_game_for_detail_returns_hidden_games_but_not_deleted():
             return FakeResult()
 
     session = FakeSession()
+    call = partial(get_game_for_detail, session, game_id=_GAME_ID)
 
     with pytest.raises(GameNotFoundError):
-        anyio.run(partial(get_game_for_detail, session, game_id=_GAME_ID))
+        anyio.run(call)
 
     compiled = _compile(session.statement)
     assert "games.deleted_at IS NULL" in compiled

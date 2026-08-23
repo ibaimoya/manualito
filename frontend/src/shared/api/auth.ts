@@ -66,7 +66,6 @@ export interface ResetPasswordInput {
   password: string;
 }
 
-
 export const authApi = {
   /** POST /api/auth/register — crea cuenta y deja sesión iniciada (autologin). */
   async register(input: RegisterInput, signal?: AbortSignal): Promise<AuthResponse> {

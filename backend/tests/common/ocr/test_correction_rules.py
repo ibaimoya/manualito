@@ -152,66 +152,116 @@ def test_puntos_de_guia_colapsan(text, expected):
 
 # ---------------------------------------------------------------------------
 # Partición de Equivalencia (EP) — des-guionado de fin de linea con guarda
-#   EP1: la union valida contra el lexico y se aplica.
+#   EP1: la union valida contra el lexico, se aplica y queda registrada.
 #   EP2: la union valida solo contra el vocabulario de la pagina y se aplica.
 #   EP3: la union no valida (salto de columna) y el guion se conserva.
 #   EP4: guion en la ultima linea de la pagina se conserva.
+#   EP5: la base de la linea recortada se reinicia a su resto.
 # ---------------------------------------------------------------------------
 
 
 def test_desguionado_une_palabra_del_lexico():
-    """Una palabra partida por guion se une si el léxico la reconoce."""
+    """Una palabra partida por guion se une y su base registra la pareja."""
     lines = [
         {"text": "construye tus propie-", "confidence": 0.9},
         {"text": "dades favoritas", "confidence": 0.8},
     ]
 
-    assert merge_hyphenated_lines(lines, vocabulary=frozenset({"propiedades"})) == [
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"propiedades"}))
+
+    assert result.lines == [
         {"text": "construye tus propiedades", "confidence": 0.9},
         {"text": "favoritas", "confidence": 0.8},
     ]
+    assert result.bases == ("construye tus propie- dades", "favoritas")
+    assert result.hyphen_joins == (frozenset({"propie- dades"}), frozenset())
 
 
 def test_desguionado_vacia_y_elimina_la_linea_siguiente():
-    """La línea siguiente desaparece si solo contenía el fragmento."""
+    """La línea siguiente desaparece con su base y sus uniones en paralelo."""
     lines = [
         {"text": "fue una jugada necesa-", "confidence": 0.7},
         {"text": "rias", "confidence": 0.6},
     ]
 
-    assert merge_hyphenated_lines(lines, vocabulary=frozenset({"necesarias"})) == [
-        {"text": "fue una jugada necesarias", "confidence": 0.7},
-    ]
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"necesarias"}))
+
+    assert result.lines == [{"text": "fue una jugada necesarias", "confidence": 0.7}]
+    assert result.bases == ("fue una jugada necesa- rias",)
+    assert result.hyphen_joins == (frozenset({"necesa- rias"}),)
 
 
 def test_desguionado_une_aunque_siga_puntuacion():
-    """La puntuación pegada al fragmento no impide validar la unión."""
+    """La puntuación pegada al fragmento viaja con la pareja registrada."""
     lines = [
         {"text": "compra tus propie-", "confidence": 0.9},
         {"text": "dades, después cobra", "confidence": 0.8},
     ]
 
-    assert merge_hyphenated_lines(lines, vocabulary=frozenset({"propiedades"})) == [
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"propiedades"}))
+
+    assert result.lines == [
         {"text": "compra tus propiedades,", "confidence": 0.9},
         {"text": "después cobra", "confidence": 0.8},
     ]
+    assert result.bases == ("compra tus propie- dades,", "después cobra")
+    assert result.hyphen_joins == (frozenset({"propie- dades,"}), frozenset())
 
 
 def test_desguionado_conserva_el_guion_fuera_de_vocabulario():
-    """El salto de columna no se une porque la palabra resultante no es válida."""
+    """El salto de columna no se une y las bases quedan como el texto."""
     lines = [
         {"text": "gana el Bétisu-", "confidence": 0.7},
         {"text": "frió una derrota", "confidence": 0.7},
     ]
 
-    assert merge_hyphenated_lines(lines, vocabulary=frozenset({"derrota"})) == lines
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"derrota"}))
+
+    assert result.lines == lines
+    assert result.bases == ("gana el Bétisu-", "frió una derrota")
+    assert result.hyphen_joins == (frozenset(), frozenset())
 
 
 def test_desguionado_conserva_guion_en_la_ultima_linea():
     """Un guion final sin línea siguiente se conserva."""
     lines = [{"text": "continuará en la si-", "confidence": 0.9}]
 
-    assert merge_hyphenated_lines(lines, vocabulary=frozenset({"siguiente"})) == lines
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"siguiente"}))
+
+    assert result.lines == lines
+
+
+def test_desguionado_ignora_entradas_sin_texto():
+    """Una entrada sin texto conserva el guion previo y deja una base vacía."""
+    lines = [
+        {"text": "corta la si-", "confidence": 0.9},
+        {"confidence": 0.8},
+    ]
+
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"siguiente"}))
+
+    assert result.lines == lines
+    assert result.bases == ("corta la si-", "")
+    assert page_vocabulary([{"confidence": 0.8}]) == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("current", "following"),
+    [
+        ("acaba en 5-", "cinco puntos"),
+        ("junta propie-", "“dades raras"),
+    ],
+)
+def test_desguionado_descarta_fragmentos_no_alfabeticos(current, following):
+    """Sin letras a ambos lados del guion no hay unión posible."""
+    lines = [
+        {"text": current, "confidence": 0.9},
+        {"text": following, "confidence": 0.9},
+    ]
+
+    result = merge_hyphenated_lines(lines, vocabulary=frozenset({"propiedades", "cinco"}))
+
+    assert result.lines == lines
 
 
 def test_vocabulario_de_pagina_alimenta_el_desguionado():
@@ -223,12 +273,15 @@ def test_vocabulario_de_pagina_alimenta_el_desguionado():
     ]
 
     vocabulary = page_vocabulary(lines)
+    result = merge_hyphenated_lines(lines, vocabulary=vocabulary)
 
     assert "zargos" in vocabulary
-    assert merge_hyphenated_lines(lines, vocabulary=vocabulary)[1] == {
-        "text": "coloca tus zargos",
-        "confidence": 0.8,
-    }
+    assert result.lines[1] == {"text": "coloca tus zargos", "confidence": 0.8}
+    assert result.bases == (
+        "los zargos dominan el juego",
+        "coloca tus zar- gos",
+        "en el tablero",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -253,9 +306,24 @@ def test_orquestador_encadena_todas_las_reglas(correction_config):
         vocabulary=frozenset({"propiedades"}),
     )
 
-    assert result == [
+    assert result.lines == [
         {"text": "Construir propiedades", "confidence": 0.84},
         {"text": "del tablero", "confidence": 0.9},
         {"text": "Índice. 4", "confidence": 0.9},
     ]
+    assert result.bases == ("Construir propie- dades", "del tablero", "Índice. 4")
+    assert result.hyphen_joins == (frozenset({"propie- dades"}), frozenset(), frozenset())
     assert lines[1] == {"text": "e Construir propie-", "confidence": 0.84}
+
+
+def test_orquestador_descarta_lineas_sin_texto_o_vaciadas(correction_config):
+    """Las entradas sin texto o vaciadas por la limpieza no llegan al desguionado."""
+    lines = [
+        {"confidence": 0.9},
+        {"text": "   ", "confidence": 0.9},
+        {"text": "Regla válida", "confidence": 0.9},
+    ]
+
+    result = apply_correction_rules(lines, config=correction_config, vocabulary=frozenset())
+
+    assert result.lines == [{"text": "Regla válida", "confidence": 0.9}]

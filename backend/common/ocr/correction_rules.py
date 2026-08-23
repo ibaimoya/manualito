@@ -16,6 +16,13 @@ class OcrCorrectionConfig:
     llm_below: float
 
 
+@dataclass(frozen=True, slots=True)
+class RuleCorrectionResult:
+    lines: list[dict[str, object]]
+    bases: tuple[str, ...]
+    hyphen_joins: tuple[frozenset[str], ...]
+
+
 def apply_confidence_gate(
     lines: list[dict[str, object]],
     *,
@@ -63,9 +70,11 @@ def merge_hyphenated_lines(
     lines: list[dict[str, object]],
     *,
     vocabulary: frozenset[str],
-) -> list[dict[str, object]]:
-    """Une palabras partidas por un guion al final de línea si la unión está en el vocabulario."""
+) -> RuleCorrectionResult:
+    """Une palabras partidas por guion y registra la base y las uniones de cada línea."""
     merged = [dict(line) for line in lines]
+    bases = [text if isinstance(text := line.get("text"), str) else "" for line in merged]
+    joins: list[set[str]] = [set() for _ in merged]
     index = 0
     while index < len(merged) - 1:
         current_text = merged[index].get("text")
@@ -74,13 +83,21 @@ def merge_hyphenated_lines(
         if joined is None:
             index += 1
             continue
-        merged[index]["text"], remainder = joined
+        joined_text, remainder, pair = joined
+        merged[index]["text"] = joined_text
+        bases[index] = f"{bases[index]} {pair.partition(' ')[2]}"
+        joins[index].add(pair)
         if remainder:
             merged[index + 1]["text"] = remainder
+            bases[index + 1] = remainder
             index += 1
         else:
-            del merged[index + 1]
-    return merged
+            del merged[index + 1], bases[index + 1], joins[index + 1]
+    return RuleCorrectionResult(
+        lines=merged,
+        bases=tuple(bases),
+        hyphen_joins=tuple(frozenset(join) for join in joins),
+    )
 
 
 def _join_hyphenated(
@@ -88,7 +105,7 @@ def _join_hyphenated(
     next_text: object,
     *,
     vocabulary: frozenset[str],
-) -> tuple[str, str] | None:
+) -> tuple[str, str, str] | None:
     if not isinstance(current_text, str) or not isinstance(next_text, str):
         return None
     if not current_text.endswith("-"):
@@ -104,7 +121,8 @@ def _join_hyphenated(
     candidate = (fragment + letters.group(0)).lower()
     if not _WORD_PATTERN.fullmatch(candidate) or candidate not in vocabulary:
         return None
-    return current_text[:-1] + first_token, remainder.strip()
+    pair = f"{current_text.split()[-1]} {first_token}"
+    return current_text[:-1] + first_token, remainder.strip(), pair
 
 
 def apply_correction_rules(
@@ -112,7 +130,7 @@ def apply_correction_rules(
     *,
     config: OcrCorrectionConfig,
     vocabulary: frozenset[str],
-) -> list[dict[str, object]]:
+) -> RuleCorrectionResult:
     """Aplica el filtro de confianza, la limpieza por línea y el desguionado sobre copias."""
     cleaned = []
     for line in apply_confidence_gate(lines, config=config):

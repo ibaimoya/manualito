@@ -70,7 +70,13 @@ def test_run_ocr_aplica_gate_reglas_y_llm(monkeypatch):
     )
 
     assert lines == [
-        {"text": "deben restarse antes de la", "confidence": 0.60},
+        {
+            "text": "deben restarse antes de la",
+            "confidence": 0.60,
+            "corrections": [
+                {"start": 6, "end": 14, "original": "rostarse", "source": "consenso-llm"},
+            ],
+        },
         {"text": "Construir una carretera", "confidence": 0.90},
         {"text": "19 hexágonos", "confidence": 0.92},
     ]
@@ -108,7 +114,13 @@ def test_run_ocr_sin_modelo_corrector_solo_aplica_reglas(monkeypatch):
 
     assert llm_calls == []
     assert lines == [
-        {"text": "Construir propiedades", "confidence": 0.84},
+        {
+            "text": "Construir propiedades",
+            "confidence": 0.84,
+            "corrections": [
+                {"start": 10, "end": 21, "original": "propie- dades", "source": "regla-guion"},
+            ],
+        },
         {"text": "del tablero", "confidence": 0.90},
     ]
 
@@ -132,6 +144,7 @@ def test_run_ocr_degrada_y_corta_tras_un_fallo_del_llm(monkeypatch):
         "segunda linea dudosa",
         "tercera linea dudosa",
     ]
+    assert all("corrections" not in line for line in lines)
     assert len(llm_calls) == 1
 
 
@@ -180,7 +193,7 @@ def test_run_ocr_detecta_el_idioma_de_la_pagina(monkeypatch):
 
 
 def test_run_ocr_conserva_la_confianza_al_corregir(monkeypatch):
-    """La línea corregida conserva su confianza y solo cambia el texto."""
+    """La línea corregida conserva su confianza y gana su anotación."""
     raw = [{"text": "el jugadar naranja gana", "confidence": 0.7}]
 
     lines, _llm_calls = _run_ocr_with(
@@ -189,7 +202,15 @@ def test_run_ocr_conserva_la_confianza_al_corregir(monkeypatch):
         llm_replies=[{"text": "el jugador naranja gana"}],
     )
 
-    assert lines == [{"text": "el jugador naranja gana", "confidence": 0.7}]
+    assert lines == [
+        {
+            "text": "el jugador naranja gana",
+            "confidence": 0.7,
+            "corrections": [
+                {"start": 3, "end": 10, "original": "jugadar", "source": "consenso-llm"},
+            ],
+        },
+    ]
 
 
 def test_run_ocr_ignora_respuestas_sin_texto_valido(monkeypatch):
@@ -203,3 +224,75 @@ def test_run_ocr_ignora_respuestas_sin_texto_valido(monkeypatch):
     )
 
     assert lines == [{"text": "linea dudosa del manual", "confidence": 0.7}]
+
+
+# ---------------------------------------------------------------------------
+# Partición de Equivalencia (EP) — procedencia de las correcciones persistidas
+#   EP1: cada correccion de una linea lleva su fuente (guion o consenso).
+#   EP2: una respuesta valida identica no genera la clave corrections.
+#   EP3: la edicion LLM solapada con una union se etiqueta como consenso.
+# ---------------------------------------------------------------------------
+
+
+def test_run_ocr_anota_cada_correccion_con_su_fuente(monkeypatch):
+    """Las ediciones del LLM y las uniones de guion conviven etiquetadas."""
+    raw = [
+        {"text": "se rostan las propie-", "confidence": 0.60},
+        {"text": "dades del jugador", "confidence": 0.90},
+    ]
+
+    lines, llm_calls = _run_ocr_with(
+        monkeypatch,
+        raw_lines=raw,
+        llm_replies=[{"text": "se restan las propiedades"}],
+    )
+
+    assert llm_calls[0]["text"] == "se rostan las propiedades"
+    assert lines == [
+        {
+            "text": "se restan las propiedades",
+            "confidence": 0.60,
+            "corrections": [
+                {"start": 3, "end": 9, "original": "rostan", "source": "consenso-llm"},
+                {"start": 14, "end": 25, "original": "propie- dades", "source": "regla-guion"},
+            ],
+        },
+        {"text": "del jugador", "confidence": 0.90},
+    ]
+
+
+def test_run_ocr_no_anota_lineas_devueltas_identicas(monkeypatch):
+    """El LLM devolviendo el mismo texto deja la línea sin anotaciones."""
+    raw = [{"text": "linea dudosa normal", "confidence": 0.7}]
+
+    lines, llm_calls = _run_ocr_with(monkeypatch, raw_lines=raw)
+
+    assert len(llm_calls) == 1
+    assert lines == [{"text": "linea dudosa normal", "confidence": 0.7}]
+
+
+def test_run_ocr_etiqueta_como_llm_la_edicion_solapada_con_el_desguionado(monkeypatch):
+    """Un span que funde edición LLM y unión de guion se atribuye al consenso."""
+    raw = [
+        {"text": "deben rostarse propie-", "confidence": 0.60},
+        {"text": "dades hoy", "confidence": 0.90},
+    ]
+
+    lines, _llm_calls = _run_ocr_with(
+        monkeypatch,
+        raw_lines=raw,
+        llm_replies=[{"text": "deben restarse propiedades"}],
+    )
+
+    assert lines[0] == {
+        "text": "deben restarse propiedades",
+        "confidence": 0.60,
+        "corrections": [
+            {
+                "start": 6,
+                "end": 26,
+                "original": "rostarse propie- dades",
+                "source": "consenso-llm",
+            },
+        ],
+    }

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 _BULLET_ARTIFACT_PATTERN = re.compile(r"^[e*+•·«]\s+(?=[A-ZÁÉÍÓÚÜÑ])")
 _GUIDE_DOTS_PATTERN = re.compile(r"\.{4,}")
-_TRAILING_HYPHEN_PATTERN = re.compile(r"([a-záéíóúüñ]+)-$", re.IGNORECASE)
 _WORD_PATTERN = re.compile(r"[a-záéíóúüñ]+", re.IGNORECASE)
 
 
@@ -92,14 +91,17 @@ def _join_hyphenated(
 ) -> tuple[str, str] | None:
     if not isinstance(current_text, str) or not isinstance(next_text, str):
         return None
-    fragment = _TRAILING_HYPHEN_PATTERN.search(current_text)
-    if fragment is None:
+    if not current_text.endswith("-"):
         return None
+    reversed_fragment = _WORD_PATTERN.match(current_text[-2::-1])
+    if reversed_fragment is None:
+        return None
+    fragment = reversed_fragment.group(0)[::-1]
     first_token, _, remainder = next_text.strip().partition(" ")
     letters = _WORD_PATTERN.match(first_token)
     if letters is None:
         return None
-    candidate = (fragment.group(1) + letters.group(0)).lower()
+    candidate = (fragment + letters.group(0)).lower()
     if not _WORD_PATTERN.fullmatch(candidate) or candidate not in vocabulary:
         return None
     return current_text[:-1] + first_token, remainder.strip()

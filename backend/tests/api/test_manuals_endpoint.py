@@ -37,7 +37,16 @@ _FAKE_SESSION = object()
 _USER_ID = uuid4()
 _GAME_ID = uuid4()
 _MANUAL_ID = uuid4()
-_OCR_LINES = [{"text": "Regla 1", "confidence": 0.9}]
+_OCR_LINES = [
+    {
+        "text": "el jugador gana",
+        "confidence": 0.7,
+        "corrections": [
+            {"start": 3, "end": 10, "original": "jugadar", "source": "consenso-llm"},
+        ],
+    },
+    {"text": "Regla 1", "confidence": 0.9},
+]
 
 
 @pytest.fixture
@@ -233,7 +242,10 @@ def test_get_manual_devuelve_detalle_con_paginas(
             "image_width": 800,
             "image_height": 1200,
             "ocr_confidence_mean": 0.9,
-            "ocr_lines": _OCR_LINES,
+            "ocr_lines": [
+                _OCR_LINES[0],
+                {"text": "Regla 1", "confidence": 0.9, "corrections": []},
+            ],
         }
     ]
     get_mock.assert_awaited_once_with(

@@ -13,6 +13,7 @@ GAME_QUESTION_TOP_K_MAX = 10
 MANUAL_PAGE_TEXT_MAX_LENGTH = 20_000
 ManualOcrStatus = Literal["pending", "processing", "completed", "failed"]
 ManualDedupStatus = Literal["none", "reused"]
+ManualCorrectionSource = Literal["regla-guion", "consenso-llm"]
 PageText = Annotated[
     str,
     StringConstraints(
@@ -58,11 +59,21 @@ class ManualListResponse(StrictModel):
     manuals: list[ManualSummaryResponse]
 
 
+class ManualLineCorrection(StrictModel):
+    """Corrección aplicada a la línea con offsets de codepoints sobre su texto final."""
+
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+    original: str
+    source: ManualCorrectionSource
+
+
 class ManualTextLine(StrictModel):
     """Línea de texto guardada para una página de manual."""
 
     text: str
     confidence: float | None = None
+    corrections: list[ManualLineCorrection] = Field(default_factory=list)
 
 
 class ManualPageResponse(StrictModel):

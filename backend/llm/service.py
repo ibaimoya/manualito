@@ -5,15 +5,18 @@ import httpx
 
 from common.conversation_limits import MESSAGE_CONTENT_MAX_LENGTH
 from common.language import Language
+from common.ocr.consensus import consensus_correction
 from llm import config
 from llm.client import (
     JsonValue,
     OllamaClient,
     OllamaResponseError,
+    correction_options,
     model_control_payload,
     model_options,
 )
 from llm.exceptions import (
+    CorrectionModelNotConfiguredError,
     EmptyLlmAnswerError,
     InvalidLlmResponseError,
     LlmGenerationError,
@@ -21,8 +24,10 @@ from llm.exceptions import (
     LlmUnavailableError,
 )
 from llm.prompt_builder import (
+    CORRECTION_PROMPT_VARIANTS,
     MAX_TITLE_CHARS,
     build_condense_question_prompt,
+    build_correction_messages,
     build_prompt,
     build_title_prompt,
     output_language_instruction,
@@ -32,6 +37,8 @@ from llm.schemas import (
     CondenseQuestionResponse,
     ConversationTitleRequest,
     ConversationTitleResponse,
+    CorrectLineRequest,
+    CorrectLineResponse,
     GenerateRequest,
     GenerateResponse,
 )
@@ -122,6 +129,68 @@ async def generate_conversation_title(
     if not title:
         raise EmptyLlmAnswerError
     return ConversationTitleResponse(title=title)
+
+
+async def correct_line(
+    *,
+    payload: CorrectLineRequest,
+    client: httpx.AsyncClient,
+) -> CorrectLineResponse:
+    """Corrige una línea OCR con tres pasadas del modelo corrector y consenso."""
+    model = config.OLLAMA_CORRECTION_MODEL
+    if not model:
+        raise CorrectionModelNotConfiguredError
+
+    candidates = []
+    for variant in CORRECTION_PROMPT_VARIANTS:
+        messages = build_correction_messages(
+            variant=variant,
+            text=payload.text,
+            context_before=payload.context_before,
+            context_after=payload.context_after,
+            language=payload.language,
+        )
+        candidates.append(await _chat_text(messages=messages, client=client, model=model))
+
+    return CorrectLineResponse(text=consensus_correction(payload.text, candidates))
+
+
+async def _chat_text(
+    *,
+    messages: list[dict[str, str]],
+    client: httpx.AsyncClient,
+    model: str,
+) -> str:
+    """Ejecuta una pasada de chat del corrector y devuelve su primera línea."""
+    ollama_payload: dict[str, JsonValue] = {
+        **model_control_payload(model=model),
+        "messages": messages,
+        "stream": False,
+        "think": False,
+        "options": correction_options(),
+    }
+
+    ollama = OllamaClient(client)
+
+    try:
+        generated_text = await ollama.chat(ollama_payload)
+    except httpx.ConnectError:
+        logger.error("No se pudo conectar con Ollama en %s.", config.OLLAMA_URL)
+        raise LlmUnavailableError from None
+    except (TimeoutError, httpx.TimeoutException):
+        logger.error("Ollama no respondió en %ss.", config.OLLAMA_TIMEOUT)
+        raise LlmTimeoutError from None
+    except httpx.HTTPStatusError as llm_err:
+        logger.exception("Ollama devolvió un error HTTP.")
+        raise LlmGenerationError from llm_err
+    except OllamaResponseError:
+        logger.exception("Respuesta JSON inválida de Ollama.")
+        raise InvalidLlmResponseError from None
+
+    candidate = generated_text.strip().split("\n")[0].strip()
+    if not candidate:
+        raise EmptyLlmAnswerError
+    return candidate
 
 
 async def _generate_text(

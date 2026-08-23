@@ -7,6 +7,11 @@ y las versiones siguen [SemVer 2.0.0](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Added
+
+- Añadida la corrección automática del texto OCR de los manuales, que elimina
+  el ruido del escaneo y arregla las erratas de lectura usando el LLM.
+
 ---
 
 ## [1.0.0-rc.1] - 2026-08-19

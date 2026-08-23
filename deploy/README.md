@@ -68,7 +68,7 @@ Los modelos no se definen en los scripts. La fuente de verdad está aquí:
 | Fichero | Contenido |
 | --- | --- |
 | `deploy/profiles/llm/low.env` | modelo ligero y contexto asociado |
-| `deploy/profiles/llm/high.env` | modelo de mayor calidad y contexto asociado |
+| `deploy/profiles/llm/high.env` | modelo de mayor calidad, contexto asociado y modelo corrector de OCR |
 
 ## OCR
 

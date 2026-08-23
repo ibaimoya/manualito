@@ -58,6 +58,61 @@ def output_language_instruction(*, language: Language) -> str:
     return _OUTPUT_LANGUAGE_INSTRUCTIONS[language]
 
 
+# Prompts validados experimentalmente para el corrector OCR con instrucciones en inglés.
+CORRECTION_PROMPT_VARIANTS: tuple[str, str, str] = (
+    (
+        "Fix the OCR errors in one line from a {language_name} board game manual.\n"
+        "Return ONLY the corrected line, no quotes, no explanation.\n"
+        "Do not add or remove content, only fix misread characters.\n\n"
+        "Neighboring lines (context):\n{context}\n\n"
+        "Line to fix:\n{line}\n\nCorrected line:"
+    ),
+    (
+        "You are a conservative OCR post-correction system. When in doubt, leave the "
+        "word unchanged.\n"
+        "Fix only obvious misreadings in this line from a {language_name} board game "
+        "manual. Keep the text in {language_name}.\n"
+        "Return only the final line.\n\n"
+        "Context:\n{context}\n\nLine:\n{line}\n\nFinal line:"
+    ),
+    (
+        "Correct one OCR line from a {language_name} board game manual. Keep the text "
+        "in {language_name}.\n"
+        "Allowed operations: replace misread letters inside a word, restore accents, "
+        "split merged words, join broken syllables.\n"
+        "Forbidden operations: adding or removing words, changing numbers, reordering, "
+        "paraphrasing.\n"
+        "If the line is already correct or you are unsure, return it unchanged.\n"
+        "Answer ONLY with the line.\n\n"
+        "Context:\n{context}\n\nLine:\n{line}\n\nLine:"
+    ),
+)
+
+_EMPTY_CORRECTION_CONTEXT = "(no additional context)"
+_CORRECTION_LANGUAGE_NAMES: dict[Language, str] = {
+    "es": "Spanish",
+    "en": "English",
+}
+
+
+def build_correction_messages(
+    *,
+    variant: str,
+    text: str,
+    context_before: list[str],
+    context_after: list[str],
+    language: Language,
+) -> list[dict[str, str]]:
+    """Construye el mensaje de chat de una pasada del corrector OCR."""
+    context = "\n".join([*context_before, *context_after]) or _EMPTY_CORRECTION_CONTEXT
+    content = variant.format(
+        language_name=_CORRECTION_LANGUAGE_NAMES[language],
+        context=context,
+        line=text,
+    )
+    return [{"role": "user", "content": content}]
+
+
 def build_prompt(
     *,
     question: str,

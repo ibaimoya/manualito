@@ -29,6 +29,10 @@ class EmptyLlmAnswerError(LlmError):
     """Ollama ha devuelto una respuesta vacía."""
 
 
+class CorrectionModelNotConfiguredError(LlmError):
+    """El despliegue no define un modelo corrector de OCR."""
+
+
 @dataclass(frozen=True, slots=True)
 class LlmErrorResponse:
     """Respuesta pública asociada a un error de dominio LLM."""
@@ -57,6 +61,10 @@ _LLM_ERROR_RESPONSES: Mapping[type[Exception], LlmErrorResponse] = {
     EmptyLlmAnswerError: LlmErrorResponse(
         status_code=500,
         detail="El LLM no devolvió una respuesta válida.",
+    ),
+    CorrectionModelNotConfiguredError: LlmErrorResponse(
+        status_code=503,
+        detail="El modelo de corrección OCR no está configurado.",
     ),
 }
 

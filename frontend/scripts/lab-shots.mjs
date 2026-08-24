@@ -31,7 +31,7 @@ for (const v of variants) {
     for (const th of themes) {
       for (const vp of viewports) {
         await page.setViewportSize({ width: vp.width, height: vp.height });
-        const conf = esc === 'base' ? '&conf=true' : '';
+        const conf = esc === 'base' || esc === 'search' ? '&conf=true' : '';
         await page.goto(`${BASE}/lab?v=${v}&esc=${esc}&th=${th}${conf}`, {
           waitUntil: 'networkidle',
         });

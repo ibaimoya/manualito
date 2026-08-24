@@ -8,6 +8,7 @@ import {
 } from '@/features/manual/lab/fixtures';
 import { LabSwitcher, type LabSearch, type LabVariant } from '@/features/manual/lab/LabSwitcher';
 import { Variant0 } from '@/features/manual/lab/Variant0';
+import { VariantA } from '@/features/manual/lab/VariantA';
 import { VariantPlaceholder } from '@/features/manual/lab/VariantPlaceholder';
 import { useTheme } from '@/app/theme';
 
@@ -68,7 +69,15 @@ function LabScreen() {
           seededQuery={seededQuery}
         />
       ) : null}
-      {search.v === 'a' ? <VariantPlaceholder name="V-A Documento partido" /> : null}
+      {search.v === 'a' ? (
+        <VariantA
+          key={`${search.esc}-${search.pg}-${seededQuery}`}
+          escenario={search.esc}
+          initialPage={search.pg}
+          showConfidence={search.conf}
+          seededQuery={seededQuery}
+        />
+      ) : null}
       {search.v === 'b' ? <VariantPlaceholder name="V-B Lectura focal" /> : null}
       {search.v === 'c' ? <VariantPlaceholder name="V-C Mesa de trabajo" /> : null}
       <LabSwitcher search={search} />

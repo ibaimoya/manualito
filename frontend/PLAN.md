@@ -82,7 +82,7 @@ prácticas. Sin tope de horas: se itera hasta pasar el gate entero.
 - [x] Ruta `/lab` + `fixtures.ts` + `LabSwitcher` renderizando con tokens reales (light y dark verificados; Brasa #15100b)
 - [x] `scripts/lab-shots.mjs` produce PNGs deterministas (12/12, matriz 1920/375 × light/dark × base/busy/search)
 - [x] `.lab-shots/` en .gitignore del frontend
-- [ ] Commit F0 (nombre de Sol) y réplica sync verificada con `(#64)`
+- [x] Commit F0 `dbc4dc1` (GitHub) → gemelo sync `14b14c4` (#64), coautoría 0 en ambos
 - GATE F0: /lab con fixtures en dark+light en el navegador built-in y PNGs generados. CUMPLIDO salvo commit.
 
 #### Notas de entorno F0 (imprescindibles para reanudar)
@@ -112,12 +112,16 @@ prácticas. Sin tope de horas: se itera hasta pasar el gate entero.
 - GATE F1: brief escrito y revisado.
 
 ### F2 Divergencia (3 variantes, calidad-prototipo)
-- [ ] V-A Documento partido (texto+imagen lado a lado, rail como tira compacta)
-- [ ] V-B Lectura focal (columna centrada, chrome atenuado, panel de imagen peek/colapsable)
-- [ ] V-C Mesa de trabajo (filmstrip con estados, cabecera densa inspector, confianza como capa)
-- [ ] Matriz de capturas completa de las 3
-- [ ] Ronda de jurado 1 (3 cuñaos + Sol) con acta → dirección elegida (o híbrido)
+- [x] V-A Documento partido `3977bc9` (rail informativo, toolbar única, severidad asimétrica
+      pactada con Sol, panel Original)
+- [x] V-B Lectura focal + V-C Mesa de trabajo `0922e66`
+- [x] Matriz de capturas completa (48 PNGs)
+- [ ] Ronda de jurado 1 (3 cuñaos + Sol con imágenes vía codex -i) con acta → dirección
 - GATE F2: acta con dirección y motivos.
+
+Nota F1: commit brief `83a0229`. Sol sobre el brief: aprobar con cambios (condiciones en el brief).
+Nota jurado: Sol visual = exec FRESCO con `-i` (las imágenes solo se adjuntan al prompt inicial);
+la sesión persistente 01a02fae queda para nombres de commit y decisiones.
 
 ### F3 Convergencia (rondas 45-60min sobre la ganadora)
 - [ ] Opciones avanzadas rediseñadas: toggle Confianza, buscador, Editar, menú Acciones, diálogos
@@ -160,3 +164,8 @@ prácticas. Sin tope de horas: se itera hasta pasar el gate entero.
 ## Log de estado
 
 - 2026-08-23: campaña aprobada. Ramas creadas. F0 en curso.
+- 2026-08-23 19:35: F0 CERRADO (gate cumplido). Lab operativo en http://127.0.0.1:5174/lab.
+  Sesión Sol persistente: 01a02fae-7eb8-71c0-bff3-576a23277780 (resume con codex.exe ... resume <id>).
+  Sync GitLab: requiere la rama gemela CHECKED-OUT en ubu-manualito; lag-by-one, se vacía con
+  pasada manual de sync.ps1. Ibai mergeó la #21 (#9) en ambos remotos tras cortar estas ramas.
+  F1 en curso: auditoría + minería + brief.

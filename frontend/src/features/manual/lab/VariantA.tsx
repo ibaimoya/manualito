@@ -8,16 +8,18 @@ import {
   Copy,
   Layers,
   LoaderCircle,
+  Minus,
   MoreHorizontal,
   PanelRightClose,
   PanelRightOpen,
   Pencil,
+  Plus,
   RotateCw,
   Search,
   Trash2,
   X,
 } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ManualDetailPage, OcrLine } from '@/shared/api/client';
 import { confidenceTone, pageStatus, pageStatusLegend } from '@/features/manual/pageStatus';
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
@@ -277,7 +279,7 @@ function CompactState({
   action,
 }: Readonly<{ icon: ReactNode; title: string; body: string; action?: string }>) {
   return (
-    <div className="flex items-start gap-3 border-t border-border pt-5">
+    <div className="flex items-start gap-3 pt-2">
       <span className="mt-0.5 text-fg-3">{icon}</span>
       <div className="min-w-0">
         <p className="text-[14px] font-semibold text-fg">{title}</p>
@@ -296,11 +298,18 @@ function CompactState({
   );
 }
 
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 3;
+
 function OriginalPanel({
   page,
   open,
   onToggle,
 }: Readonly<{ page: ManualDetailPage; open: boolean; onToggle: () => void }>) {
+  const [zoom, setZoom] = useState(1);
+  function stepZoom(delta: number): void {
+    setZoom((value) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((value + delta) * 4) / 4)));
+  }
   if (!open) {
     return (
       <aside className="hidden border-l border-border bg-surface md:flex md:flex-col md:items-center md:py-3">
@@ -330,25 +339,60 @@ function OriginalPanel({
       <div className="flex items-center gap-2 px-4 pb-1 pt-2.5">
         <p className="text-[12.5px] font-semibold text-fg-2">Original</p>
         <p className="mono text-[11px] tabular-nums text-fg-3">página {page.page_number}</p>
+        {page.image_available ? (
+          <span className="ml-auto flex items-center gap-0.5">
+            <MiniNavButton
+              label="Alejar la imagen"
+              disabled={zoom <= ZOOM_MIN}
+              onClick={() => stepZoom(-0.25)}
+            >
+              <Minus size={ICON.sm} strokeWidth={STROKE} />
+            </MiniNavButton>
+            <button
+              type="button"
+              title="Volver al tamaño real"
+              disabled={zoom === 1}
+              onClick={() => setZoom(1)}
+              className="mono h-6 rounded px-1 text-[11px] tabular-nums text-fg-2 hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:hover:bg-transparent"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <MiniNavButton
+              label="Acercar la imagen"
+              disabled={zoom >= ZOOM_MAX}
+              onClick={() => stepZoom(0.25)}
+            >
+              <Plus size={ICON.sm} strokeWidth={STROKE} />
+            </MiniNavButton>
+          </span>
+        ) : null}
         <button
           type="button"
           aria-label="Ocultar la imagen original"
           title="Ocultar la imagen original"
           onClick={onToggle}
-          className="ml-auto grid size-7 place-items-center rounded text-fg-3 hover:text-fg"
+          className={cn(
+            'grid size-7 place-items-center rounded text-fg-3 hover:text-fg',
+            !page.image_available && 'ml-auto',
+          )}
         >
           <PanelRightClose size={ICON.sm} strokeWidth={STROKE} />
         </button>
       </div>
-      <div className="flex-1 px-4 pb-4 pt-2">
+      <div className="flex-1 overflow-auto px-4 pb-4 pt-2">
         {page.image_available ? (
           <div
-            className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-lg border border-border bg-bg shadow-sm"
+            className={cn(
+              'relative overflow-hidden rounded-lg border border-border bg-bg shadow-sm',
+              zoom <= 1 && 'mx-auto',
+            )}
             style={{
               aspectRatio:
                 page.image_width && page.image_height
                   ? `${page.image_width} / ${page.image_height}`
                   : '3 / 4',
+              width: `${zoom * 100}%`,
+              maxWidth: zoom <= 1 ? '520px' : undefined,
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-bg to-surface" />
@@ -401,6 +445,21 @@ export function VariantA({
   const [panelOpen, setPanelOpen] = useState(true);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [activeDuda, setActiveDuda] = useState<number | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const cancelDeleteRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!deleteOpen) return;
+    cancelDeleteRef.current?.focus();
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setDeleteOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [deleteOpen]);
   const rowRefs = useRef(new Map<number, HTMLDivElement>());
   const search = usePageSearch(pages);
   const [seeded, setSeeded] = useState(false);
@@ -426,10 +485,30 @@ export function VariantA({
       : null;
   const noResults = search.query.trim().length > 0 && search.totalHits === 0;
 
+  const pageText = page.ocr_lines.map((line) => line.text).join('\n');
+  const dirty = editing && draft !== pageText;
+
   function goToPage(pageNumber: number): void {
+    if (editing) return;
     if (pageNumber < 1 || pageNumber > pages.length) return;
     setActivePage(pageNumber);
     setActiveDuda(null);
+  }
+
+  function startEditing(): void {
+    setDraft(pageText);
+    setConfirmDiscard(false);
+    setEditing(true);
+  }
+
+  function stopEditing(): void {
+    setEditing(false);
+    setConfirmDiscard(false);
+  }
+
+  function requestCancelEdit(): void {
+    if (dirty) setConfirmDiscard(true);
+    else stopEditing();
   }
 
   function registerRow(index: number, node: HTMLDivElement | null): void {
@@ -476,24 +555,38 @@ export function VariantA({
             <MoreHorizontal size={ICON.md} strokeWidth={STROKE} aria-hidden="true" />
           </ToolbarButton>
           {actionsOpen ? (
-            <div className="absolute right-0 top-10 z-20 w-52 rounded-lg border border-border bg-card py-1 shadow-md">
+            <>
               <button
                 type="button"
-                disabled={busy}
-                className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-fg hover:bg-surface disabled:opacity-45"
-              >
-                <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-                Releer todo el manual
-              </button>
-              <div className="mx-3 my-1 border-t border-border" />
-              <button
-                type="button"
-                className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-error hover:bg-error-bg"
-              >
-                <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-                Eliminar manual…
-              </button>
-            </div>
+                aria-label="Cerrar el menú"
+                tabIndex={-1}
+                onClick={() => setActionsOpen(false)}
+                className="fixed inset-0 z-10 cursor-default"
+              />
+              <div className="absolute right-0 top-10 z-20 w-52 rounded-lg border border-border bg-card py-1 shadow-md">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setActionsOpen(false)}
+                  className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-fg hover:bg-surface disabled:opacity-45"
+                >
+                  <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                  Releer todo el manual
+                </button>
+                <div className="mx-3 my-1 border-t border-border" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionsOpen(false);
+                    setDeleteOpen(true);
+                  }}
+                  className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-error hover:bg-error-bg"
+                >
+                  <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                  Eliminar manual…
+                </button>
+              </div>
+            </>
           ) : null}
         </div>
       </header>
@@ -566,7 +659,8 @@ export function VariantA({
                   placeholder="Buscar en el manual…"
                   aria-label="Buscar en el texto del manual"
                   enterKeyHint="search"
-                  className="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none"
+                  disabled={editing}
+                  className="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-3 disabled:cursor-not-allowed [&::-webkit-search-cancel-button]:appearance-none"
                 />
                 {search.query ? (
                   <span className="flex shrink-0 items-center gap-0.5">
@@ -605,35 +699,46 @@ export function VariantA({
                   <ToolbarButton
                     label="Colorear líneas según su confianza OCR"
                     pressed={showConfidence}
-                    disabled={!hasConfidence}
+                    disabled={!hasConfidence || editing}
                     onClick={toggleConfidence}
                   >
                     <Layers size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
                     Confianza
                   </ToolbarButton>
-                  {showConfidence && hasConfidence ? (
+                  {showConfidence && hasConfidence && !editing ? (
                     <span className="ml-1.5 flex items-center gap-0.5">
-                      <span className="mono text-[12px] tabular-nums text-fg-2">
-                        {dudas.length} dudas
-                      </span>
-                      <MiniNavButton
-                        label="Duda anterior"
-                        disabled={dudas.length === 0}
-                        onClick={() => jumpToDuda(-1)}
-                      >
-                        <ChevronUp size={ICON.sm} strokeWidth={STROKE} />
-                      </MiniNavButton>
-                      <MiniNavButton
-                        label="Duda siguiente"
-                        disabled={dudas.length === 0}
-                        onClick={() => jumpToDuda(1)}
-                      >
-                        <ChevronDown size={ICON.sm} strokeWidth={STROKE} />
-                      </MiniNavButton>
+                      {dudas.length === 0 ? (
+                        <span className="text-[12px] text-fg-3">Sin dudas</span>
+                      ) : (
+                        <>
+                          <span className="mono text-[12px] tabular-nums text-fg-2">
+                            {dudas.length} dudas
+                          </span>
+                          <MiniNavButton
+                            label="Duda anterior"
+                            disabled={false}
+                            onClick={() => jumpToDuda(-1)}
+                          >
+                            <ChevronUp size={ICON.sm} strokeWidth={STROKE} />
+                          </MiniNavButton>
+                          <MiniNavButton
+                            label="Duda siguiente"
+                            disabled={false}
+                            onClick={() => jumpToDuda(1)}
+                          >
+                            <ChevronDown size={ICON.sm} strokeWidth={STROKE} />
+                          </MiniNavButton>
+                        </>
+                      )}
                     </span>
                   ) : null}
                 </span>
-                <ToolbarButton label="Editar el texto de esta página" disabled={busy}>
+                <ToolbarButton
+                  label={editing ? 'Salir de la edición' : 'Editar el texto de esta página'}
+                  pressed={editing}
+                  disabled={busy || st.key === 'failed' || st.key === 'processing'}
+                  onClick={() => (editing ? requestCancelEdit() : startEditing())}
+                >
                   <Pencil size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
                   Editar
                 </ToolbarButton>
@@ -644,7 +749,8 @@ export function VariantA({
               <button
                 type="button"
                 aria-label="Página anterior"
-                disabled={page.page_number <= 1}
+                title={editing ? 'Termina la edición para cambiar de página' : undefined}
+                disabled={page.page_number <= 1 || editing}
                 onClick={() => goToPage(page.page_number - 1)}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-2 hover:border-border-strong hover:text-fg disabled:opacity-40"
               >
@@ -656,7 +762,8 @@ export function VariantA({
               <button
                 type="button"
                 aria-label="Página siguiente"
-                disabled={page.page_number >= pages.length}
+                title={editing ? 'Termina la edición para cambiar de página' : undefined}
+                disabled={page.page_number >= pages.length || editing}
                 onClick={() => goToPage(page.page_number + 1)}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-2 hover:border-border-strong hover:text-fg disabled:opacity-40"
               >
@@ -710,7 +817,64 @@ export function VariantA({
                   body="El texto aparecerá aquí en cuanto termine el reconocimiento."
                 />
               ) : null}
-              {st.key !== 'failed' && st.key !== 'processing' ? (
+              {st.key !== 'failed' && st.key !== 'processing' && editing ? (
+                <div>
+                  <textarea
+                    value={draft}
+                    onChange={(event) => {
+                      setDraft(event.target.value);
+                      setConfirmDiscard(false);
+                    }}
+                    aria-label={`Editar el texto de la página ${page.page_number}`}
+                    rows={Math.max(8, draft.split('\n').length + 1)}
+                    className="w-full resize-y rounded-lg border border-border bg-bg px-3.5 py-3 font-serif text-[15.5px] leading-[1.72] text-fg outline-none focus:border-primary"
+                  />
+                  <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                    {confirmDiscard ? (
+                      <>
+                        <p className="text-[13px] font-medium text-fg">¿Descartar los cambios?</p>
+                        <button
+                          type="button"
+                          onClick={stopEditing}
+                          className="inline-flex h-8 items-center rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv hover:opacity-90"
+                        >
+                          Descartar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDiscard(false)}
+                          className="inline-flex h-8 items-center rounded-lg border border-border-strong px-3 text-[13px] font-medium text-fg hover:bg-surface"
+                        >
+                          Seguir editando
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          disabled={!dirty}
+                          onClick={stopEditing}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv hover:opacity-90 disabled:opacity-45"
+                        >
+                          <Check size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                          Guardar cambios
+                        </button>
+                        <button
+                          type="button"
+                          onClick={requestCancelEdit}
+                          className="inline-flex h-8 items-center rounded-lg border border-border-strong px-3 text-[13px] font-medium text-fg hover:bg-surface"
+                        >
+                          Cancelar
+                        </button>
+                        {dirty ? (
+                          <span className="text-[12px] text-fg-3">Cambios sin guardar</span>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              {st.key !== 'failed' && st.key !== 'processing' && !editing ? (
                 <>
                   {st.key === 'edited' ? (
                     <p className="mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent">
@@ -740,6 +904,50 @@ export function VariantA({
 
         <OriginalPanel page={page} open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} />
       </div>
+
+      {deleteOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lab-delete-title"
+          className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4"
+        >
+          <button
+            type="button"
+            aria-label="Cerrar sin eliminar"
+            tabIndex={-1}
+            onClick={() => setDeleteOpen(false)}
+            className="absolute inset-0 cursor-default"
+          />
+          <div className="relative w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-lg">
+            <p id="lab-delete-title" className="text-[15px] font-semibold text-fg">
+              ¿Eliminar este manual?
+            </p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
+              Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción no se
+              puede deshacer.
+            </p>
+            <div className="mt-4 flex justify-end gap-2.5">
+              <button
+                type="button"
+                ref={cancelDeleteRef}
+                onClick={() => setDeleteOpen(false)}
+                className="inline-flex h-8 items-center rounded-lg border border-border-strong px-3 text-[13px] font-medium text-fg hover:bg-surface"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv hover:opacity-90"
+              >
+                <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                Eliminar manual
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

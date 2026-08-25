@@ -1,31 +1,36 @@
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Copy,
   Layers,
   LoaderCircle,
+  MoreHorizontal,
+  PanelRightClose,
+  PanelRightOpen,
   Pencil,
   RotateCw,
   Search,
   Trash2,
   X,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import type { ManualDetailPage, OcrLine } from '@/shared/api/client';
 import { confidenceTone, pageStatus, pageStatusLegend } from '@/features/manual/pageStatus';
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import { cn } from '@/shared/lib/cn';
 
-/* V-A "Documento partido": rail informativo 240px + lectura a medida 65ch + panel de imagen.
-   Prototipo de laboratorio: componentes nuevos sobre tokens, sin reusar las piezas actuales. */
+/* Dirección congelada (acta ronda 1): híbrido A+C. Tres zonas con panel plegable, filas
+   estables de confianza con números solo en ese modo, navegación entre dudas a lo FineReader,
+   búsqueda con anterior/siguiente y estado de cero resultados, destructivas protegidas. */
 
 const ICON = { sm: 14, md: 16 } as const;
 const STROKE = 1.75;
 
-/** Primeras palabras reales de la página para el rail (sin folio decorativo). */
 function pagePreview(lines: readonly OcrLine[]): string {
   const text = lines
     .map((line) => line.text)
@@ -33,6 +38,10 @@ function pagePreview(lines: readonly OcrLine[]): string {
     .replaceAll('\n', ' ')
     .trim();
   return text.length > 0 ? text : 'Sin texto todavía';
+}
+
+function prefersReducedMotion(): boolean {
+  return globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -71,12 +80,7 @@ function RailRow({
           className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[st.tone])}
           aria-hidden="true"
         />
-        <span
-          className={cn(
-            'text-[13px] font-semibold',
-            active ? 'text-primary-700' : 'text-fg',
-          )}
-        >
+        <span className={cn('text-[13px] font-semibold', active ? 'text-primary-700' : 'text-fg')}>
           Página {page.page_number}
         </span>
         <span className="mono ml-auto text-[11px] text-fg-3">{st.short}</span>
@@ -95,13 +99,14 @@ function RailRow({
 
 function RailLegend() {
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 pb-1 pt-2">
+    <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 px-3 pb-2 pt-2">
       {pageStatusLegend().map((item) => (
-        <span key={item.key} className="inline-flex items-center gap-1.5 text-[11px] text-fg-3">
-          <span
-            className={cn('size-1.5 rounded-full', STATUS_DOT[item.tone])}
-            aria-hidden="true"
-          />
+        <span
+          key={item.key}
+          title={item.label}
+          className="inline-flex items-center gap-1.5 text-[12px] text-fg-3"
+        >
+          <span className={cn('size-1.5 rounded-full', STATUS_DOT[item.tone])} aria-hidden="true" />
           {item.short}
         </span>
       ))}
@@ -126,6 +131,7 @@ function ToolbarButton({
     <button
       type="button"
       aria-label={label}
+      title={label}
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
@@ -142,48 +148,107 @@ function ToolbarButton({
   );
 }
 
+function MiniNavButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: Readonly<{ label: string; disabled: boolean; onClick: () => void; children: ReactNode }>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="grid size-6 shrink-0 place-items-center rounded text-fg-3 hover:bg-surface hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
+  );
+}
+
+type MatchCounter = { value: number };
+
+function highlightNeedle(
+  text: string,
+  needle: string,
+  counter: MatchCounter,
+  activeIndex: number | null,
+): ReactNode {
+  if (!needle) return text;
+  const lower = text.toLowerCase();
+  const parts: ReactNode[] = [];
+  let from = 0;
+  let at = lower.indexOf(needle, from);
+  while (at >= 0) {
+    if (at > from) parts.push(text.slice(from, at));
+    const isActive = counter.value === activeIndex;
+    parts.push(
+      <mark
+        key={`${at}-${counter.value}`}
+        className={cn(
+          'rounded-[2px] px-0.5 font-semibold',
+          isActive
+            ? 'bg-primary text-fg-inv'
+            : 'bg-primary-100 text-primary-700 ring-1 ring-primary-300/70',
+        )}
+      >
+        {text.slice(at, at + needle.length)}
+      </mark>,
+    );
+    counter.value += 1;
+    from = at + needle.length;
+    at = lower.indexOf(needle, from);
+  }
+  parts.push(text.slice(from));
+  return parts;
+}
+
 function ReadingLines({
   lines,
   needle,
+  activeMatch,
   showConfidence,
-}: Readonly<{ lines: readonly OcrLine[]; needle: string; showConfidence: boolean }>) {
+  activeDuda,
+  registerRow,
+}: Readonly<{
+  lines: readonly OcrLine[];
+  needle: string;
+  activeMatch: number | null;
+  showConfidence: boolean;
+  activeDuda: number | null;
+  registerRow: (index: number, node: HTMLDivElement | null) => void;
+}>) {
+  const counter: MatchCounter = { value: 0 };
   return (
     <div className="flex flex-col">
       {lines.map((line, index) => {
         const tone = line.confidence == null ? null : confidenceTone(line.confidence);
         const pct = line.confidence == null ? null : Math.round(line.confidence * 100);
-        const last = index === lines.length - 1;
-        const problem = tone?.tone === 'warning' || tone?.tone === 'error';
+        const problem =
+          showConfidence && (tone?.tone === 'warning' || tone?.tone === 'error');
         return (
           <div
             key={index}
+            ref={(node) => registerRow(index, node)}
             className={cn(
               'grid',
-              showConfidence ? '-mx-2 grid-cols-[3px_minmax(0,1fr)_44px] gap-x-3 px-2' : 'grid-cols-1',
-              /* Severidad asimétrica: el texto bueno queda limpio, el dudoso se lava suave. */
-              showConfidence && tone?.tone === 'warning' && 'bg-warning-bg/60',
-              showConfidence && tone?.tone === 'error' && 'bg-error-bg/70',
+              showConfidence
+                ? '-mx-2 grid-cols-[26px_minmax(0,1fr)_44px] gap-x-2.5 px-2'
+                : 'grid-cols-1',
+              showConfidence && tone?.tone === 'warning' && 'bg-warning-bg/75',
+              showConfidence && tone?.tone === 'error' && 'bg-error-bg/85',
+              activeDuda === index && 'outline outline-2 -outline-offset-1 outline-primary/50',
             )}
           >
             {showConfidence ? (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  problem ? 'w-[3px]' : 'w-px',
-                  tone?.tone === 'success' && 'bg-success/40',
-                  tone?.tone === 'warning' && 'bg-warning',
-                  tone?.tone === 'error' && 'bg-error',
-                  tone === null && 'bg-border',
-                )}
-              />
+              <span className="mono pt-[6px] text-right text-[11px] tabular-nums text-fg-3">
+                {index + 1}
+              </span>
             ) : null}
-            <p
-              className={cn(
-                'font-serif text-[15.5px] leading-[1.72] text-fg [overflow-wrap:anywhere]',
-                !last && 'pb-3.5',
-              )}
-            >
-              {highlightNeedle(line.text, needle)}
+            <p className="pb-3.5 font-serif text-[15.5px] leading-[1.72] text-fg [overflow-wrap:anywhere]">
+              {highlightNeedle(line.text, needle, counter, activeMatch)}
             </p>
             {showConfidence ? (
               <span
@@ -195,7 +260,7 @@ function ReadingLines({
                 )}
                 aria-label={pct == null ? 'Sin dato de confianza' : `Confianza ${pct} por ciento`}
               >
-                {pct == null ? 's/d' : `${pct}%`}
+                {problem ? `${pct}%` : pct == null ? 's/d' : `${pct}%`}
               </span>
             ) : null}
           </div>
@@ -203,26 +268,6 @@ function ReadingLines({
       })}
     </div>
   );
-}
-
-function highlightNeedle(text: string, needle: string): ReactNode {
-  if (!needle) return text;
-  const lower = text.toLowerCase();
-  const parts: ReactNode[] = [];
-  let from = 0;
-  let at = lower.indexOf(needle, from);
-  while (at >= 0) {
-    if (at > from) parts.push(text.slice(from, at));
-    parts.push(
-      <mark key={at} className="rounded-[2px] bg-primary-100 px-0.5 font-semibold text-primary-700">
-        {text.slice(at, at + needle.length)}
-      </mark>,
-    );
-    from = at + needle.length;
-    at = lower.indexOf(needle, from);
-  }
-  parts.push(text.slice(from));
-  return parts;
 }
 
 function CompactState({
@@ -251,22 +296,90 @@ function CompactState({
   );
 }
 
-function PagePlaceholderImage({ page }: Readonly<{ page: ManualDetailPage }>) {
+function OriginalPanel({
+  page,
+  open,
+  onToggle,
+}: Readonly<{ page: ManualDetailPage; open: boolean; onToggle: () => void }>) {
+  if (!open) {
+    return (
+      <aside className="hidden border-l border-border bg-surface md:flex md:flex-col md:items-center md:py-3">
+        <button
+          type="button"
+          aria-label="Mostrar la imagen original"
+          title="Mostrar la imagen original"
+          onClick={onToggle}
+          className="grid size-8 place-items-center rounded-lg text-fg-2 hover:bg-surface-2 hover:text-fg"
+        >
+          <PanelRightOpen size={ICON.md} strokeWidth={STROKE} />
+        </button>
+        <p
+          className="mt-3 text-[11px] font-semibold tracking-wide text-fg-3"
+          style={{ writingMode: 'vertical-rl' }}
+        >
+          Original
+        </p>
+      </aside>
+    );
+  }
   return (
-    <div
-      className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-lg border border-border bg-bg shadow-sm"
-      style={{
-        aspectRatio:
-          page.image_width && page.image_height
-            ? `${page.image_width} / ${page.image_height}`
-            : '3 / 4',
-      }}
+    <aside
+      aria-label="Imagen original de la página"
+      className="hidden border-l border-border bg-surface md:flex md:min-h-0 md:flex-col md:overflow-y-auto"
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-bg to-surface" />
-      <p className="mono absolute inset-x-0 bottom-3 text-center text-[11px] text-fg-3">
-        escaneo · página {page.page_number}
-      </p>
-    </div>
+      <div className="flex items-center gap-2 px-4 pb-1 pt-2.5">
+        <p className="text-[12.5px] font-semibold text-fg-2">Original</p>
+        <p className="mono text-[11px] tabular-nums text-fg-3">página {page.page_number}</p>
+        <button
+          type="button"
+          aria-label="Ocultar la imagen original"
+          title="Ocultar la imagen original"
+          onClick={onToggle}
+          className="ml-auto grid size-7 place-items-center rounded text-fg-3 hover:text-fg"
+        >
+          <PanelRightClose size={ICON.sm} strokeWidth={STROKE} />
+        </button>
+      </div>
+      <div className="flex-1 px-4 pb-4 pt-2">
+        {page.image_available ? (
+          <div
+            className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-lg border border-border bg-bg shadow-sm"
+            style={{
+              aspectRatio:
+                page.image_width && page.image_height
+                  ? `${page.image_width} / ${page.image_height}`
+                  : '3 / 4',
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-bg to-surface" />
+            <div className="absolute inset-x-6 top-6 space-y-2.5" aria-hidden="true">
+              {[92, 78, 85, 60, 88, 74, 40].map((width, row) => (
+                <div
+                  key={row}
+                  className="h-2 rounded-sm bg-surface-2"
+                  style={{ width: `${width}%` }}
+                />
+              ))}
+            </div>
+            <p className="mono absolute inset-x-0 bottom-3 text-center text-[11px] text-fg-3">
+              el escaneo real aparece aquí
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3 pt-2">
+            <AlertTriangle
+              size={16}
+              strokeWidth={STROKE}
+              className="mt-0.5 shrink-0 text-fg-3"
+              aria-hidden="true"
+            />
+            <p className="text-[13px] leading-relaxed text-fg-2">
+              Esta página no tiene escaneo guardado.
+            </p>
+          </div>
+        )}
+      </div>
+    </aside>
   );
 }
 
@@ -285,6 +398,10 @@ export function VariantA({
   const pages = manual.pages;
   const [activePage, setActivePage] = useState(initialPage);
   const [showConfidence, setShowConfidence] = useState(initialConfidence);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [activeDuda, setActiveDuda] = useState<number | null>(null);
+  const rowRefs = useRef(new Map<number, HTMLDivElement>());
   const search = usePageSearch(pages);
   const [seeded, setSeeded] = useState(false);
   if (!seeded && seededQuery) {
@@ -295,25 +412,90 @@ export function VariantA({
   const st = pageStatus(page);
   const busy = manual.status === 'indexing';
   const hasConfidence = page.ocr_lines.some((line) => line.confidence != null);
+  const dudas = page.ocr_lines
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => {
+      if (line.confidence == null) return false;
+      const tone = confidenceTone(line.confidence).tone;
+      return tone === 'warning' || tone === 'error';
+    })
+    .map(({ index }) => index);
+  const activeMatch =
+    search.active !== null && search.active.pageNumber === page.page_number
+      ? search.active.indexInPage
+      : null;
+  const noResults = search.query.trim().length > 0 && search.totalHits === 0;
+
+  function goToPage(pageNumber: number): void {
+    if (pageNumber < 1 || pageNumber > pages.length) return;
+    setActivePage(pageNumber);
+    setActiveDuda(null);
+  }
+
+  function registerRow(index: number, node: HTMLDivElement | null): void {
+    if (node) rowRefs.current.set(index, node);
+    else rowRefs.current.delete(index);
+  }
+
+  function jumpToMatch(delta: 1 | -1): void {
+    const match = search.step(delta);
+    if (match) goToPage(match.pageNumber);
+  }
+
+  function jumpToDuda(delta: 1 | -1): void {
+    if (dudas.length === 0) return;
+    const at = activeDuda === null ? -1 : dudas.indexOf(activeDuda);
+    const next = dudas[(at + delta + dudas.length) % dudas.length]!;
+    setActiveDuda(next);
+    rowRefs.current.get(next)?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'center',
+    });
+  }
+
+  function toggleConfidence(): void {
+    setShowConfidence((value) => !value);
+    setActiveDuda(null);
+  }
 
   return (
     <div className="flex min-h-dvh flex-col md:h-dvh md:overflow-hidden">
-      {/* Cabecera del documento: título + meta + acciones, hairline abajo */}
-      <header className="flex items-baseline gap-3 border-b border-border px-5 py-3">
-        <h1 className="font-display text-[17px] font-bold tracking-tight text-fg">
+      <header className="flex items-center gap-3 border-b border-border px-5 py-2.5">
+        <h1 className="min-w-0 truncate font-display text-[17px] font-bold tracking-tight text-fg">
           {manual.title ?? manual.game_name}
         </h1>
-        <span className="mono text-[11.5px] text-fg-3">
+        <span className="mono shrink-0 text-[11.5px] text-fg-3">
           PDF · {manual.page_count} páginas
         </span>
-        <span className="ml-auto flex items-center gap-1">
-          <ToolbarButton label="Reprocesar todo el manual" disabled={busy}>
-            <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+        <div className="relative ml-auto shrink-0">
+          <ToolbarButton
+            label="Acciones del manual"
+            pressed={actionsOpen}
+            onClick={() => setActionsOpen((value) => !value)}
+          >
+            <MoreHorizontal size={ICON.md} strokeWidth={STROKE} aria-hidden="true" />
           </ToolbarButton>
-          <ToolbarButton label="Eliminar manual">
-            <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-          </ToolbarButton>
-        </span>
+          {actionsOpen ? (
+            <div className="absolute right-0 top-10 z-20 w-52 rounded-lg border border-border bg-card py-1 shadow-md">
+              <button
+                type="button"
+                disabled={busy}
+                className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-fg hover:bg-surface disabled:opacity-45"
+              >
+                <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                Releer todo el manual
+              </button>
+              <div className="mx-3 my-1 border-t border-border" />
+              <button
+                type="button"
+                className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-error hover:bg-error-bg"
+              >
+                <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                Eliminar manual…
+              </button>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       {busy ? (
@@ -331,8 +513,14 @@ export function VariantA({
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[240px_minmax(0,1.2fr)_minmax(0,1fr)]">
-        {/* ─ Rail informativo ─ */}
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col md:grid',
+          panelOpen
+            ? 'md:grid-cols-[240px_minmax(0,1.2fr)_minmax(0,1fr)]'
+            : 'md:grid-cols-[240px_minmax(0,1fr)_44px]',
+        )}
+      >
         <nav
           aria-label="Páginas del manual"
           className="flex gap-1 overflow-x-auto border-b border-border p-2 md:flex-col md:overflow-y-auto md:border-b-0 md:border-r"
@@ -346,22 +534,20 @@ export function VariantA({
               page={item}
               active={item.page_number === page.page_number}
               hits={search.hitsByPage.get(item.page_number) ?? 0}
-              onSelect={() => setActivePage(item.page_number)}
+              onSelect={() => goToPage(item.page_number)}
             />
           ))}
         </nav>
 
-        {/* ─ Columna de lectura ─ */}
         <section
           aria-label={`Texto de la página ${page.page_number}`}
           className="min-w-0 md:min-h-0 md:overflow-y-auto"
         >
           <div className="mx-auto max-w-[42rem] px-5 py-4 md:px-8">
-            {/* Toolbar única del documento */}
-            <div className="flex items-center gap-2 pb-4">
+            <div className="flex flex-wrap items-center gap-2 pb-4">
               <div
                 className={cn(
-                  'flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border pl-2.5 pr-1 transition-colors duration-150',
+                  'flex h-8 min-w-52 flex-1 items-center gap-2 rounded-lg border pl-2.5 pr-1 transition-colors duration-150',
                   search.query
                     ? 'border-primary'
                     : 'border-border focus-within:border-border-strong',
@@ -383,42 +569,83 @@ export function VariantA({
                   className="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none"
                 />
                 {search.query ? (
-                  <span className="flex shrink-0 items-center">
-                    <span className="mono px-1 text-[11px] tabular-nums text-fg-2" aria-live="polite">
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <span
+                      className="mono px-1 text-[12px] tabular-nums text-fg-2"
+                      aria-live="polite"
+                    >
                       {search.activePosition}/{search.totalHits}
                     </span>
-                    <button
-                      type="button"
-                      aria-label="Borrar búsqueda"
+                    <MiniNavButton
+                      label="Coincidencia anterior"
+                      disabled={search.totalHits === 0}
+                      onClick={() => jumpToMatch(-1)}
+                    >
+                      <ChevronUp size={ICON.sm} strokeWidth={STROKE} />
+                    </MiniNavButton>
+                    <MiniNavButton
+                      label="Coincidencia siguiente"
+                      disabled={search.totalHits === 0}
+                      onClick={() => jumpToMatch(1)}
+                    >
+                      <ChevronDown size={ICON.sm} strokeWidth={STROKE} />
+                    </MiniNavButton>
+                    <MiniNavButton
+                      label="Borrar búsqueda"
+                      disabled={false}
                       onClick={() => search.search('')}
-                      className="grid size-6 place-items-center rounded text-fg-3 hover:text-fg"
                     >
                       <X size={ICON.sm} strokeWidth={STROKE} />
-                    </button>
+                    </MiniNavButton>
                   </span>
                 ) : null}
               </div>
-              <ToolbarButton
-                label="Colorear líneas según su confianza OCR"
-                pressed={showConfidence}
-                disabled={!hasConfidence}
-                onClick={() => setShowConfidence((value) => !value)}
-              >
-                <Layers size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-                Confianza
-              </ToolbarButton>
-              <ToolbarButton label="Editar el texto de esta página" disabled={busy}>
-                <Pencil size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-              </ToolbarButton>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="flex items-center">
+                  <ToolbarButton
+                    label="Colorear líneas según su confianza OCR"
+                    pressed={showConfidence}
+                    disabled={!hasConfidence}
+                    onClick={toggleConfidence}
+                  >
+                    <Layers size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                    Confianza
+                  </ToolbarButton>
+                  {showConfidence && hasConfidence ? (
+                    <span className="ml-1.5 flex items-center gap-0.5">
+                      <span className="mono text-[12px] tabular-nums text-fg-2">
+                        {dudas.length} dudas
+                      </span>
+                      <MiniNavButton
+                        label="Duda anterior"
+                        disabled={dudas.length === 0}
+                        onClick={() => jumpToDuda(-1)}
+                      >
+                        <ChevronUp size={ICON.sm} strokeWidth={STROKE} />
+                      </MiniNavButton>
+                      <MiniNavButton
+                        label="Duda siguiente"
+                        disabled={dudas.length === 0}
+                        onClick={() => jumpToDuda(1)}
+                      >
+                        <ChevronDown size={ICON.sm} strokeWidth={STROKE} />
+                      </MiniNavButton>
+                    </span>
+                  ) : null}
+                </span>
+                <ToolbarButton label="Editar el texto de esta página" disabled={busy}>
+                  <Pencil size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                  Editar
+                </ToolbarButton>
+              </span>
             </div>
 
-            {/* Línea de contexto de página: nav + estado, sin card */}
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <button
                 type="button"
                 aria-label="Página anterior"
                 disabled={page.page_number <= 1}
-                onClick={() => setActivePage(page.page_number - 1)}
+                onClick={() => goToPage(page.page_number - 1)}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-2 hover:border-border-strong hover:text-fg disabled:opacity-40"
               >
                 <ChevronLeft size={ICON.md} strokeWidth={STROKE} />
@@ -430,7 +657,7 @@ export function VariantA({
                 type="button"
                 aria-label="Página siguiente"
                 disabled={page.page_number >= pages.length}
-                onClick={() => setActivePage(page.page_number + 1)}
+                onClick={() => goToPage(page.page_number + 1)}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-2 hover:border-border-strong hover:text-fg disabled:opacity-40"
               >
                 <ChevronRight size={ICON.md} strokeWidth={STROKE} />
@@ -454,7 +681,12 @@ export function VariantA({
               </span>
             </div>
 
-            {/* Contenido de la página */}
+            {noResults ? (
+              <p className="border-b border-border py-3 text-[13px] text-fg-2">
+                Sin coincidencias de «{search.query.trim()}» en este manual.
+              </p>
+            ) : null}
+
             <div className="pt-5">
               {st.key === 'failed' ? (
                 <CompactState
@@ -495,7 +727,10 @@ export function VariantA({
                   <ReadingLines
                     lines={page.ocr_lines}
                     needle={search.needle}
+                    activeMatch={activeMatch}
                     showConfidence={showConfidence && hasConfidence}
+                    activeDuda={showConfidence ? activeDuda : null}
+                    registerRow={registerRow}
                   />
                 </>
               ) : null}
@@ -503,19 +738,7 @@ export function VariantA({
           </div>
         </section>
 
-        {/* ─ Panel de imagen original ─ */}
-        <aside
-          aria-label="Imagen original de la página"
-          className="hidden border-l border-border bg-surface md:flex md:min-h-0 md:flex-col md:overflow-y-auto"
-        >
-          <div className="flex items-baseline gap-2 px-4 pb-1 pt-3">
-            <p className="text-[12.5px] font-semibold text-fg-2">Original</p>
-            <p className="mono text-[11px] tabular-nums text-fg-3">página {page.page_number}</p>
-          </div>
-          <div className="flex-1 px-4 pb-4 pt-2">
-            <PagePlaceholderImage page={page} />
-          </div>
-        </aside>
+        <OriginalPanel page={page} open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} />
       </div>
     </div>
   );

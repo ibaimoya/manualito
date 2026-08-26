@@ -100,3 +100,74 @@ Construidas las tres variantes (commits `3977bc9`, `0922e66`) y capturada la mat
    Detalles bajo demanda (entra en F3 si cabe, si no F4).
 9. RECHAZADO: filmstrip de C como navegación (ilegible, no escala); dashboardización del
    inspector permanente.
+
+## Rondas 2 y 3 — Convergencia: híbrido A+C completo (2026-08-23)
+
+**Ronda 2** (`8d9a466`): reescrito V-A con la síntesis congelada. Filas estables con números
+solo en modo confianza, navegación de dudas junto al toggle, búsqueda con anterior/siguiente y
+estado de 0 resultados, marca de búsqueda con anillo (ya no choca con lavados), acciones tras
+menú ⋯ con Eliminar separado y en rojo, panel Original plegable con placeholder intencional y
+estado sin escaneo, lavados subidos a /75 y /85, leyenda a 12px, tooltips en iconos.
+
+**Ronda 3** (`2169965`): opciones avanzadas al completo. Modo edición (textarea serif de la
+misma medida, Guardar primario, Cancelar con confirmación de descarte si hay cambios, búsqueda
+y Confianza bloqueadas, navegación de página deshabilitada), diálogo modal de eliminar (scrim,
+Escape, foco inicial en Cancelar), zoom del panel Original (−/%/+ por anchura, con scroll al
+desbordar), menú que cierra al clic fuera, «Sin dudas» en vez de «0 dudas» con chevrons,
+divider huérfano del estado failed eliminado. Nuevo `scripts/lab-interactions.mjs` (Playwright)
+para capturar estados interactivos: edición sucia, descarte, menú, diálogo ×2 temas, zoom, busy.
+
+**Autocrítica del lead (antes del jurado):** faltaba todo lo de la ronda 3 (por eso se hizo);
+el «0 dudas» era ruido; el divider huérfano en failed; el zoom por `scale` CSS no desbordaba
+con scroll (corregido a anchura).
+
+**Veredictos del jurado (sobre las capturas de rondas 2+3):**
+
+- Paco 6/10. El buscador y la edición se entienden a la primera; el diálogo de borrar "de
+  sobra claro". Estorban: iconos sin nombre (⋯, zoom), la jerga (Confianza, dudas, Duplicada,
+  %) que "parece un boletín de notas", y el busy poco obvio (le daría clics pensando que está
+  colgada). Pide esconder la telemetría de la vista normal (ya es así: conf va apagada por
+  defecto; la captura la llevaba activada).
+- Marta 7/10. "Más cerca de producto pulido que de prototipo"; salva el contorno naranja de
+  página activa, la pareja sans/serif y el sistema de confianza en claro. Caza: tirador de
+  resize nativo del textarea, tres escalas de radio conviviendo, diálogo de eliminar "de
+  librería sin retocar" (scrim gris, botón destructivo salmón sin fuerza en Brasa), lavados de
+  Brasa casi invisibles, azul Editada ≈ azul Pendiente, dots del rail redundantes con el badge.
+  Reportó la fila del 72% sin lavado: verificado con recorte ampliado que SÍ lo lleva (falso
+  positivo por reescalado), lo que confirma que el lavado error en claro es demasiado tímido.
+- Rubén 7/10. Se quedaría en la app. Rompedores: dos pares de flechas gemelas (coincidencias y
+  dudas) apiladas que confunden, la barra de búsqueda apelotonada a 375px (tocaría la X
+  queriendo la flecha), el ⋯ inalcanzable con el pulgar, el gesto atrás del móvil saltándose la
+  confirmación de descarte, dobles taps en Guardar/Eliminar.
+- Sol 7,3/10 ITERAR (arquitectura A+C intacta, aún no pasar al micropulido). Por superficie:
+  lectura+confianza "la parte más lograda"; móvil "no publicable todavía" (lectura empieza a
+  ~300px, rail sin pista de scroll, original inaccesible, targets de 24-32px); Brasa con bordes
+  a 1,4:1-2,5:1 (necesitan 3:1 no textual) y colores que repiten función; foco sin atrapar en
+  el modal ni devolución al cerrar; failed ofrece "sube una versión más nítida" pero solo hay
+  Releer; zoom recorta sin affordance de paneo ni Ajustar. Tells restantes: misma píldora para
+  todo, leyenda "de panel de laboratorio", exceso de microlabels mono, sombras genéricas,
+  iconos de biblioteca sin adaptar. Sus 5 arreglos: recomponer móvil (barra 44px + hoja de
+  páginas + Ver original), semántica de Brasa, foco/estados transitorios, toolbar con
+  «Coincidencia 1 de 7»/«Duda 1 de 8» separadas y targets 44px, recuperación (Sustituir imagen
+  primaria) y zoom completo.
+
+**Síntesis del lead (plan de Ronda 4):**
+
+1. ACEPTADO (Sol 1, Rubén 1-2): recomponer móvil. Barra de página compacta 44px con hoja de
+   páginas, búsqueda con aire (contador/flechas con targets dignos), acceso «Ver original».
+2. ACEPTADO (Sol 4, Rubén 1): toolbar con grupos separados y contadores con posición
+   («Coincidencia N de M», «Duda N de M»); el botón Editar en modo activo pasa a decir «Salir».
+3. ACEPTADO (Marta 1, Sol 2): contraste de lavados en ambos temas (el error claro también),
+   bordes funcionales a 3:1 en Brasa, botón destructivo con fuerza en Brasa.
+4. ACEPTADO (Marta 3): diálogo de eliminar en paleta propia (scrim cálido, card crema/Brasa).
+5. ACEPTADO (Marta 2): resize-none en el textarea + escala de radios unificada.
+6. ACEPTADO (Sol 3): foco al abrir confirmación de descarte en «Seguir editando»; en el lab se
+   documenta que el porte F5 usará el Dialog de Radix (trap + inert + devolución de serie).
+7. ACEPTADO (Sol 5): failed con «Sustituir imagen» primaria y «Reintentar lectura» secundaria;
+   zoom con «Ajustar» y affordance de scroll.
+8. ACEPTADO (Marta): dot de Pendiente a neutro para separarlo de Editada.
+9. APARCADO: hoja de detalles bajo demanda; sombras direccionales cálidas y sustitución de
+   iconos (F4, junto al motion); anuncio aria-live del busy (F5 con datos reales).
+10. RECHAZADO (Sol/Marta pedían retirar la leyenda o los dots): la leyenda de estados es
+    requisito de Ibai (retocable, no eliminable). Se mantiene con los dots como escaneo
+    periférico; la redundancia dot+texto es deliberada (color nunca solo).

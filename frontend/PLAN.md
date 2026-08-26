@@ -98,37 +98,34 @@ prácticas. Sin tope de horas: se itera hasta pasar el gate entero.
   session id en el log de estado tras el primer run.
 
 ### F1 Minería + diagnóstico
-- [ ] Auditoría "por qué parece de juguete" con capturas ampliadas del visor actual (hipótesis:
-      rounded-2xl ubicuo, bordes gruesos uniformes, controles 44px también en desktop, pills
-      centradas, badges pesados, jerarquía plana)
-- [ ] Minería: interfaces.dev, rareui.com (componentes vendorizables), beautifului.dev (loading
-      con tiempo transcurrido → banner de reprocesado), recent.design, pageflows, portfolios de
-      la lista de Ibai (arlan.me/vault, nachi.design, maple.dev, amicro.vercel.app, alvarosh.dev,
-      lucasmartinic.com, andremooij.com, ample.studio, manixh.dev, swamii.me, byalkor/trondao...)
-- [ ] Barrido web "AI UI tells" + catálogo §9 design-taste → checklist anti-tells destilada
-- [ ] `docs/design/visor-brief.md`: 10-15 movimientos concretos + anti-patrones + paleta coolors
-      (si se ajusta) + checklist anti-tells
-- [ ] Revisión única de Sol al brief
-- GATE F1: brief escrito y revisado.
+- [x] Auditoría "por qué parece de juguete" (8 causas en el brief)
+- [x] Minería de referencias (refs/ capturadas; recent.design timeout)
+- [x] Barrido anti-tells destilado en checklist del brief
+- [x] `docs/design/visor-brief.md` `83a0229` con 15 movimientos
+- [x] Revisión de Sol: aprobar con cambios (condiciones incorporadas)
+- GATE F1: CUMPLIDO.
 
 ### F2 Divergencia (3 variantes, calidad-prototipo)
 - [x] V-A Documento partido `3977bc9` (rail informativo, toolbar única, severidad asimétrica
       pactada con Sol, panel Original)
 - [x] V-B Lectura focal + V-C Mesa de trabajo `0922e66`
 - [x] Matriz de capturas completa (48 PNGs)
-- [ ] Ronda de jurado 1 (3 cuñaos + Sol con imágenes vía codex -i) con acta → dirección
-- GATE F2: acta con dirección y motivos.
+- [x] Ronda de jurado 1 (3 cuñaos + Sol) con acta `3d1ff77` → dirección: híbrido A+C
+- GATE F2: CUMPLIDO.
 
 Nota F1: commit brief `83a0229`. Sol sobre el brief: aprobar con cambios (condiciones en el brief).
 Nota jurado: Sol visual = exec FRESCO con `-i` (las imágenes solo se adjuntan al prompt inicial);
 la sesión persistente 01a02fae queda para nombres de commit y decisiones.
 
 ### F3 Convergencia (rondas 45-60min sobre la ganadora)
-- [ ] Opciones avanzadas rediseñadas: toggle Confianza, buscador, Editar, menú Acciones, diálogos
-      (guardar/reprocesar/eliminar), banner de reproceso, viewer de imagen (UX de zoom conservada)
-- [ ] Ronda N: construir → autocrítica (3 defectos propios ANTES del jurado) → capturas → jurado
-      → síntesis aceptado/rechazado/aparcado → cambios → commit → acta
-- GATE F3: veredicto "dirección congelada" en acta.
+- [x] Ronda 2 `8d9a466`: híbrido A+C construido (síntesis de la ronda 1)
+- [x] Ronda 3 `2169965`: opciones avanzadas completas (edición, diálogo eliminar, zoom, menú)
+      + `scripts/lab-interactions.mjs` para capturas de estados interactivos
+- [x] Jurado 2 (Paco 6, Marta 7, Rubén 7, Sol 7,3 ITERAR) + acta `20a5d02`
+- [x] Ronda 4 `591bf23`: móvil recompuesto (barra 44px + hojas), lavados plenos + regla 3px,
+      Coincidencia/Duda N de M, failed con dos acciones, diálogo en paleta, Escape en hojas
+- [x] Pase corto de Sol sobre 6 capturas: «CONGELAR.»
+- GATE F3: CUMPLIDO (dirección congelada en acta ronda 4).
 
 ### F4 Micro-pulido (el corazón)
 - [ ] Tabla control×estado al 100% (hover/focus-visible/active/disabled/loading/empty/error)

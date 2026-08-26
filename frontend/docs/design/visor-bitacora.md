@@ -171,3 +171,32 @@ con scroll (corregido a anchura).
 10. RECHAZADO (Sol/Marta pedían retirar la leyenda o los dots): la leyenda de estados es
     requisito de Ibai (retocable, no eliminable). Se mantiene con los dots como escaneo
     periférico; la redundancia dot+texto es deliberada (color nunca solo).
+
+## Ronda 4 — Cierre de convergencia y gate de F3 (2026-08-23)
+
+**Cambios** (`591bf23`), aplicando la síntesis completa de la ronda anterior:
+
+- Móvil recompuesto: el rail horizontal muere; en su lugar una barra compacta de 44px
+  («Página 2 de 6» + dot de estado) que abre una hoja inferior con leyenda y listado completo,
+  y un acceso «Ver original» que abre el escaneo a pantalla completa con cierre de 44px.
+- Búsqueda móvil: los controles internos del campo pasan a una fila propia con
+  «Coincidencia N de M» y objetivos táctiles de 44px (flechas y borrar).
+- Confianza: lavados a plena fuerza en ambos temas + regla lateral de 3px por severidad
+  (movimiento 3 del brief, que las rondas 2-3 habían dejado caer). Brasa por fin escanea.
+- «Duda N de M» cuando hay duda activa (aria-live), «N dudas» en reposo.
+- Editar en modo activo pasa a decir «Salir»; el descarte enfoca «Seguir editando».
+- Página fallida: «Sustituir la imagen» primaria + «Reintentar la lectura» secundaria
+  (el texto ya no promete una acción que no existe).
+- Diálogo de eliminar en paleta propia: scrim cálido (#221507/45) y card sobre crema/Brasa.
+- Textarea sin tirador nativo (resize-none) y MiniNav a rounded-md (escala de radios: md
+  controles menores, lg controles, xl superficies elevadas).
+- Dot de Pendiente a neutro (se separa del azul Editada). Escape cierra hojas y menú.
+- Zoom con «Ajustar al ancho» y cursor de arrastre al desbordar.
+
+**Verificación de Marta sobre el 72%:** recorte ampliado demuestra que el lavado SÍ estaba;
+falso positivo por reescalado. Con el lavado pleno ya es indiscutible.
+
+**Gate de F3 (pase corto de Sol sobre 6 capturas nuevas): «CONGELAR.»** Dirección congelada
+con los pendientes asignados: trap de foco completo → F5 (Radix Dialog), sombras
+direccionales e iconos con carácter → F4, aria-live del busy → F5, leyenda se queda
+(requisito de Ibai). F3 CERRADA. Siguiente: F4, micropulido de microanimaciones.

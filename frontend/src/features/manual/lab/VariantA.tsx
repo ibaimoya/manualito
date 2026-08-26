@@ -6,7 +6,9 @@ import {
   ChevronRight,
   ChevronUp,
   Copy,
+  Image as ImageIcon,
   Layers,
+  List,
   LoaderCircle,
   Minus,
   MoreHorizontal,
@@ -17,6 +19,7 @@ import {
   RotateCw,
   Search,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -53,6 +56,11 @@ const STATUS_DOT: Record<string, string> = {
   error: 'bg-error',
 };
 
+function statusDotClass(st: { key: string; tone: string }): string {
+  if (st.key === 'processing') return 'bg-fg-3';
+  return STATUS_DOT[st.tone] ?? 'bg-fg-3';
+}
+
 function RailRow({
   page,
   active,
@@ -79,7 +87,7 @@ function RailRow({
     >
       <span className="flex items-center gap-2">
         <span
-          className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[st.tone])}
+          className={cn('size-1.5 shrink-0 rounded-full', statusDotClass(st))}
           aria-hidden="true"
         />
         <span className={cn('text-[13px] font-semibold', active ? 'text-primary-700' : 'text-fg')}>
@@ -108,7 +116,10 @@ function RailLegend() {
           title={item.label}
           className="inline-flex items-center gap-1.5 text-[12px] text-fg-3"
         >
-          <span className={cn('size-1.5 rounded-full', STATUS_DOT[item.tone])} aria-hidden="true" />
+          <span
+            className={cn('size-1.5 rounded-full', statusDotClass(item))}
+            aria-hidden="true"
+          />
           {item.short}
         </span>
       ))}
@@ -163,7 +174,7 @@ function MiniNavButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-6 shrink-0 place-items-center rounded text-fg-3 hover:bg-surface hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
+      className="grid size-6 shrink-0 place-items-center rounded-md text-fg-3 hover:bg-surface hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>
@@ -237,10 +248,12 @@ function ReadingLines({
             className={cn(
               'grid',
               showConfidence
-                ? '-mx-2 grid-cols-[26px_minmax(0,1fr)_44px] gap-x-2.5 px-2'
+                ? 'relative -mx-2 grid-cols-[26px_minmax(0,1fr)_44px] gap-x-2.5 px-2'
                 : 'grid-cols-1',
-              showConfidence && tone?.tone === 'warning' && 'bg-warning-bg/75',
-              showConfidence && tone?.tone === 'error' && 'bg-error-bg/85',
+              problem &&
+                'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:content-[""]',
+              showConfidence && tone?.tone === 'warning' && 'bg-warning-bg before:bg-warning',
+              showConfidence && tone?.tone === 'error' && 'bg-error-bg before:bg-error',
               activeDuda === index && 'outline outline-2 -outline-offset-1 outline-primary/50',
             )}
           >
@@ -276,23 +289,15 @@ function CompactState({
   icon,
   title,
   body,
-  action,
-}: Readonly<{ icon: ReactNode; title: string; body: string; action?: string }>) {
+  actions,
+}: Readonly<{ icon: ReactNode; title: string; body: string; actions?: ReactNode }>) {
   return (
     <div className="flex items-start gap-3 pt-2">
       <span className="mt-0.5 text-fg-3">{icon}</span>
       <div className="min-w-0">
         <p className="text-[14px] font-semibold text-fg">{title}</p>
         <p className="mt-0.5 max-w-[52ch] text-[13px] leading-relaxed text-fg-2">{body}</p>
-        {action ? (
-          <button
-            type="button"
-            className="mt-2.5 inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-strong px-2.5 text-[13px] font-medium text-fg hover:bg-surface"
-          >
-            <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-            {action}
-          </button>
-        ) : null}
+        {actions ? <div className="mt-2.5 flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
     </div>
   );
@@ -300,6 +305,81 @@ function CompactState({
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
+
+function ZoomControls({
+  zoom,
+  onStep,
+  onReset,
+}: Readonly<{ zoom: number; onStep: (delta: number) => void; onReset: () => void }>) {
+  return (
+    <span className="flex items-center gap-0.5">
+      <MiniNavButton label="Alejar la imagen" disabled={zoom <= ZOOM_MIN} onClick={() => onStep(-0.25)}>
+        <Minus size={ICON.sm} strokeWidth={STROKE} />
+      </MiniNavButton>
+      <button
+        type="button"
+        title="Ajustar al ancho del panel"
+        disabled={zoom === 1}
+        onClick={onReset}
+        className="mono h-6 rounded-md px-1 text-[11px] tabular-nums text-fg-2 hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:hover:bg-transparent"
+      >
+        {Math.round(zoom * 100)}%
+      </button>
+      <MiniNavButton label="Acercar la imagen" disabled={zoom >= ZOOM_MAX} onClick={() => onStep(0.25)}>
+        <Plus size={ICON.sm} strokeWidth={STROKE} />
+      </MiniNavButton>
+    </span>
+  );
+}
+
+function PaperPreview({
+  page,
+  zoom,
+  maxWidth,
+}: Readonly<{ page: ManualDetailPage; zoom: number; maxWidth: number }>) {
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-lg border border-border bg-bg shadow-sm',
+        zoom <= 1 && 'mx-auto',
+      )}
+      style={{
+        aspectRatio:
+          page.image_width && page.image_height
+            ? `${page.image_width} / ${page.image_height}`
+            : '3 / 4',
+        width: `${zoom * 100}%`,
+        maxWidth: zoom <= 1 ? `${maxWidth}px` : undefined,
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-bg to-surface" />
+      <div className="absolute inset-x-6 top-6 space-y-2.5" aria-hidden="true">
+        {[92, 78, 85, 60, 88, 74, 40].map((width, row) => (
+          <div key={row} className="h-2 rounded-sm bg-surface-2" style={{ width: `${width}%` }} />
+        ))}
+      </div>
+      <p className="mono absolute inset-x-0 bottom-3 text-center text-[11px] text-fg-3">
+        el escaneo real aparece aquí
+      </p>
+    </div>
+  );
+}
+
+function MissingScan() {
+  return (
+    <div className="flex items-start gap-3 pt-2">
+      <AlertTriangle
+        size={16}
+        strokeWidth={STROKE}
+        className="mt-0.5 shrink-0 text-fg-3"
+        aria-hidden="true"
+      />
+      <p className="text-[13px] leading-relaxed text-fg-2">
+        Esta página no tiene escaneo guardado.
+      </p>
+    </div>
+  );
+}
 
 function OriginalPanel({
   page,
@@ -340,30 +420,8 @@ function OriginalPanel({
         <p className="text-[12.5px] font-semibold text-fg-2">Original</p>
         <p className="mono text-[11px] tabular-nums text-fg-3">página {page.page_number}</p>
         {page.image_available ? (
-          <span className="ml-auto flex items-center gap-0.5">
-            <MiniNavButton
-              label="Alejar la imagen"
-              disabled={zoom <= ZOOM_MIN}
-              onClick={() => stepZoom(-0.25)}
-            >
-              <Minus size={ICON.sm} strokeWidth={STROKE} />
-            </MiniNavButton>
-            <button
-              type="button"
-              title="Volver al tamaño real"
-              disabled={zoom === 1}
-              onClick={() => setZoom(1)}
-              className="mono h-6 rounded px-1 text-[11px] tabular-nums text-fg-2 hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:hover:bg-transparent"
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-            <MiniNavButton
-              label="Acercar la imagen"
-              disabled={zoom >= ZOOM_MAX}
-              onClick={() => stepZoom(0.25)}
-            >
-              <Plus size={ICON.sm} strokeWidth={STROKE} />
-            </MiniNavButton>
+          <span className="ml-auto">
+            <ZoomControls zoom={zoom} onStep={stepZoom} onReset={() => setZoom(1)} />
           </span>
         ) : null}
         <button
@@ -379,48 +437,14 @@ function OriginalPanel({
           <PanelRightClose size={ICON.sm} strokeWidth={STROKE} />
         </button>
       </div>
-      <div className="flex-1 overflow-auto px-4 pb-4 pt-2">
+      <div
+        className={cn('flex-1 overflow-auto px-4 pb-4 pt-2', zoom > 1 && 'cursor-grab')}
+        title={zoom > 1 ? 'Desplázate para recorrer la imagen ampliada' : undefined}
+      >
         {page.image_available ? (
-          <div
-            className={cn(
-              'relative overflow-hidden rounded-lg border border-border bg-bg shadow-sm',
-              zoom <= 1 && 'mx-auto',
-            )}
-            style={{
-              aspectRatio:
-                page.image_width && page.image_height
-                  ? `${page.image_width} / ${page.image_height}`
-                  : '3 / 4',
-              width: `${zoom * 100}%`,
-              maxWidth: zoom <= 1 ? '520px' : undefined,
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-bg to-surface" />
-            <div className="absolute inset-x-6 top-6 space-y-2.5" aria-hidden="true">
-              {[92, 78, 85, 60, 88, 74, 40].map((width, row) => (
-                <div
-                  key={row}
-                  className="h-2 rounded-sm bg-surface-2"
-                  style={{ width: `${width}%` }}
-                />
-              ))}
-            </div>
-            <p className="mono absolute inset-x-0 bottom-3 text-center text-[11px] text-fg-3">
-              el escaneo real aparece aquí
-            </p>
-          </div>
+          <PaperPreview page={page} zoom={zoom} maxWidth={520} />
         ) : (
-          <div className="flex items-start gap-3 pt-2">
-            <AlertTriangle
-              size={16}
-              strokeWidth={STROKE}
-              className="mt-0.5 shrink-0 text-fg-3"
-              aria-hidden="true"
-            />
-            <p className="text-[13px] leading-relaxed text-fg-2">
-              Esta página no tiene escaneo guardado.
-            </p>
-          </div>
+          <MissingScan />
         )}
       </div>
     </aside>
@@ -449,7 +473,10 @@ export function VariantA({
   const [draft, setDraft] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pagesSheet, setPagesSheet] = useState(false);
+  const [originalSheet, setOriginalSheet] = useState(false);
   const cancelDeleteRef = useRef<HTMLButtonElement | null>(null);
+  const keepEditingRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!deleteOpen) return;
@@ -460,6 +487,19 @@ export function VariantA({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [deleteOpen]);
+
+  const transientOpen = pagesSheet || originalSheet || actionsOpen;
+  useEffect(() => {
+    if (!transientOpen) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      setPagesSheet(false);
+      setOriginalSheet(false);
+      setActionsOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [transientOpen]);
   const rowRefs = useRef(new Map<number, HTMLDivElement>());
   const search = usePageSearch(pages);
   const [seeded, setSeeded] = useState(false);
@@ -507,8 +547,12 @@ export function VariantA({
   }
 
   function requestCancelEdit(): void {
-    if (dirty) setConfirmDiscard(true);
-    else stopEditing();
+    if (dirty) {
+      setConfirmDiscard(true);
+      requestAnimationFrame(() => keepEditingRef.current?.focus());
+    } else {
+      stopEditing();
+    }
   }
 
   function registerRow(index: number, node: HTMLDivElement | null): void {
@@ -616,11 +660,9 @@ export function VariantA({
       >
         <nav
           aria-label="Páginas del manual"
-          className="flex gap-1 overflow-x-auto border-b border-border p-2 md:flex-col md:overflow-y-auto md:border-b-0 md:border-r"
+          className="hidden md:flex md:flex-col md:gap-1 md:overflow-y-auto md:border-r md:border-border md:p-2"
         >
-          <div className="hidden md:block">
-            <RailLegend />
-          </div>
+          <RailLegend />
           {pages.map((item) => (
             <RailRow
               key={item.page_number}
@@ -631,6 +673,32 @@ export function VariantA({
             />
           ))}
         </nav>
+
+        <div className="flex h-11 items-center gap-1 border-b border-border px-2 md:hidden">
+          <button
+            type="button"
+            disabled={editing}
+            onClick={() => setPagesSheet(true)}
+            className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left disabled:opacity-45"
+          >
+            <List size={ICON.md} strokeWidth={STROKE} className="shrink-0 text-fg-2" aria-hidden="true" />
+            <span className="truncate text-[13px] font-semibold text-fg">
+              Página {page.page_number} de {pages.length}
+            </span>
+            <span
+              className={cn('size-1.5 shrink-0 rounded-full', statusDotClass(st))}
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOriginalSheet(true)}
+            className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-fg-2"
+          >
+            <ImageIcon size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+            Ver original
+          </button>
+        </div>
 
         <section
           aria-label={`Texto de la página ${page.page_number}`}
@@ -643,7 +711,7 @@ export function VariantA({
                   'flex h-8 min-w-52 flex-1 items-center gap-2 rounded-lg border pl-2.5 pr-1 transition-colors duration-150',
                   search.query
                     ? 'border-primary'
-                    : 'border-border focus-within:border-border-strong',
+                    : 'border-border-strong focus-within:border-primary/60',
                 )}
               >
                 <Search
@@ -663,7 +731,7 @@ export function VariantA({
                   className="min-w-0 flex-1 bg-transparent text-[13px] text-fg outline-none placeholder:text-fg-3 disabled:cursor-not-allowed [&::-webkit-search-cancel-button]:appearance-none"
                 />
                 {search.query ? (
-                  <span className="flex shrink-0 items-center gap-0.5">
+                  <span className="hidden shrink-0 items-center gap-0.5 md:flex">
                     <span
                       className="mono px-1 text-[12px] tabular-nums text-fg-2"
                       aria-live="polite"
@@ -711,8 +779,10 @@ export function VariantA({
                         <span className="text-[12px] text-fg-3">Sin dudas</span>
                       ) : (
                         <>
-                          <span className="mono text-[12px] tabular-nums text-fg-2">
-                            {dudas.length} dudas
+                          <span className="mono text-[12px] tabular-nums text-fg-2" aria-live="polite">
+                            {activeDuda !== null && dudas.includes(activeDuda)
+                              ? `Duda ${dudas.indexOf(activeDuda) + 1} de ${dudas.length}`
+                              : `${dudas.length} dudas`}
                           </span>
                           <MiniNavButton
                             label="Duda anterior"
@@ -740,10 +810,46 @@ export function VariantA({
                   onClick={() => (editing ? requestCancelEdit() : startEditing())}
                 >
                   <Pencil size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
-                  Editar
+                  {editing ? 'Salir' : 'Editar'}
                 </ToolbarButton>
               </span>
             </div>
+
+            {search.query && !editing ? (
+              <div className="-mt-2 flex items-center pb-2 md:hidden">
+                <span className="text-[13px] text-fg-2" aria-live="polite">
+                  {search.totalHits === 0
+                    ? 'Sin coincidencias'
+                    : `Coincidencia ${search.activePosition} de ${search.totalHits}`}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Coincidencia anterior"
+                  disabled={search.totalHits === 0}
+                  onClick={() => jumpToMatch(-1)}
+                  className="ml-auto grid size-11 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
+                >
+                  <ChevronUp size={ICON.md} strokeWidth={STROKE} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Coincidencia siguiente"
+                  disabled={search.totalHits === 0}
+                  onClick={() => jumpToMatch(1)}
+                  className="grid size-11 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
+                >
+                  <ChevronDown size={ICON.md} strokeWidth={STROKE} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Borrar búsqueda"
+                  onClick={() => search.search('')}
+                  className="grid size-11 place-items-center rounded-lg text-fg-2"
+                >
+                  <X size={ICON.md} strokeWidth={STROKE} />
+                </button>
+              </div>
+            ) : null}
 
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <button
@@ -799,8 +905,25 @@ export function VariantA({
                 <CompactState
                   icon={<AlertTriangle size={18} strokeWidth={STROKE} aria-hidden="true" />}
                   title="No pudimos leer esta página"
-                  body="La foto salió demasiado oscura o movida. Reintenta la lectura o sube una versión más nítida."
-                  action="Releer esta página"
+                  body="La foto salió demasiado oscura o movida. Sube una versión más nítida o vuelve a intentar la lectura."
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[13px] font-semibold text-fg-inv hover:opacity-90"
+                      >
+                        <Upload size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                        Sustituir la imagen
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-strong px-2.5 text-[13px] font-medium text-fg hover:bg-surface"
+                      >
+                        <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                        Reintentar la lectura
+                      </button>
+                    </>
+                  }
                 />
               ) : null}
               {st.key === 'processing' ? (
@@ -827,7 +950,7 @@ export function VariantA({
                     }}
                     aria-label={`Editar el texto de la página ${page.page_number}`}
                     rows={Math.max(8, draft.split('\n').length + 1)}
-                    className="w-full resize-y rounded-lg border border-border bg-bg px-3.5 py-3 font-serif text-[15.5px] leading-[1.72] text-fg outline-none focus:border-primary"
+                    className="w-full resize-none rounded-lg border border-border-strong bg-bg px-3.5 py-3 font-serif text-[15.5px] leading-[1.72] text-fg outline-none focus:border-primary"
                   />
                   <div className="mt-3 flex flex-wrap items-center gap-2.5">
                     {confirmDiscard ? (
@@ -842,6 +965,7 @@ export function VariantA({
                         </button>
                         <button
                           type="button"
+                          ref={keepEditingRef}
                           onClick={() => setConfirmDiscard(false)}
                           className="inline-flex h-8 items-center rounded-lg border border-border-strong px-3 text-[13px] font-medium text-fg hover:bg-surface"
                         >
@@ -905,12 +1029,66 @@ export function VariantA({
         <OriginalPanel page={page} open={panelOpen} onToggle={() => setPanelOpen((v) => !v)} />
       </div>
 
+      {pagesSheet ? (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            aria-label="Cerrar el listado de páginas"
+            tabIndex={-1}
+            onClick={() => setPagesSheet(false)}
+            className="absolute inset-0 cursor-default bg-black/35"
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[72dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-bg p-3 pb-5">
+            <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-border-strong" aria-hidden="true" />
+            <RailLegend />
+            <div className="flex flex-col gap-1">
+              {pages.map((item) => (
+                <RailRow
+                  key={item.page_number}
+                  page={item}
+                  active={item.page_number === page.page_number}
+                  hits={search.hitsByPage.get(item.page_number) ?? 0}
+                  onSelect={() => {
+                    goToPage(item.page_number);
+                    setPagesSheet(false);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {originalSheet ? (
+        <div className="fixed inset-0 z-40 flex flex-col bg-bg md:hidden">
+          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
+            <p className="text-[13px] font-semibold text-fg">Original</p>
+            <p className="mono text-[11px] tabular-nums text-fg-3">página {page.page_number}</p>
+            <button
+              type="button"
+              aria-label="Cerrar la imagen original"
+              onClick={() => setOriginalSheet(false)}
+              className="ml-auto grid size-11 place-items-center rounded-lg text-fg-2"
+            >
+              <X size={ICON.md} strokeWidth={STROKE} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {page.image_available ? (
+              <PaperPreview page={page} zoom={1} maxWidth={520} />
+            ) : (
+              <MissingScan />
+            )}
+          </div>
+        </div>
+      ) : null}
+
       {deleteOpen ? (
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="lab-delete-title"
-          className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4"
+          className="fixed inset-0 z-50 grid place-items-center bg-[#221507]/45 p-4"
         >
           <button
             type="button"
@@ -919,7 +1097,7 @@ export function VariantA({
             onClick={() => setDeleteOpen(false)}
             className="absolute inset-0 cursor-default"
           />
-          <div className="relative w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-lg">
+          <div className="relative w-full max-w-sm rounded-xl border border-border bg-bg p-5 shadow-lg">
             <p id="lab-delete-title" className="text-[15px] font-semibold text-fg">
               ¿Eliminar este manual?
             </p>

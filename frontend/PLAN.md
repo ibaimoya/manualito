@@ -58,11 +58,11 @@ El código v1 del lab queda como referencia de QUÉ NO y para canibalizar fixtur
 - GATE N0: CUMPLIDO.
 
 ### N1 Lenguaje visual v2 (~2h)
-- [ ] `docs/design/lenguaje-visor.md` + página de muestra en /lab (ruta ?v=lang): tipografía
-      con jerarquía real, superficies/profundidad, radios, sombras cálidas direccionales,
-      iconografía con carácter, expresión de confianza y estados nueva, microcopy con voz
-- [ ] Paleta coolors.co si se ajusta algún color
-- GATE N1: muestra renderizada, auditada anti-IA, filmstrip de sus hovers.
+- [x] `docs/design/lenguaje-visor.md` + muestra viva `/lab?v=lang` (LangSheet + lang-sheet.css)
+- [x] Literata Variable instalada; confianza = rotulador; leyenda humana; mascota meeple
+- [x] Derivados de color propuestos con coolors en la hoja (--m-paper, --hl-media, --hl-baja)
+- [x] Hover verificado dinámicamente (filmstrip + computed styles); anti-IA limpio
+- GATE N1: CUMPLIDO.
 
 ### N2 Divergencia estructural nueva (~4h)
 - [ ] 3 composiciones NUEVAS (V-D, V-E, V-F) que NO partan del A+C muerto; cada una diseñada

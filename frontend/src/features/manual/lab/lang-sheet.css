@@ -1,0 +1,76 @@
+/* Lenguaje visual v2 del visor: tokens derivados y gestos de la muestra /lab?v=lang.
+   Los nuevos valores (--lab-paper, --hl-*) son candidatos a token en el porte. */
+
+:root {
+  --lab-paper: #fffdf8;
+  --hl-media: #f2d98c;
+  --hl-baja: #f4b8ae;
+}
+
+html.theme-dark {
+  --lab-paper: #1e1710;
+  --hl-media: #4a3a12;
+  --hl-baja: #52241c;
+}
+
+/* Trazo de rotulador: abraza el texto, no la fila. Radios asimétricos = gesto de mano. */
+.lang-hl {
+  border-radius: 0.4em 0.25em 0.5em 0.3em;
+  padding: 0.08em 0.28em;
+  margin: -0.08em -0.05em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.lang-hl-media {
+  background: var(--hl-media);
+}
+
+.lang-hl-baja {
+  background: var(--hl-baja);
+}
+
+/* Texto de lectura: Literata con partición de palabras en español. */
+.lang-reading {
+  font-family: 'Literata Variable', Literata, Georgia, 'Times New Roman', serif;
+  font-size: 17px;
+  line-height: 1.68;
+  hyphens: auto;
+}
+
+/* Lift de hover con sombra cálida, solo en punteros finos. */
+.lang-lift {
+  transition:
+    translate 150ms var(--m-easing),
+    box-shadow 150ms var(--m-easing),
+    scale 160ms var(--m-easing);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lang-lift:hover {
+    translate: 0 -1px;
+    box-shadow: var(--m-shadow-sm);
+  }
+}
+
+.lang-lift:active {
+  scale: 0.97;
+  translate: 0 0;
+}
+
+/* Mascota flotante: solo estados raros, y quieta si el usuario lo pide. */
+@media (prefers-reduced-motion: no-preference) {
+  .lang-bob {
+    animation: lang-bob 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes lang-bob {
+    from {
+      translate: 0 -4px;
+    }
+
+    to {
+      translate: 0 4px;
+    }
+  }
+}

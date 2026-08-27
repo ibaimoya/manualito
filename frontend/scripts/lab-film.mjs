@@ -1,6 +1,7 @@
 // Evidencia dinámica del laboratorio: vídeo + filmstrip + layout shift por interacción.
-// Uso: node scripts/lab-film.mjs <nombre> "<query de /lab>" "<selector o role:Nombre>" [frames]
+// Uso: node scripts/lab-film.mjs <nombre> "<query de /lab>" "<selector o role:Nombre>" [frames] [hover]
 //   node scripts/lab-film.mjs toggle-confianza "v=a&esc=base&th=light" "role:Colorear líneas según su confianza OCR"
+// El 5º argumento "hover" hace hover en vez de click (para filmar estados de puntero).
 // Salida: .lab-shots/film/<nombre>/ con frame-*.png, video.webm y cls.json (falla si CLS > 0).
 
 import { mkdirSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
@@ -11,7 +12,7 @@ import { chromium } from 'playwright';
 const BASE = process.env.LAB_BASE ?? 'http://127.0.0.1:5174';
 const FRAME_TIMES = [0, 60, 120, 180, 240, 320, 480];
 
-const [name, query, target, framesArg] = process.argv.slice(2);
+const [name, query, target, framesArg, action] = process.argv.slice(2);
 if (!name || !query || !target) {
   console.error('uso: node scripts/lab-film.mjs <nombre> "<query>" "<selector|role:Nombre>" [t1,t2,...]');
   process.exit(1);
@@ -51,7 +52,8 @@ const locator = target.startsWith('role:')
   ? page.getByRole('button', { name: target.slice(5) })
   : page.locator(target);
 
-await locator.first().click();
+if (action === 'hover') await locator.first().hover();
+else await locator.first().click();
 const t0 = Date.now();
 for (const t of frameTimes) {
   const wait = t - (Date.now() - t0);

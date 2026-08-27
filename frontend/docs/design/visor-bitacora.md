@@ -240,3 +240,20 @@ según imports (tree-shakeable), solo en el bundle del visor.
 y layout shift SIN filtrar hadRecentInput (el CLS clásico excluye los shifts tras input, que es
 justo lo que hay que cazar aquí). Prueba de fuego: el toggle Confianza de la v1 da CLS 0.0049 y
 exit 2. La herramienta detecta el defecto exacto que Ibai sintió con las manos. GATE N0 cumplido.
+
+## N1 — Lenguaje visual v2 (2026-08-24 00:05)
+
+`docs/design/lenguaje-visor.md` + muestra viva en `/lab?v=lang` (light y Brasa capturados).
+Decisiones: metáfora mesa/papel/objetos con las sombras cálidas de marca (que la v1 no
+aprovechaba), Literata Variable para la lectura (17px/1.68, nueva dep
+`@fontsource-variable/literata`), título a 26px Manrope 800, mono SOLO en datos, la confianza
+pasa de wash de fila a TRAZO DE ROTULADOR que abraza el texto (radios asimétricos,
+box-decoration-break), leyenda en una línea tranquila con voz humana («Bien leída», «Con
+dudas», «Aún leyendo»), mascota meeple flotante para estados raros, microcopy sin jerga
+(«Leer de nuevo», nunca «Reprocesar»). Derivados de color propuestos: --m-paper, --hl-media,
+--hl-baja (coolors en la hoja).
+
+Evidencia dinámica: hover del botón primario verificado (translate 0 -1px + --m-shadow-sm,
+transición translate/box-shadow/scale 150ms) con vídeo y filmstrip en
+`.lab-shots/film/lang-hover-guardar/`. Auditoría anti-IA de la muestra: limpia. GATE N1
+cumplido.

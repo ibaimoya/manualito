@@ -45,6 +45,7 @@
     "clsx": "^2.1.1",
     "i18next": "^26.3.6",
     "lucide-react": "^1.29.0",
+    "motion": "^13.1.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",

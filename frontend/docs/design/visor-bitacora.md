@@ -223,3 +223,20 @@ hacen los que saben".
 bajo el cursor, motion-first con spec por control, evidencia dinámica obligatoria (filmstrips,
 vídeo, CLS=0 por interacción), lenguaje visual nuevo prohibiendo el vocabulario v1, dependencia
 `motion` autorizada por el mandato de springs, y el único gate vinculante es Ibai a las 16:00.
+
+## N0 — Recetario y evidencia dinámica (2026-08-23 23:20)
+
+`docs/design/recetario-jugueton.md`: 18 recetas con valores minadas de Family (ensayo
+family-values + catálogo de 64 clips de 60fps.design), Emil (RECIPES de la colección
+instalada, Vaul, Sonner) y Rauno. Los tres pilares Family: trays de altura variable,
+continuidad (nada se teletransporta) y curva deleite-frecuencia.
+
+**Dependencia `motion` 13.1.1 instalada** (motion.dev). Justificación: el mandato Family/Arc
+exige layoutId morphs (botón→sheet, spinner que migra), FLIP del toggle de confianza y
+springs interrumpibles con herencia de velocidad, inexpresables en CSS. Coste ~5-18 KB gzip
+según imports (tree-shakeable), solo en el bundle del visor.
+
+`scripts/lab-film.mjs`: por interacción graba vídeo .webm, filmstrip a 0/60/120/180/240/320/480ms
+y layout shift SIN filtrar hadRecentInput (el CLS clásico excluye los shifts tras input, que es
+justo lo que hay que cazar aquí). Prueba de fuego: el toggle Confianza de la v1 da CLS 0.0049 y
+exit 2. La herramienta detecta el defecto exacto que Ibai sintió con las manos. GATE N0 cumplido.

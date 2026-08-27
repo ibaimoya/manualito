@@ -49,13 +49,13 @@ El código v1 del lab queda como referencia de QUÉ NO y para canibalizar fixtur
 ## Fases nocturnas (marcar al cerrar; no parar entre fases)
 
 ### N0 Recetario de los que saben (~1,5h)
-- [ ] Minar Family (family.co, posts de Benji Taylor, análisis de Emil sobre Family), Arc
-      (motion de Browser Company), Vaul y Sonner (código real de Emil), Rauno (craft),
-      colección animations ya instalada en .agents/skills
-- [ ] Destilar `docs/design/recetario-jugueton.md`: ≥15 recetas CONCRETAS con valores
-      (springs stiffness/damping/bounce, morphs, staggers, gestos, hovers con carácter),
-      cada una con "dónde aplica en el visor"
-- GATE N0: recetario escrito con valores copiables, no vaguedades.
+- [x] Minado: benji.org/family-values, catálogo 60fps.design (64 clips), RECIPES de Emil,
+      rauno.me/craft/interaction-design
+- [x] `docs/design/recetario-jugueton.md`: 18 recetas con valores y destino en el visor
+- [x] `motion` 13.1.1 instalada (justificada en bitácora)
+- [x] `scripts/lab-film.mjs`: vídeo + filmstrip + layout shift por interacción (cuenta
+      hadRecentInput a propósito); el toggle v1 da CLS 0.0049 → detecta el defecto de Ibai
+- GATE N0: CUMPLIDO.
 
 ### N1 Lenguaje visual v2 (~2h)
 - [ ] `docs/design/lenguaje-visor.md` + página de muestra en /lab (ruta ?v=lang): tipografía

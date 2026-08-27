@@ -28,6 +28,7 @@ import { confidenceTone, pageStatus, pageStatusLegend } from '@/features/manual/
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import { cn } from '@/shared/lib/cn';
+import '@/features/manual/lab/lab-motion.css';
 
 /* Dirección congelada (acta ronda 1): híbrido A+C. Tres zonas con panel plegable, filas
    estables de confianza con números solo en ese modo, navegación entre dudas a lo FineReader,
@@ -149,7 +150,7 @@ function ToolbarButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-medium transition-[border-color,background-color,color] duration-150 ease-[var(--ease-mn)]',
+        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-medium transition-[border-color,background-color,color,scale] duration-150 ease-[var(--ease-mn)] active:scale-[0.98]',
         pressed
           ? 'border-primary text-primary-700'
           : 'border-border bg-transparent text-fg-2 hover:border-border-strong hover:text-fg',
@@ -174,7 +175,7 @@ function MiniNavButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-6 shrink-0 place-items-center rounded-md text-fg-3 hover:bg-surface hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
+      className="grid size-6 shrink-0 place-items-center rounded-md text-fg-3 transition-[background-color,color,scale] duration-150 ease-[var(--ease-mn)] hover:bg-surface hover:text-fg active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
     >
       {children}
     </button>
@@ -254,7 +255,8 @@ function ReadingLines({
                 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:content-[""]',
               showConfidence && tone?.tone === 'warning' && 'bg-warning-bg before:bg-warning',
               showConfidence && tone?.tone === 'error' && 'bg-error-bg before:bg-error',
-              activeDuda === index && 'outline outline-2 -outline-offset-1 outline-primary/50',
+              activeDuda === index &&
+                'mn-duda-land outline outline-2 -outline-offset-1 outline-primary/50',
             )}
           >
             {showConfidence ? (
@@ -438,7 +440,7 @@ function OriginalPanel({
         </button>
       </div>
       <div
-        className={cn('flex-1 overflow-auto px-4 pb-4 pt-2', zoom > 1 && 'cursor-grab')}
+        className={cn('mn-panel-in flex-1 overflow-auto px-4 pb-4 pt-2', zoom > 1 && 'cursor-grab')}
         title={zoom > 1 ? 'Desplázate para recorrer la imagen ampliada' : undefined}
       >
         {page.image_available ? (
@@ -636,7 +638,7 @@ export function VariantA({
       </header>
 
       {busy ? (
-        <div className="flex items-center gap-3 border-b border-border bg-surface px-5 py-2">
+        <div className="mn-banner-in flex items-center gap-3 border-b border-border bg-surface px-5 py-2">
           <LoaderCircle
             size={ICON.sm}
             strokeWidth={STROKE}
@@ -910,7 +912,7 @@ export function VariantA({
                     <>
                       <button
                         type="button"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[13px] font-semibold text-fg-inv hover:opacity-90"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98]"
                       >
                         <Upload size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
                         Sustituir la imagen
@@ -959,7 +961,7 @@ export function VariantA({
                         <button
                           type="button"
                           onClick={stopEditing}
-                          className="inline-flex h-8 items-center rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv hover:opacity-90"
+                          className="inline-flex h-8 items-center rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98]"
                         >
                           Descartar
                         </button>
@@ -978,7 +980,7 @@ export function VariantA({
                           type="button"
                           disabled={!dirty}
                           onClick={stopEditing}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv hover:opacity-90 disabled:opacity-45"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98] disabled:opacity-45"
                         >
                           <Check size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
                           Guardar cambios
@@ -1036,9 +1038,9 @@ export function VariantA({
             aria-label="Cerrar el listado de páginas"
             tabIndex={-1}
             onClick={() => setPagesSheet(false)}
-            className="absolute inset-0 cursor-default bg-black/35"
+            className="mn-scrim-in absolute inset-0 cursor-default bg-black/35"
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[72dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-bg p-3 pb-5">
+          <div className="mn-sheet-in absolute inset-x-0 bottom-0 max-h-[72dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-bg p-3 pb-5">
             <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-border-strong" aria-hidden="true" />
             <RailLegend />
             <div className="flex flex-col gap-1">
@@ -1060,7 +1062,7 @@ export function VariantA({
       ) : null}
 
       {originalSheet ? (
-        <div className="fixed inset-0 z-40 flex flex-col bg-bg md:hidden">
+        <div className="mn-cover-in fixed inset-0 z-40 flex flex-col bg-bg md:hidden">
           <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
             <p className="text-[13px] font-semibold text-fg">Original</p>
             <p className="mono text-[11px] tabular-nums text-fg-3">página {page.page_number}</p>
@@ -1088,7 +1090,7 @@ export function VariantA({
           role="dialog"
           aria-modal="true"
           aria-labelledby="lab-delete-title"
-          className="fixed inset-0 z-50 grid place-items-center bg-[#221507]/45 p-4"
+          className="mn-scrim-in fixed inset-0 z-50 grid place-items-center bg-[#221507]/45 p-4"
         >
           <button
             type="button"
@@ -1097,7 +1099,7 @@ export function VariantA({
             onClick={() => setDeleteOpen(false)}
             className="absolute inset-0 cursor-default"
           />
-          <div className="relative w-full max-w-sm rounded-xl border border-border bg-bg p-5 shadow-lg">
+          <div className="mn-dialog-in relative w-full max-w-sm rounded-xl border border-border bg-bg p-5 shadow-lg">
             <p id="lab-delete-title" className="text-[15px] font-semibold text-fg">
               ¿Eliminar este manual?
             </p>
@@ -1117,7 +1119,7 @@ export function VariantA({
               <button
                 type="button"
                 onClick={() => setDeleteOpen(false)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv hover:opacity-90"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98]"
               >
                 <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
                 Eliminar manual

@@ -200,3 +200,26 @@ falso positivo por reescalado. Con el lavado pleno ya es indiscutible.
 con los pendientes asignados: trap de foco completo → F5 (Radix Dialog), sombras
 direccionales e iconos con carácter → F4, aria-live del busy → F5, leyenda se queda
 (requisito de Ibai). F3 CERRADA. Siguiente: F4, micropulido de microanimaciones.
+
+## Ronda 5 — Rechazo de Ibai y reinicio v2 (2026-08-23 22:45)
+
+Ibai probó el laboratorio con las manos y rechazó el resultado entero: "hay tantas cutreces
+que no sé ni por dónde empezar, la ux es bastante mala", "clicas en confianza y no puedes
+volver a clicar porque se ha movido el botón, además sin ningún tipo de animación", "no hay
+microanimaciones, ni siquiera animaciones, no es ni un 1 por ciento de lo que querría",
+"se nota que es IA", "has reutilizado muchas cosas que eran cutres cuando la idea era darle
+un lavado de cara".
+
+**Diagnóstico del lead (asumido):** el proceso validó con capturas estáticas (jurados, Sol y
+yo), nadie sintió un click; hice extensión de estados en vez de profundidad de sensación; el
+lavado de cara no ocurrió porque reutilicé el vocabulario visual viejo; el motion fue capa
+final en vez de diseño; el gate lo dio un proxy en fotos. El CONGELAR de Sol queda anulado.
+
+**Decisiones de Ibai:** desde cero TODO (estructura incluida), tacto de referencia Family/Arc
+(juguetón), campaña nocturna autónoma sin parar hasta 2026-08-24 16:00, "mira a ver como lo
+hacen los que saben".
+
+**Arranca la campaña v2** (plan nuevo en `frontend/PLAN.md`): regla cero de no-desplazamiento
+bajo el cursor, motion-first con spec por control, evidencia dinámica obligatoria (filmstrips,
+vídeo, CLS=0 por interacción), lenguaje visual nuevo prohibiendo el vocabulario v1, dependencia
+`motion` autorizada por el mandato de springs, y el único gate vinculante es Ibai a las 16:00.

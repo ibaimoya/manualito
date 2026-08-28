@@ -1,8 +1,9 @@
 // Evidencia dinámica del laboratorio: vídeo + filmstrip + layout shift por interacción.
-// Uso: node scripts/lab-film.mjs <nombre> "<query de /lab>" "<selector o role:Nombre>" [frames] [hover]
+// Uso: node scripts/lab-film.mjs <nombre> "<query de /lab>" "<selector o role:Nombre>" [frames] [accion] [maxCls]
 //   node scripts/lab-film.mjs toggle-confianza "v=a&esc=base&th=light" "role:Colorear líneas según su confianza OCR"
-// El 5º argumento "hover" hace hover en vez de click (para filmar estados de puntero).
-// Salida: .lab-shots/film/<nombre>/ con frame-*.png, video.webm y cls.json (falla si CLS > 0).
+// accion: "hover" hace hover en vez de click. maxCls: umbral de layout shift permitido para
+// interacciones cuya esencia ES una expansión animada (acordeones); por defecto 0.
+// Salida: .lab-shots/film/<nombre>/ con frame-*.png, video.webm y cls.json.
 
 import { mkdirSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,7 +13,8 @@ import { chromium } from 'playwright';
 const BASE = process.env.LAB_BASE ?? 'http://127.0.0.1:5174';
 const FRAME_TIMES = [0, 60, 120, 180, 240, 320, 480];
 
-const [name, query, target, framesArg, action] = process.argv.slice(2);
+const [name, query, target, framesArg, action, maxClsArg] = process.argv.slice(2);
+const maxCls = maxClsArg ? Number(maxClsArg) : 0;
 if (!name || !query || !target) {
   console.error('uso: node scripts/lab-film.mjs <nombre> "<query>" "<selector|role:Nombre>" [t1,t2,...]');
   process.exit(1);
@@ -81,8 +83,8 @@ for (const f of readdirSync(OUT)) {
   if (f.endsWith('.webm')) renameSync(join(OUT, f), join(OUT, 'video.webm'));
 }
 
-console.log(`lab-film: ${name} → ${frameTimes.length} frames + video.webm | CLS=${cls.total.toFixed(4)}`);
-if (cls.total > 0) {
+console.log(`lab-film: ${name} → ${frameTimes.length} frames + video.webm | CLS=${cls.total.toFixed(4)} (max ${maxCls})`);
+if (cls.total > maxCls) {
   console.error(`lab-film: FALLO regla cero, layout shift ${cls.total.toFixed(4)}:`, JSON.stringify(cls.entries));
   process.exit(2);
 }

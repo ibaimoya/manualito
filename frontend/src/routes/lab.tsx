@@ -10,6 +10,8 @@ import { LabSwitcher, type LabSearch, type LabVariant } from '@/features/manual/
 import { LangSheet } from '@/features/manual/lab/LangSheet';
 import { Variant0 } from '@/features/manual/lab/Variant0';
 import { VariantD } from '@/features/manual/lab/VariantD';
+import { VariantE } from '@/features/manual/lab/VariantE';
+import { VariantF } from '@/features/manual/lab/VariantF';
 import { VariantA } from '@/features/manual/lab/VariantA';
 import { VariantB } from '@/features/manual/lab/VariantB';
 import { VariantC } from '@/features/manual/lab/VariantC';
@@ -21,7 +23,7 @@ function parseSearch(search: Record<string, unknown>): LabSearch {
     : 'base';
   const pg = Number(search.pg);
   return {
-    v: ['0', 'a', 'b', 'c', 'lang', 'd'].includes(search.v as string)
+    v: ['0', 'a', 'b', 'c', 'lang', 'd', 'e', 'f'].includes(search.v as string)
       ? (search.v as LabVariant)
       : '0',
     esc,
@@ -95,6 +97,24 @@ function LabScreen() {
       {search.v === 'lang' ? <LangSheet /> : null}
       {search.v === 'd' ? (
         <VariantD
+          key={`${search.esc}-${search.pg}-${seededQuery}`}
+          escenario={search.esc}
+          initialPage={search.pg}
+          showConfidence={search.conf}
+          seededQuery={seededQuery}
+        />
+      ) : null}
+      {search.v === 'e' ? (
+        <VariantE
+          key={`${search.esc}-${search.pg}-${seededQuery}`}
+          escenario={search.esc}
+          initialPage={search.pg}
+          showConfidence={search.conf}
+          seededQuery={seededQuery}
+        />
+      ) : null}
+      {search.v === 'f' ? (
+        <VariantF
           key={`${search.esc}-${search.pg}-${seededQuery}`}
           escenario={search.esc}
           initialPage={search.pg}

@@ -257,3 +257,65 @@ Evidencia dinámica: hover del botón primario verificado (translate 0 -1px + --
 transición translate/box-shadow/scale 150ms) con vídeo y filmstrip en
 `.lab-shots/film/lang-hover-guardar/`. Auditoría anti-IA de la muestra: limpia. GATE N1
 cumplido.
+
+## N2 — Specs motion-first de la divergencia (2026-08-24 00:15)
+
+Tres estructuras nuevas, ninguna hereda el esqueleto A+C. Spec ANTES del código.
+
+**V-D «El atril»** (la más Family). Un solo objeto en escena: la hoja de papel del manual
+sobre la mesa, con las hojas vecinas asomando por los bordes como una pila. Todas las
+herramientas viven en un BOLSILLO flotante inferior centrado (dock) que MORFA en la
+herramienta pulsada (tray que crece hacia arriba desde el dock, transform-origin abajo,
+spring duration 0.5 bounce 0.2 con Motion layout; contenido crossfade 150ms; Esc o clic
+fuera lo devuelve). Herramientas: Buscar (campo + N de M + flechas), Dudas (activa los
+trazos de rotulador, que entran con scaleX desde la izquierda 240ms stagger 40ms, y navega
+Duda N de M), Editar (la hoja se vuelve editable, el tray muestra Guardar/Cancelar),
+Original (el escaneo entra como segunda hoja desde la derecha con spring y la de texto se
+desliza a la izquierda), Hojas en móvil (lista de páginas). Pasar de hoja: clic en el borde
+de la vecina = la actual sale 24px con fade 180ms ease-out y la nueva entra del lado del
+avance; con TECLADO el cambio es instantáneo (regla de ausencia). El margen derecho del
+papel está SIEMPRE reservado: al activar dudas los % aparecen con fade sin desplazar nada.
+Estados raros sobre el propio papel con la mascota.
+
+**V-E «El taller»**. Dos hojas sobre la mesa (texto y escaneo, lado a lado); la pila de
+páginas es un MAZO en el borde izquierdo con esquinas dobladas del color del estado
+(dog-ear); pulsar una hoja del mazo la trae al centro con spring y el mazo se recoloca.
+Las herramientas son un estuche superior: el rotulador de dudas se DESTAPA (rota 15º) al
+activarse. El escaneo se acerca/aleja arrastrando (metáfora física del zoom).
+
+**V-F «La libreta»**. Lectura continua vertical de TODO el manual (muere la paginación):
+separadores de perforación entre hojas, cabecera de hoja pegajosa, y un índice de PESTAÑAS
+de colores en el borde derecho (como un cuaderno con pestañas por estado) que navega y
+refleja la posición del scroll. La búsqueda y las dudas saltan por scroll. El escaneo de
+cada hoja se despliega bajo su bloque (acordeón).
+
+Orden de construcción: D (favorita presunta a falsificar), E, F. Cada una con filmstrip +
+CLS=0 de sus 2-3 interacciones clave antes de pasar a la siguiente.
+
+## N2 — Divergencia construida (2026-08-24 00:55)
+
+Las tres variantes viven en /lab con Motion y evidencia dinámica:
+
+- **V-D «El atril»** (`251089e`): dock que morfa en cada herramienta (spring 0.5/0.2, FLIP
+  con popLayout), rotulador que SE DIBUJA en cascada sobre el texto (background-size, solo
+  pintura), cambio de hoja direccional 180ms, escaneo como segunda hoja con spring, mascota
+  en estados raros. Filmstrips: morph del dock (overshoot visible a 160ms), dibujo del
+  rotulador (medio trazo a 60ms), cambio de hoja. CLS=0 fuera del morph diseñado.
+- **V-E «El taller»**: mazo de hojas con esquinas dobladas del color del estado (dog-ear
+  CSS), rotación alterna ±0.8º con la activa enderezada y adelantada (spring), estuche
+  superior con el rotulador que se destapa (rota -15º al activarse), dos hojas sobre la mesa
+  (texto + escaneo pegajoso). Filmstrips: tirar del mazo (CLS=0), destape (CLS=0).
+- **V-F «La libreta»**: todo el manual en un scroll con perforaciones, cabecera pegajosa con
+  hoja actual (IntersectionObserver), pestañas físicas de colores en el borde derecho que se
+  DESLIZAN con transform (nada de animar width: primera versión pillada por el banco con
+  microshifts en la NAV), escaneo desplegable por hoja, dudas y búsqueda globales por scroll.
+  Filmstrips: salto por pestaña (CLS=0), acordeón del escaneo (0.03 dentro del umbral 0.05
+  documentado: los acordeones animan altura por necesidad, Emil lo sanciona, y el patrón de
+  entradas pequeñas decrecientes demuestra suavidad).
+
+**Arreglos de regla cero cazados por el banco:** el trazo del rotulador empujaba el texto
+0.23em al activarse (padding sin margen espejo) → margen espejo exacto, el texto no se mueve
+un píxel en NINGUNA variante; las pestañas de F animaban width → transform puro; lab-film
+gana umbral maxCls por interacción para expansiones cuya esencia es mover contenido.
+
+GATE N2: CUMPLIDO (3 variantes vivas, filmstrips + vídeos en .lab-shots/film/, CLS según regla).

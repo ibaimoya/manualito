@@ -65,12 +65,13 @@ El código v1 del lab queda como referencia de QUÉ NO y para canibalizar fixtur
 - GATE N1: CUMPLIDO.
 
 ### N2 Divergencia estructural nueva (~4h)
-- [ ] 3 composiciones NUEVAS (V-D, V-E, V-F) que NO partan del A+C muerto; cada una diseñada
-      motion-first (spec de interacción por control antes del código) y construida con
-      `motion` desde el primer commit
-- [ ] Filmstrips + vídeos de las 3 en sus interacciones clave (toggle confianza, búsqueda,
-      cambio de página, panel/imagen)
-- GATE N2: 3 variantes vivas con evidencia dinámica y CLS=0.
+- [x] V-D «El atril» `251089e`, V-E «El taller», V-F «La libreta» construidas con Motion
+      tras spec motion-first en bitácora
+- [x] Filmstrips + vídeos de las interacciones clave en .lab-shots/film/ (dock morph, dibujo
+      del rotulador, mazo, destape, pestañas, acordeón)
+- [x] Regla cero endurecida: margen espejo del rotulador, pestañas por transform, maxCls
+      explícito para acordeones
+- GATE N2: CUMPLIDO.
 
 ### N3 Convergencia por tacto (~3h)
 - [ ] Jurado (Paco/Marta/Rubén) + Sol sobre FILMSTRIPS y vídeos, con pregunta añadida "¿qué

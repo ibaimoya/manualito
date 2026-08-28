@@ -9,6 +9,7 @@ import {
 import { LabSwitcher, type LabSearch, type LabVariant } from '@/features/manual/lab/LabSwitcher';
 import { LangSheet } from '@/features/manual/lab/LangSheet';
 import { Variant0 } from '@/features/manual/lab/Variant0';
+import { VariantD } from '@/features/manual/lab/VariantD';
 import { VariantA } from '@/features/manual/lab/VariantA';
 import { VariantB } from '@/features/manual/lab/VariantB';
 import { VariantC } from '@/features/manual/lab/VariantC';
@@ -20,7 +21,9 @@ function parseSearch(search: Record<string, unknown>): LabSearch {
     : 'base';
   const pg = Number(search.pg);
   return {
-    v: ['0', 'a', 'b', 'c', 'lang'].includes(search.v as string) ? (search.v as LabVariant) : '0',
+    v: ['0', 'a', 'b', 'c', 'lang', 'd'].includes(search.v as string)
+      ? (search.v as LabVariant)
+      : '0',
     esc,
     th: search.th === 'dark' ? 'dark' : 'light',
     acc: search.acc === 'blue' ? 'blue' : 'warm',
@@ -90,6 +93,15 @@ function LabScreen() {
         />
       ) : null}
       {search.v === 'lang' ? <LangSheet /> : null}
+      {search.v === 'd' ? (
+        <VariantD
+          key={`${search.esc}-${search.pg}-${seededQuery}`}
+          escenario={search.esc}
+          initialPage={search.pg}
+          showConfidence={search.conf}
+          seededQuery={seededQuery}
+        />
+      ) : null}
       {search.v === 'c' ? (
         <VariantC
           key={`${search.esc}-${search.pg}-${seededQuery}`}

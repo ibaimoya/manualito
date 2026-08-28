@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { LAB_ESCENARIOS, type LabEscenario } from '@/features/manual/lab/fixtures';
 import { cn } from '@/shared/lib/cn';
 
-export type LabVariant = '0' | 'a' | 'b' | 'c' | 'lang';
+export type LabVariant = '0' | 'a' | 'b' | 'c' | 'lang' | 'd';
 
 export interface LabSearch {
   v: LabVariant;
@@ -14,7 +14,7 @@ export interface LabSearch {
   pg: number;
 }
 
-const VARIANTS: readonly LabVariant[] = ['0', 'a', 'b', 'c', 'lang'];
+const VARIANTS: readonly LabVariant[] = ['0', 'a', 'b', 'c', 'lang', 'd'];
 
 function SwitcherButton({
   active,

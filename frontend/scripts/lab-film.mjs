@@ -36,13 +36,23 @@ await page.evaluate(() => {
   window.__clsEntries = [];
   // Ojo: NO se filtra hadRecentInput. El CLS clásico excluye los shifts que siguen a un
   // input, pero aquí medimos exactamente eso: que la interfaz no salte al interactuar.
+  // Los nodos dentro de [data-film-ignore] (morphs diseñados, p. ej. un dock que se
+  // transforma) no puntúan: su calidad la juzga el filmstrip, no este número.
   new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
-      window.__cls += entry.value;
+      const sources = entry.sources ?? [];
+      const ignored =
+        sources.length > 0 &&
+        sources.every((s) => {
+          const el = s.node instanceof Element ? s.node : s.node?.parentElement;
+          return el?.closest('[data-film-ignore]') != null;
+        });
+      if (!ignored) window.__cls += entry.value;
       window.__clsEntries.push({
         value: entry.value,
+        ignored,
         recentInput: entry.hadRecentInput,
-        sources: entry.sources?.map((s) => s.node?.nodeName ?? '?') ?? [],
+        sources: sources.map((s) => s.node?.nodeName ?? '?'),
       });
     }
   }).observe({ type: 'layout-shift', buffered: false });

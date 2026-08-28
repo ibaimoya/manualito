@@ -23,11 +23,28 @@ html.theme-dark {
 }
 
 .lang-hl-media {
-  background: var(--hl-media);
+  background-image: linear-gradient(var(--hl-media), var(--hl-media));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 }
 
 .lang-hl-baja {
-  background: var(--hl-baja);
+  background-image: linear-gradient(var(--hl-baja), var(--hl-baja));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* El trazo se dibuja de izquierda a derecha al activarse (solo pintura, sin layout). */
+@media (prefers-reduced-motion: no-preference) {
+  .lang-hl-draw {
+    animation: lang-hl-draw 240ms var(--m-easing) backwards;
+  }
+
+  @keyframes lang-hl-draw {
+    from {
+      background-size: 0% 100%;
+    }
+  }
 }
 
 /* Texto de lectura: Literata con partición de palabras en español. */

@@ -74,10 +74,11 @@ El código v1 del lab queda como referencia de QUÉ NO y para canibalizar fixtur
 - GATE N2: CUMPLIDO.
 
 ### N3 Convergencia por tacto (~3h)
-- [ ] Jurado (Paco/Marta/Rubén) + Sol sobre FILMSTRIPS y vídeos, con pregunta añadida "¿qué
-      interacción se siente muerta?"
-- [ ] Síntesis y elección de una; ronda de fusión
-- GATE N3: elegida con motivos de TACTO, no de foto.
+- [x] Jurado sobre filmstrips: Paco E8/D6/F5, Marta F7/D6/E5,5, Rubén D7/F6/E4,
+      Sol F8,1/E7,9/D7,6 «elegir F y robarle a las otras dos»
+- [x] Síntesis: FUSIÓN con F de chasis + índice con nombres y cotejo de E + bolsillo móvil
+      de D + rotulador slice continuo + % crudo fuera de la vista + pestañas ancladas al borde
+- GATE N3: CUMPLIDO.
 
 ### N4 Profundidad superficie a superficie (~4h)
 - [ ] Orden: lectura+confianza → búsqueda → página/rail → imagen original → móvil → estados

@@ -319,3 +319,55 @@ un píxel en NINGUNA variante; las pestañas de F animaban width → transform p
 gana umbral maxCls por interacción para expansiones cuya esencia es mover contenido.
 
 GATE N2: CUMPLIDO (3 variantes vivas, filmstrips + vídeos en .lab-shots/film/, CLS según regla).
+
+## N3 — Jurado de la divergencia y síntesis (2026-08-24 01:25)
+
+**Veredictos** (sobre filmstrips + capturas claro/Brasa/móvil):
+
+- Paco: E 8 · D 6 · F 5. El índice del taller con NOMBRES de hoja es "el índice del manual
+  de papel de toda la vida"; el dock de D apretado y con seis palabras diminutas; el scroll
+  de F le pierde para buscar una regla suelta; los % "parecen precios de un catálogo".
+- Marta: F 7 · D 6 · E 5,5. F es "la que más se cree su propia premisa" y la más editorial;
+  E "un panel de admin con tres widgets" (card soup); el rotulador actual es "truco": dos
+  pegatinas al saltar de línea (clone genera esquinas dobles) y el % crudo al lado es
+  "dashboard de QA disfrazado"; el crossfade del mazo de E deja texto fantasma; en Brasa el
+  rotulador se apaga; las pestañas de F son "minimapa de editor", no libreta.
+- Rubén: D 7 · F 6 · E 4. El bolsillo de D es lo único pensado para el pulgar (pero se
+  camufla con el fondo y el morph no debe bloquear si tocas otra herramienta); la toolbar
+  superior de F a 375px es "gesto de garra"; E ni enseña móvil.
+- Sol: F 8,1 · E 7,9 · D 7,6. "Elegiría La libreta como principal: V-E gana la demostración
+  de seis páginas, pero V-F gana el producto por lectura, móvil y escalabilidad." Motion
+  mejor en D (morph con overshoot coherente; el rotulador en cascada "explica, además de
+  adornar", pero no debe repetirse en cada apertura); el intermedio del mazo de E es "doble
+  exposición"; las pestañas pasivas de F no deben moverse con el scroll. Tells restantes:
+  rotuladores demasiado geométricos, mismo radio y sombra en todas las superficies, % como
+  telemetría contraria a la voz, silabeo móvil agresivo, pestañas solo-color. Brasa mejor en
+  D; en E el ámbar significa demasiadas cosas.
+
+**Síntesis del lead — la dirección es una FUSIÓN con F de chasis:**
+
+1. ELEGIDA: V-F «La libreta» como estructura (lectura continua, escala, mismo modelo mental
+   en móvil, sin cambio de página que animar). E muere como estructura, D muere como escena.
+2. ROBADO de E (Paco): el índice con NOMBRES. La hoja de páginas y las pestañas ganan título
+   y estado con palabra, no solo número+color. Y el cotejo lado a lado: en pantallas anchas
+   el escaneo se abre JUNTO al bloque de texto, no solo debajo.
+3. ROBADO de D (Rubén): el bolsillo. En móvil las herramientas viven en el dock inferior que
+   morfa (con más contraste sobre la mesa y morph interrumpible); en escritorio la barra
+   superior de F con el buscador siempre visible.
+4. ROTULADOR v2 (Marta): box-decoration-break pasa de clone a SLICE: el trazo es continuo a
+   través del salto de línea (de verdad "el rotulador se deslizó por dos líneas") y el
+   dibujo con background-size recorre la frase entera. Radio pequeño.
+5. EL % CRUDO MUERE en la vista (unánime: Paco, Marta, Sol, y coincide con la investigación
+   de la industria de la v1): la banda la dice el COLOR del trazo + la leyenda; el detalle
+   («Lectura dudosa · 66%») vive en el title/tooltip del trazo. La leyenda de estados se
+   queda (requisito de Ibai) con palabras humanas.
+6. PESTAÑAS v2 (Marta+Sol): nacen del borde físico de la página (pegadas, con sombra, como
+   separadores de carpeta), las pasivas ANCLADAS (nada de moverse con el scroll), solo la
+   activa se desliza; nombre en el hover.
+7. Silabeo: fuera hyphens:auto (rompe el escaneo rápido).
+8. Brasa: subir la vida de --hl-media/--hl-baja oscuros.
+9. La cascada del rotulador solo la PRIMERA activación por sesión de página (Sol: que una
+   herramienta frecuente no sea ceremonia); reactivaciones instantáneas.
+
+GATE N3: CUMPLIDO (elegida con motivos de tacto y estructura). N4 = construir la fusión en
+profundidad sobre V-F.

@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { confidenceTone, pageStatus } from '@/features/manual/pageStatus';
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
 import { usePageSearch } from '@/features/manual/usePageSearch';
@@ -57,7 +57,9 @@ function tabColor(st: { key: string; tone: string }): string {
 
 function pageTitle(item: { ocr_lines: readonly { text: string }[] }): string {
   const first = item.ocr_lines[0]?.text.trim() ?? '';
-  return first.length > 0 ? first : 'Sin texto todavía';
+  if (first.length === 0) return 'Sin texto todavía';
+  const heading = /^[^a-zá-úü]{3,40}/.exec(first)?.[0]?.trim();
+  return heading && heading.length >= 3 ? heading : first;
 }
 
 function Meeple({ className }: Readonly<{ className?: string }>) {
@@ -103,7 +105,7 @@ function DockTool({
   );
 }
 
-function highlightSearch(text: string, needle: string): ReactNode {
+function highlightSearch(text: string, needle: string, activeLine: boolean): ReactNode {
   if (!needle) return text;
   const lower = text.toLowerCase();
   const parts: ReactNode[] = [];
@@ -114,7 +116,12 @@ function highlightSearch(text: string, needle: string): ReactNode {
     parts.push(
       <mark
         key={`${at}-m`}
-        className="rounded-[0.3em] bg-primary-100 px-0.5 text-primary-700 ring-1 ring-primary-300/60"
+        className={cn(
+          'rounded-[0.3em] px-0.5',
+          activeLine
+            ? 'bg-primary font-semibold text-fg-inv'
+            : 'bg-primary-100 text-primary-700 ring-1 ring-primary-300/60',
+        )}
       >
         {text.slice(at, at + needle.length)}
       </mark>,
@@ -139,7 +146,22 @@ export function VariantF({
 }>) {
   const reduce = useReducedMotion();
   const manual = labManual(escenario);
-  const pages = manual.pages;
+  const [overrides, setOverrides] = useState<ReadonlyMap<number, string>>(new Map());
+  const pages = useMemo(
+    () =>
+      manual.pages.map((item) => {
+        const text = overrides.get(item.page_number);
+        if (text == null) return item;
+        return {
+          ...item,
+          ocr_lines: text
+            .split('\n')
+            .filter((line) => line.trim().length > 0)
+            .map((line) => ({ text: line, confidence: null })),
+        };
+      }),
+    [manual.pages, overrides],
+  );
   const search = usePageSearch(pages);
   const [marks, setMarks] = useState(initialConfidence);
   const [drawCascade, setDrawCascade] = useState(initialConfidence);
@@ -203,13 +225,18 @@ export function VariantF({
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
+      if (editingPage !== null) {
+        if (dirty && !confirmDiscard) setConfirmDiscard(true);
+        else if (!dirty) stopEditing();
+        return;
+      }
       setDeleteOpen(false);
       setMasOpen(false);
       setDock('closed');
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  });
 
   useEffect(() => {
     if (deleteOpen) cancelDeleteRef.current?.focus();
@@ -282,6 +309,18 @@ export function VariantF({
     setConfirmDiscard(false);
   }
 
+  function saveEditing(): void {
+    if (editingPage !== null && dirty) {
+      setOverrides((current) => new Map(current).set(editingPage, draft));
+    }
+    stopEditing();
+  }
+
+  function effectiveStatus(item: (typeof pages)[number]): { key: string; tone: string; label?: string } {
+    if (overrides.has(item.page_number)) return { key: 'edited', tone: 'accent' };
+    return pageStatus(item);
+  }
+
   const dudasLabel =
     activeDuda !== null && dudasGlobal.includes(activeDuda)
       ? `Duda ${dudasGlobal.indexOf(activeDuda) + 1} de ${dudasGlobal.length}`
@@ -290,11 +329,16 @@ export function VariantF({
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <header className="sticky top-0 z-30 border-b border-border bg-bg/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-6 py-2.5">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-6 py-2.5">
           <h1 className="min-w-0 truncate font-display text-[19px] font-extrabold tracking-tight text-fg">
             {manual.title ?? manual.game_name}
           </h1>
-          <span className="mono shrink-0 text-[11px] text-fg-3">
+          <span
+            className={cn(
+              'mono shrink-0 text-[11px] text-fg-3',
+              search.query && 'hidden xl:inline',
+            )}
+          >
             hoja {currentPage} de {pages.length}
           </span>
           <div className="ml-auto hidden shrink-0 items-center gap-1 md:flex">
@@ -509,7 +553,7 @@ export function VariantF({
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 pb-32 md:pb-24">
         {pages.map((item, blockIndex) => {
-          const itemSt = pageStatus(item);
+          const itemSt = effectiveStatus(item);
           const scanOpen = openScans.has(item.page_number);
           const isEditing = editingPage === item.page_number;
           const canEdit =
@@ -546,7 +590,7 @@ export function VariantF({
                       title="Editar el texto de esta hoja"
                       onClick={() => startEditing(item.page_number)}
                       disabled={editingPage !== null}
-                      className="grid size-7 place-items-center rounded-md text-fg-3 hover:text-fg disabled:opacity-40"
+                      className="grid size-11 place-items-center rounded-md text-fg-3 hover:text-fg disabled:opacity-40 md:size-7"
                     >
                       <Pencil size={13} strokeWidth={STROKE} />
                     </button>
@@ -556,7 +600,7 @@ export function VariantF({
                       type="button"
                       onClick={() => toggleScan(item.page_number)}
                       aria-expanded={scanOpen}
-                      className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-fg-2 hover:text-fg"
+                      className="inline-flex h-11 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-fg-2 hover:text-fg md:h-7"
                     >
                       <ImageIcon size={13} strokeWidth={STROKE} aria-hidden="true" />
                       {scanOpen ? 'Ocultar el escaneo' : 'Ver el escaneo'}
@@ -654,7 +698,7 @@ export function VariantF({
                             <button
                               type="button"
                               disabled={!dirty}
-                              onClick={stopEditing}
+                              onClick={saveEditing}
                               className="lang-lift inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv disabled:opacity-45"
                             >
                               <Check size={14} strokeWidth={STROKE} aria-hidden="true" />
@@ -680,7 +724,7 @@ export function VariantF({
                     </div>
                   ) : null}
 
-                  {itemSt.key !== 'failed' && itemSt.key !== 'processing' && !isEditing ? (
+                        {itemSt.key !== 'failed' && itemSt.key !== 'processing' && !isEditing ? (
                     <div className="space-y-3.5">
                       {item.ocr_lines.map((line, index) => {
                         const tone =
@@ -721,10 +765,10 @@ export function VariantF({
                                       'outline outline-2 outline-offset-2 outline-primary/60',
                                   )}
                                 >
-                                  {highlightSearch(line.text, search.needle)}
+                                  {highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)}
                                 </span>
                               ) : (
-                                highlightSearch(line.text, search.needle)
+                                highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)
                               )}
                             </p>
                           </div>
@@ -746,24 +790,26 @@ export function VariantF({
                     >
                       <div className="lg:sticky lg:top-16">
                         <div
-                          className="relative h-44 overflow-hidden rounded-xl border border-border shadow-xs lg:h-auto lg:aspect-[3/4]"
-                          style={{ background: 'var(--lab-paper)' }}
+                          className="relative h-44 overflow-hidden rounded-sm border border-border-strong shadow-xs lg:h-auto lg:aspect-[3/4]"
+                          style={{ background: '#f3ead9', rotate: '-0.4deg' }}
                         >
                           <div
-                            className="absolute inset-x-5 top-4 space-y-2"
                             aria-hidden="true"
+                            className="absolute inset-0 px-4 py-3.5"
+                            style={{ filter: 'contrast(0.92) sepia(0.12)' }}
                           >
-                            {[92, 78, 85, 60, 88].map((width, row) => (
-                              <div
-                                key={row}
-                                className="h-1.5 rounded-sm bg-surface-2"
-                                style={{ width: `${width}%` }}
-                              />
-                            ))}
+                            {manual.pages
+                              .find((entry) => entry.page_number === item.page_number)
+                              ?.ocr_lines.map((line, row) => (
+                                <p
+                                  key={row}
+                                  className="lang-reading pb-1"
+                                  style={{ fontSize: 9, lineHeight: 1.5, color: '#57493a' }}
+                                >
+                                  {line.text}
+                                </p>
+                              ))}
                           </div>
-                          <p className="mono absolute inset-x-0 bottom-2.5 text-center text-[10.5px] text-fg-3">
-                            el escaneo real aparece aquí
-                          </p>
                         </div>
                         <p className="mt-1.5 text-center text-[11px] text-fg-3">
                           Original · hoja {item.page_number}
@@ -974,7 +1020,7 @@ export function VariantF({
                         <span className="min-w-0 truncate text-[12px] text-fg-2">
                           {pageTitle(item)}
                         </span>
-                        <span className="ml-auto shrink-0 text-[10.5px] text-fg-3">
+                        <span className="ml-auto shrink-0 text-[10.5px] text-fg-2">
                           {STATUS_WORD[itemSt.key] ?? itemSt.label}
                         </span>
                       </button>

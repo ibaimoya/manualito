@@ -371,3 +371,31 @@ GATE N2: CUMPLIDO (3 variantes vivas, filmstrips + vídeos en .lab-shots/film/, 
 
 GATE N3: CUMPLIDO (elegida con motivos de tacto y estructura). N4 = construir la fusión en
 profundidad sobre V-F.
+
+## Nota de régimen (2026-08-24 00:15, orden de Ibai)
+
+Ibai avisa en mitad de la noche: Codex puede agotar su cuota y NO se puede gastar API bajo
+ningún concepto. Desde este punto no se invoca más a Codex: el pase de mitad de N4 de Sol ha
+sido el último. Los nombres de commit los pone el lead imitando el patrón establecido de Sol
+(tipo(visor): participio + objeto (#89), corto, sin verbosidad). El jurado Sonnet sigue
+disponible (suscripción Claude).
+
+## N4 — Lista del pase de mitad aplicada (2026-08-24 01:05)
+
+Del pase de Sol (el último antes del régimen sin Codex) se aplican al laboratorio:
+
+1. Coincidencia ACTIVA distinguida (marca sólida primary en la línea activa, el resto anillo).
+2. Guardar cambios es REAL: overrides locales por hoja, el estado pasa a Editada, el texto
+   guardado sustituye al OCR y la búsqueda/dudas se recalculan en vivo (verificado: 1/7→1/4
+   tras editar la hoja 1). Sustituir/reintentar/releer quedan como demo documentada.
+3. El escaneo deja de ser placeholder: maqueta de página fotografiada (texto sepia rotado
+   -0.4º) con el contenido real de cada hoja: el cotejo ya coteja.
+4. LabSwitcher plegado en móvil tras un disparador único de 44px (tapaba la cabecera);
+   lápiz y Ver el escaneo a 44px en móvil.
+5. Escape en edición: limpia cierra, sucia abre el descarte (foco a Seguir editando).
+6. Cabecera a max-w-5xl: el título ya no se trunca con la búsqueda activa.
+7. Índice con heurística de título (recorte al encabezado en mayúsculas: «PUNTUACIÓN»).
+8. Contraste del estado en la hoja móvil a text-fg-2.
+
+Pendientes aceptados para el porte F5 real: trap completo de foco con Radix Dialog, aria-live
+del progreso, acciones de red reales.

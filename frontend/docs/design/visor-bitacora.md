@@ -399,3 +399,21 @@ Del pase de Sol (el último antes del régimen sin Codex) se aplican al laborato
 
 Pendientes aceptados para el porte F5 real: trap completo de foco con Radix Dialog, aria-live
 del progreso, acciones de red reales.
+
+## N4 — Cierre de profundidad (2026-08-24 01:40)
+
+Barrido final de superficies con evidencia dinámica completa:
+
+- Escenarios edited/dup/busy/failed sobre la fusión: estados inline con voz y mascota.
+- Accent-blue: chips y mascota viran al azul meeple; los trazos siguen semánticos (correcto:
+  la severidad nunca hereda el accent).
+- Pestañas re-filmadas tras el rediseño de borde: CLS=0.
+- Teclado: orden lógico (buscador → Dudas → acciones → pestañas), controles invisibles
+  saltados con tabIndex, descarte enfoca «Seguir editando», Escape cierra diálogo/menú/dock
+  y en edición limpia sale (sucia abre el descarte).
+- Films en .lab-shots/film/: fusion-dudas (cascada), fusion-cotejo (expansión dentro de
+  umbral), fusion-tab (salto por pestaña), fusion-dock (morph móvil, vídeo).
+
+GATE N4: CUMPLIDO. Jurado final Sonnet convocado sobre la fusión terminada (acta en la
+siguiente entrada). N5 arranca a las 15:00 con la síntesis del jurado ya aplicada en lo que
+dé tiempo.

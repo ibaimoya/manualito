@@ -81,10 +81,12 @@ El código v1 del lab queda como referencia de QUÉ NO y para canibalizar fixtur
 - GATE N3: CUMPLIDO.
 
 ### N4 Profundidad superficie a superficie (~4h)
-- [ ] Orden: lectura+confianza → búsqueda → página/rail → imagen original → móvil → estados
-      (busy/failed/edición/diálogos). Una superficie no se cierra sin su filmstrip + CLS=0
-      + spec cumplida; solo entonces la siguiente
-- GATE N4: todas las superficies con evidencia dinámica.
+- [x] Fusión construida y profundizada: rotulador slice con cascada única, cotejo lado a
+      lado con maqueta real del escaneo, Guardar real con overrides, bolsillo móvil 44px,
+      pestañas con nombre ancladas, índice heurístico, Escape/foco verificados, Brasa y
+      accent-blue limpios, escenarios completos
+- [x] Films: fusion-dudas/cotejo/tab/dock + teclado por script
+- GATE N4: CUMPLIDO (jurado final en curso).
 
 ### N5 Entrega 16:00 (empezar 15:00, cerrar 15:30-16:00)
 - [ ] Vídeos .webm de cada interacción en `.lab-shots/videos/` (para que Ibai los vea)

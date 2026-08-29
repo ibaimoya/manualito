@@ -9,19 +9,19 @@
 
 html.theme-dark {
   --lab-paper: #1e1710;
-  --hl-media: #4a3a12;
-  --hl-baja: #52241c;
+  --hl-media: #614a10;
+  --hl-baja: #6e2f21;
 }
 
-/* Trazo de rotulador: abraza el texto, no la fila. Radios asimétricos = gesto de mano. */
-/* Margen espejo del padding: el trazo pinta ALREDEDOR del texto sin moverlo un pixel
-   (regla cero: activar las dudas no desplaza la lectura). */
+/* Trazo de rotulador: abraza el texto, no la fila. Radios asimétricos = gesto de mano.
+   Margen espejo del padding: el trazo pinta ALREDEDOR del texto sin moverlo un pixel
+   (regla cero). box-decoration-break por defecto (slice): el trazo es UNA pieza continua
+   a través del salto de línea, como un rotulador real; el radio corto evita esquinas
+   dobles en los cortes de línea. */
 .lang-hl {
-  border-radius: 0.4em 0.25em 0.5em 0.3em;
+  border-radius: 0.35em 0.2em 0.4em 0.25em;
   padding: 0.08em 0.28em;
   margin: -0.08em -0.28em;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
 }
 
 .lang-hl-media {
@@ -49,12 +49,11 @@ html.theme-dark {
   }
 }
 
-/* Texto de lectura: Literata con partición de palabras en español. */
+/* Texto de lectura: Literata sin silabeo (el corte de palabras rompe el escaneo rápido). */
 .lang-reading {
   font-family: 'Literata Variable', Literata, Georgia, 'Times New Roman', serif;
   font-size: 17px;
   line-height: 1.68;
-  hyphens: auto;
 }
 
 /* Lift de hover con sombra cálida, solo en punteros finos. */

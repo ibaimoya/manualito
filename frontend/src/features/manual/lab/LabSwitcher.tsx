@@ -50,7 +50,7 @@ export function LabSwitcher({ search }: Readonly<{ search: LabSearch }>) {
   return (
     <aside
       aria-label="Controles del laboratorio"
-      className="fixed bottom-3 right-3 z-50 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-border-strong bg-card/95 px-2 py-1.5 shadow-md backdrop-blur"
+      className="fixed right-3 z-50 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-border-strong bg-card/95 px-2 py-1.5 shadow-md backdrop-blur max-md:top-3 md:bottom-3"
     >
       <span className="flex items-center gap-0.5">
         {VARIANTS.map((variant) => (

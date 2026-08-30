@@ -22,7 +22,7 @@ function HomeScreen() {
   const { t } = useTranslation('home');
   const firstName = user?.username?.split(/\s+/)[0];
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-10 pt-4 md:max-w-5xl md:px-8 md:pt-10">
+    <div className="page-frame page-stack">
       {/* Header de móvil — oculto en md+ porque la Sidebar ya muestra Brand. */}
       <header className="flex items-center justify-between md:hidden">
         <div className="flex items-center gap-3">
@@ -139,7 +139,7 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
           />
         </Link>
       </div>
-      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
         {manuals.slice(0, 6).map((m) => (
           <li key={m.id}>
             <ManualCard manual={m} meta={formatRelative(m.created_at)} />
@@ -154,7 +154,7 @@ function RecentSkeleton() {
   return (
     <section aria-hidden="true">
       <div className="mb-3 h-5 w-24 animate-pulse rounded bg-surface-2" />
-      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <li key={i} className="h-[72px] animate-pulse rounded-2xl bg-surface-2" />
         ))}

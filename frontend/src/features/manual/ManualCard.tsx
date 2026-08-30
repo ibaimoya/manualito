@@ -44,13 +44,11 @@ export function ManualCard({ manual, meta, className }: Props) {
             <div className="truncate font-semibold text-fg">{name}</div>
             {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
-          <Badge
-            tone={indexing ? 'primary' : 'neutral'}
-            icon={indexing ? <Spinner size={10} /> : undefined}
-            className="hidden @sm:inline-flex"
-          >
-            {indexing ? t('card.processing') : t('card.ready')}
-          </Badge>
+          {indexing && (
+            <Badge tone="primary" icon={<Spinner size={10} />} className="hidden @sm:inline-flex">
+              {t('card.processing')}
+            </Badge>
+          )}
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />
         </div>
       </Card>

@@ -53,8 +53,10 @@ type StatusTranslate = (
     | 'status.pendingReview',
 ) => string;
 
-const GAME_GRID = 'grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(208px,1fr))]';
-const MANUAL_GRID = 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]';
+const GAME_GRID =
+  'grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,208px),1fr))]';
+const MANUAL_GRID =
+  'grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))]';
 
 function HistoryScreen() {
   const { t } = useTranslation('library');
@@ -67,12 +69,12 @@ function HistoryScreen() {
   const manualItems = manuals.data ?? [];
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 pb-12 pt-4 md:px-8 md:pt-8">
+    <div className="page-frame page-stack">
       <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg md:text-3xl">
         {t('title')}
       </h1>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex flex-col gap-3 @2xl/app:flex-row @2xl/app:items-center @2xl/app:gap-4">
         <SegmentedControl
           value={view}
           onChange={setView}
@@ -92,7 +94,7 @@ function HistoryScreen() {
             },
           ]}
         />
-        <div className="sm:ml-auto sm:w-80">
+        <div className="@2xl/app:ml-auto @2xl/app:w-80">
           {view === 'games' && gameItems.length > 0 ? <GameJumpSearch games={gameItems} /> : null}
           {view === 'manuals' && manualItems.length > 0 ? (
             <ManualFilter value={manualQuery} onChange={setManualQuery} />

@@ -84,7 +84,7 @@ function AboutScreen() {
   const { t } = useTranslation('help');
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-5 pb-12 pt-6 md:px-8 md:pt-9">
+    <div className="page-frame page-stack mx-auto max-w-5xl">
       <header className="flex flex-col items-center gap-3 text-center">
         <Monogram size={64} radius={16} />
         <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-fg md:text-4xl">
@@ -100,7 +100,7 @@ function AboutScreen() {
           eyebrow={t('sections.howItWorks.eyebrow')}
           title={t('sections.howItWorks.title')}
         />
-        <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-1">
+        <div className="grid gap-3 @4xl/app:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] @4xl/app:items-stretch @4xl/app:gap-1">
           {STEPS.map((step, index) => (
             <Fragment key={step.n}>
               <Card className="flex flex-col gap-2.5 p-4">
@@ -114,13 +114,16 @@ function AboutScreen() {
                   <span className="mono text-[11px] tracking-[0.12em] text-fg-3">{step.n}</span>
                 </div>
                 {/* min-h de 2 líneas en md: "Te lo explicamos" parte y desalineaba los cuerpos. */}
-                <h3 className="font-display text-base font-bold text-fg md:min-h-12">
+                <h3 className="font-display text-base font-bold text-fg @4xl/app:min-h-12">
                   {t(step.titleKey)}
                 </h3>
                 <p className="text-[13px] leading-relaxed text-fg-2">{t(step.descriptionKey)}</p>
               </Card>
               {index < STEPS.length - 1 ? (
-                <span aria-hidden="true" className="hidden place-items-center text-fg-3 md:grid">
+                <span
+                  aria-hidden="true"
+                  className="hidden place-items-center text-fg-3 @4xl/app:grid"
+                >
                   <ChevronRight size={18} strokeWidth={2} />
                 </span>
               ) : null}
@@ -143,7 +146,7 @@ function AboutScreen() {
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <p className="text-[15px] leading-relaxed text-fg">
+                <p className="max-w-prose text-[15px] leading-relaxed text-fg">
                   <Trans
                     ns="help"
                     i18nKey={answerKey}
@@ -163,7 +166,7 @@ function AboutScreen() {
 
       <section
         aria-label={t('sections.project.ariaLabel')}
-        className="grid gap-3 md:grid-cols-[3fr_2fr]"
+        className="grid gap-3 @3xl/app:grid-cols-[3fr_2fr]"
       >
         <Card className="bg-surface p-5">
           <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">

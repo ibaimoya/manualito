@@ -53,7 +53,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
   const displayName = user.username || user.email;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 pb-10 pt-5 md:px-8 md:pt-8">
+    <div className="page-frame page-stack mx-auto max-w-5xl">
       <Card className="p-6">
         <div className="flex flex-wrap items-start gap-5">
           <Avatar
@@ -62,7 +62,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
             color={user.avatar_color}
             figure={user.avatar_figure}
           />
-          <div className="min-w-56 flex-1">
+          <div className="min-w-0 flex-1 basis-56">
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="min-w-0 truncate font-display text-2xl font-extrabold tracking-tight text-fg md:text-3xl">
                 {displayName}
@@ -91,7 +91,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               {t('memberSince', { date: memberSince(user.created_at) })}
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52">
+          <div className="flex w-full flex-col gap-2 @3xl/app:w-auto @3xl/app:min-w-52">
             <Button variant="secondary" onClick={() => setEditOpen(true)}>
               <Pencil size={16} strokeWidth={2} />
               {t('actions.edit')}

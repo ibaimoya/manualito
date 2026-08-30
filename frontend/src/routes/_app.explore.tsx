@@ -13,7 +13,7 @@ function ExploreScreen() {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-7 px-5 pb-10 pt-4 md:px-8 md:pt-10">
+    <div className="page-frame page-stack">
       <header className="flex flex-col gap-2">
         <span className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           {t('header.eyebrow')}
@@ -32,7 +32,7 @@ function ExploreScreen() {
         }
       />
 
-      <ul className="grid gap-3 sm:grid-cols-3">
+      <ul className="grid gap-3 @3xl/app:grid-cols-3">
         <Hint icon={<Sparkles strokeWidth={2} />} title={t('hints.instantQuestion.title')}>
           {t('hints.instantQuestion.description')}
         </Hint>

@@ -67,7 +67,7 @@ function AppLayout() {
       <main
         id="main-content"
         className={cn(
-          'flex-1 overflow-y-auto transition-[padding] duration-200 ease-[var(--ease-mn)]',
+          '@container/app min-h-0 min-w-0 flex-1 overflow-y-auto transition-[padding] duration-200 ease-[var(--ease-mn)]',
           collapsed ? 'md:pl-[72px]' : 'md:pl-60',
           showNav ? 'pb-[72px] md:pb-0' : 'pb-0',
         )}
@@ -97,7 +97,7 @@ function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
       className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-bg/95 backdrop-blur"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <ul className="mx-auto flex max-w-md justify-around">
+      <ul className="mx-auto grid max-w-md grid-cols-4">
         <NavItem to="/home" pathname={pathname} icon={<Home size={22} strokeWidth={1.75} />}>
           {t('navigation.home')}
         </NavItem>
@@ -132,12 +132,12 @@ function NavItem({
 }>) {
   const active = pathname === to;
   return (
-    <li>
+    <li className="min-w-0">
       <Link
         to={to}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'flex min-h-[44px] flex-col items-center justify-center gap-1 px-6 py-2 text-xs font-semibold transition-colors',
+          'flex min-h-[44px] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-semibold transition-colors',
           active ? 'text-primary' : 'text-fg-3 hover:text-fg-2',
         )}
       >

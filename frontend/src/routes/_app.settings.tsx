@@ -21,50 +21,56 @@ function SettingsScreen() {
   const { t } = useTranslation('settings');
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-[var(--m-space-5)] px-[var(--m-space-5)] pb-10 pt-[var(--m-space-4)] md:max-w-3xl md:px-[var(--m-space-8)] md:pt-[var(--m-space-8)]">
+    <div className="page-frame page-stack mx-auto max-w-4xl">
       <header>
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
           {t('heading')}
         </h1>
       </header>
 
-      <AccountSection />
+      <div className="flex flex-col gap-6">
+        <AccountSection />
 
-      <Group title={t('appearance.group')}>
-        {/* Hint estático que no cambia al alternar el modo */}
-        <Row label={t('appearance.theme')} hint={t('appearance.themeHint')} stacked>
-          <SegmentedControl<ThemeMode>
-            value={theme.mode}
-            onChange={theme.setMode}
-            ariaLabel={t('appearance.themeModeAriaLabel')}
-            options={[
-              { value: 'light', label: t('appearance.themeModes.light'), icon: <Sun size={14} /> },
-              { value: 'dark', label: t('appearance.themeModes.dark'), icon: <Moon size={14} /> },
-              {
-                value: 'auto',
-                label: t('appearance.themeModes.auto'),
-                icon: <SunMoon size={14} />,
-              },
-            ]}
-          />
-        </Row>
-        <Row label={t('appearance.accentColor')} hint={t('appearance.accentColorHint')}>
-          <SegmentedControl<AccentVariant>
-            value={theme.accent}
-            onChange={theme.setAccent}
-            ariaLabel={t('appearance.accentColorAriaLabel')}
-            options={[
-              { value: 'amber', label: t('appearance.accentColors.amber') },
-              { value: 'blue', label: t('appearance.accentColors.blue') },
-            ]}
-          />
-        </Row>
-        <Row label={t('appearance.language')} hint={t('appearance.languageHint')} stacked>
-          <LanguageCards />
-        </Row>
-      </Group>
+        <Group title={t('appearance.group')}>
+          {/* Hint estático que no cambia al alternar el modo */}
+          <Row label={t('appearance.theme')} hint={t('appearance.themeHint')} stacked>
+            <SegmentedControl<ThemeMode>
+              value={theme.mode}
+              onChange={theme.setMode}
+              ariaLabel={t('appearance.themeModeAriaLabel')}
+              options={[
+                {
+                  value: 'light',
+                  label: t('appearance.themeModes.light'),
+                  icon: <Sun size={14} />,
+                },
+                { value: 'dark', label: t('appearance.themeModes.dark'), icon: <Moon size={14} /> },
+                {
+                  value: 'auto',
+                  label: t('appearance.themeModes.auto'),
+                  icon: <SunMoon size={14} />,
+                },
+              ]}
+            />
+          </Row>
+          <Row label={t('appearance.accentColor')} hint={t('appearance.accentColorHint')}>
+            <SegmentedControl<AccentVariant>
+              value={theme.accent}
+              onChange={theme.setAccent}
+              ariaLabel={t('appearance.accentColorAriaLabel')}
+              options={[
+                { value: 'amber', label: t('appearance.accentColors.amber') },
+                { value: 'blue', label: t('appearance.accentColors.blue') },
+              ]}
+            />
+          </Row>
+          <Row label={t('appearance.language')} hint={t('appearance.languageHint')} stacked>
+            <LanguageCards />
+          </Row>
+        </Group>
 
-      <PrivacyDataSection />
+        <PrivacyDataSection />
+      </div>
 
       <footer className="mt-2 flex justify-center">
         <Link

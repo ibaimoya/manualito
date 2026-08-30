@@ -74,6 +74,33 @@
   --ease-mn: var(--m-easing);
 }
 
+/* Márgenes comunes. El contenido ocupa el ancho disponible de la página. */
+@utility page-frame {
+  width: 100%;
+  padding-inline: 1rem;
+
+  @media (min-width: 40rem) {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility page-stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-block: 1.5rem 3rem;
+
+  @media (min-width: 64rem) {
+    gap: 2rem;
+    padding-top: 2rem;
+  }
+}
+
 /* ──────────────────────────────────────────────────────────────
    Base layout — body fills viewport, fuentes en español primero
    ────────────────────────────────────────────────────────────── */

@@ -13,8 +13,7 @@
     "viewImage": "Ver imagen"
   },
   "card": {
-    "processing": "Procesando…",
-    "ready": "Listo"
+    "processing": "Procesando…"
   },
   "confidence": {
     "heading": "Confianza OCR",

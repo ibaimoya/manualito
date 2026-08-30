@@ -249,6 +249,19 @@ export function VariantF({
   const dirty = editingPage !== null && draft !== editingSource;
 
   useEffect(() => {
+    if (initialPage <= 1) return;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        blockRefs.current
+          .get(initialPage)
+          ?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      });
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo el deep-link inicial
+  }, []);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {

@@ -417,3 +417,32 @@ Barrido final de superficies con evidencia dinámica completa:
 GATE N4: CUMPLIDO. Jurado final Sonnet convocado sobre la fusión terminada (acta en la
 siguiente entrada). N5 arranca a las 15:00 con la síntesis del jurado ya aplicada en lo que
 dé tiempo.
+
+## N4 — Jurado final sobre la fusión y respuesta inmediata (2026-08-24 00:55)
+
+**Veredictos:** Paco 7 ("programa serio", el rotulador "un acierto"), Rubén 7 (bolsillo "a la
+altura", se queda en la app), Marta 6 ("a un par de arreglos de cruzar la línea", subida real:
+el slice y Brasa vivo "mejoras de verdad").
+
+**Aplicado en caliente (misma noche):**
+
+- Paco: índice completo bajo demanda en escritorio (chip «hoja N de M ⌄» abre popover con
+  leyenda + nombres + estados), leyenda recuperada también en la hoja móvil, naranja de
+  búsqueda separado del de dudas (las coincidencias pasan al azul meeple, la activa en
+  sólido), hints en cada estado (title con explicación llana de Duplicada etc.), microcopy
+  «Las hojas que editaste a mano se conservan» bajo Leer de nuevo.
+- Rubén: la "bola de colores" era el botón de los devtools de TanStack Query: oculto en el
+  laboratorio; evidencia móvil del buscador producida (bolsillo con 2/7 y la activa en azul
+  sólido a la vista); nombres del índice ya sin cortes.
+- Marta: sus dos bugs "más vergonzosos" ya estaban muertos antes de su acta (título C.. y
+  PUNTUACIÓN C, corregidos tras Paco); Duplicada gana color propio (terracota primary-700,
+  la colisión con Con dudas era objetiva); tonos de Brasa separados (ámbar más amarillo,
+  baja más roja); la maqueta del escaneo ahora huele a foto (gradiente cálido, viñeta
+  interior, rotación, blur sutil); y el confeti de post-its resuelto: los trazos de líneas
+  consecutivas del mismo tono se agrupan en UNA pasada (esquinas interiores planas, hueco
+  reducido).
+
+**Aparcado con motivo:** cascada re-filmada pendiente (el strip de la fusión salió plano por
+timing de captura, la receta está probada en el strip de V-D); accent-blue intercambia el
+azul de búsqueda por naranja (colisión menor en modo minoritario, para el pase de paleta del
+porte); trap completo de foco y aria-live → F5 con Radix.

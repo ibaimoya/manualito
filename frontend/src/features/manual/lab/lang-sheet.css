@@ -9,8 +9,8 @@
 
 html.theme-dark {
   --lab-paper: #1e1710;
-  --hl-media: #614a10;
-  --hl-baja: #6e2f21;
+  --hl-media: #6d5a0d;
+  --hl-baja: #77241a;
 }
 
 /* Trazo de rotulador: abraza el texto, no la fila. Radios asimétricos = gesto de mano.
@@ -91,4 +91,10 @@ html.theme-dark {
       translate: 0 4px;
     }
   }
+}
+
+/* El boton flotante de los devtools de TanStack Query no pinta nada en el laboratorio
+   (Ruben lo confundio con un control del bolsillo). */
+.tsqd-parent-container {
+  display: none !important;
 }

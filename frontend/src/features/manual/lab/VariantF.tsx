@@ -43,6 +43,41 @@ const STATUS_WORD: Record<string, string> = {
   failed: 'No se pudo leer',
 };
 
+const STATUS_HINT: Record<string, string> = {
+  ok: 'La lectura salió con confianza alta',
+  low: 'Algunas frases tienen dudas de lectura',
+  edited: 'El texto lo corregiste tú a mano',
+  duplicate: 'Esta hoja repite otra ya subida',
+  processing: 'Todavía estamos leyendo esta hoja',
+  failed: 'La foto no se pudo leer',
+};
+
+function Leyenda() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2.5 pb-1.5 pt-1">
+      {(
+        [
+          ['var(--m-success)', 'Bien leída'],
+          ['var(--m-warning)', 'Con dudas'],
+          ['var(--m-accent-500)', 'Editada'],
+          ['var(--m-primary-700)', 'Duplicada'],
+          ['var(--m-text-3)', 'Aún leyendo'],
+          ['var(--m-error)', 'No se pudo leer'],
+        ] as const
+      ).map(([color, label]) => (
+        <span key={label} className="inline-flex items-center gap-1 text-[11px] text-fg-2">
+          <span
+            aria-hidden="true"
+            className="size-1.5 rounded-full"
+            style={{ background: color }}
+          />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 const TAB_COLOR: Record<string, string> = {
   success: 'var(--m-success)',
   warning: 'var(--m-warning)',
@@ -52,13 +87,17 @@ const TAB_COLOR: Record<string, string> = {
 
 function tabColor(st: { key: string; tone: string }): string {
   if (st.key === 'processing') return 'var(--m-text-3)';
+  if (st.key === 'duplicate') return 'var(--m-primary-700)';
   return TAB_COLOR[st.tone] ?? 'var(--m-text-3)';
 }
 
 function pageTitle(item: { ocr_lines: readonly { text: string }[] }): string {
   const first = item.ocr_lines[0]?.text.trim() ?? '';
   if (first.length === 0) return 'Sin texto todavía';
-  const heading = /^[^a-zá-úü]{3,40}/.exec(first)?.[0]?.trim();
+  const heading = /^[^a-zá-úü]{3,40}/
+    .exec(first)?.[0]
+    ?.trim()
+    .replace(/\s+[A-ZÁÉÍÓÚÜÑ]$/, '');
   return heading && heading.length >= 3 ? heading : first;
 }
 
@@ -119,8 +158,8 @@ function highlightSearch(text: string, needle: string, activeLine: boolean): Rea
         className={cn(
           'rounded-[0.3em] px-0.5',
           activeLine
-            ? 'bg-primary font-semibold text-fg-inv'
-            : 'bg-primary-100 text-primary-700 ring-1 ring-primary-300/60',
+            ? 'bg-accent font-semibold text-fg-inv'
+            : 'bg-accent-100 text-accent ring-1 ring-accent-300/60',
         )}
       >
         {text.slice(at, at + needle.length)}
@@ -173,6 +212,7 @@ export function VariantF({
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [dock, setDock] = useState<DockMode>('closed');
   const [masOpen, setMasOpen] = useState(false);
+  const [indexOpen, setIndexOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [activeDuda, setActiveDuda] = useState<string | null>(null);
   const [seeded, setSeeded] = useState(false);
@@ -232,6 +272,7 @@ export function VariantF({
       }
       setDeleteOpen(false);
       setMasOpen(false);
+      setIndexOpen(false);
       setDock('closed');
     };
     document.addEventListener('keydown', onKey);
@@ -333,13 +374,73 @@ export function VariantF({
           <h1 className="min-w-0 truncate font-display text-[19px] font-extrabold tracking-tight text-fg">
             {manual.title ?? manual.game_name}
           </h1>
-          <span
-            className={cn(
-              'mono shrink-0 text-[11px] text-fg-3',
-              search.query && 'hidden xl:inline',
-            )}
-          >
-            hoja {currentPage} de {pages.length}
+          <span className="relative shrink-0">
+            <button
+              type="button"
+              title="Abrir el índice de hojas"
+              aria-expanded={indexOpen}
+              onClick={() => setIndexOpen((value) => !value)}
+              className={cn(
+                'mono hidden h-7 items-center gap-1 rounded-md px-1.5 text-[11px] text-fg-3 hover:bg-surface hover:text-fg md:inline-flex',
+                search.query && 'max-xl:hidden',
+              )}
+            >
+              hoja {currentPage} de {pages.length}
+              <ChevronDown size={11} strokeWidth={STROKE} aria-hidden="true" />
+            </button>
+            <span className={cn('mono text-[11px] text-fg-3 md:hidden')}>
+              hoja {currentPage} de {pages.length}
+            </span>
+            {indexOpen ? (
+              <>
+                <button
+                  type="button"
+                  aria-label="Cerrar el índice"
+                  tabIndex={-1}
+                  onClick={() => setIndexOpen(false)}
+                  className="fixed inset-0 z-10 cursor-default"
+                />
+                <div className="absolute left-0 top-9 z-20 w-80 rounded-xl border border-border bg-card p-1.5 shadow-md">
+                  <Leyenda />
+                  <div className="flex flex-col gap-0.5">
+                    {pages.map((item) => {
+                      const itemSt = effectiveStatus(item);
+                      return (
+                        <button
+                          key={item.page_number}
+                          type="button"
+                          onClick={() => {
+                            scrollToPage(item.page_number);
+                            setIndexOpen(false);
+                          }}
+                          className={cn(
+                            'flex h-9 items-center gap-2 rounded-lg px-2.5 text-left',
+                            item.page_number === currentPage
+                              ? 'bg-primary-100 text-primary-700'
+                              : 'text-fg hover:bg-surface',
+                          )}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="h-5 w-1 shrink-0 rounded-full"
+                            style={{ background: tabColor(itemSt) }}
+                          />
+                          <span className="text-[12.5px] font-bold tabular-nums">
+                            {item.page_number}
+                          </span>
+                          <span className="min-w-0 truncate text-[12px] text-fg-2">
+                            {pageTitle(item)}
+                          </span>
+                          <span className="ml-auto shrink-0 text-[10.5px] text-fg-2">
+                            {STATUS_WORD[itemSt.key] ?? itemSt.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : null}
           </span>
           <div className="ml-auto hidden shrink-0 items-center gap-1 md:flex">
             <div className="flex h-8 items-center gap-1.5 rounded-lg border border-border-strong pl-2 pr-1 focus-within:border-primary/60">
@@ -469,6 +570,9 @@ export function VariantF({
                       <RotateCw size={14} strokeWidth={STROKE} aria-hidden="true" />
                       Leer de nuevo todo el manual
                     </button>
+                    <p className="px-2.5 pb-1 text-[11px] leading-snug text-fg-3">
+                      Las hojas que editaste a mano se conservan.
+                    </p>
                     <div className="mx-2 my-1 border-t border-border" />
                     <button
                       type="button"
@@ -580,7 +684,10 @@ export function VariantF({
                 <span className="mono text-[11.5px] font-semibold tabular-nums text-fg-2">
                   hoja {item.page_number}
                 </span>
-                <span className="text-[12px] text-fg-3">
+                <span
+                  className="text-[12px] text-fg-3"
+                  title={STATUS_HINT[itemSt.key] ?? undefined}
+                >
                   {STATUS_WORD[itemSt.key] ?? itemSt.label}
                 </span>
                 <span className="ml-auto flex items-center gap-0.5">
@@ -724,56 +831,79 @@ export function VariantF({
                     </div>
                   ) : null}
 
-                        {itemSt.key !== 'failed' && itemSt.key !== 'processing' && !isEditing ? (
+                  {itemSt.key !== 'failed' && itemSt.key !== 'processing' && !isEditing ? (
                     <div className="space-y-3.5">
-                      {item.ocr_lines.map((line, index) => {
-                        const tone =
-                          line.confidence == null ? null : confidenceTone(line.confidence);
-                        const problem =
-                          marks && (tone?.tone === 'warning' || tone?.tone === 'error');
-                        const pct =
-                          line.confidence == null
-                            ? null
-                            : Math.round(line.confidence * 100);
-                        const lineKey = `${item.page_number}:${index}`;
-                        return (
-                          <div
-                            key={index}
-                            ref={(node) => {
-                              if (node) lineRefs.current.set(lineKey, node);
-                              else lineRefs.current.delete(lineKey);
-                            }}
-                          >
-                            <p className="lang-reading text-fg" lang="es">
-                              {problem ? (
-                                <span
-                                  title={`Lectura con dudas · ${pct}% de confianza`}
-                                  style={
-                                    drawCascade
-                                      ? {
-                                          animationDelay: `${Math.min(index * 40, 300)}ms`,
-                                        }
-                                      : undefined
-                                  }
-                                  className={cn(
-                                    'lang-hl',
-                                    drawCascade && 'lang-hl-draw',
-                                    tone?.tone === 'error'
-                                      ? 'lang-hl-baja'
-                                      : 'lang-hl-media',
-                                    activeDuda === lineKey &&
-                                      'outline outline-2 outline-offset-2 outline-primary/60',
-                                  )}
-                                >
-                                  {highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)}
-                                </span>
-                              ) : (
-                                highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)
-                              )}
-                            </p>
-                          </div>
-                        );
-                      })}
+                      {(() => {
+                        const tones = item.ocr_lines.map((line) => {
+                          if (!marks || line.confidence == null) return null;
+                          const tone = confidenceTone(line.confidence).tone;
+                          return tone === 'warning' || tone === 'error' ? tone : null;
+                        });
+                        return item.ocr_lines.map((line, index) => {
+                          const lineTone = tones[index] ?? null;
+                          const problem = lineTone !== null;
+                          const pct =
+                            line.confidence == null
+                              ? null
+                              : Math.round(line.confidence * 100);
+                          const lineKey = `${item.page_number}:${index}`;
+                          const prevSame = index > 0 && tones[index - 1] === lineTone;
+                          const nextSame =
+                            index < tones.length - 1 && tones[index + 1] === lineTone;
+                          const groupRadius = !problem
+                            ? undefined
+                            : prevSame && nextSame
+                              ? '0.12em'
+                              : prevSame
+                                ? '0.1em 0.12em 0.4em 0.25em'
+                                : nextSame
+                                  ? '0.35em 0.2em 0.12em 0.1em'
+                                  : undefined;
+                          return (
+                            <div
+                              key={index}
+                              ref={(node) => {
+                                if (node) lineRefs.current.set(lineKey, node);
+                                else lineRefs.current.delete(lineKey);
+                              }}
+                              style={
+                                problem && prevSame ? { marginTop: '0.35rem' } : undefined
+                              }
+                            >
+                              <p className="lang-reading text-fg" lang="es">
+                                {problem ? (
+                                  <span
+                                    title={`Lectura con dudas · ${pct}% de confianza`}
+                                    style={{
+                                      ...(drawCascade
+                                        ? {
+                                            animationDelay: `${Math.min(index * 40, 300)}ms`,
+                                          }
+                                        : undefined),
+                                      ...(groupRadius
+                                        ? { borderRadius: groupRadius }
+                                        : undefined),
+                                    }}
+                                    className={cn(
+                                      'lang-hl',
+                                      drawCascade && 'lang-hl-draw',
+                                      lineTone === 'error'
+                                        ? 'lang-hl-baja'
+                                        : 'lang-hl-media',
+                                      activeDuda === lineKey &&
+                                        'outline outline-2 outline-offset-2 outline-primary/60',
+                                    )}
+                                  >
+                                    {highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)}
+                                  </span>
+                                ) : (
+                                  highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)
+                                )}
+                              </p>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   ) : null}
                 </div>
@@ -790,13 +920,18 @@ export function VariantF({
                     >
                       <div className="lg:sticky lg:top-16">
                         <div
-                          className="relative h-44 overflow-hidden rounded-sm border border-border-strong shadow-xs lg:h-auto lg:aspect-[3/4]"
-                          style={{ background: '#f3ead9', rotate: '-0.4deg' }}
+                          className="relative h-44 overflow-hidden rounded-sm border border-border-strong shadow-sm lg:h-auto lg:aspect-[3/4]"
+                          style={{
+                            background: 'linear-gradient(160deg, #f7efdf 0%, #efe3ca 70%, #e9dbc0 100%)',
+                            boxShadow:
+                              'inset 0 0 28px rgba(60, 35, 10, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5), var(--m-shadow-sm)',
+                            rotate: '-0.5deg',
+                          }}
                         >
                           <div
                             aria-hidden="true"
                             className="absolute inset-0 px-4 py-3.5"
-                            style={{ filter: 'contrast(0.92) sepia(0.12)' }}
+                            style={{ filter: 'contrast(0.88) sepia(0.18) blur(0.3px)' }}
                           >
                             {manual.pages
                               .find((entry) => entry.page_number === item.page_number)
@@ -991,9 +1126,10 @@ export function VariantF({
                 transition={{ duration: 0.12 }}
                 className="w-[19rem] p-2"
               >
+                <Leyenda />
                 <div className="flex flex-col gap-0.5">
                   {pages.map((item) => {
-                    const itemSt = pageStatus(item);
+                    const itemSt = effectiveStatus(item);
                     return (
                       <button
                         key={item.page_number}

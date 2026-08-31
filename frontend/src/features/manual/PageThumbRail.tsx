@@ -18,7 +18,7 @@ function PaperThumb({ failed, active }: Readonly<{ failed: boolean; active: bool
     <span
       aria-hidden="true"
       className={cn(
-        'relative hidden h-[50px] w-[38px] shrink-0 flex-col justify-center gap-1 overflow-hidden rounded-md border border-border p-2 transition-transform md:flex',
+        'relative hidden h-[50px] w-[38px] shrink-0 flex-col justify-center gap-1 overflow-hidden rounded-md border border-border p-2 transition-transform @4xl/app:flex',
         failed
           ? 'bg-[repeating-linear-gradient(135deg,var(--m-surface)_0_6px,var(--m-surface-2)_6px_12px)]'
           : 'bg-gradient-to-b from-surface to-surface-2',
@@ -45,9 +45,9 @@ function PaperThumb({ failed, active }: Readonly<{ failed: boolean; active: bool
 function pageButtonSurface(active: boolean, isDup: boolean): string {
   if (active) return 'border-primary bg-primary-50';
   if (isDup) {
-    return 'border-dashed border-border-strong bg-card md:shadow-xs md:hover:-translate-y-px md:hover:shadow-sm';
+    return 'border-dashed border-border-strong bg-card @4xl/app:shadow-xs @4xl/app:hover:-translate-y-px @4xl/app:hover:shadow-sm';
   }
-  return 'border-border bg-card md:shadow-xs md:hover:-translate-y-px md:hover:border-border-strong md:hover:shadow-sm';
+  return 'border-border bg-card @4xl/app:shadow-xs @4xl/app:hover:-translate-y-px @4xl/app:hover:border-border-strong @4xl/app:hover:shadow-sm';
 }
 
 function PageButton({
@@ -76,7 +76,7 @@ function PageButton({
         'group relative flex shrink-0 border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         // móvil: chip vertical · escritorio: fila completa
         'h-[58px] w-[46px] flex-col items-center justify-center gap-1 rounded-xl',
-        'md:h-auto md:w-full md:flex-row md:items-center md:justify-start md:gap-3 md:rounded-2xl md:p-2',
+        '@4xl/app:h-auto @4xl/app:w-full @4xl/app:flex-row @4xl/app:items-center @4xl/app:justify-start @4xl/app:gap-3 @4xl/app:rounded-2xl @4xl/app:p-2',
         pageButtonSurface(active, isDup),
       )}
     >
@@ -85,7 +85,7 @@ function PageButton({
       {/* número compacto (móvil) */}
       <span
         className={cn(
-          'mono text-xs font-bold tabular-nums md:hidden',
+          'mono text-xs font-bold tabular-nums @4xl/app:hidden',
           active ? 'text-primary-700' : 'text-fg-2',
         )}
       >
@@ -94,7 +94,7 @@ function PageButton({
       {/* etiqueta (escritorio) */}
       <span
         className={cn(
-          'hidden min-w-0 flex-1 truncate font-body text-sm font-semibold tabular-nums md:block',
+          'hidden min-w-0 flex-1 truncate font-body text-sm font-semibold tabular-nums @4xl/app:block',
           active ? 'text-fg' : 'text-fg-2',
         )}
       >
@@ -102,7 +102,7 @@ function PageButton({
       </span>
 
       {hits > 0 ? (
-        <span className="mono hidden h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold tabular-nums text-fg-inv md:grid">
+        <span className="mono hidden h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold tabular-nums text-fg-inv @4xl/app:grid">
           {hits}
         </span>
       ) : null}
@@ -113,7 +113,7 @@ function PageButton({
         size={12}
         strokeWidth={2.3}
         className={cn(
-          'md:hidden',
+          '@4xl/app:hidden',
           STATUS_FG_CLASS[st.tone],
           st.key === 'processing' && 'animate-spin',
         )}
@@ -121,7 +121,7 @@ function PageButton({
       />
       <span
         className={cn(
-          'hidden size-6 shrink-0 place-items-center rounded-full md:grid',
+          'hidden size-6 shrink-0 place-items-center rounded-full @4xl/app:grid',
           STATUS_TONE_CLASS[st.tone],
         )}
       >
@@ -134,7 +134,7 @@ function PageButton({
       </span>
 
       {hits > 0 ? (
-        <span className="mono absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-fg-inv md:hidden">
+        <span className="mono absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-fg-inv @4xl/app:hidden">
           {hits}
         </span>
       ) : null}
@@ -184,10 +184,10 @@ export function PageThumbRail({
   return (
     <nav
       aria-label={t('page.navLabel')}
-      className="min-w-0 md:flex md:min-h-0 md:flex-1 md:flex-col"
+      className="min-w-0 @4xl/app:flex @4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:flex-col"
     >
       {/* cabecera + leyenda — solo escritorio */}
-      <div className="hidden md:block">
+      <div className="hidden @4xl/app:block">
         <div className="flex items-center justify-between px-1 pb-2.5">
           <h2 className="font-display text-lg font-bold tracking-tight text-fg">
             {t('page.heading')}
@@ -201,7 +201,7 @@ export function PageThumbRail({
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 md:min-h-0 md:flex-1 md:flex-col md:overflow-x-visible md:overflow-y-auto md:pb-2 md:pr-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 @4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:flex-col @4xl/app:overflow-x-visible @4xl/app:overflow-y-auto @4xl/app:pb-2 @4xl/app:pr-1">
         {pages.map((page) => (
           <PageButton
             key={page.page_number}

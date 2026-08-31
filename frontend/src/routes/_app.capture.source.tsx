@@ -248,7 +248,7 @@ function NewManualScreen() {
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar crumb={t('title')} />
 
-      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-8 p-5 md:grid-cols-2 md:gap-10 md:p-8">
+      <div className="page-frame grid flex-1 content-start gap-8 py-6 @3xl/app:grid-cols-2 @3xl/app:gap-10 lg:py-8">
         <section className="flex flex-col gap-5">
           <StepHeader n={1} title={t('steps.game')} done={game !== null} />
           {game ? (
@@ -266,7 +266,7 @@ function NewManualScreen() {
           )}
         >
           <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5 @sm/app:grid-cols-3">
             <SourceFileControl
               inputId={cameraInputId}
               icon={<Camera size={19} strokeWidth={2} />}

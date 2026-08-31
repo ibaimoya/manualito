@@ -78,7 +78,7 @@ function ConversationsScreen() {
         }
       />
 
-      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-28 pt-5 md:px-6">
+      <div className="page-frame relative flex flex-1 flex-col py-6 lg:py-8">
         <header className="mb-4 flex items-center gap-3.5">
           <GameCover name={gameName} size={44} radius={12} processing={gameIds.has(gameId)} />
           <div className="min-w-0 flex-1">
@@ -140,7 +140,7 @@ function ConversationsScreen() {
             to="/chat/$gameId"
             params={{ gameId }}
             search={{}}
-            className="fixed bottom-6 right-5 z-10 inline-flex items-center gap-2 rounded-full bg-primary px-5 font-body text-[15px] font-bold text-fg-inv shadow-lg transition-transform hover:scale-[1.03] md:right-10"
+            className="sticky bottom-6 z-10 mt-6 inline-flex items-center gap-2 self-end rounded-full bg-primary px-5 font-body text-[15px] font-bold text-fg-inv shadow-lg transition-transform active:scale-[0.96]"
             style={{ height: 52 }}
           >
             <Plus size={18} strokeWidth={2.2} aria-hidden="true" />

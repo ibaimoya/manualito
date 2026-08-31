@@ -420,6 +420,10 @@ function ChatScreen() {
 
   // Scroll al final cuando entra un mensaje nuevo.
   useEffect(() => {
+    if (messages.length === 0 && pendingQuestion === null) {
+      scrollRef.current?.scrollTo({ top: 0 });
+      return;
+    }
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length, pendingQuestion, askMutation.isPending, hasPendingAssistant]);
 
@@ -563,7 +567,7 @@ function ChatConversation({
   const { t } = useTranslation('chat');
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-5 md:px-6">
+    <div className="page-frame flex flex-col gap-4 py-5">
       {historyLoading ? <HistorySkeleton /> : null}
       {historyError ? (
         <p className="py-6 text-center text-sm text-fg-3">{t('error.history')}</p>
@@ -609,10 +613,10 @@ function ChatComposerBar({
 
   return (
     <div
-      className="shrink-0 border-t border-border bg-bg px-4 pt-[11px] md:px-6"
+      className="shrink-0 border-t border-border bg-bg pt-3"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}
     >
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="page-frame">
         {canAsk ? null : <SourcesUnavailableNotice />}
         <MessageComposer
           value={draft}
@@ -665,30 +669,34 @@ function ChatHeader({
   // El título se reescribe (borrar + teclear) cuando el backend nombra la conversación.
   const shownTitle = useRetypingTitle(title);
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-border bg-bg px-4 py-2.5 md:px-6">
-      {gameName ? <GameCover name={gameName} size={38} radius={9} processing={processing} /> : null}
-      <div className="min-w-0 flex-1">
-        {/* El espacio fijo evita que la línea de abajo salte mientras se borra. */}
-        <p className="truncate font-display text-[15px] font-bold text-fg md:text-base">
-          {shownTitle || ' '}
-        </p>
-        <p className="mono mt-0.5 flex items-center gap-1.5 text-[11px] text-fg-3">
-          <Meeple size={11} color="currentColor" />
-          <span className="truncate">{gameName ?? t('fallback.gameName')}</span>
-        </p>
+    <div className="shrink-0 border-b border-border bg-bg">
+      <div className="page-frame flex items-center gap-3 py-3">
+        {gameName ? (
+          <GameCover name={gameName} size={38} radius={9} processing={processing} />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          {/* El espacio fijo evita que la línea de abajo salte mientras se borra. */}
+          <p className="truncate font-display text-[15px] font-bold text-fg md:text-base">
+            {shownTitle || ' '}
+          </p>
+          <p className="mono mt-0.5 flex items-center gap-1.5 text-[11px] text-fg-3">
+            <Meeple size={11} color="currentColor" />
+            <span className="truncate">{gameName ?? t('fallback.gameName')}</span>
+          </p>
+        </div>
+        {showNew ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onNew}
+            className="shrink-0"
+            aria-label={t('aria.newConversation')}
+          >
+            <Plus size={15} strokeWidth={2} />
+            <span className="hidden sm:inline">{t('actions.new')}</span>
+          </Button>
+        ) : null}
       </div>
-      {showNew ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onNew}
-          className="shrink-0"
-          aria-label={t('aria.newConversation')}
-        >
-          <Plus size={15} strokeWidth={2} />
-          <span className="hidden sm:inline">{t('actions.new')}</span>
-        </Button>
-      ) : null}
     </div>
   );
 }
@@ -701,7 +709,7 @@ function ChatWelcome({
   const { t } = useTranslation('chat');
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-6 py-8 text-center">
+    <div className="page-frame flex min-h-full flex-col items-center justify-center py-8 text-center">
       <ChatBotAvatar size={64} />
       <h2 className="mt-3.5 font-display text-2xl font-extrabold tracking-tight text-fg">
         <Trans
@@ -725,7 +733,7 @@ function ChatWelcome({
                 key={key}
                 type="button"
                 onClick={() => onPick(question)}
-                className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-all hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-primary-100 text-primary-700">
                   <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
@@ -753,7 +761,7 @@ function ReadOnlyEmpty({ gameName }: Readonly<{ gameName: string | null }>) {
   const { t } = useTranslation('chat');
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-6 py-8 text-center">
+    <div className="page-frame flex min-h-full flex-col items-center justify-center py-8 text-center">
       <ChatBotAvatar size={64} />
       <h2 className="mt-3.5 font-display text-2xl font-extrabold tracking-tight text-fg">
         {t('readOnly.title')}
@@ -790,7 +798,7 @@ function UserBubble({ content }: Readonly<{ content: string }>) {
   return (
     <div className="flex justify-end">
       <div
-        className="max-w-[82%] whitespace-pre-wrap break-words rounded-2xl bg-primary px-[15px] py-[11px] text-[15px] leading-normal text-fg-inv shadow-xs"
+        className="max-w-[min(90%,65ch)] whitespace-pre-wrap break-words rounded-2xl bg-primary px-[15px] py-[11px] text-[15px] leading-normal text-fg-inv shadow-xs"
         style={{ borderBottomRightRadius: 4 }}
       >
         {content}
@@ -855,7 +863,7 @@ function BotBubble({
   return (
     <div className="group flex items-start gap-[11px]">
       <ChatBotAvatar />
-      <div className="min-w-0 max-w-[82%]">
+      <div className="min-w-0 max-w-prose">
         <div
           className="rounded-2xl border border-border bg-card px-4 py-[13px] shadow-xs"
           style={{ borderBottomLeftRadius: 4 }}
@@ -907,7 +915,7 @@ function BotStaticBubble({
       <ChatBotAvatar />
       <div
         className={cn(
-          'max-w-[82%] rounded-2xl border px-4 py-[13px] text-[15px] leading-relaxed shadow-xs',
+          'min-w-0 max-w-prose rounded-2xl border px-4 py-[13px] text-[15px] leading-relaxed shadow-xs',
           tone === 'error'
             ? 'border-error/30 bg-error-bg text-error'
             : 'border-border bg-card text-fg-2',

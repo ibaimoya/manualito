@@ -397,9 +397,9 @@ function ManualDetailLoaded({
         },
       ]}
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 md:grid md:h-[calc(100dvh_-_3.5rem)] md:flex-none md:max-w-none md:grid-cols-[300px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:gap-0 md:overflow-hidden md:p-0">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 @4xl/app:grid @4xl/app:h-[calc(100dvh_-_3.5rem)] @4xl/app:flex-none @4xl/app:max-w-none @4xl/app:grid-cols-[300px_minmax(0,1fr)] @4xl/app:grid-rows-[minmax(0,1fr)] @4xl/app:gap-0 @4xl/app:overflow-hidden @4xl/app:p-0">
         {/* ───── RAIL ───── */}
-        <aside className="min-w-0 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border md:px-4 md:py-5">
+        <aside className="min-w-0 @4xl/app:flex @4xl/app:min-h-0 @4xl/app:flex-col @4xl/app:overflow-hidden @4xl/app:border-r @4xl/app:border-border @4xl/app:px-4 @4xl/app:py-5">
           <PageThumbRail
             pages={pages}
             activePage={page.page_number}
@@ -409,9 +409,9 @@ function ManualDetailLoaded({
         </aside>
 
         {/* ───── COLUMNA PRINCIPAL ───── */}
-        <div className="flex min-w-0 flex-col gap-4 md:min-h-0 md:gap-0 md:overflow-hidden">
+        <div className="flex min-w-0 flex-col gap-4 @4xl/app:min-h-0 @4xl/app:gap-0 @4xl/app:overflow-hidden">
           {/* cabecera del manual: título + metadatos + acciones (centradas en la celda) */}
-          <div className="flex items-center gap-4 md:border-b md:border-border md:px-6 md:py-4">
+          <div className="flex items-center gap-4 @4xl/app:border-b @4xl/app:border-border @4xl/app:px-6 @4xl/app:py-4">
             <div className="min-w-0 flex-1">
               <h1 className="truncate font-display text-xl font-extrabold tracking-tight text-fg">
                 {title}
@@ -434,8 +434,8 @@ function ManualDetailLoaded({
           {busy ? <ReprocessBanner data={processing.data ?? null} /> : null}
 
           {/* visor con scroll propio en escritorio */}
-          <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:px-6 md:py-5">
-            <div className="mx-auto flex max-w-3xl flex-col gap-4">
+          <div className="@4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:overflow-y-auto @4xl/app:px-6 @4xl/app:py-5">
+            <div className="flex flex-col gap-4">
               {/* fila de control: navegación de página + estado */}
               <div className="flex flex-wrap items-center gap-3">
                 <PageNav
@@ -1034,7 +1034,7 @@ function ReprocessBanner({
   const { t } = useTranslation('manual');
   const pct = data ? (data.completed_pages / Math.max(data.page_count, 1)) * 100 : 5;
   return (
-    <div className="md:px-6 md:pt-4">
+    <div className="@4xl/app:px-6 @4xl/app:pt-4">
       <output className="flex items-center gap-3 rounded-2xl border border-primary bg-primary-50 p-3.5">
         <Loader2 size={20} className="shrink-0 animate-spin text-primary" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -1169,7 +1169,7 @@ function SearchField({
   return (
     <div
       className={cn(
-        'flex h-10 min-w-0 max-w-[460px] flex-1 items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors',
+        'flex h-10 w-full min-w-0 max-w-[460px] flex-auto items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors @2xl/app:w-auto @2xl/app:flex-1',
         hasQuery
           ? 'border-primary'
           : 'border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
@@ -1240,14 +1240,17 @@ function DetailSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-5 px-4 py-4 md:max-w-none md:grid-cols-[300px_minmax(0,1fr)] md:gap-0 md:p-0"
+      className="mx-auto grid w-full max-w-6xl flex-1 content-start gap-5 px-4 py-4 @4xl/app:max-w-none @4xl/app:grid-cols-[300px_minmax(0,1fr)] @4xl/app:gap-0 @4xl/app:p-0"
     >
-      <div className="flex gap-2 md:flex-col md:border-r md:border-border md:px-4 md:py-5">
+      <div className="flex gap-2 @4xl/app:flex-col @4xl/app:border-r @4xl/app:border-border @4xl/app:px-4 @4xl/app:py-5">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-16 w-28 animate-pulse rounded-2xl bg-surface-2 md:w-full" />
+          <div
+            key={i}
+            className="h-16 w-28 animate-pulse rounded-2xl bg-surface-2 @4xl/app:w-full"
+          />
         ))}
       </div>
-      <div className="space-y-4 md:px-6 md:py-5">
+      <div className="space-y-4 @4xl/app:px-6 @4xl/app:py-5">
         <div className="h-10 w-72 max-w-full animate-pulse rounded-xl bg-surface-2" />
         <div className="h-[clamp(320px,52vh,520px)] animate-pulse rounded-2xl bg-surface-2" />
       </div>

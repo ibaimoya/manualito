@@ -77,7 +77,7 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   return (
     <>
       <div className="flex-1">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-5 md:px-6 md:py-8">
+        <div className="page-frame page-stack">
           <GameHeader game={game} onRate={openRating} />
           <ExplanationSection gameId={game.id} hasManuals={canAsk} />
           {canAsk || game.conversations_count > 0 ? (
@@ -115,9 +115,9 @@ function GameHeader({
   const { t } = useTranslation('game');
   const { gameIds } = useProcessingManuals();
   return (
-    <header className="flex items-center gap-5 md:gap-6">
+    <header className="flex flex-wrap items-center gap-5 @2xl/app:flex-nowrap @2xl/app:gap-6">
       <GameCover name={game.name} size={120} processing={gameIds.has(game.id)} />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-48">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           {game.year_published === null
             ? t('header.boardGame')
@@ -375,12 +375,12 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
 
   return (
     <div
-      className="sticky bottom-0 z-10 border-t border-border bg-bg/95 px-4 pt-2.5 backdrop-blur md:px-6"
+      className="sticky bottom-0 z-10 border-t border-border bg-bg/95 pt-2.5 backdrop-blur"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="page-frame">
         <div
-          className="flex flex-wrap justify-center gap-2 pb-2"
+          className="flex gap-2 overflow-x-auto pb-2"
           aria-label={t('composer.aria.suggestedQuestions')}
         >
           {SUGGESTED_QUESTIONS.map((questionKey) => {
@@ -422,7 +422,7 @@ function ExplanationSkeleton() {
 
 function HubSkeleton() {
   return (
-    <div aria-hidden="true" className="mx-auto w-full max-w-4xl space-y-6 px-4 py-5 md:px-6">
+    <div aria-hidden="true" className="page-frame page-stack">
       <div className="flex gap-5">
         <div className="size-24 animate-pulse rounded-3xl bg-surface-2" />
         <div className="flex-1 space-y-3 pt-1">

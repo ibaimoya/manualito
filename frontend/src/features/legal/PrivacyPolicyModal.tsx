@@ -19,7 +19,7 @@ export function PrivacyPolicyModal({
         description={t('modal.description')}
         onClose={() => onOpenChange(false)}
       />
-      <DialogBody className="max-h-[70dvh] overflow-y-auto">
+      <DialogBody className="min-h-0 overflow-y-auto">
         <PrivacySections />
       </DialogBody>
     </Dialog>

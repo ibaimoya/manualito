@@ -26,11 +26,15 @@ export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
       >
         <Meeple size={400} />
       </div>
-      <LanguagePill className="fixed right-[22px] top-[18px] z-40" />
-      <div className="relative mx-auto flex min-h-full w-full max-w-[420px] flex-col items-center justify-center gap-6 px-6 py-10">
-        <LockUp withTagline={false} />
-        <div className="w-full rounded-2xl border border-border bg-card p-7 shadow-md sm:p-8">
-          {children}
+      <div className="relative flex min-h-full flex-col px-4 py-4 sm:px-6">
+        <div className="flex shrink-0 justify-end pb-6">
+          <LanguagePill />
+        </div>
+        <div className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center gap-6 pb-8">
+          <LockUp withTagline={false} />
+          <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-md sm:p-8">
+            {children}
+          </div>
         </div>
       </div>
     </div>

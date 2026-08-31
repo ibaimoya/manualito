@@ -111,7 +111,7 @@ export const ModalBody = ({ children, className }: ModalBodyProps) => (
  */
 
 export const DIALOG_CONTENT_CLASS = cn(
-  'fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-md',
+  'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md flex-col overflow-y-auto',
   '-translate-x-1/2 -translate-y-1/2',
   'rounded-2xl border border-border bg-card shadow-lg',
 );

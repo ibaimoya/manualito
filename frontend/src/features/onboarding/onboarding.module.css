@@ -30,6 +30,8 @@
   flex-shrink: 0;
   width: 100vw;
   height: 100%;
+  overflow-y: auto;
+  padding-block: calc(env(safe-area-inset-top) + 76px) calc(env(safe-area-inset-bottom) + 108px);
 }
 
 /* — Mesh + grain + vignette layers — */
@@ -212,7 +214,8 @@
   margin: auto;
   text-align: center;
   padding: 24px;
-  max-width: 720px;
+  width: 100%;
+  max-width: 72rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -239,7 +242,7 @@
   margin: 0;
   font-family: var(--m-font-display), sans-serif;
   font-weight: 800;
-  font-size: clamp(64px, 18vw, 180px);
+  font-size: clamp(32px, 11vw, 144px);
   letter-spacing: -0.035em;
   line-height: 0.95;
   color: #fff8f0;
@@ -338,23 +341,24 @@
 /* — Step slides — */
 .step {
   margin: auto;
-  max-width: 920px;
+  max-width: 72rem;
   width: 100%;
   padding: 24px;
   display: grid;
   gap: 28px;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
 }
 
-@media (min-width: 720px) {
+@media (min-width: 960px) {
   .step {
-    grid-template-columns: 1fr 1fr;
-    gap: 56px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 48px;
   }
 }
 
 .stepCopy {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -411,6 +415,7 @@
   display: grid;
   place-items: center;
   min-height: 320px;
+  min-width: 0;
 }
 
 /* Phone (step 1) */
@@ -512,9 +517,11 @@
    etiqueta) y el barrido va en relevo: ciclo de 3.6s en tres tramos —
    brilla OCR, cruza el hilo 1, brilla RAG, cruza el hilo 2, brilla LLM. */
 .pipeline {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 16px minmax(0, 1fr);
+  width: 100%;
   align-items: flex-start;
-  gap: 14px;
+  gap: 4px;
 }
 
 .node {
@@ -522,7 +529,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  width: 112px;
+  min-width: 0;
   /* El icono del anillo hereda este color; el fondo real bajo él es el
      mesh oscuro, no el tinte translúcido del propio anillo. */
   color: #fff8f0;
@@ -533,8 +540,8 @@
 }
 
 .nodeRing {
-  width: 92px;
-  height: 92px;
+  width: min(92px, 100%);
+  aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(
     80% 80% at 50% 30%,
@@ -607,7 +614,7 @@
 .link {
   position: relative;
   flex: 1;
-  min-width: 24px;
+  width: 100%;
   height: 2px;
   /* Centro del anillo: 92/2 − 1px de medio hilo. */
   margin-top: 45px;
@@ -659,13 +666,6 @@
   }
   100% {
     left: 100%;
-  }
-}
-
-@media (max-width: 719px) {
-  .pipeline {
-    transform: scale(0.78);
-    transform-origin: center;
   }
 }
 
@@ -795,6 +795,35 @@
     transform 600ms ease 200ms;
 }
 
+@media (max-width: 400px) {
+  .topbar {
+    padding-inline: 16px;
+  }
+
+  .topbarName {
+    display: none;
+  }
+
+  .step,
+  .hero,
+  .choice {
+    padding-inline: 16px;
+  }
+
+  .nodeRing {
+    width: 64px;
+  }
+
+  .nodeCore {
+    width: 44px;
+    height: 44px;
+  }
+
+  .link {
+    margin-top: 31px;
+  }
+}
+
 .choice.isIn {
   opacity: 1;
   transform: none;
@@ -904,8 +933,11 @@
 
 /* — Reduced motion — */
 @media (prefers-reduced-motion: reduce) {
+  .track {
+    transition: none;
+  }
+
   .mesh,
-  .track,
   .letterIn,
   .thumb,
   .node,

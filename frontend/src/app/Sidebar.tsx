@@ -129,7 +129,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         )}
       </div>
 
-      <div className={cn('pb-4', collapsed ? 'px-2' : 'px-3')}>
+      <div className={cn('shrink-0 pb-4', collapsed ? 'px-2' : 'px-3')}>
         <Button asChild block aria-label={collapsed ? t('navigation.newManual') : undefined}>
           <Link to="/capture/source" title={collapsed ? t('navigation.newManual') : undefined}>
             <Plus size={18} strokeWidth={2} />
@@ -139,7 +139,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
       </div>
 
       <nav
-        className={cn('flex flex-1 flex-col', collapsed ? 'px-2' : 'px-3')}
+        className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', collapsed ? 'px-2' : 'px-3')}
         aria-label={t('navigation.aria.sections')}
       >
         <NavList items={NAV_MAIN} pathname={pathname} collapsed={collapsed} />
@@ -152,7 +152,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
       </nav>
 
       {user ? (
-        <footer className="border-t border-border p-3">
+        <footer className="shrink-0 border-t border-border p-3">
           <UserCard user={user} collapsed={collapsed} />
         </footer>
       ) : null}

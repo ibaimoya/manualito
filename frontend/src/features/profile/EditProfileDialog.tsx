@@ -116,12 +116,12 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
       }}
       className="flex flex-col gap-4"
     >
-      <fieldset>
+      <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-semibold text-fg">{t('edit.avatar')}</legend>
-        <div className="flex items-start gap-4 rounded-2xl border border-border bg-surface p-3.5">
+        <div className="flex flex-wrap items-start gap-4 rounded-2xl border border-border bg-surface p-3.5">
           <Avatar name={username || user.username} size={64} color={color} figure={figure} />
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <fieldset aria-label={t('edit.avatarColor')} className="flex gap-2">
+          <div className="flex min-w-0 flex-1 basis-48 flex-col gap-2.5">
+            <fieldset aria-label={t('edit.avatarColor')} className="flex flex-wrap gap-2">
               {COLORS.map((option) => {
                 const label = t(option.key);
                 return (
@@ -218,7 +218,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
         </AuthAlert>
       ) : null}
 
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>
           {t('edit.cancel')}
         </Button>

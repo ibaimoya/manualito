@@ -184,12 +184,12 @@ function StatCards() {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid gap-3 @md/app:grid-cols-3">
       {items.map((item) => (
-        <Card key={item.label} className="p-4 md:p-5">
+        <Card key={item.label} className="flex items-center gap-3 p-4 @md/app:block @md/app:p-5">
           <span
             aria-hidden="true"
-            className={`mb-3 grid size-9 place-items-center rounded-xl ${item.chipClass}`}
+            className={`grid size-9 shrink-0 place-items-center rounded-xl @md/app:mb-3 ${item.chipClass}`}
           >
             {item.icon}
           </span>
@@ -203,7 +203,7 @@ function StatCards() {
               {item.value ?? '—'}
             </span>
           )}
-          <span className="mt-0.5 block break-words text-xs text-fg-3">{item.label}</span>
+          <span className="block text-sm text-fg-3 @md/app:mt-0.5 @md/app:text-xs">{item.label}</span>
         </Card>
       ))}
     </div>

@@ -242,3 +242,97 @@ def test_cookie_names_keep_host_prefix_only_when_secure():
     assert insecure.resolved_auth_csrf_cookie_name == "manualito_csrf"
     assert secure.resolved_auth_session_cookie_name == "__Host-manualito_session"
     assert secure.resolved_auth_csrf_cookie_name == "__Host-manualito_csrf"
+
+
+def test_smtp_secret_file_and_reply_to_from_environment(monkeypatch, tmp_path):
+    """Lee el archivo real indicado por el entorno sin mostrar la credencial."""
+    secret_file = tmp_path / "smtp.txt"
+    secret_file.write_text("  test-mail-credential\n", encoding="utf-8")
+    monkeypatch.delenv("SMTP_PASSWORD", raising=False)
+    monkeypatch.setenv("SMTP_PASSWORD_FILE", str(secret_file))
+    monkeypatch.setenv("SMTP_REPLY_TO", "support@example.com")
+
+    settings = ApiSettings()
+
+    assert settings.resolved_smtp_password == "test-mail-credential"
+    assert settings.smtp_reply_to == "support@example.com"
+    assert "test-mail-credential" not in repr(settings)
+    assert "test-mail-credential" not in settings.model_dump_json()
+
+
+def test_smtp_password_from_environment_is_not_displayed(monkeypatch):
+    """La credencial directa tampoco aparece al representar la configuración."""
+    monkeypatch.delenv("SMTP_PASSWORD_FILE", raising=False)
+    monkeypatch.setenv("SMTP_PASSWORD", "test-direct-credential")
+
+    settings = ApiSettings()
+
+    assert settings.resolved_smtp_password == "test-direct-credential"
+    assert "test-direct-credential" not in repr(settings)
+    assert "test-direct-credential" not in settings.model_dump_json()
+
+
+def test_smtp_rejects_two_credential_sources(tmp_path):
+    """Un archivo y una variable no pueden elegir credenciales distintas."""
+    with pytest.raises(ValueError, match="solo SMTP_PASSWORD_FILE o SMTP_PASSWORD") as error:
+        ApiSettings(
+            smtp_password="test-conflicting-credential",
+            smtp_password_file=str(tmp_path / "smtp.txt"),
+        )
+
+    assert "test-conflicting-credential" not in str(error.value)
+    assert "test-conflicting-credential" not in repr(error.value)
+
+
+@pytest.mark.parametrize(
+    "file_kind", ["missing", "directory", "empty", "whitespace", "invalid_utf8"],
+)
+def test_smtp_rejects_unusable_secret_file(tmp_path, file_kind):
+    """Un secreto inaccesible o vacío impide arrancar el envío."""
+    secret_file = tmp_path / "smtp.txt"
+    if file_kind == "directory":
+        secret_file.mkdir()
+    elif file_kind == "empty":
+        secret_file.touch()
+    elif file_kind == "whitespace":
+        secret_file.write_text(" \n\t", encoding="utf-8")
+    elif file_kind == "invalid_utf8":
+        secret_file.write_bytes(b"\xff\xfe")
+
+    with pytest.raises(ValueError, match="SMTP_PASSWORD_FILE"):
+        ApiSettings(smtp_password=None, smtp_password_file=str(secret_file))
+
+
+def test_smtp_secret_is_hidden_when_another_setting_fails():
+    """Un error ajeno al correo no incluye su credencial en el diagnóstico."""
+    with pytest.raises(ValueError, match="greater than or equal to 1") as error:
+        ApiSettings(smtp_password="test-invalid-settings-credential", smtp_port=0)
+
+    assert "test-invalid-settings-credential" not in str(error.value)
+    assert "test-invalid-settings-credential" not in repr(error.value)
+
+
+def test_smtp_rejects_two_tls_modes():
+    """TLS implícito y STARTTLS son modos alternativos."""
+    with pytest.raises(ValueError, match="SMTP_USE_TLS y SMTP_STARTTLS"):
+        ApiSettings(smtp_use_tls=True, smtp_starttls=True)
+
+
+def test_smtp_defaults_keep_local_mailpit(monkeypatch):
+    """El entorno local sigue capturando los correos sin credenciales ni TLS."""
+    for name in (
+        "SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_PASSWORD_FILE",
+        "SMTP_STARTTLS", "SMTP_USE_TLS", "SMTP_FROM_EMAIL", "SMTP_REPLY_TO",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    settings = ApiSettings()
+
+    assert settings.smtp_host == "mailpit"
+    assert settings.smtp_port == 1025
+    assert settings.smtp_username is None
+    assert settings.resolved_smtp_password is None
+    assert settings.smtp_starttls is False
+    assert settings.smtp_use_tls is False
+    assert settings.smtp_from_email == "no-reply@manualito.local"
+    assert settings.smtp_reply_to is None

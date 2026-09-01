@@ -15,6 +15,7 @@
 !config/*.env
 !secrets/*.txt
 secrets/tunnel_token.txt
+secrets/resend_api_key.txt
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

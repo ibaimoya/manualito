@@ -33,6 +33,12 @@ _bgg_cache_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 _bgg_cache_locks_guard = asyncio.Lock()
 
 
+async def discover_games(session: AsyncSession, *, limit: int) -> GameSearchResponse:
+    """Selecciona juegos consultables de la comunidad sin acudir a BGG."""
+    games = await repository.discover_games(session, limit=limit)
+    return GameSearchResponse(games=[GameSearchItem.model_validate(game) for game in games])
+
+
 async def search_game_catalog(
     session: AsyncSession,
     *,

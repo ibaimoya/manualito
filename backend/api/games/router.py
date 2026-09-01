@@ -23,6 +23,7 @@ from api.games.schemas import (
 )
 from api.games.service import (
     create_manual_game,
+    discover_games,
     follow_game,
     get_game_detail,
     list_my_games,
@@ -79,7 +80,18 @@ async def create_game_handler(
     )
 
 
-# Va antes de la ruta `/{game_id}`: si no, FastAPI intentaría leer `mine` como un UUID.
+# Las rutas con nombre van antes de `/{game_id}` para no interpretarlas como UUID.
+@router.get("/api/games/discover")
+@limiter.limit(config.GAME_SEARCH_RATE_LIMIT)
+async def discover_games_handler(
+    request: Request,
+    session: DbSession,
+    limit: GameSearchLimit = 6,
+) -> GameSearchResponse:
+    """Juegos al azar con manuales compartidos que ya se pueden consultar."""
+    return await discover_games(session, limit=limit)
+
+
 @router.get("/api/games/mine")
 async def list_my_games_handler(
     auth: CurrentAuth,

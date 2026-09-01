@@ -1,4 +1,16 @@
 {
+  "discovery": {
+    "empty": {
+      "description": "No games have shared rulebooks yet. Upload one and help others get playing.",
+      "title": "The next game starts here",
+      "upload": "Upload a rulebook"
+    },
+    "error": "We couldn't load the games. Please try again.",
+    "heading": "Suggestions",
+    "loading": "Finding community games",
+    "openGame": "View {{name}}",
+    "shuffle": "Show other suggestions"
+  },
   "header": {
     "description": "Find a game someone has already explained and ask away without uploading your rulebook. The number beside each result shows how many rulebooks the community has shared.",
     "eyebrow": "From the community",

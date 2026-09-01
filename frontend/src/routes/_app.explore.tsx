@@ -1,8 +1,10 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { FileText, Sparkles, Users } from 'lucide-react';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { FileText, Plus, Sparkles, Users } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GameTypeahead } from '@/features/upload/GameTypeahead';
+import { DiscoverGames } from '@/features/games/DiscoverGames';
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/_app/explore')({
   component: ExploreScreen,
@@ -43,6 +45,23 @@ function ExploreScreen() {
           {t('hints.giveBack.description')}
         </Hint>
       </ul>
+
+      <DiscoverGames
+        emptyState={
+          <section className="rounded-2xl border border-dashed border-border-strong px-5 py-8 text-center">
+            <h2 className="font-display text-xl font-bold">{t('discovery.empty.title')}</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-fg-2">
+              {t('discovery.empty.description')}
+            </p>
+            <Button asChild variant="secondary" className="mt-5">
+              <Link to="/capture/source">
+                <Plus size={18} aria-hidden="true" />
+                {t('discovery.empty.upload')}
+              </Link>
+            </Button>
+          </section>
+        }
+      />
     </div>
   );
 }

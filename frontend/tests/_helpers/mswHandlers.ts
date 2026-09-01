@@ -202,6 +202,22 @@ export const handlers = [
     });
   }),
 
+  http.get('/api/games/discover', () =>
+    HttpResponse.json({
+      games: [
+        { id: 'rec-1', name: 'Carcassonne', bgg_id: 822, year_published: 2000, manuals_count: 2 },
+        {
+          id: 'rec-2',
+          name: 'Ticket to Ride',
+          bgg_id: 9209,
+          year_published: 2004,
+          manuals_count: 1,
+        },
+        { id: 'rec-3', name: 'Azul', bgg_id: 230802, year_published: 2017, manuals_count: 1 },
+      ],
+      attribution: 'Powered by BoardGameGeek.',
+    }),
+  ),
   http.get('/api/games/:gameId', () => HttpResponse.json(SAMPLE_GAME_DETAIL)),
 
   http.get('/api/games/:gameId/explanation', () => HttpResponse.json(SAMPLE_EXPLANATION)),

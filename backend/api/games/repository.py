@@ -27,6 +27,32 @@ from database.models.manual import Manual, ManualPage
 SIMILARITY_THRESHOLD = 0.1
 
 
+async def discover_games(session: AsyncSession, *, limit: int) -> list[GameSearchResult]:
+    """Elige juegos al azar, con al menos un manual compartido ya indexado."""
+    result = await session.execute(
+        select(
+            Game.id,
+            Game.name,
+            Game.bgg_id,
+            Game.year_published,
+            func.count(Manual.id).label("manuals_count"),
+        )
+        .join(Manual, Manual.game_id == Game.id)
+        .where(
+            Game.deleted_at.is_(None),
+            Game.status == "active",
+            Manual.deleted_at.is_(None),
+            Manual.status == "active",
+            Manual.visibility == "shared",
+            Manual.chunks_indexed > 0,
+        )
+        .group_by(Game.id)
+        .order_by(func.random())
+        .limit(limit)
+    )
+    return [GameSearchResult(**row) for row in result.mappings()]
+
+
 async def search_games(
     session: AsyncSession,
     *,

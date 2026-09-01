@@ -19,11 +19,52 @@ function renderExplore() {
     path: '/explore',
     initialEntry: '/explore',
     component: routeComponent(ExploreRoute),
-    stubs: { '/game/$gameId': 'GameHubScreen' },
+    stubs: { '/game/$gameId': 'GameHubScreen', '/capture/source': 'UploadScreen' },
   });
 }
 
 describe('/explore', () => {
+  it('abre los juegos de la comunidad sin pasar por la subida', async () => {
+    renderExplore();
+    await userEvent.click(await screen.findByRole('link', { name: 'Ver Carcassonne' }));
+    expect(await screen.findByText('GameHubScreen')).toBeInTheDocument();
+  });
+
+  it('invita a subir el primer manual cuando no hay juegos disponibles', async () => {
+    server.use(
+      http.get('/api/games/discover', () => HttpResponse.json({ games: [], attribution: '' })),
+    );
+    renderExplore();
+    expect(await screen.findByText('Aquí empieza la próxima partida')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Subir un manual' })).toHaveAttribute(
+      'href',
+      '/capture/source',
+    );
+  });
+
+  it('permite reintentar un error sin anunciar un catálogo vacío', async () => {
+    server.use(http.get('/api/games/discover', () => new HttpResponse(null, { status: 503 })));
+    renderExplore();
+    expect(await screen.findByRole('alert')).toHaveTextContent('No hemos podido cargar los juegos');
+    expect(screen.queryByText('Aquí empieza la próxima partida')).not.toBeInTheDocument();
+    server.resetHandlers();
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('link', { name: 'Ver Carcassonne' })).toBeInTheDocument();
+  });
+
+  it('barajar pide otra selección al servidor', async () => {
+    renderExplore();
+    const shuffle = await screen.findByRole('button', { name: 'Ver otras sugerencias' });
+    server.use(
+      http.get('/api/games/discover', () =>
+        HttpResponse.json({ games: [searchResult('g2', 'Dominion', 1)], attribution: '' }),
+      ),
+    );
+    await userEvent.click(shuffle);
+    expect(await screen.findByRole('link', { name: 'Ver Dominion' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Ver Carcassonne' })).not.toBeInTheDocument();
+  });
+
   it('al elegir un juego del buscador navega a su hub', async () => {
     server.use(
       http.get('/api/games', () =>

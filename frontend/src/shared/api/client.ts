@@ -311,4 +311,13 @@ export const api = {
       signal,
     });
   },
+
+  /** Selección aleatoria de juegos con manuales compartidos consultables. */
+  async discoverGames(signal?: AbortSignal): Promise<GameSearchResponse> {
+    return request<GameSearchResponse>('/games/discover', {
+      method: 'GET',
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
+  },
 };

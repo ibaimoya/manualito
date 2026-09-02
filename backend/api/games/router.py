@@ -176,8 +176,9 @@ async def get_game_explanation_handler(
         generate_game_explanation_task.delay(
             str(outcome.job.user_id),
             str(outcome.job.game_id),
+            outcome.job.source_fingerprint,
         )
-    return build_game_explanation_response(outcome.snapshot)
+    return build_game_explanation_response(outcome.snapshot, outcome.owned_manual_ids)
 
 
 @router.post(

@@ -1,8 +1,9 @@
 """Consultas SQL del catálogo local de juegos."""
 
+from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, delete, func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
@@ -11,6 +12,7 @@ from api.games.dto import (
     CachedGameInput,
     CreatedGame,
     GameDetail,
+    GameExplanationPool,
     GameExplanationSnapshot,
     GamePoolManualSummary,
     GameSearchResult,
@@ -329,73 +331,77 @@ async def game_pool_has_manuals(
     return result.scalar_one_or_none() is not None
 
 
-async def get_pool_fingerprint(
+async def get_explanation_pool(
     session: AsyncSession,
     *,
     game_id: UUID,
     current_user_id: UUID,
-) -> str | None:
-    """Huella estable de manuales visibles; None si no hay manuales que explicar."""
+) -> GameExplanationPool | None:
     result = await session.execute(
-        select(Manual.id, Manual.indexed_at)
+        select(Manual.id, Manual.indexed_at, Manual.owner_user_id)
         .where(*_pool_visibility_filters(game_id, current_user_id))
         .order_by(Manual.id.asc())
     )
-    items = [f"{row.id}:{row.indexed_at.isoformat() if row.indexed_at else ''}" for row in result]
-    if not items:
+    manuals = result.all()
+    if not manuals:
         return None
-    fingerprint: str = sha256_hex("|".join(items))
-    return fingerprint
+    versions = [
+        f"{manual.id}:{manual.indexed_at.isoformat() if manual.indexed_at else ''}"
+        for manual in manuals
+    ]
+    return GameExplanationPool(
+        source_fingerprint=sha256_hex("|".join(versions)),
+        manual_ids=tuple(manual.id for manual in manuals),
+        owned_manual_ids=frozenset(
+            manual.id for manual in manuals if manual.owner_user_id == current_user_id
+        ),
+    )
+
+
+async def lock_game_explanation(
+    session: AsyncSession, *, game_id: UUID, source_fingerprint: str
+) -> None:
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"explanation-request:{game_id}:{source_fingerprint}"},
+    )
 
 
 async def get_game_explanation(
-    session: AsyncSession,
-    *,
-    user_id: UUID,
-    game_id: UUID,
+    session: AsyncSession, *, game_id: UUID, source_fingerprint: str
 ) -> GameExplanationSnapshot | None:
-    """Carga la explicación cacheada de un juego para un usuario."""
-    result = await session.execute(
+    explanation = await session.scalar(
         select(GameExplanation).where(
-            GameExplanation.user_id == user_id,
             GameExplanation.game_id == game_id,
+            GameExplanation.source_fingerprint == source_fingerprint,
         )
     )
-    explanation = result.scalar_one_or_none()
-    if explanation is None:
-        return None
-    return _game_explanation_snapshot(explanation)
+    return _game_explanation_snapshot(explanation) if explanation is not None else None
 
 
-async def upsert_game_explanation(
+async def save_game_explanation(
     session: AsyncSession,
     *,
-    user_id: UUID,
     game_id: UUID,
-    sections: dict[str, object],
     source_fingerprint: str,
+    sections: dict[str, object],
+    status: Literal["ready", "generating", "failed"],
+    error_code: str | None = None,
 ) -> GameExplanationSnapshot:
-    """Guarda la explicación del usuario en una sola sentencia atómica."""
-    stmt = (
+    values = {
+        "sections": sections,
+        "status": status,
+        "error_code": error_code,
+        "updated_at": func.now(),
+    }
+    if status == "ready":
+        values["generated_at"] = func.now()
+    result = await session.execute(
         insert(GameExplanation)
-        .values(
-            user_id=user_id,
-            game_id=game_id,
-            sections=sections,
-            source_fingerprint=source_fingerprint,
-            status="ready",
-            error_code=None,
-        )
+        .values(game_id=game_id, source_fingerprint=source_fingerprint, **values)
         .on_conflict_do_update(
-            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
-            set_={
-                "sections": sections,
-                "source_fingerprint": source_fingerprint,
-                "status": "ready",
-                "error_code": None,
-                "generated_at": func.now(),
-                "updated_at": func.now(),
-            },
+            index_elements=[GameExplanation.game_id, GameExplanation.source_fingerprint],
+            set_=values,
         )
         .returning(
             GameExplanation.sections,
@@ -406,88 +412,36 @@ async def upsert_game_explanation(
             GameExplanation.updated_at,
         )
     )
-    result = await session.execute(stmt)
     snapshot = GameExplanationSnapshot(**result.mappings().one())
     await session.commit()
     return snapshot
 
 
-async def mark_game_explanation_generating(
-    session: AsyncSession,
-    *,
-    user_id: UUID,
-    game_id: UUID,
-    sections: dict[str, object],
-    source_fingerprint: str,
-) -> GameExplanationSnapshot:
-    """Guarda que la explicación del usuario se está generando para una huella."""
-    stmt = (
-        insert(GameExplanation)
-        .values(
-            user_id=user_id,
-            game_id=game_id,
-            sections=sections,
-            source_fingerprint=source_fingerprint,
-            status="generating",
-            error_code=None,
-        )
-        .on_conflict_do_update(
-            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
-            set_={
-                "sections": sections,
-                "source_fingerprint": source_fingerprint,
-                "status": "generating",
-                "error_code": None,
-                "updated_at": func.now(),
-            },
-        )
-        .returning(
-            GameExplanation.sections,
-            GameExplanation.source_fingerprint,
-            GameExplanation.status,
-            GameExplanation.error_code,
-            GameExplanation.generated_at,
-            GameExplanation.updated_at,
+async def discard_pending_explanation(
+    session: AsyncSession, *, game_id: UUID, source_fingerprint: str
+) -> None:
+    await session.execute(
+        delete(GameExplanation).where(
+            GameExplanation.game_id == game_id,
+            GameExplanation.source_fingerprint == source_fingerprint,
+            GameExplanation.status == "generating",
         )
     )
-    result = await session.execute(stmt)
-    snapshot = GameExplanationSnapshot(**result.mappings().one())
     await session.commit()
-    return snapshot
 
 
 async def mark_game_explanation_failed(
-    session: AsyncSession,
-    *,
-    user_id: UUID,
-    game_id: UUID,
-    sections: dict[str, object],
-    source_fingerprint: str,
-    error_code: str,
+    session: AsyncSession, *, game_id: UUID, source_fingerprint: str, error_code: str
 ) -> None:
-    """Marca la explicación como fallida sin perder apartados parciales."""
-    stmt = (
-        insert(GameExplanation)
-        .values(
-            user_id=user_id,
-            game_id=game_id,
-            sections=sections,
-            source_fingerprint=source_fingerprint,
-            status="failed",
-            error_code=error_code,
+    await session.execute(
+        update(GameExplanation)
+        .where(
+            GameExplanation.game_id == game_id,
+            GameExplanation.source_fingerprint == source_fingerprint,
+            GameExplanation.status == "generating",
         )
-        .on_conflict_do_update(
-            index_elements=[GameExplanation.user_id, GameExplanation.game_id],
-            set_={
-                "sections": sections,
-                "source_fingerprint": source_fingerprint,
-                "status": "failed",
-                "error_code": error_code,
-                "updated_at": func.now(),
-            },
-        )
+        .values(status="failed", error_code=error_code, updated_at=func.now())
     )
-    await session.execute(stmt)
     await session.commit()
 
 

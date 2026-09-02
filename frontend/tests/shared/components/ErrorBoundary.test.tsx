@@ -40,24 +40,23 @@ describe('ErrorBoundary', () => {
     spy.mockRestore();
   });
 
-  it('fallback custom recibe `reset` como función invocable', () => {
+  it('el reset del fallback recupera los hijos cuando el error ya no existe', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    let receivedReset: (() => void) | null = null;
-    render(
-      <ErrorBoundary
-        fallback={(_err, reset) => {
-          receivedReset = reset;
-          return <p>fb</p>;
-        }}
-      >
+    const user = userEvent.setup();
+    const fallback = (_err: Error, reset: () => void) => <button onClick={reset}>Recuperar</button>;
+    const { rerender } = render(
+      <ErrorBoundary fallback={fallback}>
         <Boom />
       </ErrorBoundary>,
     );
-    expect(typeof receivedReset).toBe('function');
-    // Llamar reset() — no esperamos un re-render visible (el render del
-    // boundary tras setState dispararía otra vez Boom).  Solo necesitamos
-    // que la línea se ejecute para que V8 la marque como cubierta.
-    receivedReset!();
+    rerender(
+      <ErrorBoundary fallback={fallback}>
+        <p>Hijo recuperado</p>
+      </ErrorBoundary>,
+    );
+    expect(screen.queryByText('Hijo recuperado')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Recuperar' }));
+    expect(screen.getByText('Hijo recuperado')).toBeInTheDocument();
     spy.mockRestore();
   });
 

@@ -98,5 +98,5 @@ export function renderRoute({
       </LanguageProvider>
     </ThemeProvider>,
   );
-  return { qc, ...result };
+  return { qc, router, ...result };
 }

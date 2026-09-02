@@ -15,7 +15,12 @@ const __dirname = dirname(__filename);
  */
 export default defineConfig({
   plugins: [react()],
+  // Resolver la variante de navegador de NumberFlow en jsdom, sin sustituir el componente.
+  ssr: {
+    noExternal: ['@number-flow/react', 'number-flow', 'esm-env'],
+  },
   resolve: {
+    conditions: ['browser'],
     alias: {
       '@': resolve(__dirname, './src'),
       '@tests': resolve(__dirname, './tests'),

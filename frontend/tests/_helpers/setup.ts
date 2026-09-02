@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import type {} from 'vitest/jsdom';
 import { randomUUID, webcrypto } from 'node:crypto';
 import { afterEach, expect } from 'vitest';
 import { cleanup, configure } from '@testing-library/react';
@@ -13,69 +14,62 @@ expect.extend(toHaveNoViolations);
 
 const testWindow = globalThis.window;
 
-class TestStorage implements Storage {
-  items = new Map<string, string>();
+// jsdom no implementa View Transitions. Ejecutamos la actualización real del DOM;
+// las capturas y su interpolación se comprueban en navegador.
+Object.defineProperty(document, 'startViewTransition', {
+  configurable: true,
+  writable: true,
+  value: ((options) => {
+    const update = typeof options === 'function' ? options : options?.update;
+    const updateCallbackDone = Promise.resolve()
+      .then(() => update?.())
+      .then(() => undefined);
+    return {
+      ready: updateCallbackDone,
+      finished: updateCallbackDone,
+      updateCallbackDone,
+      types: new Set(typeof options === 'object' ? options.types : []),
+      skipTransition: () => undefined,
+    };
+  }) satisfies Document['startViewTransition'],
+});
 
-  get length() {
-    return this.items.size;
+// jsdom no ejecuta transiciones CSS. Su interpolación se comprueba en navegador.
+Object.defineProperty(Element.prototype, 'getAnimations', {
+  configurable: true,
+  value: () => [],
+});
+
+// jsdom no calcula geometría. El movimiento y la visibilidad se comprueban en navegador.
+class LayoutObserver {
+  observe() {
+    return undefined;
   }
 
-  clear() {
-    this.items.clear();
+  unobserve() {
+    return undefined;
   }
 
-  getItem(key: string) {
-    return this.items.get(key) ?? null;
-  }
-
-  key(index: number) {
-    return Array.from(this.items.keys())[index] ?? null;
-  }
-
-  removeItem(key: string) {
-    this.items.delete(key);
-  }
-
-  setItem(key: string, value: string) {
-    this.items.set(key, value);
+  disconnect() {
+    return undefined;
   }
 }
 
-const localStorageMock = new TestStorage();
-const sessionStorageMock = new TestStorage();
-
-Object.defineProperty(globalThis, 'Storage', {
+Object.defineProperty(globalThis, 'ResizeObserver', {
   configurable: true,
-  writable: true,
-  value: TestStorage,
+  value: LayoutObserver,
+});
+Object.defineProperty(globalThis, 'IntersectionObserver', {
+  configurable: true,
+  value: LayoutObserver,
 });
 
-Object.defineProperty(globalThis, 'localStorage', {
-  configurable: true,
-  writable: true,
-  value: localStorageMock,
-});
-Object.defineProperty(globalThis, 'sessionStorage', {
-  configurable: true,
-  writable: true,
-  value: sessionStorageMock,
-});
-
-if (testWindow !== undefined) {
-  Object.defineProperty(testWindow, 'Storage', {
+// Vitest 4 conserva los globals de Storage de Node si ya existen.
+// Los tests de navegador deben usar las instancias reales del mismo jsdom.
+for (const key of ['localStorage', 'sessionStorage'] as const) {
+  Object.defineProperty(globalThis, key, {
     configurable: true,
-    writable: true,
-    value: TestStorage,
-  });
-  Object.defineProperty(testWindow, 'localStorage', {
-    configurable: true,
-    writable: true,
-    value: localStorageMock,
-  });
-  Object.defineProperty(testWindow, 'sessionStorage', {
-    configurable: true,
-    writable: true,
-    value: sessionStorageMock,
+    get: () => jsdom.window[key],
   });
 }
 
@@ -83,6 +77,7 @@ if (testWindow !== undefined) {
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  sessionStorage.clear();
   // Un test que cambie de idioma no debe contaminar a los siguientes
   if (i18n.language !== 'es') void i18n.changeLanguage('es');
 });
@@ -139,6 +134,12 @@ if (testWindow !== undefined) {
   // `Element.prototype.scrollTo` sobre nodos concretos (sidebar,
   // contenedores con `overflow: auto`).  Mismo tratamiento.
   Object.defineProperty(Element.prototype, 'scrollTo', {
+    writable: true,
+    configurable: true,
+    value: () => undefined,
+  });
+  // jsdom tampoco desplaza la opción activa de los combobox; la geometría se verifica en navegador.
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
     writable: true,
     configurable: true,
     value: () => undefined,

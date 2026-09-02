@@ -54,10 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
  * ErrorBoundary y el "errorComponent" raíz del router. El enlace de inicio usa
  * "<a>" (recarga real) porque en estado de error el router puede no ser fiable.
  */
-export function FullPageError({
-  message,
-  onRetry,
-}: Readonly<{ message?: string; onRetry?: () => void }>) {
+function FullPageError({ message, onRetry }: Readonly<{ message?: string; onRetry?: () => void }>) {
   const { t } = useTranslation('errors');
 
   return (

@@ -23,11 +23,5 @@
     "heading": "Recent",
     "viewAll": "View all",
     "viewAllAriaLabel": "View all your games"
-  },
-  "recommendations": {
-    "attribution": "Powered by <b>BoardGameGeek</b>",
-    "description": "Games you might want to learn next, based on your library.",
-    "heading": "For you",
-    "learn": "Learn {{game}}"
   }
 }

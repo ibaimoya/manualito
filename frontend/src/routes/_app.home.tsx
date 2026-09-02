@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ManualCard } from '@/features/manual/ManualCard';
 import { manualsQueryOptions } from '@/features/manual/use-manuals';
-import { RecommendedSection } from '@/features/recommend/RecommendedSection';
+import { DiscoverGames } from '@/features/games/DiscoverGames';
 import { useAuth } from '@/features/auth/use-auth';
 import { formatRelative } from '@/shared/lib/relativeDate';
 import { type ManualSummary } from '@/shared/api/client';
@@ -66,7 +66,7 @@ function HomeScreen() {
 
       <RecentSection />
 
-      <RecommendedSection />
+      <DiscoverGames />
     </div>
   );
 }
@@ -120,7 +120,7 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
   return (
     <section aria-labelledby="home-recent">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 id="home-recent" className="font-display text-base font-bold text-fg md:text-lg">
+        <h2 id="home-recent" className="font-display text-xl font-bold tracking-tight text-fg">
           {t('recent.heading')}
         </h2>
         <Link
@@ -142,7 +142,7 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
       <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
         {manuals.slice(0, 6).map((m) => (
           <li key={m.id}>
-            <ManualCard manual={m} meta={formatRelative(m.created_at)} />
+            <ManualCard manual={m} meta={formatRelative(m.created_at)} className="p-4" />
           </li>
         ))}
       </ul>
@@ -156,7 +156,7 @@ function RecentSkeleton() {
       <div className="mb-3 h-5 w-24 animate-pulse rounded bg-surface-2" />
       <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <li key={i} className="h-[72px] animate-pulse rounded-2xl bg-surface-2" />
+          <li key={i} className="h-[82px] animate-pulse rounded-2xl bg-surface-2" />
         ))}
       </ul>
     </section>

@@ -23,11 +23,5 @@
     "heading": "Recientes",
     "viewAll": "Ver todo",
     "viewAllAriaLabel": "Ver todos tus juegos"
-  },
-  "recommendations": {
-    "attribution": "Powered by <b>BoardGameGeek</b>",
-    "description": "Juegos que quizá quieras aprender, según tu biblioteca.",
-    "heading": "Para ti",
-    "learn": "Aprender {{game}}"
   }
 }

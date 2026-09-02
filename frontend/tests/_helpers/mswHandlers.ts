@@ -237,35 +237,6 @@ export const handlers = [
   http.post('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 204 })),
   http.delete('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 204 })),
 
-  http.get('/api/recommendations', () =>
-    HttpResponse.json({
-      recommendations: [
-        {
-          id: 'rec-1',
-          name: 'Carcassonne',
-          bgg_id: 822,
-          year_published: 2000,
-          reason: 'Porque tienes Catan',
-        },
-        {
-          id: 'rec-2',
-          name: 'Ticket to Ride',
-          bgg_id: 9209,
-          year_published: 2004,
-          reason: 'Familiar y de rutas',
-        },
-        {
-          id: 'rec-3',
-          name: 'Azul',
-          bgg_id: 230802,
-          year_published: 2017,
-          reason: 'Estrategia ligera muy valorada',
-        },
-      ],
-      attribution: 'Game data provided by BoardGameGeek.',
-    }),
-  ),
-
   /* -------- Manuales -------- */
   http.post('/api/manuals', async () => {
     await delay(50);

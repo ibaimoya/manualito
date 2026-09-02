@@ -1,9 +1,10 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { Route as HomeRoute } from '@/routes/_app.home';
+import { DISCOVER_GAMES_KEY } from '@/features/games/use-discover-games';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
@@ -56,6 +57,19 @@ describe('/home', () => {
     renderHome();
     const para = await screen.findByText(/Aún no has consultado/, { selector: 'p' });
     expect(para.textContent).toMatch(/Pulsa\s+Nuevo manual\s+para empezar/);
+    expect(await screen.findByRole('link', { name: 'Ver Carcassonne' })).toHaveAttribute(
+      'href',
+      '/game/rec-1',
+    );
+  });
+
+  it('oculta el descubrimiento cuando no hay juegos compartidos', async () => {
+    server.use(
+      http.get('/api/games/discover', () => HttpResponse.json({ games: [], attribution: '' })),
+    );
+    const { qc } = renderHome();
+    await waitFor(() => expect(qc.getQueryData(DISCOVER_GAMES_KEY)).toEqual([]));
+    expect(screen.queryByRole('heading', { name: 'Sugerencias' })).not.toBeInTheDocument();
   });
 
   it('muestra los manuales recientes desde el backend', async () => {

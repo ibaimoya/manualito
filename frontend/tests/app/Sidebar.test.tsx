@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createMemoryHistory,
@@ -8,35 +8,41 @@ import {
   createRouter,
   Outlet,
   RouterProvider,
+  useRouterState,
 } from '@tanstack/react-router';
 import { Sidebar } from '@/app/Sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
+afterEach(() => vi.restoreAllMocks());
+
 /**
  * Sidebar solo se renderiza en desktop (Tailwind `hidden md:flex`).
- * Necesita un `<Link>` de TanStack Router → montamos un router fake mínimo
- * con las 3 rutas (`/home`, `/history`, `/settings`) para que los Links
- * no exploten.
+ * Usa un router real en memoria para comprobar también los cambios de ruta.
  */
 function renderSidebar(
   pathname: string,
   opts: { collapsed?: boolean; onToggle?: () => void } = {},
 ) {
-  const root = createRootRoute({
-    component: () => (
+  function Shell() {
+    const currentPath = useRouterState({ select: (state) => state.location.pathname });
+    return (
       <>
-        <Sidebar pathname={pathname} collapsed={opts.collapsed} onToggle={opts.onToggle} />
+        <Sidebar pathname={currentPath} collapsed={opts.collapsed} onToggle={opts.onToggle} />
         <Outlet />
       </>
+    );
+  }
+  const root = createRootRoute({ component: Shell });
+  const paths = ['/home', '/history', '/explore', '/about', '/settings'] as const;
+  const tree = root.addChildren(
+    paths.map((path) =>
+      createRoute({
+        getParentRoute: () => root,
+        path,
+        component: () => <div>{path}</div>,
+      }),
     ),
-  });
-  const make = (path: '/home' | '/history' | '/settings') =>
-    createRoute({
-      getParentRoute: () => root,
-      path,
-      component: () => <div>{path}</div>,
-    });
-  const tree = root.addChildren([make('/home'), make('/history'), make('/settings')]);
+  );
   const router = createRouter({
     routeTree: tree,
     history: createMemoryHistory({ initialEntries: [pathname] }),
@@ -113,4 +119,71 @@ describe('Sidebar (desktop)', () => {
     // El toggle ahora ofrece expandir.
     expect(screen.getByRole('button', { name: 'Expandir menú' })).toBeInTheDocument();
   });
+
+  it('mantiene una sola selección al invertir la navegación entre secciones y utilidades', async () => {
+    const user = userEvent.setup();
+    renderSidebar('/home');
+    await screen.findByRole('link', { name: 'Inicio' });
+    const navigation = within(screen.getByRole('navigation', { name: 'Secciones de la app' }));
+
+    for (const label of ['Explorar', 'Ajustes', 'Inicio', 'Ayuda', 'Biblioteca']) {
+      const link = navigation.getByRole('link', { name: label });
+      await user.click(link);
+      expect(navigation.getAllByRole('link', { current: 'page' })).toEqual([link]);
+    }
+
+    expect(await screen.findByText('/history')).toBeInTheDocument();
+  });
+
+  it('conserva selección y foco al activar movimiento reducido después de navegar', async () => {
+    // Solo se sustituye la preferencia del sistema, que jsdom no implementa.
+    const original = window.matchMedia;
+    const media = Object.assign(new EventTarget(), {
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+    });
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) =>
+      query === media.media ? (media as unknown as MediaQueryList) : original(query),
+    );
+    const user = userEvent.setup();
+    renderSidebar('/home');
+    const explore = await screen.findByRole('link', { name: 'Explorar' });
+    const navigation = within(screen.getByRole('navigation', { name: 'Secciones de la app' }));
+
+    await user.click(explore);
+    act(() => {
+      media.matches = true;
+      media.dispatchEvent(new Event('change'));
+    });
+
+    expect(explore).toHaveFocus();
+    expect(navigation.getAllByRole('link', { current: 'page' })).toEqual([explore]);
+    expect(await screen.findByText('/explore')).toBeInTheDocument();
+    const home = navigation.getByRole('link', { name: 'Inicio' });
+    await user.click(home);
+    expect(navigation.getAllByRole('link', { current: 'page' })).toEqual([home]);
+    expect(await screen.findByText('/home')).toBeInTheDocument();
+  });
+
+  it.each([false, true])(
+    'conserva navegación y foco con teclado, plegada=%s',
+    async (collapsed) => {
+      const user = userEvent.setup();
+      renderSidebar('/home', { collapsed });
+      const home = await screen.findByRole('link', { name: 'Inicio' });
+      const library = screen.getByRole('link', { name: 'Biblioteca' });
+      const navigation = within(screen.getByRole('navigation', { name: 'Secciones de la app' }));
+      home.focus();
+
+      await user.keyboard('{Tab}{Enter}');
+      expect(await screen.findByText('/history')).toBeInTheDocument();
+      expect(library).toHaveFocus();
+      expect(navigation.getAllByRole('link', { current: 'page' })).toEqual([library]);
+
+      await user.keyboard('{Shift>}{Tab}{/Shift}{Enter}');
+      expect(await screen.findByText('/home')).toBeInTheDocument();
+      expect(home).toHaveFocus();
+      expect(navigation.getAllByRole('link', { current: 'page' })).toEqual([home]);
+    },
+  );
 });

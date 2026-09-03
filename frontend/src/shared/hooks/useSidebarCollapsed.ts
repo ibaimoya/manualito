@@ -1,11 +1,4 @@
-import { useCallback, useState } from 'react';
-
-/**
- * Estado plegado/expandido de la sidebar de escritorio, persistido en
- * localStorage para que la preferencia sobreviva recargas. Es preferencia de
- * UI pura (no afecta a datos), por eso vive fuera del wrapper "storage" con
- * validación Zod: una lectura tolerante a fallos basta.
- */
+import { useEffect, useState } from 'react';
 const KEY = 'manualito.sidebar.collapsed';
 
 function readCollapsed(): boolean {
@@ -22,19 +15,15 @@ export interface SidebarCollapse {
 }
 
 export function useSidebarCollapsed(): SidebarCollapse {
-  const [collapsed, setCollapsed] = useState<boolean>(readCollapsed);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
 
-  const toggle = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(KEY, next ? '1' : '0');
-      } catch {
-        // Sin almacenamiento (modo privado): el estado vive solo en memoria.
-      }
-      return next;
-    });
-  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(KEY, collapsed ? '1' : '0');
+    } catch {
+      // La preferencia sigue funcionando si el navegador bloquea el almacenamiento.
+    }
+  }, [collapsed]);
 
-  return { collapsed, toggle };
+  return { collapsed, toggle: () => setCollapsed((current) => !current) };
 }

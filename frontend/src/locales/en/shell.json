@@ -45,10 +45,6 @@
     "toggle": {
       "collapse": "Collapse menu",
       "expand": "Expand menu"
-    },
-    "tooltip": {
-      "collapse": "Collapse",
-      "expand": "Expand"
     }
   },
   "skipLink": "Skip to content",
@@ -58,7 +54,7 @@
       "title": "Can't save locally"
     },
     "quota": {
-      "description": "Free up space from Settings → Clear local data.",
+      "description": "Free up space in your browser's storage settings.",
       "title": "Local storage is full"
     }
   },
@@ -69,7 +65,7 @@
     "titles": {
       "privacy": "Privacy policy",
       "profile": "Profile",
-      "security": "Account & security"
+      "security": "Account"
     }
   }
 }

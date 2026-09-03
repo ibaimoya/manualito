@@ -6,7 +6,7 @@ import {
   type LinkOptions,
 } from '@tanstack/react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -40,7 +40,7 @@ const PARENT_KEYS: Record<string, readonly ParentKey[]> = {
 
 // Mismo cuerpo en todos los tramos: con tamaños mezclados los baselines no casan.
 const CRUMB_LINK_CLASS =
-  'shrink-0 font-display text-sm font-semibold text-fg-2 transition-colors hover:text-fg';
+  'hit-area inline-flex shrink-0 items-center rounded-sm font-display text-sm font-semibold text-fg-2 transition-colors hover:text-fg';
 const CRUMB_CURRENT_CLASS = 'truncate font-display text-sm font-bold tracking-tight text-fg';
 
 function HomeCrumb() {
@@ -77,14 +77,14 @@ export function DesktopTopbar({
       ) : (
         <nav
           aria-label={t('topbar.aria.breadcrumb')}
-          className="flex min-w-0 flex-1 items-center gap-1.5"
+          className="breadcrumb-trail flex min-w-0 flex-1 items-center gap-1.5"
         >
           <HomeCrumb />
-          {parents.map((item) => (
+          {parents.map((item, index) => (
             <Fragment key={item.label}>
-              <CrumbSeparator />
-              <Link {...item.link} className={cn(CRUMB_LINK_CLASS, 'max-w-44 truncate')}>
-                {item.label}
+              <CrumbSeparator remaining={parents.length - index} />
+              <Link {...item.link} className={cn(CRUMB_LINK_CLASS, 'max-w-44')}>
+                <span className="truncate">{item.label}</span>
               </Link>
             </Fragment>
           ))}
@@ -118,7 +118,7 @@ interface ParentKey {
  * ("history.back"). Si entraste directo (deep-link o recarga) y no hay nada detrás,
  * se muestra apagado y no clicable: la salida es por las migajas o el menú.
  */
-export function BackButton() {
+function BackButton() {
   const { t } = useTranslation();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -130,11 +130,9 @@ export function BackButton() {
       disabled={!canGoBack}
       aria-label={t('actions.back')}
       className={cn(
-        'grid size-8 shrink-0 place-items-center rounded-full transition-[background-color,color,translate]',
+        'hit-area icon-feedback grid size-8 shrink-0 place-items-center rounded-full transition-colors pointer-coarse:size-11',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
-        canGoBack
-          ? 'text-fg-2 hover:bg-surface-2 hover:text-fg active:-translate-x-px'
-          : 'cursor-not-allowed text-fg-3 opacity-40',
+        canGoBack ? 'text-fg-2 hover:text-fg' : 'cursor-not-allowed text-fg-3 opacity-40',
       )}
     >
       <ChevronLeft size={18} strokeWidth={2.25} aria-hidden="true" />
@@ -142,9 +140,15 @@ export function BackButton() {
   );
 }
 
-function CrumbSeparator() {
+function CrumbSeparator({ remaining = 0 }: Readonly<{ remaining?: number }>) {
   return (
-    <ChevronRight size={15} strokeWidth={2.25} className="shrink-0 text-fg-3" aria-hidden="true" />
+    <ChevronRight
+      size={15}
+      strokeWidth={2.25}
+      className="shrink-0 text-fg-3"
+      style={{ '--crumb-delay': `${remaining * 50}ms` } as CSSProperties}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -171,14 +175,14 @@ export function ScreenTopBar({
       {/* md+: breadcrumb. */}
       <nav
         aria-label={t('topbar.aria.breadcrumb')}
-        className="hidden min-w-0 flex-1 items-center gap-1.5 md:flex"
+        className="breadcrumb-trail hidden min-w-0 flex-1 items-center gap-1.5 md:flex"
       >
         <HomeCrumb />
-        {trail?.map((item) => (
+        {trail?.map((item, index) => (
           <Fragment key={item.label}>
-            <CrumbSeparator />
-            <Link {...item.link} className={cn(CRUMB_LINK_CLASS, 'max-w-44 truncate')}>
-              {item.label}
+            <CrumbSeparator remaining={trail.length - index} />
+            <Link {...item.link} className={cn(CRUMB_LINK_CLASS, 'max-w-44')}>
+              <span className="truncate">{item.label}</span>
             </Link>
           </Fragment>
         ))}

@@ -137,11 +137,13 @@ function NavItem({
         to={to}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'flex min-h-[44px] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-semibold transition-colors',
+          'icon-feedback flex min-h-[44px] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-semibold transition-colors',
           active ? 'text-primary' : 'text-fg-3 hover:text-fg-2',
         )}
       >
-        <span aria-hidden="true">{icon}</span>
+        <span aria-hidden="true" data-feedback-icon>
+          {icon}
+        </span>
         <span>{children}</span>
       </Link>
     </li>

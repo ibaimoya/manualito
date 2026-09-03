@@ -45,10 +45,6 @@
     "toggle": {
       "collapse": "Contraer menú",
       "expand": "Expandir menú"
-    },
-    "tooltip": {
-      "collapse": "Contraer",
-      "expand": "Expandir"
     }
   },
   "skipLink": "Saltar al contenido",
@@ -58,7 +54,7 @@
       "title": "No podemos guardar localmente"
     },
     "quota": {
-      "description": "Libera espacio desde Ajustes → Borrar datos locales.",
+      "description": "Libera espacio desde la configuración de almacenamiento de tu navegador.",
       "title": "Espacio local agotado"
     }
   },
@@ -69,7 +65,7 @@
     "titles": {
       "privacy": "Política de privacidad",
       "profile": "Perfil",
-      "security": "Cuenta y seguridad"
+      "security": "Cuenta"
     }
   }
 }

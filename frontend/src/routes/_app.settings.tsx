@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, FileText, LogOut, Moon, Sun, SunMoon } from 'lucide-react';
+import { ChevronRight, FileText, Moon, Sun, SunMoon } from 'lucide-react';
+import { LogOutIcon } from '@/shared/components/action-icons';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
@@ -75,7 +76,7 @@ function SettingsScreen() {
       <footer className="mt-2 flex justify-center">
         <Link
           to="/privacy"
-          className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
+          className="hit-area rounded-sm text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
         >
           {t('footer.privacyPolicy')}
         </Link>
@@ -94,10 +95,7 @@ function AccountSection() {
 
   return (
     <Group title={t('account.group')}>
-      <Link
-        to="/profile"
-        className="flex items-center gap-3.5 p-4 transition-colors hover:bg-surface-2"
-      >
+      <Link to="/profile" className="icon-feedback flex items-center gap-3.5 p-4">
         <Avatar
           name={displayName}
           size={52}
@@ -116,11 +114,11 @@ function AccountSection() {
           type="button"
           size="sm"
           variant="ghost"
-          className="text-error hover:bg-error-bg"
+          className="text-error hover:text-error"
           loading={logout.isPending}
           onClick={() => logout.mutate()}
         >
-          <LogOut size={14} strokeWidth={2} />
+          <LogOutIcon size={14} strokeWidth={2} />
           {t('account.logoutAction')}
         </Button>
       </Row>

@@ -6,50 +6,275 @@
     "title": "Algo ha fallado"
   },
   "code": {
-    "gameNotFound": {
-      "hint": "Busca el juego otra vez y vuelve a asociar el manual.",
-      "message": "El juego seleccionado ya no existe en el catálogo.",
+    "admin_required": {
+      "hint": "Usa una cuenta con los permisos necesarios.",
+      "message": "Necesitas permisos de administrador para realizar esta acción.",
+      "title": "Permisos insuficientes"
+    },
+    "asset_storage_unavailable": {
+      "hint": "Espera un momento y vuelve a intentarlo.",
+      "message": "No se puede acceder a los archivos en este momento.",
+      "title": "Archivos no disponibles"
+    },
+    "conversation_not_found": {
+      "hint": "Vuelve al historial y selecciona otra conversación.",
+      "message": "No se ha encontrado la conversación que buscas.",
+      "title": "Conversación no encontrada"
+    },
+    "current_password_required": {
+      "hint": "Si no la recuerdas, puedes restablecerla desde la pantalla de acceso.",
+      "message": "Escribe tu contraseña actual para continuar.",
+      "title": "Falta la contraseña actual"
+    },
+    "email_invalid": {
+      "hint": "Comprueba que incluya el nombre, @ y el dominio.",
+      "message": "Escribe una dirección de email válida.",
+      "title": "Email no válido"
+    },
+    "email_required": {
+      "hint": "Usa una dirección como nombre@ejemplo.com.",
+      "message": "Escribe tu dirección de email para continuar.",
+      "title": "Falta el email"
+    },
+    "email_too_long": {
+      "hint": "Revisa la dirección de email que has escrito.",
+      "message": "El email puede tener como máximo {{max}} caracteres.",
+      "title": "Email demasiado largo"
+    },
+    "email_verification_token_invalid": {
+      "hint": "Inicia sesión y solicita otro enlace de verificación.",
+      "message": "El enlace para verificar tu email no es válido o ha caducado.",
+      "title": "Enlace de verificación no válido"
+    },
+    "game_not_found": {
+      "hint": "Vuelve al catálogo y busca el juego otra vez.",
+      "message": "No se ha encontrado el juego seleccionado en el catálogo.",
       "title": "Juego no encontrado"
     },
-    "gameUnavailable": {
+    "game_unavailable": {
       "hint": "Vuelve al catálogo y selecciona otro juego.",
       "message": "Este juego ya no está disponible para nuevas preguntas.",
       "title": "Juego no disponible"
     },
-    "identityUnavailable": {
-      "hint": "Inicia sesión o prueba con otro nombre de usuario.",
+    "generated_answer_too_long": {
+      "hint": "Prueba con una pregunta más concreta.",
+      "message": "La respuesta generada supera la longitud permitida.",
+      "title": "Respuesta demasiado larga"
+    },
+    "identity_unavailable": {
+      "hint": "Inicia sesión o prueba con otro email o nombre de usuario.",
       "message": "Ya existe una cuenta con ese email o nombre de usuario.",
       "title": "Email o usuario no disponible"
     },
-    "invalidPdf": {
+    "image_too_large": {
+      "hint": "Reduce el tamaño de la imagen y vuelve a subirla.",
+      "message": "Cada imagen puede ocupar como máximo {{max}} MB.",
+      "title": "Imagen demasiado grande"
+    },
+    "invalid_credentials": {
+      "hint": "Revisa los datos de acceso o restablece tu contraseña.",
+      "message": "El email, el nombre de usuario o la contraseña no son correctos.",
+      "title": "No se ha podido iniciar sesión"
+    },
+    "invalid_csrf_token": {
+      "hint": "Recarga la página y vuelve a intentarlo.",
+      "message": "La comprobación de seguridad no se ha completado.",
+      "title": "No se ha podido confirmar la acción"
+    },
+    "invalid_image": {
+      "hint": "Exporta la imagen de nuevo y vuelve a subirla.",
+      "message": "El archivo no contiene una imagen válida.",
+      "title": "Imagen no válida"
+    },
+    "invalid_pdf": {
       "hint": "Exporta el manual de nuevo como PDF y vuelve a intentarlo.",
       "message": "El archivo no es un PDF válido.",
       "title": "PDF no válido"
     },
-    "manualContextNotFound": {
-      "hint": "Espera a que termine el procesamiento o sube un manual válido.",
-      "message": "No hay manuales indexados disponibles para responder sobre ese juego.",
-      "title": "Sin contexto suficiente"
+    "invalid_request": {
+      "hint": "Revisa los datos y vuelve a intentarlo.",
+      "message": "Algunos datos de la solicitud no son válidos.",
+      "title": "Datos no válidos"
     },
-    "manualDuplicate": {
+    "invalid_request_body": {
+      "hint": "Recarga la página y vuelve a intentarlo.",
+      "message": "No se han podido leer los datos de la solicitud.",
+      "title": "No se han podido leer los datos"
+    },
+    "manual_busy": {
+      "hint": "Espera a que termine el procesamiento y vuelve a intentarlo.",
+      "message": "El manual se está procesando y aún no se puede modificar.",
+      "title": "Manual en procesamiento"
+    },
+    "manual_context_not_found": {
+      "hint": "Espera a que termine el procesamiento o sube un manual válido.",
+      "message": "No hay manuales procesados disponibles para responder sobre este juego.",
+      "title": "Sin manuales disponibles"
+    },
+    "manual_duplicate": {
       "hint": "Abre el manual existente o sube una versión distinta.",
       "message": "Ese manual ya está en tu biblioteca para este juego.",
       "title": "Manual duplicado"
     },
-    "manualTooLarge": {
+    "manual_not_editable": {
+      "hint": "Puedes editar el texto de tus manuales privados.",
+      "message": "No se puede editar el texto de un manual compartido.",
+      "title": "Manual no editable"
+    },
+    "manual_not_found": {
+      "hint": "Vuelve a tu biblioteca y selecciona un manual disponible.",
+      "message": "No se ha encontrado el manual o la página que buscas.",
+      "title": "Manual no encontrado"
+    },
+    "manual_request_too_large": {
+      "hint": "Reduce el tamaño de los archivos y vuelve a intentarlo.",
+      "message": "La subida supera el tamaño permitido.",
+      "title": "Subida demasiado grande"
+    },
+    "manual_too_large": {
       "hint": "Reduce las imágenes o divide el manual en varias subidas.",
-      "message": "El conjunto de imágenes puede ocupar como máximo 95 MB.",
+      "message": "El conjunto de imágenes puede ocupar como máximo {{max}} MB.",
       "title": "Manual demasiado grande"
     },
-    "noManualSources": {
+    "manual_too_many_pages": {
+      "hint": "Divide el manual en archivos con menos páginas.",
+      "message": "El manual puede tener como máximo {{max}} páginas.",
+      "title": "Demasiadas páginas"
+    },
+    "manual_upload_selection_invalid": {
+      "hint": "Elige un solo tipo de archivo para cada subida.",
+      "message": "Selecciona imágenes o un PDF para esta subida, sin combinar ambos.",
+      "title": "Selecciona las páginas del manual"
+    },
+    "message_required": {
+      "hint": "Añade la pregunta que quieres hacer sobre el juego.",
+      "message": "Escribe un mensaje para continuar.",
+      "title": "Falta el mensaje"
+    },
+    "message_too_long": {
+      "hint": "Acorta la pregunta y vuelve a enviarla.",
+      "message": "El mensaje puede tener como máximo {{max}} caracteres.",
+      "title": "Mensaje demasiado largo"
+    },
+    "method_not_allowed": {
+      "hint": "Vuelve a la pantalla anterior y selecciona una de las acciones disponibles.",
+      "message": "Esta acción no está disponible para el recurso solicitado.",
+      "title": "Acción no disponible"
+    },
+    "no_manual_sources": {
       "hint": "Sube de nuevo el manual del juego para volver a preguntar.",
       "message": "Una fuente que usaste ya no está disponible, así que no se pueden hacer nuevas preguntas en esta conversación.",
       "title": "Fuente no disponible"
     },
-    "pdfTooLarge": {
-      "hint": "Reduce el PDF o divide el manual en un archivo más pequeño.",
-      "message": "El PDF puede ocupar como máximo 95 MB.",
+    "password_required": {
+      "hint": "Completa el campo de contraseña y vuelve a intentarlo.",
+      "message": "Escribe una contraseña para continuar.",
+      "title": "Falta la contraseña"
+    },
+    "password_reset_token_invalid": {
+      "hint": "Solicita otro enlace para crear una contraseña nueva.",
+      "message": "El enlace para restablecer tu contraseña no es válido o ha caducado.",
+      "title": "Enlace de contraseña no válido"
+    },
+    "password_too_long": {
+      "hint": "Usa una contraseña más corta.",
+      "message": "La contraseña puede tener como máximo {{max}} caracteres.",
+      "title": "Contraseña demasiado larga"
+    },
+    "password_too_short": {
+      "hint": "Usa una contraseña más larga.",
+      "message": "La contraseña debe tener al menos {{min}} caracteres.",
+      "title": "Contraseña demasiado corta"
+    },
+    "pdf_too_large": {
+      "hint": "Reduce el PDF o divide el manual en archivos más pequeños.",
+      "message": "El PDF puede ocupar como máximo {{max}} MB.",
       "title": "PDF demasiado grande"
+    },
+    "rating_not_found": {
+      "hint": "Vuelve al juego para consultar o añadir tu valoración.",
+      "message": "No se ha encontrado la valoración de este juego.",
+      "title": "Valoración no encontrada"
+    },
+    "text_required": {
+      "hint": "Añade el contenido que aparece en esa página del manual.",
+      "message": "Escribe el texto de la página antes de guardarlo.",
+      "title": "Falta el texto de la página"
+    },
+    "text_too_long": {
+      "hint": "Revisa el contenido y elimina el texto que no pertenezca a esa página.",
+      "message": "El texto de la página puede tener como máximo {{max}} caracteres.",
+      "title": "Texto demasiado largo"
+    },
+    "title_required": {
+      "hint": "Elige un título que te ayude a reconocerlo después.",
+      "message": "Escribe un título para continuar.",
+      "title": "Falta el título"
+    },
+    "title_too_long": {
+      "hint": "Usa un título más corto.",
+      "message": "El título puede tener como máximo {{max}} caracteres.",
+      "title": "Título demasiado largo"
+    },
+    "token_required": {
+      "hint": "Solicita un enlace nuevo y ábrelo desde tu correo.",
+      "message": "El enlace está incompleto y no se puede utilizar.",
+      "title": "Enlace no válido"
+    },
+    "token_too_long": {
+      "hint": "Solicita un enlace nuevo y ábrelo desde tu correo.",
+      "message": "El enlace no tiene un formato válido.",
+      "title": "Enlace no válido"
+    },
+    "unexpected_field": {
+      "hint": "Recarga la página y vuelve a intentarlo.",
+      "message": "La solicitud incluye datos que no se pueden aceptar.",
+      "title": "Datos no reconocidos"
+    },
+    "username_confirmation_mismatch": {
+      "hint": "Escribe tu nombre de usuario actual para confirmar el borrado.",
+      "message": "El nombre que has escrito no coincide con el de tu cuenta.",
+      "title": "El nombre de usuario no coincide"
+    },
+    "username_contains_at": {
+      "hint": "Usa letras, números, puntos, guiones o guiones bajos.",
+      "message": "El nombre de usuario no puede contener @.",
+      "title": "Nombre de usuario no válido"
+    },
+    "username_contains_spaces": {
+      "hint": "Une las palabras o sepáralas con un punto, un guion o un guion bajo.",
+      "message": "El nombre de usuario no puede contener espacios.",
+      "title": "Nombre de usuario con espacios"
+    },
+    "username_empty": {
+      "hint": "Usa letras, números, puntos, guiones o guiones bajos.",
+      "message": "Escribe un nombre de usuario para continuar.",
+      "title": "Falta el nombre de usuario"
+    },
+    "username_invalid_character": {
+      "hint": "Usa letras, números, puntos, guiones o guiones bajos.",
+      "message": "El nombre de usuario contiene un carácter no permitido.",
+      "title": "Nombre de usuario no válido"
+    },
+    "username_key_too_long": {
+      "hint": "Elige un nombre de usuario más corto.",
+      "message": "El nombre de usuario es demasiado largo para guardarlo.",
+      "title": "Nombre de usuario demasiado largo"
+    },
+    "username_required": {
+      "hint": "Usa letras, números, puntos, guiones o guiones bajos.",
+      "message": "Escribe un nombre de usuario para continuar.",
+      "title": "Falta el nombre de usuario"
+    },
+    "username_surrounding_spaces": {
+      "hint": "Quita los espacios del principio y del final.",
+      "message": "El nombre de usuario tiene espacios al principio o al final.",
+      "title": "Nombre de usuario con espacios"
+    },
+    "username_too_long": {
+      "hint": "Elige un nombre de usuario más corto.",
+      "message": "El nombre de usuario puede tener como máximo {{max}} caracteres.",
+      "title": "Nombre de usuario demasiado largo"
     }
   },
   "http": {
@@ -69,9 +294,9 @@
       "title": "Acción no permitida"
     },
     "404": {
-      "hint": "Vuelve a la pantalla principal y sube las fotos otra vez.",
-      "message": "Este manual ya no existe en el servidor.",
-      "title": "Manual no encontrado"
+      "hint": "Vuelve a la pantalla anterior y comprueba lo que buscas.",
+      "message": "No se ha encontrado el recurso solicitado.",
+      "title": "Recurso no encontrado"
     },
     "409": {
       "hint": "Revisa los datos e inténtalo de nuevo.",
@@ -89,9 +314,9 @@
       "title": "Formato no soportado"
     },
     "422": {
-      "hint": "Comprueba que las fotos estén enfocadas y con buena luz, y vuelve a intentarlo.",
-      "message": "No se ha podido extraer texto de las páginas.",
-      "title": "No conseguimos leer el manual"
+      "hint": "Revisa los datos y vuelve a intentarlo.",
+      "message": "Algunos datos de la solicitud no son válidos.",
+      "title": "Datos no válidos"
     },
     "429": {
       "hint": "Espera un momento antes de volver a intentarlo.",
@@ -104,9 +329,9 @@
       "title": "Algo ha fallado"
     },
     "502": {
-      "hint": "Espera unos segundos y vuelve a intentarlo.",
-      "message": "Un servicio interno aún se está iniciando o no está disponible.",
-      "title": "Servicio cargando"
+      "hint": "Espera un momento y vuelve a intentarlo.",
+      "message": "Un servicio necesario no está disponible en este momento.",
+      "title": "Servicio no disponible"
     },
     "503": {
       "hint": "Vuelve a intentarlo en un momento.",
@@ -114,7 +339,7 @@
       "title": "Servicio no disponible"
     },
     "504": {
-      "hint": "Inténtalo de nuevo o prueba con menos páginas.",
+      "hint": "Espera un momento y vuelve a intentarlo.",
       "message": "La respuesta tardó más de lo esperado.",
       "title": "Tiempo de espera agotado"
     },

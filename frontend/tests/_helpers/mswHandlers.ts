@@ -218,6 +218,7 @@ export const handlers = [
       attribution: 'Powered by BoardGameGeek.',
     }),
   ),
+  http.get('/api/games/mine', () => HttpResponse.json({ games: [] })),
   http.get('/api/games/:gameId', () => HttpResponse.json(SAMPLE_GAME_DETAIL)),
 
   http.get('/api/games/:gameId/explanation', () => HttpResponse.json(SAMPLE_EXPLANATION)),
@@ -396,7 +397,20 @@ export function unauthenticatedMe() {
 
 export function failLogin(status = 401) {
   return http.post('/api/auth/login', () =>
-    HttpResponse.json({ detail: 'Credenciales inválidas.' }, { status }),
+    HttpResponse.json(
+      {
+        detail: 'Credenciales inválidas.',
+        errors: [
+          {
+            field: null,
+            code: 'invalid_credentials',
+            message: 'Credenciales inválidas.',
+            params: {},
+          },
+        ],
+      },
+      { status },
+    ),
   );
 }
 
@@ -431,8 +445,9 @@ export function failRegisterValidation() {
         errors: [
           {
             field: 'username',
-            code: 'username_invalid',
-            message: 'El nombre de usuario solo puede contener letras, números, puntos y guiones.',
+            code: 'username_invalid_character',
+            message: "El nombre de usuario contiene un carácter no permitido: '!'.",
+            params: {},
           },
         ],
       },

@@ -6,50 +6,275 @@
     "title": "Something went wrong"
   },
   "code": {
-    "gameNotFound": {
-      "hint": "Search for the game again and link the manual again.",
-      "message": "The selected game no longer exists in the catalog.",
+    "admin_required": {
+      "hint": "Use an account with the required permissions.",
+      "message": "You need administrator permissions to perform this action.",
+      "title": "Administrator permissions required"
+    },
+    "asset_storage_unavailable": {
+      "hint": "Wait a moment and try again.",
+      "message": "Files cannot be accessed at the moment.",
+      "title": "Files unavailable"
+    },
+    "conversation_not_found": {
+      "hint": "Return to your history and select another conversation.",
+      "message": "The conversation you are looking for could not be found.",
+      "title": "Conversation not found"
+    },
+    "current_password_required": {
+      "hint": "If you cannot remember it, reset it from the sign-in screen.",
+      "message": "Enter your current password to continue.",
+      "title": "Current password required"
+    },
+    "email_invalid": {
+      "hint": "Check that it includes a name, @ and a domain.",
+      "message": "Enter a valid email address.",
+      "title": "Invalid email address"
+    },
+    "email_required": {
+      "hint": "Use an address such as name@example.com.",
+      "message": "Enter your email address to continue.",
+      "title": "Email address required"
+    },
+    "email_too_long": {
+      "hint": "Check the email address you entered.",
+      "message": "Email addresses can contain up to {{max}} characters.",
+      "title": "Email address too long"
+    },
+    "email_verification_token_invalid": {
+      "hint": "Sign in and request another verification link.",
+      "message": "This email verification link is invalid or has expired.",
+      "title": "Invalid verification link"
+    },
+    "game_not_found": {
+      "hint": "Return to the catalog and search for the game again.",
+      "message": "The selected game could not be found in the catalog.",
       "title": "Game not found"
     },
-    "gameUnavailable": {
+    "game_unavailable": {
       "hint": "Return to the catalog and select another game.",
       "message": "This game is no longer available for new questions.",
       "title": "Game unavailable"
     },
-    "identityUnavailable": {
-      "hint": "Sign in or try a different username.",
+    "generated_answer_too_long": {
+      "hint": "Try a more specific question.",
+      "message": "The generated answer exceeds the allowed length.",
+      "title": "Answer too long"
+    },
+    "identity_unavailable": {
+      "hint": "Sign in or try a different email address or username.",
       "message": "An account with that email or username already exists.",
       "title": "Email or username unavailable"
     },
-    "invalidPdf": {
-      "hint": "Export the manual as a PDF and try again.",
+    "image_too_large": {
+      "hint": "Reduce the image size and upload it again.",
+      "message": "Each image can be up to {{max}} MB.",
+      "title": "Image too large"
+    },
+    "invalid_credentials": {
+      "hint": "Check your sign-in details or reset your password.",
+      "message": "The email, username or password is incorrect.",
+      "title": "Unable to sign in"
+    },
+    "invalid_csrf_token": {
+      "hint": "Reload the page and try again.",
+      "message": "The security check could not be completed.",
+      "title": "Unable to confirm the action"
+    },
+    "invalid_image": {
+      "hint": "Export the image again and upload it.",
+      "message": "The file does not contain a valid image.",
+      "title": "Invalid image"
+    },
+    "invalid_pdf": {
+      "hint": "Export the manual as a PDF again and try again.",
       "message": "The file is not a valid PDF.",
       "title": "Invalid PDF"
     },
-    "manualContextNotFound": {
-      "hint": "Wait for processing to finish or upload a valid manual.",
-      "message": "No indexed manuals are available to answer questions about that game.",
-      "title": "Not enough context"
+    "invalid_request": {
+      "hint": "Check the details and try again.",
+      "message": "Some details in the request are invalid.",
+      "title": "Invalid details"
     },
-    "manualDuplicate": {
+    "invalid_request_body": {
+      "hint": "Reload the page and try again.",
+      "message": "The request details could not be read.",
+      "title": "Unable to read the request"
+    },
+    "manual_busy": {
+      "hint": "Wait for processing to finish and try again.",
+      "message": "This manual is being processed and cannot be changed yet.",
+      "title": "Manual processing"
+    },
+    "manual_context_not_found": {
+      "hint": "Wait for processing to finish or upload a valid manual.",
+      "message": "No processed manuals are available to answer questions about this game.",
+      "title": "No manuals available"
+    },
+    "manual_duplicate": {
       "hint": "Open the existing manual or upload a different version.",
       "message": "This manual is already in your library for this game.",
       "title": "Duplicate manual"
     },
-    "manualTooLarge": {
+    "manual_not_editable": {
+      "hint": "You can edit the text of your private manuals.",
+      "message": "The text of a shared manual cannot be edited.",
+      "title": "Manual cannot be edited"
+    },
+    "manual_not_found": {
+      "hint": "Return to your library and select an available manual.",
+      "message": "The manual or page you are looking for could not be found.",
+      "title": "Manual not found"
+    },
+    "manual_request_too_large": {
+      "hint": "Reduce the file sizes and try again.",
+      "message": "The upload exceeds the allowed size.",
+      "title": "Upload too large"
+    },
+    "manual_too_large": {
       "hint": "Reduce the image files or split the manual into several uploads.",
-      "message": "The combined image files can be up to 95 MB.",
+      "message": "The combined image files can be up to {{max}} MB.",
       "title": "Manual too large"
     },
-    "noManualSources": {
+    "manual_too_many_pages": {
+      "hint": "Split the manual into files with fewer pages.",
+      "message": "A manual can contain up to {{max}} pages.",
+      "title": "Too many pages"
+    },
+    "manual_upload_selection_invalid": {
+      "hint": "Choose one file type for each upload.",
+      "message": "Select images or a PDF for this upload, without combining both.",
+      "title": "Select the manual pages"
+    },
+    "message_required": {
+      "hint": "Add the question you want to ask about the game.",
+      "message": "Enter a message to continue.",
+      "title": "Message required"
+    },
+    "message_too_long": {
+      "hint": "Shorten your question and send it again.",
+      "message": "Messages can contain up to {{max}} characters.",
+      "title": "Message too long"
+    },
+    "method_not_allowed": {
+      "hint": "Return to the previous screen and choose an available action.",
+      "message": "This action is not available for the requested item.",
+      "title": "Action unavailable"
+    },
+    "no_manual_sources": {
       "hint": "Upload the game's manual again to ask questions.",
-      "message": "A source you used is no longer available, so you can't ask new questions in this conversation.",
+      "message": "A source you used is no longer available, so you cannot ask new questions in this conversation.",
       "title": "Source unavailable"
     },
-    "pdfTooLarge": {
-      "hint": "Reduce the PDF size or split the manual into a smaller file.",
-      "message": "The PDF can be up to 95 MB.",
+    "password_required": {
+      "hint": "Complete the password field and try again.",
+      "message": "Enter a password to continue.",
+      "title": "Password required"
+    },
+    "password_reset_token_invalid": {
+      "hint": "Request another link to create a new password.",
+      "message": "This password reset link is invalid or has expired.",
+      "title": "Invalid password reset link"
+    },
+    "password_too_long": {
+      "hint": "Use a shorter password.",
+      "message": "Passwords can contain up to {{max}} characters.",
+      "title": "Password too long"
+    },
+    "password_too_short": {
+      "hint": "Use a longer password.",
+      "message": "Passwords must contain at least {{min}} characters.",
+      "title": "Password too short"
+    },
+    "pdf_too_large": {
+      "hint": "Reduce the PDF size or split the manual into smaller files.",
+      "message": "The PDF can be up to {{max}} MB.",
       "title": "PDF too large"
+    },
+    "rating_not_found": {
+      "hint": "Return to the game to view or add your rating.",
+      "message": "The rating for this game could not be found.",
+      "title": "Rating not found"
+    },
+    "text_required": {
+      "hint": "Add the content shown on that page of the manual.",
+      "message": "Enter the page text before saving.",
+      "title": "Page text required"
+    },
+    "text_too_long": {
+      "hint": "Check the content and remove any text that does not belong to that page.",
+      "message": "Page text can contain up to {{max}} characters.",
+      "title": "Page text too long"
+    },
+    "title_required": {
+      "hint": "Choose a title that will help you recognize it later.",
+      "message": "Enter a title to continue.",
+      "title": "Title required"
+    },
+    "title_too_long": {
+      "hint": "Use a shorter title.",
+      "message": "Titles can contain up to {{max}} characters.",
+      "title": "Title too long"
+    },
+    "token_required": {
+      "hint": "Request a new link and open it from your email.",
+      "message": "This link is incomplete and cannot be used.",
+      "title": "Invalid link"
+    },
+    "token_too_long": {
+      "hint": "Request a new link and open it from your email.",
+      "message": "This link has an invalid format.",
+      "title": "Invalid link"
+    },
+    "unexpected_field": {
+      "hint": "Reload the page and try again.",
+      "message": "The request includes details that cannot be accepted.",
+      "title": "Unrecognized details"
+    },
+    "username_confirmation_mismatch": {
+      "hint": "Enter your current username to confirm deletion.",
+      "message": "The username you entered does not match your account.",
+      "title": "Username does not match"
+    },
+    "username_contains_at": {
+      "hint": "Use letters, numbers, periods, hyphens or underscores.",
+      "message": "Usernames cannot contain @.",
+      "title": "Invalid username"
+    },
+    "username_contains_spaces": {
+      "hint": "Join the words or separate them with a period, hyphen or underscore.",
+      "message": "Usernames cannot contain spaces.",
+      "title": "Username contains spaces"
+    },
+    "username_empty": {
+      "hint": "Use letters, numbers, periods, hyphens or underscores.",
+      "message": "Enter a username to continue.",
+      "title": "Username required"
+    },
+    "username_invalid_character": {
+      "hint": "Use letters, numbers, periods, hyphens or underscores.",
+      "message": "The username contains a character that is not allowed.",
+      "title": "Invalid username"
+    },
+    "username_key_too_long": {
+      "hint": "Choose a shorter username.",
+      "message": "The username is too long to save.",
+      "title": "Username too long"
+    },
+    "username_required": {
+      "hint": "Use letters, numbers, periods, hyphens or underscores.",
+      "message": "Enter a username to continue.",
+      "title": "Username required"
+    },
+    "username_surrounding_spaces": {
+      "hint": "Remove the spaces at the start and end.",
+      "message": "The username has spaces at the start or end.",
+      "title": "Username contains spaces"
+    },
+    "username_too_long": {
+      "hint": "Choose a shorter username.",
+      "message": "Usernames can contain up to {{max}} characters.",
+      "title": "Username too long"
     }
   },
   "http": {
@@ -69,9 +294,9 @@
       "title": "Action not allowed"
     },
     "404": {
-      "hint": "Go back to the home screen and upload the photos again.",
-      "message": "This manual no longer exists on the server.",
-      "title": "Manual not found"
+      "hint": "Return to the previous screen and check what you are looking for.",
+      "message": "The requested item could not be found.",
+      "title": "Resource not found"
     },
     "409": {
       "hint": "Check the details and try again.",
@@ -89,9 +314,9 @@
       "title": "Unsupported format"
     },
     "422": {
-      "hint": "Make sure the photos are in focus and well lit, then try again.",
-      "message": "We couldn't extract text from the pages.",
-      "title": "Couldn't read the manual"
+      "hint": "Check the details and try again.",
+      "message": "Some details in the request are invalid.",
+      "title": "Invalid details"
     },
     "429": {
       "hint": "Wait a moment before trying again.",
@@ -104,9 +329,9 @@
       "title": "Something went wrong"
     },
     "502": {
-      "hint": "Wait a few seconds and try again.",
-      "message": "An internal service is still starting up or unavailable.",
-      "title": "Service starting"
+      "hint": "Wait a moment and try again.",
+      "message": "A required service is unavailable at the moment.",
+      "title": "Service unavailable"
     },
     "503": {
       "hint": "Try again in a moment.",
@@ -114,7 +339,7 @@
       "title": "Service unavailable"
     },
     "504": {
-      "hint": "Try again or use fewer pages.",
+      "hint": "Wait a moment and try again.",
       "message": "The response took longer than expected.",
       "title": "Request timed out"
     },

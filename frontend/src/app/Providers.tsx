@@ -1,13 +1,13 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useTranslation } from 'react-i18next';
 import { Toaster, toast } from 'sonner';
 import { LanguageProvider } from './language';
 import { ThemeProvider, useTheme } from './theme';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { handleSessionExpired } from '@/features/auth/session-expired';
 import { onStorageWriteFail } from '@/shared/lib/storage';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 type Props = Readonly<{ children: ReactNode }>;
 
@@ -60,8 +60,6 @@ function AppToaster() {
 }
 
 export function Providers({ children }: Props) {
-  const { t } = useTranslation('shell');
-
   // useState: un único cliente aunque StrictMode doble el render.
   const [queryClient] = useState(createQueryClient);
 
@@ -70,20 +68,20 @@ export function Providers({ children }: Props) {
     () =>
       onStorageWriteFail((reason) => {
         if (reason === 'quota') {
-          toast.warning(t('storage.quota.title'), {
+          toast.warning(<LiveTrans ns="shell" i18nKey="storage.quota.title" />, {
             id: 'storage-quota',
-            description: t('storage.quota.description'),
+            description: <LiveTrans ns="shell" i18nKey="storage.quota.description" />,
             duration: 8000,
           });
         } else if (reason === 'denied') {
-          toast.warning(t('storage.denied.title'), {
+          toast.warning(<LiveTrans ns="shell" i18nKey="storage.denied.title" />, {
             id: 'storage-denied',
-            description: t('storage.denied.description'),
+            description: <LiveTrans ns="shell" i18nKey="storage.denied.description" />,
             duration: 8000,
           });
         }
       }),
-    [t],
+    [],
   );
 
   return (

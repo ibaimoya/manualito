@@ -34,6 +34,7 @@ def normalize_username(username: str) -> str:
         raise UsernameValidationError(
             "username_too_long",
             f"El nombre de usuario no puede superar {USERNAME_MAX_LENGTH} caracteres.",
+            params={"max": USERNAME_MAX_LENGTH},
         )
     if "@" in normalized:
         raise UsernameValidationError(
@@ -48,7 +49,7 @@ def normalize_username(username: str) -> str:
     if invalid_character := _find_invalid_character(normalized):
         raise UsernameValidationError(
             "username_invalid_character",
-            f"El nombre de usuario contiene un carácter no permitido: {invalid_character!r}."
+            f"El nombre de usuario contiene un carácter no permitido: {invalid_character!r}.",
         )
 
     return normalized
@@ -69,6 +70,7 @@ def build_username_key(username: str) -> str:
         raise UsernameValidationError(
             "username_key_too_long",
             "La clave normalizada del nombre de usuario es demasiado larga.",
+            params={"max": USERNAME_KEY_MAX_LENGTH},
         )
 
     return key
@@ -82,11 +84,7 @@ def _normalize_compatibility(username: str) -> str:
 def _find_invalid_character(username: str) -> str | None:
     """Devuelve el primer carácter fuera de las clases permitidas."""
     return next(
-        (
-            character
-            for character in username
-            if not _is_allowed_username_character(character)
-        ),
+        (character for character in username if not _is_allowed_username_character(character)),
         None,
     )
 
@@ -94,8 +92,4 @@ def _find_invalid_character(username: str) -> str | None:
 def _is_allowed_username_character(character: str) -> bool:
     """Permite letras Unicode, marcas, números y símbolos seguros."""
     category = unicodedata.category(character)
-    return (
-        category[0] in {"L", "M"}
-        or category == "Nd"
-        or character in USERNAME_ALLOWED_SYMBOLS
-    )
+    return category[0] in {"L", "M"} or category == "Nd" or character in USERNAME_ALLOWED_SYMBOLS

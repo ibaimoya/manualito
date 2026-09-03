@@ -1,4 +1,3 @@
-import { mapApiError } from './error-mapper';
 import { ApiError, JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } from './http';
 
 /**
@@ -7,8 +6,7 @@ import { ApiError, JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } fr
  * "@/shared/api/client".
  */
 
-export { ApiError, apiErrorNotification, isAbortApiError } from './http';
-export type { ApiErrorNotification } from './http';
+export { ApiError, isAbortApiError } from './http';
 
 /* ============================================================
    Tipos del contrato (manuales / juegos)
@@ -136,7 +134,7 @@ export const api = {
   async health(): Promise<{ status: string }> {
     const res = await fetch('/health', { credentials: 'same-origin' });
     if (!res.ok) {
-      throw new ApiError(mapApiError({ status: res.status }), res.status, null);
+      throw new ApiError(res.status, null);
     }
     return (await res.json()) as { status: string };
   },

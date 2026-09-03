@@ -1,279 +1,145 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { useEffect } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
 import { ThemeProvider, useTheme } from '@/app/theme';
 
-type ThemeApi = ReturnType<typeof useTheme>;
+beforeEach(() => {
+  vi.useFakeTimers();
+  document.documentElement.className = '';
+});
 
-function ThemeCapture({ onCapture }: Readonly<{ onCapture: (api: ThemeApi) => void }>) {
-  const api = useTheme();
-  useEffect(() => {
-    onCapture(api);
-  }, [api, onCapture]);
-  return null;
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+function renderTheme() {
+  return renderHook(useTheme, { wrapper: ThemeProvider });
 }
 
-function ThemeProbe() {
-  const t = useTheme();
-  return (
-    <div>
-      <p data-testid="mode">{t.mode}</p>
-      <p data-testid="accent">{t.accent}</p>
-      <button onClick={() => t.setMode('dark')}>dark</button>
-      <button onClick={() => t.setAccent('blue')}>blue</button>
-    </div>
-  );
+function advanceTime(ms: number) {
+  act(() => {
+    vi.advanceTimersByTime(ms);
+  });
 }
 
 describe('ThemeProvider', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    document.documentElement.className = '';
+  it('inicia en light y amber y aplica el tema al documento', () => {
+    const { result } = renderTheme();
+    expect(result.current.mode).toBe('light');
+    expect(result.current.accent).toBe('amber');
+    expect(document.documentElement).toHaveClass('theme-light');
   });
 
-  it('valor inicial: mode=light, accent=amber', () => {
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    );
-    expect(screen.getByTestId('mode').textContent).toBe('light');
-    expect(screen.getByTestId('accent').textContent).toBe('amber');
-  });
-
-  it('aplica clases CSS al <html> según el state', () => {
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    );
-    // Por defecto theme-light (matchMedia=false en jsdom).
-    expect(document.documentElement.classList.contains('theme-light')).toBe(true);
-  });
-
-  it('cambiar a dark añade theme-dark y persiste en localStorage', async () => {
-    const user = userEvent.setup();
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    );
-    await user.click(screen.getByText('dark'));
-    // El class del html se aplica inmediatamente (UI reactivo).
-    expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
-    // El persist a localStorage es debounced 200ms para evitar spam de
-    // writes — esperamos a que se materialice.
-    await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem('manualito.settings') ?? '{}');
-      expect(stored.mode).toBe('dark');
+  it('aplica dark inmediatamente y lo persiste tras la espera', () => {
+    const { result } = renderTheme();
+    act(() => result.current.setMode('dark'));
+    expect(document.documentElement).toHaveClass('theme-dark');
+    advanceTime(200);
+    expect(JSON.parse(localStorage.getItem('manualito.settings')!)).toEqual({
+      mode: 'dark',
+      accent: 'amber',
     });
   });
 
-  it('cambiar accent persiste y refleja en html', async () => {
-    const user = userEvent.setup();
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    );
-    await user.click(screen.getByText('blue'));
-    expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
-    expect(screen.getByTestId('accent').textContent).toBe('blue');
+  it('aplica el acento elegido y lo persiste', () => {
+    const { result } = renderTheme();
+    act(() => result.current.setAccent('blue'));
+    expect(result.current.accent).toBe('blue');
+    expect(document.documentElement).toHaveClass('accent-blue');
+    advanceTime(200);
+    expect(JSON.parse(localStorage.getItem('manualito.settings')!)).toEqual({
+      mode: 'light',
+      accent: 'blue',
+    });
   });
 
-  it('useTheme fuera de Provider lanza error claro', () => {
-    // Silencia el error de React en consola para este test.
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(() => render(<ThemeProbe />)).toThrow(/useTheme/);
-    spy.mockRestore();
+  it('useTheme fuera de Provider lanza un error claro', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(() => renderHook(useTheme)).toThrow(/useTheme/);
   });
 
-  it('lee preferencias persistidas del localStorage al montar', () => {
+  it('lee preferencias persistidas al montar', () => {
     localStorage.setItem('manualito.settings', JSON.stringify({ mode: 'dark', accent: 'blue' }));
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    );
-    expect(screen.getByTestId('mode').textContent).toBe('dark');
-    expect(screen.getByTestId('accent').textContent).toBe('blue');
+    const { result } = renderTheme();
+    expect(result.current.mode).toBe('dark');
+    expect(result.current.accent).toBe('blue');
+    expect(document.documentElement).toHaveClass('theme-dark', 'accent-blue');
   });
 
-  it('ignora estado corrupto y cae a defaults', () => {
+  it('usa los valores iniciales si las preferencias están corruptas', () => {
     localStorage.setItem('manualito.settings', '{[no valid json');
-    expect(() =>
-      render(
-        <ThemeProvider>
-          <ThemeProbe />
-        </ThemeProvider>,
-      ),
-    ).not.toThrow();
-    expect(screen.getByTestId('mode').textContent).toBe('light');
+    const { result } = renderTheme();
+    expect(result.current.mode).toBe('light');
+    expect(result.current.accent).toBe('amber');
   });
 
-  it('act + setMode rerendera correctamente', () => {
-    let api: ThemeApi | undefined;
-    render(
-      <ThemeProvider>
-        <ThemeCapture
-          onCapture={(value) => {
-            api = value;
-          }}
-        />
-      </ThemeProvider>,
+  it('reinicia la espera entre cambios y escribe solo la última preferencia', () => {
+    const { result } = renderTheme();
+    advanceTime(200);
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+    act(() => result.current.setMode('dark'));
+    advanceTime(50);
+    act(() => result.current.setMode('light'));
+    advanceTime(50);
+    act(() => result.current.setMode('dark'));
+    advanceTime(199);
+
+    expect(setItem).not.toHaveBeenCalled();
+    advanceTime(1);
+    expect(setItem).toHaveBeenCalledExactlyOnceWith(
+      'manualito.settings',
+      JSON.stringify({ mode: 'dark', accent: 'amber' }),
     );
-    act(() => api!.setMode('light'));
-    expect(document.documentElement.classList.contains('theme-light')).toBe(true);
   });
 
-  /* ============================================================
-     Spam de toggles — robustez bajo clicks rápidos.
-     ============================================================ */
-  describe('robustez bajo spam', () => {
-    it('20 setMode en cascada → UNA sola escritura a localStorage (debounce)', async () => {
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-      let api: ThemeApi | undefined;
-      render(
-        <ThemeProvider>
-          <ThemeCapture
-            onCapture={(value) => {
-              api = value;
-            }}
-          />
-        </ThemeProvider>,
-      );
+  it('repetir los valores actuales no provoca nuevas escrituras', () => {
+    const { result } = renderTheme();
+    advanceTime(200);
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
 
-      setItemSpy.mockClear();
+    act(() => result.current.setMode('light'));
+    act(() => result.current.setAccent('amber'));
+    advanceTime(200);
 
-      act(() => {
-        for (let i = 0; i < 20; i++) {
-          api!.setMode(i % 2 === 0 ? 'dark' : 'light');
-        }
-      });
+    expect(setItem).not.toHaveBeenCalled();
+  });
 
-      await waitFor(() => expect(setItemSpy).toHaveBeenCalled(), { timeout: 1500 });
+  it('solo sigue el esquema del SO en modo auto y conserva el acento', () => {
+    // El SO es una frontera externa: controlamos el cambio de su media query.
+    let prefersDark = false;
+    const listeners = new Set<() => void>();
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          get matches() {
+            return query === '(prefers-color-scheme: dark)' && prefersDark;
+          },
+          media: query,
+          onchange: null,
+          addEventListener: (_: string, cb: () => void) => listeners.add(cb),
+          removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
+          addListener: () => undefined,
+          removeListener: () => undefined,
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList,
+    );
 
-      // El debounce de 200ms colapsa los 20 cambios en como máximo 2
-      // writes (el primero podría salir si hubo gap; en spam puro = 1).
-      expect(setItemSpy.mock.calls.length).toBeLessThanOrEqual(2);
-      const lastCall = setItemSpy.mock.calls[setItemSpy.mock.calls.length - 1];
-      const payload = JSON.parse(lastCall?.[1] as string);
-      expect(payload.mode).toBe('light'); // i=19 → impar → light
+    const { result } = renderTheme();
+    act(() => result.current.setAccent('blue'));
+    expect(listeners.size).toBe(0);
 
-      setItemSpy.mockRestore();
+    act(() => result.current.setMode('auto'));
+    expect(listeners.size).toBe(1);
+    act(() => {
+      prefersDark = true;
+      for (const listener of listeners) listener();
     });
+    expect(document.documentElement).toHaveClass('theme-dark', 'accent-blue');
 
-    it('setMode con el mismo valor reutiliza el mismo objeto de state (guard)', () => {
-      // No medimos renders directamente (con useTransition de React 19 el
-      // conteo es impredecible).  Verificamos el efecto observable:
-      // localStorage no recibe writes nuevos si llamas setMode con el
-      // valor actual.
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-      let api: ThemeApi | undefined;
-      render(
-        <ThemeProvider>
-          <ThemeCapture
-            onCapture={(value) => {
-              api = value;
-            }}
-          />
-        </ThemeProvider>,
-      );
-
-      setItemSpy.mockClear();
-      act(() => {
-        for (let i = 0; i < 5; i++) api!.setMode('light');
-      });
-
-      // El default es 'light' → cinco setMode('light') no deben provocar
-      // ninguna escritura porque el state no cambia.
-      return waitFor(() => {
-        expect(setItemSpy).not.toHaveBeenCalled();
-        setItemSpy.mockRestore();
-      });
-    });
-
-    it('fuera del modo auto no se abren suscripciones a prefers-color-scheme', () => {
-      // En jsdom matchMedia es un shim definido en src/test/setup.ts; cada
-      // llamada a window.matchMedia devuelve un MQL nuevo. Contamos las
-      // invocaciones del query: en modo light solo las hace applyToHtml.
-      const realMM = window.matchMedia.bind(window);
-      const mmSpy = vi.spyOn(window, 'matchMedia').mockImplementation(realMM);
-
-      let api: ThemeApi | undefined;
-      render(
-        <ThemeProvider>
-          <ThemeCapture
-            onCapture={(value) => {
-              api = value;
-            }}
-          />
-        </ThemeProvider>,
-      );
-
-      const initialCount = mmSpy.mock.calls.filter(
-        ([q]) => q === '(prefers-color-scheme: dark)',
-      ).length;
-
-      act(() => {
-        api!.setAccent('blue');
-        api!.setAccent('amber');
-        api!.setAccent('blue');
-      });
-
-      const afterCount = mmSpy.mock.calls.filter(
-        ([q]) => q === '(prefers-color-scheme: dark)',
-      ).length;
-
-      expect(afterCount - initialCount).toBeLessThanOrEqual(3);
-      mmSpy.mockRestore();
-    });
-
-    it('en modo auto, el cambio de esquema del SO conserva el acento elegido', () => {
-      // Mock controlable: applyToHtml lee `matches` fresco en cada llamada
-      // y el listener de 'auto' se registra aquí para poder dispararlo.
-      let prefersDark = false;
-      const listeners = new Set<() => void>();
-      const mmSpy = vi.spyOn(window, 'matchMedia').mockImplementation(
-        (query: string) =>
-          ({
-            get matches() {
-              return query === '(prefers-color-scheme: dark)' ? prefersDark : false;
-            },
-            media: query,
-            onchange: null,
-            addEventListener: (_: string, cb: () => void) => listeners.add(cb),
-            removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
-            addListener: () => undefined,
-            removeListener: () => undefined,
-            dispatchEvent: () => false,
-          }) as unknown as MediaQueryList,
-      );
-
-      let api: ThemeApi | undefined;
-      render(
-        <ThemeProvider>
-          <ThemeCapture
-            onCapture={(value) => {
-              api = value;
-            }}
-          />
-        </ThemeProvider>,
-      );
-
-      act(() => api!.setMode('auto'));
-      act(() => api!.setAccent('blue'));
-      expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
-
-      // El SO pasa a oscuro: el listener debe aplicar el acento ACTUAL.
-      act(() => {
-        prefersDark = true;
-        for (const cb of [...listeners]) cb();
-      });
-      expect(document.documentElement.classList.contains('theme-dark')).toBe(true);
-      expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
-      mmSpy.mockRestore();
-    });
+    act(() => result.current.setMode('light'));
+    expect(listeners.size).toBe(0);
+    expect(document.documentElement).toHaveClass('theme-light', 'accent-blue');
   });
 });

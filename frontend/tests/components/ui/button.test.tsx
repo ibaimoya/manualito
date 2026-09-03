@@ -87,28 +87,37 @@ describe('Button', () => {
       expect(clicked).toBe(0);
     });
 
-    it('preserva el texto al pasar de idle a loading (ancho estable)', () => {
-      // Patrón "spinner reemplaza icono, texto se mantiene" → la
-      // anchura del botón no salta entre estados.  Validamos que el
-      // texto sigue presente.
+    it('conserva el icono y el texto al interrumpir la carga y permite pulsar de nuevo', async () => {
+      const user = userEvent.setup();
+      let clicked = 0;
       const { rerender } = render(
-        <Button>
-          <Upload size={18} /> Procesar
+        <Button loading={false} onClick={() => clicked++}>
+          <Upload data-testid="upload-icon" size={18} /> Procesar
         </Button>,
       );
-      expect(screen.getByRole('button', { name: /procesar/i })).toBeInTheDocument();
+      const btn = screen.getByRole('button', { name: 'Procesar' });
+      const icon = screen.getByTestId('upload-icon');
+      const spinner = btn.querySelectorAll('svg')[1];
 
-      rerender(
-        <Button loading>
-          <Upload size={18} /> Procesar
-        </Button>,
-      );
-      const btn = screen.getByRole('button', { name: /procesar/i });
-      expect(btn).toBeInTheDocument();
-      expect(btn).toHaveAttribute('aria-busy', 'true');
+      for (const loading of [true, false, true, false]) {
+        rerender(
+          <Button loading={loading} onClick={() => clicked++}>
+            <Upload data-testid="upload-icon" size={18} /> Procesar
+          </Button>,
+        );
+        expect(screen.getByRole('button', { name: 'Procesar' })).toBe(btn);
+        expect(screen.getByTestId('upload-icon')).toBe(icon);
+        expect(btn.querySelectorAll('svg')[1]).toBe(spinner);
+        if (loading) expect(btn).toBeDisabled();
+        else expect(btn).toBeEnabled();
+      }
+
+      await user.click(btn);
+      expect(clicked).toBe(1);
+      expect(btn).not.toHaveAttribute('aria-busy');
     });
 
-    it('en botones icon-only reemplaza el icono por spinner', () => {
+    it('en botones icon-only mantiene el icono montado y conserva aria-label', () => {
       const { container } = render(
         <Button size="icon" loading aria-label="Enviar pregunta">
           <Upload data-testid="send-icon" size={18} />
@@ -118,8 +127,27 @@ describe('Button', () => {
       const btn = screen.getByRole('button', { name: /enviar pregunta/i });
       expect(btn).toBeDisabled();
       expect(btn).toHaveAttribute('aria-busy', 'true');
-      expect(screen.queryByTestId('send-icon')).not.toBeInTheDocument();
-      expect(container.querySelectorAll('svg')).toHaveLength(1);
+      expect(screen.getByTestId('send-icon')).toBeInTheDocument();
+      expect(container.querySelectorAll('svg')).toHaveLength(2);
+    });
+
+    it('conserva una etiqueta sin icono, aunque esté envuelta en un elemento', async () => {
+      const { container, rerender } = render(
+        <Button loading={false}>
+          <span>Guardar</span>
+        </Button>,
+      );
+      const label = screen.getByText('Guardar');
+
+      rerender(
+        <Button loading>
+          <span>Guardar</span>
+        </Button>,
+      );
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+      expect(screen.getByText('Guardar')).toBe(label);
+      expect(await axe(container)).toHaveNoViolations();
     });
 
     it('sin loading no expone aria-busy', () => {

@@ -4,6 +4,54 @@
    (bg-primary, text-primary-700, etc.).  Source of truth lives here.
    ============================================================ */
 
+@property --m-primary-50 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fdebd8;
+}
+
+@property --m-primary-100 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fbd5b0;
+}
+
+@property --m-primary-300 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f0a45d;
+}
+
+@property --m-primary-500 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #e07a1f;
+}
+
+@property --m-primary-600 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #c46514;
+}
+
+@property --m-primary-700 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a8431f;
+}
+
+@property --m-accent-100 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #d6e4ed;
+}
+
+@property --m-accent-500 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2c6e91;
+}
+
 :root {
   /* — Color: Brand —————————————————————————————— */
   --m-primary-50: #fdebd8;
@@ -173,4 +221,15 @@ html.theme-dark.accent-blue {
   --m-accent-500: #f6953b;
   --m-accent-100: #4a2d10;
   --m-shadow-ring-primary: 0 0 0 4px rgba(124, 192, 232, 0.26);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root.accent-transition {
+    --m-color-transition-duration: 0s;
+    transition-property:
+      --m-primary-50, --m-primary-100, --m-primary-300, --m-primary-500, --m-primary-600,
+      --m-primary-700, --m-accent-100, --m-accent-500;
+    transition-duration: var(--m-dur-slow);
+    transition-timing-function: ease;
+  }
 }

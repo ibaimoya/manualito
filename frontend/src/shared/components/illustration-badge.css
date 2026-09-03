@@ -1,0 +1,48 @@
+.illustration-badge-accent {
+  background-color: color-mix(in srgb, var(--m-accent-500) 70%, var(--m-text));
+}
+
+.illustration-card [data-icon-part='camera-lens'] {
+  transform-origin: 12px 13px;
+}
+
+.illustration-card .scan-text-lines {
+  transform-origin: 7px 12px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .illustration-card
+    :is(
+      .illustration-spark,
+      .illustration-chat,
+      .illustration-page,
+      .illustration-people,
+      [data-icon-part='camera-lens'],
+      .scan-text-lines
+    ) {
+    transition: transform var(--m-dur) var(--m-easing);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .illustration-card:hover {
+      [data-icon-part='camera-lens'] {
+        transform: scale(0.65);
+      }
+      .scan-text-lines {
+        transform: translateY(-1px) scaleX(0.85);
+      }
+      .illustration-spark {
+        transform: rotate(12deg) scale(1.08);
+      }
+      .illustration-chat {
+        transform: translateX(1px) rotate(-8deg);
+      }
+      .illustration-page {
+        transform: rotate(-8deg);
+      }
+      .illustration-people {
+        transform: scaleX(1.12);
+      }
+    }
+  }
+}

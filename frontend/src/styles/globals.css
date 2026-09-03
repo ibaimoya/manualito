@@ -5,6 +5,7 @@
 
 @import 'tailwindcss';
 @import './tokens.css';
+@import './microinteractions.css';
 
 /* @theme inline → expone los CSS vars de la marca como utilidades de Tailwind v4.
    Esto permite escribir "bg-primary", "text-text-2", "border-border-strong", etc.
@@ -98,6 +99,59 @@
   @media (min-width: 64rem) {
     gap: 2rem;
     padding-top: 2rem;
+  }
+}
+
+@utility page-title {
+  font-family: var(--m-font-display);
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+
+  @container app (min-width: 48rem) {
+    font-size: 2.25rem;
+  }
+
+  @container app (min-width: 80rem) {
+    font-size: 2.5rem;
+  }
+}
+
+@utility page-eyebrow {
+  font-family: var(--m-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--m-primary-700);
+}
+
+@utility page-description {
+  max-width: 70ch;
+  font-size: 1rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+  color: var(--m-text-2);
+
+  @container app (min-width: 48rem) {
+    font-size: 1.125rem;
+  }
+}
+
+@utility hit-area {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(44px, calc(100% + 12px));
+    height: max(44px, calc(100% + 12px));
+    transform: translate(-50%, -50%);
   }
 }
 
@@ -285,13 +339,8 @@ kbd {
   }
 }
 
-/* Cometa que recorre el borde de la fila respondiéndose (conic-gradient
-   enmascarado a solo-borde). inset:-1px + radio 1px mayor que la caja lo pega
-   a la arista sin separación. El radio se deriva de --radius-2xl (el mismo
-   token que usa la clase `rounded-2xl` de la caja) en vez de un valor fijo
-   copiado a mano: así el anillo nunca puede desajustarse de la caja, sea cual
-   sea su radio real. Aceptamos --proc-radius como override puntual si algún
-   callsite futuro usase una caja con otro radio. */
+/* El inset compensa el borde de 1px del padre: las dos cajas coinciden,
+   por lo que el cometa hereda exactamente sus radios. */
 @property --proc-angle {
   syntax: '<angle>';
   inherits: false;
@@ -300,10 +349,10 @@ kbd {
 .proc-border {
   position: absolute;
   inset: -1px;
-  border-radius: var(--proc-radius, calc(var(--radius-2xl, 1rem) + 1px));
+  border-radius: inherit;
   padding: 2.5px;
   pointer-events: none;
-  z-index: 0;
+  z-index: 2;
   background: conic-gradient(
     from var(--proc-angle),
     transparent 262deg,
@@ -486,47 +535,6 @@ kbd {
   transform-origin: var(--radix-dropdown-menu-content-transform-origin);
 }
 
-/* — Menú de idioma — sin scale porque el texto re-rasteriza al asentar y parpadea */
-@keyframes mn-lang-in {
-  from {
-    opacity: 0;
-    translate: 0 -4px;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-@keyframes mn-lang-out {
-  from {
-    opacity: 1;
-    translate: 0 0;
-  }
-  to {
-    opacity: 0;
-    translate: 0 -4px;
-  }
-}
-[data-mn-lang-menu][data-state='open'] {
-  animation: mn-lang-in 150ms var(--m-easing);
-}
-[data-mn-lang-menu][data-state='closed'] {
-  animation: mn-lang-out 130ms var(--m-easing) forwards;
-}
-
-/* Respeta prefers-reduced-motion para todas las animaciones globales */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Asegura touch targets ≥ 44px en controles pequeños via padding visual */
 button,
 [role='button'],
 a,
@@ -535,12 +543,7 @@ input[type='radio'] {
   touch-action: manipulation;
 }
 
-/* — Capacidad de input: pointer & hover (decisión #28 — Principio 2) —
-   Detectamos la CAPACIDAD del dispositivo, no el dispositivo (anti UA-sniff).
-
-   Touch real ("pointer: coarse"): garantizamos área mínima 44×44 px
-   en todos los botones e icon-buttons.  Cumple WCAG 2.2 SC 2.5.8 sin
-   tener que enumerar tamaños en cada componente. */
+/* Los controles con tamaño propio conservan su geometría en pantallas táctiles. */
 @media (pointer: coarse) {
   button:not([class*='shrink-0']),
   [role='button']:not([class*='shrink-0']),
@@ -549,40 +552,31 @@ input[type='radio'] {
   }
 }
 
-/* Hover states activos SOLO cuando puede hacerse hover real.
-   En táctil puro el navegador simula hover tras el primer tap, lo que
-   produce "sticky hover" desagradable.  En "(hover: none)" neutralizamos
-   los efectos visuales más comunes para que ni siquiera se apliquen al
-   tap (no solo la duración).  Ver Motion docs:
-   https://motion.dev/docs/react-hover-animation */
-@media (hover: none), (pointer: coarse) {
-  *:hover {
-    background-color: revert !important;
-    color: revert !important;
-    box-shadow: revert !important;
-    border-color: revert !important;
-    /* Tailwind v4 reparte el transform en propiedades propias: hay que revertir
-       las tres, no solo "transform", o el hover pegajoso sobreviviría al tap. */
-    transform: revert !important;
-    translate: revert !important;
-    scale: revert !important;
-    rotate: revert !important;
-    transition-duration: 0ms !important;
-  }
-  /* Mantenemos ":active" como feedback de tap inmediato y corto. */
-  *:active {
-    transition-duration: 80ms !important;
-  }
+/* El acento ya interpola los colores. Los controles solo animan su propia interacción. */
+.transition-colors {
+  transition-duration: var(--m-color-transition-duration, var(--tw-duration, 150ms));
 }
 
-/* Refuerzo: para "prefers-reduced-motion", neutralizamos transition
-   shorthand además de duration, y eliminamos transforms iniciales de
-   Sheet/Dialog para que aparezcan/desaparezcan sin slide ni zoom. */
+.transition-control {
+  transition:
+    color var(--m-color-transition-duration, var(--tw-duration, 150ms)),
+    background-color var(--m-color-transition-duration, var(--tw-duration, 150ms)),
+    border-color var(--m-color-transition-duration, var(--tw-duration, 150ms)),
+    box-shadow var(--m-color-transition-duration, var(--tw-duration, 150ms)),
+    transform var(--tw-duration, 150ms),
+    scale var(--tw-duration, 150ms),
+    opacity var(--tw-duration, 150ms);
+  transition-timing-function: var(--tw-ease, var(--m-easing));
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition: none !important;
+    scroll-behavior: auto !important;
   }
   [data-mn-sheet],
   [data-mn-dialog] {

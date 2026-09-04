@@ -52,7 +52,7 @@ export function VerifyEmailBanner() {
           href={MAILPIT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline"
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent hover:underline"
         >
           {t('banner.openMail')}
           <ExternalLink size={13} strokeWidth={2.25} aria-hidden="true" />
@@ -69,7 +69,7 @@ export function VerifyEmailBanner() {
             type="button"
             onClick={() => resend.mutate()}
             disabled={resend.isPending}
-            className="text-sm font-semibold text-accent hover:underline disabled:opacity-60"
+            className="min-h-11 text-sm font-semibold text-accent hover:underline disabled:opacity-60"
           >
             {resend.isPending ? t('banner.sending') : t('banner.resend')}
           </button>
@@ -78,7 +78,7 @@ export function VerifyEmailBanner() {
           type="button"
           onClick={dismiss}
           aria-label={t('banner.dismiss')}
-          className="grid size-8 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
+          className="grid size-11 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
         >
           <X size={16} aria-hidden="true" />
         </button>

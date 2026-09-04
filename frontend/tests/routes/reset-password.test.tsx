@@ -78,7 +78,13 @@ describe('/reset-password', () => {
   it('token caducado/inválido → estado de error', async () => {
     server.use(
       http.post('/api/auth/password/reset', () =>
-        HttpResponse.json({ detail: 'expired' }, { status: 400 }),
+        HttpResponse.json(
+          {
+            detail: 'expired',
+            errors: [{ field: null, code: 'password_reset_token_invalid', message: 'expired' }],
+          },
+          { status: 400 },
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -87,6 +93,34 @@ describe('/reset-password', () => {
     await user.type(screen.getByLabelText('Repite la contraseña'), 'claveSegura99');
     await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
     expect(await screen.findByText('Este enlace ya no vale')).toBeInTheDocument();
+  });
+
+  it('un fallo temporal conserva las contraseñas y permite reintentar con el mismo token', async () => {
+    const submissions: unknown[] = [];
+    server.use(
+      http.post('/api/auth/password/reset', async ({ request }) => {
+        submissions.push(await request.json());
+        return submissions.length === 1
+          ? HttpResponse.json({ detail: 'temporary' }, { status: 503 })
+          : HttpResponse.json({ detail: 'ok' });
+      }),
+    );
+    const user = userEvent.setup();
+    renderReset('valid-token');
+    await user.type(await screen.findByLabelText('Nueva contraseña'), 'claveSegura99');
+    await user.type(screen.getByLabelText('Repite la contraseña'), 'claveSegura99');
+    await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('Este enlace ya no vale')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Nueva contraseña')).toHaveValue('claveSegura99');
+    expect(screen.getByLabelText('Repite la contraseña')).toHaveValue('claveSegura99');
+    await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
+    expect(await screen.findByText('Contraseña actualizada')).toBeInTheDocument();
+    expect(submissions).toEqual([
+      { token: 'valid-token', password: 'claveSegura99' },
+      { token: 'valid-token', password: 'claveSegura99' },
+    ]);
   });
 
   it('contraseñas distintas → muestra el aviso de coincidencia', async () => {

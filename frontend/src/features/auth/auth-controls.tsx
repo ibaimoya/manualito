@@ -1,10 +1,13 @@
 import { type ParseKeys } from 'i18next';
-import { type ReactNode, useState } from 'react';
-import { AlertTriangle, Check, Eye, EyeOff } from 'lucide-react';
+import { type MouseEvent, type ReactNode, useCallback, useRef, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Input, type InputProps } from '@/components/ui/input';
 import i18n from '@/app/i18n';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { PasswordMaskBurst } from './PasswordMaskBurst';
+import { FieldFeedback } from './FieldFeedback';
 
 type AuthKey = ParseKeys<'auth'>;
 
@@ -88,47 +91,63 @@ export function AuthField({
         {hint ? <span className="text-xs font-normal text-fg-3">{hint}</span> : null}
       </div>
       {children}
-      {error ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-error">
-          <AlertTriangle size={13} strokeWidth={2.2} aria-hidden="true" />
-          {error}
-        </p>
-      ) : null}
-      {!error && success ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
-          <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-          {success}
-        </p>
-      ) : null}
+      <FieldFeedback id={`${htmlFor}-feedback`} error={error} success={success} />
     </div>
   );
 }
 
 /** Input de contraseña con botón mostrar/ocultar (target 44px). */
 export function PasswordInput({
-  invalid,
   className,
   ...props
-}: Readonly<Omit<InputProps, 'type' | 'preset'> & { invalid?: boolean }>) {
+}: Readonly<Omit<InputProps, 'type' | 'preset'>>) {
   const { t } = useTranslation('auth');
   const [reveal, setReveal] = useState(false);
+  const [burst, setBurst] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const stopBurst = useCallback(() => setBurst(false), []);
+
+  function toggleVisibility(event: MouseEvent<HTMLButtonElement>) {
+    setBurst(
+      reveal && event.detail > 0 && !reducedMotion && Boolean(inputRef.current?.value.length),
+    );
+    setReveal(!reveal);
+  }
+
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onInputCapture={stopBurst}
+      onPointerDownCapture={stopBurst}
+      onScrollCapture={stopBurst}
+    >
       <Input
+        ref={inputRef}
         type={reveal ? 'text' : 'password'}
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className={cn('pr-11', invalid && 'border-error focus-visible:ring-error/20', className)}
+        className={cn('pr-11', className)}
         {...props}
       />
+      {burst && (
+        <PasswordMaskBurst
+          inputRef={inputRef}
+          reducedMotion={reducedMotion}
+          onComplete={stopBurst}
+        />
+      )}
       <button
         type="button"
-        onClick={() => setReveal((value) => !value)}
+        onClick={toggleVisibility}
         aria-label={reveal ? t('aria.hidePassword') : t('aria.showPassword')}
-        className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
+        aria-pressed={reveal}
+        data-active={reveal}
+        className="state-icon absolute right-0 top-1/2 size-11 -translate-y-1/2 rounded-full text-fg-3 hover:text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
-        {reveal ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        <Eye size={18} aria-hidden="true" />
+        <EyeOff size={18} aria-hidden="true" />
       </button>
     </div>
   );
@@ -169,8 +188,8 @@ export function NewPasswordFields({
           autoComplete="new-password"
           placeholder={t('placeholders.newPassword')}
           value={password}
-          invalid={passwordShort}
           aria-invalid={ariaInvalid(passwordShort)}
+          aria-describedby={passwordError ? `${fieldId}-pw-feedback` : undefined}
           onChange={(event) => onPasswordChange(event.target.value)}
           required
         />
@@ -187,8 +206,8 @@ export function NewPasswordFields({
           autoComplete="new-password"
           placeholder={t('placeholders.repeatPassword')}
           value={confirm}
-          invalid={Boolean(confirmError)}
           aria-invalid={ariaInvalid(Boolean(confirmError))}
+          aria-describedby={confirmError ? `${fieldId}-pw2-feedback` : undefined}
           onChange={(event) => onConfirmChange(event.target.value)}
           required
         />

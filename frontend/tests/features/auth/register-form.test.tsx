@@ -14,6 +14,7 @@ import {
 import { server } from '@tests/_helpers/server';
 import { failRegister, failRegisterValidation } from '@tests/_helpers/mswHandlers';
 import { ThemeProvider } from '@/app/theme';
+import i18n from '@/app/i18n';
 import { RegisterForm } from '@/features/auth/register-form';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -106,7 +107,7 @@ describe('RegisterForm', () => {
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
-  it('ante un 422 de validación muestra el mensaje de campo del backend', async () => {
+  it('traduce un error de campo 422 y lo mantiene en el idioma seleccionado', async () => {
     server.use(failRegisterValidation());
     const user = userEvent.setup();
     const { onAuthenticated } = mountRegister();
@@ -115,8 +116,13 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(
-      await screen.findByText(/solo puede contener letras, números, puntos y guiones/i),
+      await screen.findByText('El nombre de usuario contiene un carácter no permitido.'),
     ).toBeInTheDocument();
+    await act(() => i18n.changeLanguage('en'));
+    expect(
+      screen.getByText('The username contains a character that is not allowed.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/El nombre de usuario contiene/)).not.toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 

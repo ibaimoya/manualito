@@ -35,7 +35,7 @@ describe('/security · último acceso', () => {
 
   it('sin fecha de login la sección no se muestra', async () => {
     renderSecurity({ ...TEST_USER, last_login_at: null });
-    await screen.findByRole('heading', { name: 'Cuenta y seguridad' });
+    await screen.findByRole('heading', { name: 'Cuenta' });
     expect(screen.queryByText('Último acceso')).not.toBeInTheDocument();
   });
 });

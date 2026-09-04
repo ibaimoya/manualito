@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
 import { ApiError } from '@/shared/api/http';
-import { cn } from '@/shared/lib/cn';
 import {
   ariaInvalid,
   AuthField,
@@ -15,6 +14,7 @@ import {
   NewPasswordFields,
 } from './auth-controls';
 import { AuthAlert } from './auth-alert';
+import { FieldFeedback } from './FieldFeedback';
 import { useRegister } from './use-auth';
 
 export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: () => void }>) {
@@ -74,6 +74,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
             placeholder={t('placeholders.email')}
             value={email}
             aria-invalid={ariaInvalid(Boolean(emailError))}
+            aria-describedby={emailError ? `${fieldId}-email-feedback` : undefined}
             onChange={(event) => setEmail(event.target.value)}
             required
           />
@@ -86,6 +87,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
             placeholder={t('placeholders.username')}
             value={username}
             aria-invalid={ariaInvalid(Boolean(usernameError))}
+            aria-describedby={usernameError ? `${fieldId}-name-feedback` : undefined}
             onChange={(event) => setUsername(event.target.value)}
             required
           />
@@ -116,7 +118,10 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
 
       <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
         {t('forms.register.haveAccount')}{' '}
-        <Link to="/login" className="font-bold text-accent hover:underline">
+        <Link
+          to="/login"
+          className="inline-flex min-h-11 items-center font-bold text-accent hover:underline"
+        >
           {t('forms.register.signIn')}
         </Link>
       </p>
@@ -124,18 +129,13 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   );
 }
 
-/**
- * Aviso de error del registro. En un 409 el backend no revela si el duplicado
- * es el email o el usuario (por privacidad), así que el mensaje cubre ambos. El
- * resto reutiliza el mensaje ya mapeado (p. ej. el detalle de un 422 de campo).
- */
 function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
   const { t } = useTranslation('auth');
-  if (error == null) return null;
   const isConflict = error instanceof ApiError && error.status === 409;
   const mappedMessage = error instanceof ApiError ? error.view.message : null;
   return (
     <AuthAlert
+      open={error != null}
       title={isConflict ? t('alerts.register.conflict.title') : t('alerts.register.failure.title')}
       className="mt-4"
     >
@@ -154,13 +154,6 @@ function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
   );
 }
 
-function consentBoxClass(error: boolean, checked: boolean): string {
-  if (error) return 'border-error bg-error-bg';
-  if (checked) return 'border-success bg-success-bg';
-  return 'border-primary-300 bg-primary-50';
-}
-
-/** Casilla de consentimiento con altura de error reservada (sin salto al aparecer). */
 function ConsentField({
   id,
   checked,
@@ -177,17 +170,13 @@ function ConsentField({
   const { t } = useTranslation('auth');
   return (
     <div>
-      <label
-        className={cn(
-          'flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition-colors',
-          consentBoxClass(error, checked),
-        )}
-      >
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface-2 p-3.5">
         <input
           id={id}
           type="checkbox"
           checked={checked}
           aria-invalid={ariaInvalid(error)}
+          aria-describedby={error ? `${id}-feedback` : undefined}
           onChange={(event) => onChange(event.target.checked)}
           className="size-5 shrink-0 accent-primary"
         />
@@ -212,9 +201,7 @@ function ConsentField({
           />
         </span>
       </label>
-      <p className="mt-1.5 min-h-[1.05rem] text-xs text-error" role="alert">
-        {error ? t('consent.required') : ''}
-      </p>
+      <FieldFeedback id={`${id}-feedback`} error={error ? t('consent.required') : undefined} />
     </div>
   );
 }

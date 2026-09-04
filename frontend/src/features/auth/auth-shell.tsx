@@ -10,7 +10,7 @@ import { LockUp, Meeple } from '@/shared/components/Brand';
 export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
     // h-dvh + scroll interno: un min-h creciente cortaría el form en viewports bajos.
-    <div className="relative h-dvh overflow-y-auto bg-surface">
+    <div className="relative h-dvh overflow-y-auto bg-surface [scrollbar-gutter:stable_both-edges]">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0"
@@ -30,8 +30,10 @@ export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
         <div className="flex shrink-0 justify-end pb-6">
           <LanguagePill />
         </div>
-        <div className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center gap-6 pb-8">
-          <LockUp withTagline={false} />
+        <div className="mx-auto my-auto flex w-full max-w-[420px] shrink-0 flex-col items-center gap-6 pb-8">
+          <div className="brand-home brand-home-centered flex">
+            <LockUp withTagline={false} />
+          </div>
           <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-md sm:p-8">
             {children}
           </div>

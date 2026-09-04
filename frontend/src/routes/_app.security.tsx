@@ -132,7 +132,8 @@ function ChangePasswordSection() {
               autoComplete="current-password"
               placeholder={t('password.currentPlaceholder')}
               value={current}
-              invalid={wrongCurrent}
+              aria-invalid={Boolean(currentError) || undefined}
+              aria-describedby={currentError ? `${fieldId}-current-feedback` : undefined}
               onChange={(event) => setCurrent(event.target.value)}
               required
             />

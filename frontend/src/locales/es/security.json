@@ -15,7 +15,7 @@
     "successDescription": "Hemos cerrado tu sesión en este dispositivo.",
     "warning": "Se borrarán <strong>para siempre</strong> {{summary}}. Los manuales que compartiste dejarán de estar disponibles para otros usuarios. No hay vuelta atrás ni copia de seguridad."
   },
-  "heading": "Cuenta y seguridad",
+  "heading": "Cuenta",
   "lastAccess": {
     "description": "El inicio de sesión más reciente de tu cuenta. Si no lo reconoces, cambia la contraseña.",
     "eyebrow": "Actividad",

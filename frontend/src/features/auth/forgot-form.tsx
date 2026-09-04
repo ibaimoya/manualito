@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/shared/api/auth';
+import { mapApiError } from '@/shared/api/error-mapper';
+import { AuthAlert } from './auth-alert';
 import { ariaInvalid, AuthField, emailFieldError, isEmail } from './auth-controls';
 import { AuthStatus } from './auth-status';
 
@@ -23,6 +25,7 @@ export function ForgotForm() {
   });
   const trimmedEmail = email.trim();
   const emailError = emailFieldError(trimmedEmail, submitted);
+  const requestError = forgot.isError ? mapApiError(forgot.error) : null;
 
   if (forgot.isSuccess) {
     return (
@@ -56,6 +59,9 @@ export function ForgotForm() {
         {t('forms.forgot.heading')}
       </h1>
       <p className="mt-1.5 text-sm text-fg-2">{t('forms.forgot.description')}</p>
+      <AuthAlert open={forgot.isError} title={requestError?.title ?? ''} className="mt-4">
+        {requestError?.message}
+      </AuthAlert>
 
       <div className="mt-5 flex flex-col gap-4">
         <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
@@ -65,6 +71,7 @@ export function ForgotForm() {
             placeholder={t('placeholders.email')}
             value={email}
             aria-invalid={ariaInvalid(Boolean(emailError))}
+            aria-describedby={emailError ? `${fieldId}-email-feedback` : undefined}
             onChange={(event) => setEmail(event.target.value)}
             required
           />
@@ -76,7 +83,10 @@ export function ForgotForm() {
 
       <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
         {t('forms.forgot.rememberPassword')}{' '}
-        <Link to="/login" className="font-bold text-accent hover:underline">
+        <Link
+          to="/login"
+          className="inline-flex min-h-11 items-center font-bold text-accent hover:underline"
+        >
           {t('forms.register.signIn')}
         </Link>
       </p>

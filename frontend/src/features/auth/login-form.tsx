@@ -50,11 +50,9 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
       </h1>
       <p className="mt-1.5 text-sm text-fg-2">{t('forms.login.description')}</p>
 
-      {login.isError ? (
-        <AuthAlert title={t('alerts.login.title')} className="mt-4">
-          {loginErrorText(login.error, t('alerts.login.fallback'))}
-        </AuthAlert>
-      ) : null}
+      <AuthAlert open={login.isError} title={t('alerts.login.title')} className="mt-4">
+        {loginErrorText(login.error, t('alerts.login.fallback'))}
+      </AuthAlert>
 
       <div className="mt-5 flex flex-col gap-4">
         <AuthField label={t('fields.identifier')} htmlFor={`${fieldId}-id`} error={identifierError}>
@@ -64,32 +62,38 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
             placeholder={t('placeholders.email')}
             value={identifier}
             aria-invalid={ariaInvalid(Boolean(identifierError))}
+            aria-describedby={identifierError ? `${fieldId}-id-feedback` : undefined}
             onChange={(event) => setIdentifier(event.target.value)}
             required
           />
         </AuthField>
 
-        <AuthField
-          label={t('fields.password.default')}
-          htmlFor={`${fieldId}-pw`}
-          error={passwordError}
-        >
-          <PasswordInput
-            id={`${fieldId}-pw`}
-            autoComplete="current-password"
-            placeholder={t('placeholders.loginPassword')}
-            value={password}
-            invalid={Boolean(passwordError)}
-            aria-invalid={ariaInvalid(Boolean(passwordError))}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+        <div>
+          <AuthField
+            label={t('fields.password.default')}
+            htmlFor={`${fieldId}-pw`}
+            error={passwordError}
+          >
+            <PasswordInput
+              id={`${fieldId}-pw`}
+              autoComplete="current-password"
+              placeholder={t('placeholders.loginPassword')}
+              value={password}
+              aria-invalid={ariaInvalid(Boolean(passwordError))}
+              aria-describedby={passwordError ? `${fieldId}-pw-feedback` : undefined}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </AuthField>
           <div className="mt-2 flex justify-end">
-            <Link to="/forgot" className="text-sm font-semibold text-accent hover:underline">
+            <Link
+              to="/forgot"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-accent hover:underline"
+            >
               {t('forms.login.forgotPassword')}
             </Link>
           </div>
-        </AuthField>
+        </div>
 
         <Button type="submit" size="lg" block loading={login.isPending} className="mt-1">
           {login.isPending ? t('actions.signInLoading') : t('actions.signIn')}
@@ -98,7 +102,10 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
 
       <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
         {t('forms.login.dontHaveAccount')}{' '}
-        <Link to="/register" className="font-bold text-accent hover:underline">
+        <Link
+          to="/register"
+          className="inline-flex min-h-11 items-center font-bold text-accent hover:underline"
+        >
           {t('actions.createAccount')}
         </Link>
       </p>

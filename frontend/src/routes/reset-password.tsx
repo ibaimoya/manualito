@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { authApi } from '@/shared/api/auth';
 import { AuthShell } from '@/features/auth/auth-shell';
 import { AuthStatus } from '@/features/auth/auth-status';
+import { AuthAlert } from '@/features/auth/auth-alert';
 import { MIN_PASSWORD, NewPasswordFields } from '@/features/auth/auth-controls';
+import { mapApiError } from '@/shared/api/error-mapper';
 
 /** Ruta neutral (con o sin sesión): se llega desde el enlace del email. */
 export const Route = createFileRoute('/reset-password')({
@@ -48,6 +50,7 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
   const [confirm, setConfirm] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const reset = useMutation({ mutationFn: () => authApi.resetPassword({ token, password }) });
+  const resetError = reset.isError ? mapApiError(reset.error) : null;
 
   if (reset.isSuccess) {
     return (
@@ -64,7 +67,7 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
     );
   }
 
-  if (reset.isError) {
+  if (resetError?.code === 'password_reset_token_invalid') {
     return (
       <AuthStatus
         tone="warning"
@@ -107,6 +110,7 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
       <p className="mt-1.5 text-sm text-fg-2">{t('forms.reset.description')}</p>
 
       <div className="mt-5 flex flex-col gap-4">
+        {resetError ? <AuthAlert title={resetError.title}>{resetError.message}</AuthAlert> : null}
         <NewPasswordFields
           fieldId={fieldId}
           label={t('fields.password.new')}

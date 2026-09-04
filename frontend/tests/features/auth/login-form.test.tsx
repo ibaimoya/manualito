@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -12,6 +12,7 @@ import {
 import { server } from '@tests/_helpers/server';
 import { failLogin } from '@tests/_helpers/mswHandlers';
 import { ThemeProvider } from '@/app/theme';
+import i18n from '@/app/i18n';
 import { LoginForm } from '@/features/auth/login-form';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -79,8 +80,33 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(
-      await screen.findByText(/Tu sesión ha expirado o no has iniciado sesión/i),
+      await screen.findByText('El email, el nombre de usuario o la contraseña no son correctos.'),
     ).toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('traduce el error del servidor y lo actualiza al cambiar de idioma sin reenviar', async () => {
+    server.use(failLogin());
+    await i18n.changeLanguage('en');
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountLogin();
+
+    await user.type(await screen.findByLabelText('Email or username'), 'marta');
+    await user.type(screen.getByLabelText('Password'), 'incorrect');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    const english = 'The email, username or password is incorrect.';
+    const spanish = 'El email, el nombre de usuario o la contraseña no son correctos.';
+    await waitFor(() => expect(screen.getByText(english)).toBeVisible());
+    expect(screen.queryByText('Credenciales inválidas.')).not.toBeInTheDocument();
+
+    await act(() => i18n.changeLanguage('es'));
+    expect(screen.getByText(spanish)).toBeVisible();
+    expect(screen.queryByText(english)).not.toBeInTheDocument();
+
+    await act(() => i18n.changeLanguage('en'));
+    expect(screen.getByText(english)).toBeVisible();
+    expect(screen.queryByText(spanish)).not.toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
@@ -92,7 +118,34 @@ describe('LoginForm', () => {
 
     expect(await screen.findByText('Escribe tu email o nombre de usuario')).toBeInTheDocument();
     expect(screen.getByText('Escribe tu contraseña')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email o usuario')).toHaveFocus();
+    expect(screen.getByLabelText('Email o usuario')).toHaveAccessibleDescription(
+      'Escribe tu email o nombre de usuario',
+    );
+    expect(screen.getByLabelText('Contraseña')).toHaveAccessibleDescription(
+      'Escribe tu contraseña',
+    );
     expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('retira el aviso accesible al corregir y permite invalidar de nuevo durante la salida', async () => {
+    const user = userEvent.setup();
+    mountLogin();
+    await user.click(await screen.findByRole('button', { name: 'Entrar' }));
+    const identifier = screen.getByLabelText('Email o usuario');
+
+    await user.type(identifier, 'm');
+    expect(identifier).not.toHaveAttribute('aria-invalid');
+    expect(identifier).not.toHaveAccessibleDescription();
+
+    await user.clear(identifier);
+    expect(identifier).toHaveAccessibleDescription('Escribe tu email o nombre de usuario');
+    expect(screen.getAllByText('Escribe tu email o nombre de usuario')).toHaveLength(1);
+
+    await user.type(identifier, 'marta');
+    await waitFor(() => {
+      expect(screen.queryByText('Escribe tu email o nombre de usuario')).not.toBeInTheDocument();
+    });
   });
 
   it('con identificador pero sin contraseña, avisa solo de la contraseña', async () => {

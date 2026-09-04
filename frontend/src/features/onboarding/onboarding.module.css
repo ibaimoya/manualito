@@ -154,14 +154,6 @@
   transition: background 150ms ease;
 }
 
-.topbarLink:hover {
-  border-color: rgba(255, 248, 240, 0.38);
-}
-
-.topbarLink:hover::before {
-  background: rgba(255, 248, 240, 0.16);
-}
-
 .topbarLink:active {
   transform: scale(0.96);
 }
@@ -199,7 +191,9 @@
   height: 8px;
   border-radius: 9999px;
   background: rgba(255, 248, 240, 0.3);
-  transition: all 280ms ease;
+  transition:
+    width 280ms ease,
+    background-color 280ms ease;
 }
 
 .dot.isOn {
@@ -228,7 +222,9 @@
   color: #fff8f0;
   opacity: 0;
   transform: translateY(8px);
-  transition: all 600ms ease 200ms;
+  transition:
+    opacity 600ms ease 200ms,
+    transform 600ms ease 200ms;
 }
 
 .eyebrowTop.isIn {
@@ -282,7 +278,9 @@
   max-width: 520px;
   opacity: 0;
   transform: translateY(8px);
-  transition: all 600ms ease 900ms;
+  transition:
+    opacity 600ms ease 900ms,
+    transform 600ms ease 900ms;
 }
 
 .tagline.isIn {
@@ -308,7 +306,8 @@
   opacity: 0;
   transform: translateY(12px);
   transition:
-    all 500ms ease 1300ms,
+    opacity 500ms ease 1300ms,
+    transform 500ms ease 1300ms,
     background 150ms ease;
   view-transition-name: var(--vt, none);
 }
@@ -316,10 +315,6 @@
 .pill.isIn {
   opacity: 1;
   transform: translateY(0);
-}
-
-.pill:hover {
-  background: #fdebd8;
 }
 
 .scrollhint {
@@ -384,7 +379,9 @@
   color: #fff8f0;
   opacity: 0;
   transform: translateY(8px);
-  transition: all 600ms ease 200ms;
+  transition:
+    opacity 600ms ease 200ms,
+    transform 600ms ease 200ms;
 }
 
 .stepTitle.isIn {
@@ -400,7 +397,9 @@
   max-width: 440px;
   opacity: 0;
   transform: translateY(8px);
-  transition: all 600ms ease 400ms;
+  transition:
+    opacity 600ms ease 400ms,
+    transform 600ms ease 400ms;
 }
 
 .stepSub.isIn {
@@ -872,10 +871,6 @@
   transition: background 150ms ease;
 }
 
-.choiceCreate:hover {
-  background: #9a4a0e;
-}
-
 .choiceGhost {
   height: 52px;
   border: 1px solid rgba(255, 248, 240, 0.3);
@@ -888,10 +883,6 @@
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: background 150ms ease;
-}
-
-.choiceGhost:hover {
-  background: #3a2519;
 }
 
 .choiceNote {
@@ -913,8 +904,30 @@
   cursor: pointer;
 }
 
-.noteLink:hover {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .topbarLink:hover {
+    border-color: rgba(255, 248, 240, 0.38);
+  }
+
+  .topbarLink:hover::before {
+    background: rgba(255, 248, 240, 0.16);
+  }
+
+  .pill:hover {
+    background: #fdebd8;
+  }
+
+  .choiceCreate:hover {
+    background: #9a4a0e;
+  }
+
+  .choiceGhost:hover {
+    background: #3a2519;
+  }
+
+  .noteLink:hover {
+    text-decoration: underline;
+  }
 }
 
 /* — View transitions — */

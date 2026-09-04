@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -96,13 +96,16 @@ export function Onboarding() {
   const navigate = useNavigate();
   const N = SLIDES.length;
   const PANELS = N + 1; // las diapositivas + la pantalla de elección final
-  const isChoice = index === N;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const focusPanelRef = useRef(false);
 
   // Ancladas a "visitado": con index, la saliente se vaciaría en pleno deslizamiento.
   const [visited, setVisited] = useState<ReadonlySet<number>>(() => new Set([0]));
 
   function go(next: number): void {
     const clamped = Math.max(0, Math.min(PANELS - 1, next));
+    if (clamped === index) return;
+    focusPanelRef.current = trackRef.current?.contains(document.activeElement) ?? false;
     setIndex(clamped);
     setVisited((prev) => (prev.has(clamped) ? prev : new Set(prev).add(clamped)));
   }
@@ -131,21 +134,37 @@ export function Onboarding() {
     enterTo('/login');
   }
 
-  // Teclado en captura: el guard ve el modal de privacidad antes de que Radix lo cierre.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (privacyOpen) return;
-      if (e.key === 'ArrowRight') go(index + 1);
-      else if (e.key === 'ArrowLeft') go(index - 1);
-      else if (e.key === 'Enter') {
-        if (isChoice) enterTo('/register');
-        else next();
-      } else if (e.key === 'Escape') skip();
-    };
-    globalThis.window.addEventListener('keydown', onKey, true);
-    return () => globalThis.window.removeEventListener('keydown', onKey, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, privacyOpen]);
+    if (!focusPanelRef.current) return;
+    focusPanelRef.current = false;
+    trackRef.current
+      ?.querySelector<HTMLElement>('section:not([inert])')
+      ?.focus({ preventScroll: true });
+  }, [index]);
+
+  const onKey = useEffectEvent((event: KeyboardEvent) => {
+    if (privacyOpen || event.defaultPrevented || event.isComposing) return;
+    // Los controles conservan su teclado nativo, también dentro de los portales.
+    if (
+      event.target instanceof Element &&
+      event.target.closest(
+        'button, a, input, textarea, select, [contenteditable="true"], [role="dialog"]',
+      )
+    )
+      return;
+    if (event.key === 'ArrowRight') go(index + 1);
+    else if (event.key === 'ArrowLeft') go(index - 1);
+    else if (event.key === 'Enter' && index < N) next();
+    else if (event.key === 'Escape') skip();
+    else return;
+    event.preventDefault();
+  });
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => onKey(event);
+    globalThis.window.addEventListener('keydown', handleKey);
+    return () => globalThis.window.removeEventListener('keydown', handleKey);
+  }, []);
 
   return (
     <div className={styles.root}>
@@ -172,11 +191,18 @@ export function Onboarding() {
       </header>
 
       <div
+        ref={trackRef}
         className={styles.track}
         style={{ width: `${PANELS * 100}vw`, transform: `translateX(${-index * 100}vw)` }}
       >
         {/* — Slide 0: Hero — */}
-        <section className={styles.slide} aria-label={t('aria.hero')}>
+        <section
+          className={styles.slide}
+          aria-label={t('aria.hero')}
+          tabIndex={-1}
+          inert={index !== 0}
+          aria-hidden={index !== 0}
+        >
           <div className={styles.hero}>
             <span className={cn(styles.eyebrowTop, styles.isIn)}>{t('hero.eyebrow')}</span>
             <HeroWordmark playing />
@@ -210,6 +236,9 @@ export function Onboarding() {
               key={s.id}
               className={styles.slide}
               aria-label={t('aria.step', { n: s.n, titulo: title })}
+              tabIndex={-1}
+              inert={index !== slideIdx}
+              aria-hidden={index !== slideIdx}
             >
               <div className={styles.step}>
                 <div className={styles.stepCopy}>
@@ -239,7 +268,13 @@ export function Onboarding() {
           );
         })}
         {/* — Última diapositiva: elección crear/entrar — */}
-        <section className={styles.slide} aria-label={t('aria.authChoice')}>
+        <section
+          className={styles.slide}
+          aria-label={t('aria.authChoice')}
+          tabIndex={-1}
+          inert={index !== N}
+          aria-hidden={index !== N}
+        >
           <AuthChoice
             shown={visited.has(N)}
             onRegister={() => enterTo('/register')}
@@ -252,13 +287,12 @@ export function Onboarding() {
       <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
       {/* Un punto por panel: las diapositivas y la pantalla de elección final. */}
-      <div className={styles.pager} role="tablist" aria-label={t('aria.pager')}>
+      <nav className={styles.pager} aria-label={t('aria.pager')}>
         {Array.from({ length: PANELS }, (_, k) => (
           <button
             key={SLIDES[k]?.id ?? 'final'}
             type="button"
-            role="tab"
-            aria-selected={index === k}
+            aria-current={index === k ? 'step' : undefined}
             aria-label={t('aria.goToSlide', { n: k + 1 })}
             onClick={() => go(k)}
             className={styles.dotHit}
@@ -266,7 +300,7 @@ export function Onboarding() {
             <span className={cn(styles.dot, index === k && styles.isOn)} />
           </button>
         ))}
-      </div>
+      </nav>
     </div>
   );
 }

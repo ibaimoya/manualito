@@ -18,7 +18,7 @@
       "heading": "What data do we process?"
     },
     "images": {
-      "body": "We process them to extract the text. If you turn on “delete photos after processing” in Settings, they're deleted when processing finishes. The extracted text is saved with your rulebook.",
+      "body": "We process them to extract the text and keep them so you can view the rulebook pages. You can delete the rulebook from your library.",
       "heading": "Your rulebook images"
     },
     "processing": {
@@ -26,7 +26,7 @@
       "heading": "Where is it processed?"
     },
     "rights": {
-      "body": "You can view and delete your information from Settings (delete your account or sign out). If you need anything else, write to us.",
+      "body": "You can view your information and delete your account from Settings. If you need anything else, write to us.",
       "heading": "Your rights"
     },
     "usage": {

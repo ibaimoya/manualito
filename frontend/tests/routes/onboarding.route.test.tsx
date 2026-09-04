@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import {
   createMemoryHistory,
@@ -13,14 +13,7 @@ import { storage } from '@/shared/lib/storage';
 
 afterEach(() => {
   localStorage.clear();
-  vi.restoreAllMocks();
 });
-
-// Mock del componente Onboarding pesado — solo nos interesa el beforeLoad
-// de la ruta, no la animación del bundle.
-vi.mock('@/features/onboarding/Onboarding', () => ({
-  Onboarding: () => <div>OnboardingComponent</div>,
-}));
 
 function renderOnboarding() {
   const root = createRootRoute({ component: Outlet });

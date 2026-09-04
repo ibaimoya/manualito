@@ -18,7 +18,7 @@
       "heading": "¿Qué datos tratamos?"
     },
     "images": {
-      "body": "Se procesan para extraer el texto. Si activas «borrar fotos tras procesar» en Ajustes, se eliminan al terminar. El texto extraído se guarda asociado a tu manual.",
+      "body": "Se procesan para extraer el texto y se conservan para que puedas consultar las páginas del manual. Puedes borrar el manual desde tu biblioteca.",
       "heading": "Las imágenes de tus manuales"
     },
     "processing": {
@@ -26,7 +26,7 @@
       "heading": "¿Dónde se procesan?"
     },
     "rights": {
-      "body": "Puedes consultar y borrar tu información desde Ajustes (borrar la cuenta o cerrar sesión). Si necesitas algo más, escríbenos.",
+      "body": "Puedes consultar tu información y borrar tu cuenta desde Ajustes. Si necesitas algo más, escríbenos.",
       "heading": "Tus derechos"
     },
     "usage": {

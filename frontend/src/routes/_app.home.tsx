@@ -5,10 +5,12 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Meeple, Monogram } from '@/shared/components/Brand';
 import { Avatar } from '@/shared/components/Avatar';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Button } from '@/components/ui/button';
 import { ManualCard } from '@/features/manual/ManualCard';
 import { manualsQueryOptions } from '@/features/manual/use-manuals';
 import { DiscoverGames } from '@/features/games/DiscoverGames';
+import { HomeGreeting } from '@/features/home/HomeGreeting';
 import { useAuth } from '@/features/auth/use-auth';
 import { formatRelative } from '@/shared/lib/relativeDate';
 import { type ManualSummary } from '@/shared/api/client';
@@ -20,6 +22,8 @@ export const Route = createFileRoute('/_app/home')({
 function HomeScreen() {
   const { user } = useAuth();
   const { t } = useTranslation('home');
+  const { data: manuals = [], isPending, isError } = useQuery(manualsQueryOptions());
+  const recentManuals = manuals.slice(0, 6);
   const firstName = user?.username?.split(/\s+/)[0];
   return (
     <div className="page-frame page-stack">
@@ -31,7 +35,7 @@ function HomeScreen() {
         </div>
         <Link
           to="/settings"
-          className="grid size-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
+          className="grid size-11 place-items-center rounded-xl text-fg-2"
           aria-label={t('account.ariaLabel')}
         >
           {user ? (
@@ -47,15 +51,7 @@ function HomeScreen() {
         className="md:flex md:items-start md:justify-between md:gap-8"
       >
         <div className="md:max-w-xl">
-          <h1
-            id="home-hello"
-            className="break-words font-display text-3xl font-bold leading-tight tracking-tight text-fg md:text-4xl"
-          >
-            {firstName ? t('greeting.named', { firstName }) : t('greeting.anonymous')}{' '}
-            <span aria-hidden="true">👋</span>
-            <br />
-            {t('greeting.question')}
-          </h1>
+          <HomeGreeting firstName={firstName} />
           <p className="mt-2 text-base leading-relaxed text-fg-2 md:text-lg">
             {t('greeting.description')}
           </p>
@@ -64,9 +60,13 @@ function HomeScreen() {
 
       <HeroCta />
 
-      <RecentSection />
+      <SkeletonSwap pending={isPending} skeleton={<RecentSkeleton />}>
+        <RecentSection manuals={recentManuals} isError={isError} />
+      </SkeletonSwap>
 
-      <DiscoverGames />
+      {!isPending && (
+        <DiscoverGames excludedGameIds={recentManuals.map((manual) => manual.game_id)} />
+      )}
     </div>
   );
 }
@@ -105,12 +105,12 @@ function HeroCta() {
   );
 }
 
-/** Sección de recientes: resuelve la query y elige estado (carga/error/vacío/lista). */
-function RecentSection() {
-  const { data: manuals, isPending, isError } = useQuery(manualsQueryOptions());
-  if (isPending) return <RecentSkeleton />;
-  if (isError) return <RecentError />;
-  if (!manuals || manuals.length === 0) return <EmptyRecents />;
+function RecentSection({
+  manuals,
+  isError,
+}: Readonly<{ manuals: ManualSummary[]; isError: boolean }>) {
+  if (isError && manuals.length === 0) return <RecentError />;
+  if (manuals.length === 0) return <EmptyRecents />;
   return <RecentManuals manuals={manuals} />;
 }
 
@@ -126,7 +126,7 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
         <Link
           to="/history"
           aria-label={t('recent.viewAllAriaLabel')}
-          className="group/all inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-accent transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+          className="hit-area group/all inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-accent transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
         >
           <span className="underline-offset-4 group-hover/all:underline">
             {t('recent.viewAll')}
@@ -140,7 +140,7 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
         </Link>
       </div>
       <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
-        {manuals.slice(0, 6).map((m) => (
+        {manuals.map((m) => (
           <li key={m.id}>
             <ManualCard manual={m} meta={formatRelative(m.created_at)} className="p-4" />
           </li>

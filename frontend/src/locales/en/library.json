@@ -57,8 +57,7 @@
     "inputAriaLabel": "Jump to a game",
     "listLabel": "Your games",
     "noResults": "No games match “{{query}}”.",
-    "placeholder": "Search your games…",
-    "shortcut": "jump"
+    "placeholder": "Search your games…"
   },
   "manualCard": {
     "chunks": "{{count}} chunks",

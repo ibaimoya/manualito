@@ -87,9 +87,10 @@ async def discover_games_handler(
     request: Request,
     session: DbSession,
     limit: GameSearchLimit = 6,
+    exclude_game_ids: Annotated[list[UUID] | None, Query(max_length=20)] = None,
 ) -> GameSearchResponse:
     """Juegos al azar con manuales compartidos que ya se pueden consultar."""
-    return await discover_games(session, limit=limit)
+    return await discover_games(session, limit=limit, excluded_game_ids=exclude_game_ids or ())
 
 
 @router.get("/api/games/mine")

@@ -29,12 +29,12 @@ export function ManualCard({ manual, meta, className }: Props) {
       to={indexing ? '/processing/$manualId' : '/game/$gameId'}
       params={indexing ? { manualId: manual.id } : { gameId: manual.game_id }}
       search={indexing ? { name } : undefined}
-      className="@container block"
+      className="game-preview @container block"
     >
-      <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>
+      <Card className={cn('p-3 transition-none hover:border-border-strong', className)}>
         <div className="flex items-center gap-3">
           <div
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+            className="game-preview-token grid h-12 w-12 shrink-0 place-items-center rounded-xl"
             style={{ background: gameColor(name), color: '#FFF8F0' }}
             aria-hidden="true"
           >

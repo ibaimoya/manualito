@@ -57,8 +57,7 @@
     "inputAriaLabel": "Saltar a un juego",
     "listLabel": "Tus juegos",
     "noResults": "Ningún juego coincide con «{{query}}».",
-    "placeholder": "Buscar entre tus juegos…",
-    "shortcut": "saltar"
+    "placeholder": "Buscar entre tus juegos…"
   },
   "manualCard": {
     "chunks": "{{count}} fragmentos",

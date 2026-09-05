@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
@@ -65,6 +65,44 @@ describe('/explore', () => {
     expect(screen.queryByRole('link', { name: 'Ver Carcassonne' })).not.toBeInTheDocument();
   });
 
+  it('reinicia la espera de carga al barajar y conserva ambos iconos entre peticiones', async () => {
+    renderExplore();
+    const user = userEvent.setup();
+    const shuffle = await screen.findByRole('button', { name: 'Ver otras sugerencias' });
+    const stateIcon = shuffle.querySelector('.state-icon');
+    const shuffleIcon = shuffle.querySelector('.lucide-shuffle');
+    const spinnerIcon = shuffle.querySelector('.lucide-loader-circle');
+    let finishRequest: (() => void) | undefined;
+
+    // MSW retiene únicamente la respuesta HTTP para observar la carga real de React Query.
+    server.use(
+      http.get('/api/games/discover', async () => {
+        await new Promise<void>((resolve) => {
+          finishRequest = resolve;
+        });
+        return HttpResponse.json({
+          games: [searchResult('g1', 'Carcassonne', 1), searchResult('g2', 'Dominion', 1)],
+          attribution: '',
+        });
+      }),
+    );
+
+    expect(shuffleIcon).toBeInTheDocument();
+    expect(spinnerIcon).toBeInTheDocument();
+    for (let request = 0; request < 2; request += 1) {
+      await user.click(shuffle);
+      expect(shuffle).toBeDisabled();
+      expect(stateIcon).toHaveAttribute('data-active', 'false');
+      await waitFor(() => expect(stateIcon).toHaveAttribute('data-active', 'true'));
+
+      finishRequest?.();
+      await waitFor(() => expect(shuffle).toBeEnabled());
+      expect(stateIcon).toHaveAttribute('data-active', 'false');
+      expect(shuffle.querySelector('.lucide-shuffle')).toBe(shuffleIcon);
+      expect(shuffle.querySelector('.lucide-loader-circle')).toBe(spinnerIcon);
+    }
+  });
+
   it('al elegir un juego del buscador navega a su hub', async () => {
     server.use(
       http.get('/api/games', () =>
@@ -77,7 +115,7 @@ describe('/explore', () => {
     renderExplore();
     const user = userEvent.setup();
     await user.type(await screen.findByRole('combobox', { name: /Buscar juego/i }), 'cat');
-    await user.click(await screen.findByRole('button', { name: /Catan/i }));
+    await user.click(await screen.findByRole('option', { name: /Catan/i }));
     expect(await screen.findByText('GameHubScreen')).toBeInTheDocument();
   });
 

@@ -3,10 +3,11 @@ import { api } from '@/shared/api/client';
 
 export const DISCOVER_GAMES_KEY = ['games', 'discover'] as const;
 
-export function discoverGamesQueryOptions() {
+export function discoverGamesQueryOptions(excludedGameIds: readonly string[] = []) {
+  const excludedIds = [...new Set(excludedGameIds)].sort();
   return queryOptions({
-    queryKey: DISCOVER_GAMES_KEY,
-    queryFn: async ({ signal }) => (await api.discoverGames(signal)).games,
+    queryKey: [...DISCOVER_GAMES_KEY, { excludedGameIds: excludedIds }],
+    queryFn: async ({ signal }) => (await api.discoverGames(excludedIds, signal)).games,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });

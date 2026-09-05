@@ -279,8 +279,12 @@ export const api = {
   },
 
   /** Selección aleatoria de juegos con manuales compartidos consultables. */
-  async discoverGames(signal?: AbortSignal): Promise<GameSearchResponse> {
-    return request<GameSearchResponse>('/games/discover', {
+  async discoverGames(
+    excludedGameIds: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<GameSearchResponse> {
+    const query = new URLSearchParams(excludedGameIds.map((id) => ['exclude_game_ids', id]));
+    return request<GameSearchResponse>(`/games/discover${query.size ? `?${query}` : ''}`, {
       method: 'GET',
       timeoutMs: TIMEOUT.QUICK,
       signal,

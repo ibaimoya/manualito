@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { CornerDownLeft, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
@@ -42,18 +42,23 @@ export function GameJumpSearch({ games }: Props) {
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.nativeEvent.isComposing) return;
     if (event.key === 'Escape' && query.length > 0) {
       event.preventDefault();
       reset();
       return;
     }
     if (matches.length === 0) return;
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      setHighlight(Math.min(matches.length - 1, activeIndex + 1));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setHighlight(Math.max(0, activeIndex - 1));
+      const next = Math.max(
+        0,
+        Math.min(matches.length - 1, activeIndex + (event.key === 'ArrowDown' ? 1 : -1)),
+      );
+      setHighlight(next);
+      document
+        .getElementById(`${listId}-opt-${next}`)
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
     } else if (event.key === 'Enter') {
       event.preventDefault();
       const match = matches[activeIndex];
@@ -65,10 +70,10 @@ export function GameJumpSearch({ games }: Props) {
     <div className="relative w-full md:w-80">
       <div
         className={cn(
-          'flex h-11 items-center gap-2.5 border bg-bg px-3.5 transition-colors',
+          'search-feedback flex h-11 items-center gap-2.5 border bg-bg px-3.5 transition-colors',
           open
             ? 'rounded-t-2xl border-primary'
-            : 'rounded-2xl border-border-strong shadow-xs focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
+            : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
         <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
@@ -91,22 +96,15 @@ export function GameJumpSearch({ games }: Props) {
           aria-label={t('gameSearch.inputAriaLabel')}
           className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
-        {query.length > 0 ? (
+        {query.length > 0 && (
           <button
             type="button"
             onClick={reset}
             aria-label={t('gameSearch.clear')}
-            className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
+            className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
           >
-            <X size={16} aria-hidden="true" />
+            <X size={16} className="search-clear-icon" aria-hidden="true" />
           </button>
-        ) : (
-          <span
-            className="mono hidden shrink-0 items-center gap-1 text-[10px] text-fg-3 sm:flex"
-            aria-hidden="true"
-          >
-            <CornerDownLeft size={12} /> {t('gameSearch.shortcut')}
-          </span>
         )}
       </div>
 
@@ -114,6 +112,7 @@ export function GameJumpSearch({ games }: Props) {
         <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
           <ul
             id={listId}
+            role="listbox"
             aria-label={t('gameSearch.listLabel')}
             className="max-h-72 overflow-y-auto"
           >
@@ -130,7 +129,12 @@ export function GameJumpSearch({ games }: Props) {
                 />
               ))
             ) : (
-              <li className="px-4 py-6 text-center text-sm text-fg-3">
+              <li
+                role="option"
+                aria-disabled="true"
+                aria-selected="false"
+                className="px-4 py-6 text-center text-sm text-fg-3"
+              >
                 {t('gameSearch.noResults', { query: query.trim() })}
               </li>
             )}
@@ -157,18 +161,19 @@ function ResultRow({
   onHover: () => void;
 }>) {
   return (
-    <li>
+    <li role="none">
       <button
         id={id}
         type="button"
-        onMouseDown={(event) => {
-          event.preventDefault();
-          onPick();
-        }}
+        role="option"
+        aria-selected={active}
+        tabIndex={-1}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onPick}
         onMouseMove={onHover}
         className={cn(
-          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left transition-colors',
-          active ? 'border-l-primary bg-surface' : 'border-l-transparent hover:bg-surface',
+          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left',
+          active ? 'border-l-primary bg-surface' : 'border-l-transparent',
         )}
       >
         <span className="mono grid size-9 shrink-0 place-items-center rounded-lg bg-primary-100 text-[11px] font-bold text-primary-700">

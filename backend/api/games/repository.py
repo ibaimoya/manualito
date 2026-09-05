@@ -1,5 +1,6 @@
 """Consultas SQL del catálogo local de juegos."""
 
+from collections.abc import Sequence
 from typing import Literal
 from uuid import UUID
 
@@ -29,7 +30,9 @@ from database.models.manual import Manual, ManualPage
 SIMILARITY_THRESHOLD = 0.1
 
 
-async def discover_games(session: AsyncSession, *, limit: int) -> list[GameSearchResult]:
+async def discover_games(
+    session: AsyncSession, *, limit: int, excluded_game_ids: Sequence[UUID]
+) -> list[GameSearchResult]:
     """Elige juegos al azar, con al menos un manual compartido ya indexado."""
     result = await session.execute(
         select(
@@ -43,6 +46,7 @@ async def discover_games(session: AsyncSession, *, limit: int) -> list[GameSearc
         .where(
             Game.deleted_at.is_(None),
             Game.status == "active",
+            Game.id.not_in(excluded_game_ids),
             Manual.deleted_at.is_(None),
             Manual.status == "active",
             Manual.visibility == "shared",

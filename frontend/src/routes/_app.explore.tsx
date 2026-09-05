@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { GameTypeahead } from '@/features/upload/GameTypeahead';
 import { DiscoverGames } from '@/features/games/DiscoverGames';
 import { Button } from '@/components/ui/button';
+import { IllustrationBadge, type IllustrationTone } from '@/shared/components/IllustrationBadge';
 
 export const Route = createFileRoute('/_app/explore')({
   component: ExploreScreen,
@@ -16,14 +17,10 @@ function ExploreScreen() {
 
   return (
     <div className="page-frame page-stack">
-      <header className="flex flex-col gap-2">
-        <span className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-          {t('header.eyebrow')}
-        </span>
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
-          {t('header.title')}
-        </h1>
-        <p className="max-w-md text-sm leading-relaxed text-fg-2">{t('header.description')}</p>
+      <header className="flex flex-col gap-3">
+        <span className="page-eyebrow">{t('header.eyebrow')}</span>
+        <h1 className="page-title">{t('header.title')}</h1>
+        <p className="page-description">{t('header.description')}</p>
       </header>
 
       <GameTypeahead
@@ -35,13 +32,25 @@ function ExploreScreen() {
       />
 
       <ul className="grid gap-3 @3xl/app:grid-cols-3">
-        <Hint icon={<Sparkles strokeWidth={2} />} title={t('hints.instantQuestion.title')}>
+        <Hint
+          tone="primary"
+          icon={<Sparkles className="illustration-spark" size={18} strokeWidth={2} />}
+          title={t('hints.instantQuestion.title')}
+        >
           {t('hints.instantQuestion.description')}
         </Hint>
-        <Hint icon={<FileText strokeWidth={2} />} title={t('hints.withoutUpload.title')}>
+        <Hint
+          tone="accent"
+          icon={<FileText className="illustration-page" size={18} strokeWidth={2} />}
+          title={t('hints.withoutUpload.title')}
+        >
           {t('hints.withoutUpload.description')}
         </Hint>
-        <Hint icon={<Users strokeWidth={2} />} title={t('hints.giveBack.title')}>
+        <Hint
+          tone="green"
+          icon={<Users className="illustration-people" size={18} strokeWidth={2} />}
+          title={t('hints.giveBack.title')}
+        >
           {t('hints.giveBack.description')}
         </Hint>
       </ul>
@@ -67,18 +76,19 @@ function ExploreScreen() {
 }
 
 function Hint({
+  tone,
   icon,
   title,
   children,
-}: Readonly<{ icon: ReactNode; title: string; children: ReactNode }>) {
+}: Readonly<{
+  tone: IllustrationTone;
+  icon: ReactNode;
+  title: string;
+  children: ReactNode;
+}>) {
   return (
-    <li className="rounded-2xl border border-border bg-surface p-3.5">
-      <span
-        className="grid size-8 place-items-center rounded-lg bg-primary-100 text-primary-700 [&_svg]:size-[15px]"
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
+    <li className="illustration-card rounded-2xl border border-border bg-surface p-3.5">
+      <IllustrationBadge tone={tone}>{icon}</IllustrationBadge>
       <p className="mt-2 text-sm font-bold text-fg">{title}</p>
       <p className="mt-1 text-xs leading-relaxed text-fg-3">{children}</p>
     </li>

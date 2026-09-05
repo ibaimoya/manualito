@@ -11,8 +11,9 @@
   "greeting": {
     "anonymous": "Hi",
     "description": "Snap a photo of the rulebook and I'll walk you through it, no need to read the whole thing.",
-    "named": "Hi, {{firstName}}",
-    "question": "What game are we learning?"
+    "named": "Hi, <player>{{firstName}}</player>",
+    "question": "What game are we learning?",
+    "wave": "Say hello"
   },
   "hero": {
     "description": "Upload pages from the camera, your gallery, or a PDF, and I'll explain everything as we go.",

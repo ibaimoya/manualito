@@ -150,3 +150,34 @@ async def test_discovery_empty_catalog_and_limit_validation(discovery_world):
     for limit in (0, 21, "invalid"):
         response = await client.get("/api/games/discover", params={"limit": limit})
         assert response.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_discovery_excludes_recent_games_before_sampling(discovery_world):
+    session, owner_id, client = discovery_world
+    games = [await add_game(session, owner_id, f"Juego {index}") for index in range(8)]
+    excluded = [str(game.id) for game in games[:5]]
+    available = {str(game.id) for game in games[5:]}
+
+    for _ in range(3):
+        response = await client.get(
+            "/api/games/discover", params={"limit": 3, "exclude_game_ids": excluded}
+        )
+        assert response.status_code == 200
+        assert {game["id"] for game in response.json()["games"]} == available
+
+    all_excluded = await client.get(
+        "/api/games/discover", params={"exclude_game_ids": [str(game.id) for game in games]}
+    )
+    assert all_excluded.json()["games"] == []
+
+    unfiltered = await client.get("/api/games/discover", params={"limit": 20})
+    assert {game["id"] for game in unfiltered.json()["games"]} == set(excluded) | available
+
+
+@pytest.mark.anyio
+async def test_discovery_validates_excluded_game_ids(discovery_world):
+    _, _, client = discovery_world
+    for excluded in (["invalid"], [str(uuid4()) for _ in range(21)]):
+        response = await client.get("/api/games/discover", params={"exclude_game_ids": excluded})
+        assert response.status_code == 422

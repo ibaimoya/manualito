@@ -17,6 +17,7 @@ import { api, type GameSearchItem } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
 import { toastApiError } from '@/shared/lib/toastApiError';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 250;
@@ -64,9 +65,9 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
     onSuccess: onSelect,
     onError: (error) =>
       toastApiError(error, 'create-game', {
-        title: t('typeahead.error.createTitle'),
+        title: <LiveTrans ns="explore" i18nKey="typeahead.error.createTitle" />,
         id: 'create-game-error',
-        description: t('typeahead.error.createDescription'),
+        description: <LiveTrans ns="explore" i18nKey="typeahead.error.createDescription" />,
       }),
   });
 
@@ -87,16 +88,28 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
   const activeIndex = games.length > 0 ? Math.min(highlight, games.length - 1) : 0;
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
-    handleSearchKeyDown({
-      event,
-      canReset: query.length > 0,
-      status,
-      games,
-      activeIndex,
-      onReset: reset,
-      onHighlight: setHighlight,
-      onSelect,
-    });
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === 'Escape' && query.length > 0) {
+      event.preventDefault();
+      reset();
+      return;
+    }
+    if (status !== 'results') return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const next = Math.max(
+        0,
+        Math.min(games.length - 1, activeIndex + (event.key === 'ArrowDown' ? 1 : -1)),
+      );
+      setHighlight(next);
+      document
+        .getElementById(`${listId}-opt-${next}`)
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const game = games[activeIndex];
+      if (game) onSelect(game);
+    }
   }
 
   function reset(): void {
@@ -122,8 +135,8 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
           ref={inputRef}
           type="text"
           role="combobox"
-          aria-expanded={open}
-          aria-controls={listId}
+          aria-expanded={status === 'results'}
+          aria-controls={status === 'results' ? listId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={activeId}
           autoComplete="off"
@@ -154,9 +167,9 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
             type="button"
             onClick={reset}
             aria-label={t('typeahead.clearSearch')}
-            className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
+            className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
           >
-            <X size={16} aria-hidden="true" />
+            <X size={16} className="search-clear-icon" aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -227,6 +240,7 @@ function ResultsDropdown({
     <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
       <ul
         id={listId}
+        role={status === 'results' ? 'listbox' : undefined}
         aria-label={t('typeahead.resultsAriaLabel')}
         className="max-h-64 overflow-y-auto"
       >
@@ -287,11 +301,7 @@ function EmptyResult({
           </p>
           <button
             type="button"
-            // mousedown (no click): crea antes de que el input pierda el foco.
-            onMouseDown={(event) => {
-              event.preventDefault();
-              onCreate();
-            }}
+            onClick={onCreate}
             disabled={creating}
             aria-busy={creating}
             className="mx-auto mt-3 inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg bg-primary pl-2.5 pr-3 text-sm font-semibold text-fg-inv transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
@@ -343,48 +353,6 @@ function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
   );
 }
 
-function handleSearchKeyDown({
-  event,
-  canReset,
-  status,
-  games,
-  activeIndex,
-  onReset,
-  onHighlight,
-  onSelect,
-}: {
-  event: KeyboardEvent<HTMLInputElement>;
-  canReset: boolean;
-  status: Status;
-  games: GameSearchItem[];
-  activeIndex: number;
-  onReset: () => void;
-  onHighlight: (index: number) => void;
-  onSelect: (game: GameSearchItem) => void;
-}): void {
-  if (event.key === 'Escape' && canReset) {
-    event.preventDefault();
-    onReset();
-    return;
-  }
-  if (status !== 'results') return;
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    onHighlight(Math.min(games.length - 1, activeIndex + 1));
-    return;
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    onHighlight(Math.max(0, activeIndex - 1));
-    return;
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    const game = games[activeIndex];
-    if (game) onSelect(game);
-  }
-}
-
 function resolveStatus({
   term,
   enabled,
@@ -425,19 +393,19 @@ function ResultRow({
 }>) {
   const { t } = useTranslation('explore');
   return (
-    <li>
+    <li role="none">
       <button
         id={id}
         type="button"
-        // mousedown (no click): elige antes de que el input pierda foco.
-        onMouseDown={(event) => {
-          event.preventDefault();
-          onPick();
-        }}
+        role="option"
+        aria-selected={active}
+        tabIndex={-1}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onPick}
         onMouseMove={onHover}
         className={cn(
-          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left transition-colors',
-          active ? 'border-l-primary bg-surface' : 'border-l-transparent hover:bg-surface',
+          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left',
+          active ? 'border-l-primary bg-surface' : 'border-l-transparent',
         )}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-primary-700">

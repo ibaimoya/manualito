@@ -1,25 +1,28 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import type { ParseKeys } from 'i18next';
-import { ChevronRight, FileText, Plus, RotateCw, ScanText, Sparkles } from 'lucide-react';
+import { ChevronRight, FileText, RotateCw, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ConversationsSection } from '@/features/conversations/ConversationsSection';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { FollowButton } from '@/features/games/FollowButton';
-import { GameCover } from '@/features/games/GameCover';
+import { GameHeroCover } from '@/features/games/GameHeroCover';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
+import { ManualThumbnail } from '@/features/manual/ManualThumbnail';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
+import { SuggestedQuestions } from '@/features/games/SuggestedQuestions';
 import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
+import { AddManualIcon, ExtractedTextIcon } from '@/shared/components/action-icons';
 import {
   type ExplanationSectionKey,
   type GameDetail,
@@ -33,15 +36,6 @@ export const Route = createFileRoute('/_app/game/$gameId')({
   component: GameHubScreen,
 });
 
-type GameKey = ParseKeys<'game'>;
-
-const SUGGESTED_QUESTIONS: readonly GameKey[] = [
-  'questions.firstPlayer',
-  'questions.passTurn',
-  'questions.tie',
-  'questions.ends',
-];
-
 function GameHubScreen() {
   const { t } = useTranslation('game');
   const { gameId } = Route.useParams();
@@ -53,10 +47,11 @@ function GameHubScreen() {
         crumb={detail.data?.name ?? t('navigation.game')}
         trail={[{ label: t('navigation.library'), link: linkOptions({ to: '/history' }) }]}
       />
-      {detail.isPending ? <HubSkeleton /> : null}
-      {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-      {detail.isError && detail.data === undefined ? <HubError /> : null}
-      {detail.data ? <GameHubLoaded game={detail.data} /> : null}
+      <SkeletonSwap pending={detail.isPending} skeleton={<HubSkeleton />} className="grow">
+        {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
+        {detail.isError && detail.data === undefined ? <HubError /> : null}
+        {detail.data ? <GameHubLoaded key={detail.data.id} game={detail.data} /> : null}
+      </SkeletonSwap>
     </div>
   );
 }
@@ -116,7 +111,7 @@ function GameHeader({
   const { gameIds } = useProcessingManuals();
   return (
     <header className="flex flex-wrap items-center gap-5 @2xl/app:flex-nowrap @2xl/app:gap-6">
-      <GameCover name={game.name} size={120} processing={gameIds.has(game.id)} />
+      <GameHeroCover name={game.name} processing={gameIds.has(game.id)} />
       <div className="min-w-0 flex-1 basis-48">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           {game.year_published === null
@@ -167,7 +162,7 @@ function ExplanationSection({
         </p>
         <Button asChild className="mt-4">
           <Link to="/capture/source" search={{ gameId }}>
-            <Plus size={16} strokeWidth={2} />
+            <AddManualIcon size={18} strokeWidth={2} />
             {t('manuals.add')}
           </Link>
         </Button>
@@ -242,8 +237,8 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   return (
     <section aria-labelledby="game-manuals">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
           <span className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
             {t('manuals.sourceLabel')}
           </span>
@@ -251,9 +246,9 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
             {t('manuals.heading')}
           </h2>
         </div>
-        <Button asChild variant="ghost">
+        <Button asChild variant="ghost" className="shrink-0 px-0">
           <Link to="/capture/source" search={{ gameId: game.id }}>
-            <Plus size={15} strokeWidth={2} />
+            <AddManualIcon size={18} strokeWidth={2} />
             {t('manuals.add')}
           </Link>
         </Button>
@@ -273,42 +268,12 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
   );
 }
 
-/**
- * Hoja de papel en miniatura: lomo del color del juego, esquina doblada y,
- * si el manual tiene varias páginas, una segunda hoja asomando detrás.
- */
-function ManualThumb({ color, stacked }: Readonly<{ color: string; stacked: boolean }>) {
-  return (
-    <span aria-hidden="true" className="relative h-[58px] w-[46px] shrink-0">
-      {stacked ? (
-        <span className="absolute inset-0 translate-x-[3px] translate-y-[2px] rotate-3 rounded-md border border-border bg-surface-2" />
-      ) : null}
-      <span className="relative block size-full overflow-hidden rounded-md border border-border bg-gradient-to-b from-bg to-surface shadow-sm transition-transform group-hover:-rotate-2">
-        <span className="absolute inset-y-0 left-0 w-[4px]" style={{ backgroundColor: color }} />
-        <span
-          className="absolute right-0 top-0 size-3.5 bg-surface-2 shadow-[-1px_1px_2px_rgba(53,28,12,0.12)]"
-          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }}
-        />
-        <span className="absolute inset-x-2 top-3.5 flex flex-col gap-[4px] pl-[3px]">
-          {[88, 64, 78, 50, 70].map((width) => (
-            <span
-              key={width}
-              className="h-[2.5px] rounded-full bg-fg/15"
-              style={{ width: `${width}%` }}
-            />
-          ))}
-        </span>
-      </span>
-    </span>
-  );
-}
-
 function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   const { t } = useTranslation('game');
   const label = manual.title ?? t(manual.source_type === 'pdf' ? 'manuals.pdf' : 'manuals.photos');
   const body = (
     <>
-      <ManualThumb color={gameColor(label)} stacked={manual.page_count > 1} />
+      <ManualThumbnail color={gameColor(label)} stacked={manual.page_count > 1} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-display text-[15px] font-bold leading-tight text-fg">{label}</p>
         <p className="mono mt-1 text-[11px] text-fg-3">
@@ -321,7 +286,7 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         ) : null}
         {manual.is_own ? (
           <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent">
-            <ScanText size={13} strokeWidth={2} aria-hidden="true" />
+            <ExtractedTextIcon size={13} strokeWidth={2} />
             {t('manuals.extracted')}
           </span>
         ) : (
@@ -334,18 +299,18 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   // El manual propio se abre clicando la tarjeta entera, no un mini-enlace.
   if (manual.is_own) {
     return (
-      <Card className="transition-all hover:-translate-y-px hover:border-border-strong hover:shadow-sm">
+      <Card className="manual-interaction transition-none hover:border-border-strong">
         <Link
           to="/manual/$manualId"
           params={{ manualId: manual.id }}
           aria-label={t('manuals.viewExtracted', { label })}
-          className="group flex items-center gap-3.5 p-3.5"
+          className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
         >
           {body}
           <ChevronRight
             size={18}
             strokeWidth={2}
-            className="shrink-0 text-fg-3 transition-transform group-hover:translate-x-0.5"
+            className="shrink-0 text-fg-3"
             aria-hidden="true"
           />
         </Link>
@@ -359,6 +324,7 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   const navigate = useNavigate();
   const [question, setQuestion] = useState('');
+  const [writing, setWriting] = useState(false);
   const canAsk = game.manuals.length > 0;
 
   function ask(q: string): void {
@@ -379,31 +345,21 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div className="page-frame">
+        <SuggestedQuestions onSelect={ask} suspended={writing || question.length > 0} />
         <div
-          className="flex gap-2 overflow-x-auto pb-2"
-          aria-label={t('composer.aria.suggestedQuestions')}
+          onFocus={() => setWriting(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setWriting(false);
+          }}
         >
-          {SUGGESTED_QUESTIONS.map((questionKey) => {
-            const question = t(questionKey);
-            return (
-              <button
-                key={questionKey}
-                type="button"
-                onClick={() => ask(question)}
-                className="h-8 shrink-0 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg hover:bg-surface-2"
-              >
-                {question}
-              </button>
-            );
-          })}
+          <MessageComposer
+            value={question}
+            onChange={setQuestion}
+            onSubmit={() => ask(question)}
+            placeholder={t('composer.placeholder', { gameName: game.name })}
+            maxLength={QUESTION_MAX}
+          />
         </div>
-        <MessageComposer
-          value={question}
-          onChange={setQuestion}
-          onSubmit={() => ask(question)}
-          placeholder={t('composer.placeholder', { gameName: game.name })}
-          maxLength={QUESTION_MAX}
-        />
       </div>
     </div>
   );

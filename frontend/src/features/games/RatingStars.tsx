@@ -29,16 +29,22 @@ function Star({ size = 20, filled = false }: Readonly<{ size?: number; filled?: 
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill={filled ? 'var(--m-primary-500)' : 'var(--m-surface-2)'}
-      stroke={filled ? 'var(--m-primary-600)' : 'var(--m-border-strong)'}
+      fill="var(--m-surface-2)"
+      stroke="var(--m-border-strong)"
       strokeWidth="1.4"
       strokeLinejoin="round"
       strokeLinecap="round"
       aria-hidden="true"
       className="block"
-      style={{ filter: filled ? 'drop-shadow(0 1px 1px rgba(53,28,12,.18))' : 'none' }}
     >
       <path d={STAR_PATH} />
+      <path
+        d={STAR_PATH}
+        fill="var(--m-primary-500)"
+        stroke="var(--m-primary-600)"
+        opacity={filled ? 1 : 0}
+        className="rating-star-fill"
+      />
     </svg>
   );
 }
@@ -63,7 +69,8 @@ export function RatingStars({
 }>) {
   const { t } = useTranslation('game');
   const [hover, setHover] = useState(0);
-  const shown = hover || value;
+  const [focus, setFocus] = useState(0);
+  const shown = hover || focus || value;
 
   if (!onSelect) {
     return (
@@ -88,7 +95,7 @@ export function RatingStars({
       aria-label={t('rating.aria.group')}
       className={cn('inline-flex items-center', className)}
       style={{ marginInlineStart: startOffset }}
-      onMouseLeave={() => setHover(0)}
+      onPointerLeave={() => setHover(0)}
     >
       {[1, 2, 3, 4, 5].map((n) => (
         <button
@@ -96,14 +103,21 @@ export function RatingStars({
           type="button"
           aria-pressed={value === n}
           aria-label={`${t('rating.aria.star', { count: n })} — ${t(RATE_LABELS[n]!)}`}
-          onMouseEnter={() => setHover(n)}
-          onFocus={() => setHover(n)}
-          onBlur={() => setHover(0)}
+          onPointerEnter={(event) => {
+            if (event.pointerType !== 'mouse') return;
+            setHover(n);
+            setFocus(0);
+          }}
+          onFocus={(event) => {
+            if (!event.currentTarget.matches(':focus-visible')) return;
+            setFocus(n);
+            setHover(0);
+          }}
+          onBlur={() => setFocus(0)}
           onClick={() => onSelect(n)}
           className={cn(
-            'grid cursor-pointer place-items-center rounded-xl transition-transform duration-150 ease-[var(--ease-mn)]',
+            'rating-option grid cursor-pointer place-items-center rounded-xl',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-            hover === n && 'scale-[1.18]',
           )}
           style={{ width: hitWidth, height: hitHeight }}
         >

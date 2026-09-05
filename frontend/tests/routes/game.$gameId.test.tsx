@@ -1,12 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as GameRoute } from '@/routes/_app.game.$gameId';
+import { gameDetailKey } from '@/features/games/use-games';
 import { SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
+import i18n from '@/app/i18n';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -30,6 +32,60 @@ function renderHub() {
     },
   });
 }
+
+describe('/game/$gameId · preguntas sugeridas', () => {
+  it('reinicia el borrador al navegar a otro juego que ya está en caché', async () => {
+    const { qc, router } = renderHub();
+    const input = await screen.findByRole('textbox', { name: /Escribe tu pregunta/i });
+    await userEvent.setup().type(input, 'Pregunta de Catan');
+    qc.setQueryData(gameDetailKey('game-wingspan'), {
+      ...SAMPLE_GAME_DETAIL,
+      id: 'game-wingspan',
+      name: 'Wingspan',
+    });
+
+    await act(() => router.navigate({ to: '/game/$gameId', params: { gameId: 'game-wingspan' } }));
+
+    expect(
+      (await screen.findAllByRole('heading', { level: 1, name: 'Wingspan' })).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByRole('textbox', { name: /Escribe tu pregunta/i })).toHaveValue('');
+  });
+
+  it.each(['es', 'en'])(
+    'no duplica las preguntas en %s, ni en copias ocultas',
+    async (language) => {
+      await act(() => i18n.changeLanguage(language));
+      renderHub();
+      const carousel = await screen.findByRole('group', {
+        name: i18n.t('game:composer.aria.suggestedQuestions'),
+      });
+      const questions = within(carousel)
+        .getAllByRole('button', { hidden: true })
+        .filter((button) => button.textContent?.endsWith('?'));
+      expect(questions).toHaveLength(14);
+      expect(new Set(questions.map((button) => button.textContent)).size).toBe(questions.length);
+    },
+  );
+
+  it('abre el chat al elegir una pregunta', async () => {
+    renderHub();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '¿Quién empieza?' }));
+    expect(await screen.findByText('Chat stub')).toBeInTheDocument();
+  });
+
+  it('no ofrece preguntas si no hay un manual disponible', async () => {
+    server.use(
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({ ...SAMPLE_GAME_DETAIL, manuals: [] }),
+      ),
+    );
+    renderHub();
+    await screen.findAllByRole('heading', { name: 'Catan' });
+    expect(screen.queryByRole('group', { name: 'Preguntas sugeridas' })).not.toBeInTheDocument();
+  });
+});
 
 describe('/game/$gameId · cabecera', () => {
   it('muestra nombre, año y el chip de IA', async () => {
@@ -91,7 +147,7 @@ describe('/game/$gameId · cabecera', () => {
 
 describe('/game/$gameId · refetch fallido con cache', () => {
   it('no apila el error a pantalla completa sobre el hub ya cargado', async () => {
-    renderHub();
+    const { qc } = renderHub();
     const user = userEvent.setup();
     await screen.findAllByRole('heading', { name: 'Catan' });
 
@@ -114,7 +170,7 @@ describe('/game/$gameId · refetch fallido con cache', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(qc.getQueryState(gameDetailKey('test-game-001'))?.status).toBe('error');
     });
     expect(screen.getAllByRole('heading', { name: 'Catan' }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/No hemos encontrado este juego/)).not.toBeInTheDocument();
@@ -181,6 +237,77 @@ describe('/game/$gameId · explicación', () => {
 });
 
 describe('/game/$gameId · seguir', () => {
+  it('conserva el foco y evita duplicar la petición mientras espera al servidor', async () => {
+    const response = Promise.withResolvers<HttpResponse<null>>();
+    let requests = 0;
+    let following = false;
+    server.use(
+      http.post('/api/games/:gameId/follow', async () => {
+        requests++;
+        const result = await response.promise;
+        following = true;
+        return result;
+      }),
+      http.delete('/api/games/:gameId/follow', () => {
+        following = false;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({ ...SAMPLE_GAME_DETAIL, is_following: following }),
+      ),
+    );
+    renderHub();
+    const user = userEvent.setup();
+    const button = await screen.findByRole('button', { name: 'Seguir este juego' });
+    await user.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+    expect(button).toHaveFocus();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    await user.click(button);
+    expect(requests).toBe(1);
+
+    response.resolve(new HttpResponse(null, { status: 204 }));
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'false'));
+    expect(button).toHaveFocus();
+    await user.keyboard(' ');
+    await waitFor(() => {
+      expect(button).toHaveAttribute('aria-busy', 'false');
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+    });
+    expect(following).toBe(false);
+  });
+
+  it('si falla, restaura el estado anterior, avisa y permite reintentar', async () => {
+    server.use(
+      http.post('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 500 })),
+    );
+    renderHub();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Seguir este juego' }));
+    expect(
+      await screen.findByText('No se ha guardado el cambio. Inténtalo de nuevo.'),
+    ).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Seguir este juego' });
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(button).toHaveAttribute('aria-disabled', 'false');
+
+    let following = false;
+    server.use(
+      http.post('/api/games/:gameId/follow', () => {
+        following = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({ ...SAMPLE_GAME_DETAIL, is_following: following }),
+      ),
+    );
+    await user.click(button);
+    await waitFor(() => {
+      expect(button).toHaveAttribute('aria-busy', 'false');
+      expect(button).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+
   it('seguir el juego: «Seguir» → «Siguiendo» y lanza el POST', async () => {
     let following = false;
     server.use(
@@ -209,6 +336,22 @@ describe('/game/$gameId · seguir', () => {
 });
 
 describe('/game/$gameId · fuentes y conversaciones', () => {
+  it('avisa si falla el borrado de una conversación y conserva la fila', async () => {
+    server.use(
+      http.delete(
+        '/api/conversations/:conversationId',
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    );
+    renderHub();
+    const user = userEvent.setup();
+    const remove = await screen.findByRole('button', { name: /Borrar conversación/ });
+    await user.click(remove);
+    await user.click(screen.getByRole('button', { name: 'Borrar' }));
+    expect(await screen.findByText('No hemos podido borrarla')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Borrar conversación/ })).toBeEnabled();
+  });
+
   it('el manual propio enlaza al texto extraído; el compartido no', async () => {
     renderHub();
     const region = await screen.findByRole('region', { name: /Manuales/ });

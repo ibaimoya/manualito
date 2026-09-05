@@ -13,6 +13,7 @@ import { RATE_LABELS, RatingStars } from '@/features/games/RatingStars';
 import { gameDetailKey, myGamesKey } from '@/features/games/use-games';
 import { gamesApi, type GameDetail, type GameRating } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 const NOTE_MAX = 120;
 
@@ -100,9 +101,9 @@ function RateGameForm({
       });
     },
     onError: () =>
-      toast.error(t('rating.toast.saveError'), {
+      toast.error(<LiveTrans ns="game" i18nKey="rating.toast.saveError" />, {
         id: 'rate-game',
-        description: t('rating.toast.retry'),
+        description: <LiveTrans ns="game" i18nKey="rating.toast.retry" />,
       }),
   });
 
@@ -114,9 +115,9 @@ function RateGameForm({
       toast.success(t('rating.toast.removed'), { id: 'rate-game' });
     },
     onError: () =>
-      toast.error(t('rating.toast.removeError'), {
+      toast.error(<LiveTrans ns="game" i18nKey="rating.toast.removeError" />, {
         id: 'rate-game',
-        description: t('rating.toast.retry'),
+        description: <LiveTrans ns="game" i18nKey="rating.toast.retry" />,
       }),
   });
 
@@ -144,7 +145,7 @@ function RateGameForm({
             aria-label={t('rating.actions.remove')}
             onClick={() => setScore(0)}
             className={cn(
-              'grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:bg-error-bg hover:text-error',
+              'icon-feedback grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:text-error',
               score === 0 && 'invisible',
             )}
           >

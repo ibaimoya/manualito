@@ -1,4 +1,4 @@
-import { Flag, RefreshCw, Sparkles, type LucideIcon } from 'lucide-react';
+import { Flag, RefreshCw, Trophy, type LucideIcon } from 'lucide-react';
 import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,7 +8,9 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Markdown } from '@/shared/components/Markdown';
+import { IllustrationBadge, type IllustrationTone } from '@/shared/components/IllustrationBadge';
 
 export type ExplanationBlockKey = 'setup' | 'turns' | 'victory';
 type GameKey = ParseKeys<'game'>;
@@ -17,25 +19,25 @@ const BLOCKS: ReadonlyArray<{
   key: ExplanationBlockKey;
   title: GameKey;
   icon: LucideIcon;
-  chipClass: string;
+  tone: IllustrationTone;
 }> = [
   {
     key: 'setup',
     title: 'explanation.blocks.setup',
     icon: Flag,
-    chipClass: 'bg-primary-100 text-primary-700',
+    tone: 'primary',
   },
   {
     key: 'turns',
     title: 'explanation.blocks.turns',
     icon: RefreshCw,
-    chipClass: 'bg-accent-100 text-accent',
+    tone: 'accent',
   },
   {
     key: 'victory',
     title: 'explanation.blocks.victory',
-    icon: Sparkles,
-    chipClass: 'bg-warning-bg text-warning',
+    icon: Trophy,
+    tone: 'green',
   },
 ];
 
@@ -61,23 +63,23 @@ export function ExplanationBlocks({
         <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           {t('explanation.summary')}
         </p>
-        {summary === null ? (
-          <SummaryShimmer />
-        ) : (
-          <Markdown className="text-base leading-relaxed text-fg">{summary}</Markdown>
-        )}
+        <SkeletonSwap pending={summary === null} skeleton={<SummaryShimmer />}>
+          {summary !== null && (
+            <Markdown className="text-base leading-relaxed text-fg">{summary}</Markdown>
+          )}
+        </SkeletonSwap>
       </Card>
       <Accordion type="multiple" className="space-y-3">
-        {BLOCKS.map(({ key, title, icon: Icon, chipClass }) => {
+        {BLOCKS.map(({ key, title, icon: Icon, tone }) => {
           const body = content[key];
           const pending = body === null;
           return (
             <AccordionItem key={key} value={key} disabled={pending}>
-              <AccordionTrigger headingLevel={2} loading={pending}>
+              <AccordionTrigger className="explanation-trigger" headingLevel={2} loading={pending}>
                 <div className="flex items-center gap-3">
-                  <span className={`grid h-8 w-8 place-items-center rounded-lg ${chipClass}`}>
-                    <Icon size={16} strokeWidth={2} />
-                  </span>
+                  <IllustrationBadge tone={tone} className="explanation-icon">
+                    <Icon size={18} strokeWidth={2} aria-hidden="true" />
+                  </IllustrationBadge>
                   <span>{t(title)}</span>
                 </div>
               </AccordionTrigger>

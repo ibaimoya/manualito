@@ -19,7 +19,7 @@ export function GameCover({
     <div
       aria-hidden="true"
       data-testid="game-cover"
-      className="relative shrink-0 select-none overflow-hidden"
+      className="game-cover relative shrink-0 select-none overflow-hidden"
       style={{
         width: size,
         height: size,

@@ -1,6 +1,20 @@
-import { MessagesSquare } from 'lucide-react';
+import { Icon } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { cn } from '@/shared/lib/cn';
+
+const BUBBLES = [
+  {
+    path: 'M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
+    peek: 'translate(-1px, -2px) scale(1.16)',
+  },
+  {
+    path: 'M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1',
+    peek: 'translate(1px, -2px) scale(1.16)',
+  },
+];
+const REST = 'translate(0px, 0px) scale(1)';
 
 type ConversationActivitySize = 'sm' | 'md';
 type ConversationActivityTone = 'primary' | 'accent';
@@ -40,6 +54,9 @@ export function ConversationActivityIcon({
   className?: string;
 }>) {
   const { t } = useTranslation('conversations');
+  const hoverMotion = useMediaQuery(
+    '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+  );
   const iconSize = size === 'sm' ? 16 : 18;
   const unreadBadgeSize = size === 'sm' ? 'size-2.5' : 'size-3';
 
@@ -57,7 +74,28 @@ export function ConversationActivityIcon({
         className,
       )}
     >
-      <MessagesSquare size={iconSize} strokeWidth={size === 'sm' ? 2 : 1.9} aria-hidden="true" />
+      <Icon
+        iconNode={[]}
+        size={iconSize}
+        strokeWidth={size === 'sm' ? 2 : 1.9}
+        aria-hidden="true"
+        className="overflow-visible"
+      >
+        {BUBBLES.map((bubble, index) => (
+          <motion.path
+            key={bubble.path}
+            d={bubble.path}
+            style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
+            variants={{
+              rest: { transform: REST, transition: { duration: hoverMotion ? 0.12 : 0 } },
+              chat: {
+                transform: [null, bubble.peek, REST],
+                transition: { duration: 0.32, delay: index * 0.14, ease: 'easeInOut' },
+              },
+            }}
+          />
+        ))}
+      </Icon>
       {unread && !hasPendingReply ? (
         <span
           aria-hidden="true"

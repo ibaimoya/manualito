@@ -1,13 +1,19 @@
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
+import { TrashIcon } from '@/shared/components/action-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { cn } from '@/shared/lib/cn';
 import { formatRelative } from '@/shared/lib/relativeDate';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { AnsweringLine, ConversationActivityIcon } from './ConversationActivityIcon';
 import {
   conversationsKey,
@@ -32,31 +38,37 @@ export function ConversationsSection({
   const { isUnread } = useConversationsRead();
   const del = useMutation({
     mutationFn: (conversationId: string) => conversationsApi.remove(conversationId),
+    onError: () =>
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.deleteError" />, {
+        id: 'conversation-delete',
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
+      }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
 
   // Sin backend, la sección simplemente no aparece.
-  if (isError) return null;
+  if (isError && data === undefined) return null;
 
   const conversations = data ?? [];
 
   return (
     <section aria-labelledby="result-conversations" className="pt-1">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <h2
           id="result-conversations"
           className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700"
         >
           {t('section.heading')}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {showViewAll && conversations.length > 0 ? (
             <Link
               to="/conversations/$gameId"
               params={{ gameId }}
-              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-fg-2 transition-colors hover:text-fg"
+              className="icon-feedback inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-semibold text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {t('section.viewAll', { count: conversations.length })}
+              <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
             </Link>
           ) : null}
           {canAsk ? (
@@ -64,31 +76,33 @@ export function ConversationsSection({
               to="/chat/$gameId"
               params={{ gameId }}
               search={{}}
-              className="inline-flex h-8 items-center gap-1 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2"
+              className="icon-feedback inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              <Plus size={13} strokeWidth={2.25} aria-hidden="true" />
+              <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
               {t('section.new')}
             </Link>
           ) : null}
         </div>
       </div>
 
-      {isPending ? <RowsSkeleton /> : null}
-      {!isPending && conversations.length === 0 ? <EmptyRows /> : null}
-      {conversations.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {conversations.slice(0, MAX_ROWS).map((c) => (
-            <ConversationRow
-              key={c.id}
-              gameId={gameId}
-              conversation={c}
-              unread={isUnread(c)}
-              deleting={del.isPending && del.variables === c.id}
-              onDelete={() => del.mutate(c.id)}
-            />
-          ))}
-        </div>
-      ) : null}
+      <SkeletonSwap pending={isPending} skeleton={<RowsSkeleton />}>
+        {conversations.length === 0 ? (
+          <EmptyRows />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {conversations.slice(0, MAX_ROWS).map((c) => (
+              <ConversationRow
+                key={c.id}
+                gameId={gameId}
+                conversation={c}
+                unread={isUnread(c)}
+                deleting={del.isPending && del.variables === c.id}
+                onDelete={() => del.mutate(c.id)}
+              />
+            ))}
+          </div>
+        )}
+      </SkeletonSwap>
     </section>
   );
 }
@@ -110,16 +124,20 @@ function ConversationRow({
   const [confirming, setConfirming] = useState(false);
   const title = conversation.title ?? t('fallback.conversationTitle');
   const pending = conversation.has_pending_reply;
+  const hoverMotion = useMediaQuery(
+    '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+  );
 
   return (
-    // Caja redondeada propia: respondiendo, el borde transparente deja sitio al
-    // cometa (su radio se deriva en CSS de --radius-2xl, el mismo token que usa
-    // rounded-2xl aquí). El bg redondea sin overflow-hidden para no recortar
-    // el cometa, que sobresale 1px.
-    <div
+    <motion.div
+      initial={false}
+      animate="rest"
+      whileHover={hoverMotion ? 'chat' : 'rest'}
       className={cn(
-        'relative rounded-2xl border bg-card shadow-xs transition-colors',
-        pending ? 'border-transparent' : 'border-border hover:bg-surface-2',
+        'relative rounded-2xl border bg-card shadow-xs',
+        pending
+          ? 'border-transparent'
+          : 'border-border hover:bg-surface-2 focus-within:bg-surface-2',
         deleting && 'opacity-50',
       )}
     >
@@ -144,18 +162,17 @@ function ConversationRow({
             )}
           </span>
         </Link>
-        {/* Misma papelera compacta que la biblioteca: 30 px, rounded-lg, tinte al hover. */}
         <button
           type="button"
           onClick={() => setConfirming((v) => !v)}
-          className="grid size-[30px] shrink-0 self-center place-items-center rounded-lg text-fg-3 transition-colors hover:bg-error-bg hover:text-error"
+          className="icon-feedback grid size-11 shrink-0 self-center place-items-center rounded-lg text-fg-3 transition-colors hover:text-error"
           aria-label={t('aria.deleteConversation', { title })}
         >
-          <Trash2 size={15} strokeWidth={2} />
+          <TrashIcon size={15} strokeWidth={2} />
         </button>
       </div>
       {confirming ? (
-        <div className="relative z-[1] flex items-center gap-2 rounded-b-2xl border-t border-border bg-error-bg p-3">
+        <div className="feedback-fade relative z-[1] flex items-center gap-2 rounded-b-2xl border-t border-border bg-error-bg p-3">
           <span className="mr-auto text-sm text-error">{t('section.confirmDelete')}</span>
           <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
             {t('actions.cancel')}
@@ -173,7 +190,7 @@ function ConversationRow({
         </div>
       ) : null}
       {pending ? <span className="proc-border" aria-hidden="true" /> : null}
-    </div>
+    </motion.div>
   );
 }
 

@@ -2,11 +2,20 @@ import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ParseKeys } from 'i18next';
 import { BookOpen, Check, ChevronRight, Copy, FileText, Plus, Sparkles } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import {
   conversationMessagesKey,
@@ -31,6 +40,8 @@ import {
 import { cn } from '@/shared/lib/cn';
 import { storage } from '@/shared/lib/storage';
 import { toastApiError } from '@/shared/lib/toastApiError';
+import { LiveTrans } from '@/shared/components/LiveTrans';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
 // q comparte cota con el backend; c reabre una conversación guardada.
 type ChatSearch = { q?: string; c?: string };
@@ -236,6 +247,7 @@ async function sendConversationTurn(args: {
   let activeConversationId = conversationId;
   if (activeConversationId === null) {
     activeConversationId = (await conversationsApi.create(gameId, signal)).id;
+    signal.throwIfAborted();
     // Guardado ya: un reintento reutiliza la conversación, no crea otra.
     setConversationId(activeConversationId);
   }
@@ -284,7 +296,6 @@ function useAskFlow(args: {
     clearConversationRoute,
   } = args;
   const queryClient = useQueryClient();
-  const { t } = useTranslation('chat');
   const [turns, setTurns] = useState<ConversationMessage[]>([]);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -302,8 +313,8 @@ function useAskFlow(args: {
         setConversationId,
       }),
     onError: (err, question) => {
+      if (isAbortApiError(err) || askAbortRef.current?.signal.aborted) return;
       setPendingQuestion(null);
-      if (isAbortApiError(err)) return;
       // Si la fuente desapareció, refresca el juego para deshabilitar el composer.
       if (err instanceof ApiError && err.view.code === 'no_manual_sources') {
         queryClient.invalidateQueries({ queryKey: gameDetailKey(gameId) }).catch(() => undefined);
@@ -311,12 +322,13 @@ function useAskFlow(args: {
       // Recupera la pregunta en el composer para reintentar sin reescribirla.
       setDraft((current) => (current.length > 0 ? current : question));
       toastApiError(err, 'ask-error', {
-        title: t('error.request.title'),
+        title: <LiveTrans ns="chat" i18nKey="error.request.title" />,
         id: 'ask-error-unknown',
-        description: t('error.request.description'),
+        description: <LiveTrans ns="chat" i18nKey="error.request.description" />,
       });
     },
     onSuccess: (data) => {
+      if (askAbortRef.current?.signal.aborted) return;
       setPendingQuestion(null);
       setTurns((prev) => [...prev, data.user_message, data.assistant_message]);
       setAnimateId(completedAssistantAnimationId(data.assistant_message));
@@ -365,11 +377,63 @@ export const Route = createFileRoute('/_app/chat/$gameId')({
 });
 
 function ChatScreen() {
+  const { gameId } = Route.useParams();
+  const { q, c } = Route.useSearch();
+  const [session, setSession] = useState(() => ({
+    gameId,
+    q,
+    c,
+    conversationId: c ?? null,
+    revision: 0,
+  }));
+  const setConversationId = useCallback((conversationId: string | null) => {
+    setSession((current) => ({ ...current, conversationId }));
+  }, []);
+
+  if (session.gameId !== gameId || session.c !== c || session.q !== q) {
+    // Quitar la pregunta consumida o fijar el id recién creado conserva el chat.
+    // Otra conversación o juego tiene su propio borrador y su propia petición.
+    const sameSession =
+      session.gameId === gameId &&
+      q === undefined &&
+      ((c ?? null) === session.conversationId || (c === session.c && session.q !== undefined));
+    setSession({
+      gameId,
+      q,
+      c,
+      conversationId: sameSession ? session.conversationId : (c ?? null),
+      revision: session.revision + (sameSession ? 0 : 1),
+    });
+  }
+
+  return (
+    <ChatSessionScreen
+      key={session.revision}
+      gameId={gameId}
+      initialQ={q}
+      initialC={c}
+      conversationId={session.conversationId}
+      setConversationId={setConversationId}
+    />
+  );
+}
+
+function ChatSessionScreen({
+  gameId,
+  initialQ,
+  initialC,
+  conversationId,
+  setConversationId,
+}: Readonly<{
+  gameId: string;
+  initialQ?: string;
+  initialC?: string;
+  conversationId: string | null;
+  setConversationId: (id: string | null) => void;
+}>) {
   const { t: tChat } = useTranslation('chat');
   const { t: tShell } = useTranslation('shell');
-  const { gameId } = Route.useParams();
-  const { q: initialQ, c: initialC } = Route.useSearch();
-  const [conversationId, setConversationId] = useState<string | null>(initialC ?? null);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   // Id de la última respuesta recién llegada: solo esa se escribe letra a letra.
   const [animateId, setAnimateId] = useState<string | null>(null);
   const initialQueueRef = useRef<string | null>(initialQ ?? null);
@@ -418,14 +482,27 @@ function ChatScreen() {
   const waitingForReply = askMutation.isPending || hasPendingAssistant;
   const sendPending = waitingForReply && canAsk;
 
-  // Scroll al final cuando entra un mensaje nuevo.
-  useEffect(() => {
+  const scrollToLatest = useEffectEvent(() => {
     if (messages.length === 0 && pendingQuestion === null) {
       scrollRef.current?.scrollTo({ top: 0 });
       return;
     }
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: reducedMotion ? 'instant' : 'smooth',
+    });
+  });
+  // Los mensajes nuevos siguen el fondo; cambiar la preferencia no cambia la lectura.
+  useEffect(() => {
+    scrollToLatest();
   }, [messages.length, pendingQuestion, askMutation.isPending, hasPendingAssistant]);
+
+  useEffect(() => {
+    const viewport = scrollRef.current;
+    if (reducedMotion && viewport) {
+      viewport.scrollTo({ top: viewport.scrollTop, behavior: 'instant' });
+    }
+  }, [reducedMotion]);
 
   // Mantiene la vista pegada al fondo mientras la respuesta se escribe.
   const pinToBottom = useCallback(() => {
@@ -567,24 +644,27 @@ function ChatConversation({
   const { t } = useTranslation('chat');
 
   return (
-    <div className="page-frame flex flex-col gap-4 py-5">
-      {historyLoading ? <HistorySkeleton /> : null}
-      {historyError ? (
-        <p className="py-6 text-center text-sm text-fg-3">{t('error.history')}</p>
-      ) : null}
-      {messages.map((message) => (
-        <Bubble
-          key={message.id}
-          msg={message}
-          animate={message.id === animateId}
-          onReveal={onReveal}
-          availableManualIds={availableManualIds}
-        />
-      ))}
-      {pendingQuestion ? <UserBubble content={pendingQuestion} /> : null}
-      {responsePending ? (
-        <BotStatusBubble label={t('status.writing')} visibleLabel={false} />
-      ) : null}
+    <div className="page-frame py-5">
+      <SkeletonSwap pending={historyLoading && !pendingQuestion} skeleton={<HistorySkeleton />}>
+        <div className="flex flex-col gap-4">
+          {historyError ? (
+            <p className="py-6 text-center text-sm text-fg-3">{t('error.history')}</p>
+          ) : null}
+          {messages.map((message) => (
+            <Bubble
+              key={message.id}
+              msg={message}
+              animate={message.id === animateId}
+              onReveal={onReveal}
+              availableManualIds={availableManualIds}
+            />
+          ))}
+          {pendingQuestion ? <UserBubble content={pendingQuestion} /> : null}
+          {responsePending ? (
+            <BotStatusBubble label={t('status.writing')} visibleLabel={false} />
+          ) : null}
+        </div>
+      </SkeletonSwap>
     </div>
   );
 }
@@ -932,15 +1012,20 @@ function BotStaticBubble({
 function CopyAnswer({ text }: Readonly<{ text: string }>) {
   const { t } = useTranslation('chat');
   const [copied, setCopied] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
 
   async function copy(): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
+      clearTimeout(resetTimer.current);
       setCopied(true);
-      toast.success(t('feedback.copy.success'), { id: 'copy-answer' });
-      setTimeout(() => setCopied(false), 1500);
+      resetTimer.current = setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error(t('feedback.copy.failure'), { id: 'copy-answer' });
+      clearTimeout(resetTimer.current);
+      setCopied(false);
+      toast.error(<LiveTrans ns="chat" i18nKey="feedback.copy.failure" />, { id: 'copy-answer' });
     }
   }
 
@@ -951,13 +1036,16 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
         copy().catch(() => undefined);
       }}
       aria-label={t('aria.copyAnswer')}
-      className="mt-1.5 grid size-7 place-items-center rounded-lg text-fg-3 transition-[color,background-color,opacity] hover:bg-surface-2 hover:text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-visible:opacity-100"
+      data-copied={copied}
+      className="mt-1.5 grid size-11 place-items-center rounded-lg text-fg-3 transition-[color,opacity,transform] hover:text-fg-2 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 motion-reduce:active:scale-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-visible:opacity-100 md:data-[copied=true]:opacity-100"
     >
-      {copied ? (
-        <Check size={14} strokeWidth={2.5} className="text-success" aria-hidden="true" />
-      ) : (
-        <Copy size={14} strokeWidth={2} aria-hidden="true" />
-      )}
+      <span className="state-icon" data-active={copied} aria-hidden="true">
+        <Copy size={14} strokeWidth={2} />
+        <Check size={14} strokeWidth={2.5} className="text-success" />
+      </span>
+      <span role="status" className="sr-only">
+        {copied ? t('feedback.copy.success') : ''}
+      </span>
     </button>
   );
 }
@@ -968,17 +1056,12 @@ function SourceChips({
   availableManualIds,
 }: Readonly<{ sources: AnswerSource[]; availableManualIds: ReadonlySet<string> | null }>) {
   const { t } = useTranslation('chat');
-  const byPage = new Map<number, { manualId: string; title: string | null; isOwn: boolean }>();
+  const byPage = new Map<string, AnswerSource>();
   for (const source of sources) {
-    if (!byPage.has(source.page)) {
-      byPage.set(source.page, {
-        manualId: source.manual_id,
-        title: source.manual_title,
-        isOwn: source.is_own,
-      });
-    }
+    const key = `${source.manual_id}:${source.page}`;
+    if (!byPage.has(key)) byPage.set(key, source);
   }
-  const pages = [...byPage.entries()].sort((a, b) => a[0] - b[0]);
+  const pages = [...byPage.entries()].sort((a, b) => a[1].page - b[1].page);
   return (
     <div className="mt-[13px] border-t border-dashed border-border-strong pt-3">
       <p className="mono mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-3">
@@ -986,12 +1069,14 @@ function SourceChips({
         {t('sources.heading')}
       </p>
       <div className="flex flex-wrap gap-[7px]">
-        {pages.map(([page, source]) => (
+        {pages.map(([key, source]) => (
           <SourceChip
-            key={page}
-            page={page}
-            {...source}
-            available={availableManualIds === null || availableManualIds.has(source.manualId)}
+            key={key}
+            page={source.page}
+            manualId={source.manual_id}
+            title={source.manual_title}
+            isOwn={source.is_own}
+            available={availableManualIds === null || availableManualIds.has(source.manual_id)}
           />
         ))}
       </div>

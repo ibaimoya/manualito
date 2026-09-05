@@ -1,92 +1,74 @@
 import { useEffect, useRef, useState } from 'react';
+import { animate as animateValue, useMotionValue, useMotionValueEvent } from 'motion/react';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
-/**
- * Animaciones tipo máquina de escribir del chat: revelar la respuesta letra a
- * letra y reescribir el título cuando cambia. Ambas respetan reduced-motion (si
- * está activo, ponen el texto al instante) y acotan la duración para no eternizarse.
- */
-
-function prefersReducedMotion(): boolean {
-  // globalThis.matchMedia (no "window") y guardado por si no hay DOM (SSR/tests).
-  return (
-    typeof globalThis.matchMedia === 'function' &&
-    globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-}
-
-const CHAR_MS = 22;
-const MIN_TICKS = 24;
-const MAX_TICKS = 70;
-
-/**
- * Revela "text" progresivamente cuando "animate" es true (respuesta recién
- * llegada). Si no, lo muestra entero al instante (historial, reduced-motion).
- */
 export function useTypewriter(
   text: string,
   animate: boolean,
 ): Readonly<{ shown: string; done: boolean }> {
-  // Arrancamos en 0 solo cuando vamos a animar de verdad; el resto, texto completo.
-  const willAnimate = animate && text.length > 0 && !prefersReducedMotion();
-  const [count, setCount] = useState(() => (willAnimate ? 0 : text.length));
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const willAnimate = animate && !reducedMotion;
+  const progress = useMotionValue(willAnimate ? 0 : text.length);
+  const previousText = useRef(text);
+  const [display, setDisplay] = useState({ text, count: willAnimate ? 0 : text.length });
+
+  useMotionValueEvent(progress, 'change', (count) => {
+    setDisplay({ text, count: Math.ceil(count) });
+  });
 
   useEffect(() => {
-    if (!willAnimate) return;
-    const len = text.length;
-    // Pasos por tick para que el total quede entre ~0,5 s y ~1,5 s sea cual sea el largo.
-    const step = Math.ceil(len / Math.min(Math.max(len, MIN_TICKS), MAX_TICKS));
-    let revealed = 0;
-    const timer = setInterval(() => {
-      revealed += step;
-      if (revealed >= len) {
-        setCount(len);
-        clearInterval(timer);
-      } else {
-        setCount(revealed);
-      }
-    }, CHAR_MS);
-    return () => clearInterval(timer);
-  }, [text, willAnimate]);
+    if (previousText.current !== text) {
+      previousText.current = text;
+      progress.jump(0);
+    }
+    if (!willAnimate) {
+      progress.jump(text.length);
+      return;
+    }
+    if (progress.get() === text.length) return;
+    const step = Math.ceil(text.length / Math.min(Math.max(text.length, 24), 70));
+    const playback = animateValue(progress, text.length, {
+      duration: Math.ceil((text.length - progress.get()) / step) * 0.022,
+      ease: 'linear',
+    });
+    return () => playback.stop();
+  }, [text, willAnimate, progress]);
 
-  // Si dejamos de animar a mitad (llega otra respuesta), mostramos el texto entero.
-  const shown = animate ? text.slice(0, count) : text;
-  return { shown, done: !animate || count >= text.length };
+  const count = display.text === text ? display.count : 0;
+  return {
+    shown: willAnimate ? text.slice(0, count) : text,
+    done: !willAnimate || count >= text.length,
+  };
 }
 
-const TITLE_CHAR_MS = 32;
-
-/**
- * Muestra "target"; cuando cambia, lo borra letra a letra y escribe el nuevo
- * (como un chatbot renombrando la conversación). En el primer montaje lo pone directo.
- */
 export function useRetypingTitle(target: string): string {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const current = useMotionValue(target);
   const [shown, setShown] = useState(target);
-  const targetRef = useRef(target);
+  useMotionValueEvent(current, 'change', setShown);
 
   useEffect(() => {
-    // El título anterior (ya mostrado entero cuando está asentado) es de donde borramos.
-    const from = targetRef.current;
-    if (target === from) return;
-    targetRef.current = target;
-    if (prefersReducedMotion()) {
-      // rAF para no llamar a setState en el cuerpo del efecto (solo en callbacks).
-      const raf = requestAnimationFrame(() => setShown(target));
-      return () => cancelAnimationFrame(raf);
+    if (reducedMotion) {
+      current.jump(target);
+      return;
     }
-    let current = from;
-    let erasing = current.length > 0;
-    const timer = setInterval(() => {
-      if (erasing) {
-        current = current.slice(0, -1);
-        if (current.length === 0) erasing = false;
-      } else {
-        current = target.slice(0, current.length + 1);
-      }
-      setShown(current);
-      if (!erasing && current === target) clearInterval(timer);
-    }, TITLE_CHAR_MS);
-    return () => clearInterval(timer);
-  }, [target]);
+    const from = current.get();
+    if (from === target) return;
+    const length = from.length + target.length;
+    const playback = animateValue(0, length, {
+      duration: Math.min(length * 0.032, 1.5),
+      ease: 'linear',
+      onUpdate: (progress) => {
+        const step = Math.floor(progress);
+        current.set(
+          step < from.length
+            ? from.slice(0, from.length - step)
+            : target.slice(0, step - from.length),
+        );
+      },
+    });
+    return () => playback.stop();
+  }, [target, reducedMotion, current]);
 
-  return shown;
+  return reducedMotion ? target : shown;
 }

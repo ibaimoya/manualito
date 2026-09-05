@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as ConversationsRoute } from '@/routes/_app.conversations.$gameId';
+import { conversationsKey } from '@/features/conversations/use-conversations';
+import type { ConversationSummary } from '@/shared/api/conversations';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
 
@@ -103,10 +105,25 @@ describe('/conversations/$gameId', () => {
   });
 
   it('renombrar desde el kebab: el diálogo precarga el título y guarda', async () => {
-    renderConversations();
+    const { qc } = renderConversations();
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole('button', { name: 'Opciones de «Dudas de preparación»' }),
+    );
+    let conversation = qc.getQueryData<ConversationSummary[]>(
+      conversationsKey('test-game-001'),
+    )![0]!;
+    let sentTitle: string | undefined;
+    server.use(
+      http.patch('/api/conversations/:conversationId', async ({ request }) => {
+        const body = (await request.json()) as { title: string };
+        sentTitle = body.title;
+        conversation = { ...conversation, title: body.title };
+        return HttpResponse.json(conversation);
+      }),
+      http.get('/api/games/:gameId/conversations', () =>
+        HttpResponse.json({ conversations: [conversation] }),
+      ),
     );
     await user.click(await screen.findByRole('menuitem', { name: 'Renombrar' }));
     const dialog = await screen.findByRole('dialog', { name: 'Renombrar conversación' });
@@ -117,6 +134,11 @@ describe('/conversations/$gameId', () => {
     await user.type(input, 'Preparación inicial');
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
     expect(await screen.findByText('Conversación renombrada')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Opciones de «Preparación inicial»' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Dudas de preparación')).not.toBeInTheDocument();
+    expect(sentTitle).toBe('Preparación inicial');
   });
 
   it('un borrador abandonado no sobrevive al cerrar y reabrir el diálogo', async () => {
@@ -142,16 +164,32 @@ describe('/conversations/$gameId', () => {
   });
 
   it('borrar desde el kebab pasa por confirmación destructiva', async () => {
-    renderConversations();
+    const { qc } = renderConversations();
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole('button', { name: 'Opciones de «Dudas de preparación»' }),
+    );
+    const conversation = qc.getQueryData<ConversationSummary[]>(
+      conversationsKey('test-game-001'),
+    )![0]!;
+    let deletedId: string | undefined;
+    server.use(
+      http.delete('/api/conversations/:conversationId', ({ params }) => {
+        deletedId = String(params.conversationId);
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.get('/api/games/:gameId/conversations', () =>
+        HttpResponse.json({ conversations: deletedId === conversation.id ? [] : [conversation] }),
+      ),
     );
     await user.click(await screen.findByRole('menuitem', { name: 'Borrar' }));
     const dialog = await screen.findByRole('dialog', { name: 'Borrar conversación' });
     expect(dialog).toHaveTextContent('Esta acción no se puede deshacer.');
     await user.click(within(dialog).getByRole('button', { name: 'Borrar conversación' }));
     expect(await screen.findByText('Conversación borrada')).toBeInTheDocument();
+    expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();
+    expect(screen.queryByText('Dudas de preparación')).not.toBeInTheDocument();
+    expect(deletedId).toBe(conversation.id);
   });
 
   it('sin conversaciones muestra el estado vacío con CTA', async () => {

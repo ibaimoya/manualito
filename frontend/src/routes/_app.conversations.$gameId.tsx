@@ -1,12 +1,16 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, MoreVertical, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
+import { BookOpen, MoreVertical, Pencil, Plus, Search, Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
+import { TrashIcon } from '@/shared/components/action-icons';
 import { Trans, useTranslation } from 'react-i18next';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -30,6 +34,7 @@ import {
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
 export const Route = createFileRoute('/_app/conversations/$gameId')({
   component: ConversationsScreen,
@@ -79,15 +84,11 @@ function ConversationsScreen() {
       />
 
       <div className="page-frame relative flex flex-1 flex-col py-6 lg:py-8">
-        <header className="mb-4 flex items-center gap-3.5">
-          <GameCover name={gameName} size={44} radius={12} processing={gameIds.has(gameId)} />
-          <div className="min-w-0 flex-1">
-            <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-              {t('header.subtitle', { gameName })}
-            </p>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-              {t('page.title')}
-            </h1>
+        <header className="mb-6 flex items-center gap-4 @3xl/app:mb-8">
+          <GameCover name={gameName} size={56} radius={14} processing={gameIds.has(gameId)} />
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="page-eyebrow break-words">{t('header.subtitle', { gameName })}</p>
+            <h1 className="page-title">{t('page.title')}</h1>
           </div>
         </header>
 
@@ -110,42 +111,42 @@ function ConversationsScreen() {
           </div>
         ) : null}
 
-        {conversations.isPending ? <ListSkeleton /> : null}
-        {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-        {conversations.isError && conversations.data === undefined ? (
-          <Card className="bg-surface p-5 text-sm text-fg-2">{t('error.load')}</Card>
-        ) : null}
+        <SkeletonSwap pending={conversations.isPending} skeleton={<ListSkeleton />}>
+          {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
+          {conversations.isError && conversations.data === undefined ? (
+            <Card className="bg-surface p-5 text-sm text-fg-2">{t('error.load')}</Card>
+          ) : null}
 
-        {conversations.isSuccess && all.length === 0 ? (
-          <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
-        ) : null}
+          {conversations.isSuccess && all.length === 0 ? (
+            <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
+          ) : null}
 
-        {conversations.isSuccess && all.length > 0 && visible.length === 0 ? (
-          <NoResults filter={filter} onClear={() => setFilter('')} />
-        ) : null}
+          {conversations.isSuccess && all.length > 0 && visible.length === 0 ? (
+            <NoResults filter={filter} onClear={() => setFilter('')} />
+          ) : null}
 
-        <ul className="flex flex-col gap-2.5" aria-label={t('page.listLabel')}>
-          {visible.map((conversation) => (
-            <ConversationCard
-              key={conversation.id}
-              conversation={conversation}
-              gameId={gameId}
-              unread={isUnread(conversation)}
-            />
-          ))}
-        </ul>
+          <ul className="flex flex-col gap-2.5" aria-label={t('page.listLabel')}>
+            {visible.map((conversation) => (
+              <ConversationCard
+                key={conversation.id}
+                conversation={conversation}
+                gameId={gameId}
+                unread={isUnread(conversation)}
+              />
+            ))}
+          </ul>
+        </SkeletonSwap>
 
         {!canAsk || all.length === 0 ? null : (
-          <Link
-            to="/chat/$gameId"
-            params={{ gameId }}
-            search={{}}
-            className="sticky bottom-6 z-10 mt-6 inline-flex items-center gap-2 self-end rounded-full bg-primary px-5 font-body text-[15px] font-bold text-fg-inv shadow-lg transition-transform active:scale-[0.96]"
-            style={{ height: 52 }}
+          <Button
+            asChild
+            className="sticky bottom-6 z-10 mt-6 h-13 self-end rounded-full text-[15px] font-bold shadow-lg motion-safe:active:scale-[0.96]"
           >
-            <Plus size={18} strokeWidth={2.2} aria-hidden="true" />
-            {t('actions.newConversation')}
-          </Link>
+            <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
+              <Plus size={18} strokeWidth={2.2} aria-hidden="true" />
+              {t('actions.newConversation')}
+            </Link>
+          </Button>
         )}
       </div>
     </div>
@@ -168,6 +169,9 @@ function ConversationCard({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const title = conversation.title ?? t('fallback.conversationTitle');
   const pending = conversation.has_pending_reply;
+  const hoverMotion = useMediaQuery(
+    '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+  );
 
   function openChat(): void {
     navigate({
@@ -184,22 +188,25 @@ function ConversationCard({
       toast.success(t('toast.deleteSuccess'), { id: 'conversation-delete' });
     },
     onError: () =>
-      toast.error(t('toast.deleteError'), {
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.deleteError" />, {
         id: 'conversation-delete',
-        description: t('toast.retry'),
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
       }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
 
   return (
-    <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
+    <motion.li
+      initial={false}
+      animate="rest"
+      whileHover={hoverMotion ? 'chat' : 'rest'}
+      className={cn(remove.isPending && 'pointer-events-none opacity-50')}
+    >
       <Card
         style={pending ? { borderColor: 'transparent' } : undefined}
         className={cn(
-          'relative flex items-start gap-3 p-3.5',
-          'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-          !pending && 'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
-          'active:translate-y-0 active:shadow-xs',
+          'relative flex items-start gap-3 p-3.5 transition-none',
+          !pending && 'hover:border-border-strong hover:bg-surface-2 focus-within:bg-surface-2',
         )}
       >
         <ConversationActivityIcon
@@ -207,7 +214,7 @@ function ConversationCard({
           unread={unread}
           size="md"
           tone="accent"
-          className="relative z-[1] transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
+          className="relative z-[1]"
         />
         {/* Botón principal: su ::after se estira sobre toda la card, así que se
             abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
@@ -215,8 +222,8 @@ function ConversationCard({
           type="button"
           onClick={openChat}
           className={cn(
-            'relative z-[1] min-w-0 flex-1 cursor-pointer text-left',
-            "after:absolute after:inset-0 after:rounded-2xl after:content-['']",
+            'min-w-0 flex-1 cursor-pointer text-left',
+            "after:absolute after:inset-0 after:z-[1] after:rounded-2xl after:content-['']",
             'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
           )}
         >
@@ -247,7 +254,7 @@ function ConversationCard({
             <button
               type="button"
               aria-label={t('aria.optionsFor', { title })}
-              className="relative z-10 grid size-9 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface hover:text-fg data-[state=open]:bg-surface"
+              className="icon-feedback relative z-10 grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg data-[state=open]:text-fg"
             >
               <MoreVertical size={17} strokeWidth={2} />
             </button>
@@ -262,7 +269,7 @@ function ConversationCard({
               {t('actions.rename')}
             </DropdownMenuItem>
             <DropdownMenuItem danger onSelect={() => setDeleteOpen(true)}>
-              <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+              <TrashIcon size={16} strokeWidth={2} aria-hidden="true" />
               {t('actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -304,13 +311,13 @@ function ConversationCard({
               loading={remove.isPending}
               onClick={() => remove.mutate()}
             >
-              <Trash2 size={16} strokeWidth={2} />
+              <TrashIcon size={16} strokeWidth={2} />
               {t('actions.deleteConversation')}
             </Button>
           </div>
         </DialogBody>
       </Dialog>
-    </li>
+    </motion.li>
   );
 }
 
@@ -381,9 +388,9 @@ function RenameForm({
       toast.success(t('toast.renameSuccess'), { id: 'conversation-rename' });
     },
     onError: () =>
-      toast.error(t('toast.renameError'), {
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.renameError" />, {
         id: 'conversation-rename',
-        description: t('toast.retry'),
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
       }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });

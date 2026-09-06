@@ -132,11 +132,11 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                     aria-label={label}
                     onClick={() => setColor(option.value)}
                     className={cn(
-                      'size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] transition-transform',
+                      'transition-control size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
                       option.className,
                       color === option.value
                         ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
-                        : 'hover:scale-110',
+                        : 'motion-safe:hover:scale-110',
                     )}
                   />
                 );
@@ -155,7 +155,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                     title={label}
                     onClick={() => setFigure(option.value)}
                     className={cn(
-                      'grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 transition-colors',
+                      'transition-control grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
                       selected
                         ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
                         : 'hover:bg-surface-2',

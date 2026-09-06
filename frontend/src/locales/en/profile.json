@@ -2,14 +2,15 @@
   "actions": {
     "edit": "Edit profile",
     "logout": "Sign out",
-    "security": "Account & security"
+    "security": "Account"
   },
   "activity": {
     "conversations": "Conversations",
     "games": "Games",
     "manuals": "Manuals",
     "section": "Your activity",
-    "title": "At a glance"
+    "title": "At a glance",
+    "unavailable": "Unavailable"
   },
   "avatar": {
     "colors": {

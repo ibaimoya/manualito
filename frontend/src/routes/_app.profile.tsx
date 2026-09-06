@@ -1,17 +1,18 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { useInView } from 'motion/react';
+import NumberFlow, { continuous } from '@number-flow/react';
 import {
   AlertTriangle,
   BadgeCheck,
   Dices,
-  Lock,
-  LogOut,
   Mail,
   MessagesSquare,
   Pencil,
   ScrollText,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { AccountIcon, LogOutIcon } from '@/shared/components/action-icons';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,8 +26,14 @@ import i18n from '@/app/i18n';
 import { Avatar } from '@/shared/components/Avatar';
 import { SectionHead } from '@/shared/components/SectionHead';
 import { elideEmail } from '@/shared/lib/elideEmail';
+import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { useTextWave } from '@/shared/hooks/useTextWave';
 
 export const Route = createFileRoute('/_app/profile')({
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(accountStatsQueryOptions());
+  },
   component: ProfileScreen,
 });
 
@@ -51,64 +58,93 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
   const logout = useLogout();
   const [editOpen, setEditOpen] = useState(false);
   const displayName = user.username || user.email;
+  const nameWave = useTextWave<HTMLHeadingElement>();
 
   return (
     <div className="page-frame page-stack mx-auto max-w-5xl">
-      <Card className="p-6">
-        <div className="flex flex-wrap items-start gap-5">
-          <Avatar
-            name={displayName}
-            size={96}
-            color={user.avatar_color}
-            figure={user.avatar_figure}
-          />
-          <div className="min-w-0 flex-1 basis-56">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="min-w-0 truncate font-display text-2xl font-extrabold tracking-tight text-fg md:text-3xl">
-                {displayName}
-              </h1>
-              {user.email_verified_at === null ? null : (
-                <Tooltip content={t('verification.verified')}>
-                  <button
-                    type="button"
-                    aria-label={t('verification.verified')}
-                    className="grid shrink-0 translate-y-[2px] cursor-help place-items-center rounded-full text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40"
-                  >
-                    <BadgeCheck size={22} strokeWidth={2.2} aria-hidden="true" />
-                  </button>
-                </Tooltip>
-              )}
+      <Card className="bg-surface p-5 shadow-none @md/app:p-6 @3xl/app:p-8">
+        <div className="flex flex-col gap-6 @3xl/app:flex-row @3xl/app:items-center @3xl/app:gap-8">
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-4 @md/app:flex-row @md/app:items-center @md/app:gap-5">
+            <Avatar
+              name={displayName}
+              size={96}
+              color={user.avatar_color}
+              figure={user.avatar_figure}
+            />
+            <div className="min-w-0 w-full flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <h1
+                  {...nameWave}
+                  aria-label={displayName}
+                  className="-my-1 min-w-0 truncate py-1 font-display text-2xl font-extrabold tracking-tight text-fg md:text-3xl"
+                >
+                  <span aria-hidden="true">
+                    {Array.from(displayName, (letter, index) => (
+                      <span key={`${letter}-${index}`} data-text-wave className="inline-block">
+                        {letter}
+                      </span>
+                    ))}
+                  </span>
+                </h1>
+                {user.email_verified_at === null ? null : (
+                  <Tooltip content={t('verification.verified')}>
+                    <button
+                      type="button"
+                      aria-label={t('verification.verified')}
+                      className="hit-area grid size-8 shrink-0 cursor-help place-items-center rounded-full text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40"
+                    >
+                      <BadgeCheck size={22} strokeWidth={2.2} aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                )}
+              </div>
+              <p className="mono mt-0.5 truncate text-sm text-fg-3">@{user.username}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-fg-2">
+                  <Mail
+                    size={15}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                    className="shrink-0 text-fg-3"
+                  />
+                  <span className="truncate">{elideEmail(user.email)}</span>
+                </span>
+                <VerificationBadge user={user} />
+              </div>
+              <p className="mono mt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-3">
+                {t('memberSince', { date: memberSince(user.created_at) })}
+              </p>
             </div>
-            <p className="mono mt-0.5 truncate text-sm text-fg-3">@{user.username}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-fg-2">
-                <Mail size={15} strokeWidth={2} aria-hidden="true" className="shrink-0 text-fg-3" />
-                <span className="truncate">{elideEmail(user.email)}</span>
-              </span>
-              <VerificationBadge user={user} />
-            </div>
-            <p className="mono mt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-3">
-              {t('memberSince', { date: memberSince(user.created_at) })}
-            </p>
           </div>
-          <div className="flex w-full flex-col gap-2 @3xl/app:w-auto @3xl/app:min-w-52">
-            <Button variant="secondary" onClick={() => setEditOpen(true)}>
-              <Pencil size={16} strokeWidth={2} />
+          <div className="grid grid-cols-2 gap-2 border-t border-border pt-4 @3xl/app:w-44 @3xl/app:shrink-0 @3xl/app:grid-cols-1 @3xl/app:border-l @3xl/app:border-t-0 @3xl/app:pl-5 @3xl/app:pt-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 justify-start gap-2 rounded-lg px-2 text-fg"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil size={16} strokeWidth={2} className="shrink-0" />
               {t('actions.edit')}
             </Button>
-            <Button asChild variant="secondary">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-10 justify-start gap-2 rounded-lg px-2 text-fg"
+            >
               <Link to="/security">
-                <Lock size={16} strokeWidth={2} />
+                <AccountIcon size={16} strokeWidth={2} className="shrink-0" />
                 {t('actions.security')}
               </Link>
             </Button>
             <Button
               variant="ghost"
-              className="text-error hover:bg-error-bg"
+              size="sm"
+              className="col-span-2 h-10 justify-start gap-2 rounded-lg px-2 text-error hover:text-error @3xl/app:col-span-1"
               loading={logout.isPending}
               onClick={() => logout.mutate()}
             >
-              <LogOut size={16} strokeWidth={2} />
+              <LogOutIcon size={16} strokeWidth={2} className="shrink-0" />
               {t('actions.logout')}
             </Button>
           </div>
@@ -145,7 +181,7 @@ function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
           type="button"
           onClick={() => resend.mutate()}
           disabled={resend.isPending}
-          className="text-xs font-semibold text-accent hover:underline disabled:opacity-60"
+          className="hit-area rounded-sm text-xs font-semibold text-accent hover:underline disabled:opacity-60"
         >
           {resend.isPending ? t('verification.resending') : t('verification.resend')}
         </button>
@@ -158,24 +194,28 @@ function StatCards() {
   const { t } = useTranslation('profile');
   const stats = useQuery(accountStatsQueryOptions());
   const items: ReadonlyArray<{
+    id: string;
     label: string;
     value: number | undefined;
     icon: ReactNode;
     chipClass: string;
   }> = [
     {
+      id: 'games',
       label: t('activity.games'),
       value: stats.data?.games_count,
       icon: <Dices size={17} strokeWidth={2} />,
       chipClass: 'bg-primary-100 text-primary-700',
     },
     {
+      id: 'conversations',
       label: t('activity.conversations'),
       value: stats.data?.conversations_count,
       icon: <MessagesSquare size={17} strokeWidth={2} />,
       chipClass: 'bg-accent-100 text-accent',
     },
     {
+      id: 'manuals',
       label: t('activity.manuals'),
       value: stats.data?.manuals_count,
       icon: <ScrollText size={17} strokeWidth={2} />,
@@ -184,28 +224,78 @@ function StatCards() {
   ];
 
   return (
-    <div className="grid gap-3 @md/app:grid-cols-3">
+    <div className="grid gap-3 @md/app:grid-cols-3" aria-busy={stats.isPending}>
       {items.map((item) => (
-        <Card key={item.label} className="flex items-center gap-3 p-4 @md/app:block @md/app:p-5">
+        <Card key={item.id} className="flex items-center gap-4 p-4 @md/app:block @md/app:p-5">
           <span
             aria-hidden="true"
             className={`grid size-9 shrink-0 place-items-center rounded-xl @md/app:mb-3 ${item.chipClass}`}
           >
             {item.icon}
           </span>
-          {stats.isPending ? (
-            <span
-              className="block h-8 w-10 animate-pulse rounded-lg bg-surface-2"
-              aria-hidden="true"
-            />
-          ) : (
-            <span className="block font-display text-3xl font-extrabold tracking-tight text-fg">
-              {item.value ?? '—'}
+          <div className="min-w-0">
+            <div className="flex h-9 items-center font-display text-3xl font-extrabold leading-9 tabular-nums tracking-tight text-fg">
+              {!stats.isPending && item.value === undefined ? (
+                <span aria-label={t('activity.unavailable')}>–</span>
+              ) : (
+                <ActivityCount value={item.value} />
+              )}
+            </div>
+            <span className="block text-sm text-fg-3 @md/app:mt-0.5 @md/app:text-xs">
+              {item.label}
             </span>
-          )}
-          <span className="block text-sm text-fg-3 @md/app:mt-0.5 @md/app:text-xs">{item.label}</span>
+          </div>
         </Card>
       ))}
     </div>
+  );
+}
+
+function ActivityCount({ value }: Readonly<{ value: number | undefined }>) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const visible = useInView(ref, { once: true, amount: 'all' });
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const [started, setStarted] = useState(reducedMotion);
+  const loaded = value !== undefined;
+  const revealed = loaded && started;
+
+  // Una vez visible el total, cambiar la preferencia no debe devolverlo a cero.
+  if (reducedMotion && !started) setStarted(true);
+
+  useEffect(() => {
+    if (!loaded || !visible || started) return;
+    // Mantén el placeholder mientras termina de entrar el perfil.
+    const timer = setTimeout(() => setStarted(true), 350);
+    return () => clearTimeout(timer);
+  }, [loaded, started, visible]);
+
+  return (
+    <span className="relative inline-flex h-9 items-center">
+      <span className="sr-only">{value}</span>
+      <span
+        ref={ref}
+        aria-hidden="true"
+        className={cn(
+          'inline-flex h-9 items-center transition-opacity duration-200 motion-reduce:transition-none',
+          revealed ? 'opacity-100' : 'opacity-0',
+        )}
+      >
+        <NumberFlow
+          value={revealed ? value : 0}
+          animated={!reducedMotion}
+          plugins={[continuous]}
+          format={{ useGrouping: false }}
+          transformTiming={{ duration: 1100, easing: 'ease-out' }}
+          className="leading-none [--number-flow-mask-height:0.1em]"
+        />
+      </span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'pointer-events-none absolute left-0 h-7 w-10 rounded-lg bg-surface-2 transition-opacity duration-200 motion-reduce:transition-none',
+          revealed ? 'opacity-0' : 'opacity-100',
+        )}
+      />
+    </span>
   );
 }

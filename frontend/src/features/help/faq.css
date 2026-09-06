@@ -1,0 +1,76 @@
+.faq-trigger [data-faq-part] {
+  transform-origin: 12px 12px;
+}
+
+.faq-trigger [data-faq-part='spark'] {
+  transform-origin: 20px 4px;
+}
+
+.faq-trigger [data-faq-part='dot'] {
+  transform-origin: 4px 20px;
+}
+
+.faq-trigger [data-faq-part='shackle'] {
+  transform-origin: 12px 11px;
+}
+
+.faq-trigger [data-faq-part='keyhole'] {
+  transform-origin: 12px 16.5px;
+}
+
+.faq-trigger [data-faq-part='meridian'] {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.5px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .faq-trigger [data-faq-part] {
+    transition: transform var(--m-dur) var(--m-easing);
+  }
+
+  .faq-trigger {
+    &[data-state='open'] {
+      [data-faq-part='star'] {
+        transform: rotate(12deg) scale(0.86);
+      }
+      [data-faq-part='spark'] {
+        transform: rotate(90deg) scale(1.35);
+      }
+      [data-faq-part='dot'] {
+        transform: scale(0.7);
+      }
+      [data-faq-part='shackle'] {
+        transform: scaleY(0.8);
+      }
+      [data-faq-part='keyhole'] {
+        transform: rotate(90deg);
+      }
+      [data-faq-part='meridian'] {
+        transform: scaleX(0.3);
+      }
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover {
+        [data-faq-part='star'] {
+          transform: rotate(12deg) scale(0.86);
+        }
+        [data-faq-part='spark'] {
+          transform: rotate(90deg) scale(1.35);
+        }
+        [data-faq-part='dot'] {
+          transform: scale(0.7);
+        }
+        [data-faq-part='shackle'] {
+          transform: scaleY(0.8);
+        }
+        [data-faq-part='keyhole'] {
+          transform: rotate(90deg);
+        }
+        [data-faq-part='meridian'] {
+          transform: scaleX(0.3);
+        }
+      }
+    }
+  }
+}

@@ -5,7 +5,7 @@
       "question": "What languages does it support?"
     },
     "photos": {
-      "answer": "They're <strong>private by default</strong>: we only use them to extract the text. Sharing a rulebook with your game's community is optional and reversible. Read more in the <link>Privacy Policy</link>.",
+      "answer": "They're <strong>private by default</strong>: we only use them to extract the text. Sharing a rulebook with your game's community is optional and reversible. Read more in the <privacyLink>Privacy Policy</privacyLink>.",
       "question": "What happens to my photos?"
     },
     "reliable": {

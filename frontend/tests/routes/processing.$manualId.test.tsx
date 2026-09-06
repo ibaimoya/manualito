@@ -1,12 +1,15 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { Route as ProcessingRoute } from '@/routes/_app.processing.$manualId';
 import { server } from '@tests/_helpers/server';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.useRealTimers();
+});
 afterAll(() => server.close());
 
 function stubProcessing(status: string, completed = 0, pageCount = 2) {
@@ -40,6 +43,30 @@ function renderProcessing(manualId: string, name?: string) {
 }
 
 describe('/processing/$manualId', () => {
+  it.each(['indexing', 'failed'])(
+    'no sale de un manual %s aunque su detalle esté en caché',
+    async (status) => {
+      stubProcessing(status);
+      const { qc, router } = renderProcessing('cached-manual', 'Catan');
+      await waitFor(() => {
+        expect(qc.getQueryState(['manuals', 'processing', 'cached-manual'])?.status).toBe(
+          'success',
+        );
+      });
+      vi.useFakeTimers();
+      act(() => {
+        qc.setQueryData(['manuals', 'detail', 'cached-manual'], {
+          id: 'cached-manual',
+          game_id: 'test-game-001',
+        });
+      });
+      // Supera el tiempo de salida de 600 ms para comprobar que no se programó.
+      await act(() => vi.advanceTimersByTimeAsync(700));
+      expect(router.state.location.pathname).toBe('/processing/cached-manual');
+      expect(screen.queryByText('GameHubScreen')).not.toBeInTheDocument();
+    },
+  );
+
   it('muestra el nombre del manual y el progreso de páginas mientras indexa', async () => {
     stubProcessing('indexing', 1, 2);
     renderProcessing('m1', 'Catan');

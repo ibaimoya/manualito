@@ -13,16 +13,15 @@ import {
 
 const THUMB_LINES = [88, 64, 80, 52] as const;
 
-function PaperThumb({ failed, active }: Readonly<{ failed: boolean; active: boolean }>) {
+function PaperThumb({ failed }: Readonly<{ failed: boolean }>) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        'relative hidden h-[50px] w-[38px] shrink-0 flex-col justify-center gap-1 overflow-hidden rounded-md border border-border p-2 transition-transform @4xl/app:flex',
+        'relative hidden h-[50px] w-[38px] shrink-0 flex-col justify-center gap-1 overflow-hidden rounded-md border border-border p-2 @4xl/app:flex',
         failed
           ? 'bg-[repeating-linear-gradient(135deg,var(--m-surface)_0_6px,var(--m-surface-2)_6px_12px)]'
           : 'bg-gradient-to-b from-surface to-surface-2',
-        !active && 'group-hover:-rotate-2',
       )}
     >
       {failed ? (
@@ -45,9 +44,9 @@ function PaperThumb({ failed, active }: Readonly<{ failed: boolean; active: bool
 function pageButtonSurface(active: boolean, isDup: boolean): string {
   if (active) return 'border-primary bg-primary-50';
   if (isDup) {
-    return 'border-dashed border-border-strong bg-card @4xl/app:shadow-xs @4xl/app:hover:-translate-y-px @4xl/app:hover:shadow-sm';
+    return 'border-dashed border-border-strong bg-card hover:bg-surface-2';
   }
-  return 'border-border bg-card @4xl/app:shadow-xs @4xl/app:hover:-translate-y-px @4xl/app:hover:border-border-strong @4xl/app:hover:shadow-sm';
+  return 'border-border bg-card hover:border-border-strong hover:bg-surface-2';
 }
 
 function PageButton({
@@ -73,14 +72,14 @@ function PageButton({
       className={cn(
         // border-2 constante: el grosor no cambia entre estados, así la tarjeta
         // no crece al activarse. La activa se distingue por color y fondo.
-        'group relative flex shrink-0 border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+        'relative flex shrink-0 border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
         // móvil: chip vertical · escritorio: fila completa
         'h-[58px] w-[46px] flex-col items-center justify-center gap-1 rounded-xl',
         '@4xl/app:h-auto @4xl/app:w-full @4xl/app:flex-row @4xl/app:items-center @4xl/app:justify-start @4xl/app:gap-3 @4xl/app:rounded-2xl @4xl/app:p-2',
         pageButtonSurface(active, isDup),
       )}
     >
-      <PaperThumb failed={st.key === 'failed'} active={active} />
+      <PaperThumb failed={st.key === 'failed'} />
 
       {/* número compacto (móvil) */}
       <span

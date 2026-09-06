@@ -12,6 +12,7 @@ import {
   STATUS_FG_CLASS,
 } from '@/features/manual/pageStatus';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
 /** Cota del backend ("MANUAL_PAGE_TEXT_MAX_LENGTH"). */
 const PAGE_TEXT_MAX = 20_000;
@@ -22,29 +23,48 @@ const BOX_CLASS = 'h-[clamp(360px,60vh,640px)]';
 const TEXT_BOX = cn('overflow-hidden rounded-2xl border', BOX_CLASS);
 /** Misma tipografía al leer y al editar, para que entrar en edición no la cambie. */
 const TEXT_BODY = 'font-serif text-[15.5px] leading-[1.72] text-fg';
+const CONFIDENCE_TRANSITION =
+  'duration-[240ms] ease-[var(--m-easing)] motion-reduce:transition-none';
+
+const COUNT_FORMATTERS = {
+  en: new Intl.NumberFormat('en-US'),
+  es: new Intl.NumberFormat('es-ES'),
+};
 
 function formatCount(value: number): string {
-  return new Intl.NumberFormat(i18n.language.startsWith('en') ? 'en-US' : 'es-ES').format(value);
+  return COUNT_FORMATTERS[i18n.language.startsWith('en') ? 'en' : 'es'].format(value);
 }
 
 function pageText(page: ManualDetailPage): string {
   return page.ocr_lines.map((line) => line.text).join('\n');
 }
 
-function pageParagraphs(page: ManualDetailPage): string[] {
-  return page.ocr_lines
-    .flatMap((line) => line.text.split('\n'))
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-}
-
-/** Líneas OCR con su confianza, para la vista de confianza por línea. */
+/** El mismo texto y sus párrafos se conservan al mostrar la confianza OCR. */
 function pageLines(
   page: ManualDetailPage,
-): ReadonlyArray<{ text: string; confidence: number | null }> {
+): ReadonlyArray<{ paragraphs: string[]; confidence: number | null }> {
   return page.ocr_lines
-    .map((line) => ({ text: line.text.trim(), confidence: line.confidence }))
-    .filter((line) => line.text.length > 0);
+    .map((line) => ({
+      paragraphs: line.text
+        .split('\n')
+        .map((part) => part.trim())
+        .filter(Boolean),
+      confidence: line.confidence,
+    }))
+    .filter((line) => line.paragraphs.length > 0);
+}
+
+function revealActiveMatch(scroller: HTMLDivElement | null, reducedMotion: boolean): void {
+  const mark = scroller?.querySelector<HTMLElement>('mark[data-active-match]');
+  if (!scroller || !mark) return;
+  const box = scroller.getBoundingClientRect();
+  const hit = mark.getBoundingClientRect();
+  if (hit.top >= box.top && hit.bottom <= box.bottom) return;
+  const delta = hit.top - box.top - (scroller.clientHeight - hit.height) / 2;
+  scroller.scrollTo({
+    top: scroller.scrollTop + delta,
+    behavior: reducedMotion ? 'auto' : 'smooth',
+  });
 }
 
 /** Resalta "needle" en "text"; "counter" lleva el índice global para marcar la activa. */
@@ -275,24 +295,16 @@ export function PageTextCard({
   onReprocessPage: () => void;
 }>) {
   const { t } = useTranslation('manual');
-  const paragraphs = useMemo(() => pageParagraphs(page), [page]);
   const lines = useMemo(() => pageLines(page), [page]);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const st = pageStatus(page);
   const scrollRef = useRef<HTMLDivElement>(null);
   const useConfidence = showConfidence && lines.some((line) => line.confidence != null);
 
   // Trae la coincidencia activa a la vista dentro del cajón (solo si está fuera).
   useEffect(() => {
-    const scroller = scrollRef.current;
-    const mark = scroller?.querySelector<HTMLElement>('mark[data-active-match]');
-    if (!scroller || !mark) return;
-    const box = scroller.getBoundingClientRect();
-    const hit = mark.getBoundingClientRect();
-    if (hit.top >= box.top && hit.bottom <= box.bottom) return;
-    const delta = hit.top - box.top - (scroller.clientHeight - hit.height) / 2;
-    const reduced = globalThis.window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    scroller.scrollTo({ top: scroller.scrollTop + delta, behavior: reduced ? 'auto' : 'smooth' });
-  }, [activeMatch, needle, page.page_number, useConfidence]);
+    revealActiveMatch(scrollRef.current, reducedMotion);
+  }, [activeMatch, needle, page.page_number, useConfidence, reducedMotion]);
 
   if (editing) {
     return <EditBox page={page} saving={saving} onCancel={onCancelEdit} onSave={onSave} />;
@@ -303,7 +315,7 @@ export function PageTextCard({
   }
 
   const counter = { value: 0 };
-  const empty = paragraphs.length === 0;
+  const empty = lines.length === 0;
 
   // Contenido del cajón en una variable: evita anidar ternarios en el JSX y
   // mantiene el resaltado inline (el "counter" se comparte en un solo render).
@@ -314,41 +326,56 @@ export function PageTextCard({
         {t('text.empty')}
       </p>
     );
-  } else if (useConfidence) {
+  } else {
     body = (
-      <div ref={scrollRef} className="flex h-full flex-col gap-2 overflow-y-auto p-3.5">
+      <div
+        ref={scrollRef}
+        className={cn(
+          'flex h-full flex-col overflow-y-auto px-3.5 transition-[padding-block,gap] [scrollbar-gutter:stable]',
+          CONFIDENCE_TRANSITION,
+          useConfidence ? 'gap-2 py-3.5' : 'gap-3.5 py-6',
+        )}
+        onTransitionEnd={(event) => {
+          if (event.target === event.currentTarget)
+            revealActiveMatch(event.currentTarget, reducedMotion);
+        }}
+      >
         {lines.map((line, index) => {
           const meta = line.confidence == null ? null : confidenceTone(line.confidence);
           return (
             <div
-              key={`${index}-${line.text.slice(0, 24)}`}
+              key={`${index}-${line.paragraphs[0]!.slice(0, 24)}`}
               className={cn(
-                'flex items-start gap-3 rounded-lg border-l-[3px] px-3 py-2.5',
-                meta ? CONFIDENCE_ROW_CLASS[meta.tone] : 'border-l-border-strong bg-surface-2',
+                'flex shrink-0 items-start rounded-lg border-l-[3px] px-3 transition-[background-color,border-color,padding-block]',
+                CONFIDENCE_TRANSITION,
+                useConfidence
+                  ? cn(
+                      'py-2.5',
+                      meta
+                        ? CONFIDENCE_ROW_CLASS[meta.tone]
+                        : 'border-l-border-strong bg-surface-2',
+                    )
+                  : 'border-l-transparent py-0',
               )}
             >
-              <p className="min-w-0 flex-1 font-serif text-[15px] leading-[1.6] text-fg [overflow-wrap:anywhere]">
-                {highlight(line.text, needle, counter, activeMatch)}
-              </p>
-              <ConfidenceChip confidence={line.confidence} />
+              <div className={cn('min-w-0 flex-1 space-y-3.5 [overflow-wrap:anywhere]', TEXT_BODY)}>
+                {line.paragraphs.map((paragraph, paragraphIndex) => (
+                  <p key={paragraphIndex}>{highlight(paragraph, needle, counter, activeMatch)}</p>
+                ))}
+              </div>
+              <div
+                aria-hidden={!useConfidence}
+                className={cn(
+                  'shrink-0 self-center overflow-hidden transition-[width,margin-inline-start,opacity]',
+                  CONFIDENCE_TRANSITION,
+                  useConfidence ? 'ms-3 w-[4.25rem] opacity-100' : 'ms-0 w-0 opacity-0',
+                )}
+              >
+                <ConfidenceChip confidence={line.confidence} />
+              </div>
             </div>
           );
         })}
-      </div>
-    );
-  } else {
-    body = (
-      <div ref={scrollRef} className="h-full overflow-y-auto px-7 py-6">
-        <div className="flex flex-col gap-3.5">
-          {paragraphs.map((paragraph, index) => (
-            <p
-              key={`${index}-${paragraph.slice(0, 24)}`}
-              className={cn(TEXT_BODY, '[overflow-wrap:anywhere]')}
-            >
-              {highlight(paragraph, needle, counter, activeMatch)}
-            </p>
-          ))}
-        </div>
       </div>
     );
   }
@@ -396,15 +423,29 @@ export function PageTextCard({
         </div>
       ) : null}
 
-      {useConfidence ? <ConfidenceLegend /> : null}
-
-      {/* Borde redondeado fuera (overflow-hidden) + scroll dentro: barra integrada. */}
-      <article
-        aria-label={t('page.articleLabel', { pageCount, pageNumber: page.page_number })}
-        className={cn(TEXT_BOX, 'border-border bg-surface')}
-      >
-        {body}
-      </article>
+      <div>
+        <div
+          aria-hidden={!useConfidence}
+          className={cn(
+            'grid transition-[grid-template-rows,opacity]',
+            CONFIDENCE_TRANSITION,
+            useConfidence ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+          )}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="pb-3">
+              <ConfidenceLegend />
+            </div>
+          </div>
+        </div>
+        {/* Borde redondeado fuera (overflow-hidden) + scroll dentro: barra integrada. */}
+        <article
+          aria-label={t('page.articleLabel', { pageCount, pageNumber: page.page_number })}
+          className={cn(TEXT_BOX, 'border-border bg-surface')}
+        >
+          {body}
+        </article>
+      </div>
     </div>
   );
 }

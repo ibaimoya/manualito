@@ -116,7 +116,7 @@ describe('/history', () => {
     const search = await screen.findByRole('combobox', { name: /Saltar a un juego/i });
     await user.type(search, 'wing');
     const results = await screen.findByLabelText('Tus juegos');
-    await user.click(within(results).getByRole('button', { name: /Wingspan/i }));
+    await user.click(within(results).getByRole('option', { name: /Wingspan/i }));
     expect(await screen.findByText('GameHubScreen')).toBeInTheDocument();
   });
 
@@ -169,9 +169,20 @@ describe('/history', () => {
     renderHistory();
     const user = userEvent.setup();
     await goToManuals(user);
-    await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
+    const trigger = await screen.findByRole('button', { name: /Borrar Catan/i });
+    await user.click(trigger);
     expect(await screen.findByText(/¿Borrar este manual de Catan\?/)).toBeInTheDocument();
+    const cancel = screen.getByRole('button', { name: /Cancelar/i });
+    expect(cancel).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: /^Borrar$/ })).toHaveFocus();
+    await user.tab();
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await user.click(trigger);
     await user.click(screen.getByRole('button', { name: /Cancelar/i }));
+    await waitFor(() => expect(trigger).toHaveFocus());
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
 

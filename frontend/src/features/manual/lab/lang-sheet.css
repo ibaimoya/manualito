@@ -95,6 +95,6 @@ html.theme-dark {
 
 /* El boton flotante de los devtools de TanStack Query no pinta nada en el laboratorio
    (Ruben lo confundio con un control del bolsillo). */
-.tsqd-parent-container {
+body:has([data-lab-variant]) .tsqd-parent-container {
   display: none !important;
 }

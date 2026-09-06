@@ -14,7 +14,8 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { confidenceTone, pageStatus } from '@/features/manual/pageStatus';
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
@@ -144,7 +145,12 @@ function DockTool({
   );
 }
 
-function highlightSearch(text: string, needle: string, activeLine: boolean): ReactNode {
+function highlightSearch(
+  text: string,
+  needle: string,
+  activeIndex: number | null,
+  counter: { value: number },
+): ReactNode {
   if (!needle) return text;
   const lower = text.toLowerCase();
   const parts: ReactNode[] = [];
@@ -155,9 +161,10 @@ function highlightSearch(text: string, needle: string, activeLine: boolean): Rea
     parts.push(
       <mark
         key={`${at}-m`}
+        data-search-match={counter.value}
         className={cn(
           'rounded-[0.3em] px-0.5',
-          activeLine
+          counter.value === activeIndex
             ? 'bg-accent font-semibold text-fg-inv'
             : 'bg-accent-100 text-accent ring-1 ring-accent-300/60',
         )}
@@ -165,6 +172,7 @@ function highlightSearch(text: string, needle: string, activeLine: boolean): Rea
         {text.slice(at, at + needle.length)}
       </mark>,
     );
+    counter.value += 1;
     from = at + needle.length;
     at = lower.indexOf(needle, from);
   }
@@ -183,7 +191,7 @@ export function VariantF({
   showConfidence: boolean;
   seededQuery: string;
 }>) {
-  const reduce = useReducedMotion();
+  const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
   const manual = labManual(escenario);
   const [overrides, setOverrides] = useState<ReadonlyMap<number, string>>(new Map());
   const pages = useMemo(
@@ -250,11 +258,9 @@ export function VariantF({
 
   useEffect(() => {
     if (initialPage <= 1) return;
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        blockRefs.current
-          .get(initialPage)
-          ?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    let id = requestAnimationFrame(() => {
+      id = requestAnimationFrame(() => {
+        blockRefs.current.get(initialPage)?.scrollIntoView({ behavior: 'auto', block: 'start' });
       });
     });
     return () => cancelAnimationFrame(id);
@@ -305,14 +311,11 @@ export function VariantF({
   }, [dock]);
 
   function toggleMarks(): void {
-    setMarks((value) => {
-      const next = !value;
-      if (next) {
-        setDrawCascade(!everMarkedRef.current);
-        everMarkedRef.current = true;
-      }
-      return next;
-    });
+    if (!marks) {
+      setDrawCascade(!everMarkedRef.current);
+      everMarkedRef.current = true;
+    }
+    setMarks(!marks);
     setActiveDuda(null);
   }
 
@@ -326,8 +329,9 @@ export function VariantF({
   function jumpToMatch(delta: 1 | -1): void {
     const match = search.step(delta);
     if (match) {
-      lineRefs.current
-        .get(`${match.pageNumber}:${match.indexInPage}`)
+      blockRefs.current
+        .get(match.pageNumber)
+        ?.querySelector<HTMLElement>(`[data-search-match="${match.indexInPage}"]`)
         ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
     }
   }
@@ -370,7 +374,11 @@ export function VariantF({
     stopEditing();
   }
 
-  function effectiveStatus(item: (typeof pages)[number]): { key: string; tone: string; label?: string } {
+  function effectiveStatus(item: (typeof pages)[number]): {
+    key: string;
+    tone: string;
+    label?: string;
+  } {
     if (overrides.has(item.page_number)) return { key: 'edited', tone: 'accent' };
     return pageStatus(item);
   }
@@ -656,10 +664,7 @@ export function VariantF({
                 {item.page_number}
               </span>
               <span
-                className={cn(
-                  'min-w-0 truncate text-[11px]',
-                  active ? 'text-fg-2' : 'text-fg-3',
-                )}
+                className={cn('min-w-0 truncate text-[11px]', active ? 'text-fg-2' : 'text-fg-3')}
               >
                 {pageTitle(item)}
               </span>
@@ -673,8 +678,7 @@ export function VariantF({
           const itemSt = effectiveStatus(item);
           const scanOpen = openScans.has(item.page_number);
           const isEditing = editingPage === item.page_number;
-          const canEdit =
-            !busy && itemSt.key !== 'failed' && itemSt.key !== 'processing';
+          const canEdit = !busy && itemSt.key !== 'failed' && itemSt.key !== 'processing';
           return (
             <section
               key={item.page_number}
@@ -773,9 +777,7 @@ export function VariantF({
                       style={{ background: 'var(--lab-paper)' }}
                     >
                       <Meeple className="lang-bob size-9 shrink-0 text-primary" />
-                      <p className="text-[13.5px] font-medium text-fg-2">
-                        Aún leyendo esta hoja…
-                      </p>
+                      <p className="text-[13.5px] font-medium text-fg-2">Aún leyendo esta hoja…</p>
                     </div>
                   ) : null}
 
@@ -826,17 +828,13 @@ export function VariantF({
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                dirty ? setConfirmDiscard(true) : stopEditing()
-                              }
+                              onClick={() => (dirty ? setConfirmDiscard(true) : stopEditing())}
                               className="inline-flex h-8 items-center rounded-lg border border-border-strong px-3 text-[13px] font-medium text-fg"
                             >
                               Cancelar
                             </button>
                             {dirty ? (
-                              <span className="text-[12px] text-fg-3">
-                                Cambios sin guardar
-                              </span>
+                              <span className="text-[12px] text-fg-3">Cambios sin guardar</span>
                             ) : null}
                           </>
                         )}
@@ -847,6 +845,11 @@ export function VariantF({
                   {itemSt.key !== 'failed' && itemSt.key !== 'processing' && !isEditing ? (
                     <div className="space-y-3.5">
                       {(() => {
+                        const counter = { value: 0 };
+                        const activeIndex =
+                          search.active?.pageNumber === item.page_number
+                            ? search.active.indexInPage
+                            : null;
                         const tones = item.ocr_lines.map((line) => {
                           if (!marks || line.confidence == null) return null;
                           const tone = confidenceTone(line.confidence).tone;
@@ -856,9 +859,7 @@ export function VariantF({
                           const lineTone = tones[index] ?? null;
                           const problem = lineTone !== null;
                           const pct =
-                            line.confidence == null
-                              ? null
-                              : Math.round(line.confidence * 100);
+                            line.confidence == null ? null : Math.round(line.confidence * 100);
                           const lineKey = `${item.page_number}:${index}`;
                           const prevSame = index > 0 && tones[index - 1] === lineTone;
                           const nextSame =
@@ -879,9 +880,7 @@ export function VariantF({
                                 if (node) lineRefs.current.set(lineKey, node);
                                 else lineRefs.current.delete(lineKey);
                               }}
-                              style={
-                                problem && prevSame ? { marginTop: '0.35rem' } : undefined
-                              }
+                              style={problem && prevSame ? { marginTop: '0.35rem' } : undefined}
                             >
                               <p className="lang-reading text-fg" lang="es">
                                 {problem ? (
@@ -893,24 +892,25 @@ export function VariantF({
                                             animationDelay: `${Math.min(index * 40, 300)}ms`,
                                           }
                                         : undefined),
-                                      ...(groupRadius
-                                        ? { borderRadius: groupRadius }
-                                        : undefined),
+                                      ...(groupRadius ? { borderRadius: groupRadius } : undefined),
                                     }}
                                     className={cn(
                                       'lang-hl',
                                       drawCascade && 'lang-hl-draw',
-                                      lineTone === 'error'
-                                        ? 'lang-hl-baja'
-                                        : 'lang-hl-media',
+                                      lineTone === 'error' ? 'lang-hl-baja' : 'lang-hl-media',
                                       activeDuda === lineKey &&
                                         'outline outline-2 outline-offset-2 outline-primary/60',
                                     )}
                                   >
-                                    {highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)}
+                                    {highlightSearch(
+                                      line.text,
+                                      search.needle,
+                                      activeIndex,
+                                      counter,
+                                    )}
                                   </span>
                                 ) : (
-                                  highlightSearch(line.text, search.needle, search.active !== null && search.active.pageNumber === item.page_number && search.active.indexInPage === index)
+                                  highlightSearch(line.text, search.needle, activeIndex, counter)
                                 )}
                               </p>
                             </div>
@@ -935,7 +935,8 @@ export function VariantF({
                         <div
                           className="relative h-44 overflow-hidden rounded-sm border border-border-strong shadow-sm lg:h-auto lg:aspect-[3/4]"
                           style={{
-                            background: 'linear-gradient(160deg, #f7efdf 0%, #efe3ca 70%, #e9dbc0 100%)',
+                            background:
+                              'linear-gradient(160deg, #f7efdf 0%, #efe3ca 70%, #e9dbc0 100%)',
                             boxShadow:
                               'inset 0 0 28px rgba(60, 35, 10, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5), var(--m-shadow-sm)',
                             rotate: '-0.5deg',
@@ -1260,8 +1261,8 @@ export function VariantF({
                 ¿Eliminar este manual?
               </p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
-                Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción
-                no se puede deshacer.
+                Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción no se
+                puede deshacer.
               </p>
               <div className="mt-4 flex justify-end gap-2.5">
                 <button

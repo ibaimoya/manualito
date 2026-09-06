@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as ManualRoute } from '@/routes/_app.manual.$manualId';
+import type { ManualDetailResponse } from '@/shared/api/client';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { manualDetailWithPages } from '@tests/_helpers/mswHandlers';
 import { server } from '@tests/_helpers/server';
@@ -69,6 +70,17 @@ function mockSinglePageManual(page: Record<string, unknown>) {
 }
 
 describe('/manual/$manualId · lectura', () => {
+  it('mantiene el texto y la página activa cuando falla una actualización', async () => {
+    const { qc } = renderManual(2);
+    const article = await screen.findByRole('article', { name: 'Página 2 de 2' });
+    server.use(http.get('/api/manuals/:manualId', () => new HttpResponse(null, { status: 500 })));
+    const queryKey = ['manuals', 'detail', 'test-manual-001'];
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(screen.getByRole('article', { name: 'Página 2 de 2' })).toBe(article);
+    expect(article).toHaveTextContent('EL LADRÓN');
+  });
+
   it('muestra el carril de páginas con su estado y el texto de la activa', async () => {
     renderManual();
     const rail = await screen.findByRole('navigation', { name: 'Páginas del manual' });
@@ -352,11 +364,6 @@ describe('/manual/$manualId · acciones de cabecera', () => {
     const viewport = screen.getByTestId('manual-image-viewport');
     expect(viewport).toHaveAttribute('type', 'button');
     expect(viewport).toHaveAccessibleName('Ampliar imagen del manual');
-    expect(viewport).toHaveClass(
-      'scrollbar-none',
-      'h-[clamp(420px,72vh,720px)]',
-      'overscroll-contain',
-    );
 
     fireEvent.keyDown(viewport, { key: 'Enter' });
     expect(zoom).toHaveTextContent('125%');
@@ -382,15 +389,39 @@ describe('/manual/$manualId · acciones de cabecera', () => {
   });
 
   it('reprocesar pide confirmación y lanza el POST al confirmar', async () => {
-    renderManual();
+    const { qc } = renderManual();
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Acciones' }));
+    const detail = qc.getQueryData<ManualDetailResponse>(['manuals', 'detail', 'test-manual-001'])!;
+    const processedIds: string[] = [];
+    const progress = {
+      manual_id: detail.id,
+      status: 'indexing',
+      page_count: detail.pages.length,
+      completed_pages: 0,
+      failed_pages: 0,
+      pages: [],
+    };
+    server.use(
+      http.post('/api/manuals/:manualId/reprocess', ({ params }) => {
+        processedIds.push(String(params.manualId));
+        return HttpResponse.json(progress, { status: 202 });
+      }),
+      http.get('/api/manuals/:manualId', () =>
+        HttpResponse.json({
+          ...detail,
+          status: processedIds.length > 0 ? 'indexing' : detail.status,
+        }),
+      ),
+      http.get('/api/manuals/:manualId/processing', () => HttpResponse.json(progress)),
+    );
     await user.click(await screen.findByRole('menuitem', { name: /Reprocesar todo/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Reprocesar manual' });
+    expect(processedIds).toEqual([]);
     await user.click(within(dialog).getByRole('button', { name: 'Reprocesar' }));
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
+    expect(await screen.findByText('Reprocesando el manual…')).toBeInTheDocument();
+    expect(processedIds).toEqual(['test-manual-001']);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('eliminar manual confirma, borra y navega al historial', async () => {

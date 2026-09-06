@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
+  useCallback,
   useEffect,
   useId,
-  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -10,15 +10,14 @@ import {
 } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Camera,
   ChevronDown,
   ChevronUp,
   FileText,
   Image as ImageIcon,
   Sparkles,
-  Trash2,
   Users,
 } from 'lucide-react';
+import { TrashIcon, CameraIcon } from '@/shared/components/action-icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -30,6 +29,7 @@ import { api, isAbortApiError, type GameSearchItem } from '@/shared/api/client';
 import type { GameDetail } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 export const Route = createFileRoute('/_app/capture/source')({
   // "gameId" opcional: si entras desde el hub de un juego, llega preseleccionado.
@@ -50,6 +50,7 @@ const MAX_PAGES = 30;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type Mode = 'images' | 'pdf';
+type UploadPage = Readonly<{ id: string; file: File }>;
 type CreateManualVariables = Readonly<{
   game: GameSearchItem;
   pages: File[];
@@ -57,10 +58,10 @@ type CreateManualVariables = Readonly<{
   visibility: 'shared' | 'private';
 }>;
 
-function deriveUploadMode(pages: readonly File[]): Mode | null {
+function deriveUploadMode(pages: readonly UploadPage[]): Mode | null {
   const firstPage = pages[0];
   if (!firstPage) return null;
-  return firstPage.type === 'application/pdf' ? 'pdf' : 'images';
+  return firstPage.file.type === 'application/pdf' ? 'pdf' : 'images';
 }
 
 /** Reduce el detalle del hub a la forma que consume el paso 1. */
@@ -88,7 +89,7 @@ function NewManualScreen() {
   // "undefined" ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
   const [chosenGame, setChosenGame] = useState<GameSearchItem | null | undefined>(undefined);
   const game = chosenGame === undefined ? presetGame : chosenGame;
-  const [pages, setPages] = useState<File[]>([]);
+  const [pages, setPages] = useState<UploadPage[]>([]);
   // Un manual usa imágenes XOR un PDF, nunca ambos.
   const mode = deriveUploadMode(pages);
   // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
@@ -130,9 +131,9 @@ function NewManualScreen() {
     onError: (err) => {
       if (isAbortApiError(err)) return;
       toastApiError(err, 'mutation-error', {
-        title: t('feedback.unexpected.title'),
+        title: <LiveTrans ns="capture" i18nKey="feedback.unexpected.title" />,
         id: 'mutation-error-unknown',
-        description: t('feedback.unexpected.description'),
+        description: <LiveTrans ns="capture" i18nKey="feedback.unexpected.description" />,
       });
     },
     onSuccess: (data, input) => {
@@ -153,71 +154,100 @@ function NewManualScreen() {
   function submitManual(): void {
     if (busy) return;
     if (game === null) {
-      toast.warning(t('feedback.chooseGame.title'), {
-        description: t('feedback.chooseGame.description'),
+      toast.warning(<LiveTrans ns="capture" i18nKey="feedback.chooseGame.title" />, {
+        description: <LiveTrans ns="capture" i18nKey="feedback.chooseGame.description" />,
       });
       return;
     }
     if (mode === null || pages.length === 0) {
-      toast.warning(t('validation.addPages.title'), {
-        description: t('validation.addPages.description'),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.addPages.title" />, {
+        description: <LiveTrans ns="capture" i18nKey="validation.addPages.description" />,
       });
       return;
     }
-    mutation.mutate({ game, pages: [...pages], mode, visibility: share ? 'shared' : 'private' });
+    mutation.mutate({
+      game,
+      pages: pages.map((page) => page.file),
+      mode,
+      visibility: share ? 'shared' : 'private',
+    });
   }
 
   function addImages(incoming: File[]): void {
     if (incoming.length === 0) return;
     if (mode === 'pdf') {
-      toast.warning(t('validation.pdfAlreadyAdded.title'), {
-        description: t('validation.pdfAlreadyAdded.description'),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.pdfAlreadyAdded.title" />, {
+        description: <LiveTrans ns="capture" i18nKey="validation.pdfAlreadyAdded.description" />,
       });
       return;
     }
     const valid = incoming.filter((file) => IMAGE_TYPES.has(file.type));
     if (valid.length < incoming.length) {
-      toast.warning(t('validation.unsupportedImage.title'), {
-        description: t('validation.unsupportedImage.description'),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.unsupportedImage.title" />, {
+        description: <LiveTrans ns="capture" i18nKey="validation.unsupportedImage.description" />,
       });
     }
     if (valid.some((file) => file.size > MAX_IMAGE_BYTES)) {
-      toast.warning(t('validation.imageTooLarge.title'), {
-        description: t('validation.imageTooLarge.description', { max: MAX_IMAGE_MB }),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.imageTooLarge.title" />, {
+        description: (
+          <LiveTrans
+            ns="capture"
+            i18nKey="validation.imageTooLarge.description"
+            values={{ max: MAX_IMAGE_MB }}
+          />
+        ),
       });
       return;
     }
-    const next = [...pages, ...valid];
+    const next = [...pages.map((page) => page.file), ...valid];
     if (next.length > MAX_PAGES) {
-      toast.warning(t('validation.tooManyPages.title'), {
-        description: t('validation.tooManyPages.description', { max: MAX_PAGES }),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.tooManyPages.title" />, {
+        description: (
+          <LiveTrans
+            ns="capture"
+            i18nKey="validation.tooManyPages.description"
+            values={{ max: MAX_PAGES }}
+          />
+        ),
       });
       return;
     }
     if (next.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_BYTES) {
-      toast.warning(t('validation.totalTooLarge.title'), {
-        description: t('validation.totalTooLarge.description', { max: MAX_TOTAL_MB }),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.totalTooLarge.title" />, {
+        description: (
+          <LiveTrans
+            ns="capture"
+            i18nKey="validation.totalTooLarge.description"
+            values={{ max: MAX_TOTAL_MB }}
+          />
+        ),
       });
       return;
     }
-    setPages(next);
+    setPages([...pages, ...valid.map((file) => ({ id: crypto.randomUUID(), file }))]);
   }
 
   function addPdf(file: File | undefined): void {
     if (!file) return;
     if (file.type !== 'application/pdf') {
-      toast.warning(t('validation.unsupportedPdf.title'), {
-        description: t('validation.unsupportedPdf.description'),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.unsupportedPdf.title" />, {
+        description: <LiveTrans ns="capture" i18nKey="validation.unsupportedPdf.description" />,
       });
       return;
     }
     if (file.size > MAX_PDF_BYTES) {
-      toast.warning(t('validation.pdfTooLarge.title'), {
-        description: t('validation.pdfTooLarge.description', { max: MAX_PDF_MB }),
+      toast.warning(<LiveTrans ns="capture" i18nKey="validation.pdfTooLarge.title" />, {
+        description: (
+          <LiveTrans
+            ns="capture"
+            i18nKey="validation.pdfTooLarge.description"
+            values={{ max: MAX_PDF_MB }}
+          />
+        ),
       });
       return;
     }
-    setPages([file]);
+    setPages([{ id: crypto.randomUUID(), file }]);
   }
 
   function removePage(index: number): void {
@@ -248,7 +278,7 @@ function NewManualScreen() {
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar crumb={t('title')} />
 
-      <div className="page-frame grid flex-1 content-start gap-8 py-6 @3xl/app:grid-cols-2 @3xl/app:gap-10 lg:py-8">
+      <div className="page-frame grid flex-1 grid-cols-1 content-start gap-8 py-6 @3xl/app:grid-cols-2 @3xl/app:gap-10 lg:py-8">
         <section className="flex flex-col gap-5">
           <StepHeader n={1} title={t('steps.game')} done={game !== null} />
           {game ? (
@@ -269,7 +299,7 @@ function NewManualScreen() {
           <div className="grid grid-cols-1 gap-2.5 @sm/app:grid-cols-3">
             <SourceFileControl
               inputId={cameraInputId}
-              icon={<Camera size={19} strokeWidth={2} />}
+              icon={<CameraIcon size={19} strokeWidth={2} />}
               label={t('sources.camera.label')}
               sub={t('sources.camera.description')}
               disabled={busy || game === null || mode === 'pdf'}
@@ -327,9 +357,9 @@ function NewManualScreen() {
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
               <PageCounter count={pages.length} mode={mode} />
               <ul className="flex flex-col gap-2">
-                {pages.map((file, index) => (
+                {pages.map(({ id, file }, index) => (
                   <PageRow
-                    key={`${file.name}:${file.size}:${file.lastModified}:${index}`}
+                    key={id}
                     file={file}
                     index={index}
                     total={pages.length}
@@ -486,23 +516,22 @@ function PageRow({
   onRemove: (index: number) => void;
 }>) {
   const { t } = useTranslation('capture');
-  const url = useMemo(() => {
-    if (!file.type.startsWith('image/')) return null;
-    return URL.createObjectURL(file);
-  }, [file]);
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
+  const attachPreview = useCallback(
+    (image: HTMLImageElement | null) => {
+      if (!image) return;
+      const previewUrl = URL.createObjectURL(file);
+      image.src = previewUrl;
+      return () => URL.revokeObjectURL(previewUrl);
     },
-    [url],
+    [file],
   );
 
   const isPdf = mode === 'pdf';
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border bg-bg p-2.5">
-      {url ? (
+    <li className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-bg p-2.5 @sm/app:flex-nowrap">
+      {file.type.startsWith('image/') ? (
         <img
-          src={url}
+          ref={attachPreview}
           alt=""
           width={48}
           height={48}
@@ -523,7 +552,7 @@ function PageRow({
         <p className="truncate text-sm font-semibold text-fg">{file.name}</p>
         <p className="mono text-xs text-fg-3">{(file.size / MB).toFixed(2)} MB</p>
       </div>
-      <div className="flex shrink-0 gap-1">
+      <div className="ml-auto flex w-full shrink-0 justify-end gap-1 @sm/app:w-auto">
         {isPdf ? null : (
           <>
             <IconButton
@@ -545,7 +574,7 @@ function PageRow({
           label={isPdf ? t('actions.removePdf') : t('actions.removePage', { page: index + 1 })}
           disabled={disabled}
           onClick={() => onRemove(index)}
-          icon={<Trash2 size={17} strokeWidth={2} />}
+          icon={<TrashIcon size={17} strokeWidth={2} />}
         />
       </div>
     </li>
@@ -592,12 +621,13 @@ function SourceFileControl({
         htmlFor={inputId}
         aria-disabled={disabled || undefined}
         className={cn(
-          'flex min-h-[88px] flex-col items-start gap-2 rounded-2xl border border-border bg-surface p-3.5 text-left transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-primary/20',
+          'icon-feedback flex min-h-[88px] flex-col items-start gap-2 rounded-2xl border border-border bg-surface p-3.5 text-left transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-primary/20',
           disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:bg-surface-2',
         )}
       >
         <span
           className="grid size-9 place-items-center rounded-xl border border-border bg-bg text-primary-700"
+          data-feedback-icon="upload"
           aria-hidden="true"
         >
           {icon}
@@ -629,7 +659,7 @@ function IconButton({
       type="button"
       variant="ghost"
       size="icon"
-      className={cn('size-9', danger && 'text-fg-3 hover:bg-error-bg hover:text-error')}
+      className={cn('size-9', danger && 'text-fg-3 hover:text-error')}
       aria-label={label}
       disabled={disabled}
       onClick={onClick}

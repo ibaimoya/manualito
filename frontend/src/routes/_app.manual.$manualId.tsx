@@ -15,11 +15,11 @@ import {
   Pencil,
   RotateCw,
   Search,
-  Trash2,
   X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import { TrashIcon } from '@/shared/components/action-icons';
 import {
   useEffect,
   useRef,
@@ -32,7 +32,6 @@ import {
 import { toast } from 'sonner';
 import { Trans, useTranslation } from 'react-i18next';
 import { ScreenTopBar } from '@/app/Topbar';
-import i18n from '@/app/i18n';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
@@ -43,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
@@ -72,6 +72,7 @@ import {
 } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { toastApiError } from '@/shared/lib/toastApiError';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 export const Route = createFileRoute('/_app/manual/$manualId')({
   // "page" opcional: las citas del chat abren el manual en la página citada.
@@ -86,23 +87,23 @@ const PROCESSING_POLL_MS = 1500;
 
 function editErrorToast(error: unknown): void {
   if (error instanceof ApiError && error.status === 409) {
-    toast.error(i18n.t('feedback.edit.busy', { ns: 'manual' }), {
+    toast.error(<LiveTrans ns="manual" i18nKey="feedback.edit.busy" />, {
       id: 'page-edit-error',
-      description: i18n.t('feedback.edit.busyHint', { ns: 'manual' }),
+      description: <LiveTrans ns="manual" i18nKey="feedback.edit.busyHint" />,
     });
     return;
   }
   if (error instanceof ApiError && (error.status === 502 || error.status === 500)) {
-    toast.warning(i18n.t('feedback.edit.pendingIndex', { ns: 'manual' }), {
+    toast.warning(<LiveTrans ns="manual" i18nKey="feedback.edit.pendingIndex" />, {
       id: 'page-edit-error',
-      description: i18n.t('feedback.edit.pendingIndexDescription', { ns: 'manual' }),
+      description: <LiveTrans ns="manual" i18nKey="feedback.edit.pendingIndexDescription" />,
     });
     return;
   }
   toastApiError(error, 'page-edit-error', {
-    title: i18n.t('feedback.edit.failedTitle', { ns: 'manual' }),
+    title: <LiveTrans ns="manual" i18nKey="feedback.edit.failedTitle" />,
     id: 'page-edit-error-unknown',
-    description: i18n.t('feedback.edit.failedDescription', { ns: 'manual' }),
+    description: <LiveTrans ns="manual" i18nKey="feedback.edit.failedDescription" />,
   });
 }
 
@@ -192,44 +193,38 @@ function ManualDetailScreen() {
   const { manualId } = Route.useParams();
   const { page } = Route.useSearch();
   const detail = useQuery(manualDetailQueryOptions(manualId));
+  const manual = detail.data;
+  const title = manual?.title ?? manual?.game_name ?? t('navigation.manual');
 
-  if (detail.isPending) {
-    return (
-      <ManualShell crumb={t('navigation.manual')}>
-        <DetailSkeleton />
-      </ManualShell>
-    );
-  }
-  if (detail.isError || detail.data.pages.length === 0) {
-    return (
-      <ManualShell crumb={t('navigation.manual')}>
-        <div className="mx-auto max-w-md px-4 py-16 text-center">
-          <h1 className="font-display text-xl font-bold text-fg">{t('errors.load.title')}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('errors.load.description')}</p>
-          <Button asChild className="mt-5">
-            <Link to="/history">{t('errors.load.historyLink')}</Link>
-          </Button>
-        </div>
-      </ManualShell>
-    );
-  }
-  // key: el estado por manual no debe sobrevivir a un cambio de manual.
-  return <ManualDetailLoaded key={detail.data.id} manual={detail.data} initialPage={page} />;
-}
-
-function ManualShell({
-  crumb,
-  trail,
-  children,
-}: Readonly<{
-  crumb: string;
-  trail?: NonNullable<Parameters<typeof ScreenTopBar>[0]['trail']>;
-  children: ReactNode;
-}>) {
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <ScreenTopBar crumb={crumb} trail={trail} />
-      {children}
+      <ScreenTopBar
+        crumb={title === manual?.game_name ? t('navigation.extractedText') : title}
+        trail={
+          manual
+            ? [
+                { label: t('navigation.library'), link: linkOptions({ to: '/history' }) },
+                {
+                  label: manual.game_name,
+                  link: linkOptions({ to: '/game/$gameId', params: { gameId: manual.game_id } }),
+                },
+              ]
+            : undefined
+        }
+      />
+      <SkeletonSwap pending={detail.isPending} skeleton={<DetailSkeleton />} className="grow">
+        {manual && manual.pages.length > 0 ? (
+          <ManualDetailLoaded key={manual.id} manual={manual} initialPage={page} />
+        ) : (
+          <div className="mx-auto max-w-md px-4 py-16 text-center">
+            <h1 className="font-display text-xl font-bold text-fg">{t('errors.load.title')}</h1>
+            <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('errors.load.description')}</p>
+            <Button asChild className="mt-5">
+              <Link to="/history">{t('errors.load.historyLink')}</Link>
+            </Button>
+          </div>
+        )}
+      </SkeletonSwap>
     </div>
   );
 }
@@ -273,9 +268,11 @@ function ManualDetailLoaded({
   const editable = manual.visibility === 'private' && !busy;
   useEffect(() => {
     if (processingDone) {
-      qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
+      qc.invalidateQueries({ queryKey: manualDetailQueryOptions(manual.id).queryKey }).catch(
+        () => undefined,
+      );
     }
-  }, [processingDone, qc, detailKey]);
+  }, [processingDone, qc, manual.id]);
 
   const saveText = useMutation({
     mutationFn: ({ pageNumber, text }: { pageNumber: number; text: string }) =>
@@ -322,12 +319,14 @@ function ManualDetailLoaded({
     onError: (error) => {
       setReprocessOpen(false);
       if (error instanceof ApiError && error.status === 409) {
-        toast.error(t('feedback.reprocess.busy'), { id: 'reprocess-error' });
+        toast.error(<LiveTrans ns="manual" i18nKey="feedback.reprocess.busy" />, {
+          id: 'reprocess-error',
+        });
         return;
       }
-      toast.error(t('feedback.reprocess.failedTitle'), {
+      toast.error(<LiveTrans ns="manual" i18nKey="feedback.reprocess.failedTitle" />, {
         id: 'reprocess-error',
-        description: t('feedback.reprocess.failedDescription'),
+        description: <LiveTrans ns="manual" i18nKey="feedback.reprocess.failedDescription" />,
       });
     },
   });
@@ -341,9 +340,9 @@ function ManualDetailLoaded({
         navigate({ to: '/history' }).catch(() => undefined);
       },
       onError: () =>
-        toast.error(t('feedback.delete.error'), {
+        toast.error(<LiveTrans ns="manual" i18nKey="feedback.delete.error" />, {
           id: 'manual-delete-error',
-          description: t('feedback.delete.errorDescription'),
+          description: <LiveTrans ns="manual" i18nKey="feedback.delete.errorDescription" />,
         }),
     });
   }
@@ -371,8 +370,6 @@ function ManualDetailLoaded({
   usePageArrowKeys(editingPage === null, page.page_number, pages.length, goToPage);
 
   const title = manual.title ?? manual.game_name;
-  // Sin esto, el manual titulado como el juego pinta "Monopoly > Monopoly".
-  const crumb = title === manual.game_name ? t('navigation.extractedText') : title;
   const sourceIsPdf = manual.source_type === 'pdf';
   const activeMatch =
     search.active !== null && search.active.pageNumber === page.page_number
@@ -387,16 +384,7 @@ function ManualDetailLoaded({
   const hasConfidence = page.ocr_lines.some((line) => line.confidence != null);
 
   return (
-    <ManualShell
-      crumb={crumb}
-      trail={[
-        { label: t('navigation.library'), link: linkOptions({ to: '/history' }) },
-        {
-          label: manual.game_name,
-          link: linkOptions({ to: '/game/$gameId', params: { gameId: manual.game_id } }),
-        },
-      ]}
-    >
+    <>
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 @4xl/app:grid @4xl/app:h-[calc(100dvh_-_3.5rem)] @4xl/app:flex-none @4xl/app:max-w-none @4xl/app:grid-cols-[300px_minmax(0,1fr)] @4xl/app:grid-rows-[minmax(0,1fr)] @4xl/app:gap-0 @4xl/app:overflow-hidden @4xl/app:p-0">
         {/* ───── RAIL ───── */}
         <aside className="min-w-0 @4xl/app:flex @4xl/app:min-h-0 @4xl/app:flex-col @4xl/app:overflow-hidden @4xl/app:border-r @4xl/app:border-border @4xl/app:px-4 @4xl/app:py-5">
@@ -434,7 +422,7 @@ function ManualDetailLoaded({
           {busy ? <ReprocessBanner data={processing.data ?? null} /> : null}
 
           {/* visor con scroll propio en escritorio */}
-          <div className="@4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:overflow-y-auto @4xl/app:px-6 @4xl/app:py-5">
+          <div className="@4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:overflow-y-auto @4xl/app:px-6 @4xl/app:py-5 @4xl/app:[scrollbar-gutter:stable]">
             <div className="flex flex-col gap-4">
               {/* fila de control: navegación de página + estado */}
               <div className="flex flex-wrap items-center gap-3">
@@ -526,7 +514,7 @@ function ManualDetailLoaded({
         onDeleteConfirm={confirmDelete}
         deleting={deleteManual.isPending}
       />
-    </ManualShell>
+    </>
   );
 }
 
@@ -639,7 +627,7 @@ function ManualDialogs({
               {t('buttons.cancel')}
             </Button>
             <Button variant="destructive" loading={deleting} onClick={onDeleteConfirm}>
-              <Trash2 size={16} strokeWidth={2} />
+              <TrashIcon size={16} strokeWidth={2} />
               {t('buttons.deleteManual')}
             </Button>
           </div>
@@ -664,7 +652,7 @@ function ManualActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="secondary" size="sm" className="shrink-0">
+        <Button variant="secondary" size="sm" className="disclosure-feedback shrink-0">
           {t('buttons.actions')}
           <ChevronDown size={15} strokeWidth={2} />
         </Button>
@@ -681,8 +669,7 @@ function ManualActionsMenu({
         </DropdownMenuItem>
         <hr className="my-1 border-t border-border" />
         <DropdownMenuItem danger onSelect={onDelete}>
-          {/* Ajuste óptico */}
-          <Trash2 size={16} strokeWidth={2} className="-translate-y-[0.5px]" />
+          <TrashIcon size={16} strokeWidth={2} />
           {t('buttons.deleteManual')}
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -894,7 +881,7 @@ function ManualImageViewer({
       <div className="mb-3 flex flex-wrap items-center justify-center gap-3">
         <PageNav pageNumber={page.page_number} total={pageCount} onPrev={onPrev} onNext={onNext} />
         {showImage ? (
-          <div className="inline-flex h-10 items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
+          <div className="inline-flex h-10 items-center gap-1 p-1">
             <ImageZoomButton
               label={t('image.zoomOut')}
               disabled={zoom === 'fit'}
@@ -988,17 +975,15 @@ function ImageZoomButton({
   children: ReactNode;
 }>) {
   return (
-    <Tooltip content={label}>
-      <button
-        type="button"
-        aria-label={label}
-        disabled={disabled}
-        onClick={onClick}
-        className="grid size-8 place-items-center rounded-full text-fg-2 transition-colors hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-40"
-      >
-        {children}
-      </button>
-    </Tooltip>
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="icon-feedback grid size-8 place-items-center rounded-full text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -1088,7 +1073,7 @@ function NavButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-9 place-items-center rounded-xl border border-border bg-card text-fg hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+      className="icon-feedback grid size-9 place-items-center rounded-xl text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {children}
     </button>
@@ -1209,7 +1194,7 @@ function SearchField({
             <ChevronRight size={15} strokeWidth={2} />
           </SearchMiniButton>
           <SearchMiniButton label={t('search.clear')} disabled={false} onClick={() => onSearch('')}>
-            <X size={14} strokeWidth={2} />
+            <X size={14} strokeWidth={2} className="search-clear-icon" />
           </SearchMiniButton>
         </span>
       ) : null}
@@ -1229,7 +1214,7 @@ function SearchMiniButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid size-7 place-items-center rounded-lg text-fg-2 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40"
+      className="icon-feedback grid size-7 place-items-center rounded-lg text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

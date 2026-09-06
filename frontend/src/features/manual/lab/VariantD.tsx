@@ -15,8 +15,9 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { confidenceTone, pageStatus } from '@/features/manual/pageStatus';
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
 import { usePageSearch } from '@/features/manual/usePageSearch';
@@ -101,10 +102,7 @@ function DockTool({
   );
 }
 
-function TrayFrame({
-  onClose,
-  children,
-}: Readonly<{ onClose: () => void; children: ReactNode }>) {
+function TrayFrame({ onClose, children }: Readonly<{ onClose: () => void; children: ReactNode }>) {
   return (
     <div className="flex items-center gap-2 px-3 py-2">
       {children}
@@ -154,7 +152,7 @@ export function VariantD({
   showConfidence: boolean;
   seededQuery: string;
 }>) {
-  const reduce = useReducedMotion();
+  const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
   const manual = labManual(escenario);
   const pages = manual.pages;
   const search = usePageSearch(pages);
@@ -163,7 +161,7 @@ export function VariantD({
   const [dock, setDock] = useState<DockMode>(initialConfidence ? 'dudas' : 'closed');
   const [marks, setMarks] = useState(initialConfidence);
   const [originalOpen, setOriginalOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const editing = dock === 'editar';
   const [draft, setDraft] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -207,18 +205,20 @@ export function VariantD({
     setActiveDuda(null);
   }
 
+  const onEscape = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return;
+    if (editing) {
+      if (confirmDiscard) setConfirmDiscard(false);
+      else if (dirty) setConfirmDiscard(true);
+      else stopEditing();
+      return;
+    }
+    setDeleteOpen(false);
+    setDock('closed');
+  });
+
   useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      const tag = (event.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') {
-        if (event.key === 'Escape') setDock('closed');
-        return;
-      }
-      if (event.key === 'Escape') {
-        setDeleteOpen(false);
-        setDock('closed');
-      }
-    };
+    const onKey = (event: KeyboardEvent) => onEscape(event);
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
@@ -237,6 +237,7 @@ export function VariantD({
   }, [confirmDiscard]);
 
   function openTool(mode: DockMode): void {
+    if (editing) return;
     setDock((current) => (current === mode ? 'closed' : mode));
     if (mode === 'dudas') setMarks((value) => (dock === 'dudas' ? value : true));
   }
@@ -257,13 +258,11 @@ export function VariantD({
   function startEditing(): void {
     setDraft(pageText);
     setConfirmDiscard(false);
-    setEditing(true);
     setDock('editar');
     setOriginalOpen(false);
   }
 
   function stopEditing(): void {
-    setEditing(false);
     setConfirmDiscard(false);
     setDock('closed');
   }
@@ -354,7 +353,10 @@ export function VariantD({
                       STATUS_TONE_CLASS[st.tone] ?? 'text-fg-3',
                     )}
                   >
-                    <span className={cn('size-1.5 rounded-full', statusDot(st))} aria-hidden="true" />
+                    <span
+                      className={cn('size-1.5 rounded-full', statusDot(st))}
+                      aria-hidden="true"
+                    />
                     {STATUS_WORD[st.key] ?? st.label}
                   </span>
                 </div>
@@ -364,8 +366,8 @@ export function VariantD({
                     <Meeple className="size-11 -rotate-6 text-fg-3" />
                     <p className="text-[15px] font-semibold text-fg">No pudimos leer esta hoja</p>
                     <p className="max-w-[42ch] text-[13px] leading-relaxed text-fg-2">
-                      La foto salió demasiado oscura o movida. Sube una versión más nítida o
-                      vuelve a intentar la lectura.
+                      La foto salió demasiado oscura o movida. Sube una versión más nítida o vuelve
+                      a intentar la lectura.
                     </p>
                     <div className="mt-1 flex flex-wrap justify-center gap-2.5">
                       <button
@@ -412,10 +414,8 @@ export function VariantD({
                 {st.key !== 'failed' && st.key !== 'processing' && !editing ? (
                   <div className="space-y-3.5 pr-10">
                     {page.ocr_lines.map((line, index) => {
-                      const tone =
-                        line.confidence == null ? null : confidenceTone(line.confidence);
-                      const problem =
-                        marks && (tone?.tone === 'warning' || tone?.tone === 'error');
+                      const tone = line.confidence == null ? null : confidenceTone(line.confidence);
+                      const problem = marks && (tone?.tone === 'warning' || tone?.tone === 'error');
                       const pct =
                         line.confidence == null ? null : Math.round(line.confidence * 100);
                       return (
@@ -755,10 +755,7 @@ export function VariantD({
                         key={item.page_number}
                         type="button"
                         onClick={() => {
-                          goToPage(
-                            item.page_number,
-                            item.page_number > activePage ? 1 : -1,
-                          );
+                          goToPage(item.page_number, item.page_number > activePage ? 1 : -1);
                           setDock('closed');
                         }}
                         className={cn(
@@ -855,8 +852,8 @@ export function VariantD({
                 ¿Eliminar este manual?
               </p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
-                Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción
-                no se puede deshacer.
+                Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción no se
+                puede deshacer.
               </p>
               <div className="mt-4 flex justify-end gap-2.5">
                 <button

@@ -13,7 +13,8 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { confidenceTone, pageStatus } from '@/features/manual/pageStatus';
 import { labManual, LAB_BUSY_PROGRESS, type LabEscenario } from '@/features/manual/lab/fixtures';
@@ -127,7 +128,7 @@ export function VariantE({
   showConfidence: boolean;
   seededQuery: string;
 }>) {
-  const reduce = useReducedMotion();
+  const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
   const manual = labManual(escenario);
   const pages = manual.pages;
   const search = usePageSearch(pages);
@@ -446,8 +447,11 @@ export function VariantE({
         </div>
       </div>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 items-start gap-6 px-6 pb-10 pt-5">
-        <nav aria-label="Mazo de hojas" className="hidden w-36 shrink-0 flex-col md:flex">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-start gap-6 px-6 pb-10 pt-5 md:flex-row">
+        <nav
+          aria-label="Mazo de hojas"
+          className="flex w-full shrink-0 gap-2 overflow-x-auto py-1 md:w-36 md:flex-col md:gap-0 md:overflow-visible md:py-0"
+        >
           {pages.map((item, index) => {
             const itemSt = pageStatus(item);
             const active = item.page_number === page.page_number;
@@ -456,6 +460,7 @@ export function VariantE({
               <motion.button
                 key={item.page_number}
                 type="button"
+                aria-current={active ? 'page' : undefined}
                 onClick={() => goToPage(item.page_number)}
                 animate={{
                   rotate: active || reduce ? 0 : index % 2 === 0 ? -0.8 : 0.8,
@@ -463,10 +468,8 @@ export function VariantE({
                 }}
                 transition={spring}
                 className={cn(
-                  'lang-lift relative -mb-2 h-[72px] rounded-lg border p-2.5 text-left',
-                  active
-                    ? 'z-10 border-primary shadow-sm'
-                    : 'border-border shadow-xs hover:z-10',
+                  'lang-lift relative h-[72px] w-32 shrink-0 rounded-lg border p-2.5 text-left md:-mb-2 md:w-auto',
+                  active ? 'z-10 border-primary shadow-sm' : 'border-border shadow-xs hover:z-10',
                   editing && !active && 'opacity-50',
                 )}
                 style={{ background: 'var(--lab-paper)' }}
@@ -504,7 +507,7 @@ export function VariantE({
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.995 }}
             transition={spring}
             aria-label={`Texto de la hoja ${page.page_number}`}
-            className="min-w-0 flex-1 rounded-xl border border-border px-8 py-7 shadow-md"
+            className="w-full min-w-0 flex-1 rounded-xl border border-border px-8 py-7 shadow-md"
             style={{ background: 'var(--lab-paper)' }}
           >
             <div className="flex items-baseline gap-2 pb-5">
@@ -520,8 +523,8 @@ export function VariantE({
                 <Meeple className="size-11 -rotate-6 text-fg-3" />
                 <p className="text-[15px] font-semibold text-fg">No pudimos leer esta hoja</p>
                 <p className="max-w-[42ch] text-[13px] leading-relaxed text-fg-2">
-                  La foto salió demasiado oscura o movida. Sube una versión más nítida o vuelve
-                  a intentar la lectura.
+                  La foto salió demasiado oscura o movida. Sube una versión más nítida o vuelve a
+                  intentar la lectura.
                 </p>
                 <div className="mt-1 flex flex-wrap justify-center gap-2.5">
                   <button
@@ -648,7 +651,9 @@ export function VariantE({
               </div>
             )}
           </div>
-          <p className="mt-2 text-center text-[11.5px] text-fg-3">Original · hoja {page.page_number}</p>
+          <p className="mt-2 text-center text-[11.5px] text-fg-3">
+            Original · hoja {page.page_number}
+          </p>
         </aside>
       </main>
 
@@ -682,8 +687,8 @@ export function VariantE({
                 ¿Eliminar este manual?
               </p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
-                Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción
-                no se puede deshacer.
+                Se borrarán sus {manual.page_count} páginas y todo el texto leído. Esta acción no se
+                puede deshacer.
               </p>
               <div className="mt-4 flex justify-end gap-2.5">
                 <button

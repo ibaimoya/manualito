@@ -1,20 +1,32 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { StrictMode } from 'react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route as SourceRoute } from '@/routes/_app.capture.source';
 import { server } from '@tests/_helpers/server';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
+import i18n from '@/app/i18n';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+});
 afterAll(() => server.close());
 
-function renderSource(gameId?: string) {
+function renderSource(gameId?: string, strict = false) {
+  const SourceScreen = routeComponent(SourceRoute);
   return renderRoute({
     path: '/capture/source',
     initialEntry: gameId ? `/capture/source?gameId=${gameId}` : '/capture/source',
-    component: routeComponent(SourceRoute),
+    component: strict
+      ? () => (
+          <StrictMode>
+            <SourceScreen />
+          </StrictMode>
+        )
+      : SourceScreen,
     validateSearch: (s) => ({ gameId: typeof s.gameId === 'string' ? s.gameId : undefined }),
     stubs: {
       '/home': 'HomeScreen',
@@ -25,7 +37,7 @@ function renderSource(gameId?: string) {
 
 async function pickGame(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.type(await screen.findByRole('combobox', { name: /Buscar juego/i }), name);
-  await user.click(await screen.findByRole('button', { name: new RegExp(`${name}.*1995`, 'i') }));
+  await user.click(await screen.findByRole('option', { name: new RegExp(`${name}.*1995`, 'i') }));
 }
 
 const MAX_IMAGE_BYTES = 30_000_000;
@@ -75,7 +87,7 @@ describe('/capture/source · nuevo manual', () => {
     renderSource();
     const user = userEvent.setup();
     await user.type(await screen.findByRole('combobox', { name: /Buscar juego/i }), 'Catan');
-    expect(await screen.findByRole('button', { name: /Catan.*1995/i })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: /Catan.*1995/i })).toBeInTheDocument();
     expect(screen.getByText('BoardGameGeek')).toBeInTheDocument();
   });
 
@@ -182,6 +194,33 @@ describe('/capture/source · nuevo manual', () => {
     }
   });
 
+  it('retraduce el aviso local ya visible y conserva el límite al cambiar de idioma', async () => {
+    renderSource('test-game-001');
+    const user = userEvent.setup();
+    await screen.findByText(/Elegido/i);
+    await user.upload(
+      screen.getByTestId('picker-gallery'),
+      imageFile('large.jpg', MAX_IMAGE_BYTES + 1),
+    );
+    const title = await screen.findByText('Imagen demasiado grande');
+    const notification = title.closest('[data-sonner-toast]');
+    expect(screen.getByText('Cada imagen puede ocupar 30 MB.')).toBeInTheDocument();
+
+    await act(() => i18n.changeLanguage('en'));
+    expect(screen.getByText('That image is too big').closest('[data-sonner-toast]')).toBe(
+      notification,
+    );
+    expect(screen.getByText('Each image can be up to 30 MB.')).toBeInTheDocument();
+    expect(screen.queryByText('Imagen demasiado grande')).not.toBeInTheDocument();
+
+    await act(() => i18n.changeLanguage('es'));
+    expect(screen.getByText('Imagen demasiado grande').closest('[data-sonner-toast]')).toBe(
+      notification,
+    );
+    expect(screen.getByText('Cada imagen puede ocupar 30 MB.')).toBeInTheDocument();
+    expect(screen.queryByText('large.jpg')).not.toBeInTheDocument();
+  });
+
   it.each([
     [MAX_UPLOAD_BYTES - 1, true],
     [MAX_UPLOAD_BYTES, true],
@@ -260,11 +299,47 @@ describe('/capture/source · nuevo manual', () => {
 
   it('rechaza formatos fuera de JPG, PNG y WebP', async () => {
     renderSource();
-    await screen.findByRole('combobox', { name: /Buscar juego/i });
+    await pickGame(userEvent.setup(), 'Wingspan');
+    // Simula una selección que no ha respetado el filtro accept del navegador.
     fireEvent.change(screen.getByTestId('picker-gallery'), {
       target: { files: [new File(['gif'], 'animado.gif', { type: 'image/gif' })] },
     });
     expect(await screen.findByText(/Formato no soportado/i)).toBeInTheDocument();
+  });
+
+  it('reordenar conserva la fila, su vista previa y el foco del botón', async () => {
+    renderSource('test-game-001');
+    const user = userEvent.setup();
+    await screen.findByText(/Elegido/i);
+    await user.upload(screen.getByTestId('picker-gallery'), imageFiles(3));
+    const row = screen.getByText('page-1.jpg').closest('li');
+    const image = row?.querySelector('img');
+    const down = screen.getByRole('button', { name: /Bajar página 1/i });
+    await user.click(down);
+    expect(screen.getByText('page-1.jpg').closest('li')).toBe(row);
+    expect(row?.querySelector('img')).toBe(image);
+    expect(screen.getByRole('button', { name: /Bajar página 2/i })).toBe(down);
+    expect(down).toHaveFocus();
+  });
+
+  it('las vistas previas liberan todas las URLs bajo StrictMode', async () => {
+    // Blob URLs son recursos del navegador, que jsdom no carga como imágenes.
+    const liveUrls = new Set<string>();
+    let nextUrl = 0;
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
+      const url = `blob:preview-${++nextUrl}`;
+      liveUrls.add(url);
+      return url;
+    });
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation((url) => liveUrls.delete(url));
+    const { unmount } = renderSource('test-game-001', true);
+    await screen.findByText(/Elegido/i);
+    await userEvent.setup().upload(screen.getByTestId('picker-gallery'), imageFile('preview.jpg'));
+    const image = screen.getByText('preview.jpg').closest('li')?.querySelector('img');
+    expect(image).not.toBeNull();
+    expect(liveUrls.has(image!.src)).toBe(true);
+    unmount();
+    expect(liveUrls.size).toBe(0);
   });
 
   it('flujo completo: elegir juego, añadir página y procesar', async () => {

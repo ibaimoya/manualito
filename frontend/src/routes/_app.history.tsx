@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -13,15 +14,16 @@ import {
   ScrollText,
   Search,
   Sparkles,
-  Trash2,
   Users,
   X,
 } from 'lucide-react';
-import { Fragment, useState, type ReactElement, type ReactNode } from 'react';
+import { TrashIcon } from '@/shared/components/action-icons';
+import { Fragment, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Meeple } from '@/shared/components/Brand';
 import { GameCover } from '@/features/games/GameCover';
 import { GameJumpSearch } from '@/features/games/GameJumpSearch';
@@ -33,10 +35,12 @@ import {
   useProcessingManuals,
 } from '@/features/manual/use-manuals';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
+import { ManualThumbnail } from '@/features/manual/ManualThumbnail';
 import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
 import { type MyGame, type MyGamesResponse } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
+import { gameColor } from '@/shared/lib/gameColor';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 
 export const Route = createFileRoute('/_app/history')({
@@ -70,12 +74,11 @@ function HistoryScreen() {
 
   return (
     <div className="page-frame page-stack">
-      <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg md:text-3xl">
-        {t('title')}
-      </h1>
+      <h1 className="page-title">{t('title')}</h1>
 
       <div className="flex flex-col gap-3 @2xl/app:flex-row @2xl/app:items-center @2xl/app:gap-4">
         <SegmentedControl
+          className="[&_[role=radio]]:min-h-9"
           value={view}
           onChange={setView}
           ariaLabel={t('tabs.ariaLabel')}
@@ -102,26 +105,29 @@ function HistoryScreen() {
         </div>
       </div>
 
-      {view === 'games' ? (
-        <GamesView query={games} />
-      ) : (
-        <ManualsView query={manuals} filter={manualQuery} />
-      )}
+      <SkeletonSwap
+        key={view}
+        pending={view === 'games' ? games.isPending : manuals.isPending}
+        skeleton={
+          <div className={view === 'games' ? GAME_GRID : MANUAL_GRID}>
+            {[0, 1, 2, 3].map((i) =>
+              view === 'games' ? <GameSkeleton key={i} /> : <ManualSkeleton key={i} />,
+            )}
+          </div>
+        }
+      >
+        {view === 'games' ? (
+          <GamesView query={games} />
+        ) : (
+          <ManualsView query={manuals} filter={manualQuery} />
+        )}
+      </SkeletonSwap>
     </div>
   );
 }
 
 // ── Vistas ────────────────────────────────────────────────────────────────
 function GamesView({ query }: Readonly<{ query: UseQueryResult<MyGamesResponse> }>) {
-  if (query.isPending) {
-    return (
-      <div className={GAME_GRID}>
-        {[0, 1, 2, 3].map((i) => (
-          <GameSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
   if (query.isError && query.data === undefined) {
     return (
       <LibError
@@ -149,15 +155,6 @@ function ManualsView({
 }: Readonly<{ query: UseQueryResult<ManualSummary[]>; filter: string }>) {
   const { t } = useTranslation('library');
   const del = useDeleteManual();
-  if (query.isPending) {
-    return (
-      <div className={MANUAL_GRID}>
-        {[0, 1, 2, 3].map((i) => (
-          <ManualSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
   if (query.isError && query.data === undefined) {
     return (
       <LibError
@@ -203,14 +200,13 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
       params={{ gameId: game.id }}
       aria-label={t(processing ? 'aria.openGameProcessing' : 'aria.openGame', { game: game.name })}
       className={cn(
-        'group flex flex-col overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-xs',
-        'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-        'hover:-translate-y-[3px] hover:border-border-strong hover:shadow-md',
+        'game-shelf-card flex flex-col overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-xs',
+        'hover:border-border-strong',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
       )}
     >
       <div className="flex justify-center px-5 pt-5">
-        <div className="transition-[rotate,scale] duration-150 ease-[var(--ease-mn)] group-hover:-rotate-2 group-hover:scale-[1.02]">
+        <div className="shelf-cover">
           <GameCover name={game.name} size={132} radius={16} processing={processing} />
         </div>
       </div>
@@ -271,6 +267,7 @@ function ManualDocCard({
 }: Readonly<{ manual: ManualSummary; onDelete: () => void }>) {
   const { t } = useTranslation('library');
   const [confirming, setConfirming] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const st = manualStatusView(manual.status, t);
   const indexing = manual.status === 'indexing';
   const progress = useManualProgress(indexing ? manual.id : undefined);
@@ -301,138 +298,141 @@ function ManualDocCard({
   ];
 
   return (
-    <div
-      className={cn(
-        'group relative flex gap-3.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
-        'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-        'hover:-translate-y-px hover:border-border-strong hover:shadow-sm',
-      )}
-    >
-      <ManualThumb pdf={isPdf} processing={indexing} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge tone={st.tone} icon={indexing ? <Spinner size={11} /> : st.icon}>
-            {st.label}
-          </Badge>
-          <Badge
-            tone={manual.visibility === 'shared' ? 'accent' : 'neutral'}
-            icon={manual.visibility === 'shared' ? <Users /> : <Lock />}
-          >
-            {manual.visibility === 'shared'
-              ? t('manualCard.visibility.shared')
-              : t('manualCard.visibility.private')}
-          </Badge>
-        </div>
-        <Link
-          to={indexing ? '/processing/$manualId' : '/manual/$manualId'}
-          params={{ manualId: manual.id }}
-          search={indexing ? { name } : undefined}
-          aria-label={t('aria.openManual', { manual: name })}
-          className="mt-[7px] truncate font-display text-[15.5px] font-bold text-fg outline-none after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:after:shadow-[var(--m-shadow-ring-primary)]"
-        >
-          {name}
-        </Link>
-        <div className="mt-px text-xs text-fg-3">
-          {t('manualCard.manualOf', { game: manual.game_name })}
-        </div>
-        {manual.duplicate_page_count > 0 ? (
-          <div className="mt-2">
-            <DuplicatePagesBadge count={manual.duplicate_page_count} openHint />
-          </div>
-        ) : null}
-        {indexing ? (
-          <div className="mt-auto pt-[10px]">
-            <div className="mb-[5px] flex items-center justify-between">
-              <span
-                className="mono text-[10.5px] font-semibold tracking-[0.04em] text-fg-2 uppercase"
-                aria-live="polite"
-              >
-                {t('manualCard.progress.page', {
-                  page: progress?.page ?? 1,
-                  total: manual.page_count,
-                })}
-              </span>
-              <span className="mono text-[10.5px] font-bold tabular-nums text-primary-700">
-                {progress?.pct ?? 0}%
-              </span>
-            </div>
-            <ProgressBar pct={progress?.pct ?? 0} />
-          </div>
-        ) : (
-          <div className="mono mt-auto flex flex-wrap items-center gap-2 pt-[9px] text-[10.5px] tracking-[0.04em] text-fg-3">
-            {meta.map((node, i) => (
-              <Fragment key={node.key}>
-                {i > 0 ? <Dot /> : null}
-                {node}
-              </Fragment>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        aria-label={t('aria.deleteManual', { manual: name })}
-        className="relative z-10 grid size-[30px] shrink-0 self-start place-items-center rounded-lg text-fg-3 transition-colors hover:bg-error-bg hover:text-error"
-      >
-        <Trash2 size={15} strokeWidth={2} />
-      </button>
-
-      {confirming ? (
-        <div
-          role="alertdialog"
-          aria-label={t('aria.confirmDeletion')}
-          className="absolute inset-0 z-20 flex items-center gap-3 rounded-2xl border border-error bg-error-bg px-4"
-        >
-          <AlertTriangle
-            size={18}
-            strokeWidth={2}
-            className="shrink-0 text-error"
-            aria-hidden="true"
-          />
-          <span className="flex-1 text-[13.5px] font-medium text-fg">
-            {t('manualCard.deleteConfirm', { game: manual.game_name })}
-          </span>
-          <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-            {t('actions.cancel')}
-          </Button>
-          <Button size="sm" variant="destructive" onClick={onDelete}>
-            {t('actions.delete')}
-          </Button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** Miniatura de hoja con el formato (PDF/fotos) en una esquina. Indexándose,
- *  un barrido recorre la hoja (el sello de formato queda fuera del recorte). */
-function ManualThumb({
-  pdf,
-  processing = false,
-}: Readonly<{ pdf: boolean; processing?: boolean }>) {
-  return (
-    <span aria-hidden="true" className="relative h-[66px] w-[52px] shrink-0 self-start">
-      <span className="absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-[9px] border border-border-strong bg-surface px-[9px] pb-[9px] pt-[11px] shadow-xs">
-        {[88, 64, 80, 54].map((w) => (
-          <span
-            key={w}
-            className="h-[2.5px] rounded-sm bg-border-strong"
-            style={{ width: `${w}%` }}
-          />
-        ))}
-        {processing ? <span className="proc-scan" /> : null}
-      </span>
-      <span
+    <DialogPrimitive.Root open={confirming} onOpenChange={setConfirming}>
+      <div
         className={cn(
-          'absolute -right-[7px] -top-[7px] z-[1] grid size-6 place-items-center rounded-[7px] text-fg-inv shadow-sm',
-          pdf ? 'bg-primary' : 'bg-accent',
+          'manual-interaction relative flex gap-3.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
+          'hover:border-border-strong',
         )}
       >
-        {pdf ? <FileText size={12} /> : <ImageIcon size={12} />}
-      </span>
-    </span>
+        <ManualThumbnail
+          color={gameColor(name)}
+          stacked={manual.page_count > 1}
+          processing={indexing}
+          className="h-[66px] w-[52px] self-start"
+        >
+          <span
+            className={cn(
+              'absolute -right-[7px] -top-[7px] z-[1] grid size-6 place-items-center rounded-[7px] text-fg-inv',
+              isPdf ? 'bg-primary' : 'bg-accent',
+            )}
+          >
+            {isPdf ? <FileText size={12} /> : <ImageIcon size={12} />}
+          </span>
+        </ManualThumbnail>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge tone={st.tone} icon={indexing ? <Spinner size={11} /> : st.icon}>
+              {st.label}
+            </Badge>
+            <Badge
+              tone={manual.visibility === 'shared' ? 'accent' : 'neutral'}
+              icon={manual.visibility === 'shared' ? <Users /> : <Lock />}
+            >
+              {manual.visibility === 'shared'
+                ? t('manualCard.visibility.shared')
+                : t('manualCard.visibility.private')}
+            </Badge>
+          </div>
+          <Link
+            to={indexing ? '/processing/$manualId' : '/manual/$manualId'}
+            params={{ manualId: manual.id }}
+            search={indexing ? { name } : undefined}
+            aria-label={t('aria.openManual', { manual: name })}
+            className="manual-open mt-[7px] truncate font-display text-[15.5px] font-bold text-fg outline-none after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:after:shadow-[var(--m-shadow-ring-primary)]"
+          >
+            {name}
+          </Link>
+          <div className="mt-px text-xs text-fg-3">
+            {t('manualCard.manualOf', { game: manual.game_name })}
+          </div>
+          {manual.duplicate_page_count > 0 ? (
+            <div className="mt-2">
+              <DuplicatePagesBadge count={manual.duplicate_page_count} openHint />
+            </div>
+          ) : null}
+          {indexing ? (
+            <div className="mt-auto pt-[10px]">
+              <div className="mb-[5px] flex items-center justify-between">
+                <span
+                  className="mono text-[10.5px] font-semibold tracking-[0.04em] text-fg-2 uppercase"
+                  aria-live="polite"
+                >
+                  {t('manualCard.progress.page', {
+                    page: progress?.page ?? 1,
+                    total: manual.page_count,
+                  })}
+                </span>
+                <span className="mono text-[10.5px] font-bold tabular-nums text-primary-700">
+                  {progress?.pct ?? 0}%
+                </span>
+              </div>
+              <ProgressBar pct={progress?.pct ?? 0} />
+            </div>
+          ) : (
+            <div className="mono mt-auto flex flex-wrap items-center gap-2 pt-[9px] text-[10.5px] tracking-[0.04em] text-fg-3">
+              {meta.map((node, i) => (
+                <Fragment key={node.key}>
+                  {i > 0 ? <Dot /> : null}
+                  {node}
+                </Fragment>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <DialogPrimitive.Trigger asChild>
+          <button
+            type="button"
+            aria-label={t('aria.deleteManual', { manual: name })}
+            className="icon-feedback relative z-10 grid size-11 shrink-0 self-start place-items-center rounded-lg text-fg-3 transition-colors hover:text-error"
+          >
+            <TrashIcon size={17} strokeWidth={2} />
+          </button>
+        </DialogPrimitive.Trigger>
+
+        <DialogPrimitive.Content
+          role="alertdialog"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancelRef.current?.focus();
+          }}
+          onPointerDownOutside={(event) => event.preventDefault()}
+          className="feedback-fade absolute inset-0 z-20 flex flex-col justify-center gap-3 rounded-2xl border border-error bg-error-bg p-3 outline-none"
+        >
+          <DialogPrimitive.Title className="sr-only">
+            {t('aria.confirmDeletion')}
+          </DialogPrimitive.Title>
+          <div className="flex items-center gap-3">
+            <AlertTriangle
+              size={18}
+              strokeWidth={2}
+              className="shrink-0 text-error"
+              aria-hidden="true"
+            />
+            <DialogPrimitive.Description asChild>
+              <span className="min-w-0 flex-1 text-[13.5px] font-medium text-fg">
+                {t('manualCard.deleteConfirm', { game: manual.game_name })}
+              </span>
+            </DialogPrimitive.Description>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              ref={cancelRef}
+              size="sm"
+              className="h-11"
+              variant="ghost"
+              onClick={() => setConfirming(false)}
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button size="sm" className="h-11" variant="destructive" onClick={onDelete}>
+              {t('actions.delete')}
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </div>
+    </DialogPrimitive.Root>
   );
 }
 
@@ -443,7 +443,7 @@ function ManualFilter({
 }: Readonly<{ value: string; onChange: (next: string) => void }>) {
   const { t } = useTranslation('library');
   return (
-    <div className="flex h-11 w-full items-center gap-2.5 rounded-2xl border border-border-strong bg-bg px-3.5 shadow-xs focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
+    <div className="search-feedback flex h-11 w-full items-center gap-2.5 rounded-2xl border border-border-strong bg-bg px-3.5 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
       <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
       <input
         type="search"
@@ -458,9 +458,9 @@ function ManualFilter({
           type="button"
           onClick={() => onChange('')}
           aria-label={t('manualSearch.clear')}
-          className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
+          className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
         >
-          <X size={14} aria-hidden="true" />
+          <X size={14} className="search-clear-icon" aria-hidden="true" />
         </button>
       ) : null}
     </div>

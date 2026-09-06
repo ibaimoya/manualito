@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { FileText, Info } from 'lucide-react';
+import { Check, FileText, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -34,12 +34,12 @@ function ProcessingScreen() {
 
   // Pausa breve para que se vea el 100 % antes de saltar al hub del juego.
   useEffect(() => {
-    if (gameId === null) return;
+    if (!indexed || failed || gameId === null) return;
     const timer = setTimeout(() => {
       navigate({ to: '/game/$gameId', params: { gameId }, replace: true }).catch(() => undefined);
     }, 600);
     return () => clearTimeout(timer);
-  }, [gameId, navigate]);
+  }, [indexed, failed, gameId, navigate]);
 
   const pageCount = processing.data?.page_count ?? 0;
   const completedPages = indexed ? pageCount : (processing.data?.completed_pages ?? 0);
@@ -56,15 +56,26 @@ function ProcessingScreen() {
               className={cn(
                 'absolute inset-0 rounded-full border-4 border-transparent',
                 failed ? 'border-t-error' : 'border-t-primary',
+                indexed && !failed && 'opacity-0',
               )}
-              style={failed ? undefined : { animation: 'mn-spin 1.4s linear infinite' }}
+              style={failed || indexed ? undefined : { animation: 'mn-spin 1.4s linear infinite' }}
               aria-hidden="true"
             />
-            <FileText
-              size={40}
-              className={failed ? 'text-error' : 'text-primary-700'}
-              strokeWidth={1.5}
-            />
+            {indexed && !failed ? (
+              <Check
+                size={40}
+                className="feedback-enter text-primary-700"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            ) : (
+              <FileText
+                size={40}
+                className={failed ? 'text-error' : 'text-primary-700'}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            )}
           </div>
           <div className="text-center">
             <h2 className="font-display text-xl font-bold tracking-tight text-fg">

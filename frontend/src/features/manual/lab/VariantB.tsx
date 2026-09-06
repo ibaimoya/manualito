@@ -1,12 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Image,
-  Layers,
-  Pencil,
-  Search,
-  X,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image, Layers, Pencil, Search, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { ManualDetailPage, OcrLine } from '@/shared/api/client';
 import { confidenceTone, pageStatus } from '@/features/manual/pageStatus';
@@ -38,7 +30,7 @@ function PageDots({
   onSelect: (pageNumber: number) => void;
 }>) {
   return (
-    <div className="flex items-center gap-1" role="tablist" aria-label="Páginas del manual">
+    <div className="flex items-center gap-1" role="group" aria-label="Páginas del manual">
       {pages.map((page) => {
         const st = pageStatus(page);
         const current = page.page_number === active;
@@ -47,8 +39,7 @@ function PageDots({
           <button
             key={page.page_number}
             type="button"
-            role="tab"
-            aria-selected={current}
+            aria-current={current ? 'page' : undefined}
             aria-label={`Página ${page.page_number} · ${st.label}${hits > 0 ? ` · ${hits} coincidencias` : ''}`}
             onClick={() => onSelect(page.page_number)}
             className={cn(
@@ -87,8 +78,7 @@ function FocusLines({
     <div className="flex flex-col">
       {lines.map((line, index) => {
         const tone = line.confidence == null ? null : confidenceTone(line.confidence);
-        const problem =
-          showConfidence && (tone?.tone === 'warning' || tone?.tone === 'error');
+        const problem = showConfidence && (tone?.tone === 'warning' || tone?.tone === 'error');
         const last = index === lines.length - 1;
         return (
           <p

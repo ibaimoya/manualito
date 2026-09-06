@@ -24,6 +24,22 @@ function renderForgot() {
 }
 
 describe('/forgot', () => {
+  it('pide el correo en el idioma elegido en la app', async () => {
+    localStorage.setItem('manualito.language', JSON.stringify('en'));
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post('/api/auth/password/forgot', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ detail: 'ok' });
+      }),
+    );
+    renderForgot();
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox'), 'ana@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send link' }));
+    await waitFor(() => expect(body).toEqual({ email: 'ana@example.com', locale: 'en' }));
+  });
+
   it('no envía nada si el email está vacío', async () => {
     let requests = 0;
     server.use(

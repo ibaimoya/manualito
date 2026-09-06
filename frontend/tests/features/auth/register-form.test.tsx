@@ -1,6 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import i18n from '@/app/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -57,6 +59,23 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('RegisterForm', () => {
+  it('envía el idioma elegido al terminar el formulario', async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post('/api/auth/register', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ detail: 'unavailable' }, { status: 503 });
+      }),
+    );
+    const user = userEvent.setup();
+    mountRegister();
+    await fillValid(user);
+    await user.click(screen.getByRole('checkbox'));
+    await act(() => i18n.changeLanguage('en'));
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    await waitFor(() => expect(body).toMatchObject({ email: 'marta@gmail.com', locale: 'en' }));
+  });
+
   it('avisa si falta el consentimiento y registra al aceptarlo', async () => {
     const user = userEvent.setup();
     const { onAuthenticated } = mountRegister();

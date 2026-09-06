@@ -10,11 +10,17 @@ import { ariaInvalid, AuthField, emailFieldError, isEmail } from './auth-control
 import { AuthStatus } from './auth-status';
 
 export function ForgotForm() {
-  const { t } = useTranslation('auth');
+  const { t, i18n } = useTranslation('auth');
   const fieldId = useId();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const forgot = useMutation({ mutationFn: (value: string) => authApi.forgotPassword(value) });
+  const forgot = useMutation({
+    mutationFn: (value: string) =>
+      authApi.forgotPassword({
+        email: value,
+        locale: i18n.resolvedLanguage === 'en' ? 'en' : 'es',
+      }),
+  });
   const trimmedEmail = email.trim();
   const emailError = emailFieldError(trimmedEmail, submitted);
 

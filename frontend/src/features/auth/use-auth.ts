@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { authApi, type AuthResponse, type LoginInput, type RegisterInput } from '@/shared/api/auth';
 import { AUTH_ME_KEY, dropSessionCaches, meQueryOptions } from './auth-queries';
 
@@ -30,7 +31,10 @@ export function useLogin() {
 
 /** El registro deja sesión iniciada en backend (autologin), igual que login. */
 export function useRegister() {
-  return useEnterSession((input: RegisterInput) => authApi.register(input));
+  const { i18n } = useTranslation();
+  return useEnterSession((input: Omit<RegisterInput, 'locale'>) =>
+    authApi.register({ ...input, locale: i18n.resolvedLanguage === 'en' ? 'en' : 'es' }),
+  );
 }
 
 export function useLogout() {

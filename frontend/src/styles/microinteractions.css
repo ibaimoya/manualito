@@ -226,7 +226,7 @@
 
   .action-icon [data-icon-part='book-pages'] {
     transform-origin: 12px 12px;
-    transform: scaleX(0.72);
+    transform: scaleX(1);
   }
 }
 
@@ -257,7 +257,7 @@
       }
 
       [data-icon-part='book-pages'] {
-        transform: scaleX(1);
+        transform: scaleX(1.14);
       }
     }
   }

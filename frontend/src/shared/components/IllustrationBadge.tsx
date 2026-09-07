@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 import './illustration-badge.css';
 
-const TONES = {
+export const ILLUSTRATION_TONE_CLASS = {
   primary: 'bg-primary-700 text-primary-50',
   accent: 'illustration-badge-accent text-fg-inv',
   green: 'bg-success text-fg-inv',
   ochre: 'bg-warning text-fg-inv',
 } as const;
 
-export type IllustrationTone = keyof typeof TONES;
+export type IllustrationTone = keyof typeof ILLUSTRATION_TONE_CLASS;
 
 export function IllustrationBadge({
   tone,
@@ -21,7 +21,7 @@ export function IllustrationBadge({
       aria-hidden="true"
       className={cn(
         'illustration-badge grid size-8 shrink-0 place-items-center rounded-full',
-        TONES[tone],
+        ILLUSTRATION_TONE_CLASS[tone],
         className,
       )}
     >

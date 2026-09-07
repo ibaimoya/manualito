@@ -1,6 +1,7 @@
 import { Icon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import { ILLUSTRATION_TONE_CLASS } from '@/shared/components/IllustrationBadge';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { cn } from '@/shared/lib/cn';
 
@@ -24,15 +25,10 @@ const SIZE_CLASS: Record<ConversationActivitySize, string> = {
   md: 'size-10',
 };
 
-const TONE_CLASS: Record<ConversationActivityTone, string> = {
-  primary: 'bg-primary-100 text-primary-700',
-  accent: 'bg-accent-100 text-accent',
-};
-
 /** Color del halo que late bajo el glifo mientras se responde, según el tono. */
 const TONE_HALO: Record<ConversationActivityTone, string> = {
-  primary: 'rgba(246, 149, 59, 0.20)',
-  accent: 'rgba(124, 192, 232, 0.20)',
+  primary: 'color-mix(in srgb, var(--m-primary-700) 20%, transparent)',
+  accent: 'color-mix(in srgb, var(--m-accent-500) 20%, transparent)',
 };
 
 /**
@@ -69,7 +65,7 @@ export function ConversationActivityIcon({
       className={cn(
         'relative grid shrink-0 place-items-center rounded-xl',
         SIZE_CLASS[size],
-        TONE_CLASS[tone],
+        ILLUSTRATION_TONE_CLASS[tone],
         hasPendingReply && 'proc-glyph-pulse',
         className,
       )}

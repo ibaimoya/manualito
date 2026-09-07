@@ -14,6 +14,7 @@ import { axe } from 'jest-axe';
 import { server } from '@tests/_helpers/server';
 import { GameJumpSearch } from '@/features/games/GameJumpSearch';
 import { GameTypeahead } from '@/features/upload/GameTypeahead';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { GameSearchItem } from '@/shared/api/client';
 
 const games: GameSearchItem[] = [
@@ -54,7 +55,9 @@ function renderTypeahead() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
     <QueryClientProvider client={queryClient}>
-      <GameTypeahead onSelect={onSelect} />
+      <TooltipProvider>
+        <GameTypeahead onSelect={onSelect} />
+      </TooltipProvider>
     </QueryClientProvider>,
   );
   return { ...view, onSelect };

@@ -90,11 +90,10 @@ describe('/settings', () => {
     expect(screen.getByText('Claro, oscuro o el del sistema')).toBeInTheDocument();
   });
 
-  it('muestra el indicador estático de archivos gestionados por servidor', async () => {
+  it('explica el almacenamiento sin repetir un indicador de servidor', async () => {
     renderSettings();
-    expect(
-      await screen.findByRole('status', { name: /Archivos gestionados/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Se guardan en el servidor/)).toBeInTheDocument();
+    expect(screen.queryByText('Servidor')).not.toBeInTheDocument();
   });
 
   it('botón "Borrar cuenta" abre el diálogo de confirmación', async () => {

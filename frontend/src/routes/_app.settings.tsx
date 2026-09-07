@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, FileText, Moon, Sun, SunMoon } from 'lucide-react';
+import { ChevronRight, Moon, Sun, SunMoon } from 'lucide-react';
 import { LogOutIcon } from '@/shared/components/action-icons';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -132,11 +132,7 @@ function PrivacyDataSection() {
 
   return (
     <Group title={t('privacy.group')}>
-      <Row label={t('privacy.files')} hint={t('privacy.filesHint')}>
-        <Badge role="status" ariaLabel={t('privacy.filesBadgeAriaLabel')}>
-          <FileText size={12} aria-hidden="true" /> {t('privacy.filesBadge')}
-        </Badge>
-      </Row>
+      <Row label={t('privacy.files')} hint={t('privacy.filesHint')} />
       {user ? (
         <Row label={t('privacy.deleteAccount')} hint={t('privacy.deleteAccountHint')}>
           <DeleteAccountButton username={user.username} />
@@ -172,7 +168,7 @@ function Row({
   hint?: string;
   /** Control ancho en móvil bajo el label */
   stacked?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }>) {
   return (
     <div
@@ -187,25 +183,5 @@ function Row({
       </div>
       {children}
     </div>
-  );
-}
-
-function Badge({
-  children,
-  role,
-  ariaLabel,
-}: Readonly<{
-  children: ReactNode;
-  role?: string;
-  ariaLabel?: string;
-}>) {
-  return (
-    <span
-      role={role}
-      aria-label={ariaLabel}
-      className="inline-flex items-center gap-1.5 rounded-full bg-success-bg px-2.5 py-1 text-xs font-semibold text-success"
-    >
-      {children}
-    </span>
   );
 }

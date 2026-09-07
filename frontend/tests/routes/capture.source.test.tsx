@@ -91,12 +91,15 @@ describe('/capture/source · nuevo manual', () => {
     expect(screen.getByText('BoardGameGeek')).toBeInTheDocument();
   });
 
-  it('elegir un juego muestra el chip y habilita las fuentes', async () => {
+  it('elegir un juego muestra su ayuda y habilita las fuentes', async () => {
     renderSource();
     const user = userEvent.setup();
     await pickGame(user, 'Wingspan');
     expect(await screen.findByRole('button', { name: /Cambiar/i })).toBeInTheDocument();
-    expect(screen.getByText(/Elegido/i)).toBeInTheDocument();
+    const selected = screen.getByRole('button', { name: 'Juego elegido para este manual' });
+    await user.hover(selected);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Juego elegido para este manual');
+    expect(screen.getByRole('button', { name: /Cambiar/i })).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByLabelText(/Seleccionar imágenes de la galería/i)).toBeEnabled(),
     );
@@ -126,8 +129,10 @@ describe('/capture/source · nuevo manual', () => {
     // Sin coincidencias aparece la opción de crearlo.
     const createBtn = await screen.findByRole('button', { name: /Crear «Mi juego casero»/i });
     await user.click(createBtn);
-    // El juego creado queda elegido (chip con «Elegido»).
-    expect(await screen.findByText(/Elegido/i)).toBeInTheDocument();
+    // El juego creado queda seleccionado y ofrece ayuda sin sustituir Cambiar.
+    expect(
+      await screen.findByRole('button', { name: 'Juego elegido para este manual' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Mi juego casero')).toBeInTheDocument();
   });
 
@@ -197,7 +202,7 @@ describe('/capture/source · nuevo manual', () => {
   it('retraduce el aviso local ya visible y conserva el límite al cambiar de idioma', async () => {
     renderSource('test-game-001');
     const user = userEvent.setup();
-    await screen.findByText(/Elegido/i);
+    await screen.findByRole('button', { name: 'Juego elegido para este manual' });
     await user.upload(
       screen.getByTestId('picker-gallery'),
       imageFile('large.jpg', MAX_IMAGE_BYTES + 1),
@@ -310,7 +315,7 @@ describe('/capture/source · nuevo manual', () => {
   it('reordenar conserva la fila, su vista previa y el foco del botón', async () => {
     renderSource('test-game-001');
     const user = userEvent.setup();
-    await screen.findByText(/Elegido/i);
+    await screen.findByRole('button', { name: 'Juego elegido para este manual' });
     await user.upload(screen.getByTestId('picker-gallery'), imageFiles(3));
     const row = screen.getByText('page-1.jpg').closest('li');
     const image = row?.querySelector('img');
@@ -333,7 +338,7 @@ describe('/capture/source · nuevo manual', () => {
     });
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation((url) => liveUrls.delete(url));
     const { unmount } = renderSource('test-game-001', true);
-    await screen.findByText(/Elegido/i);
+    await screen.findByRole('button', { name: 'Juego elegido para este manual' });
     await userEvent.setup().upload(screen.getByTestId('picker-gallery'), imageFile('preview.jpg'));
     const image = screen.getByText('preview.jpg').closest('li')?.querySelector('img');
     expect(image).not.toBeNull();
@@ -373,7 +378,9 @@ describe('/capture/source · nuevo manual', () => {
   it('preseleccionado desde el hub: arranca con el juego de origen como chip', async () => {
     // Llegamos desde el hub de Catan (test-game-001); el detalle lo sirve MSW.
     renderSource('test-game-001');
-    expect(await screen.findByText(/Elegido/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Juego elegido para este manual' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Catan')).toBeInTheDocument();
     // Es un chip, no el buscador: no hay combobox visible.
     expect(screen.queryByRole('combobox', { name: /Buscar juego/i })).not.toBeInTheDocument();

@@ -18,6 +18,8 @@ import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
 import { toastApiError } from '@/shared/lib/toastApiError';
 import { LiveTrans } from '@/shared/components/LiveTrans';
+import { HelpIndicator } from '@/components/ui/help-indicator';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 250;
@@ -392,41 +394,47 @@ function ResultRow({
   onHover: () => void;
 }>) {
   const { t } = useTranslation('explore');
+  const sharedManuals = t('typeahead.sharedManuals', { count: game.manuals_count });
+  const option = (
+    <button
+      id={id}
+      type="button"
+      role="option"
+      aria-selected={active}
+      tabIndex={-1}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onPick}
+      onMouseMove={onHover}
+      className={cn(
+        'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left',
+        active ? 'border-l-primary bg-surface' : 'border-l-transparent',
+      )}
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-primary-700">
+        <Dice5 size={18} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
+        {highlightMatch(game.name, query, MIN_CHARS)}
+      </span>
+      {game.manuals_count > 0 ? (
+        <HelpIndicator
+          passive
+          icon={FileText}
+          label={sharedManuals}
+          className="mono min-h-6 shrink-0 text-xs font-semibold tabular-nums"
+          iconClassName="size-3.5"
+        >
+          {game.manuals_count}
+        </HelpIndicator>
+      ) : null}
+      <span className="mono shrink-0 text-xs text-fg-3">
+        {game.year_published ?? t('typeahead.yearNotAvailable')}
+      </span>
+    </button>
+  );
   return (
     <li role="none">
-      <button
-        id={id}
-        type="button"
-        role="option"
-        aria-selected={active}
-        tabIndex={-1}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={onPick}
-        onMouseMove={onHover}
-        className={cn(
-          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left',
-          active ? 'border-l-primary bg-surface' : 'border-l-transparent',
-        )}
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-primary-700">
-          <Dice5 size={18} aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
-          {highlightMatch(game.name, query, MIN_CHARS)}
-        </span>
-        {game.manuals_count > 0 ? (
-          <span
-            className="mono inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-100 px-1.5 py-0.5 text-[10px] font-bold text-primary-700"
-            title={t('typeahead.sharedManuals', { count: game.manuals_count })}
-          >
-            <FileText size={10} strokeWidth={2.5} aria-hidden="true" />
-            {game.manuals_count}
-          </span>
-        ) : null}
-        <span className="mono shrink-0 text-xs text-fg-3">
-          {game.year_published ?? t('typeahead.yearNotAvailable')}
-        </span>
-      </button>
+      {game.manuals_count > 0 ? <Tooltip content={sharedManuals}>{option}</Tooltip> : option}
     </li>
   );
 }
@@ -476,10 +484,7 @@ export function SelectedGameChip({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-display text-base font-bold text-fg">{game.name}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 text-xs font-bold text-success">
-            <Check size={13} strokeWidth={2.5} aria-hidden="true" />{' '}
-            {t('typeahead.selected.chosen')}
-          </span>
+          <HelpIndicator icon={Check} tone="success" label={t('typeahead.selected.help')} />
         </div>
         <p className="mono mt-0.5 text-[11.5px] text-fg-3">
           {game.year_published ?? t('typeahead.yearNotAvailable')}

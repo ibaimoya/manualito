@@ -60,7 +60,7 @@
     },
     "selected": {
       "change": "Cambiar",
-      "chosen": "Elegido"
+      "help": "Juego elegido para este manual"
     },
     "sharedManuals_one": "{{count}} manual compartido",
     "sharedManuals_other": "{{count}} manuales compartidos",

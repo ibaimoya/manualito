@@ -60,7 +60,7 @@
     },
     "selected": {
       "change": "Change",
-      "chosen": "Selected"
+      "help": "Game selected for this rulebook"
     },
     "sharedManuals_one": "{{count}} shared rulebook",
     "sharedManuals_other": "{{count}} shared rulebooks",

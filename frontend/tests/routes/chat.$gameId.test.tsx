@@ -554,7 +554,23 @@ describe('/chat/$gameId', () => {
     // Igual número en dos manuales conserva ambas citas, sin duplicar la propia.
     expect(screen.getAllByText('Pág. 4')).toHaveLength(2);
     expect(screen.getAllByRole('link', { name: 'Abrir página 4 del manual' })).toHaveLength(1);
-    expect(screen.getByTitle(/Comunidad/)).toHaveTextContent('Pág. 4');
+    const community = screen.getByRole('button', { name: 'Página 4 (manual de la comunidad)' });
+    expect(community).toHaveTextContent('Pág. 4');
+    await user.hover(community);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Comunidad · manual de la comunidad',
+    );
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Página 7 (ya no disponible)' })).toHaveTextContent(
+      'Pág. 7',
+    );
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.unhover(community);
+    await user.hover(own);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Reglas base');
+    await user.click(own);
+    expect(await screen.findByText('ManualScreen')).toBeInTheDocument();
   });
 
   it('typing indicator mientras la mutation está en vuelo', async () => {

@@ -16,7 +16,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Tooltip } from '@/components/ui/tooltip';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { useResendVerification } from '@/features/auth/use-resend-verification';
 import { EditProfileDialog } from '@/features/profile/EditProfileDialog';
@@ -87,15 +87,11 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
                   </span>
                 </h1>
                 {user.email_verified_at === null ? null : (
-                  <Tooltip content={t('verification.verified')}>
-                    <button
-                      type="button"
-                      aria-label={t('verification.verified')}
-                      className="hit-area grid size-8 shrink-0 cursor-help place-items-center rounded-full text-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/40"
-                    >
-                      <BadgeCheck size={22} strokeWidth={2.2} aria-hidden="true" />
-                    </button>
-                  </Tooltip>
+                  <HelpIndicator
+                    icon={BadgeCheck}
+                    tone="success"
+                    label={t('verification.verified')}
+                  />
                 )}
               </div>
               <p className="mono mt-0.5 truncate text-sm text-fg-3">@{user.username}</p>
@@ -168,8 +164,8 @@ function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
   if (user.email_verified_at !== null) return null;
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-1 text-xs font-semibold text-warning">
-        <AlertTriangle size={12} strokeWidth={2.4} aria-hidden="true" />
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning">
+        <AlertTriangle size={16} strokeWidth={1.8} aria-hidden="true" />
         {t('verification.unverified')}
       </span>
       {cooldown > 0 ? (

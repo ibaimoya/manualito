@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 import { AuthAlert } from '@/features/auth/auth-alert';
@@ -125,20 +126,21 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
               {COLORS.map((option) => {
                 const label = t(option.key);
                 return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={color === option.value}
-                    aria-label={label}
-                    onClick={() => setColor(option.value)}
-                    className={cn(
-                      'transition-control size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
-                      option.className,
-                      color === option.value
-                        ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
-                        : 'motion-safe:hover:scale-110',
-                    )}
-                  />
+                  <Tooltip key={option.value} content={label}>
+                    <button
+                      type="button"
+                      aria-pressed={color === option.value}
+                      aria-label={label}
+                      onClick={() => setColor(option.value)}
+                      className={cn(
+                        'transition-control size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
+                        option.className,
+                        color === option.value
+                          ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                          : 'motion-safe:hover:scale-110',
+                      )}
+                    />
+                  </Tooltip>
                 );
               })}
             </fieldset>
@@ -147,28 +149,28 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                 const selected = figure === option.value;
                 const label = t(option.key);
                 return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={label}
-                    title={label}
-                    onClick={() => setFigure(option.value)}
-                    className={cn(
-                      'transition-control grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
-                      selected
-                        ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
-                        : 'hover:bg-surface-2',
-                    )}
-                  >
-                    {option.value === 'initials' ? (
-                      <span className="font-display text-xs font-extrabold">
-                        {(username || user.username).trim().charAt(0).toUpperCase()}
-                      </span>
-                    ) : (
-                      <AvatarGlyph figure={option.value} size={30} />
-                    )}
-                  </button>
+                  <Tooltip key={option.value} content={label}>
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={label}
+                      onClick={() => setFigure(option.value)}
+                      className={cn(
+                        'transition-control grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
+                        selected
+                          ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                          : 'hover:bg-surface-2',
+                      )}
+                    >
+                      {option.value === 'initials' ? (
+                        <span className="font-display text-xs font-extrabold">
+                          {(username || user.username).trim().charAt(0).toUpperCase()}
+                        </span>
+                      ) : (
+                        <AvatarGlyph figure={option.value} size={30} />
+                      )}
+                    </button>
+                  </Tooltip>
                 );
               })}
             </fieldset>

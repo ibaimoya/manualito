@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
+import { Tooltip } from '@/components/ui/tooltip';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import {
   conversationMessagesKey,
@@ -1120,33 +1121,39 @@ function SourceChip({
 
   if (clickable) {
     return (
-      <Link
-        to="/manual/$manualId"
-        params={{ manualId }}
-        search={{ page }}
-        title={title ?? undefined}
-        aria-label={t('aria.pageLink', { page })}
-        className={cn(
-          CHIP_BASE,
-          'border-border-strong bg-card text-fg-2 transition-colors hover:border-primary hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-        )}
-      >
-        {icon}
-        {t('sources.page', { page })}
-      </Link>
+      <Tooltip content={title ?? t('aria.pageLink', { page })}>
+        <Link
+          to="/manual/$manualId"
+          params={{ manualId }}
+          search={{ page }}
+          aria-label={t('aria.pageLink', { page })}
+          className={cn(
+            CHIP_BASE,
+            'cursor-pointer border-border-strong bg-card text-fg-2 transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          )}
+        >
+          {icon}
+          {t('sources.page', { page })}
+        </Link>
+      </Tooltip>
     );
   }
 
   const reason = isOwn ? t('sources.unavailable') : t('sources.communityManual');
   return (
-    <span
-      title={title ? `${title} · ${reason}` : reason}
-      aria-label={t('aria.page', { page, reason })}
-      className={cn(CHIP_BASE, 'cursor-default border-border bg-card text-fg-3')}
-    >
-      {icon}
-      {t('sources.page', { page })}
-    </span>
+    <Tooltip content={title ? `${title} · ${reason}` : reason} touch>
+      <button
+        type="button"
+        aria-label={t('aria.page', { page, reason })}
+        className={cn(
+          CHIP_BASE,
+          'cursor-help border-border bg-card text-fg-3 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+        )}
+      >
+        {icon}
+        {t('sources.page', { page })}
+      </button>
+    </Tooltip>
   );
 }
 

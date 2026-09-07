@@ -16,6 +16,7 @@
     "notFoundTitle": "We couldn't find this game"
   },
   "explanation": {
+    "aiGenerated": "AI-generated",
     "aria": {
       "game": "Game explanation",
       "preparing": "Getting the explanation ready"
@@ -52,8 +53,6 @@
     "pages_other": "{{count}} pages"
   },
   "header": {
-    "aiBadge": "AI-generated",
-    "aiTooltip": "AI-generated: it can be wrong. If something doesn't look right, check it against the original rulebook.",
     "boardGame": "Board game",
     "boardGameWithYear": "Board game · {{year}}"
   },

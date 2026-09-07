@@ -1,11 +1,21 @@
 import type { ParseKeys } from 'i18next';
-import { AlertTriangle, Check, Copy, LoaderCircle, Pencil, X, type LucideIcon } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  FileText,
+  Hourglass,
+  LoaderCircle,
+  Pencil,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import i18n from '@/app/i18n';
 import type { ManualDetailPage } from '@/shared/api/client';
 
 /** Estado de lectura de una página (fuente única para rail, chip y cajón). */
 export type PageStatusKey = 'ok' | 'low' | 'edited' | 'duplicate' | 'processing' | 'failed';
-export type PageStatusTone = 'success' | 'warning' | 'accent' | 'error';
+export type PageStatusTone = 'success' | 'warning' | 'accent' | 'error' | 'neutral';
 
 export interface PageStatusMeta {
   key: PageStatusKey;
@@ -69,7 +79,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'processing',
     label: 'status.processing.label',
     short: 'status.processing.short',
-    Icon: LoaderCircle,
+    Icon: Hourglass,
     tone: 'accent',
     tip: 'status.processing.tip',
   },
@@ -86,7 +96,10 @@ function resolveStatus(definition: PageStatusDefinition): PageStatusMeta {
 
 export function pageStatus(page: ManualDetailPage): PageStatusMeta {
   if (page.ocr_status === 'pending' || page.ocr_status === 'processing') {
-    return resolveStatus(META.processing);
+    return resolveStatus({
+      ...META.processing,
+      Icon: page.ocr_status === 'processing' ? LoaderCircle : Hourglass,
+    });
   }
   if (page.ocr_status === 'failed') return resolveStatus(META.failed);
   // Reutilizada de otra página idéntica: prima sobre la calidad del texto copiado,
@@ -94,6 +107,16 @@ export function pageStatus(page: ManualDetailPage): PageStatusMeta {
   if (page.dedup_status === 'reused') return resolveStatus(META.duplicate);
   if (page.text_source === 'user_edit') return resolveStatus(META.edited);
   if (page.text_quality === 'low_confidence') return resolveStatus(META.low);
+  if (!page.ocr_lines.some((line) => line.text.trim().length > 0)) {
+    return resolveStatus({
+      ...META.ok,
+      label: 'status.empty.label',
+      short: 'status.empty.short',
+      tip: 'status.empty.tip',
+      Icon: FileText,
+      tone: 'neutral',
+    });
+  }
   return resolveStatus(META.ok);
 }
 
@@ -103,21 +126,22 @@ export function pageStatusLegend(): readonly PageStatusMeta[] {
   );
 }
 
-/** Clases fg/bg por tono, para los puntos de estado que no usan <Badge>. */
-export const STATUS_TONE_CLASS: Record<PageStatusTone, string> = {
-  success: 'bg-success-bg text-success',
-  warning: 'bg-warning-bg text-warning',
-  accent: 'bg-accent-100 text-accent',
-  error: 'bg-error-bg text-error',
-};
-
-/** Solo color de texto, para iconos de la leyenda y la tira móvil. */
+/** Color de texto para leyendas e indicadores sin superficie propia. */
 export const STATUS_FG_CLASS: Record<PageStatusTone, string> = {
   success: 'text-success',
   warning: 'text-warning',
   accent: 'text-accent',
   error: 'text-error',
+  neutral: 'text-fg-3',
 };
+
+export const STATUS_HELP_TONE = {
+  success: 'success',
+  warning: 'warning',
+  accent: 'info',
+  error: 'danger',
+  neutral: 'neutral',
+} as const;
 
 export type ConfidenceTone = 'success' | 'warning' | 'error';
 

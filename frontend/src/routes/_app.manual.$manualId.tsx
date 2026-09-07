@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Copy,
   FileText,
   Files,
   Images,
@@ -32,7 +31,7 @@ import {
 import { toast } from 'sonner';
 import { Trans, useTranslation } from 'react-i18next';
 import { ScreenTopBar } from '@/app/Topbar';
-import { Badge } from '@/components/ui/badge';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import {
@@ -44,6 +43,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
+import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
 import {
@@ -56,7 +56,7 @@ import {
   scrollDeltaForImagePoint,
   type ImageZoom,
 } from '@/features/manual/imageZoom';
-import { pageStatus } from '@/features/manual/pageStatus';
+import { pageStatus, STATUS_HELP_TONE } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import {
   manualDetailQueryOptions,
@@ -159,7 +159,7 @@ function ManualMetaRow({
 }>) {
   const { t } = useTranslation('manual');
   return (
-    <div className="mono mt-1.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
+    <div className="mono mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
       <span className="inline-flex items-center gap-1.5">
         <Clock size={13} aria-hidden="true" />
         {t('meta.uploaded', { date: formatLongDate(createdAt) })}
@@ -175,15 +175,7 @@ function ManualMetaRow({
       <span className="inline-flex items-center gap-1.5">
         <Files size={13} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
       </span>
-      {duplicateCount > 0 ? (
-        <span
-          className="inline-flex cursor-help items-center gap-1.5 text-warning"
-          title={t('meta.duplicates', { count: duplicateCount })}
-        >
-          <Copy size={13} aria-hidden="true" />{' '}
-          {t('meta.duplicateLabel', { count: duplicateCount })}
-        </span>
-      ) : null}
+      {duplicateCount > 0 ? <DuplicatePagesBadge count={duplicateCount} /> : null}
     </div>
   );
 }
@@ -1083,24 +1075,19 @@ function NavButton({
 function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
   const { t } = useTranslation('manual');
   const st = pageStatus(page);
+  const showLabel = st.key !== 'ok' && st.key !== 'edited';
   return (
-    <Tooltip content={st.tip}>
-      <Badge
-        tone={st.tone}
-        icon={
-          <st.Icon
-            strokeWidth={2.2}
-            className={st.key === 'processing' ? 'animate-spin' : undefined}
-          />
-        }
-        tabIndex={0}
-        role="status"
-        aria-label={t('status.readingLabel', { status: st.label })}
-        className="h-[30px] cursor-help px-2.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    <span role="status" aria-label={t('status.readingLabel', { status: st.label })}>
+      <HelpIndicator
+        icon={st.Icon}
+        tone={STATUS_HELP_TONE[st.tone]}
+        label={st.tip}
+        iconClassName={page.ocr_status === 'processing' ? 'animate-spin' : undefined}
+        className="text-[12.5px]"
       >
-        {st.label}
-      </Badge>
-    </Tooltip>
+        {showLabel ? st.label : null}
+      </HelpIndicator>
+    </span>
   );
 }
 
@@ -1111,28 +1098,31 @@ function ConfidenceToggle({
 }: Readonly<{ pressed: boolean; disabled: boolean; onToggle: () => void }>) {
   const { t } = useTranslation('manual');
   return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onToggle}
-      title={disabled ? t('confidence.toggle.disabledTitle') : t('confidence.toggle.title')}
-      className={cn(
-        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-55',
-        pressed
-          ? 'border-primary bg-primary-50 text-primary-700'
-          : 'border-border-strong bg-card text-fg-2 hover:bg-surface',
-      )}
+    <Tooltip
+      content={disabled ? t('confidence.toggle.disabledTitle') : t('confidence.toggle.title')}
     >
-      <Layers size={15} strokeWidth={2} aria-hidden="true" />
-      {t('confidence.toggle.label')}
-      <ChevronDown
-        size={14}
-        strokeWidth={2}
-        aria-hidden="true"
-        className={cn('transition-transform', pressed && 'rotate-180')}
-      />
-    </button>
+      <button
+        type="button"
+        aria-pressed={pressed}
+        aria-disabled={disabled}
+        onClick={disabled ? undefined : onToggle}
+        className={cn(
+          'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 aria-disabled:cursor-not-allowed aria-disabled:opacity-55',
+          pressed
+            ? 'border-primary bg-primary-50 text-primary-700'
+            : 'border-border-strong bg-card text-fg-2 aria-[disabled=false]:hover:bg-surface',
+        )}
+      >
+        <Layers size={15} strokeWidth={2} aria-hidden="true" />
+        {t('confidence.toggle.label')}
+        <ChevronDown
+          size={14}
+          strokeWidth={2}
+          aria-hidden="true"
+          className={cn('transition-transform', pressed && 'rotate-180')}
+        />
+      </button>
+    </Tooltip>
   );
 }
 

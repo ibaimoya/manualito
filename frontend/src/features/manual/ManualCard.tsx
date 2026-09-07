@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { type ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { gameColor } from '@/shared/lib/gameColor';
@@ -45,9 +44,16 @@ export function ManualCard({ manual, meta, className }: Props) {
             {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
           {indexing && (
-            <Badge tone="primary" icon={<Spinner size={10} />} className="hidden @sm:inline-flex">
+            <HelpIndicator
+              icon={LoaderCircle}
+              label={t('card.processing')}
+              tone="info"
+              passive
+              iconClassName="animate-spin"
+              className="hidden @sm:inline-flex"
+            >
               {t('card.processing')}
-            </Badge>
+            </HelpIndicator>
           )}
           <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />
         </div>

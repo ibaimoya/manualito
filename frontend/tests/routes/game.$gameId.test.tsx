@@ -88,14 +88,23 @@ describe('/game/$gameId · preguntas sugeridas', () => {
 });
 
 describe('/game/$gameId · cabecera', () => {
-  it('muestra nombre, año y el chip de IA', async () => {
+  it('muestra nombre y año, y sitúa la ayuda de IA junto al resumen', async () => {
     renderHub();
     expect((await screen.findAllByRole('heading', { name: 'Catan' })).length).toBeGreaterThan(0);
     // El año se interpola en un nodo aparte: comparamos el texto del párrafo.
     expect(
       screen.getByText((_, element) => element?.textContent === 'Juego de mesa · 1995'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Generado con IA')).toBeInTheDocument();
+    expect(screen.queryByText('Generado con IA')).not.toBeInTheDocument();
+    const summaryLabel = await screen.findByText('Resumen rápido');
+    const aiHelp = within(summaryLabel.parentElement!).getByRole('button', {
+      name: 'Generado con IA',
+    });
+    const user = userEvent.setup();
+    await user.hover(aiHelp);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/^Generado con IA$/);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
   it('sin valoración muestra solo el grupo de estrellas (sin CTA de texto)', async () => {
@@ -359,7 +368,10 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
       'href',
       '/manual/test-manual-001',
     );
-    expect(within(region).getByText(/Compartido por la comunidad/)).toBeInTheDocument();
+    const shared = within(region).getByRole('button', { name: /Compartido por la comunidad/ });
+    expect(shared.closest('a')).toBeNull();
+    await userEvent.setup().hover(shared);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/Compartido por la comunidad/);
   });
 
   it('pie con el total agregado de manuales y páginas del pool', async () => {
@@ -382,7 +394,11 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
     );
     renderHub();
     const region = await screen.findByRole('region', { name: /Manuales/ });
-    expect(within(region).getByText('1 página duplicada')).toBeInTheDocument();
+    const ownLink = within(region).getByRole('link', { name: /Ver texto extraído/ });
+    expect(ownLink.querySelector('button')).toBeNull();
+    expect(within(ownLink).getByText('1')).toBeInTheDocument();
+    await userEvent.setup().hover(ownLink);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/Una página es idéntica/);
   });
 
   it('las conversaciones muestran "Ver todas (N)" hacia la pantalla del juego', async () => {

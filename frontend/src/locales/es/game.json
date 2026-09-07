@@ -16,6 +16,7 @@
     "notFoundTitle": "No hemos encontrado este juego"
   },
   "explanation": {
+    "aiGenerated": "Generado con IA",
     "aria": {
       "game": "Explicación del juego",
       "preparing": "Preparando la explicación"
@@ -52,8 +53,6 @@
     "pages_other": "{{count}} páginas"
   },
   "header": {
-    "aiBadge": "Generado con IA",
-    "aiTooltip": "Generado por IA: puede equivocarse. Si algo no cuadra, contrástalo con el manual original.",
     "boardGame": "Juego de mesa",
     "boardGameWithYear": "Juego de mesa · {{year}}"
   },

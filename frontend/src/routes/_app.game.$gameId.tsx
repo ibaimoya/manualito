@@ -1,10 +1,10 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, FileText, RotateCw, Sparkles } from 'lucide-react';
+import { ChevronRight, FileText, RotateCw, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ScreenTopBar } from '@/app/Topbar';
-import { Badge } from '@/components/ui/badge';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
@@ -13,7 +13,7 @@ import { ConversationsSection } from '@/features/conversations/ConversationsSect
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { FollowButton } from '@/features/games/FollowButton';
-import { GameHeroCover } from '@/features/games/GameHeroCover';
+import { GAME_HERO_COVER_CLASS, GameHeroCover } from '@/features/games/GameHeroCover';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { ManualThumbnail } from '@/features/manual/ManualThumbnail';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
@@ -110,34 +110,21 @@ function GameHeader({
   const { t } = useTranslation('game');
   const { gameIds } = useProcessingManuals();
   return (
-    <header className="flex flex-wrap items-center gap-5 @2xl/app:flex-nowrap @2xl/app:gap-6">
+    <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 @2xl/app:gap-x-6 @2xl/app:gap-y-2">
       <GameHeroCover name={game.name} processing={gameIds.has(game.id)} />
-      <div className="min-w-0 flex-1 basis-48">
+      <div className="min-w-0 @2xl/app:self-end">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           {game.year_published === null
             ? t('header.boardGame')
             : t('header.boardGameWithYear', { year: game.year_published })}
         </p>
-        <h1 className="mt-1 font-display text-3xl font-extrabold leading-tight tracking-tight text-fg md:text-4xl">
+        <h1 className="mt-1 min-w-0 break-words font-display text-2xl font-extrabold leading-tight tracking-tight text-fg @2xl/app:text-4xl">
           {game.name}
         </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <Tooltip content={t('header.aiTooltip')}>
-            <Badge tone="neutral" tabIndex={0} className="cursor-help">
-              <Sparkles size={12} strokeWidth={2} aria-hidden="true" />
-              {t('header.aiBadge')}
-            </Badge>
-          </Tooltip>
-        </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <RatingStars
-            value={game.my_rating?.score ?? 0}
-            size={26}
-            align="start"
-            onSelect={onRate}
-          />
-          <FollowButton gameId={game.id} following={game.is_following} />
-        </div>
+      </div>
+      <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 @2xl/app:col-span-1 @2xl/app:self-start">
+        <RatingStars value={game.my_rating?.score ?? 0} size={26} align="start" onSelect={onRate} />
+        <FollowButton gameId={game.id} following={game.is_following} />
       </div>
     </header>
   );
@@ -270,6 +257,7 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
 
 function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   const { t } = useTranslation('game');
+  const { t: libraryT } = useTranslation('library');
   const label = manual.title ?? t(manual.source_type === 'pdf' ? 'manuals.pdf' : 'manuals.photos');
   const body = (
     <>
@@ -281,7 +269,7 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         </p>
         {manual.duplicate_page_count > 0 ? (
           <div className="mt-1.5">
-            <DuplicatePagesBadge count={manual.duplicate_page_count} />
+            <DuplicatePagesBadge count={manual.duplicate_page_count} passive={manual.is_own} />
           </div>
         ) : null}
         {manual.is_own ? (
@@ -290,7 +278,7 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
             {t('manuals.extracted')}
           </span>
         ) : (
-          <p className="mt-1.5 text-xs text-fg-3">{t('manuals.shared')}</p>
+          <HelpIndicator icon={Users} label={t('manuals.shared')} className="mt-0.5" />
         )}
       </div>
     </>
@@ -298,22 +286,28 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
 
   // El manual propio se abre clicando la tarjeta entera, no un mini-enlace.
   if (manual.is_own) {
+    const link = (
+      <Link
+        to="/manual/$manualId"
+        params={{ manualId: manual.id }}
+        aria-label={t('manuals.viewExtracted', { label })}
+        className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
+      >
+        {body}
+        <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+      </Link>
+    );
     return (
       <Card className="manual-interaction transition-none hover:border-border-strong">
-        <Link
-          to="/manual/$manualId"
-          params={{ manualId: manual.id }}
-          aria-label={t('manuals.viewExtracted', { label })}
-          className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
-        >
-          {body}
-          <ChevronRight
-            size={18}
-            strokeWidth={2}
-            className="shrink-0 text-fg-3"
-            aria-hidden="true"
-          />
-        </Link>
+        {manual.duplicate_page_count > 0 ? (
+          <Tooltip
+            content={libraryT('duplicatePages.detail', { count: manual.duplicate_page_count })}
+          >
+            {link}
+          </Tooltip>
+        ) : (
+          link
+        )}
       </Card>
     );
   }
@@ -368,7 +362,7 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
 function ExplanationSkeleton() {
   return (
     <div aria-hidden="true" className="space-y-3">
-      <div className="h-24 animate-pulse rounded-2xl bg-surface-2" />
+      <div className="h-[116px] animate-pulse rounded-2xl bg-surface-2 [@media(pointer:coarse)]:h-32" />
       {[0, 1, 2].map((i) => (
         <div key={i} className="h-14 animate-pulse rounded-2xl bg-surface-2" />
       ))}
@@ -379,12 +373,19 @@ function ExplanationSkeleton() {
 function HubSkeleton() {
   return (
     <div aria-hidden="true" className="page-frame page-stack">
-      <div className="flex gap-5">
-        <div className="size-24 animate-pulse rounded-3xl bg-surface-2" />
-        <div className="flex-1 space-y-3 pt-1">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 @2xl/app:gap-x-6 @2xl/app:gap-y-2">
+        <div
+          className={`shrink-0 animate-pulse rounded-3xl bg-surface-2 @2xl/app:row-span-2 ${GAME_HERO_COVER_CLASS}`}
+        />
+        <div className="min-w-0 space-y-2 @2xl/app:self-end">
           <div className="h-3 w-28 animate-pulse rounded bg-surface-2" />
-          <div className="h-8 w-1/2 animate-pulse rounded-xl bg-surface-2" />
-          <div className="h-5 w-2/3 animate-pulse rounded-full bg-surface-2" />
+          <div className="h-[30px] w-3/4 animate-pulse rounded-xl bg-surface-2 @2xl/app:h-[45px]" />
+        </div>
+        <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 @2xl/app:col-span-1 @2xl/app:self-start">
+          <div className="-ml-[7px] h-11 w-[200px] shrink-0 animate-pulse rounded-xl bg-surface-2" />
+          <div className="w-36 shrink-0">
+            <div className="size-11 animate-pulse rounded-full bg-surface-2" />
+          </div>
         </div>
       </div>
       <ExplanationSkeleton />

@@ -1,12 +1,13 @@
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import type { ManualDetailPage } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import {
   pageStatus,
   pageStatusLegend,
   STATUS_FG_CLASS,
-  STATUS_TONE_CLASS,
+  STATUS_HELP_TONE,
 } from '@/features/manual/pageStatus';
 
 /** Rail de páginas: lista vertical en escritorio, tira de chips en móvil. */
@@ -60,90 +61,71 @@ function PageButton({
   const isDup = st.key === 'duplicate';
   const hitsLabel = hits > 0 ? t('page.matches', { count: hits }) : '';
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-current={active ? 'true' : undefined}
-      aria-label={t('page.buttonLabel', {
-        hits: hitsLabel,
-        pageNumber: page.page_number,
-        status: st.label,
-      })}
+    <div
       className={cn(
-        // border-2 constante: el grosor no cambia entre estados, así la tarjeta
-        // no crece al activarse. La activa se distingue por color y fondo.
-        'relative flex shrink-0 border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-        // móvil: chip vertical · escritorio: fila completa
-        'h-[58px] w-[46px] flex-col items-center justify-center gap-1 rounded-xl',
-        '@4xl/app:h-auto @4xl/app:w-full @4xl/app:flex-row @4xl/app:items-center @4xl/app:justify-start @4xl/app:gap-3 @4xl/app:rounded-2xl @4xl/app:p-2',
+        'relative flex h-[72px] w-[46px] shrink-0 flex-col items-center rounded-xl border-2',
+        '@4xl/app:h-auto @4xl/app:w-full @4xl/app:flex-row @4xl/app:gap-3 @4xl/app:rounded-2xl @4xl/app:p-2',
         pageButtonSurface(active, isDup),
       )}
     >
-      <PaperThumb failed={st.key === 'failed'} />
-
-      {/* número compacto (móvil) */}
-      <span
-        className={cn(
-          'mono text-xs font-bold tabular-nums @4xl/app:hidden',
-          active ? 'text-primary-700' : 'text-fg-2',
-        )}
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-current={active ? 'true' : undefined}
+        aria-label={t('page.buttonLabel', {
+          hits: hitsLabel,
+          pageNumber: page.page_number,
+          status: st.label,
+        })}
+        className="flex min-h-8 min-w-0 flex-1 shrink-0 items-center justify-center self-stretch rounded-[inherit] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary/40 @4xl/app:justify-start @4xl/app:gap-3"
       >
-        {page.page_number}
-      </span>
-      {/* etiqueta (escritorio) */}
-      <span
-        className={cn(
-          'hidden min-w-0 flex-1 truncate font-body text-sm font-semibold tabular-nums @4xl/app:block',
-          active ? 'text-fg' : 'text-fg-2',
-        )}
-      >
-        {t('page.number', { pageNumber: page.page_number })}
-      </span>
+        <PaperThumb failed={st.key === 'failed'} />
 
-      {hits > 0 ? (
-        <span className="mono hidden h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold tabular-nums text-fg-inv @4xl/app:grid">
-          {hits}
+        {/* número compacto (móvil) */}
+        <span
+          className={cn(
+            'mono text-xs font-bold tabular-nums @4xl/app:hidden',
+            active ? 'text-primary-700' : 'text-fg-2',
+          )}
+        >
+          {page.page_number}
         </span>
-      ) : null}
+        {/* etiqueta (escritorio) */}
+        <span
+          className={cn(
+            'hidden min-w-0 flex-1 truncate font-body text-sm font-semibold tabular-nums @4xl/app:block',
+            active ? 'text-fg' : 'text-fg-2',
+          )}
+        >
+          {t('page.number', { pageNumber: page.page_number })}
+        </span>
 
-      {/* estado: icono suelto (móvil) / punto redondo (escritorio); el de
-          "Procesando" gira para que se note que el trabajo sigue en curso. */}
-      <st.Icon
-        size={12}
-        strokeWidth={2.3}
-        className={cn(
-          '@4xl/app:hidden',
-          STATUS_FG_CLASS[st.tone],
-          st.key === 'processing' && 'animate-spin',
-        )}
-        aria-hidden="true"
+        {hits > 0 ? (
+          <span className="mono hidden h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold tabular-nums text-fg-inv @4xl/app:grid">
+            {hits}
+          </span>
+        ) : null}
+
+        {hits > 0 ? (
+          <span className="mono absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-fg-inv @4xl/app:hidden">
+            {hits}
+          </span>
+        ) : null}
+      </button>
+      <HelpIndicator
+        icon={st.Icon}
+        label={st.tip}
+        tone={STATUS_HELP_TONE[st.tone]}
+        iconClassName={page.ocr_status === 'processing' ? 'animate-spin' : undefined}
+        className="size-8 min-h-8 min-w-8 shrink-0"
       />
-      <span
-        className={cn(
-          'hidden size-6 shrink-0 place-items-center rounded-full @4xl/app:grid',
-          STATUS_TONE_CLASS[st.tone],
-        )}
-      >
-        <st.Icon
-          size={13}
-          strokeWidth={2.4}
-          className={cn(st.key === 'processing' && 'animate-spin')}
-          aria-hidden="true"
-        />
-      </span>
-
-      {hits > 0 ? (
-        <span className="mono absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold tabular-nums text-fg-inv @4xl/app:hidden">
-          {hits}
-        </span>
-      ) : null}
-    </button>
+    </div>
   );
 }
 
 function Legend() {
   // Dos columnas alineadas: con 6 estados, el wrap libre quedaba descuadrado.
-  // Cada celda lleva su icono en un punto de color del mismo tono que el chip.
+  // La leyenda conserva texto y forma para no depender solo del color.
   return (
     <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
       {pageStatusLegend().map((st) => (
@@ -152,13 +134,17 @@ function Legend() {
           className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-fg-2"
         >
           <span
-            className={cn(
-              'grid size-[18px] shrink-0 place-items-center rounded-md',
-              STATUS_TONE_CLASS[st.tone],
-            )}
+            className={cn('grid size-[18px] shrink-0 place-items-center', STATUS_FG_CLASS[st.tone])}
             aria-hidden="true"
           >
-            <st.Icon size={11} strokeWidth={2.4} />
+            <st.Icon
+              size={st.key === 'failed' ? 17 : 14}
+              strokeWidth={st.key === 'failed' ? 1.8 : 2}
+              className={cn(
+                'block',
+                (st.key === 'failed' || st.key === 'processing') && '-translate-y-px',
+              )}
+            />
           </span>
           <span className="truncate">{st.short}</span>
         </span>

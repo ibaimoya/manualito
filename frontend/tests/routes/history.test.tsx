@@ -150,7 +150,11 @@ describe('/history', () => {
     renderHistory();
     const user = userEvent.setup();
     await goToManuals(user);
-    expect(await screen.findByText('1 página duplicada')).toBeInTheDocument();
+    const indicator = await screen.findByRole('button', { name: /Una página es idéntica/ });
+    expect(indicator).toHaveTextContent('1');
+    await user.hover(indicator);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/Una página es idéntica/);
+    expect(screen.getByRole('link', { name: /Abrir Catan/ })).toHaveAttribute('href', '/manual/m1');
   });
 
   it('en Manuales, el filtro acota la lista por nombre', async () => {

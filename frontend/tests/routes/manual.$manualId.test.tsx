@@ -85,7 +85,7 @@ describe('/manual/$manualId · lectura', () => {
     renderManual();
     const rail = await screen.findByRole('navigation', { name: 'Páginas del manual' });
     expect(
-      within(rail).getByRole('button', { name: 'Página 1 · Escaneado correctamente' }),
+      within(rail).getByRole('button', { name: 'Página 1 · Texto disponible' }),
     ).toBeInTheDocument();
     expect(within(rail).getByRole('button', { name: 'Página 2 · Poco clara' })).toBeInTheDocument();
     expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
@@ -121,6 +121,30 @@ describe('/manual/$manualId · lectura', () => {
     expect(screen.getByText('Confianza OCR')).toBeInTheDocument();
     // La página 1 tiene una línea con confianza 0.97 → chip «97 %».
     expect(screen.getByText('97%')).toBeInTheDocument();
+  });
+
+  it('explica la ausencia de confianza sin activar el modo con teclado o clic', async () => {
+    renderManual();
+    mockSinglePageManual({
+      ocr_status: 'completed',
+      text_source: 'pdf_text',
+      ocr_lines: [{ text: 'Texto extraído del PDF.', confidence: null }],
+    });
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole('button', { name: 'Confianza por línea' });
+    expect(toggle).toHaveAttribute('aria-disabled', 'true');
+
+    for (let index = 0; document.activeElement !== toggle && index < 15; index++) {
+      await user.tab();
+    }
+    expect(toggle).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Esta página no tiene datos de confianza OCR.',
+    );
+    await user.keyboard('{Enter}');
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('la página poco clara muestra el aviso con reproceso puntual', async () => {
@@ -175,7 +199,9 @@ describe('/manual/$manualId · lectura', () => {
       stubs: { '/history': 'Historial stub', '/home': 'Home stub', '/game/$gameId': 'Juego stub' },
     });
     // Cabecera: contador de duplicadas.
-    expect(await screen.findByText(/1 duplicada/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Una página es idéntica/ })).toHaveTextContent(
+      '1',
+    );
     // Carril: la página 2 figura como duplicada.
     const rail = screen.getByRole('navigation', { name: 'Páginas del manual' });
     expect(within(rail).getByRole('button', { name: 'Página 2 · Duplicada' })).toBeInTheDocument();
@@ -290,7 +316,9 @@ describe('/manual/$manualId · edición de texto', () => {
     expect(confirm).toHaveTextContent(/Sustituirá lo leído en la página 1/);
     await user.click(within(confirm).getByRole('button', { name: 'Guardar' }));
 
-    expect(await screen.findByText('Editada a mano')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('status', { name: 'Estado de lectura: Editada a mano' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('PREPARACIÓN corregida a mano.')).toBeInTheDocument();
   });
 

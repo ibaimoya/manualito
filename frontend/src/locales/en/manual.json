@@ -32,7 +32,7 @@
     "shortNoData": "n/a",
     "title": "OCR confidence: {{label}}",
     "toggle": {
-      "disabledTitle": "This page has no OCR confidence data (the text was edited by hand)",
+      "disabledTitle": "This page has no OCR confidence data.",
       "label": "Line-by-line confidence",
       "title": "Color each line by OCR confidence"
     }
@@ -150,6 +150,11 @@
       "short": "Edited",
       "tip": "You corrected this page by hand."
     },
+    "empty": {
+      "label": "No text available",
+      "short": "No text",
+      "tip": "This page has no text available to consult."
+    },
     "failed": {
       "label": "Reading error",
       "short": "Error",
@@ -161,9 +166,9 @@
       "tip": "The OCR isn't sure about this page. You can read it again or correct it by hand."
     },
     "ok": {
-      "label": "Scanned successfully",
-      "short": "OK",
-      "tip": "The OCR recognized this page's text with good quality."
+      "label": "Text available",
+      "short": "Available",
+      "tip": "Text available to consult. You can compare it with the original page."
     },
     "processing": {
       "label": "Processing",

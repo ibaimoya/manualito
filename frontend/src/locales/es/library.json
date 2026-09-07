@@ -74,7 +74,9 @@
     },
     "visibility": {
       "private": "Privado",
-      "shared": "Compartido"
+      "privateHelp": "Manual privado",
+      "shared": "Compartido",
+      "sharedHelp": "Compartido con la comunidad"
     }
   },
   "manualSearch": {
@@ -89,6 +91,13 @@
     "hidden": "Oculto",
     "indexing": "Procesando…",
     "pendingReview": "Revisar"
+  },
+  "statusHelp": {
+    "active": "Manual listo para consultar",
+    "failed": "No se ha podido procesar este manual",
+    "hidden": "Este manual está oculto",
+    "indexing": "Procesando el manual. El texto estará disponible al terminar.",
+    "pendingReview": "Hay páginas cuya extracción necesita revisión"
   },
   "tabs": {
     "ariaLabel": "Cambiar entre juegos y manuales",

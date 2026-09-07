@@ -1,6 +1,7 @@
 import { isInaccessible, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PageTextCard } from '@/features/manual/PageTextCard';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { ManualDetailPage } from '@/shared/api/client';
 
 const page: ManualDetailPage = {
@@ -35,7 +36,9 @@ const props = {
 
 describe('PageTextCard', () => {
   it('conserva el scroll, los párrafos OCR y la coincidencia activa al alternar confianza', () => {
-    const { rerender } = render(<PageTextCard {...props} showConfidence={false} />);
+    const { rerender } = render(<PageTextCard {...props} showConfidence={false} />, {
+      wrapper: TooltipProvider,
+    });
     const article = screen.getByRole('article', { name: 'Página 1 de 1' });
     const scroller = article.firstElementChild!;
     const paragraphs = within(article).getAllByRole('paragraph');
@@ -64,6 +67,9 @@ describe('PageTextCard', () => {
       expect(article.querySelectorAll('mark[data-active-match]')).toHaveLength(1);
       expect(article.querySelector('mark[data-active-match]')).toBe(activeMark);
       expect(isInaccessible(screen.getByLabelText(/97 por ciento/))).toBe(!showConfidence);
+      expect(screen.getByLabelText(/97 por ciento/).parentElement?.hasAttribute('inert')).toBe(
+        !showConfidence,
+      );
       expect(isInaccessible(screen.getByLabelText('Confianza OCR: sin dato'))).toBe(
         !showConfidence,
       );
@@ -76,7 +82,9 @@ describe('PageTextCard', () => {
       ocr_confidence_mean: null,
       ocr_lines: page.ocr_lines.map((line) => ({ ...line, confidence: null })),
     };
-    render(<PageTextCard {...props} page={noConfidence} showConfidence />);
+    render(<PageTextCard {...props} page={noConfidence} showConfidence />, {
+      wrapper: TooltipProvider,
+    });
 
     expect(screen.getByRole('article')).toHaveTextContent('Reparte las cartas.');
     expect(

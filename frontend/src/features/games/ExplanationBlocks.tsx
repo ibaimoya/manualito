@@ -1,4 +1,4 @@
-import { Flag, RefreshCw, Trophy, type LucideIcon } from 'lucide-react';
+import { Flag, RefreshCw, Sparkles, Trophy, type LucideIcon } from 'lucide-react';
 import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Markdown } from '@/shared/components/Markdown';
 import { IllustrationBadge, type IllustrationTone } from '@/shared/components/IllustrationBadge';
@@ -60,9 +61,17 @@ export function ExplanationBlocks({
   return (
     <>
       <Card className="bg-surface p-4">
-        <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-          {t('explanation.summary')}
-        </p>
+        <div className="mb-1.5 flex items-center gap-0.5">
+          <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
+            {t('explanation.summary')}
+          </p>
+          <HelpIndicator
+            icon={Sparkles}
+            label={t('explanation.aiGenerated')}
+            className="-my-1"
+            iconClassName="size-4"
+          />
+        </div>
         <SkeletonSwap pending={summary === null} skeleton={<SummaryShimmer />}>
           {summary !== null && (
             <Markdown className="text-base leading-relaxed text-fg">{summary}</Markdown>

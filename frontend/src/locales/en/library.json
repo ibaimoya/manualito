@@ -74,7 +74,9 @@
     },
     "visibility": {
       "private": "Private",
-      "shared": "Shared"
+      "privateHelp": "Private rulebook",
+      "shared": "Shared",
+      "sharedHelp": "Shared with the community"
     }
   },
   "manualSearch": {
@@ -89,6 +91,13 @@
     "hidden": "Hidden",
     "indexing": "Processing…",
     "pendingReview": "Needs review"
+  },
+  "statusHelp": {
+    "active": "Rulebook ready to consult",
+    "failed": "This rulebook could not be processed",
+    "hidden": "This rulebook is hidden",
+    "indexing": "Processing the rulebook. The text will be available when it finishes.",
+    "pendingReview": "Some pages need their extracted text reviewed"
   },
   "tabs": {
     "ariaLabel": "Switch between games and rulebooks",

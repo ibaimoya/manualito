@@ -5,6 +5,8 @@ import { GameCover } from './GameCover';
 
 const SPRING = { duration: 0.5, bounce: 0 };
 const MAX_TILT = 7;
+export const GAME_HERO_COVER_CLASS =
+  'size-[var(--hero-cover-size)] [--hero-cover-size:104px] @2xl/app:[--hero-cover-size:136px]';
 
 export function GameHeroCover({ name, processing }: { name: string; processing: boolean }) {
   const canTilt = useMediaQuery(
@@ -38,14 +40,14 @@ export function GameHeroCover({ name, processing }: { name: string; processing: 
 
   return (
     <div
-      className="game-hero-cover size-[120px] shrink-0"
+      className={`game-hero-cover shrink-0 @2xl/app:row-span-2 ${GAME_HERO_COVER_CLASS}`}
       onPointerMove={followPointer}
       onPointerLeave={resetTilt}
       onPointerCancel={resetTilt}
     >
       {/* La capa que se inclina no debe ampliar ni mover el área que detecta el ratón. */}
       <motion.div className="pointer-events-none" style={{ transform }}>
-        <GameCover name={name} size={120} processing={processing} />
+        <GameCover name={name} size="var(--hero-cover-size)" processing={processing} />
       </motion.div>
     </div>
   );

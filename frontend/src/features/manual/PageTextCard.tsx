@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import { Copy, Pencil, RotateCw, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import i18n from '@/app/i18n';
 import type { ManualDetailPage } from '@/shared/api/client';
 import {
@@ -10,6 +11,7 @@ import {
   confidenceTone,
   pageStatus,
   STATUS_FG_CLASS,
+  STATUS_HELP_TONE,
 } from '@/features/manual/pageStatus';
 import { cn } from '@/shared/lib/cn';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -132,22 +134,20 @@ function ConfidenceChip({ confidence }: Readonly<{ confidence: number | null }>)
   const { t } = useTranslation('manual');
   const meta = confidence == null ? null : confidenceTone(confidence);
   const pct = confidence == null ? null : Math.round(confidence * 100);
+  const label = meta
+    ? t('confidence.lineLabel', { label: meta.label, percent: pct })
+    : t('confidence.noData');
   return (
-    <span
-      title={meta ? t('confidence.title', { label: meta.label }) : t('confidence.noData')}
-      aria-label={
-        meta
-          ? t('confidence.lineLabel', { label: meta.label, percent: pct })
-          : t('confidence.noData')
-      }
-      className={cn(
-        'mono inline-flex h-[22px] shrink-0 items-center gap-1.5 self-center rounded-full border border-current bg-card px-2 text-[11px] font-bold tabular-nums',
-        meta ? STATUS_FG_CLASS[meta.tone] : 'text-fg-3',
-      )}
-    >
-      <span className="size-[7px] rounded-full bg-current" aria-hidden="true" />
-      {pct == null ? t('confidence.shortNoData') : `${pct}%`}
-    </span>
+    <Tooltip content={label} touch>
+      <button
+        type="button"
+        aria-label={label}
+        data-tone={meta ? STATUS_HELP_TONE[meta.tone] : 'neutral'}
+        className="help-indicator mono w-full self-center tabular-nums"
+      >
+        {pct == null ? t('confidence.shortNoData') : `${pct}%`}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -365,6 +365,7 @@ export function PageTextCard({
               </div>
               <div
                 aria-hidden={!useConfidence}
+                inert={!useConfidence}
                 className={cn(
                   'shrink-0 self-center overflow-hidden transition-[width,margin-inline-start,opacity]',
                   CONFIDENCE_TRANSITION,

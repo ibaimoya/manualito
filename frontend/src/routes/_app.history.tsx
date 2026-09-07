@@ -3,8 +3,9 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   AlertTriangle,
-  CircleCheck,
-  Clock,
+  Check,
+  EyeOff,
+  LoaderCircle,
   Dice5,
   FileText,
   Image as ImageIcon,
@@ -16,11 +17,12 @@ import {
   Sparkles,
   Users,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import { TrashIcon } from '@/shared/components/action-icons';
-import { Fragment, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { Fragment, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
+import { HelpIndicator, type HelpTone } from '@/components/ui/help-indicator';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
@@ -54,7 +56,12 @@ type StatusTranslate = (
     | 'status.failed'
     | 'status.hidden'
     | 'status.indexing'
-    | 'status.pendingReview',
+    | 'status.pendingReview'
+    | 'statusHelp.active'
+    | 'statusHelp.failed'
+    | 'statusHelp.hidden'
+    | 'statusHelp.indexing'
+    | 'statusHelp.pendingReview',
 ) => string;
 
 const GAME_GRID =
@@ -268,7 +275,6 @@ function ManualDocCard({
   const { t } = useTranslation('library');
   const [confirming, setConfirming] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const st = manualStatusView(manual.status, t);
   const indexing = manual.status === 'indexing';
   const progress = useManualProgress(indexing ? manual.id : undefined);
   const isPdf = manual.source_type === 'pdf';
@@ -310,30 +316,9 @@ function ManualDocCard({
           stacked={manual.page_count > 1}
           processing={indexing}
           className="h-[66px] w-[52px] self-start"
-        >
-          <span
-            className={cn(
-              'absolute -right-[7px] -top-[7px] z-[1] grid size-6 place-items-center rounded-[7px] text-fg-inv',
-              isPdf ? 'bg-primary' : 'bg-accent',
-            )}
-          >
-            {isPdf ? <FileText size={12} /> : <ImageIcon size={12} />}
-          </span>
-        </ManualThumbnail>
+        />
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge tone={st.tone} icon={indexing ? <Spinner size={11} /> : st.icon}>
-              {st.label}
-            </Badge>
-            <Badge
-              tone={manual.visibility === 'shared' ? 'accent' : 'neutral'}
-              icon={manual.visibility === 'shared' ? <Users /> : <Lock />}
-            >
-              {manual.visibility === 'shared'
-                ? t('manualCard.visibility.shared')
-                : t('manualCard.visibility.private')}
-            </Badge>
-          </div>
+          <ManualIndicators manual={manual} />
           <Link
             to={indexing ? '/processing/$manualId' : '/manual/$manualId'}
             params={{ manualId: manual.id }}
@@ -387,7 +372,11 @@ function ManualDocCard({
             aria-label={t('aria.deleteManual', { manual: name })}
             className="icon-feedback relative z-10 grid size-11 shrink-0 self-start place-items-center rounded-lg text-fg-3 transition-colors hover:text-error"
           >
-            <TrashIcon size={17} strokeWidth={2} />
+            <TrashIcon
+              size={17}
+              strokeWidth={2}
+              className="relative -top-1.5 [@media(pointer:coarse)]:top-0"
+            />
           </button>
         </DialogPrimitive.Trigger>
 
@@ -433,6 +422,33 @@ function ManualDocCard({
         </DialogPrimitive.Content>
       </div>
     </DialogPrimitive.Root>
+  );
+}
+
+function ManualIndicators({ manual }: Readonly<{ manual: ManualSummary }>) {
+  const { t } = useTranslation('library');
+  const st = manualStatusView(manual.status, t);
+  const indexing = manual.status === 'indexing';
+
+  return (
+    <div className="relative top-1 -ml-[7px] -mt-1 flex flex-wrap items-center gap-0.5">
+      <HelpIndicator
+        tone={st.tone}
+        icon={st.icon}
+        label={st.help}
+        iconClassName={indexing ? 'animate-spin' : undefined}
+      >
+        {indexing || manual.status === 'failed' ? st.label : null}
+      </HelpIndicator>
+      <HelpIndicator
+        icon={manual.visibility === 'shared' ? Users : Lock}
+        label={
+          manual.visibility === 'shared'
+            ? t('manualCard.visibility.sharedHelp')
+            : t('manualCard.visibility.privateHelp')
+        }
+      />
+    </div>
   );
 }
 
@@ -582,20 +598,45 @@ function ProgressBar({ pct }: Readonly<{ pct: number }>) {
 function manualStatusView(
   status: ManualStatus,
   t: StatusTranslate,
-): { tone: 'success' | 'warning' | 'error' | 'neutral'; label: string; icon: ReactNode } {
+): { tone: HelpTone; label: string; help: string; icon: LucideIcon } {
   switch (status) {
     case 'active':
-      return { tone: 'success', label: t('status.active'), icon: <CircleCheck /> };
+      return {
+        tone: 'success',
+        label: t('status.active'),
+        help: t('statusHelp.active'),
+        icon: Check,
+      };
     case 'indexing':
-      return { tone: 'warning', label: t('status.indexing'), icon: <Clock /> };
+      return {
+        tone: 'neutral',
+        label: t('status.indexing'),
+        help: t('statusHelp.indexing'),
+        icon: LoaderCircle,
+      };
     case 'failed':
-      return { tone: 'error', label: t('status.failed'), icon: <AlertTriangle /> };
+      return {
+        tone: 'danger',
+        label: t('status.failed'),
+        help: t('statusHelp.failed'),
+        icon: AlertTriangle,
+      };
     case 'pending_review':
       // OCR dudoso en alguna página (fallo o baja confianza): no es moderación,
       // avisa de que conviene repasar el texto. Ámbar + triángulo = "algo pasa".
-      return { tone: 'warning', label: t('status.pendingReview'), icon: <AlertTriangle /> };
+      return {
+        tone: 'warning',
+        label: t('status.pendingReview'),
+        help: t('statusHelp.pendingReview'),
+        icon: AlertTriangle,
+      };
     default:
-      return { tone: 'neutral', label: t('status.hidden'), icon: <Clock /> };
+      return {
+        tone: 'neutral',
+        label: t('status.hidden'),
+        help: t('statusHelp.hidden'),
+        icon: EyeOff,
+      };
   }
 }
 

@@ -38,9 +38,11 @@ export const AccordionTrigger = forwardRef<
           ref={ref}
           className={cn(
             'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
-            'transition-colors',
+            'transition-none',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-            loading ? 'cursor-default' : 'hover:bg-surface-2 [&[data-state=open]>svg]:rotate-180',
+            loading
+              ? 'cursor-default'
+              : 'hover:enabled:pointer-fine:bg-[color-mix(in_srgb,var(--m-surface)_50%,var(--m-surface-2))] [&[data-state=open]>svg]:rotate-180',
             className,
           )}
           {...props}

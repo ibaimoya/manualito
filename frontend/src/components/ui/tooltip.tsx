@@ -69,7 +69,8 @@ export function Tooltip({
           className="z-50 max-w-[min(18rem,var(--radix-tooltip-content-available-width))] rounded-lg bg-fg px-3 py-2 text-center text-xs font-medium leading-snug text-balance text-bg shadow-lg motion-safe:data-[state=delayed-open]:animate-[mn-fade-in_140ms_ease-out] motion-reduce:animate-none"
         >
           {content}
-          <TooltipPrimitive.Arrow className="overflow-visible fill-fg stroke-fg [stroke-width:1px]" />
+          {/* El solape evita rendijas al renderizar coordenadas fraccionarias. */}
+          <TooltipPrimitive.Arrow className="-translate-y-px fill-fg" />
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

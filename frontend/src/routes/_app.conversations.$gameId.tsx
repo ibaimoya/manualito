@@ -35,6 +35,7 @@ import { conversationsApi, type ConversationSummary } from '@/shared/api/convers
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 import { cn } from '@/shared/lib/cn';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import '@/features/conversations/conversation-list.css';
 
 export const Route = createFileRoute('/_app/conversations/$gameId')({
   component: ConversationsScreen,
@@ -125,16 +126,18 @@ function ConversationsScreen() {
             <NoResults filter={filter} onClear={() => setFilter('')} />
           ) : null}
 
-          <ul className="flex flex-col gap-2.5" aria-label={t('page.listLabel')}>
-            {visible.map((conversation) => (
-              <ConversationCard
-                key={conversation.id}
-                conversation={conversation}
-                gameId={gameId}
-                unread={isUnread(conversation)}
-              />
-            ))}
-          </ul>
+          {visible.length > 0 && (
+            <ul className="conversation-list" aria-label={t('page.listLabel')}>
+              {visible.map((conversation) => (
+                <ConversationRow
+                  key={conversation.id}
+                  conversation={conversation}
+                  gameId={gameId}
+                  unread={isUnread(conversation)}
+                />
+              ))}
+            </ul>
+          )}
         </SkeletonSwap>
 
         {!canAsk || all.length === 0 ? null : (
@@ -153,7 +156,7 @@ function ConversationsScreen() {
   );
 }
 
-function ConversationCard({
+function ConversationRow({
   conversation,
   gameId,
   unread,
@@ -200,15 +203,9 @@ function ConversationCard({
       initial={false}
       animate="rest"
       whileHover={hoverMotion ? 'chat' : 'rest'}
-      className={cn(remove.isPending && 'pointer-events-none opacity-50')}
+      className={cn('conversation-row', remove.isPending && 'pointer-events-none opacity-50')}
     >
-      <Card
-        style={pending ? { borderColor: 'transparent' } : undefined}
-        className={cn(
-          'relative flex items-start gap-3 p-3.5 transition-none',
-          !pending && 'hover:border-border-strong hover:bg-surface-2 focus-within:bg-surface-2',
-        )}
-      >
+      <div className="relative flex items-start gap-3 rounded-[inherit] p-3.5">
         <ConversationActivityIcon
           hasPendingReply={pending}
           unread={unread}
@@ -216,15 +213,14 @@ function ConversationCard({
           tone="accent"
           className="relative z-[1]"
         />
-        {/* Botón principal: su ::after se estira sobre toda la card, así que se
-            abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
+        {/* El área principal cubre la fila; el menú conserva su propio control. */}
         <button
           type="button"
           onClick={openChat}
           className={cn(
             'min-w-0 flex-1 cursor-pointer text-left',
-            "after:absolute after:inset-0 after:z-[1] after:rounded-2xl after:content-['']",
-            'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
+            "after:absolute after:inset-0 after:z-[1] after:content-['']",
+            'focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-primary',
           )}
         >
           <span className="flex items-baseline gap-2.5">
@@ -275,7 +271,7 @@ function ConversationCard({
           </DropdownMenuContent>
         </DropdownMenu>
         {pending ? <span className="proc-border" aria-hidden="true" /> : null}
-      </Card>
+      </div>
 
       <RenameDialog
         open={renameOpen}
@@ -479,9 +475,9 @@ function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () =
 
 function ListSkeleton() {
   return (
-    <div aria-hidden="true" className="space-y-2.5">
+    <div aria-hidden="true" className="conversation-list">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-surface-2" />
+        <div key={i} className="h-[72px] animate-pulse bg-surface-2" />
       ))}
     </div>
   );

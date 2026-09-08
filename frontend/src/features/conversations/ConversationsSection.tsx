@@ -2,11 +2,11 @@ import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
-import { TrashIcon } from '@/shared/components/action-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { LiveTrans } from '@/shared/components/LiveTrans';
+import { TrashIcon } from '@/shared/components/action-icons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
@@ -20,6 +20,7 @@ import {
   conversationsQueryOptions,
   useConversationsRead,
 } from './use-conversations';
+import './conversation-list.css';
 
 const MAX_ROWS = 8;
 
@@ -89,7 +90,7 @@ export function ConversationsSection({
         {conversations.length === 0 ? (
           <EmptyRows />
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="conversation-list">
             {conversations.slice(0, MAX_ROWS).map((c) => (
               <ConversationRow
                 key={c.id}
@@ -133,20 +134,14 @@ function ConversationRow({
       initial={false}
       animate="rest"
       whileHover={hoverMotion ? 'chat' : 'rest'}
-      className={cn(
-        'relative rounded-2xl border bg-card shadow-xs',
-        pending
-          ? 'border-transparent'
-          : 'border-border hover:bg-surface-2 focus-within:bg-surface-2',
-        deleting && 'opacity-50',
-      )}
+      className={cn('conversation-row', deleting && 'opacity-50')}
     >
       <div className="relative z-[1] flex items-stretch gap-1 pr-2.5">
         <Link
           to="/chat/$gameId"
           params={{ gameId }}
           search={{ c: conversation.id }}
-          className="flex min-w-0 flex-1 items-center gap-3 p-3.5"
+          className="flex min-w-0 flex-1 items-center gap-3 p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
         >
           <ConversationActivityIcon hasPendingReply={pending} unread={unread} />
           <span className="min-w-0 flex-1 leading-tight">
@@ -172,7 +167,7 @@ function ConversationRow({
         </button>
       </div>
       {confirming ? (
-        <div className="feedback-fade relative z-[1] flex items-center gap-2 rounded-b-2xl border-t border-border bg-error-bg p-3">
+        <div className="feedback-fade relative z-[1] flex items-center gap-2 border-t border-border bg-error-bg p-3">
           <span className="mr-auto text-sm text-error">{t('section.confirmDelete')}</span>
           <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
             {t('actions.cancel')}
@@ -196,9 +191,9 @@ function ConversationRow({
 
 function RowsSkeleton() {
   return (
-    <div aria-hidden="true" className="space-y-2">
+    <div aria-hidden="true" className="conversation-list">
       {[0, 1].map((i) => (
-        <div key={i} className="h-[60px] animate-pulse rounded-2xl bg-surface-2" />
+        <div key={i} className="h-16 animate-pulse bg-surface-2" />
       ))}
     </div>
   );

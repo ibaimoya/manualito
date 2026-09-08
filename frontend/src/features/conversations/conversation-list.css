@@ -1,0 +1,43 @@
+.conversation-list {
+  --conversation-hover: color-mix(in srgb, var(--m-card) 75%, var(--m-surface-2));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--m-border);
+  border-radius: 16px;
+  background: var(--m-card);
+}
+
+.conversation-list > * + * {
+  border-top: 1px solid var(--m-border);
+}
+
+.conversation-row {
+  position: relative;
+}
+
+/* El radio interior descuenta el borde de 1 px del grupo. */
+.conversation-row:first-child {
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+}
+
+.conversation-row:last-child {
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
+
+.conversation-row:focus-within {
+  background: var(--conversation-hover);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .conversation-row:hover {
+    background: var(--conversation-hover);
+  }
+}
+
+/* El borde de respuesta rodea la fila, sin invadir sus separadores. */
+.conversation-row .proc-border {
+  inset: 0;
+}

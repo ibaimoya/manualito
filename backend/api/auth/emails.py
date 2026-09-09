@@ -1,106 +1,147 @@
-"""Correos transaccionales de autenticación."""
+"""Verificación y recuperación de cuenta en español e inglés."""
 
-import logging
 from html import escape
 from pathlib import Path
 from string import Template
+from typing import Literal, TypedDict
 from urllib.parse import urlencode
 
 from api import config
+from api.auth.schemas import EmailLocale
 from api.worker.tasks.mail import enqueue_email
 
-logger = logging.getLogger(__name__)
-_VERIFICATION_TEMPLATE = Template(
-    (
-        Path(__file__).parents[1] / "mail" / "templates" / "verification_email.html"
-    ).read_text(encoding="utf-8")
+type EmailKind = Literal["verification", "reset"]
+
+
+class EmailContent(TypedDict):
+    """Contenido de un correo en HTML y texto plano."""
+
+    title: str
+    heading: str
+    preheader: str
+    greeting: str
+    intro: str
+    action_label: str
+    expiry_note: str
+    ignore_note: str
+    fallback_note: str
+
+
+_AUTH_TEMPLATE = Template(
+    (Path(__file__).parents[1] / "mail" / "templates" / "auth_email.html").read_text(
+        encoding="utf-8"
+    )
 )
-_RESET_TEMPLATE = Template(
-    (
-        Path(__file__).parents[1] / "mail" / "templates" / "reset_password_email.html"
-    ).read_text(encoding="utf-8")
-)
+_CONTENT: dict[tuple[EmailKind, EmailLocale], EmailContent] = {
+    ("verification", "es"): {
+        "title": "Verifica tu email en Manualito",
+        "heading": "Verifica tu email",
+        "preheader": "Confirma que esta dirección de email es tuya.",
+        "greeting": "Hola, {username}.",
+        "intro": "Verifica esta dirección de email para tu cuenta de Manualito.",
+        "action_label": "Verificar email",
+        "expiry_note": "El enlace caduca en {expiry}.",
+        "ignore_note": "Si no has creado esta cuenta, ignora este correo.",
+        "fallback_note": "Si el botón no funciona, copia este enlace.",
+    },
+    ("verification", "en"): {
+        "title": "Verify your email for Manualito",
+        "heading": "Verify your email",
+        "preheader": "Confirm that this email address belongs to you.",
+        "greeting": "Hi {username},",
+        "intro": "Verify this email address for your Manualito account.",
+        "action_label": "Verify email",
+        "expiry_note": "This link expires in {expiry}.",
+        "ignore_note": "If you didn't create this account, ignore this email.",
+        "fallback_note": "If the button doesn't work, copy this link.",
+    },
+    ("reset", "es"): {
+        "title": "Restablece tu contraseña en Manualito",
+        "heading": "Restablece tu contraseña",
+        "preheader": "Usa este enlace para elegir una contraseña nueva.",
+        "greeting": "Hola, {username}.",
+        "intro": "Puedes elegir una contraseña nueva para tu cuenta de Manualito.",
+        "action_label": "Restablecer contraseña",
+        "expiry_note": "El enlace caduca en {expiry}.",
+        "ignore_note": ("Si no lo has solicitado, ignora este correo. Tu contraseña no cambiará."),
+        "fallback_note": "Si el botón no funciona, copia este enlace.",
+    },
+    ("reset", "en"): {
+        "title": "Reset your Manualito password",
+        "heading": "Reset your password",
+        "preheader": "Use this link to choose a new password.",
+        "greeting": "Hi {username},",
+        "intro": "You can choose a new password for your Manualito account.",
+        "action_label": "Reset password",
+        "expiry_note": "This link expires in {expiry}.",
+        "ignore_note": (
+            "If you didn't request this, ignore this email. Your password won't change."
+        ),
+        "fallback_note": "If the button doesn't work, copy this link.",
+    },
+}
 
 
 def schedule_verification_email(
-    *,
-    to_email: str,
-    username: str,
-    token: str,
+    *, to_email: str, username: str, token: str, locale: EmailLocale
 ) -> None:
-    """Encola el email de verificación (texto + HTML) sin bloquear la respuesta."""
+    """Programa el correo para verificar la cuenta."""
     enqueue_email(
         to_email=to_email,
-        subject=f"Tu turno, {username} — confirma tu email",
-        text_body=_verification_email_body(username=username, token=token),
-        html_body=_verification_email_html(username=username, token=token),
+        **_build_email(kind="verification", username=username, token=token, locale=locale),
     )
 
 
 def schedule_password_reset_email(
-    *,
-    to_email: str,
-    username: str,
-    token: str,
+    *, to_email: str, username: str, token: str, locale: EmailLocale
 ) -> None:
-    """Encola el email de reset (texto + HTML) ocultando su contenido en Celery."""
+    """Programa el correo para recuperar la cuenta."""
     enqueue_email(
         to_email=to_email,
-        subject="Restablece tu contraseña en Manualito",
-        text_body=_password_reset_email_body(username=username, token=token),
-        html_body=_password_reset_email_html(username=username, token=token),
+        **_build_email(kind="reset", username=username, token=token, locale=locale),
     )
 
 
-def _verification_email_body(*, username: str, token: str) -> str:
-    """Construye el texto del email de verificación."""
-    link = _frontend_link("/verify-email", token)
-    return (
-        f"Hola {username},\n\n"
-        "Puedes verificar tu email de Manualito con este enlace:\n"
-        f"{link}\n\n"
-        "Si no has creado esta cuenta, ignora este correo sin problema."
+def _build_email(
+    *, kind: EmailKind, username: str, token: str, locale: EmailLocale
+) -> dict[str, str]:
+    content = _CONTENT[kind, locale]
+    path = "/verify-email" if kind == "verification" else "/reset-password"
+    minutes = (
+        config.EMAIL_VERIFICATION_TOKEN_MINUTES
+        if kind == "verification"
+        else config.PASSWORD_RESET_TOKEN_MINUTES
     )
-
-
-def _verification_email_html(*, username: str, token: str) -> str:
-    """Construye el cuerpo HTML del email de verificación."""
-    return _VERIFICATION_TEMPLATE.substitute(
-        username=escape(username),
-        verify_url=_frontend_link("/verify-email", token),
-        expiry_label=_humanize_minutes(config.EMAIL_VERIFICATION_TOKEN_MINUTES),
-    )
-
-
-def _password_reset_email_body(*, username: str, token: str) -> str:
-    """Construye el texto del email de restablecimiento."""
-    link = _frontend_link("/reset-password", token)
-    return (
-        f"Hola {username},\n\n"
-        "Puedes restablecer tu contraseña de Manualito con este enlace:\n"
-        f"{link}\n\n"
-        "Si no has pedido este cambio, puedes ignorar este correo."
-    )
-
-
-def _password_reset_email_html(*, username: str, token: str) -> str:
-    """Construye el cuerpo HTML del email de restablecimiento."""
-    return _RESET_TEMPLATE.substitute(
-        username=escape(username),
-        reset_url=_frontend_link("/reset-password", token),
-        expiry_label=_humanize_minutes(config.PASSWORD_RESET_TOKEN_MINUTES),
-    )
-
-
-def _frontend_link(path: str, token: str) -> str:
-    """Genera un enlace de frontend sin loguearlo."""
     base_url = config.FRONTEND_PUBLIC_URL.rstrip("/")
-    return f"{base_url}{path}?{urlencode({'token': token})}"
+    link = f"{base_url}{path}?{urlencode({'token': token})}"
+    greeting = content["greeting"].format(username=username)
+    expiry_note = content["expiry_note"].format(expiry=_humanize_minutes(minutes, locale))
+    text_body = "\n\n".join((greeting, content["intro"], link, expiry_note, content["ignore_note"]))
+    return {
+        "subject": content["title"],
+        "text_body": text_body,
+        "html_body": _AUTH_TEMPLATE.substitute(
+            locale=locale,
+            title=escape(content["title"]),
+            heading=escape(content["heading"]),
+            preheader=escape(content["preheader"]),
+            greeting=escape(greeting),
+            intro=escape(content["intro"]),
+            action_label=escape(content["action_label"]),
+            action_url=escape(link),
+            expiry_note=escape(expiry_note),
+            ignore_note=escape(content["ignore_note"]),
+            fallback_note=escape(content["fallback_note"]),
+        ),
+    }
 
 
-def _humanize_minutes(minutes: int) -> str:
-    """Devuelve una etiqueta de caducidad legible a partir de minutos."""
+def _humanize_minutes(minutes: int, locale: EmailLocale) -> str:
     if minutes % 60 == 0:
         hours = minutes // 60
+        if locale == "en":
+            return "1 hour" if hours == 1 else f"{hours} hours"
         return "1 hora" if hours == 1 else f"{hours} horas"
+    if locale == "en":
+        return "1 minute" if minutes == 1 else f"{minutes} minutes"
     return "1 minuto" if minutes == 1 else f"{minutes} minutos"

@@ -37,6 +37,10 @@
     "description": "La ficha ha caído fuera del tablero: la URL que intentas abrir no existe en Manualito.",
     "title": "Esta página se ha perdido"
   },
+  "notifications": {
+    "dismiss": "Cerrar notificación",
+    "label": "Notificaciones"
+  },
   "sidebar": {
     "aria": {
       "brandHome": "Manualito · ir al inicio",

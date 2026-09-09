@@ -4,6 +4,7 @@ import { randomUUID, webcrypto } from 'node:crypto';
 import { afterEach, expect } from 'vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { toHaveNoViolations } from 'jest-axe';
+import { toast } from 'sonner';
 // El singleton arranca en español y los tests asertan ese copy
 import i18n from '@/app/i18n';
 
@@ -76,6 +77,8 @@ for (const key of ['localStorage', 'sessionStorage'] as const) {
 // Limpia el DOM entre tests (jsdom es persistente por defecto).
 afterEach(() => {
   cleanup();
+  // Sonner conserva los avisos activos y los repone al montar otro Toaster.
+  toast.dismiss();
   localStorage.clear();
   sessionStorage.clear();
   // Un test que cambie de idioma no debe contaminar a los siguientes

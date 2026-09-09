@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { LanguageProvider } from './language';
-import { ThemeProvider, useTheme } from './theme';
+import { ThemeProvider } from './theme';
+import { AppToaster } from './AppToaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { handleSessionExpired } from '@/features/auth/session-expired';
 import { onStorageWriteFail } from '@/shared/lib/storage';
@@ -37,26 +38,6 @@ function createQueryClient(): QueryClient {
     },
   });
   return client;
-}
-
-/** Providers globales. Theme va fuera: el Toaster necesita leer el modo. */
-/**
- * El Toaster sigue el tema de Ajustes (con "system" ignoraría el modo forzado).
- * Arriba para no chocar con el composer del chat; máximo 3 toasts a la vez.
- */
-function AppToaster() {
-  const { mode } = useTheme();
-  return (
-    <Toaster
-      position="top-center"
-      richColors
-      closeButton
-      theme={mode === 'auto' ? 'system' : mode}
-      visibleToasts={3}
-      duration={5000}
-      gap={8}
-    />
-  );
 }
 
 export function Providers({ children }: Props) {

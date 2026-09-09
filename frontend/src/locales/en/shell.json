@@ -37,6 +37,10 @@
     "description": "The page fell off the board: the URL you're trying to open doesn't exist in Manualito.",
     "title": "This page got lost"
   },
+  "notifications": {
+    "dismiss": "Dismiss notification",
+    "label": "Notifications"
+  },
   "sidebar": {
     "aria": {
       "brandHome": "Manualito · go to Home",

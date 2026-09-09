@@ -1,0 +1,140 @@
+.manualito-toaster[data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--m-card);
+  --normal-text: var(--m-text);
+  --normal-border: var(--m-border-strong);
+  --normal-bg-hover: var(--m-surface);
+  --normal-border-hover: var(--m-border-strong);
+  --gray2: var(--m-surface);
+  --gray5: var(--m-border-strong);
+  --gray11: var(--m-text-3);
+  --border-radius: var(--m-r-lg);
+  font-family: var(--m-font-body);
+}
+
+/* Se adapta la superficie, sin alterar la geometría animada de la pila. */
+.manualito-toaster[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 48px 16px 16px;
+  font-size: 14px;
+  box-shadow: var(--m-shadow-md);
+
+  [data-title] {
+    font-weight: 600;
+    line-height: 20px;
+  }
+
+  [data-description] {
+    color: var(--m-text-2);
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  [data-icon] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    justify-content: center;
+    color: var(--m-text-3);
+  }
+
+  [data-icon] svg {
+    margin: 0;
+  }
+
+  .sonner-loading-wrapper {
+    inset: 2px auto auto 2px;
+  }
+
+  [data-icon] .lucide-triangle-alert {
+    translate: 0 -0.5px;
+  }
+
+  &[data-type='success'] [data-icon] {
+    color: var(--m-success);
+  }
+
+  &[data-type='error'] [data-icon] {
+    color: var(--m-error);
+  }
+
+  &[data-type='warning'] [data-icon] {
+    color: var(--m-warning);
+  }
+
+  &[data-type='info'] [data-icon] {
+    color: var(--m-info);
+  }
+
+  [data-button] {
+    height: 32px;
+    padding-inline: 12px;
+    border-radius: var(--m-r-sm);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  /* La acción va debajo para no estrechar el mensaje en móvil. */
+  &:has([data-button]) [data-content] {
+    flex-basis: calc(100% - 32px);
+  }
+
+  &:has([data-icon]) [data-content] + [data-button] {
+    margin-left: 32px;
+  }
+
+  [data-close-button] {
+    top: 10px;
+    right: 8px;
+    left: auto;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    transform: none;
+    border: 0;
+    border-radius: var(--m-r-sm);
+    background: transparent;
+    color: var(--m-text-3);
+  }
+
+  &:focus-visible,
+  [data-button]:focus-visible,
+  [data-close-button]:focus-visible {
+    outline: 2px solid var(--m-primary-700);
+    outline-offset: 2px;
+    box-shadow: var(--m-shadow-md);
+  }
+}
+
+.manualito-toaster[data-sonner-toaster][data-sonner-theme]
+  [data-sonner-toast][data-styled='true']
+  [data-cancel] {
+  background: var(--m-surface);
+  color: var(--m-text-2);
+}
+
+@media (pointer: coarse) {
+  .manualito-toaster[data-sonner-toaster]
+    [data-sonner-toast][data-styled='true']
+    [data-close-button] {
+    top: 4px;
+    right: 2px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* El estado final debe seguir visible al desactivar el fundido de una promesa. */
+  .manualito-toaster [data-sonner-toast][data-promise='true'] [data-icon] > svg {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .manualito-toaster .sonner-loading-wrapper[data-visible='false'] {
+    animation: none;
+    opacity: 0;
+  }
+}

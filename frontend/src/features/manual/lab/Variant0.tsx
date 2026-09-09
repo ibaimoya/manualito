@@ -36,6 +36,7 @@ export function Variant0({
     <div className="mx-auto flex w-full flex-1 flex-col gap-4 px-4 py-4 md:grid md:max-w-none md:grid-cols-[300px_minmax(0,1fr)] md:gap-0 md:p-0">
       <aside className="min-w-0 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border md:px-4 md:py-5">
         <PageThumbRail
+          manualId="lab-manual"
           pages={pages}
           activePage={page.page_number}
           hitsByPage={search.hitsByPage}
@@ -48,6 +49,7 @@ export function Variant0({
             {manual.game_name}
           </h1>
           <PageTextCard
+            onDirtyChange={() => undefined}
             page={page}
             pageCount={pages.length}
             needle={search.needle}

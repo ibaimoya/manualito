@@ -1,62 +1,45 @@
-import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  linkOptions,
+  useBlocker,
+  useNavigate,
+} from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
   FileText,
   Files,
   Images,
-  Layers,
   Loader2,
-  Maximize2,
   Pencil,
   RotateCw,
   Search,
   X,
-  ZoomIn,
-  ZoomOut,
 } from 'lucide-react';
 import { TrashIcon } from '@/shared/components/action-icons';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type MouseEvent,
-  type PointerEvent,
-  type ReactNode,
-} from 'react';
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
+import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Trans, useTranslation } from 'react-i18next';
 import { ScreenTopBar } from '@/app/Topbar';
-import { HelpIndicator } from '@/components/ui/help-indicator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { PageTextCard } from '@/features/manual/PageTextCard';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
-import {
-  imagePointRatio,
-  imageZoomWidth,
-  imageZoomLabel,
-  MAX_IMAGE_ZOOM,
-  nextImageZoom,
-  previousImageZoom,
-  scrollDeltaForImagePoint,
-  type ImageZoom,
-} from '@/features/manual/imageZoom';
-import { pageStatus, STATUS_HELP_TONE } from '@/features/manual/pageStatus';
+import { useManualProcessing } from '@/features/manual/useManualProcessing';
+import { SourceImageViewer } from '@/features/manual/SourceImageViewer';
+import { ManualViewSwitch, type ManualView } from '@/features/manual/ManualViewSwitch';
+import workspaceStyles from '@/features/manual/manual-workspace.module.css';
+import { ViewerControlGlyph } from '@/features/manual/ViewerControlGlyph';
+import controlMotion from '@/features/manual/viewer-control-motion.module.css';
+import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
 import {
   manualDetailQueryOptions,
@@ -71,6 +54,7 @@ import {
   type ManualDetailResponse,
 } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { toastApiError } from '@/shared/lib/toastApiError';
 import { LiveTrans } from '@/shared/components/LiveTrans';
 
@@ -82,8 +66,6 @@ export const Route = createFileRoute('/_app/manual/$manualId')({
   },
   component: ManualDetailScreen,
 });
-
-const PROCESSING_POLL_MS = 1500;
 
 function editErrorToast(error: unknown): void {
   if (error instanceof ApiError && error.status === 409) {
@@ -126,23 +108,52 @@ function resolveInitialPage(
   return pages[0]!.page_number;
 }
 
+function pageCapabilities(
+  page: ManualDetailPage,
+  visibility: ManualDetailResponse['visibility'],
+  busy: boolean,
+) {
+  const status = pageStatus(page);
+  return {
+    isFailed: status.key === 'failed',
+    isProcessingPage: status.key === 'processing',
+    canEdit: visibility === 'private' && !busy && status.key !== 'processing',
+    hasConfidence: page.ocr_lines.some((line) => line.confidence != null),
+  };
+}
+
 /** Atajos ← → para cambiar de página (no mientras se edita ni desde un input). */
 function usePageArrowKeys(
   active: boolean,
   pageNumber: number,
-  pageCount: number,
   onGo: (pageNumber: number) => void,
 ): void {
+  const goToPage = useEffectEvent(onGo);
   useEffect(() => {
     function onKey(event: KeyboardEvent): void {
-      if (!active || isTypingTarget(event.target)) return;
-      if (event.key === 'ArrowLeft') onGo(pageNumber - 1);
-      else if (event.key === 'ArrowRight') onGo(pageNumber + 1);
+      if (
+        !active ||
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        isTypingTarget(event.target)
+      )
+        return;
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest('button, [role=radio], [role=dialog], [data-image-canvas]')
+      )
+        return;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        goToPage(pageNumber + (event.key === 'ArrowLeft' ? -1 : 1));
+      }
     }
     globalThis.addEventListener('keydown', onKey);
     return () => globalThis.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, pageNumber, pageCount]);
+  }, [active, pageNumber]);
 }
 
 /** Fila de metadatos de la cabecera: fecha, formato, nº de páginas y duplicadas. */
@@ -159,21 +170,26 @@ function ManualMetaRow({
 }>) {
   const { t } = useTranslation('manual');
   return (
-    <div className="mono mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11.5px] text-fg-3">
-      <span className="inline-flex items-center gap-1.5">
-        <Clock size={13} aria-hidden="true" />
+    <div
+      className={cn(
+        workspaceStyles.metadata,
+        'mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs leading-5 text-fg-2',
+      )}
+    >
+      <span className="hidden items-center gap-1.5 @2xl/app:inline-flex">
+        <Clock size={14} aria-hidden="true" />
         {t('meta.uploaded', { date: formatLongDate(createdAt) })}
       </span>
       <span className="inline-flex items-center gap-1.5">
         {sourceIsPdf ? (
-          <FileText size={13} aria-hidden="true" />
+          <FileText size={14} aria-hidden="true" />
         ) : (
-          <Images size={13} aria-hidden="true" />
+          <Images size={14} aria-hidden="true" />
         )}{' '}
         {sourceIsPdf ? t('meta.format.pdf') : t('meta.format.photos')}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <Files size={13} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
+        <Files size={14} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
       </span>
       {duplicateCount > 0 ? <DuplicatePagesBadge count={duplicateCount} /> : null}
     </div>
@@ -189,7 +205,7 @@ function ManualDetailScreen() {
   const title = manual?.title ?? manual?.game_name ?? t('navigation.manual');
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg">
+    <div className="flex h-dvh min-h-[36rem] flex-col overflow-hidden bg-bg">
       <ScreenTopBar
         crumb={title === manual?.game_name ? t('navigation.extractedText') : title}
         trail={
@@ -204,7 +220,11 @@ function ManualDetailScreen() {
             : undefined
         }
       />
-      <SkeletonSwap pending={detail.isPending} skeleton={<DetailSkeleton />} className="grow">
+      <SkeletonSwap
+        pending={detail.isPending}
+        skeleton={<DetailSkeleton />}
+        className="min-h-0 flex-1 [&>div]:min-h-0"
+      >
         {manual && manual.pages.length > 0 ? (
           <ManualDetailLoaded key={manual.id} manual={manual} initialPage={page} />
         ) : (
@@ -237,34 +257,16 @@ function ManualDetailLoaded({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const [showConfidence, setShowConfidence] = useState(false);
+  const [view, setView] = useState<ManualView>('compare');
+  const [dirty, setDirty] = useState(false);
+  const [discardTarget, setDiscardTarget] = useState<number | 'cancel' | null>(null);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
   const search = usePageSearch(pages);
   const detailKey = manualDetailQueryOptions(manual.id).queryKey;
 
   const page = pages.find((item) => item.page_number === activePage) ?? pages[0]!;
-  // El detalle solo se refresca por invalidación y puede quedarse atrás (caché del
-  // SW, red lenta); /processing se sondea, así que es la verdad viva del estado.
-  // Mientras el detalle diga "indexing" sondeamos, pero el banner se apaga en
-  // cuanto /processing confirma el fin, sin esperar a que el detalle se actualice.
-  const detailIndexing = manual.status === 'indexing';
+  const { busy, processing } = useManualProcessing(manual);
   const editing = editingPage === page.page_number;
-
-  const processing = useQuery({
-    queryKey: ['manuals', 'processing', manual.id],
-    queryFn: ({ signal }) => api.getManualProcessing(manual.id, signal),
-    enabled: detailIndexing,
-    refetchInterval: PROCESSING_POLL_MS,
-  });
-  const processingDone =
-    detailIndexing && processing.data != null && processing.data.status !== 'indexing';
-  const busy = detailIndexing && !processingDone;
-  const editable = manual.visibility === 'private' && !busy;
-  useEffect(() => {
-    if (processingDone) {
-      qc.invalidateQueries({ queryKey: manualDetailQueryOptions(manual.id).queryKey }).catch(
-        () => undefined,
-      );
-    }
-  }, [processingDone, qc, manual.id]);
 
   const saveText = useMutation({
     mutationFn: ({ pageNumber, text }: { pageNumber: number; text: string }) =>
@@ -282,6 +284,8 @@ function ManualDetailLoaded({
       );
       qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
       setEditingPage(null);
+      setDirty(false);
+      editButtonRef.current?.focus({ preventScroll: true });
       toast.success(t('feedback.edit.saved'), {
         id: 'page-edit-ok',
         description: t('feedback.edit.savedDescription'),
@@ -292,8 +296,15 @@ function ManualDetailLoaded({
       if (error instanceof ApiError && (error.status === 502 || error.status === 500)) {
         qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
         setEditingPage(null);
+        setDirty(false);
       }
     },
+  });
+
+  const navigationBlocker = useBlocker({
+    shouldBlockFn: () => dirty || saveText.isPending,
+    enableBeforeUnload: dirty || saveText.isPending,
+    withResolver: true,
   });
 
   const reprocess = useMutation({
@@ -347,19 +358,57 @@ function ManualDetailLoaded({
     );
   }
 
-  // Cambiar de página sale del modo edición (volver no reabre el borrador).
+  function leaveEditor(): void {
+    setEditingPage(null);
+    setDirty(false);
+    editButtonRef.current?.focus({ preventScroll: true });
+  }
+
   function goToPage(pageNumber: number): void {
-    if (pageNumber < 1 || pageNumber > pages.length) return;
+    if (
+      !pages.some((item) => item.page_number === pageNumber) ||
+      pageNumber === page.page_number ||
+      saveText.isPending
+    )
+      return;
+    if (dirty) {
+      setDiscardTarget(pageNumber);
+      return;
+    }
     setActivePage(pageNumber);
     setEditingPage(null);
   }
 
+  function cancelEdit(): void {
+    if (saveText.isPending) return;
+    if (dirty) setDiscardTarget('cancel');
+    else leaveEditor();
+  }
+
+  function closeDiscard(): void {
+    setDiscardTarget(null);
+    if (navigationBlocker.status === 'blocked') navigationBlocker.reset();
+  }
+
+  function discardEdits(): void {
+    if (saveText.isPending) return;
+    if (typeof discardTarget === 'number') setActivePage(discardTarget);
+    leaveEditor();
+    setDiscardTarget(null);
+    if (navigationBlocker.status === 'blocked') navigationBlocker.proceed();
+  }
+
   function jumpToMatch(delta: 1 | -1): void {
+    if (editing || saveText.isPending) return;
     const match = search.step(delta);
     if (match) goToPage(match.pageNumber);
   }
 
-  usePageArrowKeys(editingPage === null, page.page_number, pages.length, goToPage);
+  usePageArrowKeys(
+    editingPage === null && !imageOpen && !reprocessOpen && !deleteOpen && discardTarget === null,
+    page.page_number,
+    goToPage,
+  );
 
   const title = manual.title ?? manual.game_name;
   const sourceIsPdf = manual.source_type === 'pdf';
@@ -367,114 +416,201 @@ function ManualDetailLoaded({
     search.active !== null && search.active.pageNumber === page.page_number
       ? search.active.indexInPage
       : null;
-  const currentPageStatus = pageStatus(page);
-  const isFailed = currentPageStatus.key === 'failed';
-  const isProcessingPage = currentPageStatus.key === 'processing';
-  const canEdit = editable && !isProcessingPage;
-  // El modo confianza solo aplica si la página trae confianzas por línea (no
-  // ocurre en páginas editadas a mano, cuyo texto no procede del OCR).
-  const hasConfidence = page.ocr_lines.some((line) => line.confidence != null);
+  const { canEdit, hasConfidence, isFailed, isProcessingPage } = pageCapabilities(
+    page,
+    manual.visibility,
+    busy,
+  );
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 @4xl/app:grid @4xl/app:h-[calc(100dvh_-_3.5rem)] @4xl/app:flex-none @4xl/app:max-w-none @4xl/app:grid-cols-[300px_minmax(0,1fr)] @4xl/app:grid-rows-[minmax(0,1fr)] @4xl/app:gap-0 @4xl/app:overflow-hidden @4xl/app:p-0">
-        {/* ───── RAIL ───── */}
-        <aside className="min-w-0 @4xl/app:flex @4xl/app:min-h-0 @4xl/app:flex-col @4xl/app:overflow-hidden @4xl/app:border-r @4xl/app:border-border @4xl/app:px-4 @4xl/app:py-5">
-          <PageThumbRail
-            pages={pages}
-            activePage={page.page_number}
-            hitsByPage={search.hitsByPage}
-            onSelect={goToPage}
-          />
-        </aside>
-
-        {/* ───── COLUMNA PRINCIPAL ───── */}
-        <div className="flex min-w-0 flex-col gap-4 @4xl/app:min-h-0 @4xl/app:gap-0 @4xl/app:overflow-hidden">
-          {/* cabecera del manual: título + metadatos + acciones (centradas en la celda) */}
-          <div className="flex items-center gap-4 @4xl/app:border-b @4xl/app:border-border @4xl/app:px-6 @4xl/app:py-4">
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate font-display text-xl font-extrabold tracking-tight text-fg">
-                {title}
-              </h1>
-              <ManualMetaRow
-                createdAt={manual.created_at}
-                sourceIsPdf={sourceIsPdf}
-                pageCount={pages.length}
-                duplicateCount={duplicateCount}
-              />
-            </div>
-            <ManualActionsMenu
-              busy={busy}
-              onViewImage={() => setImageOpen(true)}
-              onReprocess={() => setReprocessOpen(true)}
-              onDelete={() => setDeleteOpen(true)}
+      <div className="flex min-h-0 flex-1 flex-col" data-testid="manual-workspace">
+        <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3 @3xl/app:gap-5 @3xl/app:px-6">
+          <div className="min-w-36 flex-1">
+            <h1
+              className="hidden truncate font-display text-xl font-extrabold tracking-tight text-fg md:block @3xl/app:text-2xl"
+              title={title}
+            >
+              {title}
+            </h1>
+            <ManualMetaRow
+              createdAt={manual.created_at}
+              sourceIsPdf={sourceIsPdf}
+              pageCount={pages.length}
+              duplicateCount={duplicateCount}
             />
           </div>
-
-          {busy ? <ReprocessBanner data={processing.data ?? null} /> : null}
-
-          {/* visor con scroll propio en escritorio */}
-          <div className="@4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:overflow-y-auto @4xl/app:px-6 @4xl/app:py-5 @4xl/app:[scrollbar-gutter:stable]">
-            <div className="flex flex-col gap-4">
-              {/* fila de control: navegación de página + estado */}
-              <div className="flex flex-wrap items-center gap-3">
-                <PageNav
-                  pageNumber={page.page_number}
-                  total={pages.length}
-                  onPrev={() => goToPage(page.page_number - 1)}
-                  onNext={() => goToPage(page.page_number + 1)}
-                />
-                <StatusChip page={page} />
-              </div>
-
-              {/* fila de búsqueda + acciones de la vista (confianza, editar) */}
-              <div className="flex flex-wrap items-center gap-3">
-                <SearchField
-                  query={search.query}
-                  onSearch={search.search}
-                  total={search.totalHits}
-                  position={search.activePosition}
-                  onStep={jumpToMatch}
-                />
-                <div className="flex shrink-0 items-center gap-2">
-                  {!editing && !isFailed && !isProcessingPage ? (
-                    <ConfidenceToggle
-                      pressed={showConfidence}
-                      disabled={!hasConfidence}
-                      onToggle={() => setShowConfidence((value) => !value)}
-                    />
-                  ) : null}
-                  {canEdit && !editing ? (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-[6px] px-2 font-medium hover:bg-fg/[0.04] pointer-coarse:h-11"
+              disabled={busy || editing}
+              onClick={() => setReprocessOpen(true)}
+            >
+              <RotateCw size={15} aria-hidden="true" />
+              {t('workspace.reread')}
+            </Button>
+            <Tooltip content={t('buttons.deleteManual')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('buttons.deleteManual')}
+                disabled={editing}
+                onClick={() => setDeleteOpen(true)}
+                className="text-fg-3 hover:text-error"
+              >
+                <TrashIcon size={17} aria-hidden="true" />
+              </Button>
+            </Tooltip>
+          </div>
+        </header>
+        <div className="flex min-h-0 flex-1 flex-col @4xl/app:grid @4xl/app:grid-cols-[208px_minmax(0,1fr)]">
+          <aside className="min-h-0 min-w-0 shrink-0 border-b border-border px-3 py-2 @4xl/app:flex @4xl/app:flex-col @4xl/app:border-b-0 @4xl/app:border-r @4xl/app:py-4">
+            <PageThumbRail
+              manualId={manual.id}
+              pages={pages}
+              activePage={page.page_number}
+              hitsByPage={search.hitsByPage}
+              onSelect={goToPage}
+            />
+          </aside>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-3 py-2 @3xl/app:px-5">
+              <PageNav
+                pageNumber={page.page_number}
+                total={pages.length}
+                onPrev={() => goToPage(page.page_number - 1)}
+                onNext={() => goToPage(page.page_number + 1)}
+              />
+              <ManualViewSwitch value={view} onChange={setView} />
+              <SearchField
+                disabled={editing}
+                query={search.query}
+                onSearch={search.search}
+                total={search.totalHits}
+                position={search.activePosition}
+                onStep={jumpToMatch}
+              />
+            </div>
+            <div className="flex h-8 shrink-0 items-center justify-between gap-3 px-4 text-xs text-fg-2 @3xl/app:px-5">
+              {busy ? (
+                <ReprocessBanner data={processing.data ?? null} />
+              ) : (
+                <span>
+                  {t(editing ? 'workspace.editing' : 'workspace.reading', {
+                    pageNumber: page.page_number,
+                  })}
+                </span>
+              )}
+              {manual.visibility === 'shared' ? <span>{t('workspace.shared')}</span> : null}
+            </div>
+            <div className={workspaceStyles.panes} data-view={view}>
+              <section
+                aria-label={t('workspace.original')}
+                aria-hidden={view === 'text'}
+                inert={view === 'text'}
+                className={cn(workspaceStyles.pane, workspaceStyles.original)}
+              >
+                <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-5">
+                  <h2 className="flex items-center gap-2 text-sm font-semibold">
+                    <Images size={16} aria-hidden="true" />
+                    {t('workspace.original')}
+                  </h2>
+                  <Tooltip content={t('workspace.expand')}>
                     <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setEditingPage(page.page_number)}
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t('workspace.expand')}
+                      className={controlMotion.control}
+                      data-viewer-control="expand"
+                      onClick={() => setImageOpen(true)}
                     >
-                      <Pencil size={15} strokeWidth={2} />
-                      {t('buttons.editText')}
+                      <ViewerControlGlyph kind="expand" />
+                    </Button>
+                  </Tooltip>
+                </div>
+                <SourceImageViewer
+                  imageUrl={api.manualPageImageUrl(manual.id, page.page_number)}
+                  title={title}
+                  page={page}
+                />
+              </section>
+              <section
+                aria-label={t('workspace.text')}
+                aria-hidden={view === 'original'}
+                inert={view === 'original'}
+                className={cn(workspaceStyles.pane, workspaceStyles.text)}
+              >
+                <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-5">
+                  <h2 className="mr-auto truncate text-sm font-semibold">
+                    {t('workspace.extractedText')}
+                  </h2>
+                  <ConfidenceToggle
+                    checked={showConfidence}
+                    disabled={!hasConfidence || editing || isFailed || isProcessingPage}
+                    onToggle={() => setShowConfidence((value) => !value)}
+                  />
+                  {canEdit ? (
+                    <Button
+                      ref={editButtonRef}
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-[6px] font-medium hover:bg-fg/[0.04] aria-pressed:bg-fg/[0.06]"
+                      aria-pressed={editing}
+                      disabled={saveText.isPending}
+                      onClick={() => {
+                        if (editing) cancelEdit();
+                        else setEditingPage(page.page_number);
+                      }}
+                    >
+                      <Pencil size={15} aria-hidden="true" />
+                      {t('workspace.edit')}
                     </Button>
                   ) : null}
                 </div>
-              </div>
-
-              <PageTextCard
-                page={page}
-                pageCount={pages.length}
-                needle={search.needle}
-                activeMatch={activeMatch}
-                editing={editing}
-                showConfidence={showConfidence}
-                busy={busy}
-                saving={saveText.isPending}
-                reprocessing={reprocess.isPending}
-                onCancelEdit={() => setEditingPage(null)}
-                onSave={(text) => setPendingText(text)}
-                onReprocessPage={() => reprocess.mutate(page.page_number)}
-              />
+                <PageTextCard
+                  key={page.page_number}
+                  page={page}
+                  pageCount={pages.length}
+                  needle={search.needle}
+                  activeMatch={activeMatch}
+                  editing={editing}
+                  showConfidence={showConfidence}
+                  busy={busy}
+                  saving={saveText.isPending}
+                  reprocessing={reprocess.isPending}
+                  onDirtyChange={setDirty}
+                  onCancelEdit={cancelEdit}
+                  onSave={setPendingText}
+                  onReprocessPage={() => reprocess.mutate(page.page_number)}
+                />
+              </section>
             </div>
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={discardTarget !== null || navigationBlocker.status === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open) closeDiscard();
+        }}
+      >
+        <DialogHeader
+          title={t('workspace.discardTitle')}
+          description={t('workspace.discardDescription')}
+          onClose={closeDiscard}
+        />
+        <DialogBody className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={closeDiscard}>
+            {t('buttons.continueEditing')}
+          </Button>
+          <Button variant="destructive" disabled={saveText.isPending} onClick={discardEdits}>
+            {t('workspace.discard')}
+          </Button>
+        </DialogBody>
+      </Dialog>
 
       <ManualImageDialog
         open={imageOpen}
@@ -494,7 +630,9 @@ function ManualDetailLoaded({
         title={title}
         shared={manual.visibility === 'shared'}
         saveOpen={pendingText !== null}
-        onSaveClose={() => setPendingText(null)}
+        onSaveClose={() => {
+          if (!saveText.isPending) setPendingText(null);
+        }}
         onSaveConfirm={confirmSave}
         saving={saveText.isPending}
         reprocessOpen={reprocessOpen}
@@ -552,14 +690,19 @@ function ManualDialogs({
   return (
     <>
       {/* Confirmación antes de sustituir el texto leído por el editado. */}
-      <Dialog open={saveOpen} onOpenChange={(open) => !open && onSaveClose()}>
+      <Dialog
+        open={saveOpen}
+        onOpenChange={(open) => {
+          if (!open && !saving) onSaveClose();
+        }}
+      >
         <DialogHeader
           title={t('dialogs.save.header')}
           description={t('dialogs.save.description', { pageNumber })}
-          onClose={onSaveClose}
+          onClose={saving ? undefined : onSaveClose}
         />
         <DialogBody className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onSaveClose}>
+          <Button variant="ghost" disabled={saving} onClick={onSaveClose}>
             {t('buttons.continueEditing')}
           </Button>
           <Button loading={saving} onClick={onSaveConfirm}>
@@ -629,54 +772,6 @@ function ManualDialogs({
   );
 }
 
-function ManualActionsMenu({
-  busy,
-  onViewImage,
-  onReprocess,
-  onDelete,
-}: Readonly<{
-  busy: boolean;
-  onViewImage: () => void;
-  onReprocess: () => void;
-  onDelete: () => void;
-}>) {
-  const { t } = useTranslation('manual');
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="secondary" size="sm" className="disclosure-feedback shrink-0">
-          {t('buttons.actions')}
-          <ChevronDown size={15} strokeWidth={2} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onSelect={onViewImage}>
-          <Images size={16} strokeWidth={2} />
-          {t('buttons.viewImage')}
-        </DropdownMenuItem>
-        <hr className="my-1 border-t border-border" />
-        <DropdownMenuItem disabled={busy} onSelect={onReprocess}>
-          <RotateCw size={16} strokeWidth={2} />
-          {t('buttons.reprocessAll')}
-        </DropdownMenuItem>
-        <hr className="my-1 border-t border-border" />
-        <DropdownMenuItem danger onSelect={onDelete}>
-          <TrashIcon size={16} strokeWidth={2} />
-          {t('buttons.deleteManual')}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-type ImageDragState = Readonly<{
-  pointerId: number;
-  startX: number;
-  startY: number;
-  scrollLeft: number;
-  scrollTop: number;
-}>;
-
 function ManualImageDialog({
   open,
   onOpenChange,
@@ -703,7 +798,7 @@ function ManualImageDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      contentClassName="max-w-5xl overflow-hidden bg-bg"
+      contentClassName="h-dvh max-h-dvh w-screen max-w-[1600px] overflow-hidden rounded-none bg-bg sm:h-[calc(100dvh-2rem)] sm:w-[calc(100vw-2rem)] sm:rounded-[8px]"
     >
       <DialogHeader
         title={t('image.dialogTitle')}
@@ -714,295 +809,19 @@ function ManualImageDialog({
         })}
         onClose={() => onOpenChange(false)}
       />
-      <DialogBody className="px-4 pb-4 pt-0">
-        {open ? (
-          <ManualImageViewer
-            key={imageUrl}
-            imageUrl={imageUrl}
-            title={title}
-            page={page}
-            pageCount={pageCount}
+      <DialogBody className="flex min-h-0 flex-1 flex-col px-0 pb-0 pt-0">
+        <div className="mb-2 flex shrink-0 justify-center">
+          <PageNav
+            pageNumber={page.page_number}
+            total={pageCount}
             onPrev={onPrev}
             onNext={onNext}
           />
-        ) : null}
+        </div>
+        {open ? <SourceImageViewer imageUrl={imageUrl} title={title} page={page} /> : null}
       </DialogBody>
     </Dialog>
   );
-}
-
-function ManualImageViewer({
-  imageUrl,
-  title,
-  page,
-  pageCount,
-  onPrev,
-  onNext,
-}: Readonly<{
-  imageUrl: string;
-  title: string;
-  page: ManualDetailPage;
-  pageCount: number;
-  onPrev: () => void;
-  onNext: () => void;
-}>) {
-  const { t } = useTranslation('manual');
-  const [imageFailed, setImageFailed] = useState(false);
-  const [zoom, setZoom] = useState<ImageZoom>('fit');
-  const [dragging, setDragging] = useState(false);
-  const viewportRef = useRef<HTMLButtonElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const dragRef = useRef<ImageDragState | null>(null);
-  const showImage = page.image_available && !imageFailed;
-  const zoomedWidth = imageZoomWidth(zoom, page.image_width);
-  const imageStyle =
-    page.image_width && page.image_height
-      ? { aspectRatio: `${page.image_width} / ${page.image_height}`, width: zoomedWidth }
-      : { width: zoomedWidth };
-
-  const clearPan = () => {
-    dragRef.current = null;
-    setDragging(false);
-  };
-
-  const resetImageZoom = () => {
-    clearPan();
-    setZoom('fit');
-    onNextFrame(() => scrollViewportToStart(viewportRef.current));
-  };
-
-  const focusZoom = (nextZoom: ImageZoom, point?: { clientX: number; clientY: number }) => {
-    if (nextZoom === 'fit') {
-      resetImageZoom();
-      return;
-    }
-    clearPan();
-    const viewport = viewportRef.current;
-    const image = imageRef.current;
-    if (!viewport || !image) {
-      setZoom(nextZoom);
-      return;
-    }
-    if (!point && zoom === 'fit') {
-      setZoom(nextZoom);
-      onNextFrame(() => scrollViewportToStart(viewportRef.current));
-      return;
-    }
-
-    const focusPoint = point ?? viewportCenter(viewport);
-    const ratio = imagePointRatio(image.getBoundingClientRect(), focusPoint);
-    setZoom(nextZoom);
-    onNextFrame(() => {
-      const nextViewport = viewportRef.current;
-      const nextImage = imageRef.current;
-      if (!nextViewport || !nextImage) return;
-
-      const delta = scrollDeltaForImagePoint(nextImage.getBoundingClientRect(), ratio, focusPoint);
-      nextViewport.scrollLeft += delta.left;
-      nextViewport.scrollTop += delta.top;
-    });
-  };
-
-  const handlePanStart = (event: PointerEvent<HTMLButtonElement>) => {
-    const viewport = viewportRef.current;
-    if (!showImage || zoom === 'fit' || event.button !== 0 || !viewport) return;
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      scrollLeft: viewport.scrollLeft,
-      scrollTop: viewport.scrollTop,
-    };
-    viewport.setPointerCapture?.(event.pointerId);
-    setDragging(true);
-    event.preventDefault();
-  };
-
-  const handlePanMove = (event: PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    const viewport = viewportRef.current;
-    if (drag?.pointerId !== event.pointerId || !viewport) return;
-    viewport.scrollLeft = drag.scrollLeft - (event.clientX - drag.startX);
-    viewport.scrollTop = drag.scrollTop - (event.clientY - drag.startY);
-    event.preventDefault();
-  };
-
-  const stopPan = (event: PointerEvent<HTMLButtonElement>) => {
-    const drag = dragRef.current;
-    const viewport = viewportRef.current;
-    if (drag?.pointerId !== event.pointerId) return;
-    if (viewport?.hasPointerCapture?.(event.pointerId)) {
-      viewport.releasePointerCapture?.(event.pointerId);
-    }
-    clearPan();
-  };
-
-  const handleImageDoubleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    if (zoom !== 'fit') {
-      resetImageZoom();
-      return;
-    }
-    focusZoom(nextImageZoom(zoom), { clientX: event.clientX, clientY: event.clientY });
-  };
-
-  const handleImageKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    if (zoom !== 'fit') {
-      resetImageZoom();
-      return;
-    }
-    focusZoom(nextImageZoom(zoom));
-  };
-
-  const viewportClassName = cn(
-    'scrollbar-none grid h-[clamp(420px,72vh,720px)] touch-none overflow-auto overscroll-contain rounded-2xl border border-border bg-surface p-3 text-left text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
-    showImage && zoom !== 'fit' && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
-    showImage && zoom === 'fit' && 'cursor-zoom-in',
-  );
-  const imageClassName = cn(
-    'pointer-events-auto place-self-center select-none rounded-lg object-contain',
-    zoom === 'fit' ? 'max-h-[70vh] max-w-full cursor-zoom-in' : 'max-w-none',
-    zoom !== 'fit' && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
-  );
-  const imageViewportLabel = zoom === 'fit' ? t('image.expand') : t('image.resetViewport');
-
-  return (
-    <>
-      <div className="mb-3 flex flex-wrap items-center justify-center gap-3">
-        <PageNav pageNumber={page.page_number} total={pageCount} onPrev={onPrev} onNext={onNext} />
-        {showImage ? (
-          <div className="inline-flex h-10 items-center gap-1 p-1">
-            <ImageZoomButton
-              label={t('image.zoomOut')}
-              disabled={zoom === 'fit'}
-              onClick={() => focusZoom(previousImageZoom(zoom))}
-            >
-              <ZoomOut size={16} strokeWidth={2} />
-            </ImageZoomButton>
-            <output
-              aria-label={t('image.zoomValue')}
-              className="mono min-w-20 px-2 text-center text-xs font-bold text-fg"
-            >
-              {zoom === 'fit' ? t('image.fit') : imageZoomLabel(zoom)}
-            </output>
-            <ImageZoomButton
-              label={t('image.zoomIn')}
-              disabled={zoom === MAX_IMAGE_ZOOM}
-              onClick={() => focusZoom(nextImageZoom(zoom))}
-            >
-              <ZoomIn size={16} strokeWidth={2} />
-            </ImageZoomButton>
-            <ImageZoomButton
-              label={t('image.resetZoom')}
-              disabled={zoom === 'fit'}
-              onClick={() => focusZoom('fit')}
-            >
-              <Maximize2 size={15} strokeWidth={2} />
-            </ImageZoomButton>
-          </div>
-        ) : null}
-      </div>
-      {showImage ? (
-        <button
-          ref={viewportRef}
-          type="button"
-          aria-label={imageViewportLabel}
-          className={viewportClassName}
-          data-testid="manual-image-viewport"
-          onDoubleClick={handleImageDoubleClick}
-          onKeyDown={handleImageKeyDown}
-          onPointerDown={handlePanStart}
-          onPointerMove={handlePanMove}
-          onPointerUp={stopPan}
-          onPointerCancel={stopPan}
-          onLostPointerCapture={clearPan}
-        >
-          <span className="grid min-h-full min-w-full place-items-center">
-            <img
-              ref={imageRef}
-              src={imageUrl}
-              alt={t('image.alt', { pageNumber: page.page_number, title })}
-              width={page.image_width ?? undefined}
-              height={page.image_height ?? undefined}
-              loading="lazy"
-              decoding="async"
-              onError={() => setImageFailed(true)}
-              className={imageClassName}
-              style={imageStyle}
-            />
-          </span>
-        </button>
-      ) : (
-        <div className={viewportClassName} data-testid="manual-image-viewport">
-          <div className="grid place-items-center px-6 py-16 text-center">
-            <div>
-              <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-warning-bg text-warning">
-                <Images size={22} strokeWidth={2.2} aria-hidden="true" />
-              </span>
-              <p className="mt-4 font-display text-base font-bold text-fg">
-                {t('image.missingTitle')}
-              </p>
-              <p className="mt-2 max-w-sm text-sm leading-relaxed text-fg-2">
-                {t('image.missingDescription')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function ImageZoomButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: Readonly<{
-  label: string;
-  disabled: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}>) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="icon-feedback grid size-8 place-items-center rounded-full text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-40"
-    >
-      {children}
-    </button>
-  );
-}
-
-function scrollViewportToStart(viewport: HTMLButtonElement | null): void {
-  if (!viewport) return;
-  if (typeof viewport.scrollTo === 'function') {
-    viewport.scrollTo({ left: 0, top: 0 });
-    return;
-  }
-  viewport.scrollLeft = 0;
-  viewport.scrollTop = 0;
-}
-
-function viewportCenter(viewport: HTMLButtonElement): { clientX: number; clientY: number } {
-  const rect = viewport.getBoundingClientRect();
-  return {
-    clientX: rect.left + rect.width / 2,
-    clientY: rect.top + rect.height / 2,
-  };
-}
-
-function onNextFrame(callback: () => void): void {
-  if (typeof globalThis.requestAnimationFrame === 'function') {
-    globalThis.requestAnimationFrame(callback);
-    return;
-  }
-  globalThis.setTimeout(callback, 0);
 }
 
 function ReprocessBanner({
@@ -1011,22 +830,22 @@ function ReprocessBanner({
   const { t } = useTranslation('manual');
   const pct = data ? (data.completed_pages / Math.max(data.page_count, 1)) * 100 : 5;
   return (
-    <div className="@4xl/app:px-6 @4xl/app:pt-4">
-      <output className="flex items-center gap-3 rounded-2xl border border-primary bg-primary-50 p-3.5">
-        <Loader2 size={20} className="shrink-0 animate-spin text-primary" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] font-bold text-fg">{t('feedback.reprocess.progress')}</p>
-          <div className="mt-1.5">
-            <Progress value={pct} />
-          </div>
-        </div>
-        {data ? (
-          <span className="mono shrink-0 text-xs font-semibold text-primary-700">
-            {t('page.progress', { completed: data.completed_pages, count: data.page_count })}
-          </span>
-        ) : null}
-      </output>
-    </div>
+    <output className="flex min-w-0 flex-1 items-center gap-2 text-xs text-primary-700">
+      <Loader2
+        size={14}
+        className="shrink-0 animate-spin motion-reduce:animate-none"
+        aria-hidden="true"
+      />
+      <span>{t('feedback.reprocess.progress')}</span>
+      <div className="w-24">
+        <Progress value={pct} />
+      </div>
+      {data ? (
+        <span className="tabular-nums">
+          {data.completed_pages} / {data.page_count}
+        </span>
+      ) : null}
+    </output>
   );
 }
 
@@ -1042,8 +861,9 @@ function PageNav({
       <NavButton label={t('page.previous')} disabled={pageNumber <= 1} onClick={onPrev}>
         <ChevronLeft size={18} strokeWidth={2} />
       </NavButton>
-      <span className="min-w-[88px] text-center font-display text-sm font-bold text-fg">
-        {t('page.number', { pageNumber })}{' '}
+      <span className="min-w-12 tabular-nums text-center @2xl/app:min-w-[88px] font-display text-sm font-bold text-fg">
+        <span className="hidden @2xl/app:inline">{t('page.number', { pageNumber })}</span>
+        <span className="@2xl/app:hidden">{pageNumber}</span>{' '}
         <span className="font-semibold text-fg-3">/ {total}</span>
       </span>
       <NavButton label={t('page.next')} disabled={pageNumber >= total} onClick={onNext}>
@@ -1065,74 +885,69 @@ function NavButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="icon-feedback grid size-9 place-items-center rounded-xl text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
+      className="icon-feedback grid size-8 place-items-center rounded-xl @2xl/app:size-9 text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {children}
     </button>
   );
 }
 
-function StatusChip({ page }: Readonly<{ page: ManualDetailPage }>) {
-  const { t } = useTranslation('manual');
-  const st = pageStatus(page);
-  const showLabel = st.key !== 'ok' && st.key !== 'edited';
-  return (
-    <span role="status" aria-label={t('status.readingLabel', { status: st.label })}>
-      <HelpIndicator
-        icon={st.Icon}
-        tone={STATUS_HELP_TONE[st.tone]}
-        label={st.tip}
-        iconClassName={page.ocr_status === 'processing' ? 'animate-spin' : undefined}
-        className="text-[12.5px]"
-      >
-        {showLabel ? st.label : null}
-      </HelpIndicator>
-    </span>
-  );
-}
-
 function ConfidenceToggle({
-  pressed,
+  checked,
   disabled,
   onToggle,
-}: Readonly<{ pressed: boolean; disabled: boolean; onToggle: () => void }>) {
+}: Readonly<{ checked: boolean; disabled: boolean; onToggle: () => void }>) {
   const { t } = useTranslation('manual');
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const active = checked && !disabled;
   return (
     <Tooltip
       content={disabled ? t('confidence.toggle.disabledTitle') : t('confidence.toggle.title')}
     >
       <button
         type="button"
-        aria-pressed={pressed}
+        role="switch"
+        aria-label={t('confidence.toggle.label')}
+        aria-checked={active}
         aria-disabled={disabled}
         onClick={disabled ? undefined : onToggle}
-        className={cn(
-          'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 aria-disabled:cursor-not-allowed aria-disabled:opacity-55',
-          pressed
-            ? 'border-primary bg-primary-50 text-primary-700'
-            : 'border-border-strong bg-card text-fg-2 aria-[disabled=false]:hover:bg-surface',
-        )}
+        className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[6px] px-1 text-xs font-medium text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 aria-disabled:cursor-not-allowed aria-disabled:opacity-55 aria-[disabled=false]:hover:text-fg pointer-coarse:h-11"
       >
-        <Layers size={15} strokeWidth={2} aria-hidden="true" />
-        {t('confidence.toggle.label')}
-        <ChevronDown
-          size={14}
-          strokeWidth={2}
+        <span>{t('workspace.confidence')}</span>
+        <span
           aria-hidden="true"
-          className={cn('transition-transform', pressed && 'rotate-180')}
-        />
+          className={cn(
+            'inline-flex h-4 w-7 shrink-0 items-center rounded-full border p-px transition-colors duration-150 ease-[var(--m-easing)] motion-reduce:transition-none',
+            active ? 'border-fg-2 bg-fg-2' : 'border-fg-3',
+          )}
+        >
+          <motion.span
+            key={reducedMotion ? 'static' : 'animated'}
+            initial={false}
+            animate={{ transform: active ? 'translateX(12px)' : 'translateX(0px)' }}
+            transition={
+              reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 40 }
+            }
+            className={cn(
+              'size-3 rounded-full transition-colors duration-150 ease-[var(--m-easing)] motion-reduce:transition-none',
+              active ? 'bg-bg' : 'bg-fg-3',
+            )}
+          />
+        </span>
       </button>
     </Tooltip>
   );
 }
 
 function SearchField({
+  disabled,
   query,
   onSearch,
   total,
   position,
   onStep,
 }: Readonly<{
+  disabled: boolean;
   query: string;
   onSearch: (query: string) => void;
   total: number;
@@ -1144,7 +959,7 @@ function SearchField({
   return (
     <div
       className={cn(
-        'flex h-10 w-full min-w-0 max-w-[460px] flex-auto items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors @2xl/app:w-auto @2xl/app:flex-1',
+        'flex h-10 w-full min-w-0 flex-auto @3xl/app:max-w-[340px] items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors @2xl/app:w-auto @2xl/app:flex-1',
         hasQuery
           ? 'border-primary'
           : 'border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
@@ -1154,12 +969,13 @@ function SearchField({
       <Search size={16} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
       <input
         type="search"
+        disabled={disabled}
         value={query}
         onChange={(event) => onSearch(event.target.value)}
         placeholder={t('search.placeholder')}
         aria-label={t('search.ariaLabel')}
         enterKeyHint="search"
-        className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+        className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none @2xl/app:text-sm placeholder:text-fg-3 focus-visible:outline-none [&::-webkit-search-cancel-button]:appearance-none"
       />
       {hasQuery ? (
         <span className="flex shrink-0 items-center gap-0.5">
@@ -1171,19 +987,23 @@ function SearchField({
           </span>
           <SearchMiniButton
             label={t('search.previous')}
-            disabled={total === 0}
+            disabled={disabled || total === 0}
             onClick={() => onStep(-1)}
           >
             <ChevronLeft size={15} strokeWidth={2} />
           </SearchMiniButton>
           <SearchMiniButton
             label={t('search.next')}
-            disabled={total === 0}
+            disabled={disabled || total === 0}
             onClick={() => onStep(1)}
           >
             <ChevronRight size={15} strokeWidth={2} />
           </SearchMiniButton>
-          <SearchMiniButton label={t('search.clear')} disabled={false} onClick={() => onSearch('')}>
+          <SearchMiniButton
+            label={t('search.clear')}
+            disabled={disabled}
+            onClick={() => onSearch('')}
+          >
             <X size={14} strokeWidth={2} className="search-clear-icon" />
           </SearchMiniButton>
         </span>

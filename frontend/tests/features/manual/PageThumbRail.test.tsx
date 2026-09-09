@@ -24,6 +24,7 @@ describe('ayuda de las miniaturas', () => {
     const user = userEvent.setup();
     render(
       <PageThumbRail
+        manualId="test-manual-001"
         pages={[page]}
         activePage={1}
         hitsByPage={new Map()}
@@ -34,8 +35,10 @@ describe('ayuda de las miniaturas', () => {
     const rail = screen.getByRole('navigation', { name: 'Páginas del manual' });
     const button = within(rail).getByRole('button', { name: 'Página 1 · Poco clara' });
 
-    expect(within(rail).getAllByRole('button')).toHaveLength(2);
+    expect(within(button.parentElement!).getAllByRole('button')).toHaveLength(2);
     expect(button.querySelector('button, a, [tabindex]')).toBeNull();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Estados de las páginas' })).toHaveFocus();
     await user.tab();
     expect(button).toHaveFocus();
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();

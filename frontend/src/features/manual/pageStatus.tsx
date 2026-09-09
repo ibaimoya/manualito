@@ -182,10 +182,3 @@ export function confidenceLegend(): ReadonlyArray<{
     range: i18n.t(definition.range, { ns: 'manual' }),
   }));
 }
-
-/** Fondo suave + color del borde-acento izquierdo de la fila de confianza. */
-export const CONFIDENCE_ROW_CLASS: Record<ConfidenceTone, string> = {
-  success: 'border-l-success bg-success-bg',
-  warning: 'border-l-warning bg-warning-bg',
-  error: 'border-l-error bg-error-bg',
-};

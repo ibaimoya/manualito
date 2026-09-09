@@ -1,32 +1,47 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Copy, Pencil, RotateCw, Upload } from 'lucide-react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import { Pencil, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import i18n from '@/app/i18n';
 import type { ManualDetailPage } from '@/shared/api/client';
 import {
-  confidenceLegend,
-  CONFIDENCE_ROW_CLASS,
   confidenceTone,
   pageStatus,
   STATUS_FG_CLASS,
   STATUS_HELP_TONE,
+  type ConfidenceTone,
+  type PageStatusMeta,
 } from '@/features/manual/pageStatus';
 import { cn } from '@/shared/lib/cn';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
-/** Cota del backend ("MANUAL_PAGE_TEXT_MAX_LENGTH"). */
+/** Límite compartido con MANUAL_PAGE_TEXT_MAX_LENGTH en el backend. */
 const PAGE_TEXT_MAX = 20_000;
-/** Misma altura del cajón en lectura y edición: entrar/salir no mueve el layout. */
-const BOX_CLASS = 'h-[clamp(360px,60vh,640px)]';
-/** Marco común: el borde redondeado recorta la barra de scroll interior (queda
- *  integrada, no superpuesta) y fija la altura. Lo comparten lectura y edición. */
-const TEXT_BOX = cn('overflow-hidden rounded-2xl border', BOX_CLASS);
-/** Misma tipografía al leer y al editar, para que entrar en edición no la cambie. */
-const TEXT_BODY = 'font-serif text-[15.5px] leading-[1.72] text-fg';
-const CONFIDENCE_TRANSITION =
-  'duration-[240ms] ease-[var(--m-easing)] motion-reduce:transition-none';
+const TEXT_BODY =
+  'font-body text-base leading-[1.75] text-fg whitespace-pre-wrap [overflow-wrap:anywhere]';
+const TEXT_SCROLL =
+  'mx-auto block h-full w-full max-w-[76ch] overflow-y-auto overscroll-contain py-6 pe-14 [scrollbar-gutter:stable]';
+const STATUS_ROW = 'flex h-10 shrink-0 items-center gap-2 px-5 text-xs text-fg-2 sm:px-7';
+const FOOTER =
+  'flex h-[4.25rem] shrink-0 items-center gap-2 border-t border-border/40 px-4 sm:px-5';
+const EDIT_SURFACE =
+  'relative min-h-0 flex-1 overflow-hidden px-5 after:pointer-events-none after:absolute after:inset-y-6 after:start-2 after:w-0.5 after:bg-primary-700 after:opacity-0 focus-within:after:opacity-100 sm:px-7 sm:after:start-3 forced-colors:after:bg-[Highlight]';
+const QUIET_ACTION =
+  'rounded-[6px] font-medium underline-offset-4 transition-none! hover:bg-fg/[0.04] hover:underline focus-visible:underline pointer-coarse:min-h-11';
+const CONFIDENCE_HIGHLIGHT: Record<ConfidenceTone, string> = {
+  success: 'bg-success/10',
+  warning: 'bg-warning/15',
+  error: 'bg-error/15',
+};
 
 const COUNT_FORMATTERS = {
   en: new Intl.NumberFormat('en-US'),
@@ -41,35 +56,19 @@ function pageText(page: ManualDetailPage): string {
   return page.ocr_lines.map((line) => line.text).join('\n');
 }
 
-/** El mismo texto y sus párrafos se conservan al mostrar la confianza OCR. */
-function pageLines(
-  page: ManualDetailPage,
-): ReadonlyArray<{ paragraphs: string[]; confidence: number | null }> {
-  return page.ocr_lines
-    .map((line) => ({
-      paragraphs: line.text
-        .split('\n')
-        .map((part) => part.trim())
-        .filter(Boolean),
-      confidence: line.confidence,
-    }))
-    .filter((line) => line.paragraphs.length > 0);
-}
-
 function revealActiveMatch(scroller: HTMLDivElement | null, reducedMotion: boolean): void {
   const mark = scroller?.querySelector<HTMLElement>('mark[data-active-match]');
   if (!scroller || !mark) return;
   const box = scroller.getBoundingClientRect();
   const hit = mark.getBoundingClientRect();
   if (hit.top >= box.top && hit.bottom <= box.bottom) return;
-  const delta = hit.top - box.top - (scroller.clientHeight - hit.height) / 2;
   scroller.scrollTo({
-    top: scroller.scrollTop + delta,
+    top: scroller.scrollTop + hit.top - box.top - (scroller.clientHeight - hit.height) / 2,
     behavior: reducedMotion ? 'auto' : 'smooth',
   });
 }
 
-/** Resalta "needle" en "text"; "counter" lleva el índice global para marcar la activa. */
+/** Los resaltados no añaden anchura ni cambian el peso del texto. */
 function highlight(
   text: string,
   needle: string,
@@ -90,7 +89,7 @@ function highlight(
         key={`${at}-${counter.value}`}
         data-active-match={isActive || undefined}
         className={cn(
-          'rounded-[3px] px-0.5 font-semibold',
+          'rounded-[3px]',
           isActive ? 'bg-primary text-fg-inv' : 'bg-primary-100 text-primary-700',
         )}
       >
@@ -104,38 +103,12 @@ function highlight(
   return parts;
 }
 
-/** Leyenda de umbrales de confianza, visible solo con el modo activo. */
-function ConfidenceLegend() {
-  const { t } = useTranslation('manual');
-  return (
-    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-0.5">
-      <span className="mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-3">
-        {t('confidence.heading')}
-      </span>
-      {confidenceLegend().map((item) => (
-        <span
-          key={item.label}
-          className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-fg-2"
-        >
-          <span
-            className={cn('size-2.5 rounded-full bg-current', STATUS_FG_CLASS[item.tone])}
-            aria-hidden="true"
-          />
-          {item.label}
-          <span className="mono text-[10.5px] text-fg-3">{item.range}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** Chip de porcentaje de confianza de una línea (o "s/d" si no hay dato). */
-function ConfidenceChip({ confidence }: Readonly<{ confidence: number | null }>) {
+function ConfidenceValue({ confidence }: Readonly<{ confidence: number | null }>) {
   const { t } = useTranslation('manual');
   const meta = confidence == null ? null : confidenceTone(confidence);
-  const pct = confidence == null ? null : Math.round(confidence * 100);
+  const percent = confidence == null ? null : Math.round(confidence * 100);
   const label = meta
-    ? t('confidence.lineLabel', { label: meta.label, percent: pct })
+    ? t('confidence.lineLabel', { label: meta.label, percent })
     : t('confidence.noData');
   return (
     <Tooltip content={label} touch>
@@ -143,127 +116,174 @@ function ConfidenceChip({ confidence }: Readonly<{ confidence: number | null }>)
         type="button"
         aria-label={label}
         data-tone={meta ? STATUS_HELP_TONE[meta.tone] : 'neutral'}
-        className="help-indicator mono w-full self-center tabular-nums"
+        className="help-indicator mono h-7 w-full text-[11px] tabular-nums"
       >
-        {pct == null ? t('confidence.shortNoData') : `${pct}%`}
+        {percent == null ? t('confidence.shortNoData') : `${percent}%`}
       </button>
     </Tooltip>
   );
 }
 
-/** Modo edición: se monta solo al editar, con el borrador en useState perezoso. */
+type ReadingPosition = { top: number; offset: number };
+
+function EmptyPageContent({ status }: Readonly<{ status: PageStatusMeta }>) {
+  const { t } = useTranslation('manual');
+  const Icon = status.Icon;
+  let description = t('text.empty');
+  if (status.key === 'failed') description = t('text.failedDescription');
+  if (status.key === 'processing') description = status.tip;
+
+  return (
+    <div className="flex min-h-full flex-col items-center justify-center gap-3 text-center">
+      <Icon
+        size={24}
+        strokeWidth={1.5}
+        className={STATUS_FG_CLASS[status.tone]}
+        aria-hidden="true"
+      />
+      <p className="text-sm font-semibold">
+        {status.key === 'failed' ? t('text.failedTitle') : status.label}
+      </p>
+      <p className="max-w-sm text-sm leading-relaxed text-fg-2">{description}</p>
+    </div>
+  );
+}
+
 function EditBox({
   page,
   saving,
+  busy,
+  position,
   onCancel,
   onSave,
+  onDirtyChange,
+  onScrollPosition,
 }: Readonly<{
   page: ManualDetailPage;
   saving: boolean;
+  busy: boolean;
+  position: RefObject<ReadingPosition>;
   onCancel: () => void;
   onSave: (text: string) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onScrollPosition: (top: number) => void;
 }>) {
   const { t } = useTranslation('manual');
-  const [draft, setDraft] = useState(() => pageText(page));
+  const [original] = useState(() => pageText(page));
+  const [draft, setDraft] = useState(original);
   const draftId = useId();
   const draftRef = useRef<HTMLTextAreaElement>(null);
+  const dirty = draft !== original;
+  const locked = saving || busy;
+  const tooLong = draft.length > PAGE_TEXT_MAX;
+  const empty = draft.trim().length === 0;
+  const valid = !empty && !tooLong;
+  const canSave = dirty && valid && !locked;
+  const message = tooLong
+    ? t('text.tooLong', { max: formatCount(PAGE_TEXT_MAX) })
+    : empty
+      ? t('text.emptyDraft')
+      : t('text.editingHint');
 
-  // Foco al entrar en edición (autoFocus lo veta jsx-a11y).
-  useEffect(() => {
-    draftRef.current?.focus();
-  }, []);
+  useLayoutEffect(() => {
+    const textarea = draftRef.current;
+    if (!textarea) return;
+    textarea.focus({ preventScroll: true });
+    textarea.setSelectionRange(position.current.offset, position.current.offset);
+    textarea.scrollTop = position.current.top;
+  }, [position]);
 
-  const draftLength = draft.length;
-  const draftValid = draft.trim().length > 0 && draftLength <= PAGE_TEXT_MAX;
+  function save(): void {
+    if (canSave) onSave(draft);
+  }
+
   return (
     <form
-      className="flex flex-col gap-3"
+      className="flex min-h-0 flex-1 flex-col bg-bg"
+      aria-busy={locked}
       onSubmit={(event) => {
         event.preventDefault();
-        if (draftValid) onSave(draft);
+        save();
       }}
     >
+      <div className={cn(STATUS_ROW, !valid && 'text-error')}>
+        <Pencil size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
+        <p id={`${draftId}-hint`} className="truncate">
+          {message}
+        </p>
+      </div>
       <label htmlFor={draftId} className="sr-only">
         {t('text.editLabel', { pageNumber: page.page_number })}
       </label>
-      <div
-        className={cn(TEXT_BOX, 'border-primary bg-bg')}
-        style={{ boxShadow: 'var(--m-shadow-ring-primary)' }}
-      >
+      <div className={EDIT_SURFACE}>
         <textarea
           id={draftId}
           ref={draftRef}
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          disabled={saving}
+          onChange={(event) => {
+            const next = event.target.value;
+            setDraft(next);
+            onDirtyChange(next !== original);
+          }}
+          onScroll={(event) => onScrollPosition(event.currentTarget.scrollTop)}
+          onKeyDown={(event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+              event.preventDefault();
+              if (!event.nativeEvent.isComposing) save();
+            }
+          }}
+          disabled={locked}
           spellCheck
+          aria-invalid={!valid}
+          aria-describedby={`${draftId}-hint ${draftId}-count`}
           className={cn(
-            'h-full w-full resize-none bg-transparent px-7 py-6 outline-none disabled:opacity-60',
             TEXT_BODY,
+            TEXT_SCROLL,
+            'resize-none border-0 bg-transparent outline-none disabled:opacity-60',
           )}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <p
-          className={cn(
-            'mono mr-auto text-[11px]',
-            draftLength > PAGE_TEXT_MAX ? 'font-bold text-error' : 'text-fg-3',
-          )}
-          aria-live="polite"
+      <div className={cn(FOOTER, 'h-auto min-h-[4.25rem] flex-wrap py-3')}>
+        <div className="mr-auto min-w-0 basis-full @sm/app:basis-auto">
+          <p className="text-xs text-fg-2">{dirty ? t('text.dirtyState') : t('text.savedState')}</p>
+          <p
+            id={`${draftId}-count`}
+            className={cn(
+              'whitespace-nowrap text-[11px] tabular-nums',
+              tooLong ? 'text-error' : 'text-fg-3',
+            )}
+          >
+            {t('text.counter', {
+              current: formatCount(draft.length),
+              max: formatCount(PAGE_TEXT_MAX),
+            })}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className={QUIET_ACTION}
+          onClick={onCancel}
+          disabled={locked}
         >
-          {t('text.editCounter', {
-            current: formatCount(draftLength),
-            max: formatCount(PAGE_TEXT_MAX),
-          })}
-        </p>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
           {t('buttons.cancel')}
         </Button>
-        <Button type="submit" size="sm" loading={saving} disabled={!draftValid}>
-          {t('buttons.saveChanges')}
+        <Button
+          type="submit"
+          size="sm"
+          className="rounded-[6px] pointer-coarse:min-h-11"
+          loading={saving}
+          disabled={!canSave}
+        >
+          {t('buttons.save')}
         </Button>
       </div>
     </form>
   );
 }
 
-/** Cajón de error cuando la página no se pudo leer. */
-function FailedBox({
-  reprocessing,
-  busy,
-  onReprocessPage,
-}: Readonly<{ reprocessing: boolean; busy: boolean; onReprocessPage: () => void }>) {
-  const { t } = useTranslation('manual');
-  return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center gap-3 border-border bg-surface px-7 text-center',
-        TEXT_BOX,
-      )}
-    >
-      <span className="grid size-[52px] place-items-center rounded-2xl bg-error-bg text-error">
-        <Upload size={24} strokeWidth={1.75} aria-hidden="true" className="rotate-180" />
-      </span>
-      <p className="font-display text-base font-bold text-fg">{t('text.failedTitle')}</p>
-      <p className="max-w-sm text-[13.5px] leading-relaxed text-fg-2">
-        {t('text.failedDescription')}
-      </p>
-      <Button
-        size="sm"
-        variant="secondary"
-        className="mt-1"
-        loading={reprocessing}
-        disabled={busy}
-        onClick={onReprocessPage}
-      >
-        <RotateCw size={14} strokeWidth={2} />
-        {t('buttons.readAgain')}
-      </Button>
-    </div>
-  );
-}
-
-/** Cuerpo de una página: aviso de estado + cajón de texto (lectura, confianza o edición). */
+/** Lectura y edición ocupan el mismo espacio del panel, incluido su pie. */
 export function PageTextCard({
   page,
   pageCount,
@@ -277,175 +297,155 @@ export function PageTextCard({
   onCancelEdit,
   onSave,
   onReprocessPage,
+  onDirtyChange,
 }: Readonly<{
   page: ManualDetailPage;
   pageCount: number;
   needle: string;
-  /** Índice (dentro de la página) de la coincidencia activa, si cae aquí. */
   activeMatch: number | null;
   editing: boolean;
-  /** Colorea cada línea según su confianza OCR. */
   showConfidence: boolean;
-  /** El manual está reprocesándose: edición deshabilitada. */
   busy: boolean;
   saving: boolean;
   reprocessing: boolean;
   onCancelEdit: () => void;
   onSave: (text: string) => void;
   onReprocessPage: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }>) {
   const { t } = useTranslation('manual');
-  const lines = useMemo(() => pageLines(page), [page]);
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const st = pageStatus(page);
+  const status = pageStatus(page);
+  const StatusIcon = status.Icon;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const useConfidence = showConfidence && lines.some((line) => line.confidence != null);
+  const position = useRef<ReadingPosition>({ top: 0, offset: 0 });
+  const text = pageText(page);
+  const empty = text.trim().length === 0;
+  const failed = status.key === 'failed';
+  const unavailable = empty || failed;
+  const useConfidence = showConfidence && page.ocr_lines.some((line) => line.confidence != null);
 
-  // Trae la coincidencia activa a la vista dentro del cajón (solo si está fuera).
+  useLayoutEffect(() => {
+    if (!editing && scrollRef.current) scrollRef.current.scrollTop = position.current.top;
+  }, [editing]);
+
   useEffect(() => {
     revealActiveMatch(scrollRef.current, reducedMotion);
-  }, [activeMatch, needle, page.page_number, useConfidence, reducedMotion]);
+  }, [activeMatch, needle, page.page_number, reducedMotion]);
 
   if (editing) {
-    return <EditBox page={page} saving={saving} onCancel={onCancelEdit} onSave={onSave} />;
-  }
-
-  if (st.key === 'failed') {
-    return <FailedBox reprocessing={reprocessing} busy={busy} onReprocessPage={onReprocessPage} />;
+    return (
+      <EditBox
+        page={page}
+        saving={saving}
+        busy={busy}
+        position={position}
+        onCancel={onCancelEdit}
+        onSave={onSave}
+        onDirtyChange={onDirtyChange}
+        onScrollPosition={(top) => {
+          position.current.top = top;
+        }}
+      />
+    );
   }
 
   const counter = { value: 0 };
-  const empty = lines.length === 0;
-
-  // Contenido del cajón en una variable: evita anidar ternarios en el JSX y
-  // mantiene el resaltado inline (el "counter" se comparte en un solo render).
-  let body: ReactNode;
-  if (empty) {
-    body = (
-      <p className="flex h-full items-center justify-center px-7 text-center text-sm text-fg-3">
-        {t('text.empty')}
-      </p>
-    );
-  } else {
-    body = (
-      <div
-        ref={scrollRef}
-        className={cn(
-          'flex h-full flex-col overflow-y-auto px-3.5 transition-[padding-block,gap] [scrollbar-gutter:stable]',
-          CONFIDENCE_TRANSITION,
-          useConfidence ? 'gap-2 py-3.5' : 'gap-3.5 py-6',
-        )}
-        onTransitionEnd={(event) => {
-          if (event.target === event.currentTarget)
-            revealActiveMatch(event.currentTarget, reducedMotion);
-        }}
-      >
-        {lines.map((line, index) => {
-          const meta = line.confidence == null ? null : confidenceTone(line.confidence);
-          return (
-            <div
-              key={`${index}-${line.paragraphs[0]!.slice(0, 24)}`}
-              className={cn(
-                'flex shrink-0 items-start rounded-lg border-l-[3px] px-3 transition-[background-color,border-color,padding-block]',
-                CONFIDENCE_TRANSITION,
-                useConfidence
-                  ? cn(
-                      'py-2.5',
-                      meta
-                        ? CONFIDENCE_ROW_CLASS[meta.tone]
-                        : 'border-l-border-strong bg-surface-2',
-                    )
-                  : 'border-l-transparent py-0',
-              )}
-            >
-              <div className={cn('min-w-0 flex-1 space-y-3.5 [overflow-wrap:anywhere]', TEXT_BODY)}>
-                {line.paragraphs.map((paragraph, paragraphIndex) => (
-                  <p key={paragraphIndex}>{highlight(paragraph, needle, counter, activeMatch)}</p>
-                ))}
-              </div>
-              <div
-                aria-hidden={!useConfidence}
-                inert={!useConfidence}
-                className={cn(
-                  'shrink-0 self-center overflow-hidden transition-[width,margin-inline-start,opacity]',
-                  CONFIDENCE_TRANSITION,
-                  useConfidence ? 'ms-3 w-[4.25rem] opacity-100' : 'ms-0 w-0 opacity-0',
-                )}
-              >
-                <ConfidenceChip confidence={line.confidence} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+  let offset = 0;
+  const showRecovery = failed || status.key === 'low';
 
   return (
-    <div className="flex flex-col gap-3">
-      {st.key === 'low' ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-warning bg-warning-bg p-3.5">
-          <p className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-fg">
-            <strong className="font-semibold">{t('text.lowTitle')}</strong>{' '}
-            {t('text.lowDescription')}
-          </p>
+    <div className="flex min-h-0 flex-1 flex-col bg-bg">
+      <div className={STATUS_ROW}>
+        <Tooltip content={status.tip} touch>
+          <button
+            type="button"
+            className="inline-flex min-w-0 cursor-help items-center gap-2 text-start outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={status.label}
+          >
+            <StatusIcon
+              size={14}
+              strokeWidth={1.75}
+              aria-hidden="true"
+              className={cn('shrink-0', STATUS_FG_CLASS[status.tone])}
+            />
+            <span className="truncate">{status.label}</span>
+          </button>
+        </Tooltip>
+      </div>
+      <article
+        aria-label={t('page.articleLabel', { pageCount, pageNumber: page.page_number })}
+        className="min-h-0 flex-1 overflow-hidden px-5 sm:px-7"
+      >
+        <div
+          ref={scrollRef}
+          className={cn(TEXT_BODY, TEXT_SCROLL, unavailable && 'pe-0')}
+          onScroll={(event) => {
+            const scroller = event.currentTarget;
+            position.current.top = scroller.scrollTop;
+            const top = scroller.getBoundingClientRect().top;
+            const row = Array.from(
+              scroller.querySelectorAll<HTMLElement>('[data-text-offset]'),
+            ).find((element) => element.getBoundingClientRect().bottom > top);
+            position.current.offset = Number(row?.dataset.textOffset ?? 0);
+          }}
+        >
+          {unavailable ? (
+            <EmptyPageContent status={status} />
+          ) : (
+            page.ocr_lines.map((line, index) => {
+              const lineOffset = offset;
+              const tone = line.confidence == null ? null : confidenceTone(line.confidence).tone;
+              offset += line.text.length + 1;
+              return (
+                <div key={index} data-text-offset={lineOffset} className="relative min-h-[1lh]">
+                  <p className="min-h-[1lh]">
+                    {/* La tinta sigue cada tramo sin añadir espacio ni cambiar sus saltos. */}
+                    <span
+                      className={cn(
+                        'box-decoration-clone rounded-[3px] transition-[background-color] duration-150 ease-out motion-reduce:transition-none',
+                        useConfidence && tone ? CONFIDENCE_HIGHLIGHT[tone] : 'bg-transparent',
+                      )}
+                    >
+                      {highlight(line.text, needle, counter, activeMatch)}
+                    </span>
+                  </p>
+                  <div
+                    aria-hidden={!useConfidence}
+                    inert={!useConfidence}
+                    className={cn(
+                      'absolute -end-14 top-0 w-12 transition-opacity duration-150 motion-reduce:transition-none',
+                      useConfidence ? 'opacity-100' : 'opacity-0',
+                    )}
+                  >
+                    <ConfidenceValue confidence={line.confidence} />
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </article>
+      <div className={FOOTER}>
+        <p className="mr-auto min-w-0 truncate text-xs tabular-nums text-fg-3">
+          {t('text.characterCount', {
+            count: text.length,
+            formattedCount: formatCount(text.length),
+          })}
+        </p>
+        {showRecovery ? (
           <Button
-            variant="secondary"
             size="sm"
+            variant="ghost"
+            className={QUIET_ACTION}
             loading={reprocessing}
-            disabled={busy}
+            disabled={busy || saving}
             onClick={onReprocessPage}
           >
-            <RotateCw size={14} strokeWidth={2} />
+            <RotateCw size={14} strokeWidth={2} aria-hidden="true" />
             {t('buttons.readAgain')}
           </Button>
-        </div>
-      ) : null}
-      {st.key === 'edited' ? (
-        <p className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-accent">
-          <Pencil size={13} strokeWidth={2} aria-hidden="true" />
-          {t('text.edited')}
-        </p>
-      ) : null}
-      {st.key === 'duplicate' ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-warning bg-warning-bg p-3.5">
-          <Copy
-            size={16}
-            strokeWidth={2.2}
-            className="mt-0.5 shrink-0 text-warning"
-            aria-hidden="true"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-[13.5px] font-semibold text-fg">{t('text.duplicateTitle')}</p>
-            <p className="mt-0.5 text-[13.5px] leading-relaxed text-fg-2">
-              {t('text.duplicateDescription')}
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      <div>
-        <div
-          aria-hidden={!useConfidence}
-          className={cn(
-            'grid transition-[grid-template-rows,opacity]',
-            CONFIDENCE_TRANSITION,
-            useConfidence ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
-          )}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="pb-3">
-              <ConfidenceLegend />
-            </div>
-          </div>
-        </div>
-        {/* Borde redondeado fuera (overflow-hidden) + scroll dentro: barra integrada. */}
-        <article
-          aria-label={t('page.articleLabel', { pageCount, pageNumber: page.page_number })}
-          className={cn(TEXT_BOX, 'border-border bg-surface')}
-        >
-          {body}
-        </article>
+        ) : null}
       </div>
     </div>
   );

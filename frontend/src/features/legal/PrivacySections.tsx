@@ -7,62 +7,60 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/shared/lib/cn';
+import styles from './privacy.module.css';
 
-/** Contenido de la política, compartido entre la página /privacy y el modal in-app. */
 const SECTIONS = [
   {
     icon: Database,
-    h: 'sections.data.heading',
+    heading: 'sections.data.heading',
     body: 'sections.data.body',
   },
   {
     icon: Sparkles,
-    h: 'sections.usage.heading',
+    heading: 'sections.usage.heading',
     body: 'sections.usage.body',
   },
   {
     icon: ImageIcon,
-    h: 'sections.images.heading',
+    heading: 'sections.images.heading',
     body: 'sections.images.body',
   },
   {
     icon: Server,
-    h: 'sections.processing.heading',
+    heading: 'sections.processing.heading',
     body: 'sections.processing.body',
   },
   {
     icon: ShieldCheck,
-    h: 'sections.rights.heading',
+    heading: 'sections.rights.heading',
     body: 'sections.rights.body',
   },
   {
     icon: GraduationCap,
-    h: 'sections.academic.heading',
+    heading: 'sections.academic.heading',
     body: 'sections.academic.body',
   },
 ] as const;
 
-export function PrivacySections({ className }: Readonly<{ className?: string }>) {
+export function PrivacySections({
+  className,
+  headingLevel = 2,
+}: Readonly<{ className?: string; headingLevel?: 2 | 3 }>) {
   const { t } = useTranslation('legal');
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
 
   return (
-    <Card className={cn('divide-y divide-border overflow-hidden', className)}>
-      {SECTIONS.map(({ icon: Icon, h, body }) => (
-        <div key={h} className="flex gap-4 p-5">
-          <span
-            aria-hidden="true"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-100 text-primary-700"
-          >
-            <Icon size={18} strokeWidth={2} />
-          </span>
-          <div className="min-w-0">
-            <h2 className="font-display text-base font-bold tracking-tight text-fg">{t(h)}</h2>
-            <p className="mt-1 text-[15px] leading-relaxed text-fg-2">{t(body)}</p>
-          </div>
-        </div>
+    <div className={cn(styles.sections, className)}>
+      {SECTIONS.map(({ icon: Icon, heading, body }) => (
+        <section key={heading} className={styles.section}>
+          <Heading className={styles.sectionTitle}>
+            <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+            {t(heading)}
+          </Heading>
+          <p>{t(body)}</p>
+        </section>
       ))}
-    </Card>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { axe } from 'jest-axe';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -12,155 +12,117 @@ import {
 } from '@tanstack/react-router';
 import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Onboarding } from '@/features/onboarding/Onboarding';
+import { AuthShell } from '@/features/auth/auth-shell';
+import { storage } from '@/shared/lib/storage';
 
-beforeEach(() => {
-  localStorage.clear();
-});
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+afterEach(() => vi.restoreAllMocks());
 
 function renderOnboarding() {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  const root = createRootRoute({
+    component: () => (
+      <AuthShell>
+        <Outlet />
+      </AuthShell>
+    ),
   });
-  const root = createRootRoute({ component: Outlet });
-  const onboardingR = createRoute({
+  const onboarding = createRoute({
     getParentRoute: () => root,
     path: '/onboarding',
     component: Onboarding,
   });
-  const stub = (path: string, id: string) =>
-    createRoute({
-      getParentRoute: () => root,
-      path,
-      component: () => <div data-testid={id}>{id}</div>,
-    });
-  const tree = root.addChildren([
-    onboardingR,
-    stub('/login', 'login-screen'),
-    stub('/register', 'register-screen'),
-  ]);
   const router = createRouter({
-    routeTree: tree,
+    routeTree: root.addChildren([onboarding]),
     history: createMemoryHistory({ initialEntries: ['/onboarding'] }),
   });
-  return render(
+  const result = render(
     <LanguageProvider>
       <ThemeProvider>
-        <QueryClientProvider client={qc}>
+        <TooltipProvider>
           <RouterProvider router={router} />
-        </QueryClientProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </LanguageProvider>,
   );
+  return { ...result, router };
 }
 
 describe('Onboarding', () => {
-  it('renderiza el botón Empezar', async () => {
-    renderOnboarding();
-    expect(await screen.findByRole('button', { name: /Empezar/i })).toBeInTheDocument();
-  });
+  it.each([
+    [true, 'Usar modo claro', 'light', '{Enter}'],
+    [false, 'Usar modo oscuro', 'dark', ' '],
+  ] as const)(
+    'alterna desde el aspecto del sistema con teclado y conserva el acento cuando oscuro=%s',
+    async (dark, label, mode, key) => {
+      // jsdom no tiene apariencia del sistema. Solo se controla esa frontera.
+      // El provider y el botón de tema se montan sin sustituirlos.
+      const matchMedia = window.matchMedia;
+      vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+        ...matchMedia(query),
+        matches: query === '(prefers-color-scheme: dark)' && dark,
+      }));
+      storage.writeSettings({ mode: 'auto', accent: 'blue' });
+      const user = userEvent.setup();
+      renderOnboarding();
 
-  it('"Empezar" avanza de paso, no entra a la app', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-    await user.click(await screen.findByRole('button', { name: /Empezar/i }));
-    const step = screen.getByRole('region', { name: /^Paso 1/i });
-    expect(step).toHaveFocus();
-    expect(within(step).getByRole('heading', { level: 2 })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Ir a diapositiva 2/i })).toHaveAttribute(
-      'aria-current',
-      'step',
+      const toggle = await screen.findByRole('button', { name: label });
+      toggle.focus();
+      await user.keyboard(key);
+
+      expect(document.documentElement).toHaveClass(`theme-${mode}`, 'accent-blue');
+      expect(toggle).toHaveFocus();
+      expect(toggle).toHaveAccessibleName(dark ? 'Usar modo oscuro' : 'Usar modo claro');
+    },
+  );
+
+  it('presenta una bienvenida accesible sin marcarla como vista', async () => {
+    const { container } = renderOnboarding();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Que comience la partida.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manualito, ir a la web' })).toHaveAttribute(
+      'href',
+      'https://manualito.dev',
     );
-    expect(screen.queryByRole('button', { name: /Empezar/i })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('login-screen')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('register-screen')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Consulta las reglas y resuelve tus dudas de tus juegos de mesa.'),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Política de privacidad' })).toBeEnabled();
+    expect(storage.isOnboardingSeen()).toBe(false);
+    expect(await axe(container)).toHaveNoViolations();
   });
 
-  it('Saltar marca el onboarding como visto y lleva a /login (una sola vez)', async () => {
+  it('cambia el idioma con teclado y conserva el foco en la bienvenida', async () => {
     const user = userEvent.setup();
-    renderOnboarding();
-    const skip = await screen.findByRole('button', { name: /Saltar/i });
-    await user.click(skip);
-    await user.click(skip);
-    await user.click(skip);
-    expect(localStorage.getItem('manualito.onboarding.seen')).toBe('1');
-    expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
-  });
-
-  it('la pantalla de elección "Crear cuenta" lleva a /register', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-    // Salto a la última diapositiva y continúo hasta la pantalla de elección.
-    await user.click(await screen.findByRole('button', { name: /Ir a diapositiva 4/i }));
-    await user.click(await screen.findByRole('button', { name: /Continuar/i }));
-    await user.click(await screen.findByRole('button', { name: /Crear cuenta/i }));
-    expect(await screen.findByTestId('register-screen')).toBeInTheDocument();
-  });
-
-  it('la pantalla de elección "Ya tengo cuenta" lleva a /login', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-    await user.click(await screen.findByRole('button', { name: /Ir a diapositiva 4/i }));
-    await user.click(await screen.findByRole('button', { name: /Continuar/i }));
-    await user.click(await screen.findByRole('button', { name: /Ya tengo cuenta/i }));
-    expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
-  });
-
-  it('la política de privacidad se abre como modal, sin salir del onboarding', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-    await user.click(await screen.findByRole('button', { name: /Ir a diapositiva 4/i }));
-    await user.click(await screen.findByRole('button', { name: /Continuar/i }));
-    await user.click(await screen.findByRole('button', { name: /Política de privacidad/i }));
-    const dialog = await screen.findByRole('dialog', { name: /Política de privacidad/i });
-    expect(dialog).toBeInTheDocument();
-    // Seguimos en el onboarding (no se navegó a /login ni /register).
-    expect(screen.queryByTestId('login-screen')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('register-screen')).not.toBeInTheDocument();
-  });
-
-  it('Enter en Ya tengo cuenta navega a login sin activar registro', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-    await user.click(await screen.findByRole('button', { name: /Ir a diapositiva 5/i }));
-    screen.getByRole('button', { name: /Ya tengo cuenta/i }).focus();
-    await user.keyboard('{Enter}');
-    expect(await screen.findByTestId('login-screen')).toBeInTheDocument();
-    expect(screen.queryByTestId('register-screen')).not.toBeInTheDocument();
-  });
-
-  it('cambiar idioma con Enter conserva el panel y oculta los demás del foco accesible', async () => {
-    const user = userEvent.setup();
-    renderOnboarding();
-    const language = await screen.findByRole('button', { name: /Switch language to English/i });
+    const { router } = renderOnboarding();
+    const language = await screen.findByRole('button', { name: 'Switch language to English' });
     language.focus();
+
     await user.keyboard('{Enter}');
-    expect(screen.getByRole('button', { name: /Go to slide 1/i })).toHaveAttribute(
-      'aria-current',
-      'step',
-    );
-    expect(screen.getByRole('button', { name: /Cambiar el idioma a español/i })).toHaveFocus();
-    expect(document.querySelectorAll('section[inert]')).toHaveLength(4);
-    expect(screen.getAllByRole('region')).toHaveLength(1);
+
+    expect(await screen.findByRole('heading', { name: 'Let the game begin.' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Cambiar el idioma a español' })).toHaveFocus();
+    expect(router.state.location.pathname).toBe('/onboarding');
+    expect(storage.isOnboardingSeen()).toBe(false);
   });
 
-  it('Escape cierra privacidad y conserva el panel de elección', async () => {
+  it('abre privacidad sin navegar y devuelve el foco al cerrarla con Escape', async () => {
     const user = userEvent.setup();
-    renderOnboarding();
-    await user.click(await screen.findByRole('button', { name: /Ir a diapositiva 5/i }));
-    const privacy = screen.getByRole('button', { name: /Política de privacidad/i });
+    const { router } = renderOnboarding();
+    const privacy = await screen.findByRole('button', { name: 'Política de privacidad' });
+
     await user.click(privacy);
-    await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('dialog', { name: 'Política de privacidad' });
+    expect(within(dialog).getByRole('heading', { name: 'Política de privacidad' })).toHaveFocus();
+    expect(router.state.location.pathname).toBe('/onboarding');
+    expect(storage.isOnboardingSeen()).toBe(false);
+
     await user.keyboard('{Escape}');
+
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(privacy).toHaveFocus();
-    expect(screen.getByRole('button', { name: /Ir a diapositiva 5/i })).toHaveAttribute(
-      'aria-current',
-      'step',
-    );
-    expect(screen.queryByTestId('login-screen')).not.toBeInTheDocument();
   });
 });

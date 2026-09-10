@@ -10,6 +10,7 @@ import { mapApiError } from '@/shared/api/error-mapper';
 import { AuthAlert } from './auth-alert';
 import { ariaInvalid, AuthField, emailFieldError, isEmail } from './auth-controls';
 import { AuthStatus } from './auth-status';
+import styles from './entry.module.css';
 
 export function ForgotForm() {
   const { t, i18n } = useTranslation('auth');
@@ -54,16 +55,14 @@ export function ForgotForm() {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col">
-      <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        {t('forms.forgot.heading')}
-      </h1>
-      <p className="mt-1.5 text-sm text-fg-2">{t('forms.forgot.description')}</p>
+    <form onSubmit={submit} noValidate className={styles.form}>
+      <h1>{t('forms.forgot.heading')}</h1>
+      <p className={styles.formDescription}>{t('forms.forgot.description')}</p>
       <AuthAlert open={forgot.isError} title={requestError?.title ?? ''} className="mt-4">
         {requestError?.message}
       </AuthAlert>
 
-      <div className="mt-5 flex flex-col gap-4">
+      <div className={styles.fields}>
         <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
           <Input
             id={`${fieldId}-email`}
@@ -76,17 +75,14 @@ export function ForgotForm() {
             required
           />
         </AuthField>
-        <Button type="submit" size="lg" block loading={forgot.isPending}>
+        <Button type="submit" size="lg" block loading={forgot.isPending} className={styles.submit}>
           {forgot.isPending ? t('actions.sendLinkLoading') : t('actions.sendLink')}
         </Button>
       </div>
 
-      <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
+      <p className={styles.switch}>
         {t('forms.forgot.rememberPassword')}{' '}
-        <Link
-          to="/login"
-          className="inline-flex min-h-11 items-center font-bold text-accent hover:underline"
-        >
+        <Link to="/login" className={styles.textLink}>
           {t('forms.register.signIn')}
         </Link>
       </p>

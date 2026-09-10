@@ -23,12 +23,24 @@ function advanceTime(ms: number) {
   });
 }
 
+// jsdom no ejecuta CSS. Controlamos solo cuándo termina o se cancela una transición del navegador.
+function createCssTransition() {
+  const completion = Promise.withResolvers<Animation>();
+  const animation = { finished: completion.promise, transitionProperty: '--m-bg' } as CSSTransition;
+  return {
+    animation,
+    finish: () => completion.resolve(animation),
+    cancel: () => completion.reject(new DOMException('Transición cancelada', 'AbortError')),
+  };
+}
+
 describe('ThemeProvider', () => {
   it('inicia en light y amber y aplica el tema al documento', () => {
     const { result } = renderTheme();
     expect(result.current.mode).toBe('light');
     expect(result.current.accent).toBe('amber');
     expect(document.documentElement).toHaveClass('theme-light');
+    expect(document.documentElement).not.toHaveClass('color-transition');
   });
 
   it('aplica dark inmediatamente y lo persiste tras la espera', () => {
@@ -65,6 +77,105 @@ describe('ThemeProvider', () => {
     expect(result.current.mode).toBe('dark');
     expect(result.current.accent).toBe('blue');
     expect(document.documentElement).toHaveClass('theme-dark', 'accent-blue');
+    expect(document.documentElement).not.toHaveClass('color-transition');
+  });
+
+  it('mantiene la transición de tema hasta que acaba la animación del navegador', async () => {
+    const transition = createCssTransition();
+    let animations = [transition.animation];
+    vi.spyOn(document.documentElement, 'getAnimations').mockImplementation(() => animations);
+    const { result } = renderTheme();
+
+    act(() => result.current.setMode('dark'));
+    expect(document.documentElement).toHaveClass('theme-dark', 'color-transition');
+
+    await act(async () => {
+      animations = [];
+      transition.finish();
+    });
+    expect(document.documentElement).not.toHaveClass('color-transition');
+    expect(document.documentElement).toHaveClass('theme-dark');
+  });
+
+  it.each([
+    { moment: 'antes del cambio de tema', alreadyRunning: true },
+    { moment: 'durante el cambio de tema', alreadyRunning: false },
+  ])(
+    'limpia el color aunque otra animación empiece $moment y siga activa',
+    async ({ alreadyRunning }) => {
+      const transition = createCssTransition();
+      const otherCompletion = Promise.withResolvers<Animation>();
+      const otherAnimation = { finished: otherCompletion.promise } as Animation;
+      let animations = alreadyRunning
+        ? [transition.animation, otherAnimation]
+        : [transition.animation];
+      vi.spyOn(document.documentElement, 'getAnimations').mockImplementation(() => animations);
+      const { result } = renderTheme();
+
+      act(() => result.current.setMode('dark'));
+      expect(document.documentElement).toHaveClass('color-transition');
+
+      await act(async () => {
+        animations = [otherAnimation];
+        transition.finish();
+      });
+      expect(document.documentElement).toHaveClass('theme-dark');
+      expect(document.documentElement).not.toHaveClass('color-transition');
+      otherCompletion.resolve(otherAnimation);
+    },
+  );
+
+  it('conserva el último tema y acento al interrumpir una transición anterior', async () => {
+    const first = createCssTransition();
+    const latest = createCssTransition();
+    let animations = [first.animation];
+    vi.spyOn(document.documentElement, 'getAnimations').mockImplementation(() => animations);
+    const { result } = renderTheme();
+
+    act(() => result.current.setMode('dark'));
+    animations = [latest.animation];
+    act(() => {
+      result.current.setMode('light');
+      result.current.setAccent('blue');
+    });
+
+    await act(async () => first.cancel());
+    expect(document.documentElement).toHaveClass('theme-light', 'accent-blue', 'color-transition');
+    expect(document.documentElement).not.toHaveClass('theme-dark');
+
+    await act(async () => {
+      animations = [];
+      latest.finish();
+    });
+    expect(document.documentElement).not.toHaveClass('color-transition');
+    expect(document.documentElement).toHaveClass('theme-light', 'accent-blue');
+  });
+
+  it('no corta el cambio de acento al elegir un modo con la misma paleta visible', async () => {
+    const transition = createCssTransition();
+    let animations = [transition.animation];
+    vi.spyOn(document.documentElement, 'getAnimations').mockImplementation(() => animations);
+    const { result } = renderTheme();
+
+    act(() => result.current.setAccent('blue'));
+    act(() => result.current.setMode('auto'));
+    expect(result.current.mode).toBe('auto');
+    expect(document.documentElement).toHaveClass('theme-light', 'accent-blue', 'color-transition');
+
+    await act(async () => {
+      animations = [];
+      transition.finish();
+    });
+    expect(document.documentElement).not.toHaveClass('color-transition');
+  });
+
+  it('aplica el destino y limpia la transición si el navegador no crea animaciones', async () => {
+    const { result } = renderTheme();
+
+    await act(async () => result.current.setMode('dark'));
+
+    expect(document.documentElement).toHaveClass('theme-dark');
+    expect(document.documentElement).not.toHaveClass('color-transition');
   });
 
   it('usa los valores iniciales si las preferencias están corruptas', () => {

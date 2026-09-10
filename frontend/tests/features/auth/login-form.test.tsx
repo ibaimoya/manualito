@@ -18,6 +18,7 @@ import { LoginForm } from '@/features/auth/login-form';
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  server.events.removeAllListeners('request:start');
   localStorage.clear();
 });
 afterAll(() => server.close());
@@ -86,6 +87,10 @@ describe('LoginForm', () => {
   });
 
   it('traduce el error del servidor y lo actualiza al cambiar de idioma sin reenviar', async () => {
+    let loginRequests = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).pathname === '/api/auth/login') loginRequests++;
+    });
     server.use(failLogin());
     await i18n.changeLanguage('en');
     const user = userEvent.setup();
@@ -93,11 +98,12 @@ describe('LoginForm', () => {
 
     await user.type(await screen.findByLabelText('Email or username'), 'marta');
     await user.type(screen.getByLabelText('Password'), 'incorrect');
-    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
 
     const english = 'The email, username or password is incorrect.';
     const spanish = 'El email, el nombre de usuario o la contraseña no son correctos.';
     await waitFor(() => expect(screen.getByText(english)).toBeVisible());
+    expect(loginRequests).toBe(1);
     expect(screen.queryByText('Credenciales inválidas.')).not.toBeInTheDocument();
 
     await act(() => i18n.changeLanguage('es'));
@@ -108,6 +114,7 @@ describe('LoginForm', () => {
     expect(screen.getByText(english)).toBeVisible();
     expect(screen.queryByText(spanish)).not.toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
+    expect(loginRequests).toBe(1);
   });
 
   it('al enviar vacío avisa de ambos campos (sin clic muerto) y no envía', async () => {

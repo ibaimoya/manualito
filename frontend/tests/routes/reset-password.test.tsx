@@ -14,6 +14,7 @@ import {
 import { server } from '@tests/_helpers/server';
 import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route as ResetRoute } from '@/routes/reset-password';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -53,7 +54,9 @@ function renderReset(token?: string) {
     <LanguageProvider>
       <ThemeProvider>
         <QueryClientProvider client={qc}>
-          <RouterProvider router={router} />
+          <TooltipProvider>
+            <RouterProvider router={router} />
+          </TooltipProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </LanguageProvider>,

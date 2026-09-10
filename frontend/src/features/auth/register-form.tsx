@@ -16,6 +16,7 @@ import {
 import { AuthAlert } from './auth-alert';
 import { FieldFeedback } from './FieldFeedback';
 import { useRegister } from './use-auth';
+import styles from './entry.module.css';
 
 export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: () => void }>) {
   const { t } = useTranslation('auth');
@@ -58,15 +59,13 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col">
-      <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        {t('forms.register.heading')}
-      </h1>
-      <p className="mt-1.5 text-sm text-fg-2">{t('forms.register.description')}</p>
+    <form onSubmit={submit} noValidate className={styles.form} data-kind="register">
+      <h1>{t('forms.register.heading')}</h1>
+      <p className={styles.formDescription}>{t('forms.register.description')}</p>
 
       <RegisterErrorAlert error={register.error} />
 
-      <div className="mt-5 flex flex-col gap-4">
+      <div className={styles.fields}>
         <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
           <Input
             id={`${fieldId}-email`}
@@ -111,17 +110,20 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
         />
         <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
-        <Button type="submit" size="lg" block loading={register.isPending}>
+        <Button
+          type="submit"
+          size="lg"
+          block
+          loading={register.isPending}
+          className={styles.submit}
+        >
           {register.isPending ? t('actions.createAccountLoading') : t('actions.createAccount')}
         </Button>
       </div>
 
-      <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
+      <p className={styles.switch}>
         {t('forms.register.haveAccount')}{' '}
-        <Link
-          to="/login"
-          className="inline-flex min-h-11 items-center font-bold text-accent hover:underline"
-        >
+        <Link to="/login" className={styles.textLink}>
           {t('forms.register.signIn')}
         </Link>
       </p>
@@ -144,7 +146,7 @@ function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
           ns="auth"
           i18nKey="alerts.register.conflict.body"
           components={{
-            login: <Link to="/login" className="font-semibold text-accent hover:underline" />,
+            login: <Link to="/login" className={styles.textLink} />,
           }}
         />
       ) : (
@@ -170,37 +172,25 @@ function ConsentField({
   const { t } = useTranslation('auth');
   return (
     <div>
-      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface-2 p-3.5">
+      <div className={styles.consent}>
         <input
           id={id}
           type="checkbox"
           checked={checked}
+          aria-labelledby={`${id}-label`}
           aria-invalid={ariaInvalid(error)}
           aria-describedby={error ? `${id}-feedback` : undefined}
           onChange={(event) => onChange(event.target.checked)}
-          className="size-5 shrink-0 accent-primary"
+          className="size-4 shrink-0 accent-primary"
         />
-        <span className="text-sm leading-relaxed text-fg">
-          <Trans
-            ns="auth"
-            i18nKey="consent.label"
-            components={{
-              privacy: (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    // Evita que el clic dentro del label alterne el checkbox
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onShowPrivacy();
-                  }}
-                  className="font-semibold text-accent hover:underline"
-                />
-              ),
-            }}
-          />
+        <span id={`${id}-label`}>
+          <label htmlFor={id}>{t('consent.label')}</label>{' '}
+          <button type="button" onClick={onShowPrivacy} className={styles.textLink}>
+            {t('consent.privacy')}
+          </button>
+          .
         </span>
-      </label>
+      </div>
       <FieldFeedback id={`${id}-feedback`} error={error ? t('consent.required') : undefined} />
     </div>
   );

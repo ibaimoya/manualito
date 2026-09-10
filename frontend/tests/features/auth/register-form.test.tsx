@@ -20,6 +20,7 @@ import { RegisterForm } from '@/features/auth/register-form';
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  server.events.removeAllListeners('request:start');
   localStorage.clear();
 });
 afterAll(() => server.close());
@@ -73,8 +74,20 @@ describe('RegisterForm', () => {
     await fillValid(user);
     await user.click(screen.getByRole('checkbox'));
     await act(() => i18n.changeLanguage('en'));
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    await user.click(screen.getByRole('button', { name: 'Sign up' }));
     await waitFor(() => expect(body).toMatchObject({ email: 'marta@gmail.com', locale: 'en' }));
+  });
+
+  it('asocia el consentimiento completo al checkbox y permite activarlo desde su texto', async () => {
+    const user = userEvent.setup();
+    mountRegister();
+    const checkbox = await screen.findByRole('checkbox', {
+      name: /^He leído y acepto la Política de privacidad\s*\.$/,
+    });
+
+    await user.click(screen.getByText('He leído y acepto la', { exact: true }));
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toHaveFocus();
   });
 
   it('avisa si falta el consentimiento y registra al aceptarlo', async () => {
@@ -137,6 +150,7 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText(/no coinciden/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Repite la contraseña')).toHaveFocus();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
@@ -152,10 +166,17 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText('Ese email no parece válido')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveFocus();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
   it('acepta email con espacios alrededor (se recorta) y registra', async () => {
+    const submissions: Promise<unknown>[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).pathname === '/api/auth/register') {
+        submissions.push(request.clone().json());
+      }
+    });
     const user = userEvent.setup();
     const { onAuthenticated } = mountRegister();
     await user.type(await screen.findByLabelText('Email'), '  marta@gmail.com  ');
@@ -166,6 +187,9 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+    expect(await Promise.all(submissions)).toEqual([
+      expect.objectContaining({ email: 'marta@gmail.com' }),
+    ]);
   });
 
   it('acepta una contraseña de exactamente 12 caracteres (límite inferior)', async () => {
@@ -191,7 +215,8 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
-    expect(await screen.findByText('Mínimo 12 caracteres')).toBeInTheDocument();
+    expect(screen.getByLabelText('Contraseña')).toHaveFocus();
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-invalid', 'true');
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 });

@@ -1,50 +1,38 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { LanguageProvider } from '@/app/language';
 import { LanguagePill } from '@/features/language/LanguagePill';
 
-function renderPill(props?: Readonly<{ tone?: 'light' | 'dark' }>) {
+function renderPill() {
   return render(
     <LanguageProvider>
-      <LanguagePill {...props} />
+      <LanguagePill />
     </LanguageProvider>,
   );
 }
 
 describe('LanguagePill', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    document.documentElement.lang = 'es';
-  });
-
-  it('muestra el otro idioma en su forma nativa con su atributo lang', () => {
-    renderPill();
-    const label = screen.getByText('English');
-    expect(label).toHaveAttribute('lang', 'en');
-  });
-
-  it('el aria va en el idioma destino', () => {
-    renderPill();
-    expect(screen.getByRole('button', { name: 'Switch language to English' })).toBeInTheDocument();
-  });
-
-  it('un toque cambia el idioma y el pill pasa a ofrecer el anterior', async () => {
+  it('cambia el idioma y activa la etiqueta y el nombre accesible del siguiente destino', async () => {
     const user = userEvent.setup();
     renderPill();
-    await user.click(screen.getByRole('button', { name: 'Switch language to English' }));
-    expect(document.documentElement.lang).toBe('en');
-    const label = screen.getByText('Español');
-    expect(label).toHaveAttribute('lang', 'es');
-    expect(screen.getByRole('button', { name: 'Cambiar el idioma a español' })).toBeInTheDocument();
-  });
+    const button = screen.getByRole('button', { name: 'Switch language to English' });
+    const english = screen.getByText('English');
+    const spanish = screen.getByText('Español');
+    expect(button).toHaveAttribute('lang', 'en');
+    expect(english).toHaveAttribute('lang', 'en');
+    expect(english).toHaveAttribute('data-active', 'true');
+    expect(spanish).toHaveAttribute('data-active', 'false');
 
-  it('el tono oscuro conserva el mismo comportamiento', async () => {
-    const user = userEvent.setup();
-    renderPill({ tone: 'dark' });
-    await user.click(screen.getByRole('button', { name: 'Switch language to English' }));
+    await user.click(button);
+
     expect(document.documentElement.lang).toBe('en');
+    expect(button).toHaveAccessibleName('Cambiar el idioma a español');
+    expect(button).toHaveAttribute('lang', 'es');
+    expect(spanish).toHaveAttribute('lang', 'es');
+    expect(spanish).toHaveAttribute('data-active', 'true');
+    expect(english).toHaveAttribute('data-active', 'false');
   });
 
   it('no tiene violaciones de accesibilidad', async () => {

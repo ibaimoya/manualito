@@ -26,6 +26,15 @@ const ThemeContext = createContext<ThemeState | null>(null);
 const PERSIST_DEBOUNCE_MS = 200;
 
 type Persisted = { mode: ThemeMode; accent: AccentVariant };
+
+function getColorTransitions(root: HTMLElement) {
+  return root
+    .getAnimations()
+    .filter((animation) =>
+      (animation as Partial<CSSTransition>).transitionProperty?.startsWith('--m-'),
+    );
+}
+
 function applyToHtml(state: Persisted): void {
   const { document: runtimeDocument, window: runtimeWindow } = globalThis;
   if (runtimeDocument === undefined || runtimeWindow === undefined) return;
@@ -34,19 +43,18 @@ function applyToHtml(state: Persisted): void {
   const dark = state.mode === 'dark' || (state.mode === 'auto' && prefersDark);
   const blue = state.accent === 'blue';
   const sameTheme = root.classList.contains(dark ? 'theme-dark' : 'theme-light');
+  const hasTheme = root.classList.contains('theme-dark') || root.classList.contains('theme-light');
+  const sameAccent = root.classList.contains('accent-blue') === blue;
 
-  root.classList.toggle(
-    'accent-transition',
-    sameTheme && root.classList.contains('accent-blue') !== blue,
-  );
+  if (hasTheme && (!sameTheme || !sameAccent)) root.classList.add('color-transition');
   root.classList.toggle('theme-dark', dark);
   root.classList.toggle('theme-light', !dark);
   root.classList.toggle('accent-blue', blue);
 
-  if (root.classList.contains('accent-transition')) {
-    void Promise.allSettled(root.getAnimations().map((animation) => animation.finished)).then(
+  if (root.classList.contains('color-transition')) {
+    void Promise.allSettled(getColorTransitions(root).map((animation) => animation.finished)).then(
       () => {
-        if (root.getAnimations().length === 0) root.classList.remove('accent-transition');
+        if (getColorTransitions(root).length === 0) root.classList.remove('color-transition');
       },
     );
   }
@@ -75,7 +83,6 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     return () => media.removeEventListener('change', onChange);
   }, [state]);
 
-  // Guard de igualdad: repetir el valor actual no dispara render.
   const setMode = useCallback(
     (mode: ThemeMode) =>
       setState((current) => (current.mode === mode ? current : { ...current, mode })),

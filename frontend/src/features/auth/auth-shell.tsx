@@ -1,44 +1,75 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { motion } from 'motion/react';
+import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { LanguagePill } from '@/features/language/LanguagePill';
-import { LockUp, Meeple } from '@/shared/components/Brand';
+import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
+import { WelcomeBook } from '@/features/onboarding/WelcomeBook';
+import { WelcomeThemeToggle } from '@/features/onboarding/WelcomeThemeToggle';
+import { Monogram, Wordmark } from '@/shared/components/Brand';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import styles from './entry.module.css';
 
-/**
- * Lienzo de las pantallas sin sesión (login/registro/recuperar): fondo cálido,
- * logo y tarjeta centrada. Escritorio y móvil comparten layout (la tarjeta se
- * adapta al ancho).
- */
+/** La cabecera y el libro permanecen montados al cambiar de pantalla. */
 export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
+  const { t } = useTranslation('onboarding');
+  const { t: authT } = useTranslation('auth');
+  const pathname = useRouterState({ select: (state) => state.matches.at(-1)?.pathname });
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const welcome = pathname === '/onboarding';
+  const content = useRef<HTMLDivElement>(null);
+  const previousPath = useRef(pathname);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    if (previousPath.current === pathname) return;
+    previousPath.current = pathname;
+    const heading = content.current?.querySelector('h1');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+  }, [pathname]);
+
   return (
-    // h-dvh + scroll interno: un min-h creciente cortaría el form en viewports bajos.
-    <div className="relative h-dvh overflow-y-auto bg-surface [scrollbar-gutter:stable_both-edges]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            'radial-gradient(55% 45% at 85% 10%, rgba(224,122,31,.12), transparent 60%),' +
-            'radial-gradient(45% 40% at 6% 96%, rgba(44,110,145,.10), transparent 60%)',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed -bottom-16 -right-14 text-fg opacity-[0.04]"
-      >
-        <Meeple size={400} />
-      </div>
-      <div className="relative flex min-h-full flex-col px-4 py-4 sm:px-6">
-        <div className="flex shrink-0 justify-end pb-6">
-          <LanguagePill />
-        </div>
-        <div className="mx-auto my-auto flex w-full max-w-[420px] shrink-0 flex-col items-center gap-6 pb-8">
-          <div className="brand-home brand-home-centered flex">
-            <LockUp withTagline={false} />
+    <div className={styles.root} data-welcome={welcome}>
+      <header className={styles.header}>
+        <a href="https://manualito.dev" className={styles.brand} aria-label={t('actions.website')}>
+          <div className={styles.brandArtwork} aria-hidden="true">
+            <Monogram size={34} radius={10} />
+            <Wordmark size={23} />
           </div>
-          <div className="w-full rounded-2xl border border-border bg-card p-5 shadow-md sm:p-8">
-            {children}
-          </div>
+        </a>
+        <div className={styles.preferences}>
+          <WelcomeThemeToggle />
+          <LanguagePill className={styles.language} />
         </div>
-      </div>
+      </header>
+
+      <main className={styles.main}>
+        <motion.div
+          className={styles.illustration}
+          layout={reducedMotion ? false : 'position'}
+          transition={{ layout: { duration: 0.24, ease: [0.23, 1, 0.32, 1] } }}
+        >
+          <WelcomeBook />
+        </motion.div>
+        <div ref={content} className={styles.panel}>
+          {!welcome && (
+            <Link to="/onboarding" className={styles.back}>
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span>{authT('actions.backToWelcome')}</span>
+            </Link>
+          )}
+          {children}
+        </div>
+      </main>
+
+      <footer className={styles.footer}>
+        <button type="button" className={styles.privacy} onClick={() => setPrivacyOpen(true)}>
+          <span>{t('actions.privacy')}</span>
+        </button>
+      </footer>
+      <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
     </div>
   );
 }

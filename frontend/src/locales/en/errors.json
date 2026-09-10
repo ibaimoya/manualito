@@ -1,10 +1,4 @@
 {
-  "boundary": {
-    "backHome": "Back to home",
-    "message": "Something unexpected happened. Try again. If it continues, reload the page.",
-    "retry": "Try again",
-    "title": "Something went wrong"
-  },
   "code": {
     "admin_required": {
       "hint": "Use an account with the required permissions.",

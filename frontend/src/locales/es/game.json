@@ -11,8 +11,12 @@
     "placeholder": "Pregunta sobre {{gameName}}…"
   },
   "error": {
-    "backToHistory": "Ir al historial",
-    "notFoundDescription": "Puede que se haya retirado del catálogo. Vuelve al historial para ver tus juegos.",
+    "backToHistory": "Ir a mi biblioteca",
+    "connectionDescription": "No hemos podido conectar con el servidor. Comprueba tu conexión y vuelve a intentarlo.",
+    "connectionTitle": "No podemos cargar este juego",
+    "loadDescription": "No hemos podido abrir la ficha. Vuelve a intentarlo o elige otro juego de tu biblioteca.",
+    "loadTitle": "El juego no ha cargado",
+    "notFoundDescription": "Puede que se haya retirado del catálogo. En tu biblioteca puedes elegir otro juego.",
     "notFoundTitle": "No hemos encontrado este juego"
   },
   "explanation": {

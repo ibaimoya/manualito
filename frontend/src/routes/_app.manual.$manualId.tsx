@@ -1,10 +1,4 @@
-import {
-  createFileRoute,
-  Link,
-  linkOptions,
-  useBlocker,
-  useNavigate,
-} from '@tanstack/react-router';
+import { createFileRoute, linkOptions, useBlocker, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft,
@@ -32,6 +26,7 @@ import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { PageTextCard } from '@/features/manual/PageTextCard';
+import { ManualRecovery } from '@/features/manual/ManualRecovery';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
 import { useManualProcessing } from '@/features/manual/useManualProcessing';
 import { SourceImageViewer } from '@/features/manual/SourceImageViewer';
@@ -221,20 +216,14 @@ function ManualDetailScreen() {
         }
       />
       <SkeletonSwap
-        pending={detail.isPending}
+        pending={detail.isPending && detail.errorUpdateCount === 0}
         skeleton={<DetailSkeleton />}
         className="min-h-0 flex-1 [&>div]:min-h-0"
       >
         {manual && manual.pages.length > 0 ? (
           <ManualDetailLoaded key={manual.id} manual={manual} initialPage={page} />
         ) : (
-          <div className="mx-auto max-w-md px-4 py-16 text-center">
-            <h1 className="font-display text-xl font-bold text-fg">{t('errors.load.title')}</h1>
-            <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('errors.load.description')}</p>
-            <Button asChild className="mt-5">
-              <Link to="/history">{t('errors.load.historyLink')}</Link>
-            </Button>
-          </div>
+          <ManualRecovery query={detail} />
         )}
       </SkeletonSwap>
     </div>
@@ -342,11 +331,6 @@ function ManualDetailLoaded({
         toast.success(t('feedback.delete.success'), { id: 'manual-deleted' });
         navigate({ to: '/history' }).catch(() => undefined);
       },
-      onError: () =>
-        toast.error(<LiveTrans ns="manual" i18nKey="feedback.delete.error" />, {
-          id: 'manual-delete-error',
-          description: <LiveTrans ns="manual" i18nKey="feedback.delete.errorDescription" />,
-        }),
     });
   }
 
@@ -451,14 +435,17 @@ function ManualDetailLoaded({
               <RotateCw size={15} aria-hidden="true" />
               {t('workspace.reread')}
             </Button>
-            <Tooltip content={t('buttons.deleteManual')}>
+            <Tooltip
+              content={editing ? t('buttons.deleteManualDisabled') : t('buttons.deleteManual')}
+              touch={editing}
+            >
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label={t('buttons.deleteManual')}
-                disabled={editing}
-                onClick={() => setDeleteOpen(true)}
-                className="text-fg-3 hover:text-error"
+                aria-disabled={editing}
+                onClick={editing ? undefined : () => setDeleteOpen(true)}
+                className="text-fg-3 aria-[disabled=false]:hover:text-error aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               >
                 <TrashIcon size={17} aria-hidden="true" />
               </Button>
@@ -959,12 +946,13 @@ function SearchField({
   return (
     <div
       className={cn(
-        'flex h-10 w-full min-w-0 flex-auto @3xl/app:max-w-[340px] items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors @2xl/app:w-auto @2xl/app:flex-1',
-        hasQuery
+        'flex h-10 w-full min-w-0 flex-auto @3xl/app:max-w-[340px] items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors @2xl/app:w-auto @2xl/app:flex-1 pointer-coarse:h-12',
+        !disabled && hasQuery
           ? 'border-primary'
           : 'border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
+        disabled && 'cursor-not-allowed bg-surface text-fg-3',
       )}
-      style={hasQuery ? { boxShadow: 'var(--m-shadow-ring-primary)' } : undefined}
+      style={!disabled && hasQuery ? { boxShadow: 'var(--m-shadow-ring-primary)' } : undefined}
     >
       <Search size={16} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
       <input
@@ -975,7 +963,7 @@ function SearchField({
         placeholder={t('search.placeholder')}
         aria-label={t('search.ariaLabel')}
         enterKeyHint="search"
-        className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none @2xl/app:text-sm placeholder:text-fg-3 focus-visible:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+        className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none @2xl/app:text-sm placeholder:text-fg-3 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none"
       />
       {hasQuery ? (
         <span className="flex shrink-0 items-center gap-0.5">
@@ -1024,7 +1012,7 @@ function SearchMiniButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="icon-feedback grid size-7 place-items-center rounded-lg text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40"
+      className="icon-feedback grid size-7 place-items-center rounded-lg text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:size-11"
     >
       {children}
     </button>

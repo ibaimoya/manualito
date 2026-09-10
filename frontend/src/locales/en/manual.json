@@ -3,6 +3,7 @@
     "cancel": "Cancel",
     "continueEditing": "Keep editing",
     "deleteManual": "Delete rulebook",
+    "deleteManualDisabled": "Finish editing the page before deleting the rulebook.",
     "readAgain": "Read this page again",
     "reprocess": "Reprocess",
     "save": "Save"
@@ -49,10 +50,18 @@
     }
   },
   "errors": {
+    "empty": {
+      "description": "This rulebook has no available pages yet. Check its status again or go back to your library.",
+      "title": "There are no pages to show yet"
+    },
     "load": {
-      "description": "It may have been deleted or could still be processing. Go back to your library and try again from there.",
+      "description": "Something went wrong while loading it. You can try again here.",
       "historyLink": "Go to library",
       "title": "We couldn't open this rulebook"
+    },
+    "missing": {
+      "description": "It may have been deleted, or you may not have access. You can find your available rulebooks in your library.",
+      "title": "This rulebook isn’t available"
     }
   },
   "feedback": {

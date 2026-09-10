@@ -4,6 +4,7 @@ import { ArrowRight, Plus, Settings as SettingsIcon } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Meeple, Monogram } from '@/shared/components/Brand';
 import { Avatar } from '@/shared/components/Avatar';
+import { RecoveryNotice } from '@/shared/components/recovery/RecoveryNotice';
 import { Card } from '@/components/ui/card';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Button } from '@/components/ui/button';
@@ -22,8 +23,10 @@ export const Route = createFileRoute('/_app/home')({
 function HomeScreen() {
   const { user } = useAuth();
   const { t } = useTranslation('home');
-  const { data: manuals = [], isPending, isError } = useQuery(manualsQueryOptions());
-  const recentManuals = manuals.slice(0, 6);
+  const manuals = useQuery(manualsQueryOptions());
+  const recentManuals = manuals.data?.slice(0, 6) ?? [];
+  const recentUnavailable = manuals.data === undefined && manuals.errorUpdateCount > 0;
+  const loadingManuals = manuals.isPending && !recentUnavailable;
   const firstName = user?.username?.split(/\s+/)[0];
   return (
     <div className="page-frame page-stack">
@@ -60,11 +63,22 @@ function HomeScreen() {
 
       <HeroCta />
 
-      <SkeletonSwap pending={isPending} skeleton={<RecentSkeleton />}>
-        <RecentSection manuals={recentManuals} isError={isError} />
+      <SkeletonSwap pending={loadingManuals} skeleton={<RecentSkeleton />}>
+        {recentUnavailable ? (
+          <RecoveryNotice
+            title={t('error.title')}
+            description={t('error.manuals')}
+            onRetry={() => void manuals.refetch()}
+            retrying={manuals.isFetching}
+          />
+        ) : recentManuals.length > 0 ? (
+          <RecentManuals manuals={recentManuals} />
+        ) : (
+          <EmptyRecents />
+        )}
       </SkeletonSwap>
 
-      {!isPending && (
+      {!loadingManuals && (
         <DiscoverGames excludedGameIds={recentManuals.map((manual) => manual.game_id)} />
       )}
     </div>
@@ -103,15 +117,6 @@ function HeroCta() {
       </div>
     </Card>
   );
-}
-
-function RecentSection({
-  manuals,
-  isError,
-}: Readonly<{ manuals: ManualSummary[]; isError: boolean }>) {
-  if (isError && manuals.length === 0) return <RecentError />;
-  if (manuals.length === 0) return <EmptyRecents />;
-  return <RecentManuals manuals={manuals} />;
 }
 
 function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
@@ -159,16 +164,6 @@ function RecentSkeleton() {
           <li key={i} className="h-[82px] animate-pulse rounded-2xl bg-surface-2" />
         ))}
       </ul>
-    </section>
-  );
-}
-
-function RecentError() {
-  const { t } = useTranslation('home');
-
-  return (
-    <section className="rounded-2xl border border-border bg-surface/60 p-6 text-center">
-      <p className="text-sm text-fg-2">{t('error.manuals')}</p>
     </section>
   );
 }

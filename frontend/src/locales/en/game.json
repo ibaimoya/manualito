@@ -11,8 +11,12 @@
     "placeholder": "Ask about {{gameName}}…"
   },
   "error": {
-    "backToHistory": "Go to history",
-    "notFoundDescription": "It may have been removed from the catalog. Go back to your history to see your games.",
+    "backToHistory": "Go to my library",
+    "connectionDescription": "We couldn't reach the server. Check your connection and try again.",
+    "connectionTitle": "We can't load this game",
+    "loadDescription": "We couldn't open this game. Try again or choose another game from your library.",
+    "loadTitle": "The game didn't load",
+    "notFoundDescription": "It may have been removed from the catalog. You can choose another game from your library.",
     "notFoundTitle": "We couldn't find this game"
   },
   "explanation": {

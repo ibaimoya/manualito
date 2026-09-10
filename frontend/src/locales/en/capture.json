@@ -37,16 +37,23 @@
     "pdfReady": "PDF ready to process"
   },
   "processing": {
+    "backToLibrary": "Go to my library",
+    "connectionDescription": "We couldn't reach the server to check progress. Check your connection and try again.",
+    "connectionTitle": "We can't check progress",
     "description": "It can take longer with PDFs or multiple pages. You can minimize the app if you'd like.",
-    "failureDescription": "Check the file or try again with another rulebook.",
-    "failureInfo": "No useful result was saved for this rulebook.",
+    "failureDescription": "We couldn't read this file. Try clearer photos or another copy of the rulebook.",
     "failureTitle": "We couldn't process it",
     "info": "Your files are used to process and index this rulebook.",
+    "loadDescription": "We couldn't check the rulebook's status. Try again to find out whether it has finished.",
+    "loadTitle": "We can't check your rulebook",
+    "notFoundDescription": "It may have been deleted. Open another rulebook from your library or upload it again.",
+    "notFoundTitle": "We couldn't find this rulebook",
     "pageCount_one": "{{completed}}/{{count}} page",
     "pageCount_other": "{{completed}}/{{count}} pages",
     "progressLabel": "Progress: {{progress}} percent",
     "title": "Reading your rulebook…",
-    "unnamed": "Unnamed rulebook"
+    "unnamed": "Unnamed rulebook",
+    "uploadAnother": "Upload another rulebook"
   },
   "sources": {
     "camera": {

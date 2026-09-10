@@ -6,7 +6,8 @@
     "description": "Aún no has consultado ningún manual. Pulsa <b>Nuevo manual</b> para empezar."
   },
   "error": {
-    "manuals": "No hemos podido cargar tus manuales. Reintenta en un momento."
+    "manuals": "Vuelve a intentarlo para consultar tus últimos manuales.",
+    "title": "Tus manuales no se han cargado"
   },
   "greeting": {
     "anonymous": "Hola",

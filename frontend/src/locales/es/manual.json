@@ -3,6 +3,7 @@
     "cancel": "Cancelar",
     "continueEditing": "Seguir editando",
     "deleteManual": "Eliminar manual",
+    "deleteManualDisabled": "Termina de editar la página para eliminar el manual.",
     "readAgain": "Releer esta página",
     "reprocess": "Reprocesar",
     "save": "Guardar"
@@ -49,10 +50,18 @@
     }
   },
   "errors": {
+    "empty": {
+      "description": "Este manual aún no tiene páginas disponibles. Comprueba de nuevo su estado o vuelve a tu biblioteca.",
+      "title": "Todavía no hay páginas que mostrar"
+    },
     "load": {
-      "description": "Puede que se haya borrado o que aún se esté procesando. Vuelve al historial e inténtalo desde allí.",
-      "historyLink": "Ir al historial",
+      "description": "Ha ocurrido un error al cargarlo. Puedes volver a intentarlo desde aquí.",
+      "historyLink": "Ir a la biblioteca",
       "title": "No hemos podido abrir este manual"
+    },
+    "missing": {
+      "description": "Puede que se haya borrado o que no tengas acceso. En tu biblioteca encontrarás los manuales disponibles.",
+      "title": "Este manual no está disponible"
     }
   },
   "feedback": {

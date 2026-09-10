@@ -7,11 +7,6 @@
     "resent": "Sent · {{seconds}}s",
     "sending": "Sending…"
   },
-  "error": {
-    "backHome": "Back to Home",
-    "description": "We hit an unexpected problem. Try again, and if it keeps happening, reload the page.",
-    "title": "Something went wrong"
-  },
   "loading": {
     "ariaLabel": "Loading content",
     "text": "Loading…"
@@ -32,14 +27,28 @@
     "newManual": "New manual",
     "settings": "Settings"
   },
-  "notFound": {
-    "backHome": "Back to Home",
-    "description": "The page fell off the board: the URL you're trying to open doesn't exist in Manualito.",
-    "title": "This page got lost"
-  },
   "notifications": {
     "dismiss": "Dismiss notification",
     "label": "Notifications"
+  },
+  "recovery": {
+    "details": "Technical details",
+    "error": {
+      "description": "Something went wrong while loading it. Try again, and get in touch if it keeps happening.",
+      "title": "We couldn’t open this page"
+    },
+    "home": "Back to home",
+    "not-found": {
+      "description": "The link may have changed, or the page may no longer exist. Head home to get back to your games.",
+      "title": "This page isn’t in the manual"
+    },
+    "offline": {
+      "description": "Check your connection and try again. If you’re online, the service may be temporarily unavailable.",
+      "title": "We couldn’t connect"
+    },
+    "retry": "Try again",
+    "retryFailed": "It still isn’t working. You can go back home or contact us.",
+    "support": "Contact support"
   },
   "sidebar": {
     "aria": {

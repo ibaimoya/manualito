@@ -18,6 +18,10 @@ afterAll(() => server.close());
 
 function renderManual(page?: number) {
   server.use(manualDetailWithPages());
+  return mountManual(page);
+}
+
+function mountManual(page?: number) {
   return renderRoute({
     path: '/manual/$manualId',
     initialEntry: page ? `/manual/test-manual-001?page=${page}` : '/manual/test-manual-001',
@@ -74,6 +78,37 @@ function mockSinglePageManual(
 }
 
 describe('/manual/$manualId · lectura', () => {
+  it('un manual inexistente ofrece volver a la biblioteca', async () => {
+    server.use(http.get('/api/manuals/:manualId', () => new HttpResponse(null, { status: 404 })));
+    const { container } = mountManual();
+    expect(
+      await screen.findByRole('heading', { name: 'Este manual no está disponible' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Ir a la biblioteca' }));
+    expect(await screen.findByText('Historial stub')).toBeInTheDocument();
+  });
+
+  it('reintenta un fallo de carga y muestra las páginas recibidas', async () => {
+    server.use(http.get('/api/manuals/:manualId', () => new HttpResponse(null, { status: 503 })));
+    mountManual();
+    expect(
+      await screen.findByRole('heading', { name: 'No hemos podido abrir este manual' }),
+    ).toBeInTheDocument();
+    server.use(manualDetailWithPages());
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('article', { name: 'Página 1 de 2' })).toBeInTheDocument();
+  });
+
+  it('distingue un manual sin páginas de un error de carga', async () => {
+    mountManual();
+    expect(
+      await screen.findByRole('heading', { name: 'Todavía no hay páginas que mostrar' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No hemos podido abrir este manual')).not.toBeInTheDocument();
+  });
+
   it('mantiene el texto y la página activa cuando falla una actualización', async () => {
     const { qc } = renderManual(2);
     const article = await screen.findByRole('article', { name: 'Página 2 de 2' });
@@ -398,6 +433,31 @@ describe('/manual/$manualId · edición de texto', () => {
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(screen.queryByRole('textbox', { name: /Texto de la página/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Coloca el tablero y reparte las piezas/)).toBeInTheDocument();
+  });
+
+  it('explica el bloqueo de borrar durante la edición y no lo activa por teclado', async () => {
+    renderManual();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Editar' }));
+    const remove = screen.getByRole('button', { name: 'Eliminar manual' });
+    const search = screen.getByRole('searchbox', { name: 'Buscar en el texto del manual' });
+    expect(remove).toHaveAttribute('aria-disabled', 'true');
+    expect(search).toBeDisabled();
+
+    act(() => remove.focus());
+    expect(remove).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Termina de editar la página para eliminar el manual.',
+    );
+    await user.keyboard('{Enter} ');
+    expect(screen.queryByRole('dialog', { name: 'Eliminar manual' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Texto de la página 1' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(remove).toHaveAttribute('aria-disabled', 'false');
+    expect(search).toBeEnabled();
+    await user.click(remove);
+    expect(await screen.findByRole('dialog', { name: 'Eliminar manual' })).toBeInTheDocument();
   });
 
   it('impide cancelar, descartar o repetir el guardado hasta recibir la respuesta', async () => {

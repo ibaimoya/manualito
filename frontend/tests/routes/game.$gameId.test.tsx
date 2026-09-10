@@ -186,6 +186,57 @@ describe('/game/$gameId · refetch fallido con cache', () => {
   });
 });
 
+describe('/game/$gameId, recuperación', () => {
+  it.each([
+    { status: 404, title: 'No hemos encontrado este juego', retry: false },
+    { status: 503, title: 'El juego no ha cargado', retry: true },
+    { status: null, title: 'No podemos cargar este juego', retry: true },
+  ])(
+    'distingue el fallo $status y permite volver a la biblioteca',
+    async ({ status, title, retry }) => {
+      server.use(
+        http.get('/api/games/:gameId', () =>
+          status === null ? HttpResponse.error() : HttpResponse.json({}, { status }),
+        ),
+      );
+      renderHub();
+      await screen.findByRole('heading', { name: title });
+      expect(Boolean(screen.queryByRole('button', { name: 'Reintentar' }))).toBe(retry);
+      await userEvent.setup().click(screen.getByRole('link', { name: 'Ir a mi biblioteca' }));
+      expect(await screen.findByText('Historial stub')).toBeInTheDocument();
+    },
+  );
+
+  it('mantiene el error durante el reintento y recupera la ficha con una sola petición nueva', async () => {
+    const user = userEvent.setup();
+    let requests = 0;
+    // La respuesta de red controlada permite comprobar el estado pendiente sin esperas arbitrarias.
+    const response = Promise.withResolvers<void>();
+    server.use(
+      http.get('/api/games/:gameId', async () => {
+        requests += 1;
+        if (requests === 1) return HttpResponse.json({}, { status: 503 });
+        await response.promise;
+        return HttpResponse.json(SAMPLE_GAME_DETAIL);
+      }),
+    );
+    renderHub();
+    const heading = await screen.findByRole('heading', { name: 'El juego no ha cargado' });
+    const retry = screen.getByRole('button', { name: 'Reintentar' });
+    await user.click(retry);
+    await user.click(retry);
+    await waitFor(() => expect(requests).toBe(2));
+    expect(retry).toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'El juego no ha cargado' })).toBe(heading);
+    await act(async () => response.resolve());
+    expect((await screen.findAllByRole('heading', { name: 'Catan' })).length).toBeGreaterThan(0);
+    expect(requests).toBe(2);
+    expect(
+      screen.queryByRole('heading', { name: 'El juego no ha cargado' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe('/game/$gameId · explicación', () => {
   it('cacheado (ready): resumen y acordeones al instante, sin teclear', async () => {
     renderHub();

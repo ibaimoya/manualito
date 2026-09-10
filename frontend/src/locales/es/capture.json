@@ -37,16 +37,23 @@
     "pdfReady": "PDF listo para procesar"
   },
   "processing": {
+    "backToLibrary": "Ir a mi biblioteca",
+    "connectionDescription": "No hemos podido conectar con el servidor para comprobar el progreso. Comprueba tu conexión y vuelve a intentarlo.",
+    "connectionTitle": "No podemos consultar el progreso",
     "description": "Puede tardar más con PDFs o varias páginas. Puedes minimizar la app si quieres.",
-    "failureDescription": "Revisa el archivo o vuelve a intentarlo con otro manual.",
-    "failureInfo": "No se ha guardado ningún resultado útil para este manual.",
+    "failureDescription": "No hemos podido leer este archivo. Prueba con fotos más claras o con otra copia del manual.",
     "failureTitle": "No se ha podido procesar",
     "info": "Tus archivos se usan para procesar e indexar este manual.",
+    "loadDescription": "No hemos podido comprobar el estado del manual. Vuelve a consultarlo para saber si ha terminado.",
+    "loadTitle": "No podemos consultar el manual",
+    "notFoundDescription": "Puede que se haya eliminado. En tu biblioteca puedes abrir otro manual o subirlo de nuevo.",
+    "notFoundTitle": "No hemos encontrado este manual",
     "pageCount_one": "{{completed}}/{{count}} página",
     "pageCount_other": "{{completed}}/{{count}} páginas",
     "progressLabel": "Progreso: {{progress}} por ciento",
     "title": "Leyendo tu manual…",
-    "unnamed": "Manual sin nombre"
+    "unnamed": "Manual sin nombre",
+    "uploadAnother": "Subir otro manual"
   },
   "sources": {
     "camera": {

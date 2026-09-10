@@ -22,6 +22,9 @@ import { RateGameDialog } from '@/features/games/RateGameDialog';
 import { SuggestedQuestions } from '@/features/games/SuggestedQuestions';
 import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
+import { mapApiError } from '@/shared/api/error-mapper';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { AddManualIcon, ExtractedTextIcon } from '@/shared/components/action-icons';
 import {
   type ExplanationSectionKey,
@@ -47,9 +50,19 @@ function GameHubScreen() {
         crumb={detail.data?.name ?? t('navigation.game')}
         trail={[{ label: t('navigation.library'), link: linkOptions({ to: '/history' }) }]}
       />
-      <SkeletonSwap pending={detail.isPending} skeleton={<HubSkeleton />} className="grow">
+      <SkeletonSwap
+        pending={detail.isPending && !detail.isFetched}
+        skeleton={<HubSkeleton />}
+        className="grow"
+      >
         {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-        {detail.isError && detail.data === undefined ? <HubError /> : null}
+        {detail.isFetched && detail.data === undefined ? (
+          <HubError
+            error={detail.error}
+            retrying={detail.isFetching}
+            onRetry={() => detail.refetch()}
+          />
+        ) : null}
         {detail.data ? <GameHubLoaded key={detail.data.id} game={detail.data} /> : null}
       </SkeletonSwap>
     </div>
@@ -393,15 +406,52 @@ function HubSkeleton() {
   );
 }
 
-function HubError() {
+function HubError({
+  error,
+  retrying,
+  onRetry,
+}: Readonly<{
+  error: Error | null;
+  retrying: boolean;
+  onRetry: () => Promise<unknown>;
+}>) {
   const { t } = useTranslation('game');
+  const { t: commonT } = useTranslation();
+  // La consulta limpia su error al reintentar, conservamos el mensaje mientras espera.
+  const [failure, setFailure] = useState(error);
+  if (error && error !== failure) setFailure(error);
+  const notFound = failure instanceof ApiError && failure.status === 404;
+  const offline = mapApiError(failure).code === 'network';
+  const kind = notFound ? 'not-found' : offline ? 'offline' : 'error';
+  const copy = ({ 'not-found': 'notFound', offline: 'connection', error: 'load' } as const)[kind];
   return (
-    <div className="mx-auto max-w-md px-4 py-16 text-center">
-      <h1 className="font-display text-xl font-bold text-fg">{t('error.notFoundTitle')}</h1>
-      <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('error.notFoundDescription')}</p>
-      <Button asChild className="mt-5">
-        <Link to="/history">{t('error.backToHistory')}</Link>
-      </Button>
+    <div className="grid min-h-[60dvh] items-center px-6 py-8">
+      <RecoveryContent
+        kind={kind}
+        retrying={retrying}
+        title={t(`error.${copy}Title`)}
+        description={t(`error.${copy}Description`)}
+      >
+        <div className={recoveryStyles.actions}>
+          {!notFound && (
+            <Button
+              className={recoveryStyles.primary}
+              loading={retrying}
+              onClick={() => void onRetry()}
+            >
+              <RotateCw size={18} aria-hidden="true" />
+              {commonT('actions.retry')}
+            </Button>
+          )}
+          <Button
+            asChild
+            variant={notFound ? 'primary' : 'secondary'}
+            className={notFound ? recoveryStyles.primary : recoveryStyles.secondary}
+          >
+            <Link to="/history">{t('error.backToHistory')}</Link>
+          </Button>
+        </div>
+      </RecoveryContent>
     </div>
   );
 }

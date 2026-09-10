@@ -6,6 +6,7 @@ import { server } from '@tests/_helpers/server';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { Route as HomeRoute } from '@/routes/_app.home';
 import { DISCOVER_GAMES_KEY, discoverGamesQueryOptions } from '@/features/games/use-discover-games';
+import { manualsQueryOptions } from '@/features/manual/use-manuals';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
@@ -41,6 +42,30 @@ function renderHome() {
 }
 
 describe('/home', () => {
+  it('conserva el aviso mientras reintenta y muestra los manuales al recuperarse', async () => {
+    server.use(http.get('/api/manuals', () => new HttpResponse(null, { status: 500 })));
+    renderHome();
+    const notice = await screen.findByRole('region', { name: 'Tus manuales no se han cargado' });
+    const button = within(notice).getByRole('button', { name: 'Reintentar' });
+    const response = Promise.withResolvers<void>();
+    server.use(
+      http.get('/api/manuals', async () => {
+        await response.promise;
+        return HttpResponse.json({ manuals: [manual()] });
+      }),
+    );
+
+    await userEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+    expect(button).toBeDisabled();
+    expect(notice).toBeInTheDocument();
+    expect(screen.queryByText(/Aún no has consultado/)).not.toBeInTheDocument();
+
+    response.resolve();
+    expect(await screen.findByText('Catan')).toBeInTheDocument();
+    expect(notice).not.toBeInTheDocument();
+  });
+
   it('mantiene los recientes cacheados si falla una actualización', async () => {
     server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [manual()] })));
     const { qc } = renderHome();
@@ -65,15 +90,21 @@ describe('/home', () => {
     expect(link).toHaveAttribute('href', '/capture/source');
   });
 
-  it('sin manuales muestra el empty state', async () => {
+  it('mantiene el estado vacío conocido si falla una actualización', async () => {
     server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
-    renderHome();
+    const { qc } = renderHome();
     const para = await screen.findByText(/Aún no has consultado/, { selector: 'p' });
     expect(para.textContent).toMatch(/Pulsa\s+Nuevo manual\s+para empezar/);
     expect(await screen.findByRole('link', { name: 'Ver Carcassonne' })).toHaveAttribute(
       'href',
       '/game/rec-1',
     );
+    server.use(http.get('/api/manuals', () => new HttpResponse(null, { status: 500 })));
+    const { queryKey } = manualsQueryOptions();
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(para).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it('oculta el descubrimiento cuando no hay juegos compartidos', async () => {

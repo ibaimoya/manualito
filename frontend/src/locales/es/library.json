@@ -32,10 +32,9 @@
   },
   "error": {
     "description": {
-      "games": "Hubo un problema de conexión. Tus juegos están a salvo.",
-      "manuals": "Hubo un problema de conexión. Tus manuales están a salvo."
+      "games": "Vuelve a intentarlo para ver los juegos que sigues.",
+      "manuals": "Vuelve a intentarlo para ver los manuales que has subido."
     },
-    "retry": "Reintentar",
     "title": "No pudimos cargar tu biblioteca"
   },
   "gameCard": {

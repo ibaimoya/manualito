@@ -1,15 +1,16 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, MoreVertical, Pencil, Plus, Search, Sparkles } from 'lucide-react';
+import { BookOpen, MoreVertical, Pencil, Plus, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TrashIcon } from '@/shared/components/action-icons';
 import { Trans, useTranslation } from 'react-i18next';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { LiveTrans } from '@/shared/components/LiveTrans';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import {
@@ -46,8 +47,10 @@ const TITLE_MAX = 80;
 function ConversationsScreen() {
   const { gameId } = Route.useParams();
   const { t } = useTranslation('conversations');
+  const { t: shellT } = useTranslation('shell');
   const game = useQuery(gameDetailQueryOptions(gameId));
   const conversations = useQuery(conversationsQueryOptions(gameId));
+  const unavailable = conversations.data === undefined && conversations.errorUpdateCount > 0;
   const [filter, setFilter] = useState('');
 
   const gameName = game.data?.name ?? t('fallback.gameName');
@@ -112,17 +115,32 @@ function ConversationsScreen() {
           </div>
         ) : null}
 
-        <SkeletonSwap pending={conversations.isPending} skeleton={<ListSkeleton />}>
-          {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-          {conversations.isError && conversations.data === undefined ? (
-            <Card className="bg-surface p-5 text-sm text-fg-2">{t('error.load')}</Card>
+        <SkeletonSwap pending={conversations.isPending && !unavailable} skeleton={<ListSkeleton />}>
+          {unavailable ? (
+            <RecoveryContent
+              headingLevel={2}
+              title={t('error.title')}
+              description={t('error.load')}
+              retrying={conversations.isFetching}
+            >
+              <div className={recoveryStyles.actions}>
+                <Button
+                  className={recoveryStyles.primary}
+                  loading={conversations.isFetching}
+                  onClick={() => void conversations.refetch()}
+                >
+                  <RefreshCw size={17} aria-hidden="true" />
+                  {shellT('recovery.retry')}
+                </Button>
+              </div>
+            </RecoveryContent>
           ) : null}
 
-          {conversations.isSuccess && all.length === 0 ? (
+          {conversations.data !== undefined && all.length === 0 ? (
             <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
           ) : null}
 
-          {conversations.isSuccess && all.length > 0 && visible.length === 0 ? (
+          {all.length > 0 && visible.length === 0 ? (
             <NoResults filter={filter} onClear={() => setFilter('')} />
           ) : null}
 

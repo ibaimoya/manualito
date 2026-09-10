@@ -11,7 +11,7 @@ import {
   Image as ImageIcon,
   Lock,
   Plus,
-  RotateCw,
+  RefreshCw,
   ScrollText,
   Search,
   Sparkles,
@@ -27,6 +27,8 @@ import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Meeple } from '@/shared/components/Brand';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { GameCover } from '@/features/games/GameCover';
 import { GameJumpSearch } from '@/features/games/GameJumpSearch';
 import { myGamesQueryOptions } from '@/features/games/use-games';
@@ -75,6 +77,7 @@ function HistoryScreen() {
   const [manualQuery, setManualQuery] = useState('');
   const games = useQuery(myGamesQueryOptions());
   const manuals = useQuery(manualsQueryOptions());
+  const activeQuery = view === 'games' ? games : manuals;
 
   const gameItems = games.data?.games ?? [];
   const manualItems = manuals.data ?? [];
@@ -114,7 +117,7 @@ function HistoryScreen() {
 
       <SkeletonSwap
         key={view}
-        pending={view === 'games' ? games.isPending : manuals.isPending}
+        pending={activeQuery.isPending && activeQuery.errorUpdateCount === 0}
         skeleton={
           <div className={view === 'games' ? GAME_GRID : MANUAL_GRID}>
             {[0, 1, 2, 3].map((i) =>
@@ -135,14 +138,9 @@ function HistoryScreen() {
 
 // ── Vistas ────────────────────────────────────────────────────────────────
 function GamesView({ query }: Readonly<{ query: UseQueryResult<MyGamesResponse> }>) {
-  if (query.isError && query.data === undefined) {
+  if (query.data === undefined && query.errorUpdateCount > 0) {
     return (
-      <LibError
-        tab="games"
-        onRetry={() => {
-          query.refetch().catch(() => undefined);
-        }}
-      />
+      <LibError tab="games" onRetry={() => void query.refetch()} retrying={query.isFetching} />
     );
   }
   const games = query.data?.games ?? [];
@@ -162,14 +160,9 @@ function ManualsView({
 }: Readonly<{ query: UseQueryResult<ManualSummary[]>; filter: string }>) {
   const { t } = useTranslation('library');
   const del = useDeleteManual();
-  if (query.isError && query.data === undefined) {
+  if (query.data === undefined && query.errorUpdateCount > 0) {
     return (
-      <LibError
-        tab="manuals"
-        onRetry={() => {
-          query.refetch().catch(() => undefined);
-        }}
-      />
+      <LibError tab="manuals" onRetry={() => void query.refetch()} retrying={query.isFetching} />
     );
   }
   const manuals = query.data ?? [];
@@ -525,22 +518,27 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
   );
 }
 
-function LibError({ tab, onRetry }: Readonly<{ tab: View; onRetry: () => void }>) {
+function LibError({
+  tab,
+  onRetry,
+  retrying,
+}: Readonly<{ tab: View; onRetry: () => void; retrying: boolean }>) {
   const { t } = useTranslation('library');
+  const { t: shellT } = useTranslation('shell');
   return (
-    <div className="flex flex-col items-center gap-1.5 px-6 py-12 text-center">
-      <span className="grid size-14 place-items-center rounded-[18px] bg-error-bg text-error">
-        <AlertTriangle size={26} />
-      </span>
-      <h2 className="mt-2.5 font-display text-[19px] font-bold text-fg">{t('error.title')}</h2>
-      <p className="max-w-sm text-sm leading-relaxed text-fg-2">
-        {t(tab === 'games' ? 'error.description.games' : 'error.description.manuals')}
-      </p>
-      <Button className="mt-3.5" onClick={onRetry}>
-        <RotateCw size={16} strokeWidth={2} />
-        {t('error.retry')}
-      </Button>
-    </div>
+    <RecoveryContent
+      headingLevel={2}
+      title={t('error.title')}
+      description={t(tab === 'games' ? 'error.description.games' : 'error.description.manuals')}
+      retrying={retrying}
+    >
+      <div className={recoveryStyles.actions}>
+        <Button className={recoveryStyles.primary} loading={retrying} onClick={onRetry}>
+          <RefreshCw size={17} aria-hidden="true" />
+          {shellT('recovery.retry')}
+        </Button>
+      </div>
+    </RecoveryContent>
   );
 }
 

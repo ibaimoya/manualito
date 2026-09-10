@@ -1,11 +1,16 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { Check, FileText, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, FileText, Info, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { ApiError } from '@/shared/api/client';
+import { mapApiError } from '@/shared/api/error-mapper';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import {
   manualDetailQueryOptions,
   manualProcessingQueryOptions,
@@ -30,7 +35,10 @@ function ProcessingScreen() {
   // El detalle resuelve a qué juego pertenece el manual ya indexado.
   const detail = useQuery({ ...manualDetailQueryOptions(manualId), enabled: indexed });
   const gameId = detail.data?.game_id ?? null;
-  const failed = status === 'failed' || processing.isError || detail.isError;
+  const failedQuery = [processing, detail].find(
+    (query) => query.isError || (query.isPending && query.isFetched),
+  );
+  const failed = status === 'failed' || Boolean(failedQuery);
 
   // Pausa breve para que se vea el 100 % antes de saltar al hub del juego.
   useEffect(() => {
@@ -45,6 +53,22 @@ function ProcessingScreen() {
   const completedPages = indexed ? pageCount : (processing.data?.completed_pages ?? 0);
   const progress = pageCount > 0 ? Math.round((completedPages / pageCount) * 100) : 0;
 
+  if (failed) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-bg">
+        <ScreenTopBar crumb={safeName} />
+        <div className="grid flex-1 items-center px-6 py-8">
+          <ProcessingError
+            processingFailed={status === 'failed'}
+            error={failedQuery?.error ?? null}
+            retrying={failedQuery?.isFetching ?? false}
+            onRetry={() => failedQuery?.refetch()}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar crumb={safeName} />
@@ -55,13 +79,13 @@ function ProcessingScreen() {
             <div
               className={cn(
                 'absolute inset-0 rounded-full border-4 border-transparent',
-                failed ? 'border-t-error' : 'border-t-primary',
-                indexed && !failed && 'opacity-0',
+                'border-t-primary',
+                indexed && 'opacity-0',
               )}
-              style={failed || indexed ? undefined : { animation: 'mn-spin 1.4s linear infinite' }}
+              style={indexed ? undefined : { animation: 'mn-spin 1.4s linear infinite' }}
               aria-hidden="true"
             />
-            {indexed && !failed ? (
+            {indexed ? (
               <Check
                 size={40}
                 className="feedback-enter text-primary-700"
@@ -71,7 +95,7 @@ function ProcessingScreen() {
             ) : (
               <FileText
                 size={40}
-                className={failed ? 'text-error' : 'text-primary-700'}
+                className="text-primary-700"
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
@@ -79,34 +103,87 @@ function ProcessingScreen() {
           </div>
           <div className="text-center">
             <h2 className="font-display text-xl font-bold tracking-tight text-fg">
-              {failed ? t('processing.failureTitle') : t('processing.title')}
+              {t('processing.title')}
             </h2>
-            <p className="mt-1 max-w-xs text-sm text-fg-2">
-              {failed ? t('processing.failureDescription') : t('processing.description')}
-            </p>
+            <p className="mt-1 max-w-xs text-sm text-fg-2">{t('processing.description')}</p>
           </div>
         </div>
 
-        {failed ? null : (
-          <>
-            <Progress
-              value={progress}
-              aria-label={t('processing.progressLabel', { progress })}
-              aria-valuetext={`${progress}%`}
-            />
-            {pageCount > 0 ? (
-              <p className="mono text-center text-xs text-fg-3">
-                {t('processing.pageCount', { count: pageCount, completed: completedPages })}
-              </p>
-            ) : null}
-          </>
-        )}
+        <Progress
+          value={progress}
+          aria-label={t('processing.progressLabel', { progress })}
+          aria-valuetext={`${progress}%`}
+        />
+        {pageCount > 0 ? (
+          <p className="mono text-center text-xs text-fg-3">
+            {t('processing.pageCount', { count: pageCount, completed: completedPages })}
+          </p>
+        ) : null}
 
         <p className="flex items-center justify-center gap-2 text-xs text-fg-3">
           <Info size={14} />
-          {failed ? t('processing.failureInfo') : t('processing.info')}
+          {t('processing.info')}
         </p>
       </div>
     </div>
+  );
+}
+
+function ProcessingError({
+  processingFailed,
+  error,
+  retrying,
+  onRetry,
+}: Readonly<{
+  processingFailed: boolean;
+  error: Error | null;
+  retrying: boolean;
+  onRetry: () => Promise<unknown> | undefined;
+}>) {
+  const { t } = useTranslation('capture');
+  const { t: commonT } = useTranslation();
+  // Reintentar consulta el estado, no vuelve a procesar el archivo.
+  const [failure, setFailure] = useState(error);
+  if (error && error !== failure) setFailure(error);
+  const notFound = !processingFailed && failure instanceof ApiError && failure.status === 404;
+  const offline = !processingFailed && mapApiError(failure).code === 'network';
+  const kind = notFound ? 'not-found' : offline ? 'offline' : 'error';
+  const copy = processingFailed
+    ? 'failure'
+    : ({ 'not-found': 'notFound', offline: 'connection', error: 'load' } as const)[kind];
+
+  return (
+    <RecoveryContent
+      kind={kind}
+      retrying={!processingFailed && retrying}
+      title={t(`processing.${copy}Title`)}
+      description={t(`processing.${copy}Description`)}
+    >
+      <div className={recoveryStyles.actions}>
+        {processingFailed ? (
+          <Button asChild className={recoveryStyles.primary}>
+            <Link to="/capture/source">{t('processing.uploadAnother')}</Link>
+          </Button>
+        ) : (
+          !notFound && (
+            <Button
+              className={recoveryStyles.primary}
+              loading={retrying}
+              onClick={() => void onRetry()}
+            >
+              <RotateCw size={18} aria-hidden="true" />
+              {commonT('actions.retry')}
+            </Button>
+          )
+        )}
+        <Button
+          asChild
+          variant={notFound ? 'primary' : 'secondary'}
+          className={notFound ? recoveryStyles.primary : recoveryStyles.secondary}
+        >
+          <Link to="/history">{t('processing.backToLibrary')}</Link>
+        </Button>
+      </div>
+    </RecoveryContent>
   );
 }

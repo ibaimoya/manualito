@@ -1,10 +1,4 @@
 {
-  "boundary": {
-    "backHome": "Volver al inicio",
-    "message": "Hemos tenido un problema inesperado. Vuelve a intentarlo y, si sigue pasando, recarga la página.",
-    "retry": "Reintentar",
-    "title": "Algo ha fallado"
-  },
   "code": {
     "admin_required": {
       "hint": "Usa una cuenta con los permisos necesarios.",

@@ -31,14 +31,50 @@ function renderConversations() {
 }
 
 describe('/conversations/$gameId', () => {
-  it('lista las conversaciones con contador y FAB de nueva', async () => {
+  it('mantiene el aviso durante el reintento y muestra el resultado recuperado', async () => {
+    server.use(
+      http.get('/api/games/:gameId/conversations', () => new HttpResponse(null, { status: 500 })),
+    );
     renderConversations();
+    const notice = await screen.findByRole('region', {
+      name: 'Tus conversaciones no se han cargado',
+    });
+    const button = within(notice).getByRole('button', { name: 'Reintentar' });
+    const response = Promise.withResolvers<void>();
+    server.use(
+      http.get('/api/games/:gameId/conversations', async () => {
+        await response.promise;
+        return HttpResponse.json({ conversations: [] });
+      }),
+    );
+
+    await userEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+    expect(button).toBeDisabled();
+    expect(notice).toBeInTheDocument();
+    expect(screen.queryByText('Aún no has preguntado nada')).not.toBeInTheDocument();
+
+    response.resolve();
+    expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();
+    expect(notice).not.toBeInTheDocument();
+  });
+
+  it('lista las conversaciones con contador y FAB de nueva', async () => {
+    const { qc } = renderConversations();
     expect(await screen.findByText('Dudas de preparación')).toBeInTheDocument();
     expect(screen.getByText('1 guardada')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Nueva conversación/ })).toHaveAttribute(
       'href',
       '/chat/test-game-001',
     );
+    server.use(
+      http.get('/api/games/:gameId/conversations', () => new HttpResponse(null, { status: 500 })),
+    );
+    const queryKey = conversationsKey('test-game-001');
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(screen.getByText('Dudas de preparación')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it('una conversación generando muestra «Manualito está respondiendo» en su fila', async () => {
@@ -192,12 +228,20 @@ describe('/conversations/$gameId', () => {
     expect(deletedId).toBe(conversation.id);
   });
 
-  it('sin conversaciones muestra el estado vacío con CTA', async () => {
+  it('conserva el estado vacío conocido si falla una actualización', async () => {
     server.use(
       http.get('/api/games/:gameId/conversations', () => HttpResponse.json({ conversations: [] })),
     );
-    renderConversations();
+    const { qc } = renderConversations();
     expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();
+    server.use(
+      http.get('/api/games/:gameId/conversations', () => new HttpResponse(null, { status: 500 })),
+    );
+    const queryKey = conversationsKey('test-game-001');
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(screen.getByText('Aún no has preguntado nada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it('no tiene violaciones de accesibilidad', async () => {

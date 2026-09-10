@@ -1,6 +1,8 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { createElement, useMemo } from 'react';
+import { toast } from 'sonner';
 import { api, type ManualSummary } from '@/shared/api/client';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 /** Raíz de las claves de caché de manuales (lista + detalle); invalidar tras
  *  subir, reprocesar o borrar para que las animaciones contextuales se enteren. */
@@ -95,6 +97,13 @@ export function useDeleteManual() {
     },
     onError: (_err, _id, ctx) => {
       if (ctx?.previous) qc.setQueryData(LIST_KEY, ctx.previous);
+      toast.error(createElement(LiveTrans, { ns: 'manual', i18nKey: 'feedback.delete.error' }), {
+        id: 'manual-delete-error',
+        description: createElement(LiveTrans, {
+          ns: 'manual',
+          i18nKey: 'feedback.delete.errorDescription',
+        }),
+      });
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: LIST_KEY }).catch(() => undefined);

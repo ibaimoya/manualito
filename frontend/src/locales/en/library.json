@@ -32,10 +32,9 @@
   },
   "error": {
     "description": {
-      "games": "There was a connection problem. Your games are safe.",
-      "manuals": "There was a connection problem. Your rulebooks are safe."
+      "games": "Try again to see the games you follow.",
+      "manuals": "Try again to see the rulebooks you've uploaded."
     },
-    "retry": "Try again",
     "title": "We couldn't load your library"
   },
   "gameCard": {

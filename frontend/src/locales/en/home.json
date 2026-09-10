@@ -6,7 +6,8 @@
     "description": "You haven't looked up a rulebook yet. Tap <b>New manual</b> to get started."
   },
   "error": {
-    "manuals": "We couldn't load your rulebooks. Try again in a moment."
+    "manuals": "Try again to see your recent rulebooks.",
+    "title": "Your rulebooks haven't loaded"
   },
   "greeting": {
     "anonymous": "Hi",

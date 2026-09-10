@@ -95,7 +95,7 @@ describe('/reset-password', () => {
     await user.type(await screen.findByLabelText('Nueva contraseña'), 'claveSegura99');
     await user.type(screen.getByLabelText('Repite la contraseña'), 'claveSegura99');
     await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
-    expect(await screen.findByText('Este enlace ya no vale')).toBeInTheDocument();
+    expect(await screen.findByText('Este enlace ya no sirve')).toBeInTheDocument();
   });
 
   it('un fallo temporal conserva las contraseñas y permite reintentar con el mismo token', async () => {
@@ -115,7 +115,7 @@ describe('/reset-password', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Este enlace ya no vale')).not.toBeInTheDocument();
+    expect(screen.queryByText('Este enlace ya no sirve')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Nueva contraseña')).toHaveValue('claveSegura99');
     expect(screen.getByLabelText('Repite la contraseña')).toHaveValue('claveSegura99');
     await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));

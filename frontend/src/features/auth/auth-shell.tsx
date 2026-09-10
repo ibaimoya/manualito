@@ -11,8 +11,11 @@ import { Monogram, Wordmark } from '@/shared/components/Brand';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import styles from './entry.module.css';
 
-/** La cabecera y el libro permanecen montados al cambiar de pantalla. */
-export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
+/** La cabecera y la ilustración permanecen montadas al cambiar de pantalla. */
+export function AuthShell({
+  children,
+  illustration,
+}: Readonly<{ children: ReactNode; illustration?: ReactNode }>) {
   const { t } = useTranslation('onboarding');
   const { t: authT } = useTranslation('auth');
   const pathname = useRouterState({ select: (state) => state.matches.at(-1)?.pathname });
@@ -31,7 +34,11 @@ export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
   }, [pathname]);
 
   return (
-    <div className={styles.root} data-welcome={welcome}>
+    <div
+      className={styles.root}
+      data-welcome={welcome}
+      data-custom-illustration={Boolean(illustration)}
+    >
       <header className={styles.header}>
         <a href="https://manualito.dev" className={styles.brand} aria-label={t('actions.website')}>
           <div className={styles.brandArtwork} aria-hidden="true">
@@ -51,7 +58,7 @@ export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
           layout={reducedMotion ? false : 'position'}
           transition={{ layout: { duration: 0.24, ease: [0.23, 1, 0.32, 1] } }}
         >
-          <WelcomeBook />
+          {illustration ?? <WelcomeBook />}
         </motion.div>
         <div ref={content} className={styles.panel}>
           {!welcome && (

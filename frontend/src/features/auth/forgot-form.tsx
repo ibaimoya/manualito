@@ -1,7 +1,6 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
-import { Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,7 @@ import { AuthAlert } from './auth-alert';
 import { ariaInvalid, AuthField, emailFieldError, isEmail } from './auth-controls';
 import { AuthStatus } from './auth-status';
 import styles from './entry.module.css';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 
 export function ForgotForm() {
   const { t, i18n } = useTranslation('auth');
@@ -31,13 +31,11 @@ export function ForgotForm() {
   if (forgot.isSuccess) {
     return (
       <AuthStatus
-        tone="accent"
-        icon={Mail}
         title={t('status.forgot.success.title')}
         body={t('status.forgot.success.body')}
         footnote={t('status.forgot.success.footnote')}
       >
-        <Button asChild size="lg" block variant="secondary">
+        <Button asChild variant="secondary" className={recoveryStyles.secondary}>
           <Link to="/login">{t('actions.backToLogin')}</Link>
         </Button>
       </AuthStatus>

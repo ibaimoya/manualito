@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import {
@@ -68,18 +69,102 @@ describe('/verify-email', () => {
     expect(await screen.findByText('Enlace no válido')).toBeInTheDocument();
   });
 
-  it('token válido → "¡Email verificado!"', async () => {
+  it('confirma el correo y permite abrir y cerrar el sobre sin bloquear continuar', async () => {
+    const user = userEvent.setup();
     renderVerify('tok');
-    expect(await screen.findByText('¡Email verificado!')).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { name: 'Correo verificado' });
+    await waitFor(() => expect(heading).toHaveFocus());
+    const envelope = screen.getByRole('button', { name: 'Abrir el sobre' });
+    expect(envelope).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('link', { name: 'Continuar' })).toHaveAttribute('href', '/home');
+
+    await user.click(envelope);
+    expect(screen.getByRole('button', { name: 'Cerrar el sobre' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(envelope).toHaveFocus();
+    await user.keyboard(' ');
+    expect(screen.getByRole('button', { name: 'Abrir el sobre' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    await user.keyboard('{Enter}');
+    expect(envelope).toHaveAttribute('aria-expanded', 'true');
+    await user.click(screen.getByRole('link', { name: 'Continuar' }));
+    expect(await screen.findByTestId('home')).toBeInTheDocument();
   });
 
-  it('token inválido (400) → "Enlace no válido"', async () => {
+  it.each([400, 422])('un token rechazado con %i muestra el enlace inválido', async (status) => {
     server.use(
-      http.post('/api/auth/email/verify', () =>
-        HttpResponse.json({ detail: 'bad' }, { status: 400 }),
-      ),
+      http.post('/api/auth/email/verify', () => HttpResponse.json({ detail: 'bad' }, { status })),
     );
     renderVerify('tok');
     expect(await screen.findByText('Enlace no válido')).toBeInTheDocument();
+  });
+
+  it('reconoce el código de enlace inválido aunque cambie el estado HTTP', async () => {
+    server.use(
+      http.post('/api/auth/email/verify', () =>
+        HttpResponse.json(
+          { errors: [{ code: 'email_verification_token_invalid' }] },
+          { status: 409 },
+        ),
+      ),
+    );
+    renderVerify('tok');
+    expect(await screen.findByRole('heading', { name: 'Enlace no válido' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Volver a intentarlo' })).not.toBeInTheDocument();
+  });
+
+  it.each(['servidor', 'red'])(
+    'permite recuperar un fallo de %s con el mismo enlace',
+    async (failure) => {
+      const retryResponse = Promise.withResolvers<void>();
+      const submissions: unknown[] = [];
+      server.use(
+        http.post('/api/auth/email/verify', async ({ request }) => {
+          submissions.push(await request.json());
+          if (submissions.length === 1) {
+            return failure === 'red'
+              ? HttpResponse.error()
+              : HttpResponse.json({ detail: 'temporary' }, { status: 503 });
+          }
+          await retryResponse.promise;
+          return HttpResponse.json({ detail: 'ok' });
+        }),
+      );
+      const user = userEvent.setup();
+      renderVerify('valid-token');
+      const heading = await screen.findByRole('heading', {
+        name: 'No hemos podido verificar tu correo',
+      });
+      expect(screen.queryByText('Enlace no válido')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Abrir el sobre' }));
+      await user.click(screen.getByRole('button', { name: 'Volver a intentarlo' }));
+
+      expect(await screen.findByRole('button', { name: 'Volver a intentarlo' })).toBeDisabled();
+      expect(heading).toBeInTheDocument();
+      expect(screen.queryByText('Enlace no válido')).not.toBeInTheDocument();
+      await act(async () => retryResponse.resolve());
+
+      const success = await screen.findByRole('heading', { name: 'Correo verificado' });
+      await waitFor(() => expect(success).toHaveFocus());
+      expect(screen.getByRole('button', { name: 'Cerrar el sobre' })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+      expect(submissions).toEqual([{ token: 'valid-token' }, { token: 'valid-token' }]);
+    },
+  );
+
+  it('cambiar el idioma no devuelve el foco al encabezado del estado', async () => {
+    const user = userEvent.setup();
+    renderVerify('tok');
+    await screen.findByRole('heading', { name: 'Correo verificado' });
+    const language = screen.getByRole('button', { name: 'Switch language to English' });
+    await user.click(language);
+    expect(await screen.findByRole('heading', { name: 'Email verified' })).toBeInTheDocument();
+    expect(language).toHaveFocus();
   });
 });

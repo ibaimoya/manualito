@@ -81,6 +81,35 @@ describe('/capture/source · nuevo manual', () => {
     // Sin juego elegido, no se pueden añadir páginas todavía.
     expect(screen.getByLabelText(/Seleccionar imágenes de la galería/i)).toBeDisabled();
     expect(screen.getByLabelText(/Seleccionar PDF/i)).toBeDisabled();
+    expect(
+      screen.getByRole('switch', { name: /Compartir el manual con la comunidad/i }),
+    ).toBeDisabled();
+  });
+
+  it('compartir responde al teclado solo mientras hay un juego elegido', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    const share = await screen.findByRole('switch', {
+      name: /Compartir el manual con la comunidad/i,
+    });
+    share.focus();
+    expect(share).not.toHaveFocus();
+    await user.click(share);
+    expect(share).toHaveAttribute('aria-checked', 'true');
+
+    await pickGame(user, 'Wingspan');
+    expect(share).toBeEnabled();
+    share.focus();
+    await user.keyboard(' ');
+    expect(share).toHaveAttribute('aria-checked', 'false');
+    await user.upload(screen.getByTestId('picker-gallery'), imageFile('page.jpg'));
+
+    await user.click(screen.getByRole('button', { name: /Cambiar/i }));
+    expect(share).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Quitar página 1' })).toBeDisabled();
+    share.focus();
+    expect(share).not.toHaveFocus();
+    expect(share).toHaveAttribute('aria-checked', 'false');
   });
 
   it('el typeahead muestra resultados y la atribución de BoardGameGeek', async () => {

@@ -60,7 +60,12 @@ const NAV_MAIN: NavItem[] = [
     icon: <Compass size={18} strokeWidth={1.75} />,
     label: 'navigation.explore',
     hover: {
-      transform: [null, 'rotate(-60deg)', 'rotate(30deg)', 'rotate(0deg)'],
+      transform: [
+        null,
+        'rotate(-60deg) scale(1)',
+        'rotate(30deg) scale(1)',
+        'rotate(0deg) scale(1)',
+      ],
       transition: { duration: 0.5, ease: 'easeInOut' },
     },
   },
@@ -87,9 +92,9 @@ const NAV_FOOTER: NavItem[] = [
     icon: <SettingsIcon size={18} strokeWidth={1.75} />,
     label: 'navigation.settings',
     hover: {
-      transform: [null, 'rotate(360deg)'],
+      transform: [null, 'rotate(360deg) scale(1)'],
       transition: { duration: 0.5, ease: 'easeInOut' },
-      transitionEnd: { transform: 'rotate(0deg)' },
+      transitionEnd: { transform: 'rotate(0deg) scale(1)' },
     },
   },
 ];
@@ -254,18 +259,18 @@ function NavList({
                   aria-hidden="true"
                   className="navigation-icon grid h-6 w-6 shrink-0 place-items-center"
                   variants={{
-                    static: { transform: 'rotate(0deg)', transition: { duration: 0 } },
+                    static: { transform: 'rotate(0deg) scale(1)', transition: { duration: 0 } },
                     rest: {
-                      transform: 'rotate(0deg)',
+                      transform: 'rotate(0deg) scale(1)',
                       transition: { duration: 0.12 },
                     },
                     hover: item.hover ?? {
                       transform: [
                         null,
-                        'rotate(-12deg)',
-                        'rotate(8deg)',
-                        'rotate(-4deg)',
-                        'rotate(0deg)',
+                        'rotate(-12deg) scale(1)',
+                        'rotate(8deg) scale(1)',
+                        'rotate(-4deg) scale(1)',
+                        'rotate(0deg) scale(1)',
                       ],
                       transition: { duration: 0.32, ease: 'easeInOut' },
                     },

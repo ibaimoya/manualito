@@ -57,8 +57,9 @@
       transform: translateX(-3px);
     }
 
-    > :is(.lucide-rotate-ccw, .lucide-rotate-cw, .lucide-settings),
-    [data-feedback-icon] > :is(.lucide-rotate-ccw, .lucide-rotate-cw, .lucide-settings) {
+    > :is(.lucide-rotate-ccw, .lucide-rotate-cw, .lucide-refresh-cw, .lucide-settings),
+    [data-feedback-icon]
+      > :is(.lucide-rotate-ccw, .lucide-rotate-cw, .lucide-refresh-cw, .lucide-settings) {
       transform: rotate(45deg);
     }
 

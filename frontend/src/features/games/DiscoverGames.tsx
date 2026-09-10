@@ -39,7 +39,7 @@ export function DiscoverGames({
             variant="ghost"
             size="icon"
             aria-label={t('discovery.shuffle')}
-            className="group/shuffle hit-area rounded-full transition-[color,transform] hover:text-primary-700 focus-visible:ring-2 focus-visible:ring-primary-600 active:scale-95 disabled:opacity-100 motion-reduce:transform-none"
+            className="group/shuffle hit-area rounded-full transition-[color,scale] hover:text-primary-700 focus-visible:ring-2 focus-visible:ring-primary-600 motion-safe:enabled:active:scale-95 disabled:opacity-100"
             disabled={isFetching}
             aria-busy={isFetching || undefined}
             onClick={() => void refetch()}

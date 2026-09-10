@@ -493,7 +493,7 @@ export function SelectedGameChip({
       <button
         type="button"
         onClick={onChange}
-        className="h-9 shrink-0 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg-2 hover:bg-surface hover:text-fg"
+        className="h-9 shrink-0 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg-2 hover:bg-surface hover:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
       >
         {t('typeahead.selected.change')}
       </button>

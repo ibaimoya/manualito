@@ -52,12 +52,8 @@
     background-color 180ms ease-out,
     transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.close:hover {
-  background: var(--m-surface);
-  transform: scale(1.04);
-}
 .close:active {
-  transform: scale(0.95);
+  background: var(--m-surface);
 }
 .close:focus-visible {
   outline: 2px solid var(--m-primary-700);
@@ -98,6 +94,21 @@
   font-size: 15px;
   line-height: 1.7;
   text-wrap: pretty;
+}
+@media (hover: hover) and (pointer: fine) {
+  .close:hover {
+    background: var(--m-surface);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .close:hover {
+    transform: scale(1.04);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .close:active {
+    transform: scale(0.95);
+  }
 }
 @media (min-width: 760px) {
   .spread {

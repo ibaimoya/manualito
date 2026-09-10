@@ -23,15 +23,20 @@ const buttonVariants = cva(
     'transition-control duration-150 ease-[var(--ease-mn)]',
     'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
     'disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed',
+    'data-[loading=true]:pointer-events-auto data-[loading=true]:opacity-100 data-[loading=true]:cursor-wait',
     'select-none',
   ],
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-fg-inv hover:bg-primary-600',
-        secondary: 'bg-surface text-fg border border-border hover:bg-surface-2',
-        ghost: 'bg-transparent text-fg-2 hover:text-fg',
-        destructive: 'bg-error text-fg-inv hover:opacity-90',
+        primary:
+          'bg-primary text-fg-inv not-disabled:not-aria-disabled:hover:bg-primary-600 not-disabled:not-aria-disabled:active:bg-primary-700',
+        secondary:
+          'bg-surface text-fg border border-border not-disabled:not-aria-disabled:hover:bg-surface-2 not-disabled:not-aria-disabled:active:bg-fg/10',
+        ghost:
+          'bg-transparent text-fg-2 not-disabled:not-aria-disabled:hover:bg-fg/[0.04] not-disabled:not-aria-disabled:active:bg-fg/[0.08]',
+        destructive:
+          'bg-error text-fg-inv not-disabled:not-aria-disabled:hover:opacity-90 not-disabled:not-aria-disabled:active:opacity-80',
       },
       size: {
         sm: 'h-9 px-3 text-sm',

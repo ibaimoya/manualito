@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { forwardRef, useRef, type ComponentRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from './button';
 import { cn } from '@/shared/lib/cn';
 
 type DialogDataKind = 'dialog' | 'sheet';
@@ -100,14 +101,15 @@ export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>
           ) : null}
         </div>
         {onClose ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
             aria-label={t('actions.close')}
-            className="icon-feedback grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 transition-colors hover:text-error focus-visible:text-error focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-error/15"
+            className="shrink-0"
           >
             <X size={20} strokeWidth={2} />
-          </button>
+          </Button>
         ) : null}
       </header>
     );

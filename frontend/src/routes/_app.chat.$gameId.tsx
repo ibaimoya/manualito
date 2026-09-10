@@ -770,7 +770,7 @@ function ChatHeader({
             variant="secondary"
             size="sm"
             onClick={onNew}
-            className="shrink-0"
+            className="shrink-0 pointer-coarse:h-11 pointer-coarse:min-w-11"
             aria-label={t('aria.newConversation')}
           >
             <Plus size={15} strokeWidth={2} />
@@ -814,7 +814,7 @@ function ChatWelcome({
                 key={key}
                 type="button"
                 onClick={() => onPick(question)}
-                className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-primary-100 text-primary-700">
                   <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
@@ -1038,7 +1038,7 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
       }}
       aria-label={t('aria.copyAnswer')}
       data-copied={copied}
-      className="mt-1.5 grid size-11 place-items-center rounded-lg text-fg-3 transition-[color,opacity,transform] hover:text-fg-2 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 motion-reduce:active:scale-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-visible:opacity-100 md:data-[copied=true]:opacity-100"
+      className="mt-1.5 grid size-11 place-items-center rounded-lg text-fg-3 transition-[color,opacity,scale] hover:text-fg-2 motion-safe:active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:[@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 data-[copied=true]:opacity-100"
     >
       <span className="state-icon" data-active={copied} aria-hidden="true">
         <Copy size={14} strokeWidth={2} />

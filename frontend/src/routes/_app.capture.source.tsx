@@ -289,12 +289,7 @@ function NewManualScreen() {
           <p className="text-sm leading-relaxed text-fg-2">{t('game.description')}</p>
         </section>
 
-        <section
-          className={cn(
-            'flex flex-col gap-4 transition-opacity',
-            game ? 'opacity-100' : 'pointer-events-none opacity-45',
-          )}
-        >
+        <section className="flex flex-col gap-4">
           <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
           <div className="grid grid-cols-1 gap-2.5 @sm/app:grid-cols-3">
             <SourceFileControl
@@ -364,7 +359,7 @@ function NewManualScreen() {
                     index={index}
                     total={pages.length}
                     mode={mode}
-                    disabled={busy}
+                    disabled={busy || game === null}
                     onMove={movePage}
                     onRemove={removePage}
                   />
@@ -373,7 +368,7 @@ function NewManualScreen() {
             </div>
           )}
 
-          <ShareToggle checked={share} onChange={setShare} disabled={busy} />
+          <ShareToggle checked={share} onChange={setShare} disabled={busy || game === null} />
 
           <Button
             block

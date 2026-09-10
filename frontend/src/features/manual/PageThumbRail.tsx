@@ -68,7 +68,7 @@ function PageButton({
   return (
     <div
       className={cn(
-        'relative flex h-11 w-[76px] shrink-0 items-center rounded-[6px]',
+        'relative flex h-11 w-[76px] shrink-0 items-center rounded-[6px] pointer-coarse:min-w-[88px]',
         '@4xl/app:h-auto @4xl/app:w-full @4xl/app:gap-1 @4xl/app:p-2',
         active
           ? 'bg-fg/[0.055] before:absolute before:inset-x-2 before:bottom-0 before:h-0.5 before:bg-primary @4xl/app:before:inset-x-auto @4xl/app:before:inset-y-2 @4xl/app:before:start-0 @4xl/app:before:h-auto @4xl/app:before:w-0.5'
@@ -84,7 +84,7 @@ function PageButton({
           pageNumber: page.page_number,
           status: st.label,
         })}
-        className="flex min-h-10 min-w-0 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 self-stretch rounded-[inherit] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary/40 @4xl/app:flex-row @4xl/app:justify-start @4xl/app:gap-3"
+        className="flex min-h-10 min-w-0 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 self-stretch rounded-[inherit] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary/40 pointer-coarse:min-h-11 pointer-coarse:min-w-11 @4xl/app:flex-row @4xl/app:justify-start @4xl/app:gap-3"
       >
         <PaperThumb
           key={page.page_number}
@@ -125,7 +125,7 @@ function PageButton({
         label={st.tip}
         tone={STATUS_HELP_TONE[st.tone]}
         iconClassName={page.ocr_status === 'processing' ? 'animate-spin' : undefined}
-        className="size-8 min-h-8 min-w-8 shrink-0"
+        className="size-8 min-h-8 min-w-8 shrink-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
       />
     </div>
   );
@@ -217,7 +217,7 @@ export function PageThumbRail({
           <Tooltip content={<Legend />} touch>
             <button
               type="button"
-              className="inline-flex min-h-8 items-center gap-2 text-xs text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="inline-flex min-h-8 items-center gap-2 text-xs text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11"
             >
               <Info size={14} aria-hidden="true" />
               {t('page.legend')}

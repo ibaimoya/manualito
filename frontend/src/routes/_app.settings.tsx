@@ -95,7 +95,10 @@ function AccountSection() {
 
   return (
     <Group title={t('account.group')}>
-      <Link to="/profile" className="icon-feedback flex items-center gap-3.5 p-4">
+      <Link
+        to="/profile"
+        className="icon-feedback flex items-center gap-3.5 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      >
         <Avatar
           name={displayName}
           size={52}

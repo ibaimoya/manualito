@@ -135,30 +135,38 @@ function RateGameForm({
       className="flex flex-col items-center text-center"
     >
       <GameCover name={gameName} size={64} processing={gameIds.has(gameId)} />
-      <div className="mt-4 flex items-center gap-1">
+      <div className="mt-4 grid grid-cols-[auto_auto_auto] items-center justify-items-center gap-x-1 max-[380px]:grid-cols-1">
         {/* Hueco simétrico a la goma: las estrellas quedan centradas. */}
-        <span aria-hidden="true" className="size-9 shrink-0" />
-        <RatingStars value={score} size={34} onSelect={setScore} />
+        <span
+          aria-hidden="true"
+          className="size-9 shrink-0 max-[380px]:hidden pointer-coarse:size-11"
+        />
+        <RatingStars
+          value={score}
+          size={34}
+          onSelect={setScore}
+          className="col-start-2 row-start-1 max-[380px]:col-start-1"
+        />
         <Tooltip content={t('rating.actions.remove')}>
           <button
             type="button"
             aria-label={t('rating.actions.remove')}
             onClick={() => setScore(0)}
             className={cn(
-              'icon-feedback grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:text-error',
+              'icon-feedback col-start-3 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:text-error max-[380px]:col-start-1 max-[380px]:row-start-3 pointer-coarse:size-11',
               score === 0 && 'invisible',
             )}
           >
             <Eraser size={18} strokeWidth={2} />
           </button>
         </Tooltip>
+        <p
+          aria-live="polite"
+          className="col-span-full row-start-2 mt-1 min-h-6 font-display text-sm font-bold text-primary-700"
+        >
+          {ratingLabel ? t(ratingLabel) : t('rating.prompt')}
+        </p>
       </div>
-      <p
-        aria-live="polite"
-        className="mt-1 min-h-6 font-display text-sm font-bold text-primary-700"
-      >
-        {ratingLabel ? t(ratingLabel) : t('rating.prompt')}
-      </p>
 
       <div className="mt-3 w-full max-w-sm text-left">
         {/* px-3: casi alineada con el texto interior del Input, sin meterse. */}

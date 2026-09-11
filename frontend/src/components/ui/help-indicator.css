@@ -59,8 +59,8 @@
   .help-indicator-glyph {
     position: relative;
     display: grid;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     place-items: center;
   }
@@ -76,22 +76,18 @@
     display: block;
   }
   /* Compensan el peso de la base del triángulo y del cuerpo del candado. */
-  .help-indicator-glyph .lucide-triangle-alert,
-  .help-indicator-glyph .lucide-lock {
+  .help-indicator-glyph [data-icon='warning'],
+  .help-indicator-glyph [data-icon='lock-simple'] {
     translate: 0 -0.5px;
   }
 
-  .help-indicator-glyph .lucide-check {
+  .help-indicator-glyph [data-icon='check'] {
     translate: 0 0.5px;
   }
 
-  .help-indicator-glyph .lucide-x {
-    scale: 1.15;
-  }
-
   .help-indicator-passive {
-    min-width: 18px;
-    min-height: 18px;
+    min-width: 20px;
+    min-height: 20px;
     cursor: inherit;
   }
 

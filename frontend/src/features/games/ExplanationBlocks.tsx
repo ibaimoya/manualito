@@ -1,4 +1,10 @@
-import { Flag, RefreshCw, Sparkles, Trophy, type LucideIcon } from 'lucide-react';
+import {
+  FlagIcon,
+  ArrowsClockwiseIcon,
+  SparkleIcon,
+  TrophyIcon,
+  type Icon,
+} from '@phosphor-icons/react';
 import type { ParseKeys } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,25 +25,29 @@ type GameKey = ParseKeys<'game'>;
 const BLOCKS: ReadonlyArray<{
   key: ExplanationBlockKey;
   title: GameKey;
-  icon: LucideIcon;
+  icon: Icon;
+  motion: 'tilt' | 'rotate' | 'up';
   tone: IllustrationTone;
 }> = [
   {
     key: 'setup',
     title: 'explanation.blocks.setup',
-    icon: Flag,
+    icon: FlagIcon,
+    motion: 'tilt',
     tone: 'primary',
   },
   {
     key: 'turns',
     title: 'explanation.blocks.turns',
-    icon: RefreshCw,
+    icon: ArrowsClockwiseIcon,
+    motion: 'rotate',
     tone: 'accent',
   },
   {
     key: 'victory',
     title: 'explanation.blocks.victory',
-    icon: Trophy,
+    icon: TrophyIcon,
+    motion: 'up',
     tone: 'green',
   },
 ];
@@ -66,10 +76,10 @@ export function ExplanationBlocks({
             {t('explanation.summary')}
           </p>
           <HelpIndicator
-            icon={Sparkles}
+            icon={SparkleIcon}
             label={t('explanation.aiGenerated')}
             className="-my-1"
-            iconClassName="size-4"
+            iconSize={18}
           />
         </div>
         <SkeletonSwap pending={summary === null} skeleton={<SummaryShimmer />}>
@@ -79,7 +89,7 @@ export function ExplanationBlocks({
         </SkeletonSwap>
       </Card>
       <Accordion type="multiple" className="space-y-3">
-        {BLOCKS.map(({ key, title, icon: Icon, tone }) => {
+        {BLOCKS.map(({ key, title, icon: Icon, motion, tone }) => {
           const body = content[key];
           const pending = body === null;
           return (
@@ -87,7 +97,7 @@ export function ExplanationBlocks({
               <AccordionTrigger className="explanation-trigger" headingLevel={2} loading={pending}>
                 <div className="flex items-center gap-3">
                   <IllustrationBadge tone={tone} className="explanation-icon">
-                    <Icon size={18} strokeWidth={2} aria-hidden="true" />
+                    <Icon size={20} data-icon-motion={motion} aria-hidden="true" />
                   </IllustrationBadge>
                   <span>{t(title)}</span>
                 </div>

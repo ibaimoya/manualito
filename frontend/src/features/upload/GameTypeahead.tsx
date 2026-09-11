@@ -2,17 +2,17 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
-  Check,
-  Dice5,
-  FileText,
-  Info,
-  Loader2,
-  Plus,
-  RotateCw,
-  Search,
-  WifiOff,
-  X,
-} from 'lucide-react';
+  CheckIcon,
+  DiceFiveIcon,
+  FileTextIcon,
+  InfoIcon,
+  CircleNotchIcon,
+  PlusIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  WifiSlashIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { api, type GameSearchItem } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
@@ -132,7 +132,12 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
             : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
-        <Search size={20} className="shrink-0 text-fg-3" aria-hidden="true" />
+        <MagnifyingGlassIcon
+          data-icon-motion="search"
+          size={20}
+          className="shrink-0 text-fg-3"
+          aria-hidden="true"
+        />
         <input
           ref={inputRef}
           type="text"
@@ -171,7 +176,7 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
             aria-label={t('typeahead.clearSearch')}
             className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
           >
-            <X size={16} className="search-clear-icon" aria-hidden="true" />
+            <XIcon size={16} className="search-clear-icon" aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -205,7 +210,7 @@ function SearchHint({ status }: Readonly<{ status: Status }>) {
   if (status !== 'idle' && status !== 'typing') return null;
   return (
     <p className="mt-2 flex items-center gap-1.5 pl-1 text-xs text-fg-3">
-      <Info size={13} aria-hidden="true" />
+      <InfoIcon size={13} aria-hidden="true" />
       {status === 'idle' ? t('typeahead.searchHint.idle') : t('typeahead.searchHint.typing')}
     </p>
   );
@@ -293,7 +298,7 @@ function EmptyResult({
   return (
     <li className="px-4 py-5 text-center">
       <span className="mx-auto mb-2.5 grid size-11 place-items-center rounded-full bg-surface text-fg-3">
-        <Search size={20} aria-hidden="true" />
+        <MagnifyingGlassIcon data-icon-motion="search" size={20} aria-hidden="true" />
       </span>
       {allowCreate ? (
         <>
@@ -309,14 +314,9 @@ function EmptyResult({
             className="mx-auto mt-3 inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg bg-primary pl-2.5 pr-3 text-sm font-semibold text-fg-inv transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {creating ? (
-              <Loader2
-                size={15}
-                strokeWidth={2.25}
-                className="shrink-0 animate-spin"
-                aria-hidden="true"
-              />
+              <CircleNotchIcon size={15} className="shrink-0 animate-spin" aria-hidden="true" />
             ) : (
-              <Plus size={15} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
+              <PlusIcon data-icon-motion="plus" size={15} className="shrink-0" aria-hidden="true" />
             )}
             <span className="min-w-0 truncate">
               {t('typeahead.empty.create.button', { game: label })}
@@ -339,7 +339,7 @@ function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const { t } = useTranslation('explore');
   return (
     <li className="flex items-start gap-3 px-4 py-4">
-      <WifiOff size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
+      <WifiSlashIcon size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-fg">{t('typeahead.error.title')}</p>
         <p className="mt-0.5 text-xs text-fg-3">{t('typeahead.error.description')}</p>
@@ -348,7 +348,8 @@ function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
           onClick={onRetry}
           className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg hover:bg-surface"
         >
-          <RotateCw size={14} aria-hidden="true" /> {t('typeahead.error.retry')}
+          <ArrowClockwiseIcon data-icon-motion="rotate" size={16} aria-hidden="true" />{' '}
+          {t('typeahead.error.retry')}
         </button>
       </div>
     </li>
@@ -411,7 +412,7 @@ function ResultRow({
       )}
     >
       <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-primary-700">
-        <Dice5 size={18} aria-hidden="true" />
+        <DiceFiveIcon size={18} aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
         {highlightMatch(game.name, query, MIN_CHARS)}
@@ -419,7 +420,7 @@ function ResultRow({
       {game.manuals_count > 0 ? (
         <HelpIndicator
           passive
-          icon={FileText}
+          icon={FileTextIcon}
           label={sharedManuals}
           className="mono min-h-6 shrink-0 text-xs font-semibold tabular-nums"
           iconClassName="size-3.5"
@@ -479,12 +480,12 @@ export function SelectedGameChip({
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-bg p-3.5 shadow-xs">
       <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-fg-inv">
-        <Dice5 size={22} strokeWidth={2} aria-hidden="true" />
+        <DiceFiveIcon size={22} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-display text-base font-bold text-fg">{game.name}</span>
-          <HelpIndicator icon={Check} tone="success" label={t('typeahead.selected.help')} />
+          <HelpIndicator icon={CheckIcon} tone="success" label={t('typeahead.selected.help')} />
         </div>
         <p className="mono mt-0.5 text-[11.5px] text-fg-3">
           {game.year_published ?? t('typeahead.yearNotAvailable')}

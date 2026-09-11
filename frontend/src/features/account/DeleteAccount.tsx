@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
-import { AlertTriangle } from 'lucide-react';
+import { WarningIcon } from '@phosphor-icons/react';
 import { TrashIcon } from '@/shared/components/action-icons';
 import { useId, useState } from 'react';
 import { Trans, Translation, useTranslation } from 'react-i18next';
@@ -34,7 +34,7 @@ export function DeleteAccountButton({ username }: Readonly<{ username: string }>
         className="text-error hover:text-error"
         onClick={() => setOpen(true)}
       >
-        <TrashIcon size={14} strokeWidth={2} />
+        <TrashIcon size={16} />
         {t('delete.button')}
       </Button>
       <DeleteAccountDialog open={open} onOpenChange={setOpen} username={username} />
@@ -130,7 +130,7 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
   return (
     <form onSubmit={submit} noValidate className="rounded-2xl border border-error bg-error-bg p-5">
       <div className="flex gap-3">
-        <AlertTriangle size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
+        <WarningIcon size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
         <p className="text-sm leading-relaxed text-fg">
           <Trans
             ns="security"
@@ -159,7 +159,7 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
 
       <div className="mt-4">
         <Button type="submit" variant="destructive" disabled={!matches} loading={remove.isPending}>
-          <TrashIcon size={16} strokeWidth={2} />
+          <TrashIcon size={16} />
           {submitLabel}
         </Button>
       </div>

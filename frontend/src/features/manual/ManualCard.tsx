@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ChevronRight, LoaderCircle } from 'lucide-react';
+import { CaretRightIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { HelpIndicator } from '@/components/ui/help-indicator';
@@ -45,7 +45,7 @@ export function ManualCard({ manual, meta, className }: Props) {
           </div>
           {indexing && (
             <HelpIndicator
-              icon={LoaderCircle}
+              icon={CircleNotchIcon}
               label={t('card.processing')}
               tone="info"
               passive
@@ -55,7 +55,12 @@ export function ManualCard({ manual, meta, className }: Props) {
               {t('card.processing')}
             </HelpIndicator>
           )}
-          <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />
+          <CaretRightIcon
+            data-icon-motion="forward"
+            size={18}
+            className="text-fg-3"
+            aria-hidden="true"
+          />
         </div>
       </Card>
     </Link>

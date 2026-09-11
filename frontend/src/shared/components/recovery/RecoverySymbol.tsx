@@ -1,46 +1,69 @@
-import { Icon, RefreshCw, Search, X } from 'lucide-react';
+import {
+  ArrowsClockwiseIcon,
+  IconBase,
+  MagnifyingGlassIcon,
+  XIcon,
+  type IconWeight,
+} from '@phosphor-icons/react';
+import type { ReactElement } from 'react';
 import { Meeple } from '@/shared/components/Brand';
 import type { RecoveryKind } from './RecoveryContent';
 import { useRecoveryGesture } from './useRecoveryGesture';
 import styles from './recovery-symbol.module.css';
 
-// CircleAlert de Lucide, con la exclamación independiente. Licencia en frontend/licenses/lucide.txt.
-function AlertSymbol() {
-  return (
-    <Icon iconNode={[]} size={128} strokeWidth={1.4}>
-      <circle cx="12" cy="12" r="10" />
+// Trazados de Phosphor 2.1.10 (MIT), separados para animar sus piezas.
+
+// WarningCircle: anillo fijo y exclamación (barra y punto) independiente.
+// Se dibuja algo mayor que los demás para compensar su anillo interior.
+const ALERT = new Map<IconWeight, ReactElement>([
+  [
+    'regular',
+    <>
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
       <g data-recovery-gesture="alert">
-        <path d="M12 8v4M12 16h.01" />
+        <path d="M120,136V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Z" />
+        <path d="M140,172a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z" />
       </g>
-    </Icon>
-  );
+    </>,
+  ],
+]);
+
+function AlertSymbol() {
+  return <IconBase size={140} weight="regular" weights={ALERT} className={styles.alert} />;
 }
 
-// WifiOff de Lucide, con ondas independientes. Licencia en frontend/licenses/lucide.txt.
-function SignalSymbol() {
-  return (
-    <Icon iconNode={[]} size={128} strokeWidth={1.4}>
-      <path d="M12 20h.01" />
+// Las ondas se prolongan 4 unidades bajo la barra para evitar huecos al moverse.
+const SIGNAL = new Map<IconWeight, ReactElement>([
+  [
+    'regular',
+    <>
       <g data-recovery-gesture="near">
-        <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+        <path d="M83.25,158.54A75.43,75.43,0,0,1,137.74,144.66L160.28,169.45A60,60,0,0,0,92.67,171.47A8,8,0,1,1,83.25,158.54Z" />
       </g>
       <g data-recovery-gesture="inner">
-        <path d="M5 12.859a10 10 0 0 1 5.17-2.69M19 12.859a10 10 0 0 0-2.007-1.523" />
+        <path d="M51,122.77A124.27,124.27,0,0,1,97.05,99.91L109.49,113.59A108,108,0,0,0,61,135.31A8,8,0,0,1,49.73,134A8,8,0,0,1,51,122.77Z" />
+        <path d="M195,135.31a8,8,0,0,0,11.24-1.3,8,8,0,0,0-1.3-11.24,124.25,124.25,0,0,0-51.73-24.2A8,8,0,1,0,150,114.24,108.12,108.12,0,0,1,195,135.31Z" />
       </g>
       <g data-recovery-gesture="outer">
-        <path d="M2 8.82a15 15 0 0 1 4.177-2.643M22 8.82a15 15 0 0 0-11.288-3.764" />
+        <path d="M18.92,87A171.87,171.87,0,0,1,61.86,61.19L73.36,73.84A155.43,155.43,0,0,0,29.08,99.4A8,8,0,0,1,18.92,87Z" />
+        <path d="M237.08,87A172.3,172.3,0,0,0,106,49.4a8,8,0,1,0,2,15.87A158.33,158.33,0,0,1,128,64a156.25,156.25,0,0,1,98.92,35.37A8,8,0,0,0,237.08,87Z" />
       </g>
-      <path d="m2 2 20 20" />
-    </Icon>
-  );
+      <path d="M128,192a12,12,0,1,0,12,12A12,12,0,0,0,128,192Z" />
+      <path d="M42.08,45.38A8,8,0,1,1,53.92,34.62L213.92,210.62A8,8,0,1,1,202.08,221.38Z" />
+    </>,
+  ],
+]);
+
+function SignalSymbol() {
+  return <IconBase size={128} weight="regular" weights={SIGNAL} />;
 }
 
 function SearchSymbol() {
   return (
     <div className={styles.search}>
-      <Search size={128} strokeWidth={1.4} />
+      <MagnifyingGlassIcon size={128} weight="regular" />
       <div className={styles.lens}>
-        <X size={42} strokeWidth={2} className={styles.cross} />
+        <XIcon size={42} weight="regular" className={styles.cross} />
         <Meeple size={46} className={styles.meeple} />
       </div>
     </div>
@@ -65,7 +88,7 @@ export function RecoverySymbol({
         )}
       </div>
       <div className={styles.retry}>
-        <RefreshCw size={112} strokeWidth={1.4} className="motion-safe:animate-spin" />
+        <ArrowsClockwiseIcon size={112} weight="regular" className="motion-safe:animate-spin" />
       </div>
     </div>
   );

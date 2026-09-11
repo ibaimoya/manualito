@@ -1,4 +1,4 @@
-import { Mail } from 'lucide-react';
+import { EnvelopeSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useTextWave } from '@/shared/hooks/useTextWave';
 
@@ -11,7 +11,7 @@ export function ContactEmail() {
     <Button asChild variant="secondary" size="sm">
       <a {...wave} href={`mailto:${EMAIL}`} aria-label={EMAIL}>
         <span data-text-wave className="inline-flex" aria-hidden="true">
-          <Mail size={15} strokeWidth={2} className="translate-y-px" />
+          <EnvelopeSimpleIcon size={18} className="translate-y-px" />
         </span>
         <span className="inline-flex" aria-hidden="true">
           {Array.from(EMAIL, (letter, index) => (

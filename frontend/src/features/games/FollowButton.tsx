@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 import { motion, useAnimate } from 'motion/react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -76,22 +76,25 @@ export function FollowButton({
       >
         <span className="follow-symbol grid size-11 shrink-0 place-items-center" aria-hidden="true">
           <span ref={icon} className="inline-flex">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-              <path className="follow-plus" d="M12 7v6m-3-3h6" />
-              <path className="follow-check" d="m9 10 2 2 4-4" pathLength="1" />
+            <svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
+              <path d="M184,32H72A16,16,0,0,0,56,48V224a8,8,0,0,0,12.24,6.78L128,193.43l59.77,37.35A8,8,0,0,0,200,224V48A16,16,0,0,0,184,32Zm0,177.57-51.77-32.35a8,8,0,0,0-8.48,0L72,209.57V48H184Z" />
+              <g
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="16"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path className="follow-plus" d="M128,74.67v64M96,106.67h64" />
+                <path
+                  className="follow-check"
+                  d="M94.93,105.6l22.4,22.4l51.2,-51.2"
+                  pathLength="1"
+                />
+              </g>
             </svg>
           </span>
-          <Loader2 size={20} className={toggle.isPending ? 'animate-spin' : undefined} />
+          <CircleNotchIcon size={20} className={toggle.isPending ? 'animate-spin' : undefined} />
         </span>
         <span className="follow-label" aria-hidden="true">
           <span>

@@ -10,13 +10,13 @@
 
 .metadata :global(.help-indicator-glyph),
 .metadata :global(.help-indicator-glyph) svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
-/* El cuadrado delantero desplaza el peso visual de Copiar hacia abajo y a la derecha. */
-.metadata :global(.lucide-copy) {
-  translate: -0.5px -1px;
+/* La hoja delantera desplaza el peso visual de Copiar hacia abajo y a la izquierda. */
+.metadata :global([data-icon='copy']) {
+  translate: 0.5px -1px;
 }
 
 .panes {

@@ -110,7 +110,7 @@ describe('/game/$gameId · cabecera', () => {
   it('sin valoración muestra solo el grupo de estrellas (sin CTA de texto)', async () => {
     renderHub();
     expect(await screen.findByRole('group', { name: 'Puntúa este juego' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '5 estrellas — Es una locura' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '5 estrellas, Es una locura' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Puntúa este juego' })).not.toBeInTheDocument();
   });
 
@@ -137,16 +137,16 @@ describe('/game/$gameId · cabecera', () => {
     const user = userEvent.setup();
     // La estrella pulsada en la cabecera abre el diálogo con esa puntuación
     // precargada (sin tocar el servidor hasta guardar).
-    await user.click(await screen.findByRole('button', { name: '4 estrellas — Es muy bueno' }));
+    await user.click(await screen.findByRole('button', { name: '4 estrellas, Es muy bueno' }));
     const dialog = await screen.findByRole('dialog', { name: /Qué te ha parecido Catan/ });
     expect(
-      within(dialog).getByRole('button', { name: '4 estrellas — Es muy bueno' }),
+      within(dialog).getByRole('button', { name: '4 estrellas, Es muy bueno' }),
     ).toHaveAttribute('aria-pressed', 'true');
     expect(within(dialog).getByRole('button', { name: 'Guardar' })).toBeEnabled();
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
     // Al cerrarse, la cabecera refleja la puntuación en las estrellas.
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '4 estrellas — Es muy bueno' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: '4 estrellas, Es muy bueno' })).toHaveAttribute(
         'aria-pressed',
         'true',
       );
@@ -174,7 +174,7 @@ describe('/game/$gameId · refetch fallido con cache', () => {
       ),
       http.get('/api/games/:gameId', () => HttpResponse.json({ detail: 'caído' }, { status: 500 })),
     );
-    await user.click(await screen.findByRole('button', { name: '4 estrellas — Es muy bueno' }));
+    await user.click(await screen.findByRole('button', { name: '4 estrellas, Es muy bueno' }));
     const dialog = await screen.findByRole('dialog', { name: /Qué te ha parecido Catan/ });
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
 

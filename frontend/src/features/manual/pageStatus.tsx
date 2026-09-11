@@ -1,15 +1,15 @@
 import type { ParseKeys } from 'i18next';
 import {
-  AlertTriangle,
-  Check,
-  Copy,
-  FileText,
-  Hourglass,
-  LoaderCircle,
-  Pencil,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+  WarningIcon,
+  CheckIcon,
+  CopyIcon,
+  FileTextIcon,
+  HourglassIcon,
+  CircleNotchIcon,
+  PencilSimpleIcon,
+  XIcon,
+  type Icon,
+} from '@phosphor-icons/react';
 import i18n from '@/app/i18n';
 import type { ManualDetailPage } from '@/shared/api/client';
 
@@ -21,7 +21,7 @@ export interface PageStatusMeta {
   key: PageStatusKey;
   label: string;
   short: string;
-  Icon: LucideIcon;
+  Icon: Icon;
   tone: PageStatusTone;
   tip: string;
 }
@@ -39,7 +39,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'duplicate',
     label: 'status.duplicate.label',
     short: 'status.duplicate.short',
-    Icon: Copy,
+    Icon: CopyIcon,
     tone: 'warning',
     tip: 'status.duplicate.tip',
   },
@@ -47,7 +47,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'edited',
     label: 'status.edited.label',
     short: 'status.edited.short',
-    Icon: Pencil,
+    Icon: PencilSimpleIcon,
     tone: 'accent',
     tip: 'status.edited.tip',
   },
@@ -55,7 +55,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'failed',
     label: 'status.failed.label',
     short: 'status.failed.short',
-    Icon: X,
+    Icon: XIcon,
     tone: 'error',
     tip: 'status.failed.tip',
   },
@@ -63,7 +63,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'low',
     label: 'status.low.label',
     short: 'status.low.short',
-    Icon: AlertTriangle,
+    Icon: WarningIcon,
     tone: 'warning',
     tip: 'status.low.tip',
   },
@@ -71,7 +71,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'ok',
     label: 'status.ok.label',
     short: 'status.ok.short',
-    Icon: Check,
+    Icon: CheckIcon,
     tone: 'success',
     tip: 'status.ok.tip',
   },
@@ -79,7 +79,7 @@ const META: Record<PageStatusKey, PageStatusDefinition> = {
     key: 'processing',
     label: 'status.processing.label',
     short: 'status.processing.short',
-    Icon: Hourglass,
+    Icon: HourglassIcon,
     tone: 'accent',
     tip: 'status.processing.tip',
   },
@@ -98,7 +98,7 @@ export function pageStatus(page: ManualDetailPage): PageStatusMeta {
   if (page.ocr_status === 'pending' || page.ocr_status === 'processing') {
     return resolveStatus({
       ...META.processing,
-      Icon: page.ocr_status === 'processing' ? LoaderCircle : Hourglass,
+      Icon: page.ocr_status === 'processing' ? CircleNotchIcon : HourglassIcon,
     });
   }
   if (page.ocr_status === 'failed') return resolveStatus(META.failed);
@@ -113,7 +113,7 @@ export function pageStatus(page: ManualDetailPage): PageStatusMeta {
       label: 'status.empty.label',
       short: 'status.empty.short',
       tip: 'status.empty.tip',
-      Icon: FileText,
+      Icon: FileTextIcon,
       tone: 'neutral',
     });
   }

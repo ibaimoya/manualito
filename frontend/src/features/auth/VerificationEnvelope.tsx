@@ -7,7 +7,7 @@ import {
   useMotionValue,
   useTransform,
 } from 'motion/react';
-import { Check, Clock3, Link2Off, Mail } from 'lucide-react';
+import { CheckIcon, ClockIcon, LinkBreakIcon, EnvelopeSimpleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Meeple, Wordmark } from '@/shared/components/Brand';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -15,7 +15,12 @@ import styles from './verification-envelope.module.css';
 
 export type VerificationState = 'verified' | 'invalid' | 'unavailable' | 'pending';
 
-const statusIcons = { verified: Check, invalid: Link2Off, unavailable: Clock3, pending: Mail };
+const statusIcons = {
+  verified: CheckIcon,
+  invalid: LinkBreakIcon,
+  unavailable: ClockIcon,
+  pending: EnvelopeSimpleIcon,
+};
 const foldEase = cubicBezier(0.77, 0, 0.175, 1);
 
 export function VerificationEnvelope({ state }: Readonly<{ state: VerificationState }>) {
@@ -61,7 +66,7 @@ export function VerificationEnvelope({ state }: Readonly<{ state: VerificationSt
             <span className={styles.letterHeading}>
               <Wordmark size={14} color="currentColor" />
               <span className={styles.stamp}>
-                <StatusIcon size={18} strokeWidth={1.6} />
+                <StatusIcon size={18} />
               </span>
             </span>
             <span className={styles.letterTitle}>{t(`status.verify.envelope.${state}.title`)}</span>
@@ -71,11 +76,7 @@ export function VerificationEnvelope({ state }: Readonly<{ state: VerificationSt
           <motion.span className={styles.flap} style={{ transform: flapTransform }}>
             <span className={styles.flapFront}>
               <span className={styles.seal}>
-                {state === 'verified' ? (
-                  <Meeple size={26} />
-                ) : (
-                  <StatusIcon size={20} strokeWidth={1.7} />
-                )}
+                {state === 'verified' ? <Meeple size={26} /> : <StatusIcon size={20} />}
               </span>
             </span>
             <span className={styles.flapBack} />

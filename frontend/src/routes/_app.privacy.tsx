@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheckIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { PrivacySections } from '@/features/legal/PrivacySections';
 
@@ -24,7 +24,7 @@ function PrivacyScreen() {
             aria-hidden="true"
             className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-100 text-primary-700 shadow-xs"
           >
-            <ShieldCheck size={26} strokeWidth={2} />
+            <ShieldCheckIcon size={26} />
           </span>
           <p className="mono mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-700">
             {t('page.eyebrow')}

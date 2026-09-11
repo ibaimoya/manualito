@@ -1,6 +1,6 @@
 import useEmblaCarousel from 'embla-carousel-react';
 import AutoScroll from 'embla-carousel-auto-scroll';
-import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { CaretLeftIcon, CaretRightIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -114,8 +114,8 @@ export function SuggestedQuestions({ onSelect, suspended }: Props) {
             onClick={() => setPaused((value) => !value)}
           >
             <span className="state-icon" data-active={paused} aria-hidden="true">
-              <Pause size={15} />
-              <Play size={15} />
+              <PauseIcon size={15} />
+              <PlayIcon size={15} />
             </span>
           </button>
         )}
@@ -126,7 +126,7 @@ export function SuggestedQuestions({ onSelect, suspended }: Props) {
           aria-label={t('composer.aria.previous')}
           onClick={() => step('previous')}
         >
-          <ChevronLeft size={18} aria-hidden="true" />
+          <CaretLeftIcon data-icon-motion="back" size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -135,7 +135,7 @@ export function SuggestedQuestions({ onSelect, suspended }: Props) {
           aria-label={t('composer.aria.next')}
           onClick={() => step('next')}
         >
-          <ChevronRight size={18} aria-hidden="true" />
+          <CaretRightIcon data-icon-motion="forward" size={18} aria-hidden="true" />
         </button>
       </div>
       <div

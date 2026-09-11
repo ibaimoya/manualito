@@ -1,4 +1,4 @@
-import { Moon, Sun } from 'lucide-react';
+import { MoonIcon, SunIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/app/theme';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -20,8 +20,18 @@ export function WelcomeThemeToggle() {
         aria-label={label}
         onClick={() => setMode(dark ? 'light' : 'dark')}
       >
-        <Sun size={19} aria-hidden="true" data-active={dark} />
-        <Moon size={19} aria-hidden="true" data-active={!dark} />
+        <SunIcon
+          size={20}
+          weight={dark ? 'duotone' : undefined}
+          aria-hidden="true"
+          data-active={dark}
+        />
+        <MoonIcon
+          size={20}
+          weight={dark ? undefined : 'duotone'}
+          aria-hidden="true"
+          data-active={!dark}
+        />
       </button>
     </Tooltip>
   );

@@ -1,26 +1,44 @@
+/* Orígenes en unidades del viewBox 256 de Phosphor. */
 .faq-trigger [data-faq-part] {
-  transform-origin: 12px 12px;
+  transform-origin: 128px 128px;
+}
+
+.faq-trigger [data-faq-part='star'] {
+  --faq-active-transform: rotate(12deg) scale(0.86);
+  transform-origin: 112px 144px;
 }
 
 .faq-trigger [data-faq-part='spark'] {
-  transform-origin: 20px 4px;
+  --faq-active-transform: rotate(90deg) scale(1.35);
+  transform-origin: 176px 40px;
 }
 
 .faq-trigger [data-faq-part='dot'] {
-  transform-origin: 4px 20px;
+  --faq-active-transform: scale(0.7);
+  transform-origin: 232px 88px;
 }
 
 .faq-trigger [data-faq-part='shackle'] {
-  transform-origin: 12px 11px;
+  --faq-active-transform: scaleY(0.8);
+  transform-origin: 128px 80px;
 }
 
 .faq-trigger [data-faq-part='keyhole'] {
-  transform-origin: 12px 16.5px;
+  --faq-active-transform: rotate(90deg);
+  transform-origin: 128px 140px;
 }
 
-.faq-trigger [data-faq-part='meridian'] {
-  vector-effect: non-scaling-stroke;
-  stroke-width: 1.5px;
+/* Conserva el grosor regular al proyectar los meridianos. */
+.faq-trigger [data-faq-part^='meridian'] {
+  stroke-width: 1.25px;
+}
+
+.faq-trigger [data-faq-part='meridian-west'] {
+  --faq-active-transform: scaleX(1.64);
+}
+
+.faq-trigger [data-faq-part='meridian-east'] {
+  --faq-active-transform: scaleX(0.22);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -28,49 +46,13 @@
     transition: transform var(--m-dur) var(--m-easing);
   }
 
-  .faq-trigger {
-    &[data-state='open'] {
-      [data-faq-part='star'] {
-        transform: rotate(12deg) scale(0.86);
-      }
-      [data-faq-part='spark'] {
-        transform: rotate(90deg) scale(1.35);
-      }
-      [data-faq-part='dot'] {
-        transform: scale(0.7);
-      }
-      [data-faq-part='shackle'] {
-        transform: scaleY(0.8);
-      }
-      [data-faq-part='keyhole'] {
-        transform: rotate(90deg);
-      }
-      [data-faq-part='meridian'] {
-        transform: scaleX(0.3);
-      }
-    }
+  .faq-trigger[data-state='open'] [data-faq-part] {
+    transform: var(--faq-active-transform);
+  }
 
-    @media (hover: hover) and (pointer: fine) {
-      &:hover {
-        [data-faq-part='star'] {
-          transform: rotate(12deg) scale(0.86);
-        }
-        [data-faq-part='spark'] {
-          transform: rotate(90deg) scale(1.35);
-        }
-        [data-faq-part='dot'] {
-          transform: scale(0.7);
-        }
-        [data-faq-part='shackle'] {
-          transform: scaleY(0.8);
-        }
-        [data-faq-part='keyhole'] {
-          transform: rotate(90deg);
-        }
-        [data-faq-part='meridian'] {
-          transform: scaleX(0.3);
-        }
-      }
+  @media (hover: hover) and (pointer: fine) {
+    .faq-trigger:hover [data-faq-part] {
+      transform: var(--faq-active-transform);
     }
   }
 }

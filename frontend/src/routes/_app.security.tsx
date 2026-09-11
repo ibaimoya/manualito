@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
-import { History, Lock } from 'lucide-react';
+import { ClockCounterClockwiseIcon, LockSimpleIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -69,7 +69,7 @@ function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | nul
           aria-hidden="true"
           className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-100 text-primary-700"
         >
-          <History size={17} strokeWidth={2} />
+          <ClockCounterClockwiseIcon size={17} />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-fg">{formatLastAccessDate(lastLoginAt)}</p>
@@ -155,7 +155,7 @@ function ChangePasswordSection() {
 
           <div>
             <Button type="submit" loading={change.isPending}>
-              <Lock size={16} strokeWidth={2} />
+              <LockSimpleIcon aria-hidden="true" size={16} />
               {t('password.button')}
             </Button>
           </div>

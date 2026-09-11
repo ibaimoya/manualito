@@ -2,34 +2,44 @@
   background-color: color-mix(in srgb, var(--m-accent-500) 70%, var(--m-text));
 }
 
-.illustration-card [data-icon-part='camera-lens'] {
-  transform-origin: 12px 13px;
-}
-
-.illustration-card .scan-text-lines {
-  transform-origin: 7px 12px;
+.illustration-card .camera-iris {
+  transform-origin: 128px 132px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .illustration-card
-    :is(
-      .illustration-spark,
-      .illustration-chat,
-      .illustration-page,
-      .illustration-people,
-      [data-icon-part='camera-lens'],
-      .scan-text-lines
-    ) {
+    :is(.illustration-spark, .illustration-chat, .illustration-page, .illustration-people) {
     transition: transform var(--m-dur) var(--m-easing);
+  }
+
+  .illustration-card .camera-iris {
+    transition:
+      transform var(--m-dur) var(--m-easing),
+      stroke-width var(--m-dur) var(--m-easing);
+  }
+
+  /* El retorno no espera los retardos de entrada. */
+  .illustration-card .scan-text-halo path {
+    transition: stroke-dashoffset var(--m-dur) var(--m-easing);
   }
 
   @media (hover: hover) and (pointer: fine) {
     .illustration-card:hover {
-      [data-icon-part='camera-lens'] {
-        transform: scale(0.65);
+      .camera-iris {
+        transform: scale(0.5);
+        stroke-width: 16;
+        transition-duration: var(--m-dur-fast);
       }
-      .scan-text-lines {
-        transform: translateY(-1px) scaleX(0.85);
+      .scan-text-halo path {
+        stroke-dashoffset: 0;
+
+        &:nth-child(2) {
+          transition-delay: 70ms;
+        }
+
+        &:nth-child(3) {
+          transition-delay: 140ms;
+        }
       }
       .illustration-spark {
         transform: rotate(12deg) scale(1.08);

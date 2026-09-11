@@ -1,6 +1,11 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, FileText, RotateCw, Users } from 'lucide-react';
+import {
+  CaretRightIcon,
+  FileTextIcon,
+  ArrowClockwiseIcon,
+  UsersThreeIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -94,7 +99,7 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
           <ManualsSection game={game} />
           {game.manuals.length > 0 ? (
             <p className="flex items-center gap-2 text-xs text-fg-3">
-              <FileText size={14} strokeWidth={2} aria-hidden="true" />
+              <FileTextIcon size={14} aria-hidden="true" />
               {t('footer.explanation', { count: game.manuals.length })} ·{' '}
               <span className="mono">{t('footer.pages', { count: totalPages })}</span>
             </p>
@@ -162,7 +167,7 @@ function ExplanationSection({
         </p>
         <Button asChild className="mt-4">
           <Link to="/capture/source" search={{ gameId }}>
-            <AddManualIcon size={18} strokeWidth={2} />
+            <AddManualIcon size={18} />
             {t('manuals.add')}
           </Link>
         </Button>
@@ -186,7 +191,7 @@ function ExplanationSection({
             explanation.refetch().catch(() => undefined);
           }}
         >
-          <RotateCw size={14} strokeWidth={2} />
+          <ArrowClockwiseIcon data-icon-motion="rotate" aria-hidden="true" size={16} />
           {t('explanation.retry')}
         </Button>
       </Card>
@@ -209,7 +214,7 @@ function ExplanationSection({
             explanation.refetch().catch(() => undefined);
           }}
         >
-          <RotateCw size={14} strokeWidth={2} />
+          <ArrowClockwiseIcon data-icon-motion="rotate" aria-hidden="true" size={16} />
           {t('explanation.retry')}
         </Button>
       </Card>
@@ -248,7 +253,7 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
         </div>
         <Button asChild variant="ghost" className="shrink-0 px-0">
           <Link to="/capture/source" search={{ gameId: game.id }}>
-            <AddManualIcon size={18} strokeWidth={2} />
+            <AddManualIcon size={18} />
             {t('manuals.add')}
           </Link>
         </Button>
@@ -287,11 +292,11 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         ) : null}
         {manual.is_own ? (
           <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent">
-            <ExtractedTextIcon size={13} strokeWidth={2} />
+            <ExtractedTextIcon size={13} />
             {t('manuals.extracted')}
           </span>
         ) : (
-          <HelpIndicator icon={Users} label={t('manuals.shared')} className="mt-0.5" />
+          <HelpIndicator icon={UsersThreeIcon} label={t('manuals.shared')} className="mt-0.5" />
         )}
       </div>
     </>
@@ -307,7 +312,12 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
       >
         {body}
-        <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+        <CaretRightIcon
+          data-icon-motion="forward"
+          size={18}
+          className="shrink-0 text-fg-3"
+          aria-hidden="true"
+        />
       </Link>
     );
     return (
@@ -439,7 +449,7 @@ function HubError({
               loading={retrying}
               onClick={() => void onRetry()}
             >
-              <RotateCw size={18} aria-hidden="true" />
+              <ArrowClockwiseIcon data-icon-motion="rotate" size={20} aria-hidden="true" />
               {commonT('actions.retry')}
             </Button>
           )}

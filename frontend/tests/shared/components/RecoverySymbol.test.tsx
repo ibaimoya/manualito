@@ -48,8 +48,9 @@ describe('RecoverySymbol con Motion real', () => {
   it('anima la exclamación con el círculo fijo y retoma el gesto durante el regreso', async () => {
     systemMotion();
     const { host, part: alert } = renderSymbol();
-    const circle = host.querySelector('circle');
-    expect(circle).not.toBeNull();
+    // El anillo es el primer trazado del símbolo y queda fuera del gesto.
+    const ring = host.querySelector('svg > path');
+    expect(ring).not.toBeNull();
     await nextFrame();
     const rest = alert.style.transform;
     enter(host);
@@ -57,12 +58,13 @@ describe('RecoverySymbol con Motion real', () => {
     await nextFrame();
     const firstMovement = alert.style.transform;
     expect(firstMovement).not.toBe(rest);
+    // Saltito corto en unidades de la rejilla 256: como mucho 11.
     const displacement = Number(firstMovement.match(/translateY\(([-\d.]+)px\)/)?.[1]);
     expect(displacement).toBeLessThan(0);
-    expect(displacement).toBeGreaterThan(-1);
+    expect(displacement).toBeGreaterThanOrEqual(-11);
     expect(firstMovement).toMatch(/scale\(1,\s*1\)/);
-    expect(alert.contains(circle)).toBe(false);
-    expect(circle).not.toHaveAttribute('style');
+    expect(alert.contains(ring)).toBe(false);
+    expect(ring).not.toHaveAttribute('style');
 
     leave(host);
     const interrupted = alert.style.transform;

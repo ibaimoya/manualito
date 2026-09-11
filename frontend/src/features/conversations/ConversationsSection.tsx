@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRightIcon, PlusIcon } from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -69,7 +69,7 @@ export function ConversationsSection({
               className="icon-feedback inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-semibold text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {t('section.viewAll', { count: conversations.length })}
-              <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
+              <ArrowRightIcon data-icon-motion="forward" size={16} aria-hidden="true" />
             </Link>
           ) : null}
           {canAsk ? (
@@ -79,7 +79,7 @@ export function ConversationsSection({
               search={{}}
               className="icon-feedback inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
-              <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+              <PlusIcon data-icon-motion="plus" size={16} aria-hidden="true" />
               {t('section.new')}
             </Link>
           ) : null}
@@ -163,7 +163,7 @@ function ConversationRow({
           className="icon-feedback grid size-11 shrink-0 self-center place-items-center rounded-lg text-fg-3 transition-colors hover:text-error"
           aria-label={t('aria.deleteConversation', { title })}
         >
-          <TrashIcon size={15} strokeWidth={2} />
+          <TrashIcon size={15} />
         </button>
       </div>
       {confirming ? (

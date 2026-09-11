@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRightIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { storage } from '@/shared/lib/storage';
 import { WelcomeHeading } from './WelcomeHeading';
@@ -31,7 +31,7 @@ export function Onboarding() {
       <div className={styles.actions}>
         <Button size="lg" className={styles.primary} onClick={() => void enter('/register')}>
           <span>{t('actions.createAccount')}</span>
-          <ArrowRight size={19} strokeWidth={2} aria-hidden="true" />
+          <ArrowRightIcon data-icon-motion="forward" size={20} aria-hidden="true" />
         </Button>
         <Button
           size="lg"

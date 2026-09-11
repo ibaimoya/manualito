@@ -7,8 +7,9 @@
   pointer-events: none;
 }
 
+/* Desplazamientos en unidades del viewBox 256 de Phosphor. */
 .glyph [data-motion-part] {
-  transform-origin: 12px 12px;
+  transform-origin: 128px 128px;
 }
 
 .ratio {
@@ -39,31 +40,31 @@
       transform: scaleX(0.74);
     }
     [data-motion-part='corner-nw'] {
-      transform: translate(1px, 1px);
+      transform: translate(10.67px, 10.67px);
     }
     [data-motion-part='corner-ne'] {
-      transform: translate(-1px, 1px);
+      transform: translate(-10.67px, 10.67px);
     }
     [data-motion-part='corner-se'] {
-      transform: translate(-1px, -1px);
+      transform: translate(-10.67px, -10.67px);
     }
     [data-motion-part='corner-sw'] {
-      transform: translate(1px, -1px);
+      transform: translate(10.67px, -10.67px);
     }
     [data-motion-part='width-line'] {
       transform: scaleX(1.167);
     }
     [data-motion-part='width-left'] {
-      transform: translateX(-1.5px);
+      transform: translateX(-16px);
     }
     [data-motion-part='width-right'] {
-      transform: translateX(1.5px);
+      transform: translateX(16px);
     }
     [data-motion-part='expand-ne'] {
-      transform: translate(1.5px, -1.5px);
+      transform: translate(16px, -16px);
     }
     [data-motion-part='expand-sw'] {
-      transform: translate(-1.5px, 1.5px);
+      transform: translate(-16px, 16px);
     }
     [data-motion-part='ratio-digit'] {
       transform: scale(1.12);
@@ -80,31 +81,31 @@
       transform: scaleX(0.74);
     }
     [data-motion-part='corner-nw'] {
-      transform: translate(1px, 1px);
+      transform: translate(10.67px, 10.67px);
     }
     [data-motion-part='corner-ne'] {
-      transform: translate(-1px, 1px);
+      transform: translate(-10.67px, 10.67px);
     }
     [data-motion-part='corner-se'] {
-      transform: translate(-1px, -1px);
+      transform: translate(-10.67px, -10.67px);
     }
     [data-motion-part='corner-sw'] {
-      transform: translate(1px, -1px);
+      transform: translate(10.67px, -10.67px);
     }
     [data-motion-part='width-line'] {
       transform: scaleX(1.167);
     }
     [data-motion-part='width-left'] {
-      transform: translateX(-1.5px);
+      transform: translateX(-16px);
     }
     [data-motion-part='width-right'] {
-      transform: translateX(1.5px);
+      transform: translateX(16px);
     }
     [data-motion-part='expand-ne'] {
-      transform: translate(1.5px, -1.5px);
+      transform: translate(16px, -16px);
     }
     [data-motion-part='expand-sw'] {
-      transform: translate(-1.5px, 1.5px);
+      transform: translate(-16px, 16px);
     }
     [data-motion-part='ratio-digit'] {
       transform: scale(1.12);
@@ -124,31 +125,31 @@
       transform: scaleX(0.6);
     }
     [data-motion-part='corner-nw'] {
-      transform: translate(1.75px, 1.75px);
+      transform: translate(18.67px, 18.67px);
     }
     [data-motion-part='corner-ne'] {
-      transform: translate(-1.75px, 1.75px);
+      transform: translate(-18.67px, 18.67px);
     }
     [data-motion-part='corner-se'] {
-      transform: translate(-1.75px, -1.75px);
+      transform: translate(-18.67px, -18.67px);
     }
     [data-motion-part='corner-sw'] {
-      transform: translate(1.75px, -1.75px);
+      transform: translate(18.67px, -18.67px);
     }
     [data-motion-part='width-line'] {
       transform: scaleX(1.25);
     }
     [data-motion-part='width-left'] {
-      transform: translateX(-2.25px);
+      transform: translateX(-24px);
     }
     [data-motion-part='width-right'] {
-      transform: translateX(2.25px);
+      transform: translateX(24px);
     }
     [data-motion-part='expand-ne'] {
-      transform: translate(2.25px, -2.25px);
+      transform: translate(24px, -24px);
     }
     [data-motion-part='expand-sw'] {
-      transform: translate(-2.25px, 2.25px);
+      transform: translate(-24px, 24px);
     }
     [data-motion-part='ratio-digit'] {
       transform: scale(0.96);

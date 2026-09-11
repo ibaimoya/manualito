@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { XIcon } from '@phosphor-icons/react';
 import { forwardRef, useRef, type ComponentRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './button';
@@ -108,7 +108,7 @@ export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>
             aria-label={t('actions.close')}
             className="shrink-0"
           >
-            <X size={20} strokeWidth={2} />
+            <XIcon aria-hidden="true" size={20} />
           </Button>
         ) : null}
       </header>

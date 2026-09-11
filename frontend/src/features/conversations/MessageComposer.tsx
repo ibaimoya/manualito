@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -103,7 +103,7 @@ export function MessageComposer({
         )}
       >
         <span className="state-icon" data-active={sendPending} aria-hidden="true">
-          <ArrowUp size={22} strokeWidth={2.8} />
+          <ArrowUpIcon data-icon-motion="up" size={22} />
           <span className="grid size-[22px] place-items-center">
             <span className="composer-send-orbit" />
           </span>

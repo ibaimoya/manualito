@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, X } from 'lucide-react';
+import { MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
@@ -76,7 +76,12 @@ export function GameJumpSearch({ games }: Props) {
             : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
-        <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
+        <MagnifyingGlassIcon
+          data-icon-motion="search"
+          size={20}
+          className="shrink-0 text-fg-3"
+          aria-hidden="true"
+        />
         <input
           ref={inputRef}
           type="text"
@@ -103,7 +108,7 @@ export function GameJumpSearch({ games }: Props) {
             aria-label={t('gameSearch.clear')}
             className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
           >
-            <X size={16} className="search-clear-icon" aria-hidden="true" />
+            <XIcon size={16} className="search-clear-icon" aria-hidden="true" />
           </button>
         )}
       </div>

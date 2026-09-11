@@ -1,18 +1,14 @@
 import * as RadioGroup from '@radix-ui/react-radio-group';
-import { Columns2, FileText, Image } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { ManualViewGlyph } from './ManualViewGlyph';
 
 export type ManualView = 'text' | 'original' | 'compare';
 
-const options = [
-  { value: 'text', icon: FileText },
-  { value: 'original', icon: Image },
-  { value: 'compare', icon: Columns2 },
-] as const;
+const options = ['text', 'original', 'compare'] as const;
 
 export function ManualViewSwitch({
   value,
@@ -51,16 +47,14 @@ function ViewOptions({
       className={cn('items-center gap-1', wide ? 'hidden @5xl/app:flex' : 'flex @5xl/app:hidden')}
     >
       {options
-        .filter((option) => wide || option.value !== 'compare')
-        .map(({ value: option, icon: Icon }) => (
+        .filter((option) => wide || option !== 'compare')
+        .map((option) => (
           <RadioGroup.Item
             key={option}
             value={option}
-            className={cn(
-              'relative inline-flex min-h-10 items-center justify-center gap-2 rounded-[4px] px-2 text-[13px] font-medium text-fg-2 hover:bg-fg/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary data-[state=checked]:text-fg @2xl/app:px-3',
-            )}
+            className="manual-view-option relative inline-flex min-h-10 items-center justify-center gap-2 rounded-[4px] px-2 text-[13px] font-medium text-fg-2 hover:bg-fg/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary data-[state=checked]:text-fg @2xl/app:px-3"
           >
-            <Icon size={16} aria-hidden="true" className="hidden @2xl/app:block" />
+            <ManualViewGlyph view={option} selected={option === value} />
             {t(`workspace.${option}`)}
             {option === value && (
               <motion.span

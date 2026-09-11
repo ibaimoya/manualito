@@ -1,15 +1,15 @@
-import { Check, Info, TriangleAlert, X } from 'lucide-react';
+import { CheckIcon, InfoIcon, WarningIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'sonner';
 import { useTheme } from './theme';
 import './toaster.css';
 
 const icons = {
-  success: <Check size={20} strokeWidth={2} aria-hidden="true" />,
-  info: <Info size={20} strokeWidth={1.8} aria-hidden="true" />,
-  warning: <TriangleAlert size={20} strokeWidth={1.8} aria-hidden="true" />,
-  error: <X size={20} strokeWidth={2} aria-hidden="true" />,
-  close: <X size={16} strokeWidth={1.8} aria-hidden="true" />,
+  success: <CheckIcon size={20} aria-hidden="true" />,
+  info: <InfoIcon size={20} aria-hidden="true" />,
+  warning: <WarningIcon size={20} data-icon="warning" aria-hidden="true" />,
+  error: <XIcon size={20} aria-hidden="true" />,
+  close: <XIcon size={16} aria-hidden="true" />,
 };
 
 /** Un único punto de presentación; Sonner conserva la pila, las pausas y los gestos. */

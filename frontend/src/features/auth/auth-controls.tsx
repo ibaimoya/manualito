@@ -1,6 +1,6 @@
 import { type ParseKeys } from 'i18next';
 import { type MouseEvent, type ReactNode, useCallback, useRef, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { EyeIcon, EyeSlashIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Input, type InputProps } from '@/components/ui/input';
 import i18n from '@/app/i18n';
@@ -146,8 +146,8 @@ export function PasswordInput({
         data-active={reveal}
         className="state-icon absolute right-0 top-1/2 size-11 -translate-y-1/2 rounded-full text-fg-3 hover:text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
-        <Eye size={18} aria-hidden="true" />
-        <EyeOff size={18} aria-hidden="true" />
+        <EyeIcon size={18} aria-hidden="true" />
+        <EyeSlashIcon size={18} aria-hidden="true" />
       </button>
     </div>
   );

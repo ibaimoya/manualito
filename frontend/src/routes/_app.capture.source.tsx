@@ -10,13 +10,13 @@ import {
 } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronDown,
-  ChevronUp,
-  FileText,
-  Image as ImageIcon,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+  CaretDownIcon,
+  CaretUpIcon,
+  FileTextIcon,
+  ImageIcon,
+  SparkleIcon,
+  UsersThreeIcon,
+} from '@phosphor-icons/react';
 import { TrashIcon, CameraIcon } from '@/shared/components/action-icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -294,7 +294,7 @@ function NewManualScreen() {
           <div className="grid grid-cols-1 gap-2.5 @sm/app:grid-cols-3">
             <SourceFileControl
               inputId={cameraInputId}
-              icon={<CameraIcon size={19} strokeWidth={2} />}
+              icon={<CameraIcon size={19} />}
               label={t('sources.camera.label')}
               sub={t('sources.camera.description')}
               disabled={busy || game === null || mode === 'pdf'}
@@ -311,7 +311,7 @@ function NewManualScreen() {
             />
             <SourceFileControl
               inputId={galleryInputId}
-              icon={<ImageIcon size={19} strokeWidth={2} />}
+              icon={<ImageIcon aria-hidden="true" size={19} />}
               label={t('sources.gallery.label')}
               sub={t('sources.gallery.description')}
               disabled={busy || game === null || mode === 'pdf'}
@@ -328,7 +328,7 @@ function NewManualScreen() {
             />
             <SourceFileControl
               inputId={pdfInputId}
-              icon={<FileText size={19} strokeWidth={2} />}
+              icon={<FileTextIcon aria-hidden="true" size={19} />}
               label={t('sources.pdf.label')}
               sub={t('sources.pdf.description')}
               disabled={busy || game === null || mode === 'images'}
@@ -378,7 +378,7 @@ function NewManualScreen() {
             disabled={!ready}
             onClick={submitManual}
           >
-            <Sparkles size={18} strokeWidth={2} />
+            <SparkleIcon aria-hidden="true" size={18} />
             {ctaLabel}
           </Button>
         </section>
@@ -386,7 +386,7 @@ function NewManualScreen() {
 
       <footer className="sticky bottom-0 border-t border-border bg-bg/95 p-4 backdrop-blur md:hidden">
         <Button block size="lg" loading={busy} disabled={!ready} onClick={submitManual}>
-          <Sparkles size={18} strokeWidth={2} />
+          <SparkleIcon aria-hidden="true" size={18} />
           {ctaLabel}
         </Button>
       </footer>
@@ -446,7 +446,7 @@ function ShareToggle({
         )}
         aria-hidden="true"
       >
-        <Users size={18} strokeWidth={2} />
+        <UsersThreeIcon size={18} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold text-fg">{t('consent.label')}</span>
@@ -537,7 +537,7 @@ function PageRow({
           className="grid size-12 shrink-0 place-items-center rounded-lg bg-error-bg text-error"
           aria-hidden="true"
         >
-          <FileText size={22} strokeWidth={1.75} />
+          <FileTextIcon size={22} />
         </span>
       )}
       <div className="min-w-0 flex-1">
@@ -554,13 +554,13 @@ function PageRow({
               label={t('actions.moveUp', { page: index + 1 })}
               disabled={disabled || index === 0}
               onClick={() => onMove(index, -1)}
-              icon={<ChevronUp size={17} strokeWidth={2} />}
+              icon={<CaretUpIcon data-icon-motion="up" aria-hidden="true" size={17} />}
             />
             <IconButton
               label={t('actions.moveDown', { page: index + 1 })}
               disabled={disabled || index === total - 1}
               onClick={() => onMove(index, 1)}
-              icon={<ChevronDown size={17} strokeWidth={2} />}
+              icon={<CaretDownIcon data-icon-motion="down" aria-hidden="true" size={17} />}
             />
           </>
         )}
@@ -569,7 +569,7 @@ function PageRow({
           label={isPdf ? t('actions.removePdf') : t('actions.removePage', { page: index + 1 })}
           disabled={disabled}
           onClick={() => onRemove(index)}
-          icon={<TrashIcon size={17} strokeWidth={2} />}
+          icon={<TrashIcon size={17} />}
         />
       </div>
     </li>

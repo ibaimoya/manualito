@@ -1,5 +1,5 @@
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronDown, Globe } from 'lucide-react';
+import { CheckIcon, CaretDownIcon, GlobeSimpleIcon } from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,13 +74,13 @@ export function LanguageMenu() {
           'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
         )}
       >
-        <Globe size={15} strokeWidth={2} aria-hidden="true" />
+        <GlobeSimpleIcon size={15} aria-hidden="true" />
         <span className="font-mono text-[11.5px] font-semibold tracking-[0.06em]">
           {language.toUpperCase()}
         </span>
-        <ChevronDown
+        <CaretDownIcon
+          data-icon-motion="down"
           size={12}
-          strokeWidth={2.25}
           aria-hidden="true"
           className="text-fg-3 transition-[rotate] duration-200 ease-[var(--ease-mn)] group-hover:text-fg-2 group-data-[state=open]:rotate-180"
         />
@@ -121,7 +121,7 @@ export function LanguageMenu() {
                       <SpainFlag />
                       {LANGUAGE_NAMES.es}
                     </span>
-                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className={CHECK_CLASS} />
+                    <CheckIcon size={15} aria-hidden="true" className={CHECK_CLASS} />
                   </DropdownMenuPrimitive.RadioItem>
                   <DropdownMenuPrimitive.RadioItem
                     ref={sweepRef}
@@ -134,7 +134,7 @@ export function LanguageMenu() {
                       <EnglishFlag />
                       {LANGUAGE_NAMES.en}
                     </span>
-                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className={CHECK_CLASS} />
+                    <CheckIcon size={15} aria-hidden="true" className={CHECK_CLASS} />
                   </DropdownMenuPrimitive.RadioItem>
                 </DropdownMenuPrimitive.RadioGroup>
               </motion.div>

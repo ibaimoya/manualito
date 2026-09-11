@@ -1,5 +1,5 @@
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { CaretDownIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from 'react';
 import { cn } from '@/shared/lib/cn';
 
@@ -49,16 +49,16 @@ export const AccordionTrigger = forwardRef<
         >
           {children}
           {loading ? (
-            <Loader2
+            <CircleNotchIcon
               size={18}
-              strokeWidth={2}
               className="shrink-0 animate-spin text-fg-3"
               aria-hidden="true"
             />
           ) : (
-            <ChevronDown
+            <CaretDownIcon
+              data-icon-motion="down"
+              aria-hidden="true"
               size={20}
-              strokeWidth={2}
               className="shrink-0 text-fg-3 transition-transform duration-200"
             />
           )}

@@ -1,18 +1,18 @@
 import { createFileRoute, linkOptions, useBlocker, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  FileText,
-  Files,
-  Images,
-  Loader2,
-  Pencil,
-  RotateCw,
-  Search,
-  X,
-} from 'lucide-react';
+  CaretLeftIcon,
+  CaretRightIcon,
+  ClockIcon,
+  FileTextIcon,
+  FilesIcon,
+  ImagesIcon,
+  CircleNotchIcon,
+  PencilSimpleIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { TrashIcon } from '@/shared/components/action-icons';
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
@@ -172,19 +172,19 @@ function ManualMetaRow({
       )}
     >
       <span className="hidden items-center gap-1.5 @2xl/app:inline-flex">
-        <Clock size={14} aria-hidden="true" />
+        <ClockIcon size={14} aria-hidden="true" />
         {t('meta.uploaded', { date: formatLongDate(createdAt) })}
       </span>
       <span className="inline-flex items-center gap-1.5">
         {sourceIsPdf ? (
-          <FileText size={14} aria-hidden="true" />
+          <FileTextIcon size={14} aria-hidden="true" />
         ) : (
-          <Images size={14} aria-hidden="true" />
+          <ImagesIcon size={14} aria-hidden="true" />
         )}{' '}
         {sourceIsPdf ? t('meta.format.pdf') : t('meta.format.photos')}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <Files size={14} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
+        <FilesIcon size={14} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
       </span>
       {duplicateCount > 0 ? <DuplicatePagesBadge count={duplicateCount} /> : null}
     </div>
@@ -432,7 +432,7 @@ function ManualDetailLoaded({
               disabled={busy || editing}
               onClick={() => setReprocessOpen(true)}
             >
-              <RotateCw size={15} aria-hidden="true" />
+              <ArrowClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
               {t('workspace.reread')}
             </Button>
             <Tooltip
@@ -501,7 +501,7 @@ function ManualDetailLoaded({
               >
                 <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border px-5">
                   <h2 className="flex items-center gap-2 text-sm font-semibold">
-                    <Images size={16} aria-hidden="true" />
+                    <ImagesIcon size={16} aria-hidden="true" />
                     {t('workspace.original')}
                   </h2>
                   <Tooltip content={t('workspace.expand')}>
@@ -551,7 +551,7 @@ function ManualDetailLoaded({
                         else setEditingPage(page.page_number);
                       }}
                     >
-                      <Pencil size={15} aria-hidden="true" />
+                      <PencilSimpleIcon data-icon-motion="tilt" size={16} aria-hidden="true" />
                       {t('workspace.edit')}
                     </Button>
                   ) : null}
@@ -709,7 +709,7 @@ function ManualDialogs({
             {t('buttons.cancel')}
           </Button>
           <Button loading={reprocessing} onClick={onReprocessConfirm}>
-            <RotateCw size={16} strokeWidth={2} />
+            <ArrowClockwiseIcon data-icon-motion="rotate" aria-hidden="true" size={18} />
             {t('buttons.reprocess')}
           </Button>
         </DialogBody>
@@ -749,7 +749,7 @@ function ManualDialogs({
               {t('buttons.cancel')}
             </Button>
             <Button variant="destructive" loading={deleting} onClick={onDeleteConfirm}>
-              <TrashIcon size={16} strokeWidth={2} />
+              <TrashIcon size={16} />
               {t('buttons.deleteManual')}
             </Button>
           </div>
@@ -818,7 +818,7 @@ function ReprocessBanner({
   const pct = data ? (data.completed_pages / Math.max(data.page_count, 1)) * 100 : 5;
   return (
     <output className="flex min-w-0 flex-1 items-center gap-2 text-xs text-primary-700">
-      <Loader2
+      <CircleNotchIcon
         size={14}
         className="shrink-0 animate-spin motion-reduce:animate-none"
         aria-hidden="true"
@@ -846,7 +846,7 @@ function PageNav({
   return (
     <div className="flex items-center gap-1.5">
       <NavButton label={t('page.previous')} disabled={pageNumber <= 1} onClick={onPrev}>
-        <ChevronLeft size={18} strokeWidth={2} />
+        <CaretLeftIcon data-icon-motion="back" aria-hidden="true" size={18} />
       </NavButton>
       <span className="min-w-12 tabular-nums text-center @2xl/app:min-w-[88px] font-display text-sm font-bold text-fg">
         <span className="hidden @2xl/app:inline">{t('page.number', { pageNumber })}</span>
@@ -854,7 +854,7 @@ function PageNav({
         <span className="font-semibold text-fg-3">/ {total}</span>
       </span>
       <NavButton label={t('page.next')} disabled={pageNumber >= total} onClick={onNext}>
-        <ChevronRight size={18} strokeWidth={2} />
+        <CaretRightIcon data-icon-motion="forward" aria-hidden="true" size={18} />
       </NavButton>
     </div>
   );
@@ -954,7 +954,12 @@ function SearchField({
       )}
       style={!disabled && hasQuery ? { boxShadow: 'var(--m-shadow-ring-primary)' } : undefined}
     >
-      <Search size={16} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+      <MagnifyingGlassIcon
+        data-icon-motion="search"
+        size={16}
+        className="shrink-0 text-fg-3"
+        aria-hidden="true"
+      />
       <input
         type="search"
         disabled={disabled}
@@ -978,21 +983,21 @@ function SearchField({
             disabled={disabled || total === 0}
             onClick={() => onStep(-1)}
           >
-            <ChevronLeft size={15} strokeWidth={2} />
+            <CaretLeftIcon data-icon-motion="back" aria-hidden="true" size={15} />
           </SearchMiniButton>
           <SearchMiniButton
             label={t('search.next')}
             disabled={disabled || total === 0}
             onClick={() => onStep(1)}
           >
-            <ChevronRight size={15} strokeWidth={2} />
+            <CaretRightIcon data-icon-motion="forward" aria-hidden="true" size={15} />
           </SearchMiniButton>
           <SearchMiniButton
             label={t('search.clear')}
             disabled={disabled}
             onClick={() => onSearch('')}
           >
-            <X size={14} strokeWidth={2} className="search-clear-icon" />
+            <XIcon aria-hidden="true" size={14} className="search-clear-icon" />
           </SearchMiniButton>
         </span>
       ) : null}

@@ -1,5 +1,5 @@
 import { type ComponentProps } from 'react';
-import { BookOpen, Pencil, Trash2 } from 'lucide-react';
+import { BookOpenIcon, PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -25,13 +25,13 @@ function TestMenu({
         <DropdownMenuTrigger>Acciones</DropdownMenuTrigger>
         <DropdownMenuContent {...contentProps}>
           <DropdownMenuItem onSelect={() => onSelect?.('abrir')}>
-            <BookOpen aria-hidden="true" /> Abrir
+            <BookOpenIcon aria-hidden="true" /> Abrir
           </DropdownMenuItem>
           <DropdownMenuItem disabled={disableRename} onSelect={() => onSelect?.('renombrar')}>
-            <Pencil aria-hidden="true" /> Renombrar
+            <PencilSimpleIcon aria-hidden="true" /> Renombrar
           </DropdownMenuItem>
           <DropdownMenuItem danger onSelect={() => onSelect?.('borrar')}>
-            <Trash2 aria-hidden="true" /> Borrar
+            <TrashIcon aria-hidden="true" /> Borrar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

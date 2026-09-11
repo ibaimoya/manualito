@@ -1,4 +1,4 @@
-import { CircleAlert, Check } from 'lucide-react';
+import { WarningCircleIcon, CheckIcon } from '@phosphor-icons/react';
 import { AnimatePresence } from 'motion/react';
 import { cn } from '@/shared/lib/cn';
 import { FeedbackReveal } from './FeedbackReveal';
@@ -9,7 +9,7 @@ export function FieldFeedback({
   success,
 }: Readonly<{ id: string; error?: string; success?: string }>) {
   const message = error || success;
-  const Icon = error ? CircleAlert : Check;
+  const Icon = error ? WarningCircleIcon : CheckIcon;
 
   return (
     <div id={id} aria-live="polite" aria-atomic="true">

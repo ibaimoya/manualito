@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, Moon, Sun, SunMoon } from 'lucide-react';
+import { CaretRightIcon, MoonIcon, SunIcon, CircleHalfIcon } from '@phosphor-icons/react';
 import { LogOutIcon } from '@/shared/components/action-icons';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -43,13 +43,35 @@ function SettingsScreen() {
                 {
                   value: 'light',
                   label: t('appearance.themeModes.light'),
-                  icon: <Sun size={14} />,
+                  icon: (
+                    <SunIcon
+                      aria-hidden="true"
+                      size={16}
+                      weight={theme.mode === 'light' ? 'duotone' : undefined}
+                    />
+                  ),
                 },
-                { value: 'dark', label: t('appearance.themeModes.dark'), icon: <Moon size={14} /> },
+                {
+                  value: 'dark',
+                  label: t('appearance.themeModes.dark'),
+                  icon: (
+                    <MoonIcon
+                      aria-hidden="true"
+                      size={16}
+                      weight={theme.mode === 'dark' ? 'duotone' : undefined}
+                    />
+                  ),
+                },
                 {
                   value: 'auto',
                   label: t('appearance.themeModes.auto'),
-                  icon: <SunMoon size={14} />,
+                  icon: (
+                    <CircleHalfIcon
+                      aria-hidden="true"
+                      size={16}
+                      weight={theme.mode === 'auto' ? 'duotone' : undefined}
+                    />
+                  ),
                 },
               ]}
             />
@@ -109,7 +131,12 @@ function AccountSection() {
           <p className="truncate font-display text-base font-bold text-fg">{displayName}</p>
           <p className="truncate text-sm text-fg-3">{t('account.description')}</p>
         </div>
-        <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+        <CaretRightIcon
+          data-icon-motion="forward"
+          size={18}
+          className="shrink-0 text-fg-3"
+          aria-hidden="true"
+        />
       </Link>
 
       <Row label={t('account.logout')} hint={t('account.logoutHint')}>
@@ -121,7 +148,7 @@ function AccountSection() {
           loading={logout.isPending}
           onClick={() => logout.mutate()}
         >
-          <LogOutIcon size={14} strokeWidth={2} />
+          <LogOutIcon size={16} />
           {t('account.logoutAction')}
         </Button>
       </Row>

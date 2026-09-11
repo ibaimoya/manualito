@@ -1,27 +1,26 @@
 import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Copy,
-  Image as ImageIcon,
-  Layers,
-  List,
-  LoaderCircle,
-  Minus,
-  MoreHorizontal,
-  PanelRightClose,
-  PanelRightOpen,
-  Pencil,
-  Plus,
-  RotateCw,
-  Search,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
+  WarningIcon,
+  CheckIcon,
+  CaretDownIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  CaretUpIcon,
+  CopyIcon,
+  ImageIcon,
+  StackIcon,
+  ListIcon,
+  CircleNotchIcon,
+  MinusIcon,
+  DotsThreeIcon,
+  SidebarSimpleIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+  UploadSimpleIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ManualDetailPage, OcrLine } from '@/shared/api/client';
 import { confidenceTone, pageStatus, pageStatusLegend } from '@/features/manual/pageStatus';
@@ -35,7 +34,6 @@ import '@/features/manual/lab/lab-motion.css';
    búsqueda con anterior/siguiente y estado de cero resultados, destructivas protegidas. */
 
 const ICON = { sm: 14, md: 16 } as const;
-const STROKE = 1.75;
 
 function pagePreview(lines: readonly OcrLine[]): string {
   const text = lines
@@ -117,10 +115,7 @@ function RailLegend() {
           title={item.label}
           className="inline-flex items-center gap-1.5 text-[12px] text-fg-3"
         >
-          <span
-            className={cn('size-1.5 rounded-full', statusDotClass(item))}
-            aria-hidden="true"
-          />
+          <span className={cn('size-1.5 rounded-full', statusDotClass(item))} aria-hidden="true" />
           {item.short}
         </span>
       ))}
@@ -240,8 +235,7 @@ function ReadingLines({
       {lines.map((line, index) => {
         const tone = line.confidence == null ? null : confidenceTone(line.confidence);
         const pct = line.confidence == null ? null : Math.round(line.confidence * 100);
-        const problem =
-          showConfidence && (tone?.tone === 'warning' || tone?.tone === 'error');
+        const problem = showConfidence && (tone?.tone === 'warning' || tone?.tone === 'error');
         return (
           <div
             key={index}
@@ -315,8 +309,12 @@ function ZoomControls({
 }: Readonly<{ zoom: number; onStep: (delta: number) => void; onReset: () => void }>) {
   return (
     <span className="flex items-center gap-0.5">
-      <MiniNavButton label="Alejar la imagen" disabled={zoom <= ZOOM_MIN} onClick={() => onStep(-0.25)}>
-        <Minus size={ICON.sm} strokeWidth={STROKE} />
+      <MiniNavButton
+        label="Alejar la imagen"
+        disabled={zoom <= ZOOM_MIN}
+        onClick={() => onStep(-0.25)}
+      >
+        <MinusIcon aria-hidden="true" size={ICON.sm} />
       </MiniNavButton>
       <button
         type="button"
@@ -327,8 +325,12 @@ function ZoomControls({
       >
         {Math.round(zoom * 100)}%
       </button>
-      <MiniNavButton label="Acercar la imagen" disabled={zoom >= ZOOM_MAX} onClick={() => onStep(0.25)}>
-        <Plus size={ICON.sm} strokeWidth={STROKE} />
+      <MiniNavButton
+        label="Acercar la imagen"
+        disabled={zoom >= ZOOM_MAX}
+        onClick={() => onStep(0.25)}
+      >
+        <PlusIcon aria-hidden="true" size={ICON.sm} />
       </MiniNavButton>
     </span>
   );
@@ -370,12 +372,7 @@ function PaperPreview({
 function MissingScan() {
   return (
     <div className="flex items-start gap-3 pt-2">
-      <AlertTriangle
-        size={16}
-        strokeWidth={STROKE}
-        className="mt-0.5 shrink-0 text-fg-3"
-        aria-hidden="true"
-      />
+      <WarningIcon size={16} className="mt-0.5 shrink-0 text-fg-3" aria-hidden="true" />
       <p className="text-[13px] leading-relaxed text-fg-2">
         Esta página no tiene escaneo guardado.
       </p>
@@ -402,7 +399,7 @@ function OriginalPanel({
           onClick={onToggle}
           className="grid size-8 place-items-center rounded-lg text-fg-2 hover:bg-surface-2 hover:text-fg"
         >
-          <PanelRightOpen size={ICON.md} strokeWidth={STROKE} />
+          <SidebarSimpleIcon aria-hidden="true" size={ICON.md} />
         </button>
         <p
           className="mt-3 text-[11px] font-semibold tracking-wide text-fg-3"
@@ -436,7 +433,7 @@ function OriginalPanel({
             !page.image_available && 'ml-auto',
           )}
         >
-          <PanelRightClose size={ICON.sm} strokeWidth={STROKE} />
+          <SidebarSimpleIcon aria-hidden="true" size={ICON.sm} />
         </button>
       </div>
       <div
@@ -598,7 +595,7 @@ export function VariantA({
             pressed={actionsOpen}
             onClick={() => setActionsOpen((value) => !value)}
           >
-            <MoreHorizontal size={ICON.md} strokeWidth={STROKE} aria-hidden="true" />
+            <DotsThreeIcon size={ICON.md} aria-hidden="true" />
           </ToolbarButton>
           {actionsOpen ? (
             <>
@@ -616,7 +613,7 @@ export function VariantA({
                   onClick={() => setActionsOpen(false)}
                   className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-fg hover:bg-surface disabled:opacity-45"
                 >
-                  <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                  <ArrowClockwiseIcon size={ICON.sm} aria-hidden="true" />
                   Releer todo el manual
                 </button>
                 <div className="mx-3 my-1 border-t border-border" />
@@ -628,7 +625,7 @@ export function VariantA({
                   }}
                   className="flex h-9 w-full items-center gap-2.5 px-3 text-[13px] font-medium text-error hover:bg-error-bg"
                 >
-                  <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                  <TrashIcon size={ICON.sm} aria-hidden="true" />
                   Eliminar manual…
                 </button>
               </div>
@@ -639,9 +636,8 @@ export function VariantA({
 
       {busy ? (
         <div className="mn-banner-in flex items-center gap-3 border-b border-border bg-surface px-5 py-2">
-          <LoaderCircle
+          <CircleNotchIcon
             size={ICON.sm}
-            strokeWidth={STROKE}
             className="animate-spin text-primary"
             aria-hidden="true"
           />
@@ -683,7 +679,7 @@ export function VariantA({
             onClick={() => setPagesSheet(true)}
             className="flex h-11 min-w-0 items-center gap-2 rounded-lg px-2 text-left disabled:opacity-45"
           >
-            <List size={ICON.md} strokeWidth={STROKE} className="shrink-0 text-fg-2" aria-hidden="true" />
+            <ListIcon size={ICON.md} className="shrink-0 text-fg-2" aria-hidden="true" />
             <span className="truncate text-[13px] font-semibold text-fg">
               Página {page.page_number} de {pages.length}
             </span>
@@ -697,7 +693,7 @@ export function VariantA({
             onClick={() => setOriginalSheet(true)}
             className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-fg-2"
           >
-            <ImageIcon size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+            <ImageIcon size={ICON.sm} aria-hidden="true" />
             Ver original
           </button>
         </div>
@@ -716,9 +712,8 @@ export function VariantA({
                     : 'border-border-strong focus-within:border-primary/60',
                 )}
               >
-                <Search
+                <MagnifyingGlassIcon
                   size={ICON.sm}
-                  strokeWidth={STROKE}
                   className="shrink-0 text-fg-3"
                   aria-hidden="true"
                 />
@@ -745,21 +740,21 @@ export function VariantA({
                       disabled={search.totalHits === 0}
                       onClick={() => jumpToMatch(-1)}
                     >
-                      <ChevronUp size={ICON.sm} strokeWidth={STROKE} />
+                      <CaretUpIcon aria-hidden="true" size={ICON.sm} />
                     </MiniNavButton>
                     <MiniNavButton
                       label="Coincidencia siguiente"
                       disabled={search.totalHits === 0}
                       onClick={() => jumpToMatch(1)}
                     >
-                      <ChevronDown size={ICON.sm} strokeWidth={STROKE} />
+                      <CaretDownIcon aria-hidden="true" size={ICON.sm} />
                     </MiniNavButton>
                     <MiniNavButton
                       label="Borrar búsqueda"
                       disabled={false}
                       onClick={() => search.search('')}
                     >
-                      <X size={ICON.sm} strokeWidth={STROKE} />
+                      <XIcon aria-hidden="true" size={ICON.sm} />
                     </MiniNavButton>
                   </span>
                 ) : null}
@@ -772,7 +767,7 @@ export function VariantA({
                     disabled={!hasConfidence || editing}
                     onClick={toggleConfidence}
                   >
-                    <Layers size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                    <StackIcon size={ICON.sm} aria-hidden="true" />
                     Confianza
                   </ToolbarButton>
                   {showConfidence && hasConfidence && !editing ? (
@@ -781,7 +776,10 @@ export function VariantA({
                         <span className="text-[12px] text-fg-3">Sin dudas</span>
                       ) : (
                         <>
-                          <span className="mono text-[12px] tabular-nums text-fg-2" aria-live="polite">
+                          <span
+                            className="mono text-[12px] tabular-nums text-fg-2"
+                            aria-live="polite"
+                          >
                             {activeDuda !== null && dudas.includes(activeDuda)
                               ? `Duda ${dudas.indexOf(activeDuda) + 1} de ${dudas.length}`
                               : `${dudas.length} dudas`}
@@ -791,14 +789,14 @@ export function VariantA({
                             disabled={false}
                             onClick={() => jumpToDuda(-1)}
                           >
-                            <ChevronUp size={ICON.sm} strokeWidth={STROKE} />
+                            <CaretUpIcon aria-hidden="true" size={ICON.sm} />
                           </MiniNavButton>
                           <MiniNavButton
                             label="Duda siguiente"
                             disabled={false}
                             onClick={() => jumpToDuda(1)}
                           >
-                            <ChevronDown size={ICON.sm} strokeWidth={STROKE} />
+                            <CaretDownIcon aria-hidden="true" size={ICON.sm} />
                           </MiniNavButton>
                         </>
                       )}
@@ -811,7 +809,7 @@ export function VariantA({
                   disabled={busy || st.key === 'failed' || st.key === 'processing'}
                   onClick={() => (editing ? requestCancelEdit() : startEditing())}
                 >
-                  <Pencil size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                  <PencilSimpleIcon size={ICON.sm} aria-hidden="true" />
                   {editing ? 'Salir' : 'Editar'}
                 </ToolbarButton>
               </span>
@@ -831,7 +829,7 @@ export function VariantA({
                   onClick={() => jumpToMatch(-1)}
                   className="ml-auto grid size-11 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
                 >
-                  <ChevronUp size={ICON.md} strokeWidth={STROKE} />
+                  <CaretUpIcon aria-hidden="true" size={ICON.md} />
                 </button>
                 <button
                   type="button"
@@ -840,7 +838,7 @@ export function VariantA({
                   onClick={() => jumpToMatch(1)}
                   className="grid size-11 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
                 >
-                  <ChevronDown size={ICON.md} strokeWidth={STROKE} />
+                  <CaretDownIcon aria-hidden="true" size={ICON.md} />
                 </button>
                 <button
                   type="button"
@@ -848,7 +846,7 @@ export function VariantA({
                   onClick={() => search.search('')}
                   className="grid size-11 place-items-center rounded-lg text-fg-2"
                 >
-                  <X size={ICON.md} strokeWidth={STROKE} />
+                  <XIcon aria-hidden="true" size={ICON.md} />
                 </button>
               </div>
             ) : null}
@@ -862,7 +860,7 @@ export function VariantA({
                 onClick={() => goToPage(page.page_number - 1)}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-2 hover:border-border-strong hover:text-fg disabled:opacity-40"
               >
-                <ChevronLeft size={ICON.md} strokeWidth={STROKE} />
+                <CaretLeftIcon aria-hidden="true" size={ICON.md} />
               </button>
               <span className="mono text-[12px] font-semibold tabular-nums text-fg">
                 {page.page_number} <span className="font-normal text-fg-3">/ {pages.length}</span>
@@ -875,7 +873,7 @@ export function VariantA({
                 onClick={() => goToPage(page.page_number + 1)}
                 className="grid size-7 place-items-center rounded-md border border-border text-fg-2 hover:border-border-strong hover:text-fg disabled:opacity-40"
               >
-                <ChevronRight size={ICON.md} strokeWidth={STROKE} />
+                <CaretRightIcon aria-hidden="true" size={ICON.md} />
               </button>
               <span
                 className={cn(
@@ -888,7 +886,6 @@ export function VariantA({
               >
                 <st.Icon
                   size={ICON.sm}
-                  strokeWidth={STROKE}
                   className={st.key === 'processing' ? 'animate-spin' : undefined}
                   aria-hidden="true"
                 />
@@ -905,7 +902,7 @@ export function VariantA({
             <div className="pt-5">
               {st.key === 'failed' ? (
                 <CompactState
-                  icon={<AlertTriangle size={18} strokeWidth={STROKE} aria-hidden="true" />}
+                  icon={<WarningIcon size={18} aria-hidden="true" />}
                   title="No pudimos leer esta página"
                   body="La foto salió demasiado oscura o movida. Sube una versión más nítida o vuelve a intentar la lectura."
                   actions={
@@ -914,14 +911,14 @@ export function VariantA({
                         type="button"
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98]"
                       >
-                        <Upload size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                        <UploadSimpleIcon size={ICON.sm} aria-hidden="true" />
                         Sustituir la imagen
                       </button>
                       <button
                         type="button"
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-strong px-2.5 text-[13px] font-medium text-fg hover:bg-surface"
                       >
-                        <RotateCw size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                        <ArrowClockwiseIcon size={ICON.sm} aria-hidden="true" />
                         Reintentar la lectura
                       </button>
                     </>
@@ -930,14 +927,7 @@ export function VariantA({
               ) : null}
               {st.key === 'processing' ? (
                 <CompactState
-                  icon={
-                    <LoaderCircle
-                      size={18}
-                      strokeWidth={STROKE}
-                      className="animate-spin"
-                      aria-hidden="true"
-                    />
-                  }
+                  icon={<CircleNotchIcon size={18} className="animate-spin" aria-hidden="true" />}
                   title="Leyendo esta página"
                   body="El texto aparecerá aquí en cuanto termine el reconocimiento."
                 />
@@ -982,7 +972,7 @@ export function VariantA({
                           onClick={stopEditing}
                           className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98] disabled:opacity-45"
                         >
-                          <Check size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                          <CheckIcon size={ICON.sm} aria-hidden="true" />
                           Guardar cambios
                         </button>
                         <button
@@ -1004,13 +994,13 @@ export function VariantA({
                 <>
                   {st.key === 'edited' ? (
                     <p className="mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent">
-                      <Check size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                      <CheckIcon size={ICON.sm} aria-hidden="true" />
                       Editada a mano
                     </p>
                   ) : null}
                   {st.key === 'duplicate' ? (
                     <p className="mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-warning">
-                      <Copy size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                      <CopyIcon size={ICON.sm} aria-hidden="true" />
                       Duplicada de otra página ya subida
                     </p>
                   ) : null}
@@ -1041,7 +1031,10 @@ export function VariantA({
             className="mn-scrim-in absolute inset-0 cursor-default bg-black/35"
           />
           <div className="mn-sheet-in absolute inset-x-0 bottom-0 max-h-[72dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-bg p-3 pb-5">
-            <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-border-strong" aria-hidden="true" />
+            <div
+              className="mx-auto mb-2 h-1 w-9 rounded-full bg-border-strong"
+              aria-hidden="true"
+            />
             <RailLegend />
             <div className="flex flex-col gap-1">
               {pages.map((item) => (
@@ -1072,7 +1065,7 @@ export function VariantA({
               onClick={() => setOriginalSheet(false)}
               className="ml-auto grid size-11 place-items-center rounded-lg text-fg-2"
             >
-              <X size={ICON.md} strokeWidth={STROKE} />
+              <XIcon aria-hidden="true" size={ICON.md} />
             </button>
           </div>
           <div className="flex-1 overflow-auto p-4">
@@ -1121,7 +1114,7 @@ export function VariantA({
                 onClick={() => setDeleteOpen(false)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv transition-[opacity,scale] duration-150 ease-[var(--ease-mn)] hover:opacity-90 active:scale-[0.98]"
               >
-                <Trash2 size={ICON.sm} strokeWidth={STROKE} aria-hidden="true" />
+                <TrashIcon size={ICON.sm} aria-hidden="true" />
                 Eliminar manual
               </button>
             </div>

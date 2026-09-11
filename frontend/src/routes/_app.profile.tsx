@@ -3,14 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useInView } from 'motion/react';
 import NumberFlow, { continuous } from '@number-flow/react';
 import {
-  AlertTriangle,
-  BadgeCheck,
-  Dices,
-  Mail,
-  MessagesSquare,
-  Pencil,
-  ScrollText,
-} from 'lucide-react';
+  WarningIcon,
+  SealCheckIcon,
+  DiceFiveIcon,
+  EnvelopeSimpleIcon,
+  ChatsIcon,
+  PencilSimpleIcon,
+  ScrollIcon,
+} from '@phosphor-icons/react';
 import { AccountIcon, LogOutIcon } from '@/shared/components/action-icons';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -88,7 +88,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
                 </h1>
                 {user.email_verified_at === null ? null : (
                   <HelpIndicator
-                    icon={BadgeCheck}
+                    icon={SealCheckIcon}
                     tone="success"
                     label={t('verification.verified')}
                   />
@@ -97,12 +97,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               <p className="mono mt-0.5 truncate text-sm text-fg-3">@{user.username}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
                 <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-fg-2">
-                  <Mail
-                    size={15}
-                    strokeWidth={2}
-                    aria-hidden="true"
-                    className="shrink-0 text-fg-3"
-                  />
+                  <EnvelopeSimpleIcon size={18} aria-hidden="true" className="shrink-0 text-fg-3" />
                   <span className="truncate">{elideEmail(user.email)}</span>
                 </span>
                 <VerificationBadge user={user} />
@@ -119,7 +114,12 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               className="h-10 justify-start gap-2 rounded-lg px-2 text-fg"
               onClick={() => setEditOpen(true)}
             >
-              <Pencil size={16} strokeWidth={2} className="shrink-0" />
+              <PencilSimpleIcon
+                data-icon-motion="tilt"
+                aria-hidden="true"
+                size={18}
+                className="shrink-0"
+              />
               {t('actions.edit')}
             </Button>
             <Button
@@ -129,7 +129,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               className="h-10 justify-start gap-2 rounded-lg px-2 text-fg"
             >
               <Link to="/security">
-                <AccountIcon size={16} strokeWidth={2} className="shrink-0" />
+                <AccountIcon size={16} className="shrink-0" />
                 {t('actions.security')}
               </Link>
             </Button>
@@ -140,7 +140,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               loading={logout.isPending}
               onClick={() => logout.mutate()}
             >
-              <LogOutIcon size={16} strokeWidth={2} className="shrink-0" />
+              <LogOutIcon size={16} className="shrink-0" />
               {t('actions.logout')}
             </Button>
           </div>
@@ -165,7 +165,7 @@ function VerificationBadge({ user }: Readonly<{ user: AuthUser }>) {
   return (
     <span className="inline-flex items-center gap-2">
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning">
-        <AlertTriangle size={16} strokeWidth={1.8} aria-hidden="true" />
+        <WarningIcon size={18} aria-hidden="true" />
         {t('verification.unverified')}
       </span>
       {cooldown > 0 ? (
@@ -200,21 +200,21 @@ function StatCards() {
       id: 'games',
       label: t('activity.games'),
       value: stats.data?.games_count,
-      icon: <Dices size={17} strokeWidth={2} />,
+      icon: <DiceFiveIcon aria-hidden="true" size={17} />,
       chipClass: 'bg-primary-100 text-primary-700',
     },
     {
       id: 'conversations',
       label: t('activity.conversations'),
       value: stats.data?.conversations_count,
-      icon: <MessagesSquare size={17} strokeWidth={2} />,
+      icon: <ChatsIcon aria-hidden="true" size={17} />,
       chipClass: 'bg-accent-100 text-accent',
     },
     {
       id: 'manuals',
       label: t('activity.manuals'),
       value: stats.data?.manuals_count,
-      icon: <ScrollText size={17} strokeWidth={2} />,
+      icon: <ScrollIcon aria-hidden="true" size={17} />,
       chipClass: 'bg-primary-100 text-primary-700',
     },
   ];

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, MessagesSquare, Sparkles } from 'lucide-react';
+import { CaretRightIcon, ChatsIcon, SparkleIcon } from '@phosphor-icons/react';
 import { Fragment } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -24,28 +24,28 @@ export const Route = createFileRoute('/_app/about')({
 const STEPS = [
   {
     n: '01',
-    icon: <CameraIcon size={22} strokeWidth={1.75} />,
+    icon: <CameraIcon size={22} />,
     tone: 'primary',
     titleKey: 'steps.capture.title',
     descriptionKey: 'steps.capture.description',
   },
   {
     n: '02',
-    icon: <ExtractedTextIcon size={22} strokeWidth={1.75} />,
+    icon: <ExtractedTextIcon size={22} />,
     tone: 'accent',
     titleKey: 'steps.read.title',
     descriptionKey: 'steps.read.description',
   },
   {
     n: '03',
-    icon: <Sparkles className="illustration-spark" size={22} strokeWidth={1.75} />,
+    icon: <SparkleIcon aria-hidden="true" className="illustration-spark" size={22} />,
     tone: 'ochre',
     titleKey: 'steps.explain.title',
     descriptionKey: 'steps.explain.description',
   },
   {
     n: '04',
-    icon: <MessagesSquare className="illustration-chat" size={22} strokeWidth={1.75} />,
+    icon: <ChatsIcon aria-hidden="true" className="illustration-chat" size={22} />,
     tone: 'green',
     titleKey: 'steps.ask.title',
     descriptionKey: 'steps.ask.description',
@@ -117,7 +117,7 @@ function AboutScreen() {
                   aria-hidden="true"
                   className="hidden place-items-center text-fg-3 @4xl/app:grid"
                 >
-                  <ChevronRight size={18} strokeWidth={2} />
+                  <CaretRightIcon size={18} />
                 </span>
               ) : null}
             </Fragment>
@@ -133,7 +133,7 @@ function AboutScreen() {
               <AccordionTrigger className="faq-trigger">
                 <span className="flex items-center gap-3">
                   <IllustrationBadge tone={tone}>
-                    <Icon size={18} strokeWidth={2} />
+                    <Icon size={20} />
                   </IllustrationBadge>
                   <span>{t(questionKey)}</span>
                 </span>

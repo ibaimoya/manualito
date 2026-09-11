@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Plus, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowRightIcon, PlusIcon, GearSixIcon } from '@phosphor-icons/react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Meeple, Monogram } from '@/shared/components/Brand';
 import { Avatar } from '@/shared/components/Avatar';
@@ -44,7 +44,7 @@ function HomeScreen() {
           {user ? (
             <Avatar name={user.username || user.email} size={36} />
           ) : (
-            <SettingsIcon size={20} strokeWidth={1.75} />
+            <GearSixIcon data-icon-motion="rotate" aria-hidden="true" size={20} />
           )}
         </Link>
       </header>
@@ -109,9 +109,14 @@ function HeroCta() {
           className="bg-bg text-primary-700 @md:w-auto @md:shrink-0 @md:px-6"
         >
           <Link to="/capture/source">
-            <Plus size={18} strokeWidth={2} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} />
             {t('hero.newManual')}
-            <ArrowRight size={16} strokeWidth={2} className="ml-auto @md:ml-2" />
+            <ArrowRightIcon
+              data-icon-motion="forward"
+              aria-hidden="true"
+              size={16}
+              className="ml-auto @md:ml-2"
+            />
           </Link>
         </Button>
       </div>
@@ -136,9 +141,9 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
           <span className="underline-offset-4 group-hover/all:underline">
             {t('recent.viewAll')}
           </span>
-          <ArrowRight
+          <ArrowRightIcon
+            data-icon-motion="forward"
             size={15}
-            strokeWidth={2.25}
             aria-hidden="true"
             className="transition-[translate] duration-150 ease-[var(--ease-mn)] group-hover/all:translate-x-0.5"
           />

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { AlertTriangle, Info } from 'lucide-react';
+import { WarningIcon, InfoIcon } from '@phosphor-icons/react';
 import { api } from '@/shared/api/client';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +35,7 @@ function PaperThumb({ failed, imageUrl }: Readonly<{ failed: boolean; imageUrl: 
       )}
     >
       {failed ? (
-        <AlertTriangle size={16} strokeWidth={2} className="mx-auto text-error/85" />
+        <WarningIcon size={18} className="mx-auto text-error/85" />
       ) : (
         THUMB_LINES.map((width) => (
           <span
@@ -144,7 +144,6 @@ function Legend() {
           <span className="grid size-[18px] shrink-0 place-items-center" aria-hidden="true">
             <st.Icon
               size={st.key === 'failed' ? 17 : 14}
-              strokeWidth={st.key === 'failed' ? 1.8 : 2}
               className={cn(
                 'block',
                 (st.key === 'failed' || st.key === 'processing') && '-translate-y-px',
@@ -219,7 +218,7 @@ export function PageThumbRail({
               type="button"
               className="inline-flex min-h-8 items-center gap-2 text-xs text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11"
             >
-              <Info size={14} aria-hidden="true" />
+              <InfoIcon size={14} aria-hidden="true" />
               {t('page.legend')}
             </button>
           </Tooltip>

@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useRef } from 'react';
-import { X } from 'lucide-react';
+import { XIcon } from '@phosphor-icons/react';
 import { Dialog } from '@/components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { PrivacySections } from '@/features/legal/PrivacySections';
@@ -41,7 +41,7 @@ export function PrivacyPolicyModal({
           aria-label={common('actions.close')}
           onClick={() => onOpenChange(false)}
         >
-          <X size={20} strokeWidth={1.8} aria-hidden="true" />
+          <XIcon size={20} aria-hidden="true" />
         </button>
       </header>
       <div className={styles.body}>

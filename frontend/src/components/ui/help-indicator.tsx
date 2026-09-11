@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { type LucideIcon } from 'lucide-react';
+import { CheckIcon, CopyIcon, LockSimpleIcon, WarningIcon, type Icon } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -7,6 +7,13 @@ import { cn } from '@/shared/lib/cn';
 import './help-indicator.css';
 
 export type HelpTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+
+const OPTICAL_ICONS = new Map<Icon, string>([
+  [WarningIcon, 'warning'],
+  [LockSimpleIcon, 'lock-simple'],
+  [CheckIcon, 'check'],
+  [CopyIcon, 'copy'],
+]);
 
 /** Una ayuda propia usa botón. Dentro de otro control, el padre ofrece la ayuda. */
 export function HelpIndicator({
@@ -16,20 +23,29 @@ export function HelpIndicator({
   children,
   className,
   iconClassName,
+  iconSize = 20,
   passive = false,
 }: Readonly<{
-  icon: LucideIcon;
+  icon: Icon;
   label: string;
   tone?: HelpTone;
   children?: ReactNode;
   className?: string;
   iconClassName?: string;
+  iconSize?: number;
   passive?: boolean;
 }>) {
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const accessibleName =
     typeof children === 'string' || typeof children === 'number' ? `${children}. ${label}` : label;
-  const glyph = <Icon size={18} strokeWidth={1.8} className={iconClassName} aria-hidden="true" />;
+  const glyph = (
+    <Icon
+      size={iconSize}
+      className={iconClassName}
+      data-icon={OPTICAL_ICONS.get(Icon)}
+      aria-hidden="true"
+    />
+  );
   const content = (
     <>
       <span className="help-indicator-glyph" aria-hidden="true">

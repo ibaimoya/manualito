@@ -3,12 +3,18 @@ import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
-import { ChevronRight, CircleAlert, Loader2, RotateCcw, Shuffle } from 'lucide-react';
+import {
+  CaretRightIcon,
+  WarningCircleIcon,
+  CircleNotchIcon,
+  ArrowCounterClockwiseIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { type GameSearchItem } from '@/shared/api/client';
 import { GameCover } from './GameCover';
+import { ShuffleGlyph } from './ShuffleGlyph';
 import { discoverGamesQueryOptions } from './use-discover-games';
 
 export function DiscoverGames({
@@ -39,12 +45,12 @@ export function DiscoverGames({
             variant="ghost"
             size="icon"
             aria-label={t('discovery.shuffle')}
-            className="group/shuffle hit-area rounded-full transition-[color,scale] hover:text-primary-700 focus-visible:ring-2 focus-visible:ring-primary-600 motion-safe:enabled:active:scale-95 disabled:opacity-100"
+            className="shuffle-button hit-area rounded-full transition-[color,scale] hover:text-primary-700 focus-visible:ring-2 focus-visible:ring-primary-600 motion-safe:enabled:active:scale-95 disabled:opacity-100"
             disabled={isFetching}
             aria-busy={isFetching || undefined}
             onClick={() => void refetch()}
           >
-            <ShuffleIcon pending={isFetching} />
+            <ShuffleFeedbackGlyph pending={isFetching} />
           </Button>
         )}
       </div>
@@ -81,7 +87,7 @@ export function DiscoverGames({
         {isError && (
           <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-4 rounded-2xl border border-border bg-card p-4 @xl/app:grid-cols-[auto_1fr_auto] @xl/app:p-5">
             <span className="grid size-10 place-items-center rounded-xl bg-primary-100 text-primary-700">
-              <CircleAlert size={20} aria-hidden="true" />
+              <WarningCircleIcon size={20} aria-hidden="true" />
             </span>
             <p role="alert" className="min-w-0 text-sm font-medium leading-relaxed text-fg-2">
               {t('discovery.error')}
@@ -92,7 +98,11 @@ export function DiscoverGames({
               loading={isFetching}
               onClick={() => void refetch()}
             >
-              <RotateCcw size={16} aria-hidden="true" />
+              <ArrowCounterClockwiseIcon
+                data-icon-motion="rotate-back"
+                size={18}
+                aria-hidden="true"
+              />
               {t('typeahead.error.retry')}
             </Button>
           </div>
@@ -103,7 +113,7 @@ export function DiscoverGames({
 }
 
 /** Conserva ambos iconos y espera 200 ms en cada petición antes de mostrar la carga. */
-function ShuffleIcon({ pending }: Readonly<{ pending: boolean }>) {
+function ShuffleFeedbackGlyph({ pending }: Readonly<{ pending: boolean }>) {
   const [spinner, setSpinner] = useState({ pending, visible: false });
 
   if (pending !== spinner.pending) {
@@ -121,16 +131,12 @@ function ShuffleIcon({ pending }: Readonly<{ pending: boolean }>) {
   return (
     <span className="state-icon" data-active={spinnerVisible} aria-hidden="true">
       <span>
-        <Shuffle
-          size={20}
-          strokeWidth={1.75}
-          className="transition-transform duration-200 ease-[var(--m-easing)] motion-safe:pointer-fine:group-enabled/shuffle:group-hover/shuffle:-rotate-[8deg]"
-        />
+        <ShuffleGlyph />
       </span>
       <span>
-        <Loader2
+        <CircleNotchIcon
           size={20}
-          strokeWidth={1.75}
+          data-icon="spinner"
           className="motion-safe:animate-spin"
           style={{ animationPlayState: spinnerVisible ? 'running' : 'paused' }}
         />
@@ -157,7 +163,12 @@ function DiscoverGameCard({ game }: Readonly<{ game: GameSearchItem }>) {
           {t('typeahead.sharedManuals', { count: game.manuals_count })}
         </p>
       </div>
-      <ChevronRight size={16} className="shrink-0 text-fg-3" aria-hidden="true" />
+      <CaretRightIcon
+        data-icon-motion="forward"
+        size={16}
+        className="shrink-0 text-fg-3"
+        aria-hidden="true"
+      />
     </Link>
   );
 }

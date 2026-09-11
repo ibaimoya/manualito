@@ -1,4 +1,4 @@
-import { Copy } from 'lucide-react';
+import { CopyIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { HelpIndicator } from '@/components/ui/help-indicator';
 
@@ -15,7 +15,7 @@ export function DuplicatePagesBadge({
   const detail = t('duplicatePages.detail', { count });
   return (
     <HelpIndicator
-      icon={Copy}
+      icon={CopyIcon}
       tone="warning"
       label={openHint ? `${detail} ${t('duplicatePages.hintSuffix')}` : detail}
       passive={passive}

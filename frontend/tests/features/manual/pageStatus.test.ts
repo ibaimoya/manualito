@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Hourglass, LoaderCircle } from 'lucide-react';
+import { HourglassIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { pageStatus, pageStatusLegend } from '@/features/manual/pageStatus';
 import type { ManualDetailPage } from '@/shared/api/client';
 
@@ -22,10 +22,12 @@ describe('información del estado de página', () => {
     const running = pageStatus({ ...page, ocr_status: 'processing', dedup_status: 'reused' });
 
     expect(queued.key).toBe('processing');
-    expect(queued.Icon).toBe(Hourglass);
+    expect(queued.Icon).toBe(HourglassIcon);
     expect(running.key).toBe('processing');
-    expect(running.Icon).toBe(LoaderCircle);
-    expect(pageStatusLegend().find((status) => status.key === 'processing')?.Icon).toBe(Hourglass);
+    expect(running.Icon).toBe(CircleNotchIcon);
+    expect(pageStatusLegend().find((status) => status.key === 'processing')?.Icon).toBe(
+      HourglassIcon,
+    );
   });
 
   it('describe el texto de un PDF sin atribuirlo a un OCR ni garantizar su calidad', () => {

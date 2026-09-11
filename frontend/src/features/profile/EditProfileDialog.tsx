@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ParseKeys } from 'i18next';
-import { Info } from 'lucide-react';
+import { InfoIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -203,12 +203,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
         />
         {emailChanged ? (
           <p className="mt-2 flex items-start gap-2 rounded-xl bg-accent-100 px-3 py-2.5 text-xs leading-relaxed text-fg">
-            <Info
-              size={14}
-              strokeWidth={2}
-              aria-hidden="true"
-              className="mt-0.5 shrink-0 text-accent"
-            />
+            <InfoIcon size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
             {t('edit.emailChangeNotice')}
           </p>
         ) : null}

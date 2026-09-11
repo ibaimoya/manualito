@@ -1,6 +1,14 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, MoreVertical, Pencil, Plus, RefreshCw, Search, Sparkles } from 'lucide-react';
+import {
+  BookOpenIcon,
+  DotsThreeVerticalIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  ArrowsClockwiseIcon,
+  MagnifyingGlassIcon,
+  SparkleIcon,
+} from '@phosphor-icons/react';
 import { motion } from 'motion/react';
 import { TrashIcon } from '@/shared/components/action-icons';
 import { Trans, useTranslation } from 'react-i18next';
@@ -98,9 +106,9 @@ function ConversationsScreen() {
 
         {all.length > 0 ? (
           <div className="relative mb-4">
-            <Search
+            <MagnifyingGlassIcon
+              data-icon-motion="search"
               size={16}
-              strokeWidth={2}
               aria-hidden="true"
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-3"
             />
@@ -129,7 +137,7 @@ function ConversationsScreen() {
                   loading={conversations.isFetching}
                   onClick={() => void conversations.refetch()}
                 >
-                  <RefreshCw size={17} aria-hidden="true" />
+                  <ArrowsClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
                   {shellT('recovery.retry')}
                 </Button>
               </div>
@@ -164,7 +172,7 @@ function ConversationsScreen() {
             className="sticky bottom-6 z-10 mt-6 h-13 self-end rounded-full text-[15px] font-bold shadow-lg motion-safe:active:scale-[0.96]"
           >
             <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
-              <Plus size={18} strokeWidth={2.2} aria-hidden="true" />
+              <PlusIcon data-icon-motion="plus" size={18} aria-hidden="true" />
               {t('actions.newConversation')}
             </Link>
           </Button>
@@ -270,20 +278,20 @@ function ConversationRow({
               aria-label={t('aria.optionsFor', { title })}
               className="icon-feedback relative z-10 grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg data-[state=open]:text-fg"
             >
-              <MoreVertical size={17} strokeWidth={2} />
+              <DotsThreeVerticalIcon aria-hidden="true" size={17} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={openChat}>
-              <BookOpen size={16} strokeWidth={2} aria-hidden="true" />
+              <BookOpenIcon size={16} aria-hidden="true" />
               {t('actions.open')}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
-              <Pencil size={16} strokeWidth={2} aria-hidden="true" />
+              <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
               {t('actions.rename')}
             </DropdownMenuItem>
             <DropdownMenuItem danger onSelect={() => setDeleteOpen(true)}>
-              <TrashIcon size={16} strokeWidth={2} aria-hidden="true" />
+              <TrashIcon size={16} aria-hidden="true" />
               {t('actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -325,7 +333,7 @@ function ConversationRow({
               loading={remove.isPending}
               onClick={() => remove.mutate()}
             >
-              <TrashIcon size={16} strokeWidth={2} />
+              <TrashIcon size={16} />
               {t('actions.deleteConversation')}
             </Button>
           </div>
@@ -432,7 +440,7 @@ function RenameForm({
         onChange={(event) => setTitle(event.target.value)}
       />
       <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-fg-3">
-        <Sparkles size={13} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0" />
+        <SparkleIcon size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
         {t('renameDialog.aiHint')}
       </p>
       <div className="mt-4 flex justify-end gap-2">
@@ -463,7 +471,7 @@ function EmptyState({
       {canAsk ? (
         <Button asChild className="mt-4">
           <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
-            <Plus size={16} strokeWidth={2} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={16} />
             {t('actions.newConversation')}
           </Link>
         </Button>
@@ -478,7 +486,7 @@ function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () =
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
       <span className="grid size-12 place-items-center rounded-2xl bg-surface text-fg-3">
-        <Search size={22} strokeWidth={2} aria-hidden="true" />
+        <MagnifyingGlassIcon data-icon-motion="search" size={22} aria-hidden="true" />
       </span>
       <p className="font-display text-base font-bold text-fg">
         {t('noResults.title', { filter: filter.trim() })}

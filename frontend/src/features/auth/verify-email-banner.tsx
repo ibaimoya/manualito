@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Info, X } from 'lucide-react';
+import { ArrowSquareOutIcon, InfoIcon, XIcon } from '@phosphor-icons/react';
 import { useAuth } from './use-auth';
 import { useResendVerification } from './use-resend-verification';
 
@@ -44,7 +44,7 @@ export function VerifyEmailBanner() {
     >
       {/* En pantallas estrechas la frase ocupa su línea y las acciones bajan. */}
       <div className="flex min-w-0 basis-full items-center gap-3 sm:flex-1 sm:basis-auto">
-        <Info size={18} className="shrink-0 text-accent" aria-hidden="true" />
+        <InfoIcon size={18} className="shrink-0 text-accent" aria-hidden="true" />
         <p className="min-w-0 flex-1 text-fg">{t('banner.message')}</p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -55,7 +55,7 @@ export function VerifyEmailBanner() {
           className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent hover:underline"
         >
           {t('banner.openMail')}
-          <ExternalLink size={13} strokeWidth={2.25} aria-hidden="true" />
+          <ArrowSquareOutIcon size={13} aria-hidden="true" />
         </a>
         <span aria-hidden="true" className="text-fg-3">
           ·
@@ -80,7 +80,7 @@ export function VerifyEmailBanner() {
           aria-label={t('banner.dismiss')}
           className="grid size-11 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
         >
-          <X size={16} aria-hidden="true" />
+          <XIcon size={16} aria-hidden="true" />
         </button>
       </div>
     </div>

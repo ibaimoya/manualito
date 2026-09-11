@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Mail, MailOpen, RefreshCw } from 'lucide-react';
+import {
+  CaretDownIcon,
+  EnvelopeSimpleIcon,
+  EnvelopeSimpleOpenIcon,
+  ArrowsClockwiseIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Wordmark } from '@/shared/components/Brand';
@@ -54,7 +59,7 @@ export function RecoveryPage({
           <div className={styles.actions}>
             {onRetry && (
               <Button className={styles.primary} loading={retrying} onClick={() => void retry()}>
-                <RefreshCw size={17} aria-hidden="true" />
+                <ArrowsClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
                 {t('recovery.retry')}
               </Button>
             )}
@@ -75,7 +80,7 @@ export function RecoveryPage({
             <details className={styles.details}>
               <summary>
                 {t('recovery.details')}
-                <ChevronDown size={16} aria-hidden="true" />
+                <CaretDownIcon data-icon-motion="down" size={16} aria-hidden="true" />
               </summary>
               <pre>{message}</pre>
             </details>
@@ -83,8 +88,8 @@ export function RecoveryPage({
           <footer className={styles.footer}>
             <a href="mailto:support@manualito.dev">
               <span className={styles.supportIcon} aria-hidden="true">
-                <Mail size={17} />
-                <MailOpen size={17} />
+                <EnvelopeSimpleIcon size={20} />
+                <EnvelopeSimpleOpenIcon size={20} />
               </span>
               {t('recovery.support')}
             </a>

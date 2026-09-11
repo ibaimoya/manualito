@@ -32,7 +32,7 @@ describe('RatingStars · interactivo', () => {
     render(<RatingStars value={0} onSelect={() => undefined} />);
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(5);
-    expect(buttons[4]).toHaveAccessibleName('5 estrellas — Es una locura');
+    expect(buttons[4]).toHaveAccessibleName('5 estrellas, Es una locura');
   });
 
   it('marca la puntuación actual con aria-pressed', () => {

@@ -4,7 +4,11 @@ import { useAnimate } from 'motion/react';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import type { RecoveryKind } from './RecoveryContent';
 
+// Las piezas viven dentro de un svg con rejilla 256, así que estos px son
+// unidades del viewBox y escalan con el tamaño de render.
 const REST = 'translateY(0px) scale(1, 1)';
+const ALERT_HOP = 'translateY(-11px) scale(1, 1)';
+const WAVE_LIFT = 'translateY(-5px) scale(1.04, 1.04)';
 const EASE = [0.2, 0.8, 0.2, 1] as const;
 
 export function useRecoveryGesture(kind: RecoveryKind, retrying: boolean) {
@@ -26,7 +30,7 @@ export function useRecoveryGesture(kind: RecoveryKind, retrying: boolean) {
         playback = animate(
           parts,
           {
-            transform: [null, 'translateY(-1px) scale(1, 1)', REST],
+            transform: [null, ALERT_HOP, REST],
           },
           { duration: 0.38, times: [0, 0.3, 1], ease: [EASE, 'easeInOut'] },
         );
@@ -35,7 +39,7 @@ export function useRecoveryGesture(kind: RecoveryKind, retrying: boolean) {
           parts,
           {
             opacity: [null, 0.2, 1],
-            transform: [null, 'translateY(-0.5px) scale(1.04, 1.04)', REST],
+            transform: [null, WAVE_LIFT, REST],
           },
           { duration: 0.42, delay: stagger(0.09), ease: EASE },
         );

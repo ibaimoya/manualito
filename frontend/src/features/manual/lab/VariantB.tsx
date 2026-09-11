@@ -1,4 +1,12 @@
-import { ChevronLeft, ChevronRight, Image, Layers, Pencil, Search, X } from 'lucide-react';
+import {
+  CaretLeftIcon,
+  CaretRightIcon,
+  ImageIcon,
+  StackIcon,
+  PencilSimpleIcon,
+  MagnifyingGlassIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useState, type ReactNode } from 'react';
 import type { ManualDetailPage, OcrLine } from '@/shared/api/client';
 import { confidenceTone, pageStatus } from '@/features/manual/pageStatus';
@@ -8,8 +16,6 @@ import { cn } from '@/shared/lib/cn';
 
 /* V-B "Lectura focal": una sola columna centrada; el chrome se repliega a una barra
    flotante compacta; la imagen original es un peek lateral colapsable. */
-
-const STROKE = 1.75;
 
 const STATUS_DOT: Record<string, string> = {
   success: 'bg-success',
@@ -188,7 +194,7 @@ export function VariantB({
                 searchOpen && 'text-primary-700',
               )}
             >
-              <Search size={16} strokeWidth={STROKE} />
+              <MagnifyingGlassIcon aria-hidden="true" size={16} />
             </button>
             <button
               type="button"
@@ -201,14 +207,14 @@ export function VariantB({
                 showConfidence && 'text-primary-700',
               )}
             >
-              <Layers size={16} strokeWidth={STROKE} />
+              <StackIcon aria-hidden="true" size={16} />
             </button>
             <button
               type="button"
               aria-label="Editar el texto de esta página"
               className="grid size-8 place-items-center rounded-lg text-fg-2 hover:bg-surface hover:text-fg"
             >
-              <Pencil size={16} strokeWidth={STROKE} />
+              <PencilSimpleIcon aria-hidden="true" size={16} />
             </button>
             <button
               type="button"
@@ -220,7 +226,7 @@ export function VariantB({
                 peekOpen && 'text-primary-700',
               )}
             >
-              <Image size={16} strokeWidth={STROKE} />
+              <ImageIcon aria-hidden="true" size={16} />
             </button>
           </span>
         </div>
@@ -247,7 +253,7 @@ export function VariantB({
                     onClick={() => search.search('')}
                     className="grid size-6 place-items-center rounded text-fg-3 hover:text-fg"
                   >
-                    <X size={14} strokeWidth={STROKE} />
+                    <XIcon aria-hidden="true" size={14} />
                   </button>
                 </>
               ) : null}
@@ -268,7 +274,7 @@ export function VariantB({
               st.tone === 'error' && 'text-error',
             )}
           >
-            <st.Icon size={14} strokeWidth={STROKE} aria-hidden="true" />
+            <st.Icon size={14} aria-hidden="true" />
             {st.label}
           </span>
           <span className="mono ml-auto text-[12px] tabular-nums text-fg-3">
@@ -301,7 +307,7 @@ export function VariantB({
               onClick={() => go(page.page_number - 1)}
               className="grid size-8 place-items-center rounded-lg text-fg-2 hover:bg-surface hover:text-fg disabled:opacity-40"
             >
-              <ChevronLeft size={16} strokeWidth={STROKE} />
+              <CaretLeftIcon aria-hidden="true" size={16} />
             </button>
             <span className="mono px-1 text-[12px] font-semibold tabular-nums text-fg">
               {page.page_number} / {pages.length}
@@ -313,7 +319,7 @@ export function VariantB({
               onClick={() => go(page.page_number + 1)}
               className="grid size-8 place-items-center rounded-lg text-fg-2 hover:bg-surface hover:text-fg disabled:opacity-40"
             >
-              <ChevronRight size={16} strokeWidth={STROKE} />
+              <CaretRightIcon aria-hidden="true" size={16} />
             </button>
           </div>
         </div>
@@ -334,7 +340,7 @@ export function VariantB({
               onClick={() => setPeekOpen(false)}
               className="ml-auto grid size-7 place-items-center rounded text-fg-3 hover:text-fg"
             >
-              <X size={14} strokeWidth={STROKE} />
+              <XIcon aria-hidden="true" size={14} />
             </button>
           </div>
           <div

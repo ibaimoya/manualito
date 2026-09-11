@@ -2,23 +2,22 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
-  AlertTriangle,
-  Check,
-  EyeOff,
-  LoaderCircle,
-  Dice5,
-  FileText,
-  Image as ImageIcon,
-  Lock,
-  Plus,
-  RefreshCw,
-  ScrollText,
-  Search,
-  Sparkles,
-  Users,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+  WarningIcon,
+  CheckIcon,
+  EyeSlashIcon,
+  CircleNotchIcon,
+  FileTextIcon,
+  ImageIcon,
+  LockSimpleIcon,
+  PlusIcon,
+  ArrowsClockwiseIcon,
+  ScrollIcon,
+  MagnifyingGlassIcon,
+  SparkleIcon,
+  UsersThreeIcon,
+  XIcon,
+  type Icon,
+} from '@phosphor-icons/react';
 import { TrashIcon } from '@/shared/components/action-icons';
 import { Fragment, useRef, useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +29,7 @@ import { Meeple } from '@/shared/components/Brand';
 import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
 import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { GameCover } from '@/features/games/GameCover';
+import { LibraryDiceIcon } from '@/features/games/LibraryDiceIcon';
 import { GameJumpSearch } from '@/features/games/GameJumpSearch';
 import { myGamesQueryOptions } from '@/features/games/use-games';
 import {
@@ -96,13 +96,13 @@ function HistoryScreen() {
             {
               value: 'games',
               label: t('tabs.games'),
-              icon: <Dice5 strokeWidth={2} />,
+              icon: <LibraryDiceIcon />,
               count: games.data?.games.length,
             },
             {
               value: 'manuals',
               label: t('tabs.manuals'),
-              icon: <ScrollText strokeWidth={2} />,
+              icon: <ScrollIcon aria-hidden="true" />,
               count: manuals.data?.length,
             },
           ]}
@@ -241,12 +241,12 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
           <>
             <div className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[13px] text-fg-2">
               <span className="inline-flex items-center gap-[5px]">
-                <ScrollText size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
+                <ScrollIcon size={13} className="text-fg-3" aria-hidden="true" />
                 {t('gameCard.manuals', { count: game.manuals_count })}
               </span>
               <Dot />
               <span className="inline-flex items-center gap-[5px]">
-                <Sparkles size={13} strokeWidth={2} className="text-fg-3" aria-hidden="true" />
+                <SparkleIcon size={13} className="text-fg-3" aria-hidden="true" />
                 {t('gameCard.chats', { count: game.conversations_count })}
               </span>
             </div>
@@ -276,7 +276,7 @@ function ManualDocCard({
   const meta: ReactElement[] = [
     <span key="format" className="inline-flex items-center gap-1 uppercase">
       {isPdf ? (
-        <FileText size={12} aria-hidden="true" />
+        <FileTextIcon size={12} aria-hidden="true" />
       ) : (
         <ImageIcon size={12} aria-hidden="true" />
       )}
@@ -365,11 +365,7 @@ function ManualDocCard({
             aria-label={t('aria.deleteManual', { manual: name })}
             className="icon-feedback relative z-10 grid size-11 shrink-0 self-start place-items-center rounded-lg text-fg-3 transition-colors hover:text-error"
           >
-            <TrashIcon
-              size={17}
-              strokeWidth={2}
-              className="relative -top-1.5 [@media(pointer:coarse)]:top-0"
-            />
+            <TrashIcon size={17} className="relative -top-1.5 [@media(pointer:coarse)]:top-0" />
           </button>
         </DialogPrimitive.Trigger>
 
@@ -386,12 +382,7 @@ function ManualDocCard({
             {t('aria.confirmDeletion')}
           </DialogPrimitive.Title>
           <div className="flex items-center gap-3">
-            <AlertTriangle
-              size={18}
-              strokeWidth={2}
-              className="shrink-0 text-error"
-              aria-hidden="true"
-            />
+            <WarningIcon size={20} className="shrink-0 text-error" aria-hidden="true" />
             <DialogPrimitive.Description asChild>
               <span className="min-w-0 flex-1 text-[13.5px] font-medium text-fg">
                 {t('manualCard.deleteConfirm', { game: manual.game_name })}
@@ -434,7 +425,7 @@ function ManualIndicators({ manual }: Readonly<{ manual: ManualSummary }>) {
         {indexing || manual.status === 'failed' ? st.label : null}
       </HelpIndicator>
       <HelpIndicator
-        icon={manual.visibility === 'shared' ? Users : Lock}
+        icon={manual.visibility === 'shared' ? UsersThreeIcon : LockSimpleIcon}
         label={
           manual.visibility === 'shared'
             ? t('manualCard.visibility.sharedHelp')
@@ -453,7 +444,12 @@ function ManualFilter({
   const { t } = useTranslation('library');
   return (
     <div className="search-feedback flex h-11 w-full items-center gap-2.5 rounded-2xl border border-border-strong bg-bg px-3.5 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
-      <Search size={18} className="shrink-0 text-fg-3" aria-hidden="true" />
+      <MagnifyingGlassIcon
+        data-icon-motion="search"
+        size={20}
+        className="shrink-0 text-fg-3"
+        aria-hidden="true"
+      />
       <input
         type="search"
         value={value}
@@ -469,7 +465,7 @@ function ManualFilter({
           aria-label={t('manualSearch.clear')}
           className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
         >
-          <X size={14} className="search-clear-icon" aria-hidden="true" />
+          <XIcon size={14} className="search-clear-icon" aria-hidden="true" />
         </button>
       ) : null}
     </div>
@@ -502,14 +498,14 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
       {tab === 'games' ? (
         <Button asChild size="lg" className="mt-3.5">
           <Link to="/explore">
-            <Search size={18} strokeWidth={2} />
+            <MagnifyingGlassIcon data-icon-motion="search" aria-hidden="true" size={20} />
             {t('actions.exploreGames')}
           </Link>
         </Button>
       ) : (
         <Button asChild size="lg" className="mt-3.5">
           <Link to="/capture/source">
-            <Plus size={18} strokeWidth={2} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} />
             {t('actions.uploadManual')}
           </Link>
         </Button>
@@ -534,7 +530,7 @@ function LibError({
     >
       <div className={recoveryStyles.actions}>
         <Button className={recoveryStyles.primary} loading={retrying} onClick={onRetry}>
-          <RefreshCw size={17} aria-hidden="true" />
+          <ArrowsClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
           {shellT('recovery.retry')}
         </Button>
       </div>
@@ -596,28 +592,28 @@ function ProgressBar({ pct }: Readonly<{ pct: number }>) {
 function manualStatusView(
   status: ManualStatus,
   t: StatusTranslate,
-): { tone: HelpTone; label: string; help: string; icon: LucideIcon } {
+): { tone: HelpTone; label: string; help: string; icon: Icon } {
   switch (status) {
     case 'active':
       return {
         tone: 'success',
         label: t('status.active'),
         help: t('statusHelp.active'),
-        icon: Check,
+        icon: CheckIcon,
       };
     case 'indexing':
       return {
         tone: 'neutral',
         label: t('status.indexing'),
         help: t('statusHelp.indexing'),
-        icon: LoaderCircle,
+        icon: CircleNotchIcon,
       };
     case 'failed':
       return {
         tone: 'danger',
         label: t('status.failed'),
         help: t('statusHelp.failed'),
-        icon: AlertTriangle,
+        icon: WarningIcon,
       };
     case 'pending_review':
       // OCR dudoso en alguna página (fallo o baja confianza): no es moderación,
@@ -626,14 +622,14 @@ function manualStatusView(
         tone: 'warning',
         label: t('status.pendingReview'),
         help: t('statusHelp.pendingReview'),
-        icon: AlertTriangle,
+        icon: WarningIcon,
       };
     default:
       return {
         tone: 'neutral',
         label: t('status.hidden'),
         help: t('statusHelp.hidden'),
-        icon: EyeOff,
+        icon: EyeSlashIcon,
       };
   }
 }

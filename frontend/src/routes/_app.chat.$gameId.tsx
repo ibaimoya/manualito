@@ -1,7 +1,15 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ParseKeys } from 'i18next';
-import { BookOpen, Check, ChevronRight, Copy, FileText, Plus, Sparkles } from 'lucide-react';
+import {
+  BookOpenIcon,
+  CheckIcon,
+  CaretRightIcon,
+  CopyIcon,
+  FileTextIcon,
+  PlusIcon,
+  SparkleIcon,
+} from '@phosphor-icons/react';
 import {
   useCallback,
   useEffect,
@@ -773,7 +781,7 @@ function ChatHeader({
             className="shrink-0 pointer-coarse:h-11 pointer-coarse:min-w-11"
             aria-label={t('aria.newConversation')}
           >
-            <Plus size={15} strokeWidth={2} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={15} />
             <span className="hidden sm:inline">{t('actions.new')}</span>
           </Button>
         ) : null}
@@ -817,14 +825,14 @@ function ChatWelcome({
                 className="group flex items-center gap-3 rounded-[14px] border border-border bg-card px-[15px] py-[13px] text-left text-sm font-semibold text-fg shadow-xs transition-[border-color,box-shadow] hover:border-border-strong hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-primary-100 text-primary-700">
-                  <Sparkles size={15} strokeWidth={2} aria-hidden="true" />
+                  <SparkleIcon size={15} aria-hidden="true" />
                 </span>
                 <span className="flex-1 transition-colors group-hover:text-primary-700">
                   {question}
                 </span>
-                <ChevronRight
+                <CaretRightIcon
+                  data-icon-motion="forward"
                   size={16}
-                  strokeWidth={2}
                   className="shrink-0 text-fg-3"
                   aria-hidden="true"
                 />
@@ -864,12 +872,7 @@ function SourcesUnavailableNotice() {
 
   return (
     <div className="mb-2 flex items-start gap-2.5 rounded-xl border border-border-strong bg-surface px-3.5 py-2.5 text-[13px] leading-snug text-fg-2">
-      <FileText
-        size={15}
-        strokeWidth={2}
-        aria-hidden="true"
-        className="mt-0.5 shrink-0 text-fg-3"
-      />
+      <FileTextIcon size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-fg-3" />
       <span>{t('readOnly.notice')}</span>
     </div>
   );
@@ -1041,8 +1044,8 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
       className="mt-1.5 grid size-11 place-items-center rounded-lg text-fg-3 transition-[color,opacity,scale] hover:text-fg-2 motion-safe:active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:[@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 data-[copied=true]:opacity-100"
     >
       <span className="state-icon" data-active={copied} aria-hidden="true">
-        <Copy size={14} strokeWidth={2} />
-        <Check size={14} strokeWidth={2.5} className="text-success" />
+        <CopyIcon size={14} />
+        <CheckIcon size={14} className="text-success" />
       </span>
       <span role="status" className="sr-only">
         {copied ? t('feedback.copy.success') : ''}
@@ -1066,7 +1069,7 @@ function SourceChips({
   return (
     <div className="mt-[13px] border-t border-dashed border-border-strong pt-3">
       <p className="mono mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-3">
-        <BookOpen size={12} strokeWidth={2} aria-hidden="true" />
+        <BookOpenIcon size={12} aria-hidden="true" />
         {t('sources.heading')}
       </p>
       <div className="flex flex-wrap gap-[7px]">
@@ -1115,7 +1118,7 @@ function SourceChip({
         clickable ? 'bg-primary-100 text-primary-700' : 'bg-surface-2 text-fg-3',
       )}
     >
-      <FileText size={11} strokeWidth={2} aria-hidden="true" />
+      <FileTextIcon size={11} aria-hidden="true" />
     </span>
   );
 

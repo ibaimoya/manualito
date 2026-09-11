@@ -22,12 +22,13 @@
   position: relative;
 }
 .lens {
+  /* El cristal de MagnifyingGlass está centrado en (112, 112) de 256. */
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  padding-right: 8.333%;
-  padding-bottom: 8.333%;
+  padding-right: 12.5%;
+  padding-bottom: 12.5%;
 }
 .cross,
 .meeple {
@@ -110,6 +111,10 @@
   .search > svg {
     width: 108px;
     height: 108px;
+  }
+  .icon > .alert {
+    width: 118px;
+    height: 118px;
   }
   .retry > svg {
     width: 96px;

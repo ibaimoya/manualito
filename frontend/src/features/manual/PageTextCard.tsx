@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Pencil, RotateCw } from 'lucide-react';
+import { PencilSimpleIcon, ArrowClockwiseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -135,12 +135,7 @@ function EmptyPageContent({ status }: Readonly<{ status: PageStatusMeta }>) {
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-3 text-center">
-      <Icon
-        size={24}
-        strokeWidth={1.5}
-        className={STATUS_FG_CLASS[status.tone]}
-        aria-hidden="true"
-      />
+      <Icon size={24} className={STATUS_FG_CLASS[status.tone]} aria-hidden="true" />
       <p className="text-sm font-semibold">
         {status.key === 'failed' ? t('text.failedTitle') : status.label}
       </p>
@@ -207,7 +202,12 @@ function EditBox({
       }}
     >
       <div className={cn(STATUS_ROW, !valid && 'text-error')}>
-        <Pencil size={14} strokeWidth={1.75} className="shrink-0" aria-hidden="true" />
+        <PencilSimpleIcon
+          data-icon-motion="tilt"
+          size={16}
+          className="shrink-0"
+          aria-hidden="true"
+        />
         <p id={`${draftId}-hint`} className="truncate">
           {message}
         </p>
@@ -365,7 +365,6 @@ export function PageTextCard({
           >
             <StatusIcon
               size={14}
-              strokeWidth={1.75}
               aria-hidden="true"
               className={cn('shrink-0', STATUS_FG_CLASS[status.tone])}
             />
@@ -442,7 +441,7 @@ export function PageTextCard({
             disabled={busy || saving}
             onClick={onReprocessPage}
           >
-            <RotateCw size={14} strokeWidth={2} aria-hidden="true" />
+            <ArrowClockwiseIcon data-icon-motion="rotate" size={16} aria-hidden="true" />
             {t('buttons.readAgain')}
           </Button>
         ) : null}

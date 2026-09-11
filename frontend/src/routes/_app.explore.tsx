@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { FileText, Plus, Sparkles, Users } from 'lucide-react';
+import { FileTextIcon, PlusIcon, SparkleIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GameTypeahead } from '@/features/upload/GameTypeahead';
@@ -34,21 +34,21 @@ function ExploreScreen() {
       <ul className="grid gap-3 @3xl/app:grid-cols-3">
         <Hint
           tone="primary"
-          icon={<Sparkles className="illustration-spark" size={18} strokeWidth={2} />}
+          icon={<SparkleIcon aria-hidden="true" className="illustration-spark" size={18} />}
           title={t('hints.instantQuestion.title')}
         >
           {t('hints.instantQuestion.description')}
         </Hint>
         <Hint
           tone="accent"
-          icon={<FileText className="illustration-page" size={18} strokeWidth={2} />}
+          icon={<FileTextIcon aria-hidden="true" className="illustration-page" size={18} />}
           title={t('hints.withoutUpload.title')}
         >
           {t('hints.withoutUpload.description')}
         </Hint>
         <Hint
           tone="green"
-          icon={<Users className="illustration-people" size={18} strokeWidth={2} />}
+          icon={<UsersThreeIcon aria-hidden="true" className="illustration-people" size={18} />}
           title={t('hints.giveBack.title')}
         >
           {t('hints.giveBack.description')}
@@ -64,7 +64,7 @@ function ExploreScreen() {
             </p>
             <Button asChild variant="secondary" className="mt-5">
               <Link to="/capture/source">
-                <Plus size={18} aria-hidden="true" />
+                <PlusIcon data-icon-motion="plus" size={18} aria-hidden="true" />
                 {t('discovery.empty.upload')}
               </Link>
             </Button>

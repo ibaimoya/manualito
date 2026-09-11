@@ -70,8 +70,8 @@ describe('/explore', () => {
     const user = userEvent.setup();
     const shuffle = await screen.findByRole('button', { name: 'Ver otras sugerencias' });
     const stateIcon = shuffle.querySelector('.state-icon');
-    const shuffleIcon = shuffle.querySelector('.lucide-shuffle');
-    const spinnerIcon = shuffle.querySelector('.lucide-loader-circle');
+    const shuffleIcon = shuffle.querySelector('[data-icon="shuffle"]');
+    const spinnerIcon = shuffle.querySelector('[data-icon="spinner"]');
     let finishRequest: (() => void) | undefined;
 
     // MSW retiene únicamente la respuesta HTTP para observar la carga real de React Query.
@@ -98,8 +98,8 @@ describe('/explore', () => {
       finishRequest?.();
       await waitFor(() => expect(shuffle).toBeEnabled());
       expect(stateIcon).toHaveAttribute('data-active', 'false');
-      expect(shuffle.querySelector('.lucide-shuffle')).toBe(shuffleIcon);
-      expect(shuffle.querySelector('.lucide-loader-circle')).toBe(spinnerIcon);
+      expect(shuffle.querySelector('[data-icon="shuffle"]')).toBe(shuffleIcon);
+      expect(shuffle.querySelector('[data-icon="spinner"]')).toBe(spinnerIcon);
     }
   });
 

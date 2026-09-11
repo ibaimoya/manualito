@@ -1,21 +1,21 @@
 import { type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
-  BookOpen,
-  Crown,
-  Dices,
-  Flag,
-  Ghost,
-  Hourglass,
-  Lightbulb,
-  Puzzle,
-  Rocket,
-  Shield,
-  Sparkles,
-  Swords,
-  Trophy,
-  Zap,
-} from 'lucide-react';
+  BookOpenIcon,
+  CrownIcon,
+  DiceFiveIcon,
+  FlagIcon,
+  GhostIcon,
+  HourglassIcon,
+  LightbulbIcon,
+  PuzzlePieceIcon,
+  RocketIcon,
+  ShieldIcon,
+  SparkleIcon,
+  SwordIcon,
+  TrophyIcon,
+  LightningIcon,
+} from '@phosphor-icons/react';
 import type { AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Meeple } from '@/shared/components/Brand';
 import { cn } from '@/shared/lib/cn';
@@ -46,22 +46,22 @@ export function AvatarGlyph({
   // currentColor: crema dentro del avatar y tinta del botón en el selector.
   if (figure === 'meeple') return <Meeple size={Math.round(size * 0.52)} color="currentColor" />;
   const Icon = {
-    dice: Dices,
-    crown: Crown,
-    flag: Flag,
-    sparkle: Sparkles,
-    book: BookOpen,
-    bulb: Lightbulb,
-    zap: Zap,
-    hourglass: Hourglass,
-    trophy: Trophy,
-    puzzle: Puzzle,
-    swords: Swords,
-    ghost: Ghost,
-    shield: Shield,
-    rocket: Rocket,
+    dice: DiceFiveIcon,
+    crown: CrownIcon,
+    flag: FlagIcon,
+    sparkle: SparkleIcon,
+    book: BookOpenIcon,
+    bulb: LightbulbIcon,
+    zap: LightningIcon,
+    hourglass: HourglassIcon,
+    trophy: TrophyIcon,
+    puzzle: PuzzlePieceIcon,
+    swords: SwordIcon,
+    ghost: GhostIcon,
+    shield: ShieldIcon,
+    rocket: RocketIcon,
   }[figure];
-  return <Icon size={iconSize} strokeWidth={1.75} aria-hidden="true" />;
+  return <Icon size={iconSize} aria-hidden="true" />;
 }
 
 /**

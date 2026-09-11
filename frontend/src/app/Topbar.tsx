@@ -5,7 +5,7 @@ import {
   useRouter,
   type LinkOptions,
 } from '@tanstack/react-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
@@ -135,16 +135,16 @@ function BackButton() {
         canGoBack ? 'text-fg-2 hover:text-fg' : 'cursor-not-allowed text-fg-3 opacity-40',
       )}
     >
-      <ChevronLeft size={18} strokeWidth={2.25} aria-hidden="true" />
+      <CaretLeftIcon data-icon-motion="back" size={18} aria-hidden="true" />
     </button>
   );
 }
 
 function CrumbSeparator({ remaining = 0 }: Readonly<{ remaining?: number }>) {
   return (
-    <ChevronRight
+    <CaretRightIcon
+      data-icon-motion="forward"
       size={15}
-      strokeWidth={2.25}
       className="shrink-0 text-fg-3"
       style={{ '--crumb-delay': `${remaining * 50}ms` } as CSSProperties}
       aria-hidden="true"

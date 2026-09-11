@@ -1,6 +1,11 @@
 import { Link, Outlet, createFileRoute, redirect, useLocation } from '@tanstack/react-router';
-import { BookOpen, Compass, Home, Settings } from 'lucide-react';
-import { type ReactNode } from 'react';
+import {
+  BookOpenIcon,
+  CompassIcon,
+  HouseIcon,
+  GearSixIcon,
+  type Icon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Sidebar } from '@/app/Sidebar';
 import { DesktopTopbar } from '@/app/Topbar';
@@ -98,20 +103,16 @@ function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="mx-auto grid max-w-md grid-cols-4">
-        <NavItem to="/home" pathname={pathname} icon={<Home size={22} strokeWidth={1.75} />}>
+        <NavItem to="/home" pathname={pathname} icon={HouseIcon}>
           {t('navigation.home')}
         </NavItem>
-        <NavItem to="/history" pathname={pathname} icon={<BookOpen size={22} strokeWidth={1.75} />}>
+        <NavItem to="/history" pathname={pathname} icon={BookOpenIcon}>
           {t('navigation.library')}
         </NavItem>
-        <NavItem to="/explore" pathname={pathname} icon={<Compass size={22} strokeWidth={1.75} />}>
+        <NavItem to="/explore" pathname={pathname} icon={CompassIcon}>
           {t('navigation.explore')}
         </NavItem>
-        <NavItem
-          to="/settings"
-          pathname={pathname}
-          icon={<Settings size={22} strokeWidth={1.75} />}
-        >
+        <NavItem to="/settings" pathname={pathname} icon={GearSixIcon}>
           {t('navigation.settings')}
         </NavItem>
       </ul>
@@ -122,12 +123,12 @@ function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
 function NavItem({
   to,
   pathname,
-  icon,
+  icon: NavIcon,
   children,
 }: Readonly<{
   to: '/home' | '/history' | '/explore' | '/settings';
   pathname: string;
-  icon: ReactNode;
+  icon: Icon;
   children: string;
 }>) {
   const active = pathname === to;
@@ -142,7 +143,7 @@ function NavItem({
         )}
       >
         <span aria-hidden="true" data-feedback-icon>
-          {icon}
+          <NavIcon size={22} weight={active ? 'duotone' : undefined} aria-hidden="true" />
         </span>
         <span>{children}</span>
       </Link>

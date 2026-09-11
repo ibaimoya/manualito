@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Loader2 } from 'lucide-react';
+import { CircleNotchIcon } from '@phosphor-icons/react';
 import { cn } from '@/shared/lib/cn';
 
 /**
@@ -133,8 +133,7 @@ function ButtonLoadingContent({
           {icon}
         </span>
         <span className="absolute inset-0 grid place-items-center" aria-hidden="true">
-          <Loader2
-            strokeWidth={2}
+          <CircleNotchIcon
             className="size-full motion-safe:animate-[mn-spin_0.9s_linear_infinite]"
             style={{ animationPlayState: loading ? 'running' : 'paused' }}
           />

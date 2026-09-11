@@ -1,18 +1,20 @@
-import { Icon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { ILLUSTRATION_TONE_CLASS } from '@/shared/components/IllustrationBadge';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { cn } from '@/shared/lib/cn';
 
+// Los dos bocadillos de Chats (Phosphor regular) como figuras independientes: el
+// delantero completo y el trasero sólo en la parte que asoma. Desplazamientos en
+// unidades del viewBox 256.
 const BUBBLES = [
   {
-    path: 'M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z',
-    peek: 'translate(-1px, -2px) scale(1.16)',
+    path: 'M40,32H168a16,16,0,0,1,16,16V136a16,16,0,0,1-16,16H71.58a8,8,0,0,0-5,1.78L37,182.22A8,8,0,0,1,24,176V48A16,16,0,0,1,40,32ZM40,48V159.25l26.55-21.47a8,8,0,0,1,5-1.78H168V48Z',
+    peek: 'translate(-10.7px, -21.3px) scale(1.16)',
   },
   {
-    path: 'M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1',
-    peek: 'translate(1px, -2px) scale(1.16)',
+    path: 'M184,80h32a16,16,0,0,1,16,16V224a8,8,0,0,1-8,8,8,8,0,0,1-5-1.78L181.59,200H88a16,16,0,0,1-16-16V152h16v32h93.59a8,8,0,0,1,5,1.78L216,207.25V96H184Z',
+    peek: 'translate(10.7px, -21.3px) scale(1.16)',
   },
 ];
 const REST = 'translate(0px, 0px) scale(1)';
@@ -53,7 +55,7 @@ export function ConversationActivityIcon({
   const hoverMotion = useMediaQuery(
     '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
   );
-  const iconSize = size === 'sm' ? 16 : 18;
+  const iconSize = size === 'sm' ? 18 : 20;
   const unreadBadgeSize = size === 'sm' ? 'size-2.5' : 'size-3';
 
   // Respondiendo: el texto de la fila ya lo anuncia, así que el glifo es decorativo.
@@ -70,10 +72,11 @@ export function ConversationActivityIcon({
         className,
       )}
     >
-      <Icon
-        iconNode={[]}
-        size={iconSize}
-        strokeWidth={size === 'sm' ? 2 : 1.9}
+      <svg
+        width={iconSize}
+        height={iconSize}
+        viewBox="0 0 256 256"
+        fill="currentColor"
         aria-hidden="true"
         className="overflow-visible"
       >
@@ -81,6 +84,7 @@ export function ConversationActivityIcon({
           <motion.path
             key={bubble.path}
             d={bubble.path}
+            fillRule="evenodd"
             style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
             variants={{
               rest: { transform: REST, transition: { duration: hoverMotion ? 0.12 : 0 } },
@@ -91,7 +95,7 @@ export function ConversationActivityIcon({
             }}
           />
         ))}
-      </Icon>
+      </svg>
       {unread && !hasPendingReply ? (
         <span
           aria-hidden="true"

@@ -1,7 +1,7 @@
 import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { motion } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { LanguagePill } from '@/features/language/LanguagePill';
 import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
@@ -63,7 +63,7 @@ export function AuthShell({
         <div ref={content} className={styles.panel}>
           {!welcome && (
             <Link to="/onboarding" className={styles.back}>
-              <ArrowLeft size={16} aria-hidden="true" />
+              <ArrowLeftIcon data-icon-motion="back" size={18} aria-hidden="true" />
               <span>{authT('actions.backToWelcome')}</span>
             </Link>
           )}

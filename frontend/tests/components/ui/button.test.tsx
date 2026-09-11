@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { Upload } from 'lucide-react';
+import { UploadSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 
 describe('Button', () => {
@@ -92,7 +92,7 @@ describe('Button', () => {
       let clicked = 0;
       const { rerender } = render(
         <Button loading={false} onClick={() => clicked++}>
-          <Upload data-testid="upload-icon" size={18} /> Procesar
+          <UploadSimpleIcon aria-hidden="true" data-testid="upload-icon" size={18} /> Procesar
         </Button>,
       );
       const btn = screen.getByRole('button', { name: 'Procesar' });
@@ -102,7 +102,7 @@ describe('Button', () => {
       for (const loading of [true, false, true, false]) {
         rerender(
           <Button loading={loading} onClick={() => clicked++}>
-            <Upload data-testid="upload-icon" size={18} /> Procesar
+            <UploadSimpleIcon aria-hidden="true" data-testid="upload-icon" size={18} /> Procesar
           </Button>,
         );
         expect(screen.getByRole('button', { name: 'Procesar' })).toBe(btn);
@@ -120,7 +120,7 @@ describe('Button', () => {
     it('en botones icon-only mantiene el icono montado y conserva aria-label', () => {
       const { container } = render(
         <Button size="icon" loading aria-label="Enviar pregunta">
-          <Upload data-testid="send-icon" size={18} />
+          <UploadSimpleIcon aria-hidden="true" data-testid="send-icon" size={18} />
         </Button>,
       );
 

@@ -1,14 +1,12 @@
 import { Link } from '@tanstack/react-router';
 import {
-  BookOpen,
-  CircleHelp,
-  Compass,
-  Home,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  Settings as SettingsIcon,
-} from 'lucide-react';
+  BookOpenIcon,
+  QuestionIcon,
+  HouseIcon,
+  PlusIcon,
+  GearSixIcon,
+  type Icon,
+} from '@phosphor-icons/react';
 import { type ReactNode, useId } from 'react';
 import { motion, type TargetAndTransition } from 'motion/react';
 import { useTranslation } from 'react-i18next';
@@ -20,13 +18,9 @@ import { LockUp, Monogram } from '@/shared/components/Brand';
 import { cn } from '@/shared/lib/cn';
 import { elideEmail } from '@/shared/lib/elideEmail';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { ExploreIcon, SidebarToggleIcon } from './navigation-icons';
 
-/**
- * Sidebar de escritorio. Siempre montada (Tailwind la oculta en móvil;
- * condicionar con JS daría rerenders al redimensionar). Plegada queda en
- * iconos con label sr-only + tooltip; el estado lo gobierna el shell (_app)
- * para ajustar a la vez el padding del contenido.
- */
+// El shell conserva el estado de plegado para ajustar también el contenido.
 type NavTo = '/home' | '/history' | '/explore' | '/settings' | '/about';
 
 type SidebarUser = Readonly<{
@@ -50,23 +44,17 @@ type NavKey =
   | 'navigation.library'
   | 'navigation.settings';
 
-type NavItem = { to: NavTo; icon: ReactNode; label: NavKey; hover?: TargetAndTransition };
+type NavItem = { to: NavTo; icon: Icon; label: NavKey; hover?: TargetAndTransition };
 
 const NAV_MAIN: NavItem[] = [
-  { to: '/home', icon: <Home size={18} strokeWidth={1.75} />, label: 'navigation.home' },
-  { to: '/history', icon: <BookOpen size={18} strokeWidth={1.75} />, label: 'navigation.library' },
+  { to: '/home', icon: HouseIcon, label: 'navigation.home' },
+  { to: '/history', icon: BookOpenIcon, label: 'navigation.library' },
   {
     to: '/explore',
-    icon: <Compass size={18} strokeWidth={1.75} />,
+    icon: ExploreIcon,
     label: 'navigation.explore',
     hover: {
-      transform: [
-        null,
-        'rotate(-60deg) scale(1)',
-        'rotate(30deg) scale(1)',
-        'rotate(0deg) scale(1)',
-      ],
-      transition: { duration: 0.5, ease: 'easeInOut' },
+      transform: 'rotate(0deg) scale(1)',
     },
   },
 ];
@@ -75,7 +63,7 @@ const NAV_MAIN: NavItem[] = [
 const NAV_FOOTER: NavItem[] = [
   {
     to: '/about',
-    icon: <CircleHelp size={18} strokeWidth={1.75} />,
+    icon: QuestionIcon,
     label: 'navigation.help',
     hover: {
       transform: [
@@ -89,7 +77,7 @@ const NAV_FOOTER: NavItem[] = [
   },
   {
     to: '/settings',
-    icon: <SettingsIcon size={18} strokeWidth={1.75} />,
+    icon: GearSixIcon,
     label: 'navigation.settings',
     hover: {
       transform: [null, 'rotate(360deg) scale(1)'],
@@ -138,35 +126,35 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
           aria-expanded={!collapsed}
           aria-label={t(collapsed ? 'sidebar.toggle.expand' : 'sidebar.toggle.collapse')}
           className={cn(
-            'icon-feedback group relative grid size-11 shrink-0 place-items-center transition-colors',
+            'sidebar-toggle group relative grid size-11 shrink-0 place-items-center transition-colors',
             collapsed ? 'rounded-xl' : 'rounded-lg text-fg-3 hover:text-fg',
           )}
         >
-          {collapsed ? (
-            <>
-              <span
-                aria-hidden="true"
-                className="transition-opacity duration-150 group-hover:opacity-0 group-focus-visible:opacity-0"
-              >
-                <Monogram size={34} radius={10} />
-              </span>
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 grid place-items-center text-fg-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
-              >
-                <PanelLeftOpen size={18} strokeWidth={1.75} />
-              </span>
-            </>
-          ) : (
-            <PanelLeftClose size={18} strokeWidth={1.75} />
+          {collapsed && (
+            <span
+              aria-hidden="true"
+              className="transition-opacity duration-150 group-hover:opacity-0 group-focus-visible:opacity-0"
+            >
+              <Monogram size={34} radius={10} />
+            </span>
           )}
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute inset-0 grid place-items-center transition-opacity duration-150',
+              collapsed &&
+                'text-fg-2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',
+            )}
+          >
+            <SidebarToggleIcon />
+          </span>
         </button>
       </div>
 
       <div className={cn('shrink-0 pb-4', collapsed ? 'px-2' : 'px-3')}>
         <Button asChild block aria-label={collapsed ? t('navigation.newManual') : undefined}>
           <Link to="/capture/source">
-            <Plus size={18} strokeWidth={2} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} />
             {collapsed ? null : t('navigation.newManual')}
           </Link>
         </Button>
@@ -227,6 +215,7 @@ function NavList({
     <ul className={cn('flex flex-col gap-1', className)}>
       {items.map((item) => {
         const label = t(item.label);
+        const active = pathname === item.to;
         return (
           <motion.li
             key={item.to}
@@ -237,14 +226,14 @@ function NavList({
             <MaybeTip show={collapsed} label={label}>
               <Link
                 to={item.to}
-                aria-current={pathname === item.to ? 'page' : undefined}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-11 items-center rounded-xl text-sm font-semibold',
+                  'navigation-link relative flex min-h-11 items-center rounded-xl text-sm font-semibold',
                   collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
-                  pathname === item.to ? 'text-primary-700' : 'text-fg-2 hover:text-fg',
+                  active ? 'text-primary-700' : 'text-fg-2 hover:text-fg',
                 )}
               >
-                {pathname === item.to && (
+                {active && (
                   <motion.span
                     key={reducedMotion ? 'static' : 'animated'}
                     layoutId={reducedMotion ? undefined : indicatorId}
@@ -276,7 +265,7 @@ function NavList({
                     },
                   }}
                 >
-                  {item.icon}
+                  <item.icon size={20} weight={active ? 'duotone' : undefined} aria-hidden="true" />
                 </motion.span>
                 <span className={cn(collapsed && 'sr-only')}>{label}</span>
               </Link>

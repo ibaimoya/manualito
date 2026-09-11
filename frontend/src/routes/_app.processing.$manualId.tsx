@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Check, FileText, Info, RotateCw } from 'lucide-react';
+import { CheckIcon, FileTextIcon, InfoIcon, ArrowClockwiseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { ScreenTopBar } from '@/app/Topbar';
@@ -86,19 +86,9 @@ function ProcessingScreen() {
               aria-hidden="true"
             />
             {indexed ? (
-              <Check
-                size={40}
-                className="feedback-enter text-primary-700"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
+              <CheckIcon size={40} className="feedback-enter text-primary-700" aria-hidden="true" />
             ) : (
-              <FileText
-                size={40}
-                className="text-primary-700"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
+              <FileTextIcon size={40} className="text-primary-700" aria-hidden="true" />
             )}
           </div>
           <div className="text-center">
@@ -121,7 +111,7 @@ function ProcessingScreen() {
         ) : null}
 
         <p className="flex items-center justify-center gap-2 text-xs text-fg-3">
-          <Info size={14} />
+          <InfoIcon aria-hidden="true" size={14} />
           {t('processing.info')}
         </p>
       </div>
@@ -171,7 +161,7 @@ function ProcessingError({
               loading={retrying}
               onClick={() => void onRetry()}
             >
-              <RotateCw size={18} aria-hidden="true" />
+              <ArrowClockwiseIcon data-icon-motion="rotate" size={20} aria-hidden="true" />
               {commonT('actions.retry')}
             </Button>
           )

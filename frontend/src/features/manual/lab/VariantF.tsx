@@ -1,19 +1,19 @@
 import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Highlighter,
-  Image as ImageIcon,
-  Layers3,
-  LoaderCircle,
-  MoreHorizontal,
-  Pencil,
-  RotateCw,
-  Search,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
+  CheckIcon,
+  CaretDownIcon,
+  CaretUpIcon,
+  HighlighterIcon,
+  ImageIcon,
+  StackIcon,
+  CircleNotchIcon,
+  DotsThreeIcon,
+  PencilSimpleIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+  UploadSimpleIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -29,7 +29,6 @@ import '@/features/manual/lab/lang-sheet.css';
    (el % crudo muere en la vista) + pestañas ancladas al borde de la página, sin animación
    (chrome de alta frecuencia). Spec en bitácora N3. */
 
-const STROKE = 1.75;
 const SPRING = { type: 'spring', duration: 0.5, bounce: 0.2 } as const;
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -407,7 +406,7 @@ export function VariantF({
               )}
             >
               hoja {currentPage} de {pages.length}
-              <ChevronDown size={11} strokeWidth={STROKE} aria-hidden="true" />
+              <CaretDownIcon size={11} aria-hidden="true" />
             </button>
             <span className={cn('mono text-[11px] text-fg-3 md:hidden')}>
               hoja {currentPage} de {pages.length}
@@ -465,12 +464,7 @@ export function VariantF({
           </span>
           <div className="ml-auto hidden shrink-0 items-center gap-1 md:flex">
             <div className="flex h-8 items-center gap-1.5 rounded-lg border border-border-strong pl-2 pr-1 focus-within:border-primary/60">
-              <Search
-                size={13}
-                strokeWidth={STROKE}
-                className="shrink-0 text-fg-3"
-                aria-hidden="true"
-              />
+              <MagnifyingGlassIcon size={13} className="shrink-0 text-fg-3" aria-hidden="true" />
               <input
                 type="search"
                 value={search.query}
@@ -493,7 +487,7 @@ export function VariantF({
                     onClick={() => jumpToMatch(-1)}
                     className="grid size-7 place-items-center rounded-md text-fg-2 hover:text-fg disabled:opacity-40"
                   >
-                    <ChevronUp size={13} strokeWidth={STROKE} />
+                    <CaretUpIcon aria-hidden="true" size={13} />
                   </button>
                   <button
                     type="button"
@@ -502,7 +496,7 @@ export function VariantF({
                     onClick={() => jumpToMatch(1)}
                     className="grid size-7 place-items-center rounded-md text-fg-2 hover:text-fg disabled:opacity-40"
                   >
-                    <ChevronDown size={13} strokeWidth={STROKE} />
+                    <CaretDownIcon aria-hidden="true" size={13} />
                   </button>
                   <button
                     type="button"
@@ -510,7 +504,7 @@ export function VariantF({
                     onClick={() => search.search('')}
                     className="grid size-7 place-items-center rounded-md text-fg-2 hover:text-fg"
                   >
-                    <X size={13} strokeWidth={STROKE} />
+                    <XIcon aria-hidden="true" size={13} />
                   </button>
                 </span>
               ) : null}
@@ -527,7 +521,7 @@ export function VariantF({
                 (!hasConfidence || busy) && 'opacity-40',
               )}
             >
-              <Highlighter size={14} strokeWidth={STROKE} aria-hidden="true" />
+              <HighlighterIcon size={14} aria-hidden="true" />
               Dudas
             </button>
             <span
@@ -550,7 +544,7 @@ export function VariantF({
                 onClick={() => jumpToDuda(-1)}
                 className="grid size-8 place-items-center rounded-md text-fg-2 hover:text-fg"
               >
-                <ChevronUp size={14} strokeWidth={STROKE} />
+                <CaretUpIcon size={14} />
               </button>
               <button
                 type="button"
@@ -559,7 +553,7 @@ export function VariantF({
                 onClick={() => jumpToDuda(1)}
                 className="grid size-8 place-items-center rounded-md text-fg-2 hover:text-fg"
               >
-                <ChevronDown size={14} strokeWidth={STROKE} />
+                <CaretDownIcon size={14} />
               </button>
             </span>
             <div className="relative">
@@ -570,7 +564,7 @@ export function VariantF({
                 onClick={() => setMasOpen((value) => !value)}
                 className="grid size-8 place-items-center rounded-lg text-fg-2 hover:text-fg"
               >
-                <MoreHorizontal size={15} strokeWidth={STROKE} aria-hidden="true" />
+                <DotsThreeIcon size={15} aria-hidden="true" />
               </button>
               {masOpen ? (
                 <>
@@ -588,7 +582,7 @@ export function VariantF({
                       onClick={() => setMasOpen(false)}
                       className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium text-fg hover:bg-surface disabled:opacity-45"
                     >
-                      <RotateCw size={14} strokeWidth={STROKE} aria-hidden="true" />
+                      <ArrowClockwiseIcon size={14} aria-hidden="true" />
                       Leer de nuevo todo el manual
                     </button>
                     <p className="px-2.5 pb-1 text-[11px] leading-snug text-fg-3">
@@ -603,7 +597,7 @@ export function VariantF({
                       }}
                       className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium text-error hover:bg-error-bg"
                     >
-                      <Trash2 size={14} strokeWidth={STROKE} aria-hidden="true" />
+                      <TrashIcon size={14} aria-hidden="true" />
                       Eliminar manual…
                     </button>
                   </div>
@@ -615,12 +609,7 @@ export function VariantF({
         {busy ? (
           <div className="mn-banner-in border-t border-border bg-surface">
             <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-6 py-1.5">
-              <LoaderCircle
-                size={13}
-                strokeWidth={STROKE}
-                className="animate-spin text-primary"
-                aria-hidden="true"
-              />
+              <CircleNotchIcon size={13} className="animate-spin text-primary" aria-hidden="true" />
               <p className="text-[12px] font-medium text-fg-2">
                 Leyendo el manual · {LAB_BUSY_PROGRESS.completed_pages} de{' '}
                 {LAB_BUSY_PROGRESS.page_count} hojas
@@ -716,7 +705,7 @@ export function VariantF({
                       disabled={editingPage !== null}
                       className="grid size-11 place-items-center rounded-md text-fg-3 hover:text-fg disabled:opacity-40 md:size-7"
                     >
-                      <Pencil size={13} strokeWidth={STROKE} />
+                      <PencilSimpleIcon aria-hidden="true" size={13} />
                     </button>
                   ) : null}
                   {item.image_available && !isEditing ? (
@@ -726,14 +715,14 @@ export function VariantF({
                       aria-expanded={scanOpen}
                       className="inline-flex h-11 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-fg-2 hover:text-fg md:h-7"
                     >
-                      <ImageIcon size={13} strokeWidth={STROKE} aria-hidden="true" />
+                      <ImageIcon size={13} aria-hidden="true" />
                       {scanOpen ? 'Ocultar el escaneo' : 'Ver el escaneo'}
                       <motion.span
                         animate={{ rotate: scanOpen ? 180 : 0 }}
                         transition={{ duration: 0.2, ease: EASE_OUT }}
                         className="inline-flex"
                       >
-                        <ChevronDown size={13} strokeWidth={STROKE} aria-hidden="true" />
+                        <CaretDownIcon size={13} aria-hidden="true" />
                       </motion.span>
                     </button>
                   ) : null}
@@ -757,14 +746,14 @@ export function VariantF({
                             type="button"
                             className="lang-lift inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-[12.5px] font-semibold text-fg-inv"
                           >
-                            <Upload size={13} strokeWidth={STROKE} aria-hidden="true" />
+                            <UploadSimpleIcon size={13} aria-hidden="true" />
                             Sustituir la imagen
                           </button>
                           <button
                             type="button"
                             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border-strong px-2.5 text-[12.5px] font-medium text-fg"
                           >
-                            <RotateCw size={13} strokeWidth={STROKE} aria-hidden="true" />
+                            <ArrowClockwiseIcon size={13} aria-hidden="true" />
                             Reintentar la lectura
                           </button>
                         </div>
@@ -823,7 +812,7 @@ export function VariantF({
                               onClick={saveEditing}
                               className="lang-lift inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv disabled:opacity-45"
                             >
-                              <Check size={14} strokeWidth={STROKE} aria-hidden="true" />
+                              <CheckIcon size={14} aria-hidden="true" />
                               Guardar cambios
                             </button>
                             <button
@@ -995,7 +984,7 @@ export function VariantF({
                 className="flex items-center gap-1 px-2 py-1.5"
               >
                 <DockTool label="Buscar" onClick={() => setDock('buscar')}>
-                  <Search size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <MagnifyingGlassIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool
                   label="Dudas"
@@ -1006,13 +995,13 @@ export function VariantF({
                     setDock('dudas');
                   }}
                 >
-                  <Highlighter size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <HighlighterIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool label="Hojas" onClick={() => setDock('hojas')}>
-                  <Layers3 size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <StackIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool label="Más" onClick={() => setDock('mas')}>
-                  <MoreHorizontal size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <DotsThreeIcon size={16} aria-hidden="true" />
                 </DockTool>
               </motion.div>
             ) : null}
@@ -1027,12 +1016,7 @@ export function VariantF({
                 transition={{ duration: 0.12 }}
                 className="flex items-center gap-1 px-2.5 py-2"
               >
-                <Search
-                  size={15}
-                  strokeWidth={STROKE}
-                  className="shrink-0 text-fg-3"
-                  aria-hidden="true"
-                />
+                <MagnifyingGlassIcon size={15} className="shrink-0 text-fg-3" aria-hidden="true" />
                 <input
                   type="search"
                   ref={dockSearchRef}
@@ -1056,7 +1040,7 @@ export function VariantF({
                   onClick={() => jumpToMatch(-1)}
                   className="grid size-11 shrink-0 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
                 >
-                  <ChevronUp size={16} strokeWidth={STROKE} />
+                  <CaretUpIcon aria-hidden="true" size={16} />
                 </button>
                 <button
                   type="button"
@@ -1065,7 +1049,7 @@ export function VariantF({
                   onClick={() => jumpToMatch(1)}
                   className="grid size-11 shrink-0 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
                 >
-                  <ChevronDown size={16} strokeWidth={STROKE} />
+                  <CaretDownIcon aria-hidden="true" size={16} />
                 </button>
                 <button
                   type="button"
@@ -1073,7 +1057,7 @@ export function VariantF({
                   onClick={() => setDock('closed')}
                   className="grid size-11 shrink-0 place-items-center rounded-lg text-fg-3"
                 >
-                  <X size={16} strokeWidth={STROKE} />
+                  <XIcon aria-hidden="true" size={16} />
                 </button>
               </motion.div>
             ) : null}
@@ -1088,12 +1072,7 @@ export function VariantF({
                 transition={{ duration: 0.12 }}
                 className="flex items-center gap-1 px-2.5 py-2"
               >
-                <Highlighter
-                  size={15}
-                  strokeWidth={STROKE}
-                  className="shrink-0 text-warning"
-                  aria-hidden="true"
-                />
+                <HighlighterIcon size={15} className="shrink-0 text-warning" aria-hidden="true" />
                 <span className="text-[13px] font-medium text-fg" aria-live="polite">
                   {dudasGlobal.length === 0 ? 'Sin dudas de lectura' : dudasLabel}
                 </span>
@@ -1104,7 +1083,7 @@ export function VariantF({
                   onClick={() => jumpToDuda(-1)}
                   className="grid size-11 shrink-0 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
                 >
-                  <ChevronUp size={16} strokeWidth={STROKE} />
+                  <CaretUpIcon aria-hidden="true" size={16} />
                 </button>
                 <button
                   type="button"
@@ -1113,7 +1092,7 @@ export function VariantF({
                   onClick={() => jumpToDuda(1)}
                   className="grid size-11 shrink-0 place-items-center rounded-lg text-fg-2 disabled:opacity-40"
                 >
-                  <ChevronDown size={16} strokeWidth={STROKE} />
+                  <CaretDownIcon aria-hidden="true" size={16} />
                 </button>
                 <button
                   type="button"
@@ -1125,7 +1104,7 @@ export function VariantF({
                   }}
                   className="grid size-11 shrink-0 place-items-center rounded-lg text-fg-3"
                 >
-                  <X size={16} strokeWidth={STROKE} />
+                  <XIcon aria-hidden="true" size={16} />
                 </button>
               </motion.div>
             ) : null}
@@ -1203,7 +1182,7 @@ export function VariantF({
                   onClick={() => setDock('closed')}
                   className="flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium text-fg disabled:opacity-45"
                 >
-                  <RotateCw size={15} strokeWidth={STROKE} aria-hidden="true" />
+                  <ArrowClockwiseIcon size={15} aria-hidden="true" />
                   Leer de nuevo todo el manual
                 </button>
                 <div className="mx-2 my-1 border-t border-border" />
@@ -1215,7 +1194,7 @@ export function VariantF({
                   }}
                   className="flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium text-error"
                 >
-                  <Trash2 size={15} strokeWidth={STROKE} aria-hidden="true" />
+                  <TrashIcon size={15} aria-hidden="true" />
                   Eliminar manual…
                 </button>
                 <button
@@ -1278,7 +1257,7 @@ export function VariantF({
                   onClick={() => setDeleteOpen(false)}
                   className="lang-lift inline-flex h-8 items-center gap-1.5 rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv"
                 >
-                  <Trash2 size={14} strokeWidth={STROKE} aria-hidden="true" />
+                  <TrashIcon size={14} aria-hidden="true" />
                   Eliminar manual
                 </button>
               </div>

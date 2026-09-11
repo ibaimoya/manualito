@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/shared/api/auth';
@@ -68,7 +68,7 @@ function VerifyEmailScreen() {
           loading={isFetching}
           onClick={() => void refetch({ cancelRefetch: false })}
         >
-          <RefreshCw size={18} aria-hidden="true" />
+          <ArrowsClockwiseIcon data-icon-motion="rotate" size={20} aria-hidden="true" />
           {t('actions.retryVerification')}
         </Button>
         <Button asChild variant="secondary" className={recoveryStyles.secondary}>

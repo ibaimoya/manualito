@@ -1,20 +1,20 @@
 import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Highlighter,
-  Image as ImageIcon,
-  Layers3,
-  LoaderCircle,
-  MoreHorizontal,
-  Pencil,
-  RotateCw,
-  Search,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
+  WarningIcon,
+  CheckIcon,
+  CaretDownIcon,
+  CaretUpIcon,
+  HighlighterIcon,
+  ImageIcon,
+  StackIcon,
+  CircleNotchIcon,
+  DotsThreeIcon,
+  PencilSimpleIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+  UploadSimpleIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
@@ -28,7 +28,6 @@ import '@/features/manual/lab/lang-sheet.css';
 /* V-D «El atril»: una sola hoja en escena sobre la mesa, pila de vecinas asomando,
    y un bolsillo flotante que morfa en la herramienta pulsada (spec en la bitácora N2). */
 
-const STROKE = 1.75;
 const SPRING = { type: 'spring', duration: 0.5, bounce: 0.2 } as const;
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
@@ -112,7 +111,7 @@ function TrayFrame({ onClose, children }: Readonly<{ onClose: () => void; childr
         onClick={onClose}
         className="grid size-8 shrink-0 place-items-center rounded-lg text-fg-3 hover:text-fg"
       >
-        <X size={15} strokeWidth={STROKE} />
+        <XIcon aria-hidden="true" size={15} />
       </button>
     </div>
   );
@@ -281,12 +280,7 @@ export function VariantD({
         </span>
         {busy ? (
           <span className="mn-banner-in ml-auto inline-flex shrink-0 items-center gap-2 text-[12.5px] font-medium text-fg-2">
-            <LoaderCircle
-              size={14}
-              strokeWidth={STROKE}
-              className="animate-spin text-primary"
-              aria-hidden="true"
-            />
+            <CircleNotchIcon size={14} className="animate-spin text-primary" aria-hidden="true" />
             Leyendo el manual · {LAB_BUSY_PROGRESS.completed_pages} de{' '}
             {LAB_BUSY_PROGRESS.page_count}
           </span>
@@ -374,14 +368,14 @@ export function VariantD({
                         type="button"
                         className="lang-lift inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-[13.5px] font-semibold text-fg-inv"
                       >
-                        <Upload size={15} strokeWidth={STROKE} aria-hidden="true" />
+                        <UploadSimpleIcon size={15} aria-hidden="true" />
                         Sustituir la imagen
                       </button>
                       <button
                         type="button"
                         className="lang-lift inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong px-3.5 text-[13.5px] font-medium text-fg"
                       >
-                        <RotateCw size={15} strokeWidth={STROKE} aria-hidden="true" />
+                        <ArrowClockwiseIcon size={15} aria-hidden="true" />
                         Reintentar la lectura
                       </button>
                     </div>
@@ -501,12 +495,7 @@ export function VariantD({
                     </>
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
-                      <AlertTriangle
-                        size={16}
-                        strokeWidth={STROKE}
-                        className="text-fg-3"
-                        aria-hidden="true"
-                      />
+                      <WarningIcon size={16} className="text-fg-3" aria-hidden="true" />
                       <p className="text-[13px] text-fg-2">Esta hoja no tiene escaneo guardado.</p>
                     </div>
                   )}
@@ -540,7 +529,7 @@ export function VariantD({
                 className="flex items-center gap-1 px-2 py-1.5"
               >
                 <DockTool label="Buscar" onClick={() => openTool('buscar')}>
-                  <Search size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <MagnifyingGlassIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool
                   label="Dudas"
@@ -548,27 +537,27 @@ export function VariantD({
                   disabled={!hasConfidence || busy}
                   onClick={() => openTool('dudas')}
                 >
-                  <Highlighter size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <HighlighterIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool
                   label="Original"
                   active={originalOpen}
                   onClick={() => setOriginalOpen((value) => !value)}
                 >
-                  <ImageIcon size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <ImageIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool
                   label="Editar"
                   disabled={busy || st.key === 'failed' || st.key === 'processing'}
                   onClick={startEditing}
                 >
-                  <Pencil size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <PencilSimpleIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool label="Hojas" onClick={() => openTool('hojas')}>
-                  <Layers3 size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <StackIcon size={16} aria-hidden="true" />
                 </DockTool>
                 <DockTool label="Más" onClick={() => openTool('mas')}>
-                  <MoreHorizontal size={16} strokeWidth={STROKE} aria-hidden="true" />
+                  <DotsThreeIcon size={16} aria-hidden="true" />
                 </DockTool>
               </motion.div>
             ) : null}
@@ -583,9 +572,8 @@ export function VariantD({
                 transition={{ duration: 0.12 }}
               >
                 <TrayFrame onClose={() => setDock('closed')}>
-                  <Search
+                  <MagnifyingGlassIcon
                     size={15}
-                    strokeWidth={STROKE}
                     className="shrink-0 text-fg-3"
                     aria-hidden="true"
                   />
@@ -615,7 +603,7 @@ export function VariantD({
                     onClick={() => jumpToMatch(-1)}
                     className="grid size-8 shrink-0 place-items-center rounded-lg text-fg-2 hover:text-fg disabled:opacity-40"
                   >
-                    <ChevronUp size={15} strokeWidth={STROKE} />
+                    <CaretUpIcon aria-hidden="true" size={15} />
                   </button>
                   <button
                     type="button"
@@ -624,7 +612,7 @@ export function VariantD({
                     onClick={() => jumpToMatch(1)}
                     className="grid size-8 shrink-0 place-items-center rounded-lg text-fg-2 hover:text-fg disabled:opacity-40"
                   >
-                    <ChevronDown size={15} strokeWidth={STROKE} />
+                    <CaretDownIcon aria-hidden="true" size={15} />
                   </button>
                 </TrayFrame>
               </motion.div>
@@ -646,12 +634,7 @@ export function VariantD({
                     setActiveDuda(null);
                   }}
                 >
-                  <Highlighter
-                    size={15}
-                    strokeWidth={STROKE}
-                    className="shrink-0 text-warning"
-                    aria-hidden="true"
-                  />
+                  <HighlighterIcon size={15} className="shrink-0 text-warning" aria-hidden="true" />
                   <span className="text-[13px] font-medium text-fg" aria-live="polite">
                     {dudas.length === 0
                       ? 'Esta hoja no tiene dudas'
@@ -666,7 +649,7 @@ export function VariantD({
                     onClick={() => jumpToDuda(-1)}
                     className="grid size-8 shrink-0 place-items-center rounded-lg text-fg-2 hover:text-fg disabled:opacity-40"
                   >
-                    <ChevronUp size={15} strokeWidth={STROKE} />
+                    <CaretUpIcon aria-hidden="true" size={15} />
                   </button>
                   <button
                     type="button"
@@ -675,7 +658,7 @@ export function VariantD({
                     onClick={() => jumpToDuda(1)}
                     className="grid size-8 shrink-0 place-items-center rounded-lg text-fg-2 hover:text-fg disabled:opacity-40"
                   >
-                    <ChevronDown size={15} strokeWidth={STROKE} />
+                    <CaretDownIcon aria-hidden="true" size={15} />
                   </button>
                 </TrayFrame>
               </motion.div>
@@ -718,7 +701,7 @@ export function VariantD({
                       onClick={stopEditing}
                       className="lang-lift inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-[13px] font-semibold text-fg-inv disabled:opacity-45"
                     >
-                      <Check size={14} strokeWidth={STROKE} aria-hidden="true" />
+                      <CheckIcon size={14} aria-hidden="true" />
                       Guardar cambios
                     </button>
                     <button
@@ -801,7 +784,7 @@ export function VariantD({
                   onClick={() => setDock('closed')}
                   className="flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium text-fg hover:bg-surface disabled:opacity-45"
                 >
-                  <RotateCw size={15} strokeWidth={STROKE} aria-hidden="true" />
+                  <ArrowClockwiseIcon size={15} aria-hidden="true" />
                   Leer de nuevo todo el manual
                 </button>
                 <div className="mx-2 my-1 border-t border-border" />
@@ -813,7 +796,7 @@ export function VariantD({
                   }}
                   className="flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[13px] font-medium text-error hover:bg-error-bg"
                 >
-                  <Trash2 size={15} strokeWidth={STROKE} aria-hidden="true" />
+                  <TrashIcon size={15} aria-hidden="true" />
                   Eliminar manual…
                 </button>
               </motion.div>
@@ -869,7 +852,7 @@ export function VariantD({
                   onClick={() => setDeleteOpen(false)}
                   className="lang-lift inline-flex h-8 items-center gap-1.5 rounded-lg bg-error px-3 text-[13px] font-semibold text-fg-inv"
                 >
-                  <Trash2 size={14} strokeWidth={STROKE} aria-hidden="true" />
+                  <TrashIcon size={14} aria-hidden="true" />
                   Eliminar manual
                 </button>
               </div>

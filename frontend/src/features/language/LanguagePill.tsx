@@ -1,4 +1,4 @@
-import { Globe } from 'lucide-react';
+import { GlobeSimpleIcon } from '@phosphor-icons/react';
 import { LANGUAGE_NAMES, useLanguage, type Language } from '@/app/language';
 import { cn } from '@/shared/lib/cn';
 import styles from './language-pill.module.css';
@@ -33,7 +33,7 @@ export function LanguagePill({ className }: Readonly<{ className?: string }>) {
         className,
       )}
     >
-      <Globe size={15} strokeWidth={2} aria-hidden="true" />
+      <GlobeSimpleIcon size={20} aria-hidden="true" />
       <span className={styles.labels} aria-hidden="true">
         {(['es', 'en'] as const).map((language) => (
           <span key={language} lang={language} data-active={target === language}>

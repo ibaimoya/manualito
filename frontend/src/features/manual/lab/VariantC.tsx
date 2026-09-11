@@ -1,4 +1,12 @@
-import { Image, Layers, Pencil, RotateCw, Search, Trash2, X } from 'lucide-react';
+import {
+  ImageIcon,
+  StackIcon,
+  PencilSimpleIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useState, type ReactNode } from 'react';
 import type { ManualDetailPage, OcrLine } from '@/shared/api/client';
 import { confidenceLegend, confidenceTone, pageStatus } from '@/features/manual/pageStatus';
@@ -8,8 +16,6 @@ import { cn } from '@/shared/lib/cn';
 
 /* V-C "Mesa de trabajo": filmstrip horizontal arriba, texto + inspector lateral de metadatos.
    Densidad de herramienta: la confianza va inline siempre que el modo esté activo. */
-
-const STROKE = 1.75;
 
 const STATUS_DOT: Record<string, string> = {
   success: 'bg-success',
@@ -179,9 +185,8 @@ export function VariantC({
   const withConfidence = page.ocr_lines.filter((line) => line.confidence != null);
   const bands = confidenceLegend().map((item) => ({
     ...item,
-    count: withConfidence.filter(
-      (line) => confidenceTone(line.confidence ?? 0).tone === item.tone,
-    ).length,
+    count: withConfidence.filter((line) => confidenceTone(line.confidence ?? 0).tone === item.tone)
+      .length,
   }));
 
   return (
@@ -192,7 +197,7 @@ export function VariantC({
           {manual.title ?? manual.game_name}
         </h1>
         <div className="ml-auto flex h-7 w-64 items-center gap-1.5 rounded-md border border-border pl-2 pr-1 focus-within:border-border-strong">
-          <Search size={13} strokeWidth={STROKE} className="shrink-0 text-fg-3" aria-hidden="true" />
+          <MagnifyingGlassIcon size={13} className="shrink-0 text-fg-3" aria-hidden="true" />
           <input
             type="search"
             value={search.query}
@@ -218,7 +223,7 @@ export function VariantC({
             showConfidence && 'text-primary-700',
           )}
         >
-          <Layers size={15} strokeWidth={STROKE} />
+          <StackIcon aria-hidden="true" size={15} />
         </button>
       </header>
 
@@ -279,7 +284,7 @@ export function VariantC({
                     st.tone === 'error' && 'text-error',
                   )}
                 >
-                  <st.Icon size={13} strokeWidth={STROKE} aria-hidden="true" />
+                  <st.Icon size={13} aria-hidden="true" />
                   {st.label}
                 </span>
               </InspectorRow>
@@ -317,28 +322,28 @@ export function VariantC({
                 type="button"
                 className="flex h-8 items-center gap-2 rounded-md px-2 text-[12.5px] font-medium text-fg hover:bg-surface-2"
               >
-                <Image size={14} strokeWidth={STROKE} aria-hidden="true" />
+                <ImageIcon size={14} aria-hidden="true" />
                 Ver imagen original
               </button>
               <button
                 type="button"
                 className="flex h-8 items-center gap-2 rounded-md px-2 text-[12.5px] font-medium text-fg hover:bg-surface-2"
               >
-                <Pencil size={14} strokeWidth={STROKE} aria-hidden="true" />
+                <PencilSimpleIcon size={14} aria-hidden="true" />
                 Editar texto
               </button>
               <button
                 type="button"
                 className="flex h-8 items-center gap-2 rounded-md px-2 text-[12.5px] font-medium text-fg hover:bg-surface-2"
               >
-                <RotateCw size={14} strokeWidth={STROKE} aria-hidden="true" />
+                <ArrowClockwiseIcon size={14} aria-hidden="true" />
                 Releer esta página
               </button>
               <button
                 type="button"
                 className="flex h-8 items-center gap-2 rounded-md px-2 text-[12.5px] font-medium text-error hover:bg-error-bg"
               >
-                <Trash2 size={14} strokeWidth={STROKE} aria-hidden="true" />
+                <TrashIcon size={14} aria-hidden="true" />
                 Eliminar manual
               </button>
             </div>
@@ -349,7 +354,7 @@ export function VariantC({
                 onClick={() => search.search('')}
                 className="flex h-8 items-center gap-2 rounded-md px-2 text-[12.5px] text-fg-3 hover:text-fg"
               >
-                <X size={13} strokeWidth={STROKE} aria-hidden="true" />
+                <XIcon size={13} aria-hidden="true" />
                 Limpiar búsqueda
               </button>
             ) : null}

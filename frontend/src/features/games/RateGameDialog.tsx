@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eraser } from 'lucide-react';
+import { EraserIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -157,7 +157,7 @@ function RateGameForm({
               score === 0 && 'invisible',
             )}
           >
-            <Eraser size={18} strokeWidth={2} />
+            <EraserIcon aria-hidden="true" size={18} />
           </button>
         </Tooltip>
         <p

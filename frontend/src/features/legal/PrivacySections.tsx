@@ -1,23 +1,23 @@
 import {
-  Database,
-  GraduationCap,
-  Image as ImageIcon,
-  Server,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react';
+  DatabaseIcon,
+  GraduationCapIcon,
+  ImageIcon,
+  HardDrivesIcon,
+  ShieldCheckIcon,
+  SparkleIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import styles from './privacy.module.css';
 
 const SECTIONS = [
   {
-    icon: Database,
+    icon: DatabaseIcon,
     heading: 'sections.data.heading',
     body: 'sections.data.body',
   },
   {
-    icon: Sparkles,
+    icon: SparkleIcon,
     heading: 'sections.usage.heading',
     body: 'sections.usage.body',
   },
@@ -27,17 +27,17 @@ const SECTIONS = [
     body: 'sections.images.body',
   },
   {
-    icon: Server,
+    icon: HardDrivesIcon,
     heading: 'sections.processing.heading',
     body: 'sections.processing.body',
   },
   {
-    icon: ShieldCheck,
+    icon: ShieldCheckIcon,
     heading: 'sections.rights.heading',
     body: 'sections.rights.body',
   },
   {
-    icon: GraduationCap,
+    icon: GraduationCapIcon,
     heading: 'sections.academic.heading',
     body: 'sections.academic.body',
   },
@@ -55,7 +55,7 @@ export function PrivacySections({
       {SECTIONS.map(({ icon: Icon, heading, body }) => (
         <section key={heading} className={styles.section}>
           <Heading className={styles.sectionTitle}>
-            <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+            <Icon size={18} aria-hidden="true" />
             {t(heading)}
           </Heading>
           <p>{t(body)}</p>

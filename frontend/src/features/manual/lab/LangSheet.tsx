@@ -1,4 +1,11 @@
-import { Check, Pencil, RotateCw, Search, Trash2, Upload } from 'lucide-react';
+import {
+  CheckIcon,
+  PencilSimpleIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+  UploadSimpleIcon,
+} from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/lib/cn';
 import '@fontsource-variable/literata';
@@ -6,8 +13,6 @@ import '@/features/manual/lab/lang-sheet.css';
 
 /* Muestra viva del lenguaje visual v2 (docs/design/lenguaje-visor.md).
    No es el visor: es el specimen que fija metáfora, tipos, subrayador, voz y gestos. */
-
-const STROKE = 1.75;
 
 function Specimen({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
@@ -64,13 +69,11 @@ export function LangSheet() {
         <p className="font-display text-[26px] font-extrabold tracking-tight text-fg">
           Cumbres, el juego de los tresmiles
         </p>
-        <p className="text-[12.5px] text-fg-3">
-          PDF · 6 páginas · subido hace dos días
-        </p>
+        <p className="text-[12.5px] text-fg-3">PDF · 6 páginas · subido hace dos días</p>
         <p className="lang-reading max-w-[62ch] text-fg" lang="es">
-          Ser la primera persona en encadenar tres cumbres y regresar al refugio base antes de
-          que la tormenta cierre los pasos de montaña. Cada alpinista comienza con cuatro cartas
-          de ruta y una ficha de refugio.
+          Ser la primera persona en encadenar tres cumbres y regresar al refugio base antes de que
+          la tormenta cierre los pasos de montaña. Cada alpinista comienza con cuatro cartas de ruta
+          y una ficha de refugio.
         </p>
         <p className="mono text-[11.5px] tabular-nums text-fg-3">
           91% · página 2 de 6 · coincidencia 1 de 7
@@ -120,7 +123,7 @@ export function LangSheet() {
             type="button"
             className="lang-lift inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-[13.5px] font-semibold text-fg-inv"
           >
-            <Check size={15} strokeWidth={STROKE} aria-hidden="true" />
+            <CheckIcon size={15} aria-hidden="true" />
             Guardar cambios
           </button>
           <button
@@ -128,21 +131,21 @@ export function LangSheet() {
             className="lang-lift inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong px-3.5 text-[13.5px] font-medium text-fg"
             style={{ background: 'var(--lab-paper)' }}
           >
-            <Upload size={15} strokeWidth={STROKE} aria-hidden="true" />
+            <UploadSimpleIcon size={15} aria-hidden="true" />
             Sustituir la imagen
           </button>
           <button
             type="button"
             className="lang-lift inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[13.5px] font-medium text-fg-2 hover:text-fg"
           >
-            <RotateCw size={15} strokeWidth={STROKE} aria-hidden="true" />
+            <ArrowClockwiseIcon size={15} aria-hidden="true" />
             Leer de nuevo
           </button>
           <button
             type="button"
             className="lang-lift inline-flex h-9 items-center gap-2 rounded-lg bg-error px-3.5 text-[13.5px] font-semibold text-fg-inv"
           >
-            <Trash2 size={15} strokeWidth={STROKE} aria-hidden="true" />
+            <TrashIcon size={15} aria-hidden="true" />
             Eliminar manual
           </button>
         </div>
@@ -185,18 +188,18 @@ export function LangSheet() {
       <Specimen title="Iconos que cuentan lo que pasa">
         <div className="flex items-center gap-6 text-fg-2">
           <span className="inline-flex items-center gap-2 text-[12.5px]">
-            <Pencil size={17} strokeWidth={STROKE} aria-hidden="true" /> edita
+            <PencilSimpleIcon size={17} aria-hidden="true" /> edita
           </span>
           <span className="inline-flex items-center gap-2 text-[12.5px]">
-            <Check size={17} strokeWidth={STROKE} aria-hidden="true" /> guarda
+            <CheckIcon size={17} aria-hidden="true" /> guarda
           </span>
           <span className="inline-flex items-center gap-2 text-[12.5px]">
-            <Search size={17} strokeWidth={STROKE} aria-hidden="true" /> busca
+            <MagnifyingGlassIcon size={17} aria-hidden="true" /> busca
           </span>
         </div>
         <p className="text-[12.5px] text-fg-3">
-          Lucide a 1.75 de trazo. En las transiciones, el icono morfa (lápiz a check, chevron
-          que rota) en vez de swapearse.
+          Iconos Phosphor. Cada estado se marca con su propio peso y el icono se sustituye al
+          cambiar, sin transiciones intermedias.
         </p>
       </Specimen>
     </div>

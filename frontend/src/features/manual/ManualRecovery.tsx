@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { type UseQueryResult } from '@tanstack/react-query';
-import { RotateCw } from 'lucide-react';
+import { ArrowClockwiseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { ApiError, type ManualDetailResponse } from '@/shared/api/client';
 import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
@@ -31,7 +31,7 @@ export function ManualRecovery({
               loading={query.isFetching}
               onClick={() => void query.refetch()}
             >
-              <RotateCw size={18} aria-hidden="true" />
+              <ArrowClockwiseIcon data-icon-motion="rotate" size={20} aria-hidden="true" />
               {commonT('actions.retry')}
             </Button>
           )}

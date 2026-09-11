@@ -15,12 +15,6 @@
     transition: transform var(--m-dur) var(--m-easing);
   }
 
-  .icon-feedback [data-feedback-icon='games'] > svg {
-    transition:
-      rotate var(--m-dur) var(--m-easing),
-      transform var(--m-dur-fast) var(--m-easing);
-  }
-
   .icon-feedback:not(:disabled, [aria-disabled='true'], [aria-busy='true']):active
     > svg:not(.animate-spin, .action-icon),
   .icon-feedback:not(:disabled, [aria-disabled='true'], [aria-busy='true']):active
@@ -47,50 +41,50 @@
       transform: translateY(-1px);
     }
 
-    > :is(.lucide-arrow-right, .lucide-chevron-right, .lucide-log-in),
-    [data-feedback-icon] > :is(.lucide-arrow-right, .lucide-chevron-right, .lucide-log-in) {
+    /* Gesto por semántica del icono (data-icon-motion), no por su identidad. */
+    > [data-icon-motion='forward'],
+    [data-feedback-icon] > [data-icon-motion='forward'] {
       transform: translateX(3px);
     }
 
-    > :is(.lucide-arrow-left, .lucide-chevron-left, .lucide-panel-left-close),
-    [data-feedback-icon] > :is(.lucide-arrow-left, .lucide-chevron-left, .lucide-panel-left-close) {
+    > [data-icon-motion='back'],
+    [data-feedback-icon] > [data-icon-motion='back'] {
       transform: translateX(-3px);
     }
 
-    > :is(.lucide-rotate-ccw, .lucide-rotate-cw, .lucide-refresh-cw, .lucide-settings),
-    [data-feedback-icon]
-      > :is(.lucide-rotate-ccw, .lucide-rotate-cw, .lucide-refresh-cw, .lucide-settings) {
+    > [data-icon-motion='rotate'],
+    [data-feedback-icon] > [data-icon-motion='rotate'] {
       transform: rotate(45deg);
     }
 
-    > :is(.lucide-pencil, .lucide-shuffle),
-    [data-feedback-icon] > :is(.lucide-pencil, .lucide-shuffle) {
+    > [data-icon-motion='rotate-back'],
+    [data-feedback-icon] > [data-icon-motion='rotate-back'] {
+      transform: rotate(-45deg);
+    }
+
+    > [data-icon-motion='tilt'],
+    [data-feedback-icon] > [data-icon-motion='tilt'] {
       transform: rotate(-8deg);
     }
 
-    > :is(.lucide-upload, .lucide-arrow-up, .lucide-chevron-up, .lucide-send),
-    [data-feedback-icon] > :is(.lucide-upload, .lucide-arrow-up, .lucide-chevron-up, .lucide-send) {
+    > [data-icon-motion='up'],
+    [data-feedback-icon] > [data-icon-motion='up'] {
       transform: translateY(-3px);
     }
 
-    > :is(.lucide-download, .lucide-chevron-down),
-    [data-feedback-icon] > :is(.lucide-download, .lucide-chevron-down) {
+    > [data-icon-motion='down'],
+    [data-feedback-icon] > [data-icon-motion='down'] {
       transform: translateY(3px);
     }
 
-    > .lucide-plus,
-    [data-feedback-icon] > .lucide-plus {
+    > [data-icon-motion='plus'],
+    [data-feedback-icon] > [data-icon-motion='plus'] {
       transform: rotate(90deg) scale(1.12);
     }
 
-    > :is(.lucide-search, .lucide-zoom-in, .lucide-scan-line),
-    [data-feedback-icon] > :is(.lucide-search, .lucide-zoom-in, .lucide-scan-line) {
+    > [data-icon-motion='search'],
+    [data-feedback-icon] > [data-icon-motion='search'] {
       transform: scale(1.12);
-    }
-
-    [data-feedback-icon='games'] > svg {
-      rotate: 90deg;
-      transform: none;
     }
 
     [data-feedback-icon='manuals'] > svg {
@@ -139,12 +133,12 @@
   .shelf-cover,
   .game-preview-token,
   .game-preview > .game-cover,
-  .game-preview .lucide-chevron-right,
-  .search-feedback > .lucide-search {
+  .game-preview [data-icon-motion='forward'],
+  .search-feedback > [data-icon-motion='search'] {
     transition: transform var(--m-dur) var(--m-easing);
   }
 
-  .search-feedback:focus-within > .lucide-search {
+  .search-feedback:focus-within > [data-icon-motion='search'] {
     transform: scale(1.12) rotate(-8deg);
   }
 
@@ -164,7 +158,7 @@
     transform: perspective(400px) rotateY(-12deg) rotate(-4deg) scale(1.04);
   }
 
-  .game-preview:hover .lucide-chevron-right {
+  .game-preview:hover [data-icon-motion='forward'] {
     transform: translateX(3px);
   }
 
@@ -193,7 +187,7 @@
     transform: translateY(-3px) rotate(-3deg);
   }
 
-  .search-feedback:hover:not(:focus-within) > .lucide-search {
+  .search-feedback:hover:not(:focus-within) > [data-icon-motion='search'] {
     transform: scale(1.08);
   }
 }
@@ -208,16 +202,25 @@
   }
 }
 
+/* Los orígenes usan coordenadas del viewBox 256, no píxeles de pantalla. */
 .action-icon [data-icon-part='trash-lid'] {
-  transform-origin: 18px 6px;
+  transform-origin: 192px 56px;
 }
 
 .action-icon [data-icon-part='lock-shackle'] {
-  transform-origin: 17px 11px;
+  transform-origin: 168px 80px;
 }
 
 .action-icon [data-icon-part='camera-lens'] {
-  transform-origin: 12px 13px;
+  transform-origin: 128px 132px;
+}
+
+.action-icon [data-icon-part='book-page-left'] {
+  transform-origin: 120px 128px;
+}
+
+.action-icon [data-icon-part='book-page-right'] {
+  transform-origin: 136px 128px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -225,8 +228,25 @@
     transition: transform var(--m-dur) var(--m-easing);
   }
 
-  .action-icon [data-icon-part='book-pages'] {
-    transform-origin: 12px 12px;
+  /* Identidad explícita de cada gesto para que la transición arranque desde
+     una lista de funciones equivalente. */
+  .action-icon [data-icon-part='trash-lid'] {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  .action-icon [data-icon-part='lock-shackle'] {
+    transform: rotate(0deg);
+  }
+
+  .action-icon [data-icon-part='camera-lens'] {
+    transform: scale(1);
+  }
+
+  .action-icon [data-icon-part='exit-arrow'] {
+    transform: translateX(0);
+  }
+
+  .action-icon :is([data-icon-part='book-page-left'], [data-icon-part='book-page-right']) {
     transform: scaleX(1);
   }
 }
@@ -242,7 +262,7 @@
     > svg.action-icon,
     [data-feedback-icon] > svg.action-icon {
       [data-icon-part='trash-lid'] {
-        transform: translateY(-1px) rotate(18deg);
+        transform: translateY(-11px) rotate(18deg);
       }
 
       [data-icon-part='lock-shackle'] {
@@ -254,10 +274,10 @@
       }
 
       [data-icon-part='exit-arrow'] {
-        transform: translateX(2px);
+        transform: translateX(21px);
       }
 
-      [data-icon-part='book-pages'] {
+      :is([data-icon-part='book-page-left'], [data-icon-part='book-page-right']) {
         transform: scaleX(1.14);
       }
     }
@@ -269,38 +289,40 @@
     transition: transform var(--m-dur) var(--m-easing);
   }
 
-  .explanation-icon > .lucide-flag {
-    transform-origin: 25% 85%;
+  /* Bandera: ondea desde la base del mástil de Flag (x 48, y 224 de 256). */
+  .explanation-icon > [data-icon-motion='tilt'] {
+    transform-origin: 19% 88%;
   }
 
   .explanation-trigger:not(:disabled):is(:focus-visible, [data-state='open']) {
-    .lucide-flag {
+    .explanation-icon > [data-icon-motion='tilt'] {
       transform: rotate(-12deg);
     }
-    .lucide-refresh-cw {
+    .explanation-icon > [data-icon-motion='rotate'] {
       transform: rotate(60deg);
     }
-    .lucide-trophy {
+    .explanation-icon > [data-icon-motion='up'] {
       transform: translateY(-3px) rotate(-6deg);
     }
   }
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .explanation-trigger:not(:disabled):hover .lucide-flag {
+  .explanation-trigger:not(:disabled):hover .explanation-icon > [data-icon-motion='tilt'] {
     transform: rotate(-12deg);
   }
 
-  .explanation-trigger:not(:disabled):hover .lucide-refresh-cw {
+  .explanation-trigger:not(:disabled):hover .explanation-icon > [data-icon-motion='rotate'] {
     transform: rotate(60deg);
   }
 
-  .explanation-trigger:not(:disabled):hover .lucide-trophy {
+  .explanation-trigger:not(:disabled):hover .explanation-icon > [data-icon-motion='up'] {
     transform: translateY(-3px) rotate(-6deg);
   }
 }
 
-.icon-feedback.disclosure-feedback[data-state='open'] > svg.lucide-chevron-down {
+/* Disclosure abierto: solo su propia flecha, no cualquier icono con gesto down. */
+.icon-feedback.disclosure-feedback[data-state='open'] > svg[data-icon-motion='down'] {
   transform: rotate(180deg);
 }
 

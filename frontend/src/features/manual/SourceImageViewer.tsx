@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { Images, Loader2, RotateCcw } from 'lucide-react';
+import { ImagesIcon, CircleNotchIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import {
   TransformComponent,
@@ -274,17 +274,12 @@ function ImageFeedback({
           aria-label={t('image.loading')}
           className="flex items-center gap-2 text-sm text-fg-2"
         >
-          <Loader2 size={17} className="motion-safe:animate-spin" aria-hidden="true" />
+          <CircleNotchIcon size={18} className="motion-safe:animate-spin" aria-hidden="true" />
           {t('image.loading')}
         </div>
       ) : (
         <div className="max-w-xs">
-          <Images
-            size={30}
-            strokeWidth={1.5}
-            className="mx-auto mb-4 text-muted"
-            aria-hidden="true"
-          />
+          <ImagesIcon size={30} className="mx-auto mb-4 text-muted" aria-hidden="true" />
           <p className="text-sm font-semibold text-fg">
             {t(state === 'error' ? 'image.errorTitle' : 'image.missingTitle')}
           </p>
@@ -293,7 +288,11 @@ function ImageFeedback({
           </p>
           {state === 'error' ? (
             <Button variant="secondary" size="sm" className="mt-5" onClick={onRetry}>
-              <RotateCcw size={15} />
+              <ArrowCounterClockwiseIcon
+                data-icon-motion="rotate-back"
+                aria-hidden="true"
+                size={16}
+              />
               {t('image.retry')}
             </Button>
           ) : null}

@@ -47,7 +47,8 @@
     inset: 2px auto auto 2px;
   }
 
-  [data-icon] .lucide-triangle-alert {
+  /* La base del triángulo pesa más que el vértice. */
+  [data-icon] > [data-icon='warning'] {
     translate: 0 -0.5px;
   }
 

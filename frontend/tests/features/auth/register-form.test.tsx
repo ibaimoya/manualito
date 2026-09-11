@@ -1,8 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import i18n from '@/app/i18n';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -76,6 +75,51 @@ describe('RegisterForm', () => {
     await act(() => i18n.changeLanguage('en'));
     await user.click(screen.getByRole('button', { name: 'Sign up' }));
     await waitFor(() => expect(body).toMatchObject({ email: 'marta@gmail.com', locale: 'en' }));
+  });
+
+  it('conserva el error al reintentar, evita envíos simultáneos y lo retira al registrarse', async () => {
+    server.use(failRegister());
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    await fillValid(user);
+    await user.click(screen.getByRole('checkbox'));
+    const submit = screen.getByRole('button', { name: 'Crear cuenta' });
+    await user.click(submit);
+    const alert = await screen.findByRole('alert');
+    const reveal = alert.parentElement!.parentElement!;
+    await waitFor(() => expect(reveal).toHaveStyle({ opacity: '1' }));
+    const firstMessage = alert.textContent;
+
+    // Controlamos la respuesta HTTP para observar un reintento todavía pendiente.
+    const response = Promise.withResolvers<void>();
+    let requests = 0;
+    server.use(
+      http.post('/api/auth/register', async () => {
+        requests++;
+        await response.promise;
+        return HttpResponse.json({ detail: 'forced error' }, { status: 500 });
+      }),
+    );
+    try {
+      await user.click(submit);
+      await waitFor(() => expect(requests).toBe(1));
+      expect(submit).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('alert')).toBe(alert);
+      expect(reveal).not.toHaveAttribute('inert');
+      expect(reveal).toHaveStyle({ opacity: '1' });
+      for (let i = 0; i < 20; i++) fireEvent.submit(submit.closest('form')!);
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+      expect(requests).toBe(1);
+    } finally {
+      response.resolve();
+    }
+    await waitFor(() => expect(submit).toBeEnabled());
+    expect(screen.getAllByRole('alert')).toEqual([alert]);
+    expect(alert.textContent).not.toBe(firstMessage);
+    server.resetHandlers();
+    await user.click(submit);
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 
   it('asocia el consentimiento completo al checkbox y permite activarlo desde su texto', async () => {

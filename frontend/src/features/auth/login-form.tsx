@@ -31,6 +31,7 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
+    if (login.isPending) return;
     setSubmitted(true);
     // Sin foco silencioso: damos feedback y llevamos al primer campo vacío.
     if (!identifier.trim()) {
@@ -49,8 +50,8 @@ export function LoginForm({ onAuthenticated }: Readonly<{ onAuthenticated: () =>
       <h1>{t('forms.login.heading')}</h1>
       <p className={styles.formDescription}>{t('forms.login.description')}</p>
 
-      <AuthAlert open={login.isError} title={t('alerts.login.title')} className="mt-4">
-        {loginErrorText(login.error, t('alerts.login.fallback'))}
+      <AuthAlert open={login.lastError != null} title={t('alerts.login.title')} className="mt-4">
+        {loginErrorText(login.lastError, t('alerts.login.fallback'))}
       </AuthAlert>
 
       <div className={styles.fields}>

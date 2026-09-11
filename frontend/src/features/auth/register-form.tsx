@@ -1,5 +1,6 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { CheckIcon } from '@phosphor-icons/react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
+    if (register.isPending) return;
     setSubmitted(true);
     const invalidId = (
       [
@@ -63,7 +65,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
       <h1>{t('forms.register.heading')}</h1>
       <p className={styles.formDescription}>{t('forms.register.description')}</p>
 
-      <RegisterErrorAlert error={register.error} />
+      <RegisterErrorAlert error={register.lastError} />
 
       <div className={styles.fields}>
         <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
@@ -173,16 +175,18 @@ function ConsentField({
   return (
     <div>
       <div className={styles.consent}>
-        <input
-          id={id}
-          type="checkbox"
-          checked={checked}
-          aria-labelledby={`${id}-label`}
-          aria-invalid={ariaInvalid(error)}
-          aria-describedby={error ? `${id}-feedback` : undefined}
-          onChange={(event) => onChange(event.target.checked)}
-          className="size-4 shrink-0 accent-primary"
-        />
+        <span className={styles.consentControl}>
+          <input
+            id={id}
+            type="checkbox"
+            checked={checked}
+            aria-labelledby={`${id}-label`}
+            aria-invalid={ariaInvalid(error)}
+            aria-describedby={error ? `${id}-feedback` : undefined}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+          <CheckIcon size={14} weight="bold" aria-hidden="true" />
+        </span>
         <span id={`${id}-label`}>
           <label htmlFor={id}>{t('consent.label')}</label>{' '}
           <button type="button" onClick={onShowPrivacy} className={styles.textLink}>

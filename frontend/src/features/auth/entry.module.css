@@ -280,8 +280,55 @@
   font-size: 13px;
   line-height: var(--consent-line-height);
 }
-.consent input {
+.consentControl {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   margin-top: calc((var(--consent-line-height) - 16px) / 2 - 0.5px);
+}
+.consentControl input {
+  grid-area: 1 / 1;
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--m-border-strong);
+  border-radius: 3px;
+  background: var(--m-bg);
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out;
+}
+.consentControl input:checked {
+  border-color: var(--m-primary-500);
+  background: var(--m-primary-500);
+}
+.consentControl input:focus-visible {
+  outline: 2px solid var(--m-primary-700);
+  outline-offset: 3px;
+}
+.consentControl svg {
+  grid-area: 1 / 1;
+  pointer-events: none;
+  color: var(--m-bg);
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity 140ms ease-out,
+    scale 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.consentControl input:checked + svg {
+  opacity: 1;
+  scale: 1;
+}
+@media (forced-colors: active) {
+  .consentControl input {
+    appearance: auto;
+  }
+  .consentControl svg {
+    display: none;
+  }
 }
 .consent .textLink {
   display: inline;

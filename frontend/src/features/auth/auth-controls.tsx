@@ -1,6 +1,7 @@
 import { type ParseKeys } from 'i18next';
 import { type MouseEvent, type ReactNode, useCallback, useRef, useState } from 'react';
 import { EyeIcon, EyeSlashIcon } from '@phosphor-icons/react';
+import { AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Input, type InputProps } from '@/components/ui/input';
 import i18n from '@/app/i18n';
@@ -8,6 +9,7 @@ import { cn } from '@/shared/lib/cn';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { PasswordMaskBurst } from './PasswordMaskBurst';
 import { FieldFeedback } from './FieldFeedback';
+import { FeedbackReveal } from './FeedbackReveal';
 
 type AuthKey = ParseKeys<'auth'>;
 
@@ -193,7 +195,13 @@ export function NewPasswordFields({
           onChange={(event) => onPasswordChange(event.target.value)}
           required
         />
-        {password ? <PasswordStrength score={passwordScore(password)} /> : null}
+        <AnimatePresence>
+          {password && (
+            <FeedbackReveal key="strength">
+              <PasswordStrength score={passwordScore(password)} />
+            </FeedbackReveal>
+          )}
+        </AnimatePresence>
       </AuthField>
 
       <AuthField

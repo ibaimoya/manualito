@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -52,6 +53,51 @@ function mountLogin() {
 }
 
 describe('LoginForm', () => {
+  it('conserva el error al reintentar, evita envíos simultáneos y lo retira al entrar', async () => {
+    server.use(failLogin());
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountLogin();
+    await user.type(await screen.findByLabelText('Email o usuario'), 'marta');
+    await user.type(screen.getByLabelText('Contraseña'), 'claveSegura');
+    const submit = screen.getByRole('button', { name: 'Entrar' });
+    await user.click(submit);
+    const alert = await screen.findByRole('alert');
+    const reveal = alert.parentElement!.parentElement!;
+    await waitFor(() => expect(reveal).toHaveStyle({ opacity: '1' }));
+    const firstMessage = alert.textContent;
+
+    // Controlamos la respuesta HTTP para observar un reintento todavía pendiente.
+    const response = Promise.withResolvers<void>();
+    let requests = 0;
+    server.use(
+      http.post('/api/auth/login', async () => {
+        requests++;
+        await response.promise;
+        return HttpResponse.json({ detail: 'forced error' }, { status: 500 });
+      }),
+    );
+    try {
+      await user.click(submit);
+      await waitFor(() => expect(requests).toBe(1));
+      expect(submit).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('alert')).toBe(alert);
+      expect(reveal).not.toHaveAttribute('inert');
+      expect(reveal).toHaveStyle({ opacity: '1' });
+      for (let i = 0; i < 20; i++) fireEvent.submit(submit.closest('form')!);
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+      expect(requests).toBe(1);
+    } finally {
+      response.resolve();
+    }
+    await waitFor(() => expect(submit).toBeEnabled());
+    expect(screen.getAllByRole('alert')).toEqual([alert]);
+    expect(alert.textContent).not.toBe(firstMessage);
+    server.resetHandlers();
+    await user.click(submit);
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
   it('muestra el enlace de recuperar contraseña en español de España', async () => {
     mountLogin();
 

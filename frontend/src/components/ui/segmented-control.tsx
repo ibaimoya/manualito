@@ -8,7 +8,6 @@ export interface SegmentOption<T extends string> {
   value: T;
   label: string;
   icon?: ReactNode;
-  /** Contador opcional: pinta una píldora con el número (p. ej. nº de items). */
   count?: number;
 }
 
@@ -63,7 +62,7 @@ export function SegmentedControl<T extends string>({
               <span
                 aria-hidden="true"
                 data-feedback-icon={o.value}
-                className="grid place-items-center [&_svg]:size-3.5"
+                className="grid place-items-center [&_svg]:size-4"
               >
                 {o.icon}
               </span>
@@ -72,10 +71,7 @@ export function SegmentedControl<T extends string>({
             {typeof o.count === 'number' ? (
               <span
                 aria-hidden="true"
-                className={cn(
-                  'mono grid h-[18px] min-w-[18px] place-items-center rounded-full px-1.5 text-[11px] font-semibold',
-                  active ? 'bg-primary-100 text-primary-700' : 'bg-surface-2 text-fg-3',
-                )}
+                className="min-w-[1ch] text-center font-normal text-fg-2 tabular-nums"
               >
                 {o.count}
               </span>

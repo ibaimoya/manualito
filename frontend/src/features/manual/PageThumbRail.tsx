@@ -210,7 +210,7 @@ export function PageThumbRail({
       <div className="hidden @4xl/app:block">
         <div className="flex items-center justify-between px-1 pb-2.5">
           <h2 className="text-sm font-semibold text-fg">{t('page.heading')}</h2>
-          <span className="mono text-xs tabular-nums text-fg-3">{pages.length}</span>
+          <span className="text-xs font-normal text-fg-2 tabular-nums">{pages.length}</span>
         </div>
         <div className="mb-2 px-1">
           <Tooltip content={<Legend />} touch>

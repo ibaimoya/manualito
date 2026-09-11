@@ -422,7 +422,7 @@ function ResultRow({
           passive
           icon={FileTextIcon}
           label={sharedManuals}
-          className="mono min-h-6 shrink-0 text-xs font-semibold tabular-nums"
+          className="min-h-6 shrink-0 text-xs font-normal text-fg-2 tabular-nums"
           iconClassName="size-3.5"
         >
           {game.manuals_count}

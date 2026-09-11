@@ -91,7 +91,9 @@ function ConversationsScreen() {
           { label: gameName, link: linkOptions({ to: '/game/$gameId', params: { gameId } }) },
         ]}
         actions={
-          counter === null ? null : <span className="mono text-[11px] text-fg-3">{counter}</span>
+          counter === null ? null : (
+            <span className="text-xs font-normal text-fg-2 tabular-nums">{counter}</span>
+          )
         }
       />
 

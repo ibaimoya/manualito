@@ -9,10 +9,12 @@
   },
   "book": {
     "coverTitle": "Manualito.",
-    "pageTitle": "Before you begin",
-    "preparation": "Place the board in the middle of the table with the pieces where everyone can reach them. Each player chooses a colour and sets up their playing area. Leave some room for the cards and other pieces you will need during the game.",
-    "reference": "Keep the manual near the board. When a question comes up, find the relevant section together, then carry on playing from where you left off.",
-    "turns": "Before the first turn, go over the aim of the game and the actions you can take. If you are playing for the first time, try a practice round to get familiar with the rules."
+    "inscription": [
+      "In good company, you and I\nBring one more friend to the club\nA place for games and pizza\nInvent a new tale, you and I",
+      "Make room for a bigger team\nOne more turn before we go\nYou might just win today\nAnd laugh about the drama",
+      "Another round, another idea\nRoll again and see things clearer\nOpen the box and give it a go\nZero rush, just a little buzz"
+    ],
+    "pageTitle": "Before you begin"
   },
   "errors": {
     "navigation": "We couldn’t open the page. Please try again."

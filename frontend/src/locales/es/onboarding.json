@@ -9,10 +9,12 @@
   },
   "book": {
     "coverTitle": "Manualito.",
-    "pageTitle": "Antes de empezar",
-    "preparation": "Coloca el tablero en el centro de la mesa y deja las piezas al alcance de todos. Cada persona elige un color y prepara su zona de juego. Reservad un poco de espacio para las cartas y los componentes que iréis usando durante la partida.",
-    "reference": "Deja el manual cerca del tablero. Cuando surja una duda, buscad el apartado correspondiente y retomad la partida desde donde la habíais dejado.",
-    "turns": "Antes del primer turno, repasad el objetivo y las acciones disponibles. Si es vuestra primera partida, podéis jugar una ronda de prueba para familiarizaros con las reglas."
+    "inscription": [
+      "Invita a quien se ría junto a ti\nBusca sitio para alguien más en el club\nAcerca otra silla a la mesa\nInventa otra historia para ti",
+      "Mil partidas caben en un álbum\nOtro dado trae un giro\nY el mejor día para jugar es hoy\nAquí siempre cabe otra partida",
+      "A veces gana la estrategia\nRecuerda que vale improvisar\nOtra ronda y empezamos de nuevo\nZanja las dudas y juega otra vez"
+    ],
+    "pageTitle": "Antes de empezar"
   },
   "errors": {
     "navigation": "No se ha podido abrir la página. Vuelve a intentarlo."

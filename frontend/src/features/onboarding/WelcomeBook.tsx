@@ -58,9 +58,12 @@ export function WelcomeBook() {
             <div className={styles.paper}>
               <div className={styles.paperContent}>
                 <p className={styles.paperTitle}>{t('book.pageTitle')}</p>
-                <p>{t('book.preparation')}</p>
-                <p>{t('book.turns')}</p>
-                <p>{t('book.reference')}</p>
+                {/* Las iniciales y los finales de verso esconden el mismo nombre. */}
+                {t('book.inscription', { returnObjects: true }).map((stanza) => (
+                  <p key={stanza} className={styles.paperVerse}>
+                    {stanza}
+                  </p>
+                ))}
               </div>
               <span className={styles.paperNumber}>1</span>
             </div>

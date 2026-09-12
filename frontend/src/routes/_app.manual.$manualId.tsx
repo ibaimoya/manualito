@@ -969,12 +969,12 @@ function ConfidenceToggle({
           <motion.span
             key={reducedMotion ? 'static' : 'animated'}
             initial={false}
-            animate={{ transform: active ? 'translateX(12px)' : 'translateX(0px)' }}
+            animate={{ marginInlineStart: active ? 12 : 0 }}
             transition={
               reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 40 }
             }
             className={cn(
-              'size-3 rounded-full transition-colors duration-150 ease-[var(--m-easing)] motion-reduce:transition-none',
+              'size-3 shrink-0 rounded-full transition-colors duration-150 ease-[var(--m-easing)] motion-reduce:transition-none',
               active ? 'bg-bg' : 'bg-fg-3',
             )}
           />

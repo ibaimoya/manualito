@@ -607,8 +607,8 @@ function OptionSwitch({
       >
         <span
           className={cn(
-            'inline-block size-5 rounded-full bg-card shadow-sm transition-transform duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
-            checked ? 'translate-x-[22px]' : 'translate-x-0.5',
+            'inline-block size-5 shrink-0 rounded-full bg-card shadow-sm transition-[margin-inline-start] duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
+            checked ? 'ms-[22px]' : 'ms-0.5',
           )}
         />
       </span>

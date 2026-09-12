@@ -776,13 +776,13 @@ function ChatHeader({
         </div>
         {showNew ? (
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={onNew}
-            className="shrink-0 pointer-coarse:h-11 pointer-coarse:min-w-11"
+            className="h-11 min-w-11 shrink-0 rounded-lg"
             aria-label={t('aria.newConversation')}
           >
-            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={15} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} className="shrink-0" />
             <span className="hidden sm:inline">{t('actions.new')}</span>
           </Button>
         ) : null}

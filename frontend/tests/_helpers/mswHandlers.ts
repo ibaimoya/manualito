@@ -19,13 +19,14 @@ const SAMPLE_USER = {
 
 const SAMPLE_AUTH = { user: SAMPLE_USER, csrf_token: 'csrf-test-token' };
 
-const SAMPLE_MANUAL_SUMMARY = {
+export const SAMPLE_MANUAL_SUMMARY = {
   id: 'test-manual-001',
   game_id: 'test-game-001',
   game_name: 'Catan',
   title: 'Catan',
   status: 'active',
   visibility: 'private',
+  anonymous: true,
   source_type: 'pdf',
   page_count: 8,
   duplicate_page_count: 0,
@@ -62,6 +63,7 @@ export const SAMPLE_GAME_DETAIL = {
       duplicate_page_count: 0,
       created_at: '2026-05-26T10:00:00.000Z',
       is_own: true,
+      author_name: null,
     },
     {
       id: 'test-manual-002',
@@ -71,6 +73,7 @@ export const SAMPLE_GAME_DETAIL = {
       duplicate_page_count: 0,
       created_at: '2026-04-02T10:00:00.000Z',
       is_own: false,
+      author_name: 'ana',
     },
   ],
   conversations_count: 1,
@@ -79,7 +82,15 @@ export const SAMPLE_GAME_DETAIL = {
 
 const SAMPLE_EXPLANATION_SECTION = {
   answer: 'Respuesta de la sección.',
-  sources: [{ manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 1, is_own: true }],
+  sources: [
+    {
+      manual_id: 'test-manual-001',
+      manual_title: 'Reglas base',
+      page: 1,
+      is_own: true,
+      author_name: null,
+    },
+  ],
 };
 
 const SAMPLE_EXPLANATION = {
@@ -277,6 +288,11 @@ export const handlers = [
       pages: [],
     }),
   ),
+
+  http.patch('/api/manuals/:manualId', async ({ request, params }) => {
+    const body = (await request.json()) as { title?: string; anonymous?: boolean };
+    return HttpResponse.json({ ...SAMPLE_MANUAL_SUMMARY, id: params.manualId, ...body });
+  }),
 
   http.delete('/api/manuals/:manualId', () => new HttpResponse(null, { status: 204 })),
 

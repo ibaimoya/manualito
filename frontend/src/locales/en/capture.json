@@ -11,8 +11,17 @@
   },
   "consent": {
     "ariaLabel": "Share this rulebook with the community",
+    "author": {
+      "description": "Others will see that you uploaded this manual.",
+      "label": "Share under my name"
+    },
     "description": "Help others ask questions without uploading their rulebook.",
-    "label": "Share with the community"
+    "label": "Share with the community",
+    "options": {
+      "anonymous": "Anonymous",
+      "label": "Sharing options",
+      "named": "With my name"
+    }
   },
   "empty": {
     "pages": "No pages yet. Use the camera, your gallery, or upload a PDF."
@@ -29,6 +38,11 @@
   },
   "game": {
     "description": "We look up the game on BoardGameGeek to connect the rulebook to its library and make answers better."
+  },
+  "name": {
+    "help": "Leave the suggested name or enter your own.",
+    "label": "Manual name (optional)",
+    "suggested": "{{gameName}} manual"
   },
   "pages": {
     "counter_one": "{{count}} / {{max}} page",

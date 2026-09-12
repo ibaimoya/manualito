@@ -425,6 +425,30 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(/Compartido por la comunidad/);
   });
 
+  it('identifica la subida de la comunidad sin repetir la de los manuales propios', async () => {
+    server.use(
+      http.get('/api/games/:gameId', () =>
+        HttpResponse.json({
+          ...SAMPLE_GAME_DETAIL,
+          manuals: [
+            SAMPLE_GAME_DETAIL.manuals[0],
+            { ...SAMPLE_GAME_DETAIL.manuals[1], author_name: null },
+            { ...SAMPLE_GAME_DETAIL.manuals[1], id: 'test-manual-003', title: 'Variante' },
+          ],
+        }),
+      ),
+    );
+    renderHub();
+    const region = await screen.findByRole('region', { name: /Manuales/ });
+    expect(within(region).getByText('Subido por Anónimo')).toBeInTheDocument();
+    expect(within(region).getByText('Subido por ana')).toBeInTheDocument();
+    expect(
+      within(within(region).getByRole('link', { name: /Ver texto extraído/ })).queryByText(
+        /Subido por/,
+      ),
+    ).toBeNull();
+  });
+
   it('pie con el total agregado de manuales y páginas del pool', async () => {
     renderHub();
     expect(await screen.findByText(/Explicación generada de 2 manuales/)).toBeInTheDocument();

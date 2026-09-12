@@ -1,7 +1,21 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 import { createElement, useMemo } from 'react';
 import { toast } from 'sonner';
-import { api, type ManualSummary } from '@/shared/api/client';
+import {
+  api,
+  type AnswerSource,
+  type ManualDetailResponse,
+  type ManualSummary,
+  type UpdateManualInput,
+} from '@/shared/api/client';
+import type { ConversationMessage } from '@/shared/api/conversations';
+import type { ExplanationSectionKey, GameDetail, GameExplanation } from '@/shared/api/games';
 import { LiveTrans } from '@/shared/components/LiveTrans';
 
 /** Raíz de las claves de caché de manuales (lista + detalle); invalidar tras
@@ -82,6 +96,101 @@ export function useManualProgress(manualId: string | undefined) {
     const page = Math.min(total, done + 1);
     return { pct, page, total };
   }, [data]);
+}
+
+function cachedAuthorName(summary: ManualSummary, current: string | null): string | null {
+  return summary.anonymous || summary.visibility !== 'shared' ? null : current;
+}
+
+function patchSource(summary: ManualSummary, source: AnswerSource): AnswerSource {
+  if (source.manual_id !== summary.id) return source;
+  return {
+    ...source,
+    manual_title: summary.title,
+    author_name: cachedAuthorName(summary, source.author_name),
+  };
+}
+
+// Retira el nombre oculto de la caché. Si se vuelve a mostrar, lo proporciona el servidor.
+function patchCachedSources(qc: QueryClient, summary: ManualSummary): void {
+  qc.setQueriesData<ConversationMessage[]>(
+    { queryKey: ['conversations', 'messages'] },
+    (messages) =>
+      messages?.map((message) => ({
+        ...message,
+        sources: message.sources.map((source) => patchSource(summary, source)),
+      })),
+  );
+  qc.setQueriesData<GameDetail>({ queryKey: ['games', 'detail'] }, (game) =>
+    game
+      ? {
+          ...game,
+          manuals: game.manuals.map((manual) =>
+            manual.id === summary.id
+              ? {
+                  ...manual,
+                  title: summary.title,
+                  author_name: cachedAuthorName(summary, manual.author_name),
+                }
+              : manual,
+          ),
+        }
+      : game,
+  );
+  qc.setQueriesData<GameExplanation>({ queryKey: ['games', 'explanation'] }, (explanation) => {
+    if (!explanation?.sections) return explanation;
+    const sections = { ...explanation.sections };
+    for (const key of Object.keys(sections) as ExplanationSectionKey[]) {
+      const section = sections[key];
+      if (section) {
+        sections[key] = {
+          ...section,
+          sources: section.sources.map((s) => patchSource(summary, s)),
+        };
+      }
+    }
+    return { ...explanation, sections };
+  });
+}
+
+const DETAILS_READ_KEYS = [manualsKey, ['games'], ['conversations']] as const;
+
+/** Guarda los cambios del mismo manual en orden, incluso al cerrar y reabrir el diálogo. */
+export function useUpdateManualDetails(manualId: string) {
+  const qc = useQueryClient();
+  const detailKey = manualDetailQueryOptions(manualId).queryKey;
+  const mutationKey = [...manualsKey, 'update', manualId] as const;
+  return useMutation({
+    mutationKey,
+    scope: { id: `manual:${manualId}` },
+    mutationFn: (input: UpdateManualInput) => api.updateManual(manualId, input),
+    onSuccess: async (summary, input) => {
+      await Promise.all(DETAILS_READ_KEYS.map((queryKey) => qc.cancelQueries({ queryKey })));
+      qc.setQueryData<ManualDetailResponse>(detailKey, (old) =>
+        old ? { ...old, ...summary, pages: old.pages } : old,
+      );
+      qc.setQueryData<ManualSummary[]>(LIST_KEY, (old) =>
+        old?.map((manual) => (manual.id === summary.id ? { ...manual, ...summary } : manual)),
+      );
+      patchCachedSources(qc, summary);
+      const i18nKey =
+        input.anonymous === undefined
+          ? 'feedback.details.renamed'
+          : input.anonymous
+            ? 'feedback.details.hidden'
+            : 'feedback.details.shown';
+      toast.success(createElement(LiveTrans, { ns: 'manual', i18nKey }), {
+        id: 'manual-details',
+      });
+    },
+    onSettled: () => {
+      // Query aún cuenta esta petición. Actualizamos las lecturas cuando termine la cola.
+      if (qc.isMutating({ mutationKey }) > 1) return;
+      for (const queryKey of DETAILS_READ_KEYS) {
+        qc.invalidateQueries({ queryKey }).catch(() => undefined);
+      }
+    },
+  });
 }
 
 /** Borra un manual con update optimista de la lista y rollback ante error. */

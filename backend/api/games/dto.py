@@ -72,6 +72,7 @@ class GamePoolManualSummary:
     created_at: datetime
     is_own: bool
     duplicate_page_count: int
+    author_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

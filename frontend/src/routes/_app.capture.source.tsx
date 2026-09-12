@@ -14,14 +14,18 @@ import {
   CaretUpIcon,
   FileTextIcon,
   ImageIcon,
+  SlidersHorizontalIcon,
   SparkleIcon,
+  UserIcon,
   UsersThreeIcon,
+  type Icon,
 } from '@phosphor-icons/react';
 import { TrashIcon, CameraIcon } from '@/shared/components/action-icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { GameTypeahead, SelectedGameChip } from '@/features/upload/GameTypeahead';
 import { gameDetailKey, gameDetailQueryOptions, myGamesKey } from '@/features/games/use-games';
 import { manualsKey } from '@/features/manual/use-manuals';
@@ -47,15 +51,18 @@ const MAX_IMAGE_BYTES = MAX_IMAGE_MB * MB;
 const MAX_PDF_BYTES = MAX_PDF_MB * MB;
 const MAX_TOTAL_BYTES = MAX_TOTAL_MB * MB;
 const MAX_PAGES = 30;
+const MAX_TITLE_LENGTH = 255;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type Mode = 'images' | 'pdf';
 type UploadPage = Readonly<{ id: string; file: File }>;
 type CreateManualVariables = Readonly<{
   game: GameSearchItem;
+  title: string;
   pages: File[];
   mode: Mode;
   visibility: 'shared' | 'private';
+  anonymous: boolean;
 }>;
 
 function deriveUploadMode(pages: readonly UploadPage[]): Mode | null {
@@ -94,8 +101,14 @@ function NewManualScreen() {
   const mode = deriveUploadMode(pages);
   // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
   const [share, setShare] = useState(true);
+  const [showName, setShowName] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const suggestedTitle =
+    game === null ? '' : t('name.suggested', { gameName: game.name }).slice(0, MAX_TITLE_LENGTH);
 
   const cameraInputId = useId();
+  const titleInputId = useId();
+  const titleHelpId = useId();
   const galleryInputId = useId();
   const pdfInputId = useId();
 
@@ -110,20 +123,22 @@ function NewManualScreen() {
       if (input.mode === 'pdf') {
         return api.createManual(
           {
-            title: input.game.name,
+            title: input.title,
             gameId: input.game.id,
             pdf: input.pages[0]!,
             visibility: input.visibility,
+            anonymous: input.anonymous,
           },
           signal,
         );
       }
       return api.createManual(
         {
-          title: input.game.name,
+          title: input.title,
           gameId: input.game.id,
           images: input.pages,
           visibility: input.visibility,
+          anonymous: input.anonymous,
         },
         signal,
       );
@@ -167,9 +182,11 @@ function NewManualScreen() {
     }
     mutation.mutate({
       game,
+      title: titleDraft.trim() || suggestedTitle,
       pages: pages.map((page) => page.file),
       mode,
       visibility: share ? 'shared' : 'private',
+      anonymous: share ? !showName : true,
     });
   }
 
@@ -287,6 +304,33 @@ function NewManualScreen() {
             <GameTypeahead onSelect={setChosenGame} focusOnMount />
           )}
           <p className="text-sm leading-relaxed text-fg-2">{t('game.description')}</p>
+          {game ? (
+            <div>
+              <label
+                htmlFor={titleInputId}
+                className="mb-1.5 block px-3.5 text-sm font-semibold text-fg"
+              >
+                {t('name.label')}
+              </label>
+              <Input
+                id={titleInputId}
+                name="title"
+                className="h-12 rounded-2xl"
+                value={titleDraft}
+                maxLength={MAX_TITLE_LENGTH}
+                placeholder={suggestedTitle}
+                aria-describedby={titleHelpId}
+                autoComplete="off"
+                spellCheck={false}
+                enterKeyHint="done"
+                disabled={busy}
+                onChange={(event) => setTitleDraft(event.target.value)}
+              />
+              <p id={titleHelpId} className="mt-1.5 px-3.5 text-xs leading-relaxed text-fg-3">
+                {t('name.help')}
+              </p>
+            </div>
+          ) : null}
         </section>
 
         <section className="flex flex-col gap-4">
@@ -369,6 +413,13 @@ function NewManualScreen() {
           )}
 
           <ShareToggle checked={share} onChange={setShare} disabled={busy || game === null} />
+          {share ? (
+            <ShareOptions
+              showName={showName}
+              onShowNameChange={setShowName}
+              disabled={busy || game === null}
+            />
+          ) : null}
 
           <Button
             block
@@ -415,55 +466,148 @@ function StepHeader({ n, title, done }: Readonly<{ n: number; title: string; don
  * Interruptor "compartir con la comunidad": toda la tarjeta es el control
  * (role=switch) para una zona táctil amplia; la pastilla de la derecha es decorativa.
  */
-function ShareToggle({
+type SwitchProps = Readonly<{
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled: boolean;
+}>;
+
+function ShareToggle(props: SwitchProps) {
+  const { t } = useTranslation('capture');
+  return (
+    <OptionSwitch
+      icon={UsersThreeIcon}
+      label={t('consent.label')}
+      description={t('consent.description')}
+      ariaLabel={t('consent.ariaLabel')}
+      {...props}
+    />
+  );
+}
+
+// El panel sigue montado para poder invertir la transición al cerrarlo.
+function ShareOptions({
+  showName,
+  onShowNameChange,
+  disabled,
+}: Readonly<{ showName: boolean; onShowNameChange: (next: boolean) => void; disabled: boolean }>) {
+  const { t } = useTranslation('capture');
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        className={cn(
+          'flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3.5 py-2 text-left text-sm font-semibold text-fg-2 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
+          disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-surface-2 hover:text-fg',
+        )}
+      >
+        <SlidersHorizontalIcon size={18} aria-hidden="true" className="shrink-0" />
+        <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+          <span>{t('consent.options.label')}</span>
+          <span className="ml-auto whitespace-nowrap text-xs font-medium text-fg-3">
+            {showName ? t('consent.options.named') : t('consent.options.anonymous')}
+          </span>
+        </span>
+        <CaretDownIcon
+          size={14}
+          aria-hidden="true"
+          className={cn(
+            'shrink-0 transition-transform duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+      <div
+        id={panelId}
+        aria-hidden={!open}
+        inert={!open}
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}
+      >
+        {/* El margen conserva el anillo de foco dentro del recorte. */}
+        <div className="-mx-1 min-h-0 overflow-hidden px-1">
+          <div
+            className={cn(
+              'pb-1 pt-3 transition-opacity duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
+              open ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            <OptionSwitch
+              icon={UserIcon}
+              label={t('consent.author.label')}
+              description={t('consent.author.description')}
+              ariaLabel={t('consent.author.label')}
+              checked={showName}
+              onChange={onShowNameChange}
+              disabled={disabled}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OptionSwitch({
+  icon: Icon,
+  label,
+  description,
+  ariaLabel,
   checked,
   onChange,
   disabled,
-}: Readonly<{ checked: boolean; onChange: (next: boolean) => void; disabled: boolean }>) {
-  const { t } = useTranslation('capture');
+}: SwitchProps & Readonly<{ icon: Icon; label: string; description: string; ariaLabel: string }>) {
   const helpId = useId();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={t('consent.ariaLabel')}
+      aria-label={ariaLabel}
       aria-describedby={helpId}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'flex w-full items-center gap-3.5 rounded-2xl border bg-surface p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20',
+        'flex w-full items-center gap-3.5 rounded-2xl border bg-surface p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 motion-reduce:transition-none',
         checked ? 'border-primary/40' : 'border-border',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-surface-2',
       )}
     >
       <span
         className={cn(
-          'grid size-9 shrink-0 place-items-center rounded-xl border transition-colors',
+          'grid size-9 shrink-0 place-items-center rounded-xl border transition-colors motion-reduce:transition-none',
           checked
             ? 'border-primary/30 bg-primary-100 text-primary-700'
             : 'border-border bg-bg text-fg-3',
         )}
         aria-hidden="true"
       >
-        <UsersThreeIcon size={18} />
+        <Icon size={18} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold text-fg">{t('consent.label')}</span>
+        <span className="block text-sm font-bold text-fg">{label}</span>
         <span id={helpId} className="mt-0.5 block text-xs leading-relaxed text-fg-3">
-          {t('consent.description')}
+          {description}
         </span>
       </span>
       <span
         aria-hidden="true"
         className={cn(
-          'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ease-[var(--ease-mn)]',
+          'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
           checked ? 'bg-primary' : 'bg-surface-2',
         )}
       >
         <span
           className={cn(
-            'inline-block size-5 rounded-full bg-card shadow-sm transition-transform duration-200 ease-[var(--ease-mn)]',
+            'inline-block size-5 rounded-full bg-card shadow-sm transition-transform duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
             checked ? 'translate-x-[22px]' : 'translate-x-0.5',
           )}
         />

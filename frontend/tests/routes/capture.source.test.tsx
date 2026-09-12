@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route as SourceRoute } from '@/routes/_app.capture.source';
@@ -55,6 +55,37 @@ function sizedFile(name: string, type: string, size: number): File {
   const file = new File(['x'], name, { type });
   Object.defineProperty(file, 'size', { value: size });
   return file;
+}
+
+// Leemos el multipart en texto porque undici no interpreta los File de jsdom.
+function formField(body: string, name: string): string | null {
+  return new RegExp(`name="${name}"\\r?\\n\\r?\\n([^\\r\\n]*)`).exec(body)?.[1] ?? null;
+}
+
+/** Recoge los campos enviados a la API de subida. */
+function captureManualPost() {
+  let body = '';
+  server.use(
+    http.post('/api/manuals', async ({ request }) => {
+      body = await request.text();
+      return HttpResponse.json({
+        manual_id: 'm-1',
+        game_id: 'game-1',
+        status: 'indexing',
+        visibility: 'shared',
+        source_type: 'images',
+        page_count: 1,
+      });
+    }),
+  );
+  return (name: string) => formField(body, name);
+}
+
+async function process(user: ReturnType<typeof userEvent.setup>) {
+  await user.click((await screen.findAllByRole('button', { name: /Procesar/i }))[0]!);
+  expect(
+    await screen.findByText('ProcessingScreen', undefined, { timeout: 3000 }),
+  ).toBeInTheDocument();
 }
 
 function imageFiles(count: number): File[] {
@@ -533,5 +564,113 @@ describe('/capture/source · nuevo manual', () => {
       await screen.findByText('ProcessingScreen', undefined, { timeout: 3000 }),
     ).toBeInTheDocument();
     expect(sentVisibility).toBe('private');
+  });
+});
+
+describe('/capture/source, nombre e identificación', () => {
+  it('usa el nombre sugerido y el anonimato por defecto', async () => {
+    const field = captureManualPost();
+    renderSource();
+    const user = userEvent.setup();
+    expect(screen.queryByRole('textbox', { name: 'Nombre del manual (opcional)' })).toBeNull();
+    await pickGame(user, 'Wingspan');
+    const name = screen.getByRole('textbox', { name: 'Nombre del manual (opcional)' });
+    expect(name).toHaveValue('');
+    expect(name).toHaveAttribute('placeholder', 'Manual de Wingspan');
+    expect(name).toHaveAccessibleDescription('Puedes dejar el nombre sugerido o escribir otro.');
+    await user.type(name, '   ');
+    await user.upload(screen.getByTestId('picker-gallery'), imageFile('foto.jpg'));
+    await process(user);
+    expect(field('title')).toBe('Manual de Wingspan');
+    expect(field('visibility')).toBe('shared');
+    expect(field('anonymous')).toBe('true');
+  });
+
+  it('conserva el nombre escrito al añadir o quitar archivos', async () => {
+    const field = captureManualPost();
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    const name = screen.getByRole('textbox', { name: 'Nombre del manual (opcional)' });
+    await user.type(name, 'Mis reglas caseras');
+    await user.upload(screen.getByTestId('picker-gallery'), imageFiles(2));
+    await user.click(await screen.findByRole('button', { name: 'Quitar página 1' }));
+    await user.click(screen.getByRole('button', { name: 'Quitar página 1' }));
+    expect(await screen.findByText(/Aún no hay páginas/i)).toBeInTheDocument();
+    expect(name).toHaveValue('Mis reglas caseras');
+    await user.upload(screen.getByTestId('picker-pdf'), pdfFile(1));
+    expect(await screen.findByText('manual.pdf')).toBeInTheDocument();
+    expect(name).toHaveValue('Mis reglas caseras');
+    await process(user);
+    expect(field('title')).toBe('Mis reglas caseras');
+    expect(field('anonymous')).toBe('true');
+  });
+
+  it('permite identificarse desde las opciones de compartir', async () => {
+    const field = captureManualPost();
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    expect(screen.queryByRole('switch', { name: 'Compartir con mi nombre' })).toBeNull();
+    const options = screen.getByRole('button', { name: /Opciones de compartir/ });
+    expect(options).toHaveAttribute('aria-expanded', 'false');
+    expect(options).toHaveTextContent('Anónimo');
+    expect(options).not.toHaveTextContent('Como Anónimo');
+    const panel = document.getElementById(options.getAttribute('aria-controls')!)!;
+    expect(panel).toHaveAttribute('aria-hidden', 'true');
+    expect(panel).toHaveAttribute('inert');
+    await user.click(options);
+    expect(options).toHaveAttribute('aria-expanded', 'true');
+    expect(panel).not.toHaveAttribute('aria-hidden', 'true');
+    expect(panel).not.toHaveAttribute('inert');
+    const showName = screen.getByRole('switch', { name: 'Compartir con mi nombre' });
+    expect(showName).toHaveAttribute('aria-checked', 'false');
+    expect(showName).toHaveAccessibleDescription('Otros verán que tú has subido este manual.');
+    await user.click(showName);
+    expect(showName).toHaveAttribute('aria-checked', 'true');
+    expect(options).toHaveTextContent('Con mi nombre');
+    await user.click(options);
+    expect(screen.queryByRole('switch', { name: 'Compartir con mi nombre' })).toBeNull();
+    expect(options).toHaveTextContent('Con mi nombre');
+    await user.upload(screen.getByTestId('picker-gallery'), imageFile('foto.jpg'));
+    await process(user);
+    expect(field('visibility')).toBe('shared');
+    expect(field('anonymous')).toBe('false');
+  });
+
+  it('permite envolver el resumen de las opciones en pantallas estrechas', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    const options = screen.getByRole('button', { name: /Opciones de compartir/ });
+    const title = within(options).getByText('Opciones de compartir');
+    expect(title.className).not.toMatch(/truncate|nowrap/);
+    expect(title.parentElement).toHaveClass('flex-wrap');
+    expect(options).not.toHaveClass('h-11');
+  });
+
+  it('envía los manuales privados como anónimos', async () => {
+    const field = captureManualPost();
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    await user.click(screen.getByRole('button', { name: /Opciones de compartir/ }));
+    await user.click(screen.getByRole('switch', { name: 'Compartir con mi nombre' }));
+    await user.click(screen.getByRole('switch', { name: /Compartir el manual con la comunidad/i }));
+    expect(screen.queryByRole('button', { name: /Opciones de compartir/ })).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Compartir con mi nombre' })).toBeNull();
+    await user.upload(screen.getByTestId('picker-gallery'), imageFile('foto.jpg'));
+    await process(user);
+    expect(field('visibility')).toBe('private');
+    expect(field('anonymous')).toBe('true');
+  });
+
+  it('mantiene el tamaño del buscador en el campo de nombre', async () => {
+    renderSource();
+    const user = userEvent.setup();
+    await pickGame(user, 'Wingspan');
+    const name = screen.getByRole('textbox', { name: 'Nombre del manual (opcional)' });
+    expect(name).toHaveClass('h-12', 'rounded-2xl');
+    expect(name).not.toHaveAttribute('role');
   });
 });

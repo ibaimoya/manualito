@@ -158,6 +158,7 @@ export function labManual(escenario: LabEscenario): ManualDetailResponse {
     title: null,
     status: escenario === 'busy' ? 'indexing' : 'active',
     visibility: 'private',
+    anonymous: true,
     source_type: 'pdf',
     page_count: PAGES.length,
     duplicate_page_count: 1,

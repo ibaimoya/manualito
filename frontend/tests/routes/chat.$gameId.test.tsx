@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { PENDING_ASSISTANT_POLL_INTERVAL_MS, Route as ChatRoute } from '@/routes/_app.chat.$gameId';
@@ -498,7 +498,7 @@ describe('/chat/$gameId', () => {
     expect(creates).toBe(1);
   });
 
-  it('cita páginas: la propia viva enlaza; la borrada y la de comunidad no', async () => {
+  it('distingue las fuentes y solo abre páginas de manuales propios disponibles', async () => {
     vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
@@ -528,10 +528,34 @@ describe('/chat/$gameId', () => {
             created_at: '2026-05-26T10:06:05.000Z',
             // test-manual-001 sigue en el pool (propio); m-borrado ya no; el otro es de comunidad.
             sources: [
-              { manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 4, is_own: true },
-              { manual_id: 'm-borrado', manual_title: 'Viejo', page: 7, is_own: true },
-              { manual_id: 'test-manual-002', manual_title: 'Comunidad', page: 4, is_own: false },
-              { manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 4, is_own: true },
+              {
+                manual_id: 'test-manual-001',
+                manual_title: 'Reglas base',
+                page: 4,
+                is_own: true,
+                author_name: 'marta',
+              },
+              {
+                manual_id: 'm-borrado',
+                manual_title: null,
+                page: 7,
+                is_own: true,
+                author_name: null,
+              },
+              {
+                manual_id: 'test-manual-002',
+                manual_title: 'Comunidad',
+                page: 4,
+                is_own: false,
+                author_name: null,
+              },
+              {
+                manual_id: 'test-manual-001',
+                manual_title: 'Reglas base',
+                page: 4,
+                is_own: true,
+                author_name: 'marta',
+              },
             ],
           },
         }),
@@ -544,32 +568,67 @@ describe('/chat/$gameId', () => {
     await user.type(input, 'madera');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
-    // La página propia y viva (4) enlaza al visor del manual.
-    const own = await screen.findByRole('link', { name: 'Abrir página 4 del manual' });
+    const own = await screen.findByRole('link', { name: 'Abrir página 4 de Reglas base' });
     expect(own.getAttribute('href')).toContain('/manual/test-manual-001');
     expect(own.getAttribute('href')).toContain('page=4');
-    // La fuente propia ya borrada (7) se cita pero NO enlaza.
-    expect(screen.getByText('Pág. 7')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
-    // Igual número en dos manuales conserva ambas citas, sin duplicar la propia.
-    expect(screen.getAllByText('Pág. 4')).toHaveLength(2);
-    expect(screen.getAllByRole('link', { name: 'Abrir página 4 del manual' })).toHaveLength(1);
-    const community = screen.getByRole('button', { name: 'Página 4 (manual de la comunidad)' });
-    expect(community).toHaveTextContent('Pág. 4');
-    await user.hover(community);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Comunidad · manual de la comunidad',
-    );
+    expect(own).toHaveTextContent(/^M$/);
+    expect(own).toHaveAccessibleDescription('Subido por marta');
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    await user.hover(own);
+    const ownTip = await screen.findByRole('tooltip');
+    expect(ownTip).toHaveTextContent('Reglas base');
+    expect(ownTip).toHaveTextContent('Página 4');
+    expect(ownTip).toHaveTextContent('Subido por marta');
+    expect(ownTip).not.toHaveTextContent('Toca de nuevo');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Página 7 (ya no disponible)' })).toHaveTextContent(
-      'Pág. 7',
-    );
+    await user.unhover(own);
+    const list = screen.getByRole('list', { name: 'Fuentes' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('link', { name: /Abrir página 4/ })).toHaveLength(1);
+    expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
+    const community = screen.getByRole('button', {
+      name: 'Página 4 de Comunidad (manual de la comunidad)',
+    });
+    expect(community).toHaveAccessibleDescription('Subido por Anónimo');
+    await user.hover(community);
+    const communityTip = await screen.findByRole('tooltip');
+    expect(communityTip).toHaveTextContent('Comunidad');
+    expect(communityTip).toHaveTextContent('Página 4');
+    expect(communityTip).toHaveTextContent('manual de la comunidad');
+    expect(communityTip).toHaveTextContent('Subido por Anónimo');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    const removed = screen.getByRole('button', {
+      name: 'Página 7 de Manual sin nombre (ya no disponible)',
+    });
+    expect(removed).toHaveAccessibleDescription('Subido por Anónimo');
     expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
     await user.unhover(community);
-    await user.hover(own);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Reglas base');
-    await user.click(own);
+    act(() => own.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Subido por marta');
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(own).toHaveFocus();
+    // Se comprueba el gesto táctil sin cambiar las capacidades del dispositivo.
+    await user.pointer({ keys: '[TouchA]', target: own });
+    const preview = await screen.findByRole('tooltip');
+    expect(preview).toHaveTextContent('Subido por marta');
+    expect(preview).toHaveTextContent('Toca de nuevo para abrir');
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.pointer({ keys: '[TouchA]', target: community });
+    await waitFor(() => expect(screen.getAllByRole('tooltip')).toHaveLength(1));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('manual de la comunidad');
+    expect(screen.getByRole('tooltip')).not.toHaveTextContent('Toca de nuevo');
+    await user.pointer({ keys: '[TouchA]', target: community });
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.pointer({ keys: '[TouchA]', target: own });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Toca de nuevo para abrir');
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.pointer({ keys: '[TouchA]', target: own });
     expect(await screen.findByText('ManualScreen')).toBeInTheDocument();
   });
 

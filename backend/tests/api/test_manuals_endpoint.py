@@ -119,6 +119,7 @@ def test_create_manual_orquesta_servicio_persistente(
     assert kwargs["game_id"] == _GAME_ID
     assert kwargs["title"] == "Manual base"
     assert kwargs["visibility"] == "shared"
+    assert kwargs["anonymous"] is True
     assert kwargs["language"] == "es"
     assert kwargs["images"][0].filename == "manual.jpg"
     assert kwargs["pdf"] is None
@@ -146,6 +147,7 @@ def test_list_manuals_devuelve_manuales_propios(
                 "title": "Manual base",
                 "status": "active",
                 "visibility": "private",
+                "anonymous": True,
                 "source_type": "images",
                 "page_count": 1,
                 "duplicate_page_count": 0,
@@ -199,6 +201,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
         title=summary.title,
         status=summary.status,
         visibility=summary.visibility,
+        anonymous=summary.anonymous,
         source_type=summary.source_type,
         page_count=summary.page_count,
         language=summary.language,
@@ -582,6 +585,7 @@ def _manual_summary() -> ManualSummary:
         title="Manual base",
         status="active",
         visibility="private",
+        anonymous=True,
         source_type="images",
         page_count=1,
         duplicate_page_count=0,

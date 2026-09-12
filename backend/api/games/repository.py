@@ -20,12 +20,14 @@ from api.games.dto import (
     MyGameSummary,
 )
 from api.games.exceptions import GameNotFoundError
+from api.manuals.repository import manual_author_name
 from common.crypto import sha256_hex
 from database.models.conversation import Conversation
 from database.models.explanation import GameExplanation
 from database.models.game import Game
 from database.models.game_follow import GameFollow
 from database.models.manual import Manual, ManualPage
+from database.models.user import User
 
 SIMILARITY_THRESHOLD = 0.1
 
@@ -315,7 +317,9 @@ async def list_game_pool_manuals(
             )
             .scalar_subquery()
             .label("duplicate_page_count"),
+            manual_author_name(),
         )
+        .join(User, User.id == Manual.owner_user_id)
         .where(*_pool_visibility_filters(game_id, current_user_id))
         .order_by(Manual.created_at.desc(), Manual.id.desc())
     )

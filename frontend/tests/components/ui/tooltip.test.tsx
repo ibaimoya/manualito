@@ -172,4 +172,44 @@ describe('Tooltip', () => {
     expect(activations).toEqual([false, false]);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
+
+  it('reserva el primer toque para consultar y permite abrir con el segundo', async () => {
+    const user = userEvent.setup();
+    const activations: boolean[] = [];
+    render(
+      <TooltipProvider>
+        <Tooltip content="Reglas base" touch="confirm" touchHint="Toca de nuevo para abrir">
+          <button type="button" onClick={(event) => activations.push(event.defaultPrevented)}>
+            Abrir
+          </button>
+        </Tooltip>
+      </TooltipProvider>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Abrir' });
+
+    await user.pointer({ keys: '[TouchA]', target: trigger });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Reglas base');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Toca de nuevo para abrir');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(activations).toEqual([true]);
+    await user.pointer({ keys: '[TouchA]', target: trigger });
+    expect(activations).toEqual([true, false]);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    // La indicación de repetir el toque no corresponde al ratón ni al teclado.
+    await user.click(trigger);
+    expect(activations).toEqual([true, false, false]);
+    await user.unhover(trigger);
+    await user.hover(trigger);
+    expect(await screen.findByRole('tooltip')).not.toHaveTextContent('Toca de nuevo');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await user.keyboard('{Enter}');
+    expect(activations).toEqual([true, false, false, false]);
+
+    // Al cerrar, la próxima pulsación táctil vuelve a mostrar los detalles.
+    await user.pointer({ keys: '[TouchA]', target: trigger });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Toca de nuevo para abrir');
+    expect(activations).toEqual([true, false, false, false, true]);
+  });
 });

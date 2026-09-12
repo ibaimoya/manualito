@@ -31,6 +31,7 @@ import { mapApiError } from '@/shared/api/error-mapper';
 import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
 import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { AddManualIcon, ExtractedTextIcon } from '@/shared/components/action-icons';
+import { UploadedBy } from '@/shared/components/UploadedBy';
 import {
   type ExplanationSectionKey,
   type GameDetail,
@@ -296,7 +297,10 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
             {t('manuals.extracted')}
           </span>
         ) : (
-          <HelpIndicator icon={UsersThreeIcon} label={t('manuals.shared')} className="mt-0.5" />
+          <>
+            <HelpIndicator icon={UsersThreeIcon} label={t('manuals.shared')} className="mt-0.5" />
+            <UploadedBy authorName={manual.author_name} />
+          </>
         )}
       </div>
     </>

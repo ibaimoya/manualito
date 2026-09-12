@@ -179,7 +179,12 @@ async def get_game_explanation_handler(
             str(outcome.job.game_id),
             outcome.job.source_fingerprint,
         )
-    return build_game_explanation_response(outcome.snapshot, outcome.owned_manual_ids)
+    return await build_game_explanation_response(
+        session,
+        current_user_id=auth.user.id,
+        snapshot=outcome.snapshot,
+        owned_manual_ids=outcome.owned_manual_ids,
+    )
 
 
 @router.post(

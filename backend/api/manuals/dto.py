@@ -78,6 +78,15 @@ class AuthorizedChunk:
     manual_title: str | None
     source_page: int
     is_own: bool
+    author_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ManualSourceInfo:
+    """Título y nombre de usuario que se pueden mostrar en una fuente."""
+
+    title: str | None
+    author_name: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +119,7 @@ class ManualSummary:
     title: str | None
     status: str
     visibility: str
+    anonymous: bool
     source_type: str
     page_count: int
     language: str | None

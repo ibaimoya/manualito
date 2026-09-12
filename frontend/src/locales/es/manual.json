@@ -31,6 +31,36 @@
       "title": "Muestra la confianza de cada línea"
     }
   },
+  "details": {
+    "confirm": {
+      "hide": {
+        "action": "Usar Anónimo",
+        "text": "Tu nombre dejará de aparecer junto a este manual y en las fuentes de las respuestas.",
+        "title": "¿Volver a aparecer como Anónimo?"
+      },
+      "show": {
+        "action": "Compartir con mi nombre",
+        "text": "Otros verán tu nombre junto a este manual y en las fuentes de las respuestas.",
+        "title": "¿Compartir con tu nombre?"
+      }
+    },
+    "errors": {
+      "empty": "Escribe un nombre para el manual.",
+      "network": "No hemos podido guardar los cambios. Inténtalo de nuevo.",
+      "tooLong": "Usa un máximo de {{max}} caracteres."
+    },
+    "field": "Nombre del manual",
+    "help": "El cambio también se verá en las fuentes de tus conversaciones.",
+    "rename": "Renombrar manual",
+    "save": "Guardar nombre",
+    "sharing": {
+      "anonymous": "Compartido como Anónimo",
+      "named": "Compartido con mi nombre",
+      "switchToAnonymous": "Compartido con mi nombre. Cambiar para volver a aparecer como Anónimo",
+      "switchToNamed": "Compartido como Anónimo. Cambiar para compartir con mi nombre"
+    },
+    "title": "Renombrar manual"
+  },
   "dialogs": {
     "delete": {
       "description": "Confirma que quieres borrarlo.",
@@ -69,6 +99,11 @@
       "error": "No hemos podido borrar el manual",
       "errorDescription": "Inténtalo de nuevo en un momento.",
       "success": "Manual borrado"
+    },
+    "details": {
+      "hidden": "Compartido como Anónimo",
+      "renamed": "Nombre guardado",
+      "shown": "Compartido con mi nombre"
     },
     "edit": {
       "busy": "El manual se está procesando",

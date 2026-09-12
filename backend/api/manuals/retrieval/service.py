@@ -144,6 +144,7 @@ def _answer_sources(chunks: Sequence[AuthorizedChunk]) -> list[AnswerSource]:
                 manual_title=chunk.manual_title,
                 page=chunk.source_page,
                 is_own=chunk.is_own,
+                author_name=chunk.author_name,
             )
         )
     return sources

@@ -24,6 +24,8 @@ export interface GamePoolManual {
   created_at: string;
   /** Solo los manuales propios pueden abrirse en detalle y editarse. */
   is_own: boolean;
+  /** Nombre de usuario visible en el manual compartido, o null si es anónimo. */
+  author_name: string | null;
 }
 
 export interface GameDetail {

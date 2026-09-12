@@ -65,6 +65,7 @@ describe('api createManual', () => {
     expect(body).toContain('g-1');
     expect(body).toContain('images');
     expect(body.match(/name="images"/g)).toHaveLength(2);
+    expect(body).toMatch(/name="anonymous"\r?\n\r?\ntrue/);
     expect(result).toMatchObject({
       manual_id: 'm-1',
       status: 'indexing',
@@ -252,6 +253,29 @@ describe('api response handling', () => {
         images: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })],
       }),
     ).rejects.toMatchObject({ status: 500 });
+  });
+});
+
+describe('api.updateManual', () => {
+  it('envía los campos modificados y recibe el resumen actualizado', async () => {
+    let received: unknown = null;
+    let contentType: string | null = null;
+    server.use(
+      http.patch('/api/manuals/:manualId', async ({ request, params }) => {
+        received = await request.json();
+        contentType = request.headers.get('content-type');
+        return HttpResponse.json({
+          id: params.manualId,
+          title: 'Reglas base',
+          anonymous: false,
+          visibility: 'shared',
+        });
+      }),
+    );
+    const result = await api.updateManual('m 1', { title: 'Reglas base', anonymous: false });
+    expect(received).toEqual({ title: 'Reglas base', anonymous: false });
+    expect(contentType).toContain('application/json');
+    expect(result).toMatchObject({ id: 'm 1', title: 'Reglas base', anonymous: false });
   });
 });
 

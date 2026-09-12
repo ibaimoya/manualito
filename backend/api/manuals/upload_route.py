@@ -53,7 +53,7 @@ class ManualUploadRoute(APIRoute):
             if _declared_body_is_too_large(request):
                 raise ManualRequestTooLargeError
             try:
-                await request.form(max_files=31, max_fields=4)
+                await request.form(max_files=31, max_fields=5)
             except HTTPException as exc:
                 if isinstance(exc.__context__, _UploadBodyTooLarge):
                     raise ManualRequestTooLargeError from exc

@@ -27,8 +27,15 @@ from api.manuals.schemas import (
     ManualProcessingPageResponse,
     ManualProcessingResponse,
     ManualSummaryResponse,
+    UpdateManualRequest,
 )
-from api.manuals.service import create_manual, delete_manual, edit_page_text, reprocess_manual
+from api.manuals.service import (
+    create_manual,
+    delete_manual,
+    edit_page_text,
+    reprocess_manual,
+    update_manual,
+)
 from api.manuals.upload_route import ManualUploadRoute
 from api.rate_limit import limiter
 from api.responses import (
@@ -56,6 +63,7 @@ upload_router = APIRouter(route_class=ManualUploadRoute)
 
 ManualTitle = Annotated[str | None, Form(max_length=255)]
 ManualVisibility = Annotated[str, Form(pattern="^(shared|private)$")]
+ManualAnonymous = Annotated[bool, Form()]
 ManualLanguage = Annotated[str | None, Form(max_length=35)]
 ManualImagesUpload = Annotated[list[UploadFile] | None, File()]
 ManualPdfUpload = Annotated[UploadFile | None, File()]
@@ -236,6 +244,7 @@ async def create_manual_handler(
     _csrf: CsrfProtection,
     title: ManualTitle = None,
     visibility: ManualVisibility = "private",
+    anonymous: ManualAnonymous = True,
     language: ManualLanguage = None,
     images: ManualImagesUpload = None,
     pdf: ManualPdfUpload = None,
@@ -250,12 +259,37 @@ async def create_manual_handler(
         language=language,
         images=images,
         pdf=pdf,
+        anonymous=anonymous,
     )
     await dispatch_task(process_manual_task.delay, str(result.manual_id))
     return result
 
 
 router.include_router(upload_router)
+
+
+@router.patch(
+    "/api/manuals/{manual_id}",
+    responses=MANUAL_NOT_FOUND_RESPONSE,
+)
+@limiter.limit(config.MANUAL_EDIT_RATE_LIMIT)
+async def update_manual_handler(
+    request: Request,
+    auth: CurrentAuth,
+    manual_id: UUID,
+    payload: UpdateManualRequest,
+    session: DbSession,
+    _csrf: CsrfProtection,
+) -> ManualSummaryResponse:
+    """Actualiza el nombre o el anonimato de un manual del usuario."""
+    summary = await update_manual(
+        session,
+        auth=auth,
+        manual_id=manual_id,
+        title=payload.title,
+        anonymous=payload.anonymous,
+    )
+    return ManualSummaryResponse.model_validate(summary)
 
 
 @router.put(

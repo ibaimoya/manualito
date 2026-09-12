@@ -11,6 +11,8 @@ import {
   PencilSimpleIcon,
   ArrowClockwiseIcon,
   MagnifyingGlassIcon,
+  UserCheckIcon,
+  UserIcon,
   XIcon,
 } from '@phosphor-icons/react';
 import { TrashIcon } from '@/shared/components/action-icons';
@@ -24,7 +26,9 @@ import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
+import { AuthorVisibilityDialog } from '@/features/manual/AuthorVisibilityDialog';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
+import { RenameManualDialog } from '@/features/manual/RenameManualDialog';
 import { PageTextCard } from '@/features/manual/PageTextCard';
 import { ManualRecovery } from '@/features/manual/ManualRecovery';
 import { PageThumbRail } from '@/features/manual/PageThumbRail';
@@ -151,17 +155,19 @@ function usePageArrowKeys(
   }, [active, pageNumber]);
 }
 
-/** Fila de metadatos de la cabecera: fecha, formato, nº de páginas y duplicadas. */
+/** Datos del archivo y estado de la publicación. */
 function ManualMetaRow({
   createdAt,
   sourceIsPdf,
   pageCount,
   duplicateCount,
+  sharing,
 }: Readonly<{
   createdAt: string;
   sourceIsPdf: boolean;
   pageCount: number;
   duplicateCount: number;
+  sharing?: ReactNode;
 }>) {
   const { t } = useTranslation('manual');
   return (
@@ -187,7 +193,29 @@ function ManualMetaRow({
         <FilesIcon size={14} aria-hidden="true" /> {t('meta.pages', { count: pageCount })}
       </span>
       {duplicateCount > 0 ? <DuplicatePagesBadge count={duplicateCount} /> : null}
+      {sharing}
     </div>
+  );
+}
+
+function SharingStateButton({
+  anonymous,
+  onClick,
+}: Readonly<{ anonymous: boolean; onClick: () => void }>) {
+  const { t } = useTranslation('manual');
+  const Icon = anonymous ? UserIcon : UserCheckIcon;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={t(
+        anonymous ? 'details.sharing.switchToNamed' : 'details.sharing.switchToAnonymous',
+      )}
+      className="inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-sm text-left text-fg-2 underline decoration-border-strong decoration-dotted underline-offset-[3px] transition-colors hover:text-fg hover:decoration-fg-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 pointer-coarse:min-h-11"
+    >
+      <Icon size={14} aria-hidden="true" />
+      <span>{t(anonymous ? 'details.sharing.anonymous' : 'details.sharing.named')}</span>
+    </button>
   );
 }
 
@@ -244,6 +272,8 @@ function ManualDetailLoaded({
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [reprocessOpen, setReprocessOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [authorOpen, setAuthorOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const [showConfidence, setShowConfidence] = useState(false);
   const [view, setView] = useState<ManualView>('compare');
@@ -389,7 +419,13 @@ function ManualDetailLoaded({
   }
 
   usePageArrowKeys(
-    editingPage === null && !imageOpen && !reprocessOpen && !deleteOpen && discardTarget === null,
+    editingPage === null &&
+      !imageOpen &&
+      !reprocessOpen &&
+      !deleteOpen &&
+      !renameOpen &&
+      !authorOpen &&
+      discardTarget === null,
     page.page_number,
     goToPage,
   );
@@ -422,9 +458,17 @@ function ManualDetailLoaded({
               sourceIsPdf={sourceIsPdf}
               pageCount={pages.length}
               duplicateCount={duplicateCount}
+              sharing={
+                manual.visibility === 'shared' ? (
+                  <SharingStateButton
+                    anonymous={manual.anonymous}
+                    onClick={() => setAuthorOpen(true)}
+                  />
+                ) : null
+              }
             />
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
@@ -435,6 +479,17 @@ function ManualDetailLoaded({
               <ArrowClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
               {t('workspace.reread')}
             </Button>
+            <Tooltip content={t('details.rename')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('details.rename')}
+                onClick={() => setRenameOpen(true)}
+                className="text-fg-3 hover:text-fg"
+              >
+                <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
+              </Button>
+            </Tooltip>
             <Tooltip
               content={editing ? t('buttons.deleteManualDisabled') : t('buttons.deleteManual')}
               touch={editing}
@@ -598,6 +653,9 @@ function ManualDetailLoaded({
           </Button>
         </DialogBody>
       </Dialog>
+
+      <RenameManualDialog open={renameOpen} onOpenChange={setRenameOpen} manual={manual} />
+      <AuthorVisibilityDialog open={authorOpen} onOpenChange={setAuthorOpen} manual={manual} />
 
       <ManualImageDialog
         open={imageOpen}

@@ -4,10 +4,11 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import Field, StringConstraints
+from pydantic import Field, StrictBool, StringConstraints, field_validator, model_validator
 
 from api.annotations import Answer, ChunksIndexed, Question
 from api.schemas import StrictModel
+from database.models.constants import MANUAL_TITLE_MAX_LENGTH
 
 GAME_QUESTION_TOP_K_MAX = 10
 MANUAL_PAGE_TEXT_MAX_LENGTH = 20_000
@@ -20,6 +21,14 @@ PageText = Annotated[
         strip_whitespace=True,
         min_length=1,
         max_length=MANUAL_PAGE_TEXT_MAX_LENGTH,
+    ),
+]
+ManualTitle = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MANUAL_TITLE_MAX_LENGTH,
     ),
 ]
 
@@ -44,6 +53,7 @@ class ManualSummaryResponse(StrictModel):
     title: str | None
     status: str
     visibility: str
+    anonymous: bool
     source_type: str
     page_count: int
     duplicate_page_count: int = Field(default=0, ge=0)
@@ -123,6 +133,26 @@ class EditPageTextRequest(StrictModel):
     text: PageText
 
 
+class UpdateManualRequest(StrictModel):
+    """Cambios de título o anonimato de un manual propio."""
+
+    title: ManualTitle | None = None
+    anonymous: StrictBool | None = None
+
+    @field_validator("title", "anonymous", mode="before")
+    @classmethod
+    def _reject_null(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("El valor no puede ser null.")
+        return value
+
+    @model_validator(mode="after")
+    def _require_a_change(self) -> "UpdateManualRequest":
+        if not self.model_fields_set:
+            raise ValueError("Incluye al menos un campo para actualizar.")
+        return self
+
+
 class GameQuestionRequest(StrictModel):
     """Pregunta dirigida al pool de manuales de un juego."""
 
@@ -137,6 +167,7 @@ class AnswerSource(StrictModel):
     manual_title: str | None
     page: int = Field(ge=1)
     is_own: bool = False
+    author_name: str | None = None
 
 
 class AnswerResponse(StrictModel):

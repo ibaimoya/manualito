@@ -23,6 +23,8 @@ export interface AnswerSource {
   page: number;
   /** Si el manual citado es del usuario: solo entonces se puede abrir el visor. */
   is_own: boolean;
+  /** Nombre de usuario autorizado por el propietario. Si está oculto, es null. */
+  author_name: string | null;
 }
 
 export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';
@@ -48,6 +50,8 @@ export interface ManualSummary {
   title: string | null;
   status: ManualStatus;
   visibility: ManualVisibility;
+  /** Oculta el nombre de quien subió el manual. */
+  anonymous: boolean;
   source_type: 'images' | 'pdf';
   page_count: number;
   /** Páginas idénticas a otras ya subidas: copiadas, no reprocesadas ni contadas. */
@@ -114,6 +118,7 @@ export type CreateManualInput =
       title: string;
       images: File[];
       visibility?: ManualVisibility;
+      anonymous?: boolean;
       language?: string;
       gameId: string;
     }
@@ -121,9 +126,16 @@ export type CreateManualInput =
       title: string;
       pdf: File;
       visibility?: ManualVisibility;
+      anonymous?: boolean;
       language?: string;
       gameId: string;
     };
+
+/** Campos que el propietario puede cambiar. */
+export interface UpdateManualInput {
+  title?: string;
+  anonymous?: boolean;
+}
 
 /* ============================================================
    Endpoints
@@ -147,6 +159,7 @@ export const api = {
     const fd = new FormData();
     fd.append('title', input.title);
     fd.append('visibility', input.visibility ?? 'private');
+    fd.append('anonymous', String(input.anonymous ?? true));
     if (input.language) fd.append('language', input.language);
     fd.append('game_id', input.gameId);
     if ('pdf' in input) {
@@ -204,6 +217,21 @@ export const api = {
         signal,
       },
     );
+  },
+
+  /** Cambia el nombre o el anonimato de un manual propio. */
+  async updateManual(
+    manualId: string,
+    input: UpdateManualInput,
+    signal?: AbortSignal,
+  ): Promise<ManualSummary> {
+    return request<ManualSummary>(`/manuals/${encodeURIComponent(manualId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+      headers: JSON_HEADERS,
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
   },
 
   /** DELETE /api/manuals/{id} — borra un manual propio (204). */

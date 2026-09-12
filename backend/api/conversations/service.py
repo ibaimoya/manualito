@@ -35,6 +35,7 @@ from api.games.exceptions import GameUnavailableError
 from api.locks import advisory_session_lock
 from api.manuals.exceptions import GeneratedAnswerTooLongError, ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
+from api.manuals.sources import refresh_sources, resolve_source_info, source_snapshot
 from common.conversation_limits import CONVERSATION_TITLE_MAX_LENGTH
 from common.language import Language
 from database.session import get_sessionmaker
@@ -79,18 +80,28 @@ async def list_conversations(
 async def list_messages(
     session: AsyncSession,
     *,
+    current_user_id: UUID,
     conversation_id: UUID,
     limit: int,
     offset: int,
 ) -> list[MessageResponse]:
-    """Lista mensajes de una conversación ya autorizada."""
+    """Devuelve los mensajes autorizados con los datos actuales de sus fuentes."""
     messages = await repository.list_conversation_messages(
         session,
         conversation_id=conversation_id,
         limit=limit,
         offset=offset,
     )
-    return [MessageResponse.model_validate(message) for message in messages]
+    responses = [MessageResponse.model_validate(message) for message in messages]
+    info = await resolve_source_info(
+        session,
+        current_user_id=current_user_id,
+        sources=(source for response in responses for source in response.sources),
+    )
+    return [
+        response.model_copy(update={"sources": refresh_sources(response.sources, info)})
+        for response in responses
+    ]
 
 
 async def send_message(
@@ -201,7 +212,7 @@ async def generate_pending_reply(
                 conversation_id=conversation_id,
                 assistant_message_id=assistant_message_id,
                 content=answer.answer,
-                sources=[source.model_dump(mode="json") for source in answer.sources],
+                sources=[source_snapshot(source) for source in answer.sources],
             )
             return True
         except (ConversationNotFoundError, GameUnavailableError):

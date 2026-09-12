@@ -31,6 +31,36 @@
       "title": "Show confidence for each line"
     }
   },
+  "details": {
+    "confirm": {
+      "hide": {
+        "action": "Use Anonymous",
+        "text": "Your name will no longer appear beside this manual or in answer sources.",
+        "title": "Switch back to Anonymous?"
+      },
+      "show": {
+        "action": "Share under my name",
+        "text": "Others will see your name beside this manual and in answer sources.",
+        "title": "Share under your name?"
+      }
+    },
+    "errors": {
+      "empty": "Enter a name for the manual.",
+      "network": "We couldn't save your changes. Try again.",
+      "tooLong": "Use {{max}} characters or fewer."
+    },
+    "field": "Manual name",
+    "help": "The new name will also appear in your conversation sources.",
+    "rename": "Rename manual",
+    "save": "Save name",
+    "sharing": {
+      "anonymous": "Shared anonymously",
+      "named": "Shared under my name",
+      "switchToAnonymous": "Shared under my name. Switch back to Anonymous",
+      "switchToNamed": "Shared anonymously. Switch to sharing under my name"
+    },
+    "title": "Rename manual"
+  },
   "dialogs": {
     "delete": {
       "description": "Are you sure you want to delete it?",
@@ -69,6 +99,11 @@
       "error": "We couldn't delete the rulebook",
       "errorDescription": "Try again in a moment.",
       "success": "Rulebook deleted"
+    },
+    "details": {
+      "hidden": "Shared anonymously",
+      "renamed": "Name saved",
+      "shown": "Shared under my name"
     },
     "edit": {
       "busy": "The rulebook is still processing",

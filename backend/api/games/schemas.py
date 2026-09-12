@@ -74,6 +74,7 @@ class GamePoolManualItem(StrictModel):
     duplicate_page_count: int = Field(default=0, ge=0)
     created_at: datetime
     is_own: bool
+    author_name: str | None = None
 
 
 class ExplanationSection(StrictModel):

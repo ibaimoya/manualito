@@ -11,8 +11,17 @@
   },
   "consent": {
     "ariaLabel": "Compartir el manual con la comunidad",
+    "author": {
+      "description": "Otros verán que tú has subido este manual.",
+      "label": "Compartir con mi nombre"
+    },
     "description": "Ayuda a otros a preguntar sin subir su manual.",
-    "label": "Compartir con la comunidad"
+    "label": "Compartir con la comunidad",
+    "options": {
+      "anonymous": "Anónimo",
+      "label": "Opciones de compartir",
+      "named": "Con mi nombre"
+    }
   },
   "empty": {
     "pages": "Aún no hay páginas. Usa la cámara, la galería o sube un PDF."
@@ -29,6 +38,11 @@
   },
   "game": {
     "description": "Buscamos el juego en BoardGameGeek para asociar el manual a su biblioteca y mejorar las respuestas."
+  },
+  "name": {
+    "help": "Puedes dejar el nombre sugerido o escribir otro.",
+    "label": "Nombre del manual (opcional)",
+    "suggested": "Manual de {{gameName}}"
   },
   "pages": {
     "counter_one": "{{count}} / {{max}} página",

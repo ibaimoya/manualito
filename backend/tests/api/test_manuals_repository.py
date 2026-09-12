@@ -404,6 +404,7 @@ async def test_create_manual_with_pending_pages_persists_images_in_order(tmp_pat
         game_id=_GAME_ID,
         title="Manual base",
         visibility="private",
+        anonymous=True,
         language="es",
         source_type="images",
         page_count=2,
@@ -468,6 +469,7 @@ async def test_create_manual_with_pending_pages_persists_pdf_source_and_empty_pa
         game_id=_GAME_ID,
         title=None,
         visibility="private",
+        anonymous=True,
         language=None,
         source_type="pdf",
         page_count=2,
@@ -909,6 +911,7 @@ async def test_load_authorized_chunks_preserves_requested_order():
             source_page=2,
             content_hash="b" * 64,
             is_own=False,
+            author_name="autora_b",
         ),
         SimpleNamespace(
             id=chunk_a,
@@ -919,6 +922,7 @@ async def test_load_authorized_chunks_preserves_requested_order():
             source_page=1,
             content_hash="a" * 64,
             is_own=True,
+            author_name=None,
         ),
     ]
     session = _FakeSession(execute_results=[rows])
@@ -935,6 +939,7 @@ async def test_load_authorized_chunks_preserves_requested_order():
     assert [chunk.manual_title for chunk in chunks] == ["Reglamento A", "Reglamento B"]
     assert [chunk.source_page for chunk in chunks] == [1, 2]
     assert [chunk.is_own for chunk in chunks] == [True, False]
+    assert [chunk.author_name for chunk in chunks] == [None, "autora_b"]
     assert session.executed
 
 
@@ -1016,6 +1021,7 @@ def _manual_row(*, title: str | None):
         title=title,
         status="active",
         visibility="private",
+        anonymous=True,
         source_type="images",
         page_count=2,
         duplicate_page_count=1,

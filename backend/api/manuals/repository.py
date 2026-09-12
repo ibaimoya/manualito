@@ -1,5 +1,7 @@
 """Consultas y escrituras SQL de manuales."""
 
+from collections.abc import Collection
+from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -18,6 +20,7 @@ from api.manuals.dto import (
     ManualPageImageAsset,
     ManualProcessingPage,
     ManualProcessingStatus,
+    ManualSourceInfo,
     ManualSummary,
     PreparedChunk,
     ReusablePageResult,
@@ -33,6 +36,7 @@ from api.manuals.exceptions import (
 from database.models.asset import Asset
 from database.models.game import Game
 from database.models.manual import Manual, ManualChunk, ManualPage
+from database.models.user import User
 
 REPROCESSABLE_MANUAL_STATUSES = ("active", "pending_review", "failed")
 INDEXED_MANUAL_STATUSES = ("active", "pending_review", "hidden")
@@ -93,6 +97,7 @@ async def create_manual_with_pending_pages(
     game_id: UUID,
     title: str | None,
     visibility: str,
+    anonymous: bool,
     language: str | None,
     source_type: str,
     page_count: int,
@@ -111,6 +116,7 @@ async def create_manual_with_pending_pages(
         status="indexing",
         language=language,
         visibility=visibility,
+        anonymous=anonymous,
         chunks_indexed=0,
     )
     session.add(manual)
@@ -239,29 +245,102 @@ async def list_user_manuals(
     return [ManualSummary(**row) for row in result.mappings()]
 
 
+async def get_user_manual_summary(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+) -> ManualSummary:
+    """Lee el resumen solo si el manual pertenece al usuario."""
+    result = await session.execute(
+        _manual_summary_query(owner_user_id).where(Manual.id == manual_id)
+    )
+    row = result.mappings().one_or_none()
+    if row is None:
+        raise ManualNotFoundError
+    return ManualSummary(**row)
+
+
 async def get_user_manual_detail(
     session: AsyncSession,
     *,
     owner_user_id: UUID,
     manual_id: UUID,
 ) -> ManualDetail:
-    """Carga detalle de manual con ownership embebido en la query."""
-    result = await session.execute(
-        _manual_summary_query(owner_user_id).where(Manual.id == manual_id)
+    """Lee un manual propio y sus páginas."""
+    summary = await get_user_manual_summary(
+        session,
+        owner_user_id=owner_user_id,
+        manual_id=manual_id,
     )
-    summary_row = result.mappings().one_or_none()
-    if summary_row is None:
-        raise ManualNotFoundError
-
     pages_result = await session.execute(
         _manual_page_detail_query()
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
     )
     return ManualDetail(
-        **summary_row,
+        **asdict(summary),
         pages=[ManualPageDetail(**row) for row in pages_result.mappings()],
     )
+
+
+async def update_user_manual(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+    title: str | None = None,
+    anonymous: bool | None = None,
+) -> ManualSummary:
+    """Comprueba el propietario al guardar y mantiene anónimos los manuales privados."""
+    values: dict[str, Any] = {}
+    if title is not None:
+        values["title"] = title
+    if anonymous is not None:
+        values["anonymous"] = case((Manual.visibility == "private", True), else_=anonymous)
+    if not values:
+        raise ValueError("Falta indicar qué cambiar en el manual.")
+
+    result = await session.execute(
+        update(Manual)
+        .where(
+            Manual.id == manual_id,
+            Manual.owner_user_id == owner_user_id,
+            Manual.deleted_at.is_(None),
+        )
+        .values(**values)
+        .returning(Manual.id)
+    )
+    if result.scalar_one_or_none() is None:
+        raise ManualNotFoundError
+    return await get_user_manual_summary(
+        session,
+        owner_user_id=owner_user_id,
+        manual_id=manual_id,
+    )
+
+
+async def load_manual_source_info(
+    session: AsyncSession,
+    *,
+    current_user_id: UUID,
+    manual_ids: Collection[UUID],
+) -> dict[UUID, ManualSourceInfo]:
+    """Consulta los datos actuales de los manuales que el usuario puede consultar."""
+    if not manual_ids:
+        return {}
+    result = await session.execute(
+        select(Manual.id, Manual.title, manual_author_name())
+        .join(User, User.id == Manual.owner_user_id)
+        .where(
+            Manual.id.in_(manual_ids),
+            Manual.deleted_at.is_(None),
+            _retrievable_manual_filter(current_user_id),
+        )
+    )
+    return {
+        row.id: ManualSourceInfo(title=row.title, author_name=row.author_name) for row in result
+    }
 
 
 async def get_user_manual_processing_status(
@@ -902,6 +981,7 @@ async def load_authorized_chunks(
             manual_title=row.manual_title,
             source_page=row.source_page,
             is_own=bool(row.is_own),
+            author_name=row.author_name,
         )
         for row in result
     }
@@ -932,6 +1012,22 @@ def _retrievable_manual_filter(current_user_id: UUID) -> ColumnElement[bool]:
     )
 
 
+def manual_author_name() -> ColumnElement[str | None]:
+    """Obtiene el nombre autorizado. La consulta debe unir antes al propietario con User."""
+    return case(
+        (
+            and_(
+                Manual.anonymous.is_(False),
+                Manual.visibility == "shared",
+                User.status == "active",
+                User.deleted_at.is_(None),
+            ),
+            User.username,
+        ),
+        else_=None,
+    ).label("author_name")
+
+
 def _authorized_chunks_query(
     game_id: UUID,
     current_user_id: UUID,
@@ -947,8 +1043,10 @@ def _authorized_chunks_query(
             Manual.title.label("manual_title"),
             ManualChunk.source_page,
             (Manual.owner_user_id == current_user_id).label("is_own"),
+            manual_author_name(),
         )
         .join(Manual, Manual.id == ManualChunk.manual_id)
+        .join(User, User.id == Manual.owner_user_id)
         .where(
             ManualChunk.id.in_(chunk_ids),
             Manual.game_id == game_id,
@@ -968,6 +1066,7 @@ def _manual_summary_query(owner_user_id: UUID) -> Select[Any]:
             Manual.title,
             Manual.status,
             Manual.visibility,
+            Manual.anonymous,
             Manual.source_type,
             Manual.page_count,
             Manual.language,

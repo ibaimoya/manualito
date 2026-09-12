@@ -2,7 +2,6 @@ import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ParseKeys } from 'i18next';
 import {
-  BookOpenIcon,
   CheckIcon,
   CaretRightIcon,
   CopyIcon,
@@ -14,6 +13,7 @@ import {
   useCallback,
   useEffect,
   useEffectEvent,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -38,6 +38,7 @@ import { gameDetailKey, gameDetailQueryOptions, myGamesKey } from '@/features/ga
 import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { Meeple } from '@/shared/components/Brand';
 import { Markdown } from '@/shared/components/Markdown';
+import { UploaderAvatar, useUploadedByText } from '@/shared/components/UploadedBy';
 import { ApiError, isAbortApiError, type AnswerSource } from '@/shared/api/client';
 import {
   conversationsApi,
@@ -1054,12 +1055,13 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
   );
 }
 
-/** Páginas que respaldan la respuesta, deduplicadas por página. */
+/** Conserva una referencia por manual y página, aunque compartan nombre o usuario. */
 function SourceChips({
   sources,
   availableManualIds,
 }: Readonly<{ sources: AnswerSource[]; availableManualIds: ReadonlySet<string> | null }>) {
   const { t } = useTranslation('chat');
+  const headingId = useId();
   const byPage = new Map<string, AnswerSource>();
   for (const source of sources) {
     const key = `${source.manual_id}:${source.page}`;
@@ -1067,96 +1069,97 @@ function SourceChips({
   }
   const pages = [...byPage.entries()].sort((a, b) => a[1].page - b[1].page);
   return (
-    <div className="mt-[13px] border-t border-dashed border-border-strong pt-3">
-      <p className="mono mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-3">
-        <BookOpenIcon size={12} aria-hidden="true" />
+    <div className="mt-[13px] border-t border-dashed border-border-strong pt-2.5">
+      <p id={headingId} className="mb-1.5 text-xs font-medium text-fg-3">
         {t('sources.heading')}
       </p>
-      <div className="flex flex-wrap gap-[7px]">
+      {/* Compensa el margen negativo del primer avatar de cada fila. */}
+      <ul aria-labelledby={headingId} className="flex flex-wrap items-center gap-y-1.5 pl-2">
         {pages.map(([key, source]) => (
-          <SourceChip
-            key={key}
-            page={source.page}
-            manualId={source.manual_id}
-            title={source.manual_title}
-            isOwn={source.is_own}
-            available={availableManualIds === null || availableManualIds.has(source.manual_id)}
-          />
+          <li key={key} className="relative -ml-2 hover:z-10 focus-within:z-10">
+            <SourceRef
+              source={source}
+              available={availableManualIds === null || availableManualIds.has(source.manual_id)}
+            />
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
 
-const CHIP_BASE =
-  'inline-flex h-[30px] items-center gap-1.5 rounded-full border pl-[9px] pr-[11px] text-[12.5px] font-semibold';
+// Aísla el gesto del avatar del hover que muestra el botón de copiar.
+const SOURCE_AVATAR =
+  'group/source relative block shrink-0 rounded-full after:absolute after:-inset-1.5 after:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card';
 
-/**
- * Cita de una página. Solo se enlaza el visor para manuales propios que sigan
- * disponibles; los de la comunidad y los ya borrados se citan pero no son
- * clicables, para no llevar a una pantalla que daría 404.
- */
-function SourceChip({
-  page,
-  manualId,
-  title,
-  isOwn,
-  available,
-}: Readonly<{
-  page: number;
-  manualId: string;
-  title: string | null;
-  isOwn: boolean;
-  available: boolean;
-}>) {
+const SOURCE_AVATAR_MOTION =
+  'transition-transform duration-150 ease-[var(--ease-mn)] motion-reduce:transition-none group-hover/source:scale-110 group-focus-visible/source:scale-110 group-aria-expanded/source:scale-110';
+
+// Solo los manuales propios y disponibles permiten abrir la página citada.
+function SourceRef({ source, available }: Readonly<{ source: AnswerSource; available: boolean }>) {
   const { t } = useTranslation('chat');
-  const clickable = isOwn && available;
-  const icon = (
-    <span
-      className={cn(
-        'grid size-[18px] place-items-center rounded-[5px]',
-        clickable ? 'bg-primary-100 text-primary-700' : 'bg-surface-2 text-fg-3',
-      )}
-    >
-      <FileTextIcon size={11} aria-hidden="true" />
+  const provenanceId = useId();
+  const { page } = source;
+  const title = source.manual_title ?? t('sources.unnamed');
+  const provenance = useUploadedByText(source.author_name);
+  const clickable = source.is_own && available;
+  const reason = clickable
+    ? null
+    : source.is_own
+      ? t('sources.unavailable')
+      : t('sources.communityManual');
+  const details = (
+    <>
+      <span className="block font-semibold [overflow-wrap:anywhere]">{title}</span>
+      <span className="block">{t('sources.page', { page })}</span>
+      {reason ? <span className="block opacity-80">{reason}</span> : null}
+      <span className="block opacity-80 [overflow-wrap:anywhere]">{provenance}</span>
+    </>
+  );
+  const hiddenProvenance = (
+    <span id={provenanceId} className="sr-only">
+      {provenance}
     </span>
   );
 
   if (clickable) {
     return (
-      <Tooltip content={title ?? t('aria.pageLink', { page })}>
-        <Link
-          to="/manual/$manualId"
-          params={{ manualId }}
-          search={{ page }}
-          aria-label={t('aria.pageLink', { page })}
-          className={cn(
-            CHIP_BASE,
-            'cursor-pointer border-border-strong bg-card text-fg-2 transition-colors hover:border-border-strong hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-          )}
-        >
-          {icon}
-          {t('sources.page', { page })}
-        </Link>
-      </Tooltip>
+      <>
+        <Tooltip content={details} touch="confirm" touchHint={t('sources.tapAgain')}>
+          <Link
+            to="/manual/$manualId"
+            params={{ manualId: source.manual_id }}
+            search={{ page }}
+            aria-label={t('aria.pageLink', { page, title })}
+            aria-describedby={provenanceId}
+            className={SOURCE_AVATAR}
+          >
+            <UploaderAvatar authorName={source.author_name} className={SOURCE_AVATAR_MOTION} />
+          </Link>
+        </Tooltip>
+        {hiddenProvenance}
+      </>
     );
   }
 
-  const reason = isOwn ? t('sources.unavailable') : t('sources.communityManual');
   return (
-    <Tooltip content={title ? `${title} · ${reason}` : reason} touch>
-      <button
-        type="button"
-        aria-label={t('aria.page', { page, reason })}
-        className={cn(
-          CHIP_BASE,
-          'cursor-help border-border bg-card text-fg-3 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-        )}
-      >
-        {icon}
-        {t('sources.page', { page })}
-      </button>
-    </Tooltip>
+    <>
+      <Tooltip content={details} touch>
+        <button
+          type="button"
+          aria-label={t('aria.page', { page, title, reason })}
+          aria-describedby={provenanceId}
+          className={cn(SOURCE_AVATAR, 'cursor-help')}
+        >
+          <UploaderAvatar
+            authorName={source.author_name}
+            muted={!available}
+            className={SOURCE_AVATAR_MOTION}
+          />
+        </button>
+      </Tooltip>
+      {hiddenProvenance}
+    </>
   );
 }
 

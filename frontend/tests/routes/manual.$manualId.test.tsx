@@ -51,6 +51,7 @@ function mockSinglePageManual(
         title: 'Catan',
         status: 'active',
         visibility: 'private',
+        anonymous: true,
         source_type: 'images',
         page_count: 1,
         language: 'spa',

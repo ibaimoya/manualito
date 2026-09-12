@@ -19,6 +19,7 @@ from api.games.schemas import ExplanationSection, GameExplanationResponse
 from api.locks import advisory_session_lock
 from api.manuals.exceptions import ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
+from api.manuals.sources import refresh_sources, resolve_source_info, source_snapshot
 from database.session import get_sessionmaker
 
 EXPLANATION_TOP_K = 5
@@ -116,7 +117,7 @@ async def _generate_sections(
             sections[key] = {
                 "answer": answer.answer,
                 "sources": [
-                    source.model_dump(mode="json", exclude={"is_own"}) for source in answer.sources
+                    source_snapshot(source, exclude={"is_own"}) for source in answer.sources
                 ],
             }
             if not _has_all_sections(sections):
@@ -167,15 +168,28 @@ def _use_cached_explanation(explanation: GameExplanationSnapshot) -> bool:
     return explanation.status == "failed"
 
 
-def build_game_explanation_response(
-    snapshot: GameExplanationSnapshot, owned_manual_ids: Collection[UUID]
+async def build_game_explanation_response(
+    session: AsyncSession,
+    *,
+    current_user_id: UUID,
+    snapshot: GameExplanationSnapshot,
+    owned_manual_ids: Collection[UUID],
 ) -> GameExplanationResponse:
+    """Añade a las fuentes guardadas el título y la atribución actuales."""
+    parsed = {
+        key: ExplanationSection.model_validate(value) for key, value in snapshot.sections.items()
+    }
+    info = await resolve_source_info(
+        session,
+        current_user_id=current_user_id,
+        sources=(source for section in parsed.values() for source in section.sources),
+    )
     sections = {}
-    for key, value in snapshot.sections.items():
-        section = ExplanationSection.model_validate(value)
-        for source in section.sources:
+    for key, section in parsed.items():
+        sources = refresh_sources(section.sources, info)
+        for source in sources:
             source.is_own = source.manual_id in owned_manual_ids
-        sections[key] = section
+        sections[key] = section.model_copy(update={"sources": sources})
     return GameExplanationResponse(
         status=snapshot.status,
         sections=sections or None,

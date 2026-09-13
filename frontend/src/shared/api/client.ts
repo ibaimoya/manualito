@@ -15,6 +15,15 @@ export { ApiError, isAbortApiError } from './http';
 export interface OcrLine {
   text: string;
   confidence: number | null;
+  /** Anotaciones opcionales del texto final. Los offsets del servidor son codepoints. */
+  corrections?: OcrLineCorrection[];
+}
+
+export interface OcrLineCorrection {
+  start: number;
+  end: number;
+  original: string;
+  source: 'regla-guion' | 'consenso-llm';
 }
 
 export interface AnswerSource {

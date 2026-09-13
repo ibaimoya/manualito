@@ -216,6 +216,8 @@
   "text": {
     "characterCount_one": "{{formattedCount}} carácter",
     "characterCount_other": "{{formattedCount}} caracteres",
+    "correctionAdded": "Añadido por IA",
+    "correctionPreviously": "Antes: “{{original}}”",
     "counter": "{{current}} / {{max}} caracteres",
     "dirtyState": "Cambios sin guardar",
     "editingHint": "Corrige el texto y guarda los cambios.",

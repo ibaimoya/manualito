@@ -2,9 +2,9 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
-  type ReactNode,
   type RefObject,
 } from 'react';
 import { PencilSimpleIcon, ArrowClockwiseIcon } from '@phosphor-icons/react';
@@ -23,6 +23,7 @@ import {
 } from '@/features/manual/pageStatus';
 import { cn } from '@/shared/lib/cn';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { CorrectionText, searchRanges } from './CorrectionText';
 
 /** Límite compartido con MANUAL_PAGE_TEXT_MAX_LENGTH en el backend. */
 const PAGE_TEXT_MAX = 20_000;
@@ -66,41 +67,6 @@ function revealActiveMatch(scroller: HTMLDivElement | null, reducedMotion: boole
     top: scroller.scrollTop + hit.top - box.top - (scroller.clientHeight - hit.height) / 2,
     behavior: reducedMotion ? 'auto' : 'smooth',
   });
-}
-
-/** Los resaltados no añaden anchura ni cambian el peso del texto. */
-function highlight(
-  text: string,
-  needle: string,
-  counter: { value: number },
-  activeIndex: number | null,
-): ReactNode {
-  if (needle.length === 0) return text;
-  const lower = text.toLowerCase();
-  const parts: ReactNode[] = [];
-  let from = 0;
-  while (true) {
-    const at = lower.indexOf(needle, from);
-    if (at < 0) break;
-    if (at > from) parts.push(text.slice(from, at));
-    const isActive = counter.value === activeIndex;
-    parts.push(
-      <mark
-        key={`${at}-${counter.value}`}
-        data-active-match={isActive || undefined}
-        className={cn(
-          'rounded-[3px]',
-          isActive ? 'bg-primary text-fg-inv' : 'bg-primary-100 text-primary-700',
-        )}
-      >
-        {text.slice(at, at + needle.length)}
-      </mark>,
-    );
-    counter.value += 1;
-    from = at + needle.length;
-  }
-  parts.push(text.slice(from));
-  return parts;
 }
 
 function ConfidenceValue({ confidence }: Readonly<{ confidence: number | null }>) {
@@ -320,6 +286,7 @@ export function PageTextCard({
   const scrollRef = useRef<HTMLDivElement>(null);
   const position = useRef<ReadingPosition>({ top: 0, offset: 0 });
   const text = pageText(page);
+  const matches = useMemo(() => searchRanges(text, needle), [text, needle]);
   const empty = text.trim().length === 0;
   const failed = status.key === 'failed';
   const unavailable = empty || failed;
@@ -350,7 +317,6 @@ export function PageTextCard({
     );
   }
 
-  const counter = { value: 0 };
   let offset = 0;
   const showRecovery = failed || status.key === 'low';
 
@@ -406,7 +372,17 @@ export function PageTextCard({
                         useConfidence && tone ? CONFIDENCE_HIGHLIGHT[tone] : 'bg-transparent',
                       )}
                     >
-                      {highlight(line.text, needle, counter, activeMatch)}
+                      <CorrectionText
+                        line={line}
+                        lineStart={lineOffset}
+                        search={matches}
+                        activeIndex={activeMatch}
+                        correctionLabel={(correction) =>
+                          correction.original
+                            ? t('text.correctionPreviously', { original: correction.original })
+                            : t('text.correctionAdded')
+                        }
+                      />
                     </span>
                   </p>
                   <div

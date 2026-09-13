@@ -77,6 +77,94 @@ describe('PageTextCard', () => {
     }
   });
 
+  it('marca solo correcciones LLM, muestra su origen y conserva búsquedas entre líneas', async () => {
+    const correctedPage: ManualDetailPage = {
+      ...page,
+      ocr_lines: [
+        {
+          text: 'A😀ñadido uno',
+          confidence: null,
+          corrections: [
+            { start: 1, end: 3, original: 'xx', source: 'consenso-llm' },
+            { start: 3, end: 5, original: '', source: 'consenso-llm' },
+            { start: 5, end: 7, original: 'guion', source: 'regla-guion' },
+          ],
+        },
+        { text: 'dos', confidence: null },
+      ],
+    };
+    const user = userEvent.setup();
+    render(
+      <PageTextCard
+        {...props}
+        page={correctedPage}
+        needle={'uno\ndos'}
+        activeMatch={0}
+        showConfidence={false}
+      />,
+      { wrapper: TooltipProvider },
+    );
+
+    const article = screen.getByRole('article');
+    expect(article.querySelectorAll('span.underline')).toHaveLength(2);
+    expect(
+      within(article)
+        .getAllByRole('paragraph')
+        .map((paragraph) => paragraph.textContent),
+    ).toEqual(['A😀ñadido uno', 'dos']);
+    expect(article.querySelectorAll('mark[data-active-match]')).toHaveLength(1);
+    expect(article.querySelector('mark[data-active-match]')?.textContent).toBe('uno');
+    expect(article.textContent).not.toContain('guion');
+
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Antes: “xx”');
+    await user.tab();
+    await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('Añadido por IA'));
+  });
+
+  it('mantiene una búsqueda que cruza una corrección y omite borrados sin texto', async () => {
+    const correctedPage: ManualDetailPage = {
+      ...page,
+      ocr_lines: [
+        {
+          text: 'Reparte cuatro fichas',
+          confidence: null,
+          corrections: [
+            { start: 8, end: 14, original: 'quatro', source: 'consenso-llm' },
+            { start: 20, end: 20, original: 'extra', source: 'consenso-llm' },
+          ],
+        },
+      ],
+    };
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <PageTextCard
+        {...props}
+        page={correctedPage}
+        needle="cuatro fichas"
+        activeMatch={0}
+        showConfidence={false}
+      />,
+      { wrapper: TooltipProvider },
+    );
+
+    const article = screen.getByRole('article');
+    expect(within(article).getByRole('paragraph')).toHaveTextContent('Reparte cuatro fichas');
+    expect(article.querySelectorAll('span.underline')).toHaveLength(1);
+    expect(article.querySelectorAll('mark')).toHaveLength(2);
+    expect(article.querySelectorAll('mark[data-active-match]')).toHaveLength(1);
+    expect(article.querySelectorAll('mark.bg-primary.text-fg-inv')).toHaveLength(2);
+    expect(article.querySelector('mark[data-active-match]')).toHaveTextContent('cuatro');
+
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Antes: “quatro”');
+
+    rerender(<PageTextCard {...props} page={correctedPage} editing showConfidence={false} />);
+    expect(screen.getByRole('textbox')).toHaveValue('Reparte cuatro fichas');
+  });
+
   it('conserva el punto de lectura al entrar y salir de edición', () => {
     const { rerender } = render(<PageTextCard {...props} showConfidence={false} />, {
       wrapper: TooltipProvider,

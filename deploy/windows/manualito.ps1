@@ -35,7 +35,6 @@ $script:OcrPaddleCpuCompose = Join-Path $script:Root "deploy\compose\ocr\paddle-
 $script:OcrPaddleGpuCompose = Join-Path $script:Root "deploy\compose\ocr\paddle-gpu.yaml"
 $script:ResendCompose = Join-Path $script:Root "deploy\compose\mail\resend.yaml"
 $script:ResendSecret = Join-Path $script:Root "secrets\resend_api_key.txt"
-$script:LocalCaScript = Join-Path $script:Root "deploy\windows\local-ca.ps1"
 $script:LowProfile = Join-Path $script:Root "deploy\profiles\llm\low.env"
 $script:HighProfile = Join-Path $script:Root "deploy\profiles\llm\high.env"
 $script:LlmVramReserveGb = 1.0
@@ -1010,76 +1009,6 @@ function Invoke-DockerCapture([string]$DockerPath, [object]$Selection, [string[]
     return [string]$output[0]
 }
 
-# Espera a que Caddy esté sano antes de ofrecer confianza en su CA local.
-function Wait-CaddyHealthy([string]$DockerPath, [object]$Selection) {
-    Write-Step "Esperando salud de Caddy"
-    $deadline = (Get-Date).AddSeconds(120)
-    do {
-        $containerId = Invoke-DockerCapture $DockerPath $Selection @("ps", "-q", "frontend")
-        if (-not [string]::IsNullOrWhiteSpace($containerId)) {
-            $health = Invoke-NativeQuiet $DockerPath @(
-                "inspect",
-                "--format",
-                "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}",
-                $containerId.Trim()
-            )
-            $status = [string]($health.Output | Select-Object -First 1)
-            if ($health.ExitCode -eq 0 -and $status.Trim() -eq "healthy") {
-                Write-Field "frontend" "healthy"
-                return
-            }
-        }
-        Start-Sleep -Seconds 2
-    } while ((Get-Date) -lt $deadline)
-    Stop-Manualito "Caddy no alcanzó el estado healthy en 120 segundos."
-}
-
-function Test-NonInteractiveSession {
-    if (-not [string]::IsNullOrWhiteSpace([string]$env:CI)) {
-        return $true
-    }
-    if (-not [string]::IsNullOrWhiteSpace([string]$env:MANUALITO_NONINTERACTIVE)) {
-        return $true
-    }
-    try {
-        return [Console]::IsInputRedirected
-    } catch {
-        return $true
-    }
-}
-
-# Ofrece una sola vez instalar la CA al arrancar desde setup.
-function Invoke-SetupCaTrustOffer([string]$DockerPath, [object]$Selection, [bool]$Requested) {
-    if (-not $Requested) {
-        return
-    }
-    if ($DryRun) {
-        Write-Note "Confianza HTTPS no aplicada en dry-run. Ejecuta .\local-ca.bat trust."
-        return
-    }
-    Wait-CaddyHealthy $DockerPath $Selection
-    if (Test-NonInteractiveSession) {
-        Write-Note "Confianza HTTPS no aplicada en modo no interactivo/CI. Ejecuta .\local-ca.bat trust."
-        return
-    }
-    if (-not (Read-YesNo "¿Confiar en la CA local de Manualito para HTTPS?")) {
-        Write-Note "Puedes instalarla después con .\local-ca.bat trust."
-        return
-    }
-    Assert-File $script:LocalCaScript "deploy\windows\local-ca.ps1"
-    $previousErrorActionPreference = $ErrorActionPreference
-    try {
-        $ErrorActionPreference = "Continue"
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:LocalCaScript trust
-        $exitCode = $LASTEXITCODE
-    } finally {
-        $ErrorActionPreference = $previousErrorActionPreference
-    }
-    if ($exitCode -ne 0) {
-        Stop-Manualito "No se pudo instalar la CA local. Ejecuta .\local-ca.bat trust para reintentarlo."
-    }
-}
-
 # Consulta el modelo que realmente tiene cargado el contenedor LLM.
 function Get-RunningLlmModel([string]$DockerPath, [object]$Selection) {
     return Invoke-DockerCapture $DockerPath $Selection @("exec", "-T", "llm", "printenv", "OLLAMA_MODEL")
@@ -1173,12 +1102,10 @@ function Invoke-Setup([string]$DockerPath) {
 
 # Arranca Manualito con la selección guardada o lanza setup si falta.
 function Invoke-Start([string]$DockerPath) {
-    $offerCaTrust = ([string]$env:MANUALITO_SETUP_TRUST_PROMPT -eq "1")
     $selection = Load-Selection
     if ($null -eq $selection) {
         Write-Note "Falta completar la configuración. Ejecutando setup antes de arrancar."
         $selection = Invoke-Setup $DockerPath
-        $offerCaTrust = $true
     }
     Assert-SelectedGpuRuntime $DockerPath $selection
     Assert-MailSecret $selection.Mail
@@ -1189,7 +1116,6 @@ function Invoke-Start([string]$DockerPath) {
     Write-Field "ocr" $selection.Ocr
     Write-Field "correo" $selection.Mail
     Invoke-Compose $DockerPath $selection @("up", "-d")
-    Invoke-SetupCaTrustOffer $DockerPath $selection $offerCaTrust
     if ($DryRun) {
         Write-Ok "Comando de arranque preparado"
     } else {
@@ -1236,7 +1162,6 @@ try {
                     exit 42
                 } else {
                     Write-Ok "Manualito queda preparado. Abre start.bat para arrancarlo."
-                    Write-Note "Después puedes confiar en HTTPS con .\local-ca.bat trust."
                 }
             }
         }

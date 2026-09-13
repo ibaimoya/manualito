@@ -91,8 +91,8 @@ Servicios expuestos:
 | OpenAPI | `https://localhost/docs` |
 
 El puerto 80 solo redirige a HTTPS. La API no publica un puerto propio en el
-host: Caddy es el único gateway de la aplicación. Para confiar en la CA local,
-usa `local-ca trust` como se explica en la [guía de despliegue](deploy/README.md).
+host. Caddy es el único gateway de la aplicación. El navegador puede mostrar
+un aviso de confianza para el certificado de `localhost`.
 
 Los detalles de perfiles LLM, NVIDIA, OCR, logs y overrides están en
 [aquí](deploy/README.md).

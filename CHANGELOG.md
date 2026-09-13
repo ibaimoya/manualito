@@ -64,8 +64,7 @@ la aplicación antes de la publicación estable `1.0.0`.
   SHA256.
 - Gateway Caddy para servir la SPA y FastAPI bajo un único origen,
   con caché por tipo de recurso, cabeceras de seguridad y logs redactados.
-- HTTPS local con CA gestionable mediante local-ca, redirección desde HTTP y
-  persistencia segura del material.
+- HTTPS local con redirección desde HTTP y persistencia de los certificados.
 - Perfil opcional de Cloudflare Tunnel para app.manualito.dev, con origen TLS
   verificado, redes aisladas e infraestructura declarativa en Terraform.
 - Añadido soporte para español e inglés, con selector de idioma persistente y

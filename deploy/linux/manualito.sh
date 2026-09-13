@@ -20,7 +20,6 @@ OCR_PADDLE_CPU_COMPOSE="$ROOT/deploy/compose/ocr/paddle-cpu.yaml"
 OCR_PADDLE_GPU_COMPOSE="$ROOT/deploy/compose/ocr/paddle-gpu.yaml"
 RESEND_COMPOSE="$ROOT/deploy/compose/mail/resend.yaml"
 RESEND_SECRET="$ROOT/secrets/resend_api_key.txt"
-LOCAL_CA_SCRIPT="$ROOT/deploy/linux/local-ca.sh"
 LOW_PROFILE="$ROOT/deploy/profiles/llm/low.env"
 HIGH_PROFILE="$ROOT/deploy/profiles/llm/high.env"
 LLM_VRAM_RESERVE_GB="1.0"
@@ -1101,68 +1100,6 @@ capture_compose_lines() {
     "$docker_path" "${COMPOSE_ARGS[@]}" "${tail[@]}" 2>/dev/null | sed '/^[[:space:]]*$/d' || true
 }
 
-wait_caddy_healthy() {
-    local docker_path="$1"
-    local accelerator="$2"
-    local llm_size="$3"
-    local ocr_mode="$4"
-    local mail_provider="$5"
-    local deadline=$((SECONDS + 120))
-    write_step "Esperando salud de Caddy"
-    while ((SECONDS < deadline)); do
-        local container_id
-        local health
-        container_id="$(
-            capture_compose_lines \
-                "$docker_path" "$accelerator" "$llm_size" "$ocr_mode" "$mail_provider" \
-                ps -q frontend | head -n1
-        )"
-        if [[ -n "$container_id" ]]; then
-            health="$(
-                "$docker_path" inspect \
-                    --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
-                    "$container_id" 2>/dev/null || true
-            )"
-            if [[ "$health" == "healthy" ]]; then
-                write_field "frontend" "healthy"
-                return 0
-            fi
-        fi
-        sleep 2
-    done
-    die "Caddy no alcanzó el estado healthy en 120 segundos."
-}
-
-noninteractive_session() {
-    [[ -n "${CI:-}" || -n "${MANUALITO_NONINTERACTIVE:-}" || ! -t 0 ]]
-}
-
-offer_setup_ca_trust() {
-    local docker_path="$1"
-    local accelerator="$2"
-    local llm_size="$3"
-    local ocr_mode="$4"
-    local mail_provider="$5"
-    local requested="$6"
-    ((requested)) || return 0
-    if ((DRY_RUN)); then
-        write_note "Confianza HTTPS no aplicada en dry-run. Ejecuta ./local-ca.sh trust."
-        return 0
-    fi
-    wait_caddy_healthy "$docker_path" "$accelerator" "$llm_size" "$ocr_mode" "$mail_provider"
-    if noninteractive_session; then
-        write_note "Confianza HTTPS no aplicada en modo no interactivo/CI. Ejecuta ./local-ca.sh trust."
-        return 0
-    fi
-    if ! read_yes_no "¿Confiar en la CA local de Manualito para HTTPS?"; then
-        write_note "Puedes instalarla después con ./local-ca.sh trust."
-        return 0
-    fi
-    assert_file "$LOCAL_CA_SCRIPT" "deploy/linux/local-ca.sh"
-    bash "$LOCAL_CA_SCRIPT" trust ||
-        die "No se pudo instalar la CA local. Ejecuta ./local-ca.sh trust para reintentarlo."
-}
-
 load_selection() {
     [[ -f "$SELECTED_ENV" ]] || return 1
     SELECTED_MAIL="$(read_env_value "$SELECTED_ENV" "MANUALITO_MAIL_PROVIDER" || true)"
@@ -1245,8 +1182,6 @@ get_running_llm_model() {
 
 invoke_start() {
     local docker_path="$1"
-    local offer_ca_trust=0
-    [[ "${MANUALITO_SETUP_TRUST_PROMPT:-}" == "1" ]] && offer_ca_trust=1
     if ! load_selection; then
         write_note "Falta completar la configuración. Ejecutando setup antes de arrancar."
         invoke_setup "$docker_path"
@@ -1254,7 +1189,6 @@ invoke_start() {
         SELECTED_LLM="$FINAL_LLM"
         SELECTED_OCR="$FINAL_OCR"
         SELECTED_MAIL="$FINAL_MAIL"
-        offer_ca_trust=1
     fi
     assert_selected_gpu_runtime "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_OCR"
     assert_mail_secret "$SELECTED_MAIL"
@@ -1264,8 +1198,6 @@ invoke_start() {
     write_field "ocr" "$SELECTED_OCR"
     write_field "correo" "$SELECTED_MAIL"
     invoke_compose "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$SELECTED_MAIL" up -d
-    offer_setup_ca_trust \
-        "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$SELECTED_MAIL" "$offer_ca_trust"
     if ((DRY_RUN)); then
         write_ok "Comando de arranque preparado"
     else
@@ -1322,7 +1254,6 @@ main() {
                     exit 42
                 else
                     write_ok "Manualito queda preparado. Ejecuta start.sh para arrancarlo."
-                    write_note "Después puedes confiar en HTTPS con ./local-ca.sh trust."
                 fi
             fi
             ;;

@@ -49,7 +49,7 @@ docker en Linux [aquí](https://www.digitalocean.com/community/tutorials/how-to-
 6. Recomienda OCR.
 7. Permite elegir Mailpit para pruebas locales o Resend para enviar correos reales.
 8. Pide confirmación.
-9. Guarda `deploy/local/selected.env`.
+9. Crea en `secrets/` las credenciales que falten y guarda `deploy/local/selected.env`.
 10. Prepara Docker Compose con los overrides necesarios.
 11. Ofrece arrancar la aplicación al terminar.
 

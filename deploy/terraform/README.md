@@ -62,11 +62,13 @@ El workflow `.github/workflows/docs.yml` verifica y construye el site.
    terraform apply
    ```
 
-4. Guarda el token devuelto con permisos de usuario y arranca el perfil:
+4. Guarda el token en la carpeta privada de secretos y arranca el perfil:
 
    ```bash
    umask 077
+   install -d -m 0700 ../../secrets
    terraform output -raw tunnel_token > ../../secrets/tunnel_token.txt
+   chmod 0644 ../../secrets/tunnel_token.txt
    cd ../..
    docker compose --profile tunnel up -d
    ```

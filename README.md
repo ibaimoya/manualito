@@ -221,7 +221,7 @@ que editar Dockerfiles ni `compose.yaml`.
 | `config/database.env` | Nombre de base de datos, host, puerto, driver y rutas de secretos. |
 | `config/frontend.env` | Variables públicas de Vite para desarrollo/build del frontend (`VITE_*`). |
 | `deploy/local/selected.env` | Selección local generada por `setup`. |
-| `secrets/` | Defaults locales de Postgres, Redis y Flower; el token opcional del túnel permanece gitignorado. |
+| `secrets/` | Credenciales locales, fuera de Git. |
 
 El servicio `llm` puede precargar el modelo de Ollama al arrancar con
 `OLLAMA_PRELOAD_ON_STARTUP=true`. La carga usa la API oficial de Ollama con una
@@ -234,9 +234,7 @@ Si falta alguna variable obligatoria, Compose corta el arranque con un mensaje
 explícito, por ejemplo `UV_VERSION no definida`. La versión de `pnpm` vive en
 `frontend/package.json` (`packageManager`) para no duplicarla.
 
-Los secretos incluidos en `secrets/` son de desarrollo local para que el TFG se
-pueda clonar y arrancar tal cual. Fuera de ese contexto deben sustituirse por
-secretos del entorno de despliegue.
+El setup crea `secrets/` y las credenciales de Postgres, Redis y Flower que falten.
 
 ---
 
@@ -295,7 +293,7 @@ scripts/
   hooks/      política local de mensajes de commit
 config/       configuración de runtime
 deploy/       scripts, perfiles y overrides de arranque local
-secrets/      secretos locales de desarrollo
+secrets/      credenciales locales generadas, fuera de Git
 compose.yaml  orquestación principal
 ```
 

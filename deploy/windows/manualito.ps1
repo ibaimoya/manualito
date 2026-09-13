@@ -1077,14 +1077,27 @@ function Resolve-RunningManualitoBeforeVram([string]$DockerPath) {
     }
 }
 
+function Initialize-Secrets([string]$DockerPath) {
+    $project = (Read-EnvFile $script:RootEnv)["PROJECT_NAME"]
+    if ($env:PROJECT_NAME) { $project = $env:PROJECT_NAME }
+    if ($env:COMPOSE_PROJECT_NAME) { $project = $env:COMPOSE_PROJECT_NAME }
+    $volumes = @(& $DockerPath volume ls --quiet `
+        --filter "label=com.docker.compose.project=$project" `
+        --filter "label=com.docker.compose.volume=database-data")
+    if ($LASTEXITCODE -ne 0) { Stop-Manualito "No se pudo comprobar el volumen de Postgres." }
+    & (Join-Path $PSScriptRoot "secrets.ps1") -Directory (Join-Path $script:Root "secrets") `
+        -DatabaseExists:($volumes.Count -gt 0) -DryRun:$DryRun
+}
+
 # Prepara configuración, guarda selección y deja las imágenes construidas.
 function Invoke-Setup([string]$DockerPath) {
     Resolve-RunningManualitoBeforeVram $DockerPath
     $nvidia = Get-NvidiaInfo
     $dockerGpu = Test-DockerGpu $DockerPath $nvidia
     $selection = Resolve-Selection $dockerGpu $nvidia
-    Assert-MailSecret $selection.Mail
     Confirm-SetupSelection $selection
+    Initialize-Secrets $DockerPath
+    Assert-MailSecret $selection.Mail
     Save-Selection $selection -Quiet:(-not $DryRun -and -not $SkipBuild)
     if ($SkipBuild) {
         Write-Note "Build saltado por -SkipBuild."
@@ -1108,6 +1121,7 @@ function Invoke-Start([string]$DockerPath) {
         $selection = Invoke-Setup $DockerPath
     }
     Assert-SelectedGpuRuntime $DockerPath $selection
+    Initialize-Secrets $DockerPath
     Assert-MailSecret $selection.Mail
     $runningServices = @(Get-RunningManualitoServices $DockerPath $selection)
     Assert-StartPortsFree $runningServices $selection.Mail

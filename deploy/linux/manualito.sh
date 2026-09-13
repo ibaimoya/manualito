@@ -1152,14 +1152,26 @@ resolve_running_manualito_before_vram() {
     fi
 }
 
+ensure_secrets() {
+    local docker_path="$1" project volumes database_exists=0
+    project="${COMPOSE_PROJECT_NAME:-${PROJECT_NAME:-$(required_env_value "$ROOT_ENV" "PROJECT_NAME")}}"
+    volumes="$("$docker_path" volume ls --quiet \
+        --filter "label=com.docker.compose.project=$project" \
+        --filter 'label=com.docker.compose.volume=database-data')" ||
+        stop_manualito "No se pudo comprobar el volumen de Postgres."
+    [[ -z "$volumes" ]] || database_exists=1
+    bash "$SCRIPT_DIR/secrets.sh" "$ROOT/secrets" "$database_exists" "$DRY_RUN"
+}
+
 invoke_setup() {
     local docker_path="$1"
     resolve_running_manualito_before_vram "$docker_path"
     get_nvidia_info
     test_docker_gpu "$docker_path"
     resolve_selection
-    assert_mail_secret "$FINAL_MAIL"
     confirm_setup_selection
+    ensure_secrets "$docker_path"
+    assert_mail_secret "$FINAL_MAIL"
     save_selection "$((! DRY_RUN && ! SKIP_BUILD))"
     if ((SKIP_BUILD)); then
         write_note "Build saltado por -SkipBuild."
@@ -1191,6 +1203,7 @@ invoke_start() {
         SELECTED_MAIL="$FINAL_MAIL"
     fi
     assert_selected_gpu_runtime "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_OCR"
+    ensure_secrets "$docker_path"
     assert_mail_secret "$SELECTED_MAIL"
     assert_start_ports_free "$(get_running_manualito_services "$docker_path")" "$SELECTED_MAIL"
     write_step "Arrancando Manualito"

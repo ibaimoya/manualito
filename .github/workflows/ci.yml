@@ -57,6 +57,7 @@ jobs:
 
       - name: Renderizar Docker Compose
         run: |
+          install -d -m 0700 secrets
           install -m 0600 /dev/null secrets/tunnel_token.txt
           trap 'rm -f secrets/tunnel_token.txt' EXIT
           docker compose config --quiet

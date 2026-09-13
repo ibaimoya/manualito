@@ -3,7 +3,7 @@
 from pathlib import Path
 from urllib.parse import quote
 
-from pydantic import Field, PrivateAttr, SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT = "30/minute"
@@ -109,7 +109,7 @@ class ApiSettings(BaseSettings):
     smtp_username: str | None = None
     smtp_password: SecretStr | None = Field(default=None, repr=False)
     smtp_password_file: str | None = None
-    _smtp_file_password: SecretStr | None = PrivateAttr(default=None)
+    _smtp_file_password: SecretStr | None = None
     smtp_starttls: bool = False
     smtp_use_tls: bool = False
     smtp_timeout: float = Field(default=10.0, gt=0)

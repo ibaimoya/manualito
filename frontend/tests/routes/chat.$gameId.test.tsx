@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { PENDING_ASSISTANT_POLL_INTERVAL_MS, Route as ChatRoute } from '@/routes/_app.chat.$gameId';
 import { server } from '@tests/_helpers/server';
 import { failSendMessage, SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
-import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
+import { renderRoute, routeComponent, TEST_USER } from '@tests/_helpers/renderRoute';
+import type { AuthUser } from '@/shared/api/auth';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
@@ -30,7 +31,7 @@ function gameWithoutManuals() {
   );
 }
 
-function renderChat(gameId: string, search?: { q?: string; c?: string }) {
+function renderChat(gameId: string, search?: { q?: string; c?: string }, user?: AuthUser | null) {
   const params = new URLSearchParams();
   if (search?.q) params.set('q', search.q);
   if (search?.c) params.set('c', search.c);
@@ -48,6 +49,7 @@ function renderChat(gameId: string, search?: { q?: string; c?: string }) {
       '/history': 'HistoryScreen',
       '/manual/$manualId': 'ManualScreen',
     },
+    user,
   });
 }
 
@@ -550,6 +552,13 @@ describe('/chat/$gameId', () => {
                 author_name: null,
               },
               {
+                manual_id: 'test-manual-003',
+                manual_title: 'Mismo nombre',
+                page: 2,
+                is_own: false,
+                author_name: 'marta',
+              },
+              {
                 manual_id: 'test-manual-001',
                 manual_title: 'Reglas base',
                 page: 4,
@@ -561,7 +570,11 @@ describe('/chat/$gameId', () => {
         }),
       ),
     );
-    renderChat('test-game-001');
+    renderChat('test-game-001', undefined, {
+      ...TEST_USER,
+      avatar_color: 'warning',
+      avatar_figure: 'crown',
+    });
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
     await waitFor(() => expect(input).toBeEnabled());
@@ -571,20 +584,24 @@ describe('/chat/$gameId', () => {
     const own = await screen.findByRole('link', { name: 'Abrir página 4 de Reglas base' });
     expect(own.getAttribute('href')).toContain('/manual/test-manual-001');
     expect(own.getAttribute('href')).toContain('page=4');
-    expect(own).toHaveTextContent(/^M$/);
-    expect(own).toHaveAccessibleDescription('Subido por marta');
+    expect(own).toHaveAccessibleDescription('Lo has subido tú');
+    expect(own.querySelector('svg')).toBeInTheDocument();
+    expect(own.querySelector('span[aria-hidden="true"]')).toHaveStyle({
+      width: '24px',
+      height: '24px',
+    });
     expect(screen.queryByRole('tooltip')).toBeNull();
     await user.hover(own);
     const ownTip = await screen.findByRole('tooltip');
     expect(ownTip).toHaveTextContent('Reglas base');
     expect(ownTip).toHaveTextContent('Página 4');
-    expect(ownTip).toHaveTextContent('Subido por marta');
+    expect(ownTip).toHaveTextContent('Lo has subido tú');
     expect(ownTip).not.toHaveTextContent('Toca de nuevo');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
     await user.unhover(own);
     const list = screen.getByRole('list', { name: 'Fuentes' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(list).getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getAllByRole('link', { name: /Abrir página 4/ })).toHaveLength(1);
     expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
     const community = screen.getByRole('button', {
@@ -597,16 +614,39 @@ describe('/chat/$gameId', () => {
     expect(communityTip).toHaveTextContent('Página 4');
     expect(communityTip).toHaveTextContent('manual de la comunidad');
     expect(communityTip).toHaveTextContent('Subido por Anónimo');
+    fireEvent.pointerLeave(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Lo has subido tú');
+    fireEvent.pointerLeave(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('manual de la comunidad');
+    fireEvent.pointerLeave(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Lo has subido tú');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
     const removed = screen.getByRole('button', {
       name: 'Página 7 de Manual sin nombre (ya no disponible)',
     });
-    expect(removed).toHaveAccessibleDescription('Subido por Anónimo');
+    expect(removed).toHaveAccessibleDescription('Lo has subido tú');
+    expect(removed.querySelector('svg')).toBeInTheDocument();
+    await user.hover(removed);
+    const removedTip = await screen.findByRole('tooltip');
+    expect(removedTip).toHaveTextContent('Lo has subido tú');
+    expect(removedTip).toHaveTextContent('ya no disponible');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    const sameName = screen.getByRole('button', {
+      name: 'Página 2 de Mismo nombre (manual de la comunidad)',
+    });
+    expect(sameName).toHaveAccessibleDescription('Subido por marta');
     expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
     await user.unhover(community);
     act(() => own.focus());
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Subido por marta');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Lo has subido tú');
     expect(screen.getAllByRole('tooltip')).toHaveLength(1);
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
@@ -614,7 +654,7 @@ describe('/chat/$gameId', () => {
     // Se comprueba el gesto táctil sin cambiar las capacidades del dispositivo.
     await user.pointer({ keys: '[TouchA]', target: own });
     const preview = await screen.findByRole('tooltip');
-    expect(preview).toHaveTextContent('Subido por marta');
+    expect(preview).toHaveTextContent('Lo has subido tú');
     expect(preview).toHaveTextContent('Toca de nuevo para abrir');
     expect(screen.getAllByRole('tooltip')).toHaveLength(1);
     expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();

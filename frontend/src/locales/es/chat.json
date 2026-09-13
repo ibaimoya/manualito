@@ -45,6 +45,7 @@
   "sources": {
     "communityManual": "manual de la comunidad",
     "heading": "Fuentes",
+    "own": "Lo has subido tú",
     "page": "Página {{page}}",
     "tapAgain": "Toca de nuevo para abrir",
     "unavailable": "ya no disponible",

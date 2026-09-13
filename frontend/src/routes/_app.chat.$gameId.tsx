@@ -39,6 +39,8 @@ import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { Meeple } from '@/shared/components/Brand';
 import { Markdown } from '@/shared/components/Markdown';
 import { UploaderAvatar, useUploadedByText } from '@/shared/components/UploadedBy';
+import { Avatar } from '@/shared/components/Avatar';
+import { useAuth } from '@/features/auth/use-auth';
 import { ApiError, isAbortApiError, type AnswerSource } from '@/shared/api/client';
 import {
   conversationsApi,
@@ -1061,6 +1063,7 @@ function SourceChips({
   availableManualIds,
 }: Readonly<{ sources: AnswerSource[]; availableManualIds: ReadonlySet<string> | null }>) {
   const { t } = useTranslation('chat');
+  const { user } = useAuth();
   const headingId = useId();
   const byPage = new Map<string, AnswerSource>();
   for (const source of sources) {
@@ -1073,13 +1076,13 @@ function SourceChips({
       <p id={headingId} className="mb-1.5 text-xs font-medium text-fg-3">
         {t('sources.heading')}
       </p>
-      {/* Compensa el margen negativo del primer avatar de cada fila. */}
-      <ul aria-labelledby={headingId} className="flex flex-wrap items-center gap-y-1.5 pl-2">
+      <ul aria-labelledby={headingId} className="flex flex-wrap items-center gap-x-0.5 gap-y-1.5">
         {pages.map(([key, source]) => (
-          <li key={key} className="relative -ml-2 hover:z-10 focus-within:z-10">
+          <li key={key} className="relative flex items-center hover:z-10 focus-within:z-10">
             <SourceRef
               source={source}
               available={availableManualIds === null || availableManualIds.has(source.manual_id)}
+              currentUser={user}
             />
           </li>
         ))}
@@ -1090,18 +1093,27 @@ function SourceChips({
 
 // Aísla el gesto del avatar del hover que muestra el botón de copiar.
 const SOURCE_AVATAR =
-  'group/source relative block shrink-0 rounded-full after:absolute after:-inset-1.5 after:content-[""] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card';
+  'group/source relative inline-grid size-6 min-h-6 min-w-6 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card pointer-coarse:min-h-11 pointer-coarse:min-w-11';
 
 const SOURCE_AVATAR_MOTION =
-  'transition-transform duration-150 ease-[var(--ease-mn)] motion-reduce:transition-none group-hover/source:scale-110 group-focus-visible/source:scale-110 group-aria-expanded/source:scale-110';
+  'transition-transform duration-150 ease-[var(--ease-mn)] motion-reduce:transition-none group-hover/source:scale-[1.04] group-focus-visible/source:scale-[1.04] group-aria-expanded/source:scale-[1.04]';
 
 // Solo los manuales propios y disponibles permiten abrir la página citada.
-function SourceRef({ source, available }: Readonly<{ source: AnswerSource; available: boolean }>) {
+function SourceRef({
+  source,
+  available,
+  currentUser,
+}: Readonly<{
+  source: AnswerSource;
+  available: boolean;
+  currentUser: ReturnType<typeof useAuth>['user'];
+}>) {
   const { t } = useTranslation('chat');
   const provenanceId = useId();
   const { page } = source;
   const title = source.manual_title ?? t('sources.unnamed');
-  const provenance = useUploadedByText(source.author_name);
+  const uploadedBy = useUploadedByText(source.author_name);
+  const provenance = source.is_own ? t('sources.own') : uploadedBy;
   const clickable = source.is_own && available;
   const reason = clickable
     ? null
@@ -1134,7 +1146,17 @@ function SourceRef({ source, available }: Readonly<{ source: AnswerSource; avail
             aria-describedby={provenanceId}
             className={SOURCE_AVATAR}
           >
-            <UploaderAvatar authorName={source.author_name} className={SOURCE_AVATAR_MOTION} />
+            {source.is_own && currentUser ? (
+              <Avatar
+                name={currentUser.username || currentUser.email}
+                size={24}
+                color={currentUser.avatar_color}
+                figure={currentUser.avatar_figure}
+                className={cn('ring-2 ring-card', SOURCE_AVATAR_MOTION)}
+              />
+            ) : (
+              <UploaderAvatar authorName={source.author_name} className={SOURCE_AVATAR_MOTION} />
+            )}
           </Link>
         </Tooltip>
         {hiddenProvenance}
@@ -1151,11 +1173,21 @@ function SourceRef({ source, available }: Readonly<{ source: AnswerSource; avail
           aria-describedby={provenanceId}
           className={cn(SOURCE_AVATAR, 'cursor-help')}
         >
-          <UploaderAvatar
-            authorName={source.author_name}
-            muted={!available}
-            className={SOURCE_AVATAR_MOTION}
-          />
+          {source.is_own && currentUser ? (
+            <Avatar
+              name={currentUser.username || currentUser.email}
+              size={24}
+              color={currentUser.avatar_color}
+              figure={currentUser.avatar_figure}
+              className={cn('ring-2 ring-card', !available && 'opacity-60', SOURCE_AVATAR_MOTION)}
+            />
+          ) : (
+            <UploaderAvatar
+              authorName={source.author_name}
+              muted={!available}
+              className={SOURCE_AVATAR_MOTION}
+            />
+          )}
         </button>
       </Tooltip>
       {hiddenProvenance}

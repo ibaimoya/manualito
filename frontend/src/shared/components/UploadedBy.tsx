@@ -33,19 +33,24 @@ export function UploaderAvatar({
   authorName,
   muted = false,
   className,
-}: Readonly<{ authorName: string | null; muted?: boolean; className?: string }>) {
+}: Readonly<{
+  authorName: string | null;
+  muted?: boolean;
+  className?: string;
+}>) {
   const initial = authorName?.trim().charAt(0).toUpperCase() ?? '';
   return (
     <span
       aria-hidden="true"
       className={cn(
-        'grid size-8 shrink-0 place-items-center rounded-full font-display text-[13px] font-bold leading-none ring-2 ring-card',
+        'grid shrink-0 place-items-center rounded-full font-display text-[11px] font-bold leading-none ring-2 ring-card',
+        'size-6',
         initial ? 'bg-primary-100 text-primary-700' : 'bg-surface-2 text-fg-3',
         muted && 'opacity-60',
         className,
       )}
     >
-      {initial || <UserIcon size={16} weight="bold" />}
+      {initial || <UserIcon size={12} weight="bold" />}
     </span>
   );
 }

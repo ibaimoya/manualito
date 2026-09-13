@@ -103,7 +103,7 @@ def test_missing_database_credential_is_not_replaced_for_existing_database(tmp_p
     assert len(list(directory.iterdir())) == 1
 
 
-@pytest.mark.parametrize("invalid", ["empty", "directory"])
+@pytest.mark.parametrize("invalid", ["empty", "whitespace", "directory"])
 def test_invalid_secret_stops_without_replacing_it(tmp_path, invalid):
     directory = tmp_path / "secrets"
     directory.mkdir()
@@ -111,13 +111,13 @@ def test_invalid_secret_stops_without_replacing_it(tmp_path, invalid):
     if invalid == "directory":
         path.mkdir()
     else:
-        path.touch()
+        path.write_bytes(b" \t\r\n" if invalid == "whitespace" else b"")
 
     assert run_setup(directory).returncode != 0
     if invalid == "directory":
         assert path.is_dir()
     else:
-        assert path.read_bytes() == b""
+        assert path.read_bytes() == (b" \t\r\n" if invalid == "whitespace" else b"")
     assert len(list(directory.iterdir())) == 1
 
 

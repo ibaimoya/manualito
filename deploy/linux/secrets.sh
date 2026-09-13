@@ -24,6 +24,9 @@ validate_paths() {
         if [[ -e "$path" && (! -f "$path" || ! -s "$path" || ! -r "$path") ]]; then
             fail "El secreto $name debe ser un archivo legible y no vacío."
         fi
+        if [[ -f "$path" ]] && ! grep -q '[^[:space:]]' "$path"; then
+            fail "El secreto $name no puede estar vacío."
+        fi
     done
 }
 

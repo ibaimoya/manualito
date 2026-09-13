@@ -18,7 +18,7 @@ function Assert-SecretPath([string]$Path, [bool]$IsDirectory) {
     if ($item.PSIsContainer -ne $IsDirectory) {
         throw "Tipo de archivo incorrecto en $Path."
     }
-    if (-not $IsDirectory -and $item.Length -eq 0) {
+    if (-not $IsDirectory -and [string]::IsNullOrWhiteSpace([IO.File]::ReadAllText($Path))) {
         throw "El secreto $($item.Name) no puede estar vacío."
     }
 }

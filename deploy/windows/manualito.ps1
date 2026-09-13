@@ -33,6 +33,8 @@ $script:LlmEnv = Join-Path $script:Root "config\llm.env"
 $script:NvidiaCompose = Join-Path $script:Root "deploy\compose\accelerators\nvidia.yaml"
 $script:OcrPaddleCpuCompose = Join-Path $script:Root "deploy\compose\ocr\paddle-cpu.yaml"
 $script:OcrPaddleGpuCompose = Join-Path $script:Root "deploy\compose\ocr\paddle-gpu.yaml"
+$script:ResendCompose = Join-Path $script:Root "deploy\compose\mail\resend.yaml"
+$script:ResendSecret = Join-Path $script:Root "secrets\resend_api_key.txt"
 $script:LocalCaScript = Join-Path $script:Root "deploy\windows\local-ca.ps1"
 $script:LowProfile = Join-Path $script:Root "deploy\profiles\llm\low.env"
 $script:HighProfile = Join-Path $script:Root "deploy\profiles\llm\high.env"
@@ -553,7 +555,7 @@ function Test-LocalPortOpen([int]$Port) {
     }
 }
 
-function Assert-StartPortsFree([string[]]$RunningServices) {
+function Assert-StartPortsFree([string[]]$RunningServices, [string]$MailProvider) {
     if ($DryRun) {
         return
     }
@@ -564,6 +566,7 @@ function Assert-StartPortsFree([string[]]$RunningServices) {
         @{ Service = "frontend"; Port = 5173 }
     )
     foreach ($entry in $ports) {
+        if ($entry.Service -eq "mailpit" -and $MailProvider -eq "resend") { continue }
         if ((Test-LocalPortOpen ([int]$entry.Port)) -and $RunningServices -notcontains $entry.Service) {
             Stop-Manualito "El puerto $($entry.Port) está ocupado y $($entry.Service) no está corriendo en este stack. Libera el puerto o reinicia Docker Desktop si lo ocupa Docker sin contenedores visibles."
         }
@@ -662,6 +665,7 @@ function Write-SetupExecutionHeader([object]$Selection) {
     Write-Field "modo" (Format-Selection $Selection.Accelerator $Selection.Llm)
     Write-Field "vram llm" (Format-LlmVram $Selection.Llm)
     Write-Field "ocr" $Selection.Ocr
+    Write-Field "correo" $Selection.Mail
     Write-Field "config" "deploy\local\selected.env"
     if ($Selection.Accelerator -ne $Selection.RecommendedAccelerator -or $Selection.Llm -ne $Selection.RecommendedLlm -or $Selection.Ocr -ne $Selection.RecommendedOcr) {
         Write-Field "aviso" "distinta de la recomendada"
@@ -713,7 +717,7 @@ function Get-OcrRecommendation([string]$SelectedAccelerator, [string]$LlmSize, [
 
 # Dibuja y procesa el selector interactivo de acelerador y modelo.
 function Read-SetupSelection([string]$RecommendedAccelerator, [string]$RecommendedLlm, [bool]$DockerGpu) {
-    Write-Step "Paso 1/2: LLM"
+    Write-Step "Paso 1/3: LLM"
     Write-MenuOption "Enter" (Format-MenuSelection $RecommendedAccelerator $RecommendedLlm) "<- recomendada"
     Write-MenuOption "1" (Format-MenuSelection "cpu" "low") "máxima compatibilidad"
     Write-MenuOption "2" (Format-MenuSelection "cpu" "high") "experimental"
@@ -754,7 +758,7 @@ function Read-SetupSelection([string]$RecommendedAccelerator, [string]$Recommend
 }
 
 function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [string]$RecommendationDetail) {
-    Write-Step "Paso 2/2: OCR"
+    Write-Step "Paso 2/3: OCR"
     Write-MenuOption "Enter" $RecommendedOcr "<- recomendada" 14
     Write-MenuOption "1" "tesseract" "máxima compatibilidad" 14
     Write-MenuOption "2" "paddle_cpu" "muy fiable, pero lento" 14
@@ -795,6 +799,36 @@ function Read-OcrSelection([string]$RecommendedOcr, [object]$PaddleGpuStatus, [s
     }
 }
 
+function Assert-MailProvider([string]$MailProvider) {
+    if ($MailProvider -notin @("mailpit", "resend")) {
+        Stop-Manualito "Proveedor de correo no válido. Ejecuta setup para seleccionarlo."
+    }
+}
+
+function Assert-MailSecret([string]$MailProvider) {
+    if ($MailProvider -ne "resend") { return }
+    if (-not (Test-Path -LiteralPath $script:ResendSecret -PathType Leaf) -or (Get-Item -LiteralPath $script:ResendSecret).Length -eq 0) {
+        Stop-Manualito "Resend requiere una clave en secrets/resend_api_key.txt."
+    }
+}
+
+function Read-MailSelection {
+    Write-Step "Paso 3/3: Correo"
+    Write-MenuOption "Enter/1" "Mailpit" "pruebas locales, sin enviar correos" 14
+    Write-MenuOption "2" "Resend" "envío de correos reales" 14
+    Write-MenuOption "q" "exit" "salir sin cambios" 14
+    Write-Note "Resend requiere secrets/resend_api_key.txt y la configuración de deploy/compose/mail/resend.yaml."
+    $options = @{ "" = "mailpit"; "1" = "mailpit"; "2" = "resend" }
+    while ($true) {
+        $answer = (Read-SetupOption).Trim().ToLowerInvariant()
+        if ($answer -in @("q", "exit", "salir")) {
+            Exit-Manualito "Setup cancelado. No se han aplicado cambios."
+        }
+        if ($options.ContainsKey($answer)) { return $options[$answer] }
+        Write-Note "Opción no válida. Pulsa Enter para usar Mailpit."
+    }
+}
+
 # Calcula la recomendación final mezclando autodetección y flags manuales.
 function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     $recommendedAccelerator = "cpu"
@@ -815,6 +849,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
     $finalLlm = $recommendedLlm
     $finalOcrInfo = $recommendedOcrInfo
     $finalOcr = $recommendedOcrInfo.Mode
+    $finalMail = "mailpit"
 
     Write-Step "Configuración recomendada"
     Write-Field "recomendada" (Format-Selection $recommendedAccelerator $recommendedLlm)
@@ -827,6 +862,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
         $finalLlm = $choice.Llm
         $finalOcrInfo = Get-OcrRecommendation $finalAccelerator $finalLlm $NvidiaInfo $paddleGpuStatus
         $finalOcr = Read-OcrSelection $finalOcrInfo.Mode $paddleGpuStatus $finalOcrInfo.Detail
+        $finalMail = Read-MailSelection
     }
 
     $showSelectionMessages = ($UseRecommended -or $DryRun -or $SkipBuild)
@@ -835,6 +871,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
         Write-Field "selección" (Format-Selection $finalAccelerator $finalLlm)
         Write-Field "vram llm" (Format-LlmVram $finalLlm)
         Write-Field "ocr" $finalOcr
+        Write-Field "correo" $finalMail
     }
     if ($finalAccelerator -ne $recommendedAccelerator -or $finalLlm -ne $recommendedLlm -or $finalOcr -ne $recommendedOcrInfo.Mode) {
         if ($showSelectionMessages) {
@@ -868,6 +905,7 @@ function Resolve-Selection([bool]$DockerGpu, [object]$NvidiaInfo) {
         Accelerator = $finalAccelerator
         Llm = $finalLlm
         Ocr = $finalOcr
+        Mail = $finalMail
         RecommendedAccelerator = $recommendedAccelerator
         RecommendedLlm = $recommendedLlm
         RecommendedOcr = $recommendedOcrInfo.Mode
@@ -885,7 +923,8 @@ function Save-Selection([object]$Selection, [switch]$Quiet) {
         "MANUALITO_ACCELERATOR=$($Selection.Accelerator)",
         "MANUALITO_LLM_SIZE=$($Selection.Llm)",
         "MANUALITO_OCR_MODE=$($Selection.Ocr)",
-        "MANUALITO_SETUP_VERSION=1"
+        "MANUALITO_MAIL_PROVIDER=$($Selection.Mail)",
+        "MANUALITO_SETUP_VERSION=2"
     )
     if (-not $DryRun) {
         $lines | Set-Content -LiteralPath $script:SelectedEnv -Encoding ASCII
@@ -916,6 +955,7 @@ function Get-ProfileFile([string]$LlmSize) {
 function Get-ComposePrefix([object]$Selection) {
     Assert-Accelerator $Selection.Accelerator
     Assert-Ocr $Selection.Ocr
+    Assert-MailProvider $Selection.Mail
     $profile = Get-ProfileFile $Selection.Llm
     Assert-File $script:RootEnv ".env"
     Assert-File $script:LlmEnv "config\llm.env"
@@ -933,6 +973,10 @@ function Get-ComposePrefix([object]$Selection) {
     if ($Selection.Ocr -eq "paddle_gpu") {
         Assert-File $script:OcrPaddleGpuCompose "override OCR Paddle GPU"
         $args += @("-f", $script:OcrPaddleGpuCompose)
+    }
+    if ($Selection.Mail -eq "resend") {
+        Assert-File $script:ResendCompose "configuración de Resend"
+        $args += @("-f", $script:ResendCompose)
     }
     return $args
 }
@@ -1047,15 +1091,19 @@ function Load-Selection {
         return $null
     }
     $values = Read-EnvFile $script:SelectedEnv
+    if (-not $values.ContainsKey("MANUALITO_MAIL_PROVIDER")) { return $null }
     $selectedAccelerator = Get-RequiredValue $values "MANUALITO_ACCELERATOR"
     $selectedLlm = Get-RequiredValue $values "MANUALITO_LLM_SIZE"
     $selectedOcr = Get-RequiredValue $values "MANUALITO_OCR_MODE"
+    $selectedMail = Get-RequiredValue $values "MANUALITO_MAIL_PROVIDER"
     Assert-Accelerator $selectedAccelerator
     Assert-Ocr $selectedOcr
+    Assert-MailProvider $selectedMail
     return [pscustomobject]@{
         Accelerator = $selectedAccelerator
         Llm = $selectedLlm
         Ocr = $selectedOcr
+        Mail = $selectedMail
     }
 }
 
@@ -1065,7 +1113,7 @@ function Get-ExistingSelectionForCompose {
     if ($null -ne $selection) {
         return $selection
     }
-    return [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract" }
+    return [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract"; Mail = "mailpit" }
 }
 
 # Lista servicios de Manualito que siguen arrancados.
@@ -1106,6 +1154,7 @@ function Invoke-Setup([string]$DockerPath) {
     $nvidia = Get-NvidiaInfo
     $dockerGpu = Test-DockerGpu $DockerPath $nvidia
     $selection = Resolve-Selection $dockerGpu $nvidia
+    Assert-MailSecret $selection.Mail
     Confirm-SetupSelection $selection
     Save-Selection $selection -Quiet:(-not $DryRun -and -not $SkipBuild)
     if ($SkipBuild) {
@@ -1127,16 +1176,18 @@ function Invoke-Start([string]$DockerPath) {
     $offerCaTrust = ([string]$env:MANUALITO_SETUP_TRUST_PROMPT -eq "1")
     $selection = Load-Selection
     if ($null -eq $selection) {
-        Write-Note "Primera ejecución detectada: lanzando setup antes de arrancar."
+        Write-Note "Falta completar la configuración. Ejecutando setup antes de arrancar."
         $selection = Invoke-Setup $DockerPath
         $offerCaTrust = $true
     }
     Assert-SelectedGpuRuntime $DockerPath $selection
+    Assert-MailSecret $selection.Mail
     $runningServices = @(Get-RunningManualitoServices $DockerPath $selection)
-    Assert-StartPortsFree $runningServices
+    Assert-StartPortsFree $runningServices $selection.Mail
     Write-Step "Arrancando Manualito"
     Write-Field "modo" (Format-Selection $selection.Accelerator $selection.Llm)
     Write-Field "ocr" $selection.Ocr
+    Write-Field "correo" $selection.Mail
     Invoke-Compose $DockerPath $selection @("up", "-d")
     Invoke-SetupCaTrustOffer $DockerPath $selection $offerCaTrust
     if ($DryRun) {
@@ -1145,7 +1196,7 @@ function Invoke-Start([string]$DockerPath) {
         Write-Ok "Manualito listo:"
         Write-Field "app" "https://localhost"
         Write-Field "flower" "http://localhost:5555"
-        Write-Field "mailpit" "http://localhost:8025"
+        if ($selection.Mail -eq "mailpit") { Write-Field "mailpit" "http://localhost:8025" }
         Write-Field "openapi" "https://localhost/docs"
         Write-Ok "LLM:"
         $runningModel = Get-RunningLlmModel $DockerPath $selection
@@ -1161,8 +1212,8 @@ function Invoke-Start([string]$DockerPath) {
 function Invoke-Stop([string]$DockerPath) {
     $selection = Load-Selection
     if ($null -eq $selection) {
-        $selection = [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract" }
-        Write-Note "No hay selected.env. Parando con CPU + low."
+        $selection = [pscustomobject]@{ Accelerator = "cpu"; Llm = "low"; Ocr = "tesseract"; Mail = "mailpit" }
+        Write-Note "No hay una selección completa. Parando con CPU + low."
     }
     Invoke-Compose $DockerPath $selection @("down")
     if ($DryRun) {

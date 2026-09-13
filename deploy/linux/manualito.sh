@@ -18,6 +18,8 @@ LLM_ENV="$ROOT/config/llm.env"
 NVIDIA_COMPOSE="$ROOT/deploy/compose/accelerators/nvidia.yaml"
 OCR_PADDLE_CPU_COMPOSE="$ROOT/deploy/compose/ocr/paddle-cpu.yaml"
 OCR_PADDLE_GPU_COMPOSE="$ROOT/deploy/compose/ocr/paddle-gpu.yaml"
+RESEND_COMPOSE="$ROOT/deploy/compose/mail/resend.yaml"
+RESEND_SECRET="$ROOT/secrets/resend_api_key.txt"
 LOCAL_CA_SCRIPT="$ROOT/deploy/linux/local-ca.sh"
 LOW_PROFILE="$ROOT/deploy/profiles/llm/low.env"
 HIGH_PROFILE="$ROOT/deploy/profiles/llm/high.env"
@@ -42,12 +44,15 @@ RECOMMENDED_OCR="tesseract"
 FINAL_ACCELERATOR="cpu"
 FINAL_LLM="low"
 FINAL_OCR="tesseract"
+FINAL_MAIL="mailpit"
 SELECTED_ACCELERATOR="cpu"
 SELECTED_LLM="low"
 SELECTED_OCR="tesseract"
+SELECTED_MAIL="mailpit"
 EXISTING_ACCELERATOR="cpu"
 EXISTING_LLM="low"
 EXISTING_OCR="tesseract"
+EXISTING_MAIL="mailpit"
 COMPOSE_ARGS=()
 
 if [[ -t 1 ]]; then
@@ -657,9 +662,11 @@ port_conflict_message() {
 assert_start_ports_free() {
     ((DRY_RUN)) && return 0
     local running_services="$1"
+    local mail_provider="$2"
     local service port
     while read -r service port; do
         [[ -z "$service" ]] && continue
+        [[ "$service" == "mailpit" && "$mail_provider" == "resend" ]] && continue
         if local_port_open "$port" && ! service_is_running "$service" "$running_services"; then
             stop_manualito "$(port_conflict_message "$service" "$port")"
         fi
@@ -774,6 +781,7 @@ write_setup_execution_header() {
     write_field "modo" "$(format_selection "$FINAL_ACCELERATOR" "$FINAL_LLM")"
     write_field "vram llm" "$(format_llm_vram "$FINAL_LLM")"
     write_field "ocr" "$FINAL_OCR"
+    write_field "correo" "$FINAL_MAIL"
     write_field "config" "deploy/local/selected.env"
     if [[ "$FINAL_ACCELERATOR" != "$RECOMMENDED_ACCELERATOR" || "$FINAL_LLM" != "$RECOMMENDED_LLM" || "$FINAL_OCR" != "$RECOMMENDED_OCR" ]]; then
         write_field "aviso" "distinta de la recomendada"
@@ -826,7 +834,7 @@ read_setup_selection() {
     local recommended_accelerator="$1"
     local recommended_llm="$2"
     local answer
-    write_step "Paso 1/2: LLM"
+    write_step "Paso 1/3: LLM"
     write_menu_option "Enter" "$(format_menu_selection "$recommended_accelerator" "$recommended_llm")" "<- recomendada"
     write_menu_option "1" "$(format_menu_selection "cpu" "low")" "máxima compatibilidad"
     write_menu_option "2" "$(format_menu_selection "cpu" "high")" "experimental"
@@ -866,7 +874,7 @@ read_ocr_selection() {
     local recommended_ocr="$1"
     local recommendation_detail="$2"
     local answer
-    write_step "Paso 2/2: OCR"
+    write_step "Paso 2/3: OCR"
     write_menu_option "Enter" "$recommended_ocr" "<- recomendada" 14
     write_menu_option "1" "tesseract" "máxima compatibilidad" 14
     write_menu_option "2" "paddle_cpu" "muy fiable, pero lento" 14
@@ -906,6 +914,37 @@ read_ocr_selection() {
     done
 }
 
+assert_mail_provider() {
+    case "$1" in
+        mailpit|resend) ;;
+        *) stop_manualito "Proveedor de correo no válido. Ejecuta setup para seleccionarlo." ;;
+    esac
+}
+
+assert_mail_secret() {
+    [[ "$1" == "resend" ]] || return 0
+    [[ -f "$RESEND_SECRET" && -s "$RESEND_SECRET" && -r "$RESEND_SECRET" ]] ||
+        stop_manualito "Resend requiere una clave en secrets/resend_api_key.txt."
+}
+
+read_mail_selection() {
+    local answer
+    write_step "Paso 3/3: Correo"
+    write_menu_option "Enter/1" "Mailpit" "pruebas locales, sin enviar correos" 14
+    write_menu_option "2" "Resend" "envío de correos reales" 14
+    write_menu_option "q" "exit" "salir sin cambios" 14
+    write_note "Resend requiere secrets/resend_api_key.txt y la configuración de deploy/compose/mail/resend.yaml."
+    while true; do
+        answer="$(lower "$(trim "$(read_setup_option)")")"
+        case "$answer" in
+            ""|1) FINAL_MAIL="mailpit"; return 0 ;;
+            2) FINAL_MAIL="resend"; return 0 ;;
+            q|exit|salir) exit_manualito "Setup cancelado. No se han aplicado cambios." ;;
+            *) write_note "Opción no válida. Pulsa Enter para usar Mailpit." ;;
+        esac
+    done
+}
+
 resolve_selection() {
     RECOMMENDED_ACCELERATOR="cpu"
     RECOMMENDED_LLM="low"
@@ -925,6 +964,7 @@ resolve_selection() {
     FINAL_ACCELERATOR="$RECOMMENDED_ACCELERATOR"
     FINAL_LLM="$RECOMMENDED_LLM"
     FINAL_OCR="$RECOMMENDED_OCR"
+    FINAL_MAIL="mailpit"
 
     write_step "Configuración recomendada"
     write_field "recomendada" "$(format_selection "$RECOMMENDED_ACCELERATOR" "$RECOMMENDED_LLM")"
@@ -938,6 +978,7 @@ resolve_selection() {
         get_ocr_recommendation "$FINAL_ACCELERATOR" "$FINAL_LLM"
         read_ocr_selection "$OCR_RECOMMENDED_MODE" "$OCR_RECOMMENDATION_DETAIL"
         FINAL_OCR="$CHOSEN_OCR"
+        read_mail_selection
     fi
 
     if ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)); then
@@ -945,6 +986,7 @@ resolve_selection() {
         write_field "selección" "$(format_selection "$FINAL_ACCELERATOR" "$FINAL_LLM")"
         write_field "vram llm" "$(format_llm_vram "$FINAL_LLM")"
         write_field "ocr" "$FINAL_OCR"
+        write_field "correo" "$FINAL_MAIL"
     fi
     if [[ "$FINAL_ACCELERATOR" != "$RECOMMENDED_ACCELERATOR" || "$FINAL_LLM" != "$RECOMMENDED_LLM" || "$FINAL_OCR" != "$RECOMMENDED_OCR" ]]; then
         ((USE_RECOMMENDED || DRY_RUN || SKIP_BUILD)) && write_note "Configuración distinta de la recomendada."
@@ -985,7 +1027,8 @@ save_selection() {
         printf 'MANUALITO_ACCELERATOR=%s\n' "$FINAL_ACCELERATOR"
         printf 'MANUALITO_LLM_SIZE=%s\n' "$FINAL_LLM"
         printf 'MANUALITO_OCR_MODE=%s\n' "$FINAL_OCR"
-        printf 'MANUALITO_SETUP_VERSION=1\n'
+        printf 'MANUALITO_MAIL_PROVIDER=%s\n' "$FINAL_MAIL"
+        printf 'MANUALITO_SETUP_VERSION=2\n'
     } >"$tmp"
     mv -f "$tmp" "$SELECTED_ENV"
     chmod 600 "$SELECTED_ENV" 2>/dev/null || true
@@ -1002,9 +1045,11 @@ build_compose_args() {
     local accelerator="$1"
     local llm_size="$2"
     local ocr_mode="$3"
+    local mail_provider="$4"
     local profile
     assert_accelerator "$accelerator"
     assert_ocr "$ocr_mode"
+    assert_mail_provider "$mail_provider"
     profile="$(get_profile_file "$llm_size")"
     assert_file "$ROOT_ENV" ".env"
     assert_file "$LLM_ENV" "config/llm.env"
@@ -1023,6 +1068,10 @@ build_compose_args() {
         assert_file "$OCR_PADDLE_GPU_COMPOSE" "override OCR Paddle GPU"
         COMPOSE_ARGS+=(-f "$OCR_PADDLE_GPU_COMPOSE")
     fi
+    if [[ "$mail_provider" == "resend" ]]; then
+        assert_file "$RESEND_COMPOSE" "configuración de Resend"
+        COMPOSE_ARGS+=(-f "$RESEND_COMPOSE")
+    fi
 }
 
 invoke_compose() {
@@ -1031,9 +1080,10 @@ invoke_compose() {
     local accelerator="$1"
     local llm_size="$2"
     local ocr_mode="$3"
-    shift 3
+    local mail_provider="$4"
+    shift 4
     local tail=("$@")
-    build_compose_args "$accelerator" "$llm_size" "$ocr_mode"
+    build_compose_args "$accelerator" "$llm_size" "$ocr_mode" "$mail_provider"
     run_external "docker compose ${tail[*]}" "$docker_path" "${COMPOSE_ARGS[@]}" "${tail[@]}"
 }
 
@@ -1043,10 +1093,11 @@ capture_compose_lines() {
     local accelerator="$1"
     local llm_size="$2"
     local ocr_mode="$3"
-    shift 3
+    local mail_provider="$4"
+    shift 4
     local tail=("$@")
     ((DRY_RUN)) && return 0
-    build_compose_args "$accelerator" "$llm_size" "$ocr_mode"
+    build_compose_args "$accelerator" "$llm_size" "$ocr_mode" "$mail_provider"
     "$docker_path" "${COMPOSE_ARGS[@]}" "${tail[@]}" 2>/dev/null | sed '/^[[:space:]]*$/d' || true
 }
 
@@ -1055,6 +1106,7 @@ wait_caddy_healthy() {
     local accelerator="$2"
     local llm_size="$3"
     local ocr_mode="$4"
+    local mail_provider="$5"
     local deadline=$((SECONDS + 120))
     write_step "Esperando salud de Caddy"
     while ((SECONDS < deadline)); do
@@ -1062,7 +1114,7 @@ wait_caddy_healthy() {
         local health
         container_id="$(
             capture_compose_lines \
-                "$docker_path" "$accelerator" "$llm_size" "$ocr_mode" \
+                "$docker_path" "$accelerator" "$llm_size" "$ocr_mode" "$mail_provider" \
                 ps -q frontend | head -n1
         )"
         if [[ -n "$container_id" ]]; then
@@ -1090,13 +1142,14 @@ offer_setup_ca_trust() {
     local accelerator="$2"
     local llm_size="$3"
     local ocr_mode="$4"
-    local requested="$5"
+    local mail_provider="$5"
+    local requested="$6"
     ((requested)) || return 0
     if ((DRY_RUN)); then
         write_note "Confianza HTTPS no aplicada en dry-run. Ejecuta ./local-ca.sh trust."
         return 0
     fi
-    wait_caddy_healthy "$docker_path" "$accelerator" "$llm_size" "$ocr_mode"
+    wait_caddy_healthy "$docker_path" "$accelerator" "$llm_size" "$ocr_mode" "$mail_provider"
     if noninteractive_session; then
         write_note "Confianza HTTPS no aplicada en modo no interactivo/CI. Ejecuta ./local-ca.sh trust."
         return 0
@@ -1112,6 +1165,9 @@ offer_setup_ca_trust() {
 
 load_selection() {
     [[ -f "$SELECTED_ENV" ]] || return 1
+    SELECTED_MAIL="$(read_env_value "$SELECTED_ENV" "MANUALITO_MAIL_PROVIDER" || true)"
+    [[ -n "$SELECTED_MAIL" ]] || return 1
+    assert_mail_provider "$SELECTED_MAIL"
     SELECTED_ACCELERATOR="$(required_env_value "$SELECTED_ENV" "MANUALITO_ACCELERATOR")"
     SELECTED_LLM="$(required_env_value "$SELECTED_ENV" "MANUALITO_LLM_SIZE")"
     SELECTED_OCR="$(required_env_value "$SELECTED_ENV" "MANUALITO_OCR_MODE")"
@@ -1124,17 +1180,19 @@ load_existing_selection_for_compose() {
         EXISTING_ACCELERATOR="$SELECTED_ACCELERATOR"
         EXISTING_LLM="$SELECTED_LLM"
         EXISTING_OCR="$SELECTED_OCR"
+        EXISTING_MAIL="$SELECTED_MAIL"
     else
         EXISTING_ACCELERATOR="cpu"
         EXISTING_LLM="low"
         EXISTING_OCR="tesseract"
+        EXISTING_MAIL="mailpit"
     fi
 }
 
 get_running_manualito_services() {
     local docker_path="$1"
     load_existing_selection_for_compose
-    capture_compose_lines "$docker_path" "$EXISTING_ACCELERATOR" "$EXISTING_LLM" "$EXISTING_OCR" ps --status=running --services
+    capture_compose_lines "$docker_path" "$EXISTING_ACCELERATOR" "$EXISTING_LLM" "$EXISTING_OCR" "$EXISTING_MAIL" ps --status=running --services
 }
 
 resolve_running_manualito_before_vram() {
@@ -1151,7 +1209,7 @@ resolve_running_manualito_before_vram() {
         return 0
     fi
     if read_yes_no "¿Quieres pararlo antes de medir VRAM?"; then
-        invoke_compose "$docker_path" "$EXISTING_ACCELERATOR" "$EXISTING_LLM" "$EXISTING_OCR" down
+        invoke_compose "$docker_path" "$EXISTING_ACCELERATOR" "$EXISTING_LLM" "$EXISTING_OCR" "$EXISTING_MAIL" down
     else
         write_note "La recomendación usará la VRAM libre actual."
     fi
@@ -1163,6 +1221,7 @@ invoke_setup() {
     get_nvidia_info
     test_docker_gpu "$docker_path"
     resolve_selection
+    assert_mail_secret "$FINAL_MAIL"
     confirm_setup_selection
     save_selection "$((! DRY_RUN && ! SKIP_BUILD))"
     if ((SKIP_BUILD)); then
@@ -1170,7 +1229,7 @@ invoke_setup() {
         return 0
     fi
     write_setup_execution_header
-    invoke_compose "$docker_path" "$FINAL_ACCELERATOR" "$FINAL_LLM" "$FINAL_OCR" up --build --no-start
+    invoke_compose "$docker_path" "$FINAL_ACCELERATOR" "$FINAL_LLM" "$FINAL_OCR" "$FINAL_MAIL" up --build --no-start
     if ((DRY_RUN)); then
         write_ok "Comando de setup preparado"
     else
@@ -1181,7 +1240,7 @@ invoke_setup() {
 get_running_llm_model() {
     local docker_bin="${1:-${DOCKER_PATH:-}}"
     [[ -n "$docker_bin" ]] || return 0
-    capture_compose_lines "$docker_bin" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" exec -T llm printenv OLLAMA_MODEL | head -n1
+    capture_compose_lines "$docker_bin" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$SELECTED_MAIL" exec -T llm printenv OLLAMA_MODEL | head -n1
 }
 
 invoke_start() {
@@ -1189,28 +1248,31 @@ invoke_start() {
     local offer_ca_trust=0
     [[ "${MANUALITO_SETUP_TRUST_PROMPT:-}" == "1" ]] && offer_ca_trust=1
     if ! load_selection; then
-        write_note "Primera ejecución detectada: lanzando setup antes de arrancar."
+        write_note "Falta completar la configuración. Ejecutando setup antes de arrancar."
         invoke_setup "$docker_path"
         SELECTED_ACCELERATOR="$FINAL_ACCELERATOR"
         SELECTED_LLM="$FINAL_LLM"
         SELECTED_OCR="$FINAL_OCR"
+        SELECTED_MAIL="$FINAL_MAIL"
         offer_ca_trust=1
     fi
     assert_selected_gpu_runtime "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_OCR"
-    assert_start_ports_free "$(get_running_manualito_services "$docker_path")"
+    assert_mail_secret "$SELECTED_MAIL"
+    assert_start_ports_free "$(get_running_manualito_services "$docker_path")" "$SELECTED_MAIL"
     write_step "Arrancando Manualito"
     write_field "modo" "$(format_selection "$SELECTED_ACCELERATOR" "$SELECTED_LLM")"
     write_field "ocr" "$SELECTED_OCR"
-    invoke_compose "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" up -d
+    write_field "correo" "$SELECTED_MAIL"
+    invoke_compose "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$SELECTED_MAIL" up -d
     offer_setup_ca_trust \
-        "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$offer_ca_trust"
+        "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$SELECTED_MAIL" "$offer_ca_trust"
     if ((DRY_RUN)); then
         write_ok "Comando de arranque preparado"
     else
         write_ok "Manualito listo:"
         write_field "app" "https://localhost"
         write_field "flower" "http://localhost:5555"
-        write_field "mailpit" "http://localhost:8025"
+        [[ "$SELECTED_MAIL" == "mailpit" ]] && write_field "mailpit" "http://localhost:8025"
         write_field "openapi" "https://localhost/docs"
         write_ok "LLM:"
         local running_model
@@ -1229,9 +1291,10 @@ invoke_stop() {
         SELECTED_ACCELERATOR="cpu"
         SELECTED_LLM="low"
         SELECTED_OCR="tesseract"
-        write_note "No hay selected.env. Parando con CPU + low."
+        SELECTED_MAIL="mailpit"
+        write_note "No hay una selección completa. Parando con CPU + low."
     fi
-    invoke_compose "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" down
+    invoke_compose "$docker_path" "$SELECTED_ACCELERATOR" "$SELECTED_LLM" "$SELECTED_OCR" "$SELECTED_MAIL" down
     if ((DRY_RUN)); then
         write_ok "Comando de parada preparado"
     elif manualito_ports_open; then

@@ -113,10 +113,13 @@ describe('navegación de bienvenida y acceso', () => {
     expect(await screen.findByRole('heading', { name: 'Que comience la partida.' })).toBeVisible();
   });
 
-  it('conserva cabecera y libro al ir a registro y volver con el historial', async () => {
+  it('conserva cabecera, libro y privacidad al cambiar de pantalla', async () => {
     const user = userEvent.setup();
     const { history, container } = renderEntry();
     const brand = await screen.findByRole('link', { name: 'Manualito, ir a la web' });
+    const privacy = within(screen.getByRole('contentinfo')).getByRole('button', {
+      name: 'Política de privacidad',
+    });
     const book = container.querySelector(`.${bookStyles.stage}`);
     expect(book).not.toBeNull();
     screen.getByRole('button', { name: 'Crear cuenta' }).focus();
@@ -124,11 +127,13 @@ describe('navegación de bienvenida y acceso', () => {
     const register = await screen.findByRole('heading', { name: 'Crea tu cuenta' });
     await waitFor(() => expect(register).toHaveFocus());
     expect(screen.getByRole('link', { name: 'Manualito, ir a la web' })).toBe(brand);
+    expect(within(screen.getByRole('contentinfo')).getByRole('button')).toBe(privacy);
     expect(container.querySelector(`.${bookStyles.stage}`)).toBe(book);
     expect(storage.isOnboardingSeen()).toBe(true);
     act(() => history.back());
     const welcome = await screen.findByRole('heading', { name: 'Que comience la partida.' });
     await waitFor(() => expect(welcome).toHaveFocus());
+    expect(within(screen.getByRole('contentinfo')).getByRole('button')).toBe(privacy);
     expect(container.querySelector(`.${bookStyles.stage}`)).toBe(book);
     act(() => history.forward());
     expect(await screen.findByRole('heading', { name: 'Crea tu cuenta' })).toBeVisible();

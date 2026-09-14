@@ -13,7 +13,10 @@ describe('auth-controls', () => {
 
   it('muestra errores solo cuando corresponde', () => {
     expect(emailFieldError('', false)).toBeUndefined();
+    expect(emailFieldError('marta@', false)).toBeUndefined();
     expect(emailFieldError('', true)).toBe('Ese email no parece válido');
+    expect(emailFieldError('marta@', true)).toBe('Ese email no parece válido');
+    expect(emailFieldError('marta@example.com', true)).toBeUndefined();
     expect(passwordTooShortError('corta', true)).toBe('Mínimo 12 caracteres');
     expect(passwordTooShortError('contraseña larga', true)).toBeUndefined();
   });

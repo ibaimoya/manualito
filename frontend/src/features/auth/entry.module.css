@@ -1,9 +1,17 @@
+/* El pie conserva su espacio cuando el formulario necesita desplazarse. */
 .root {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  min-height: 100dvh;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--m-bg);
   color: var(--m-text);
+}
+.viewport {
+  min-height: 0;
+  overflow: hidden auto;
+  scrollbar-gutter: stable;
+  scroll-padding-block: 20px;
 }
 .header {
   display: flex;
@@ -67,6 +75,7 @@
   align-items: center;
   gap: clamp(40px, 7vw, 104px);
   width: min(100%, 1120px);
+  min-height: 100%;
   margin-inline: auto;
   padding: 8px 40px 16px;
 }
@@ -74,6 +83,10 @@
   display: grid;
   place-items: center;
   min-width: 0;
+}
+.root[data-custom-illustration='false'] .illustration {
+  justify-self: center;
+  width: 320px;
 }
 .content {
   min-width: 0;
@@ -338,6 +351,7 @@
   font-size: 36px;
 }
 .form[data-kind='register'] .formDescription {
+  min-block-size: auto;
   margin-top: 8px;
 }
 .form[data-kind='register'] .fields {
@@ -349,6 +363,35 @@
 }
 .form[data-kind='register'] .switch {
   margin-top: 14px;
+}
+.root[data-register='true'] .main {
+  width: min(100%, 1280px);
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.6fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-content: start;
+  padding-block: clamp(16px, calc((100dvh - 650px) * 0.15), 64px) 24px;
+}
+.root[data-register='true'] .panel {
+  max-width: 660px;
+  align-self: start;
+}
+.root[data-register='true'] .illustration {
+  align-self: start;
+}
+.registrationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.registrationActions {
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
+}
+.registrationActions .submit {
+  width: fit-content;
+  min-width: 200px;
+  padding-inline: 32px;
 }
 @media (hover: hover) and (pointer: fine) {
   .theme:hover,
@@ -465,6 +508,25 @@
   }
   .language svg {
     display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .root[data-register='true'] .main {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 740px;
+    gap: 0;
+  }
+  .root[data-register='true'] .illustration {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .registrationGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .registrationActions .submit {
+    width: 100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {

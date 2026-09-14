@@ -126,11 +126,14 @@ describe('/reset-password', () => {
     ]);
   });
 
-  it('contraseñas distintas → muestra el aviso de coincidencia', async () => {
+  it('espera al envío para avisar si las contraseñas no coinciden', async () => {
     const user = userEvent.setup();
     renderReset('tok');
     await user.type(await screen.findByLabelText('Nueva contraseña'), 'claveSegura99');
     await user.type(screen.getByLabelText('Repite la contraseña'), 'otra12345');
+    await user.tab();
+    expect(screen.queryByText('Las contraseñas no coinciden')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
     expect(await screen.findByText('Las contraseñas no coinciden')).toBeInTheDocument();
   });
 });

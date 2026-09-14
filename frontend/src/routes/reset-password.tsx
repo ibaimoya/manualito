@@ -108,7 +108,7 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
           label={t('fields.password.new')}
           password={password}
           confirm={confirm}
-          submitted={submitted}
+          validation={{ password: submitted, confirm: submitted }}
           onPasswordChange={setPassword}
           onConfirmChange={setConfirm}
         />

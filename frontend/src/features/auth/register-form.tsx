@@ -29,11 +29,22 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   const [confirm, setConfirm] = useState('');
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [reviewed, setReviewed] = useState({
+    email: false,
+    username: false,
+    password: false,
+    confirm: false,
+  });
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
-  const emailError = emailFieldError(email.trim(), submitted);
+  const reviewField = (field: keyof typeof reviewed) => {
+    setReviewed((previous) => (previous[field] ? previous : { ...previous, [field]: true }));
+  };
+  const emailError = emailFieldError(email.trim(), submitted || reviewed.email);
   const usernameError =
-    submitted && username.trim().length === 0 ? t('validation.username.required') : undefined;
+    (submitted || reviewed.username) && username.trim().length === 0
+      ? t('validation.username.required')
+      : undefined;
   const consentError = submitted && !consent;
 
   const submit = (event: SyntheticEvent) => {
@@ -68,59 +79,77 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
       <RegisterErrorAlert error={register.lastError} />
 
       <div className={styles.fields}>
-        <AuthField label={t('fields.email')} htmlFor={`${fieldId}-email`} error={emailError}>
-          <Input
-            id={`${fieldId}-email`}
-            preset="email"
-            placeholder={t('placeholders.email')}
-            value={email}
-            aria-invalid={ariaInvalid(Boolean(emailError))}
-            aria-describedby={emailError ? `${fieldId}-email-feedback` : undefined}
-            onChange={(event) => setEmail(event.target.value)}
-            required
+        <div className={styles.registrationGrid}>
+          <AuthField
+            label={t('fields.email')}
+            htmlFor={`${fieldId}-email`}
+            error={emailError}
+            onFocusLeave={() => reviewField('email')}
+          >
+            <Input
+              id={`${fieldId}-email`}
+              preset="email"
+              placeholder={t('placeholders.email')}
+              value={email}
+              aria-invalid={ariaInvalid(Boolean(emailError))}
+              aria-describedby={emailError ? `${fieldId}-email-feedback` : undefined}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </AuthField>
+
+          <AuthField
+            label={t('fields.username')}
+            htmlFor={`${fieldId}-name`}
+            error={usernameError}
+            onFocusLeave={() => reviewField('username')}
+          >
+            <Input
+              id={`${fieldId}-name`}
+              preset="username"
+              placeholder={t('placeholders.username')}
+              value={username}
+              aria-invalid={ariaInvalid(Boolean(usernameError))}
+              aria-describedby={usernameError ? `${fieldId}-name-feedback` : undefined}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+            />
+          </AuthField>
+
+          <NewPasswordFields
+            fieldId={fieldId}
+            password={password}
+            confirm={confirm}
+            validation={{
+              password: submitted || reviewed.password,
+              confirm: submitted || reviewed.confirm,
+            }}
+            onFieldBlur={reviewField}
+            onPasswordChange={setPassword}
+            onConfirmChange={setConfirm}
           />
-        </AuthField>
+        </div>
 
-        <AuthField label={t('fields.username')} htmlFor={`${fieldId}-name`} error={usernameError}>
-          <Input
-            id={`${fieldId}-name`}
-            preset="username"
-            placeholder={t('placeholders.username')}
-            value={username}
-            aria-invalid={ariaInvalid(Boolean(usernameError))}
-            aria-describedby={usernameError ? `${fieldId}-name-feedback` : undefined}
-            onChange={(event) => setUsername(event.target.value)}
-            required
+        <div className={styles.registrationActions}>
+          <ConsentField
+            id={`${fieldId}-consent`}
+            checked={consent}
+            error={consentError}
+            onChange={setConsent}
+            onShowPrivacy={() => setPrivacyOpen(true)}
           />
-        </AuthField>
+          <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
-        <NewPasswordFields
-          fieldId={fieldId}
-          password={password}
-          confirm={confirm}
-          submitted={submitted}
-          onPasswordChange={setPassword}
-          onConfirmChange={setConfirm}
-        />
-
-        <ConsentField
-          id={`${fieldId}-consent`}
-          checked={consent}
-          error={consentError}
-          onChange={setConsent}
-          onShowPrivacy={() => setPrivacyOpen(true)}
-        />
-        <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
-
-        <Button
-          type="submit"
-          size="lg"
-          block
-          loading={register.isPending}
-          className={styles.submit}
-        >
-          {register.isPending ? t('actions.createAccountLoading') : t('actions.createAccount')}
-        </Button>
+          <Button
+            type="submit"
+            size="lg"
+            block
+            loading={register.isPending}
+            className={styles.submit}
+          >
+            {register.isPending ? t('actions.createAccountLoading') : t('actions.createAccount')}
+          </Button>
+        </div>
       </div>
 
       <p className={styles.switch}>

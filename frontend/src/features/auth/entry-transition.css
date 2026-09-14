@@ -9,8 +9,17 @@
   pointer-events: none;
 }
 :root:active-view-transition-type(entry)::view-transition-group(entry-content) {
-  animation-duration: 240ms;
+  animation-duration: 300ms;
   animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+:root:active-view-transition-type(entry)::view-transition-image-pair(entry-content) {
+  overflow: clip;
+}
+:root:active-view-transition-type(entry)::view-transition-old(entry-content),
+:root:active-view-transition-type(entry)::view-transition-new(entry-content) {
+  height: 100%;
+  object-fit: none;
+  object-position: top left;
 }
 :root:active-view-transition-type(entry)::view-transition-old(entry-content) {
   animation: entry-out 80ms ease-out both;

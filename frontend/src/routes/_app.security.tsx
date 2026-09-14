@@ -144,7 +144,7 @@ function ChangePasswordSection() {
             label={t('password.new')}
             password={password}
             confirm={confirm}
-            submitted={submitted}
+            validation={{ password: submitted, confirm: submitted }}
             onPasswordChange={setPassword}
             onConfirmChange={setConfirm}
           />

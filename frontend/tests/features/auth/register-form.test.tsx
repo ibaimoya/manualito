@@ -159,7 +159,7 @@ describe('RegisterForm', () => {
 
     // El backend no distingue email de usuario en un 409 → el mensaje cubre ambos.
     expect(await screen.findByText(/email o usuario ya está en uso/i)).toBeInTheDocument();
-    // Regresión: no debe afirmar que es el email (el conflicto pudo ser el usuario).
+    // Regresión. No debe afirmar que es el email (el conflicto pudo ser el usuario).
     expect(screen.queryByText(/Ese email ya está registrado/i)).not.toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
@@ -212,6 +212,53 @@ describe('RegisterForm', () => {
     expect(await screen.findByText('Ese email no parece válido')).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveFocus();
     expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it('valida al salir del campo y retira los errores al corregirlos', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    const email = await screen.findByLabelText('Email');
+    const password = screen.getByLabelText('Contraseña');
+    const confirm = screen.getByLabelText('Repite la contraseña');
+
+    await user.type(email, 'marta@');
+    expect(email).not.toHaveAttribute('aria-invalid');
+    expect(screen.queryByText('Ese email no parece válido')).not.toBeInTheDocument();
+    await user.type(password, 'a');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(password).not.toHaveAttribute('aria-invalid');
+    await user.click(screen.getAllByRole('button', { name: 'Mostrar contraseña' })[0]!);
+    expect(password).not.toHaveAttribute('aria-invalid');
+    await user.type(confirm, 'ab');
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(confirm).not.toHaveAttribute('aria-invalid');
+    expect(screen.queryByText('Las contraseñas no coinciden')).not.toBeInTheDocument();
+    await user.tab();
+    expect(confirm).not.toHaveAttribute('aria-invalid');
+    await user.tab();
+    expect(confirm).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute('aria-invalid');
+
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+    expect(email).toHaveFocus();
+    for (const field of [email, password, confirm]) {
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+    }
+    expect(onAuthenticated).not.toHaveBeenCalled();
+
+    await user.type(email, 'example.com');
+    await user.clear(password);
+    await user.type(password, 'claveSegura99');
+    await user.clear(confirm);
+    await user.type(confirm, 'claveSegura99');
+    for (const field of [email, password, confirm]) {
+      expect(field).not.toHaveAttribute('aria-invalid');
+    }
+    await waitFor(() => {
+      expect(screen.queryByText('Ese email no parece válido')).not.toBeInTheDocument();
+      expect(screen.queryByText('Las contraseñas no coinciden')).not.toBeInTheDocument();
+    });
+    expect(confirm).toHaveFocus();
   });
 
   it('acepta email con espacios alrededor (se recorta) y registra', async () => {

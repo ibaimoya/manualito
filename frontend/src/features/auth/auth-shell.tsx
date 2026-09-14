@@ -21,6 +21,8 @@ export function AuthShell({
   const pathname = useRouterState({ select: (state) => state.matches.at(-1)?.pathname });
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const welcome = pathname === '/onboarding';
+  const registration = pathname === '/register';
+  const viewport = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const previousPath = useRef(pathname);
   const [privacyOpen, setPrivacyOpen] = useState(false);
@@ -28,6 +30,7 @@ export function AuthShell({
   useLayoutEffect(() => {
     if (previousPath.current === pathname) return;
     previousPath.current = pathname;
+    viewport.current?.scrollTo({ top: 0, behavior: 'instant' });
     const heading = content.current?.querySelector('h1');
     heading?.setAttribute('tabindex', '-1');
     heading?.focus({ preventScroll: true });
@@ -37,6 +40,7 @@ export function AuthShell({
     <div
       className={styles.root}
       data-welcome={welcome}
+      data-register={registration}
       data-custom-illustration={Boolean(illustration)}
     >
       <header className={styles.header}>
@@ -52,24 +56,27 @@ export function AuthShell({
         </div>
       </header>
 
-      <main className={styles.main}>
-        <motion.div
-          className={styles.illustration}
-          layout={reducedMotion ? false : 'position'}
-          transition={{ layout: { duration: 0.24, ease: [0.23, 1, 0.32, 1] } }}
-        >
-          {illustration ?? <WelcomeBook />}
-        </motion.div>
-        <div ref={content} className={styles.panel}>
-          {!welcome && (
-            <Link to="/onboarding" className={styles.back}>
-              <ArrowLeftIcon data-icon-motion="back" size={18} aria-hidden="true" />
-              <span>{authT('actions.backToWelcome')}</span>
-            </Link>
-          )}
-          {children}
-        </div>
-      </main>
+      <motion.div ref={viewport} layoutScroll className={styles.viewport}>
+        <main className={styles.main}>
+          <motion.div
+            className={styles.illustration}
+            layout={reducedMotion ? false : 'position'}
+            layoutDependency={pathname}
+            transition={{ layout: { duration: 0.3, ease: [0.23, 1, 0.32, 1] } }}
+          >
+            {illustration ?? <WelcomeBook />}
+          </motion.div>
+          <div ref={content} className={styles.panel}>
+            {!welcome && (
+              <Link to="/onboarding" className={styles.back}>
+                <ArrowLeftIcon data-icon-motion="back" size={18} aria-hidden="true" />
+                <span>{authT('actions.backToWelcome')}</span>
+              </Link>
+            )}
+            {children}
+          </div>
+        </main>
+      </motion.div>
 
       <footer className={styles.footer}>
         <button type="button" className={styles.privacy} onClick={() => setPrivacyOpen(true)}>

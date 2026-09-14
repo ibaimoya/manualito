@@ -28,17 +28,10 @@
   transform-origin: 128px 140px;
 }
 
-/* Conserva el grosor regular al proyectar los meridianos. */
+/* Ambas mitades se estrechan por igual para conservar el centro y el grosor del globo. */
 .faq-trigger [data-faq-part^='meridian'] {
+  --faq-active-transform: scaleX(0.6);
   stroke-width: 1.25px;
-}
-
-.faq-trigger [data-faq-part='meridian-west'] {
-  --faq-active-transform: scaleX(1.64);
-}
-
-.faq-trigger [data-faq-part='meridian-east'] {
-  --faq-active-transform: scaleX(0.22);
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -149,7 +149,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                 const selected = figure === option.value;
                 const label = t(option.key);
                 return (
-                  <Tooltip key={option.value} content={label}>
+                  <Tooltip key={option.value} content={label} side="bottom">
                     <button
                       type="button"
                       aria-pressed={selected}

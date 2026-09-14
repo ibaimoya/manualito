@@ -91,6 +91,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
                     icon={SealCheckIcon}
                     tone="success"
                     label={t('verification.verified')}
+                    iconClassName="translate-y-px"
                   />
                 )}
               </div>

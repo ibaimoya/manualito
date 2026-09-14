@@ -1,16 +1,21 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { WarningIcon, InfoIcon } from '@phosphor-icons/react';
+import { motion } from 'motion/react';
 import { api } from '@/shared/api/client';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useTranslation } from 'react-i18next';
 import { HelpIndicator } from '@/components/ui/help-indicator';
 import type { ManualDetailPage } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { pageStatus, pageStatusLegend, STATUS_HELP_TONE } from '@/features/manual/pageStatus';
 
 /** Índice de páginas vertical en escritorio y horizontal en móvil. */
 
 const THUMB_LINES = [88, 64, 80, 52] as const;
+
+// Comparte el resorte del selector de vista y admite cambios de destino.
+const SELECTION_SPRING = { type: 'spring', stiffness: 500, damping: 40 } as const;
 
 function PaperThumb({ failed, imageUrl }: Readonly<{ failed: boolean; imageUrl: string | null }>) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -54,12 +59,15 @@ function PageButton({
   page,
   active,
   hits,
+  indicatorId,
   onSelect,
 }: Readonly<{
   manualId: string;
   page: ManualDetailPage;
   active: boolean;
   hits: number;
+  /** Sin identificador, la selección cambia sin desplazamiento. */
+  indicatorId: string | undefined;
   onSelect: () => void;
 }>) {
   const { t } = useTranslation('manual');
@@ -68,13 +76,31 @@ function PageButton({
   return (
     <div
       className={cn(
-        'relative flex h-11 w-[76px] shrink-0 items-center rounded-[6px] pointer-coarse:min-w-[88px]',
+        'relative isolate flex h-11 w-[76px] shrink-0 items-center rounded-[6px] pointer-coarse:min-w-[88px]',
         '@4xl/app:h-auto @4xl/app:w-full @4xl/app:gap-1 @4xl/app:p-2',
-        active
-          ? 'bg-fg/[0.055] before:absolute before:inset-x-2 before:bottom-0 before:h-0.5 before:bg-primary @4xl/app:before:inset-x-auto @4xl/app:before:inset-y-2 @4xl/app:before:start-0 @4xl/app:before:h-auto @4xl/app:before:w-0.5'
-          : 'hover:bg-fg/[0.035]',
+        !active && 'hover:bg-fg/[0.035]',
       )}
     >
+      {/* Solo se desplazan el fondo y la línea de selección. */}
+      {active && (
+        <>
+          <motion.span
+            aria-hidden="true"
+            initial={false}
+            layoutId={indicatorId && `${indicatorId}-bg`}
+            className="pointer-events-none absolute inset-0 -z-10 bg-fg/[0.055]"
+            style={{ borderRadius: 6 }}
+            transition={SELECTION_SPRING}
+          />
+          <motion.span
+            aria-hidden="true"
+            initial={false}
+            layoutId={indicatorId && `${indicatorId}-line`}
+            className="pointer-events-none absolute inset-x-2 bottom-0 h-0.5 bg-primary @4xl/app:inset-x-auto @4xl/app:inset-y-2 @4xl/app:start-0 @4xl/app:h-auto @4xl/app:w-0.5"
+            transition={SELECTION_SPRING}
+          />
+        </>
+      )}
       <button
         type="button"
         onClick={onSelect}
@@ -172,6 +198,8 @@ export function PageThumbRail({
 }>) {
   const { t } = useTranslation('manual');
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const indicatorId = useId();
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
   useLayoutEffect(() => {
     const scroller = scrollerRef.current;
@@ -225,8 +253,9 @@ export function PageThumbRail({
         </div>
       </div>
 
-      <div
+      <motion.div
         ref={scrollerRef}
+        layoutScroll
         className="flex gap-1 overflow-x-auto pb-1 @4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:flex-col @4xl/app:overflow-x-visible @4xl/app:overflow-y-auto @4xl/app:pb-2 @4xl/app:pr-1"
       >
         {pages.map((page) => (
@@ -236,10 +265,11 @@ export function PageThumbRail({
             page={page}
             active={page.page_number === activePage}
             hits={hitsByPage.get(page.page_number) ?? 0}
+            indicatorId={reducedMotion ? undefined : indicatorId}
             onSelect={() => onSelect(page.page_number)}
           />
         ))}
-      </div>
+      </motion.div>
     </nav>
   );
 }

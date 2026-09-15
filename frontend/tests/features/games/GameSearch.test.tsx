@@ -65,7 +65,7 @@ function renderTypeahead() {
 
 describe('selección de juegos', () => {
   it('navega con flechas y Enter desde el combobox sin interferir con IME', async () => {
-    // jsdom no tiene geometría ni scroll; comprobamos la orden al navegador y su destinatario.
+    // jsdom no tiene geometría ni scroll. Comprobamos la orden al navegador y su destinatario.
     const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
     const user = userEvent.setup();
     const router = renderJumpSearch();
@@ -139,11 +139,78 @@ describe('selección de juegos', () => {
     const user = userEvent.setup();
     const { onSelect } = renderTypeahead();
     await user.type(screen.getByRole('combobox'), 'Mi juego');
-    const create = await screen.findByRole('button', { name: /Mi juego/ });
+    const create = await screen.findByRole('option', { name: /Mi juego/ });
     create.focus();
     await user.keyboard('{Enter}');
     await waitFor(() => expect(onSelect).toHaveBeenCalledOnce());
     expect(submitted).toEqual({ name: 'Mi juego' });
     expect(onSelect.mock.calls[0]?.[0]).toMatchObject({ name: 'Mi juego' });
+  });
+
+  it('recorre cinco coincidencias y la opción de añadir con las flechas', async () => {
+    const many: GameSearchItem[] = Array.from({ length: 5 }, (_, index) => ({
+      id: `g${index}`,
+      name: `Catan ${index}`,
+      bgg_id: index,
+      year_published: 2000 + index,
+      manuals_count: 0,
+    }));
+    server.use(
+      http.get('*/api/games', () => HttpResponse.json({ games: many, attribution: 'BGG' })),
+    );
+    const user = userEvent.setup();
+    renderTypeahead();
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'Catan');
+    const listbox = await screen.findByRole('listbox');
+    const options = within(listbox).getAllByRole('option');
+    expect(options).toHaveLength(6);
+    const addRow = options[5]!;
+    expect(addRow).toHaveTextContent('Catan');
+
+    for (let i = 0; i < 5; i += 1) await user.keyboard('{ArrowDown}');
+    expect(input).toHaveAttribute('aria-activedescendant', addRow.id);
+    expect(addRow).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('ignora Enter cuando la consulta está vacía o acaba de cambiar', async () => {
+    server.use(
+      http.get('*/api/games', ({ request }) => {
+        const q = new URL(request.url).searchParams.get('q') ?? '';
+        const matches = games.filter((g) => g.name.toLowerCase().includes(q.toLowerCase()));
+        return HttpResponse.json({ games: matches, attribution: 'BGG' });
+      }),
+    );
+    const { onSelect } = renderTypeahead();
+    const input = screen.getByRole('combobox');
+
+    // Todavía no hay consulta.
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSelect).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: 'Catan' } });
+    await screen.findByRole('option', { name: /Catan Duel/ });
+
+    // El texto queda por debajo del mínimo.
+    fireEvent.change(input, { target: { value: 'Ca' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Catan' } });
+    await screen.findByRole('option', { name: /Catan Duel/ });
+
+    // La caché de Catan no corresponde al nuevo nombre.
+    fireEvent.change(input, { target: { value: 'Wingspan' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSelect).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: 'Catan' } });
+    await screen.findByRole('option', { name: /Catan Duel/ });
+
+    // Añadir letras también invalida las opciones anteriores.
+    fireEvent.change(input, { target: { value: 'Catani' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

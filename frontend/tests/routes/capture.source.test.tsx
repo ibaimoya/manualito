@@ -187,7 +187,9 @@ describe('/capture/source · nuevo manual', () => {
       'Mi juego casero',
     );
     // Sin coincidencias aparece la opción de crearlo.
-    const createBtn = await screen.findByRole('button', { name: /Crear «Mi juego casero»/i });
+    const createBtn = await screen.findByRole('option', {
+      name: /Añadir «Mi juego casero» a Manualito/i,
+    });
     await user.click(createBtn);
     // El juego creado queda seleccionado y ofrece ayuda sin sustituir Cambiar.
     expect(
@@ -436,13 +438,13 @@ describe('/capture/source · nuevo manual', () => {
   });
 
   it('preseleccionado desde el hub: arranca con el juego de origen como chip', async () => {
-    // Llegamos desde el hub de Catan (test-game-001); el detalle lo sirve MSW.
+    // Llegamos desde el hub de Catan (test-game-001). El detalle lo sirve MSW.
     renderSource('test-game-001');
     expect(
       await screen.findByRole('button', { name: 'Juego elegido para este manual' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Catan')).toBeInTheDocument();
-    // Es un chip, no el buscador: no hay combobox visible.
+    // Es un chip, no el buscador. No hay combobox visible.
     expect(screen.queryByRole('combobox', { name: /Buscar juego/i })).not.toBeInTheDocument();
   });
 
@@ -466,7 +468,7 @@ describe('/capture/source · nuevo manual', () => {
         });
       }),
       http.post('/api/manuals', async ({ request }) => {
-        // undici no parsea multipart con File de jsdom: leemos el cuerpo en crudo.
+        // undici no parsea multipart con File de jsdom. Leemos el cuerpo en crudo.
         const body = await request.text();
         sentGameId = /name="game_id"\r?\n\r?\n([^\r\n]+)/.exec(body)?.[1] ?? null;
         return HttpResponse.json({
@@ -499,7 +501,7 @@ describe('/capture/source · nuevo manual', () => {
     let sentVisibility: string | null = null;
     server.use(
       http.post('/api/manuals', async ({ request }) => {
-        // undici no parsea multipart con File de jsdom: leemos el cuerpo en crudo.
+        // undici no parsea multipart con File de jsdom. Leemos el cuerpo en crudo.
         const body = await request.text();
         sentVisibility = /name="visibility"\r?\n\r?\n(shared|private)/.exec(body)?.[1] ?? null;
         return HttpResponse.json({
@@ -535,7 +537,7 @@ describe('/capture/source · nuevo manual', () => {
     let sentVisibility: string | null = null;
     server.use(
       http.post('/api/manuals', async ({ request }) => {
-        // undici no parsea multipart con File de jsdom: leemos el cuerpo en crudo.
+        // undici no parsea multipart con File de jsdom. Leemos el cuerpo en crudo.
         const body = await request.text();
         sentVisibility = /name="visibility"\r?\n\r?\n(shared|private)/.exec(body)?.[1] ?? null;
         return HttpResponse.json({

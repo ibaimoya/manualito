@@ -33,12 +33,10 @@
   "typeahead": {
     "attribution": "Powered by <strong>BoardGameGeek</strong>",
     "clearSearch": "Limpiar búsqueda",
+    "create": {
+      "add": "Añadir «{{game}}» a Manualito"
+    },
     "empty": {
-      "create": {
-        "button": "Crear «{{game}}»",
-        "description": "Añádelo tú y podrás subir su manual igualmente.",
-        "title": "No está en BoardGameGeek"
-      },
       "search": {
         "description": "Prueba con otro nombre o revisa la ortografía.",
         "title": "No encontramos ese juego"

@@ -30,7 +30,6 @@ export interface AnswerSource {
   manual_id: string;
   manual_title: string | null;
   page: number;
-  /** Si el manual citado es del usuario: solo entonces se puede abrir el visor. */
   is_own: boolean;
   /** Nombre de usuario autorizado por el propietario. Si está oculto, es null. */
   author_name: string | null;
@@ -101,8 +100,9 @@ export interface ManualDetailPage {
   ocr_lines: OcrLine[];
 }
 
-/** Detalle de manual = resumen + páginas OCR. */
 export interface ManualDetailResponse extends ManualSummary {
+  /** Propiedad comprobada por el servidor. */
+  is_own: boolean;
   pages: ManualDetailPage[];
 }
 
@@ -208,7 +208,7 @@ export const api = {
     });
   },
 
-  /** URL autenticada de la imagen de una página de manual propio. */
+  /** La imagen requiere permiso de lectura del manual. */
   manualPageImageUrl(manualId: string, pageNumber: number): string {
     return `/api/manuals/${encodeURIComponent(manualId)}/pages/${pageNumber}/image`;
   },

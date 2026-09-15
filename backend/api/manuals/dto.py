@@ -147,8 +147,9 @@ class ManualPageDetail:
 
 @dataclass(frozen=True, slots=True)
 class ManualDetail(ManualSummary):
-    """Detalle completo de manual propio."""
+    """Páginas del manual y relación con el usuario que lo consulta."""
 
+    is_own: bool
     pages: list[ManualPageDetail]
 
 

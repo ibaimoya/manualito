@@ -166,6 +166,7 @@ export function labManual(escenario: LabEscenario): ManualDetailResponse {
     chunks_indexed: escenario === 'busy' ? 9 : 41,
     created_at: '2026-08-19T18:24:00Z',
     indexed_at: escenario === 'busy' ? null : '2026-08-19T18:31:00Z',
+    is_own: true,
     pages: PAGES,
   };
 }

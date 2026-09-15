@@ -285,6 +285,7 @@ export const handlers = [
     HttpResponse.json({
       ...SAMPLE_MANUAL_SUMMARY,
       id: params.manualId,
+      is_own: true,
       pages: [],
     }),
   ),
@@ -384,12 +385,14 @@ export const handlers = [
 ];
 
 /** Detalle de manual con páginas OCR reales (una OK y una de baja confianza). */
-export function manualDetailWithPages() {
+export function manualDetailWithPages(overrides: Record<string, unknown> = {}) {
   return http.get('/api/manuals/:manualId', ({ params }) =>
     HttpResponse.json({
       ...SAMPLE_MANUAL_SUMMARY,
       id: params.manualId,
+      is_own: true,
       pages: SAMPLE_MANUAL_PAGES,
+      ...overrides,
     }),
   );
 }

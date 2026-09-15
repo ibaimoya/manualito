@@ -69,6 +69,7 @@
     "pages_other": "{{count}} pages",
     "pdf": "PDF rulebook",
     "photos": "Photo rulebook",
+    "readShared": "Open {{label}}",
     "shared": "Shared by the community",
     "sourceLabel": "Where the explanation comes from",
     "viewExtracted": "View extracted text from {{label}}"

@@ -107,16 +107,19 @@ function resolveInitialPage(
   return pages[0]!.page_number;
 }
 
-function pageCapabilities(
-  page: ManualDetailPage,
-  visibility: ManualDetailResponse['visibility'],
-  busy: boolean,
-) {
+function defaultView(manual: ManualDetailResponse, pageNumber: number): ManualView {
+  if (manual.is_own) return 'compare';
+  const page = manual.pages.find((item) => item.page_number === pageNumber);
+  return page?.image_available ? 'original' : 'text';
+}
+
+function pageCapabilities(page: ManualDetailPage, manual: ManualDetailResponse, busy: boolean) {
   const status = pageStatus(page);
   return {
     isFailed: status.key === 'failed',
     isProcessingPage: status.key === 'processing',
-    canEdit: visibility === 'private' && !busy && status.key !== 'processing',
+    canEdit:
+      manual.is_own && manual.visibility === 'private' && !busy && status.key !== 'processing',
     hasConfidence: page.ocr_lines.some((line) => line.confidence != null),
   };
 }
@@ -266,7 +269,9 @@ function ManualDetailLoaded({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pages = manual.pages;
-  const duplicateCount = pages.filter((item) => item.dedup_status === 'reused').length;
+  const duplicateCount = manual.is_own
+    ? pages.filter((item) => item.dedup_status === 'reused').length
+    : 0;
   const [activePage, setActivePage] = useState(() => resolveInitialPage(pages, initialPage));
   const [editingPage, setEditingPage] = useState<number | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
@@ -276,7 +281,7 @@ function ManualDetailLoaded({
   const [authorOpen, setAuthorOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const [showConfidence, setShowConfidence] = useState(false);
-  const [view, setView] = useState<ManualView>('compare');
+  const [view, setView] = useState<ManualView>(() => defaultView(manual, activePage));
   const [dirty, setDirty] = useState(false);
   const [discardTarget, setDiscardTarget] = useState<number | 'cancel' | null>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
@@ -438,7 +443,7 @@ function ManualDetailLoaded({
       : null;
   const { canEdit, hasConfidence, isFailed, isProcessingPage } = pageCapabilities(
     page,
-    manual.visibility,
+    manual,
     busy,
   );
 
@@ -459,7 +464,7 @@ function ManualDetailLoaded({
               pageCount={pages.length}
               duplicateCount={duplicateCount}
               sharing={
-                manual.visibility === 'shared' ? (
+                manual.is_own && manual.visibility === 'shared' ? (
                   <SharingStateButton
                     anonymous={manual.anonymous}
                     onClick={() => setAuthorOpen(true)}
@@ -468,44 +473,46 @@ function ManualDetailLoaded({
               }
             />
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-[6px] px-2 font-medium hover:bg-fg/[0.04] pointer-coarse:h-11"
-              disabled={busy || editing}
-              onClick={() => setReprocessOpen(true)}
-            >
-              <ArrowClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
-              {t('workspace.reread')}
-            </Button>
-            <Tooltip content={t('details.rename')}>
+          {manual.is_own ? (
+            <div className="flex shrink-0 items-center gap-1">
               <Button
                 variant="ghost"
-                size="icon"
-                aria-label={t('details.rename')}
-                onClick={() => setRenameOpen(true)}
-                className="text-fg-3 hover:text-fg"
+                size="sm"
+                className="rounded-[6px] px-2 font-medium hover:bg-fg/[0.04] pointer-coarse:h-11"
+                disabled={busy || editing}
+                onClick={() => setReprocessOpen(true)}
               >
-                <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
+                <ArrowClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
+                {t('workspace.reread')}
               </Button>
-            </Tooltip>
-            <Tooltip
-              content={editing ? t('buttons.deleteManualDisabled') : t('buttons.deleteManual')}
-              touch={editing}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={t('buttons.deleteManual')}
-                aria-disabled={editing}
-                onClick={editing ? undefined : () => setDeleteOpen(true)}
-                className="text-fg-3 aria-[disabled=false]:hover:text-error aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              <Tooltip content={t('details.rename')}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('details.rename')}
+                  onClick={() => setRenameOpen(true)}
+                  className="text-fg-3 hover:text-fg"
+                >
+                  <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
+                </Button>
+              </Tooltip>
+              <Tooltip
+                content={editing ? t('buttons.deleteManualDisabled') : t('buttons.deleteManual')}
+                touch={editing}
               >
-                <TrashIcon size={17} aria-hidden="true" />
-              </Button>
-            </Tooltip>
-          </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('buttons.deleteManual')}
+                  aria-disabled={editing}
+                  onClick={editing ? undefined : () => setDeleteOpen(true)}
+                  className="text-fg-3 aria-[disabled=false]:hover:text-error aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+                >
+                  <TrashIcon size={17} aria-hidden="true" />
+                </Button>
+              </Tooltip>
+            </div>
+          ) : null}
         </header>
         <div className="flex min-h-0 flex-1 flex-col @4xl/app:grid @4xl/app:grid-cols-[208px_minmax(0,1fr)]">
           <aside className="min-h-0 min-w-0 shrink-0 border-b border-border px-3 py-2 @4xl/app:flex @4xl/app:flex-col @4xl/app:border-b-0 @4xl/app:border-r @4xl/app:py-4">
@@ -514,6 +521,7 @@ function ManualDetailLoaded({
               pages={pages}
               activePage={page.page_number}
               hitsByPage={search.hitsByPage}
+              reader={!manual.is_own}
               onSelect={goToPage}
             />
           </aside>
@@ -588,11 +596,13 @@ function ManualDetailLoaded({
                   <h2 className="mr-auto truncate text-sm font-semibold">
                     {t('workspace.extractedText')}
                   </h2>
-                  <ConfidenceToggle
-                    checked={showConfidence}
-                    disabled={!hasConfidence || editing || isFailed || isProcessingPage}
-                    onToggle={() => setShowConfidence((value) => !value)}
-                  />
+                  {manual.is_own ? (
+                    <ConfidenceToggle
+                      checked={showConfidence}
+                      disabled={!hasConfidence || editing || isFailed || isProcessingPage}
+                      onToggle={() => setShowConfidence((value) => !value)}
+                    />
+                  ) : null}
                   {canEdit ? (
                     <Button
                       ref={editButtonRef}
@@ -622,6 +632,7 @@ function ManualDetailLoaded({
                   busy={busy}
                   saving={saveText.isPending}
                   reprocessing={reprocess.isPending}
+                  reader={!manual.is_own}
                   onDirtyChange={setDirty}
                   onCancelEdit={cancelEdit}
                   onSave={setPendingText}
@@ -654,9 +665,6 @@ function ManualDetailLoaded({
         </DialogBody>
       </Dialog>
 
-      <RenameManualDialog open={renameOpen} onOpenChange={setRenameOpen} manual={manual} />
-      <AuthorVisibilityDialog open={authorOpen} onOpenChange={setAuthorOpen} manual={manual} />
-
       <ManualImageDialog
         open={imageOpen}
         onOpenChange={setImageOpen}
@@ -668,27 +676,33 @@ function ManualDetailLoaded({
         onNext={() => goToPage(page.page_number + 1)}
       />
 
-      <ManualDialogs
-        pageNumber={page.page_number}
-        pageCount={pages.length}
-        gameName={manual.game_name}
-        title={title}
-        shared={manual.visibility === 'shared'}
-        saveOpen={pendingText !== null}
-        onSaveClose={() => {
-          if (!saveText.isPending) setPendingText(null);
-        }}
-        onSaveConfirm={confirmSave}
-        saving={saveText.isPending}
-        reprocessOpen={reprocessOpen}
-        onReprocessOpenChange={setReprocessOpen}
-        onReprocessConfirm={() => reprocess.mutate(undefined)}
-        reprocessing={reprocess.isPending}
-        deleteOpen={deleteOpen}
-        onDeleteOpenChange={setDeleteOpen}
-        onDeleteConfirm={confirmDelete}
-        deleting={deleteManual.isPending}
-      />
+      {manual.is_own ? (
+        <>
+          <RenameManualDialog open={renameOpen} onOpenChange={setRenameOpen} manual={manual} />
+          <AuthorVisibilityDialog open={authorOpen} onOpenChange={setAuthorOpen} manual={manual} />
+          <ManualDialogs
+            pageNumber={page.page_number}
+            pageCount={pages.length}
+            gameName={manual.game_name}
+            title={title}
+            shared={manual.visibility === 'shared'}
+            saveOpen={pendingText !== null}
+            onSaveClose={() => {
+              if (!saveText.isPending) setPendingText(null);
+            }}
+            onSaveConfirm={confirmSave}
+            saving={saveText.isPending}
+            reprocessOpen={reprocessOpen}
+            onReprocessOpenChange={setReprocessOpen}
+            onReprocessConfirm={() => reprocess.mutate(undefined)}
+            reprocessing={reprocess.isPending}
+            deleteOpen={deleteOpen}
+            onDeleteOpenChange={setDeleteOpen}
+            onDeleteConfirm={confirmDelete}
+            deleting={deleteManual.isPending}
+          />
+        </>
+      ) : null}
     </>
   );
 }

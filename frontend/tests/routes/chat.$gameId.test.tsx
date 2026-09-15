@@ -500,7 +500,7 @@ describe('/chat/$gameId', () => {
     expect(creates).toBe(1);
   });
 
-  it('distingue las fuentes y solo abre páginas de manuales propios disponibles', async () => {
+  it('distingue las fuentes y abre las páginas de los manuales que siguen disponibles', async () => {
     vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
@@ -602,17 +602,17 @@ describe('/chat/$gameId', () => {
     await user.unhover(own);
     const list = screen.getByRole('list', { name: 'Fuentes' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(4);
-    expect(screen.getAllByRole('link', { name: /Abrir página 4/ })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Abrir página 4 de Reglas base' })).toHaveLength(1);
     expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
-    const community = screen.getByRole('button', {
-      name: 'Página 4 de Comunidad (manual de la comunidad)',
-    });
+    const community = screen.getByRole('link', { name: 'Abrir página 4 de Comunidad' });
+    expect(community.getAttribute('href')).toContain('/manual/test-manual-002');
+    expect(community.getAttribute('href')).toContain('page=4');
     expect(community).toHaveAccessibleDescription('Subido por Anónimo');
     await user.hover(community);
     const communityTip = await screen.findByRole('tooltip');
     expect(communityTip).toHaveTextContent('Comunidad');
     expect(communityTip).toHaveTextContent('Página 4');
-    expect(communityTip).toHaveTextContent('manual de la comunidad');
+    expect(communityTip).not.toHaveTextContent('ya no disponible');
     expect(communityTip).toHaveTextContent('Subido por Anónimo');
     fireEvent.pointerLeave(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
     fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
@@ -621,7 +621,7 @@ describe('/chat/$gameId', () => {
     fireEvent.pointerLeave(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
     fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
     fireEvent.pointerMove(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('manual de la comunidad');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Subido por Anónimo');
     fireEvent.pointerLeave(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
     fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
     fireEvent.pointerMove(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
@@ -640,7 +640,7 @@ describe('/chat/$gameId', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
     const sameName = screen.getByRole('button', {
-      name: 'Página 2 de Mismo nombre (manual de la comunidad)',
+      name: 'Página 2 de Mismo nombre (ya no disponible)',
     });
     expect(sameName).toHaveAccessibleDescription('Subido por marta');
     expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
@@ -658,11 +658,11 @@ describe('/chat/$gameId', () => {
     expect(preview).toHaveTextContent('Toca de nuevo para abrir');
     expect(screen.getAllByRole('tooltip')).toHaveLength(1);
     expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
-    await user.pointer({ keys: '[TouchA]', target: community });
+    await user.pointer({ keys: '[TouchA]', target: sameName });
     await waitFor(() => expect(screen.getAllByRole('tooltip')).toHaveLength(1));
-    expect(screen.getByRole('tooltip')).toHaveTextContent('manual de la comunidad');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('ya no disponible');
     expect(screen.getByRole('tooltip')).not.toHaveTextContent('Toca de nuevo');
-    await user.pointer({ keys: '[TouchA]', target: community });
+    await user.pointer({ keys: '[TouchA]', target: sameName });
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
     expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
     await user.pointer({ keys: '[TouchA]', target: own });

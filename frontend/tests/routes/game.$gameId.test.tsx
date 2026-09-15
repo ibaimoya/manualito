@@ -412,17 +412,20 @@ describe('/game/$gameId · fuentes y conversaciones', () => {
     expect(await screen.findByRole('button', { name: /Borrar conversación/ })).toBeEnabled();
   });
 
-  it('el manual propio enlaza al texto extraído; el compartido no', async () => {
+  it('el manual propio y el compartido abren el visor con su propia etiqueta', async () => {
     renderHub();
     const region = await screen.findByRole('region', { name: /Manuales/ });
     expect(within(region).getByRole('link', { name: /Ver texto extraído/ })).toHaveAttribute(
       'href',
       '/manual/test-manual-001',
     );
-    const shared = within(region).getByRole('button', { name: /Compartido por la comunidad/ });
-    expect(shared.closest('a')).toBeNull();
-    await userEvent.setup().hover(shared);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(/Compartido por la comunidad/);
+    const shared = within(region).getByRole('link', { name: 'Abrir Expansión' });
+    expect(shared).toHaveAttribute('href', '/manual/test-manual-002');
+    expect(within(shared).getByLabelText('Compartido por la comunidad')).toBeInTheDocument();
+    expect(within(shared).getByText('Subido por ana')).toBeInTheDocument();
+    expect(shared.querySelector('button')).toBeNull();
+    await userEvent.setup().click(shared);
+    expect(await screen.findByText('Manual stub')).toBeInTheDocument();
   });
 
   it('identifica la subida de la comunidad sin repetir la de los manuales propios', async () => {

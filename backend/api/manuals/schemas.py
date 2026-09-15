@@ -102,8 +102,9 @@ class ManualPageResponse(StrictModel):
 
 
 class ManualDetailResponse(ManualSummaryResponse):
-    """Detalle de un manual propio con páginas OCR."""
+    """Páginas del manual y permiso de gestión del usuario."""
 
+    is_own: bool
     pages: list[ManualPageResponse]
 
 

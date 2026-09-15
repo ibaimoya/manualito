@@ -38,7 +38,7 @@ from api.games.repository import (
 )
 from api.main import app
 from api.manuals.exceptions import ManualNotFoundError
-from api.manuals.repository import get_user_manual_detail, load_manual_source_info
+from api.manuals.repository import get_readable_manual_detail, load_manual_source_info
 from api.manuals.service import create_manual, delete_manual, update_manual
 from api.rate_limit import limiter
 from database.models.auth import AuthSession
@@ -139,8 +139,8 @@ async def test_manuales_existentes_y_nuevos_nacen_anonimos(world: NamesWorld, va
 
     async with world.sessions() as session:
         legacy_flag = await session.scalar(select(Manual.anonymous).where(Manual.id == legacy_id))
-        detail = await get_user_manual_detail(
-            session, owner_user_id=world.owner.id, manual_id=created.manual_id
+        detail = await get_readable_manual_detail(
+            session, current_user_id=world.owner.id, manual_id=created.manual_id
         )
 
     assert legacy_flag is True

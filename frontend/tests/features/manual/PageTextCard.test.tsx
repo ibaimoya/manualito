@@ -123,6 +123,45 @@ describe('PageTextCard', () => {
     await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent('Añadido por IA'));
   });
 
+  it('en modo lector muestra solo el texto, sin estado, correcciones, confianza ni releer', async () => {
+    const lowPage: ManualDetailPage = {
+      ...page,
+      text_quality: 'low_confidence',
+      ocr_lines: [
+        {
+          text: 'Reparte cuatro fichas',
+          confidence: 0.6,
+          corrections: [{ start: 8, end: 14, original: 'quatro', source: 'consenso-llm' }],
+        },
+      ],
+    };
+    const { rerender } = render(
+      <PageTextCard {...props} page={lowPage} needle="" activeMatch={null} showConfidence reader />,
+      { wrapper: TooltipProvider },
+    );
+
+    const article = screen.getByRole('article', { name: 'Página 1 de 1' });
+    expect(within(article).getByRole('paragraph')).toHaveTextContent('Reparte cuatro fichas');
+    expect(article.querySelectorAll('span.underline, [tabindex]')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Poco clara' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Releer esta página/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/por ciento/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/caracteres/)).not.toBeInTheDocument();
+
+    rerender(
+      <PageTextCard
+        {...props}
+        page={{ ...page, ocr_status: 'failed', ocr_lines: [] }}
+        showConfidence={false}
+        reader
+      />,
+    );
+    expect(screen.getByRole('article')).toHaveTextContent('Sin texto disponible');
+    expect(screen.queryByText('No pudimos leer esta página')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reintenta/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('mantiene una búsqueda que cruza una corrección y omite borrados sin texto', async () => {
     const correctedPage: ManualDetailPage = {
       ...page,

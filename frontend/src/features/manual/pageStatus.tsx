@@ -107,17 +107,19 @@ export function pageStatus(page: ManualDetailPage): PageStatusMeta {
   if (page.dedup_status === 'reused') return resolveStatus(META.duplicate);
   if (page.text_source === 'user_edit') return resolveStatus(META.edited);
   if (page.text_quality === 'low_confidence') return resolveStatus(META.low);
-  if (!page.ocr_lines.some((line) => line.text.trim().length > 0)) {
-    return resolveStatus({
-      ...META.ok,
-      label: 'status.empty.label',
-      short: 'status.empty.short',
-      tip: 'status.empty.tip',
-      Icon: FileTextIcon,
-      tone: 'neutral',
-    });
-  }
+  if (!page.ocr_lines.some((line) => line.text.trim().length > 0)) return emptyPageStatus();
   return resolveStatus(META.ok);
+}
+
+export function emptyPageStatus(): PageStatusMeta {
+  return resolveStatus({
+    ...META.ok,
+    label: 'status.empty.label',
+    short: 'status.empty.short',
+    tip: 'status.empty.tip',
+    Icon: FileTextIcon,
+    tone: 'neutral',
+  });
 }
 
 export function pageStatusLegend(): readonly PageStatusMeta[] {

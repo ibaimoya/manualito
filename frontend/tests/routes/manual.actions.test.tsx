@@ -63,7 +63,7 @@ function detailsServer(
   server.use(
     http.get('/api/manuals/:manualId', () => {
       reads += 1;
-      return HttpResponse.json({ ...current, pages: PAGES });
+      return HttpResponse.json({ ...current, is_own: true, pages: PAGES });
     }),
     http.patch('/api/manuals/:manualId', async ({ request }) => {
       const body = (await request.json()) as DetailsPatch;

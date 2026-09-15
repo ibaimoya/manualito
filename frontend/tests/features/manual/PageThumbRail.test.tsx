@@ -81,6 +81,35 @@ describe('ayuda de las miniaturas', () => {
     expect(help).toHaveFocus();
   });
 
+  it('en modo lector lista las páginas sin estados OCR ni leyenda', async () => {
+    const selected: number[] = [];
+    const user = userEvent.setup();
+    render(
+      <PageThumbRail
+        manualId="test-manual-001"
+        pages={[page, { ...secondPage, ocr_status: 'failed', ocr_lines: [] }]}
+        activePage={1}
+        hitsByPage={new Map([[2, 3]])}
+        reader
+        onSelect={(pageNumber) => selected.push(pageNumber)}
+      />,
+      { wrapper: TooltipProvider },
+    );
+
+    const rail = screen.getByRole('navigation', { name: 'Páginas del manual' });
+    expect(within(rail).getAllByRole('button')).toHaveLength(2);
+    expect(within(rail).getByRole('button', { name: 'Página 1' })).toBeInTheDocument();
+    const second = within(rail).getByRole('button', { name: 'Página 2, 3 coincidencias' });
+    expect(
+      screen.queryByRole('button', { name: 'Estados de las páginas' }),
+    ).not.toBeInTheDocument();
+    expect(rail.querySelector('.help-indicator')).toBeNull();
+    await user.click(second);
+    expect(selected).toEqual([2]);
+    await user.hover(second);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
   it('permite selecciones repetidas y activación por teclado', async () => {
     const selected: number[] = [];
     const user = userEvent.setup();

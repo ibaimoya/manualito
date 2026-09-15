@@ -25,8 +25,8 @@ from api.manuals.repository import (
     create_manual_with_pending_pages,
     find_reusable_page_result,
     get_asset_for_processing,
-    get_user_manual_detail,
-    get_user_manual_page_image_asset,
+    get_readable_manual_detail,
+    get_readable_manual_page_image_asset,
     get_user_manual_processing_status,
     list_pending_page_ids_for_processing,
     list_user_manuals,
@@ -194,8 +194,8 @@ def test_manual_summary_row_preserves_duplicate_page_count():
 
 
 @pytest.mark.anyio
-async def test_get_user_manual_detail_loads_pages_in_order():
-    """El detalle carga metadata y páginas OCR con ownership en la query."""
+async def test_get_readable_manual_detail_loads_pages_in_order():
+    """El detalle incluye páginas y propiedad del manual."""
     pages = [
         SimpleNamespace(
             page_number=1,
@@ -224,37 +224,43 @@ async def test_get_user_manual_detail_loads_pages_in_order():
     ]
     session = _FakeSession(
         execute_results=[
-            _OneOrNoneResult(_manual_row(title=None)),
+            _OneOrNoneResult(SimpleNamespace(**vars(_manual_row(title=None)), is_own=False)),
             pages,
         ],
     )
 
-    detail = await get_user_manual_detail(
+    detail = await get_readable_manual_detail(
         session,
-        owner_user_id=_OWNER_USER_ID,
+        current_user_id=_OWNER_USER_ID,
         manual_id=_MANUAL_ID,
     )
 
     assert detail.id == _MANUAL_ID
+    assert detail.is_own is False
     assert detail.pages[0].page_number == 1
     assert detail.pages[0].text_source == "ocr"
     assert detail.pages[0].ocr_lines == [{"text": "A"}]
     assert detail.pages[0].image_available is True
     assert detail.pages[0].image_width == 800
     assert detail.pages[1].page_number == 2
+    manual_sql = _compile(session.executed[0])
+    assert "AS is_own" in manual_sql
+    assert "manuals.owner_user_id =" in manual_sql
+    assert "manuals.visibility =" in manual_sql
+    assert "manuals.deleted_at IS NULL" in manual_sql
     assert "source_reused_from_page_id IS NOT NULL" in _compile(session.executed[1])
     assert "assets.kind =" in _compile(session.executed[1])
 
 
 @pytest.mark.anyio
-async def test_get_user_manual_detail_raises_for_missing_manual():
-    """Si el manual no existe o no pertenece al usuario, devuelve error de dominio."""
+async def test_get_readable_manual_detail_raises_for_missing_manual():
+    """La falta de acceso produce el mismo error que un manual inexistente."""
     session = _FakeSession(execute_results=[_OneOrNoneResult(None)])
 
     with pytest.raises(ManualNotFoundError):
-        await get_user_manual_detail(
+        await get_readable_manual_detail(
             session,
-            owner_user_id=_OWNER_USER_ID,
+            current_user_id=_OWNER_USER_ID,
             manual_id=_MANUAL_ID,
         )
 
@@ -619,8 +625,8 @@ async def test_get_asset_for_processing_returns_active_storage_key():
 
 
 @pytest.mark.anyio
-async def test_get_user_manual_page_image_asset_filters_by_owner_and_page():
-    """El visor solo puede cargar imágenes activas de páginas propias."""
+async def test_get_readable_manual_page_image_asset_filters_by_access_and_page():
+    """La consulta comprueba el permiso de lectura y el borrado de la imagen."""
     row = SimpleNamespace(
         storage_key="manuals/user/manual/page-1.jpg",
         mime_type="image/jpeg",
@@ -631,9 +637,9 @@ async def test_get_user_manual_page_image_asset_filters_by_owner_and_page():
     )
     session = _FakeSession(execute_results=[_OneOrNoneResult(row)])
 
-    asset = await get_user_manual_page_image_asset(
+    asset = await get_readable_manual_page_image_asset(
         session,
-        owner_user_id=_OWNER_USER_ID,
+        current_user_id=_OWNER_USER_ID,
         manual_id=_MANUAL_ID,
         page_number=1,
     )
@@ -645,19 +651,21 @@ async def test_get_user_manual_page_image_asset_filters_by_owner_and_page():
     assert asset.height == 1200
     compiled = _compile(session.executed[0])
     assert "manuals.owner_user_id =" in compiled
+    assert "manuals.visibility =" in compiled
+    assert "manuals.deleted_at IS NULL" in compiled
     assert "manual_pages.page_number =" in compiled
     assert "assets.kind =" in compiled
     assert "assets.deleted_at IS NULL" in compiled
 
 
 @pytest.mark.anyio
-async def test_get_user_manual_page_image_asset_returns_none_without_active_image():
+async def test_get_readable_manual_page_image_asset_returns_none_without_active_image():
     """Una página sin imagen disponible no expone ningún storage_key."""
     session = _FakeSession(execute_results=[_OneOrNoneResult(None)])
 
-    asset = await get_user_manual_page_image_asset(
+    asset = await get_readable_manual_page_image_asset(
         session,
-        owner_user_id=_OWNER_USER_ID,
+        current_user_id=_OWNER_USER_ID,
         manual_id=_MANUAL_ID,
         page_number=1,
     )

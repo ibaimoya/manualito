@@ -288,7 +288,7 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         </p>
         {manual.duplicate_page_count > 0 ? (
           <div className="mt-1.5">
-            <DuplicatePagesBadge count={manual.duplicate_page_count} passive={manual.is_own} />
+            <DuplicatePagesBadge count={manual.duplicate_page_count} passive />
           </div>
         ) : null}
         {manual.is_own ? (
@@ -298,7 +298,12 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
           </span>
         ) : (
           <>
-            <HelpIndicator icon={UsersThreeIcon} label={t('manuals.shared')} className="mt-0.5" />
+            <HelpIndicator
+              icon={UsersThreeIcon}
+              label={t('manuals.shared')}
+              className="mt-0.5"
+              passive
+            />
             <UploadedBy authorName={manual.author_name} />
           </>
         )}
@@ -306,39 +311,35 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
     </>
   );
 
-  // El manual propio se abre clicando la tarjeta entera, no un mini-enlace.
-  if (manual.is_own) {
-    const link = (
-      <Link
-        to="/manual/$manualId"
-        params={{ manualId: manual.id }}
-        aria-label={t('manuals.viewExtracted', { label })}
-        className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
-      >
-        {body}
-        <CaretRightIcon
-          data-icon-motion="forward"
-          size={18}
-          className="shrink-0 text-fg-3"
-          aria-hidden="true"
-        />
-      </Link>
-    );
-    return (
-      <Card className="manual-interaction transition-none hover:border-border-strong">
-        {manual.duplicate_page_count > 0 ? (
-          <Tooltip
-            content={libraryT('duplicatePages.detail', { count: manual.duplicate_page_count })}
-          >
-            {link}
-          </Tooltip>
-        ) : (
-          link
-        )}
-      </Card>
-    );
-  }
-  return <Card className="flex items-center gap-3.5 p-3.5 opacity-90">{body}</Card>;
+  const link = (
+    <Link
+      to="/manual/$manualId"
+      params={{ manualId: manual.id }}
+      aria-label={t(manual.is_own ? 'manuals.viewExtracted' : 'manuals.readShared', { label })}
+      className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
+    >
+      {body}
+      <CaretRightIcon
+        data-icon-motion="forward"
+        size={18}
+        className="shrink-0 text-fg-3"
+        aria-hidden="true"
+      />
+    </Link>
+  );
+  return (
+    <Card className="manual-interaction transition-none hover:border-border-strong">
+      {manual.duplicate_page_count > 0 ? (
+        <Tooltip
+          content={libraryT('duplicatePages.detail', { count: manual.duplicate_page_count })}
+        >
+          {link}
+        </Tooltip>
+      ) : (
+        link
+      )}
+    </Card>
+  );
 }
 
 function HubComposer({ game }: Readonly<{ game: GameDetail }>) {

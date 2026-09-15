@@ -43,7 +43,6 @@
     "title": "This conversation is read-only"
   },
   "sources": {
-    "communityManual": "community rulebook",
     "heading": "Sources",
     "own": "You uploaded this manual",
     "page": "Page {{page}}",

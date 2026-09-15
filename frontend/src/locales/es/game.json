@@ -69,6 +69,7 @@
     "pages_other": "{{count}} páginas",
     "pdf": "Manual en PDF",
     "photos": "Manual en fotos",
+    "readShared": "Abrir {{label}}",
     "shared": "Compartido por la comunidad",
     "sourceLabel": "De dónde sale la explicación",
     "viewExtracted": "Ver texto extraído de {{label}}"

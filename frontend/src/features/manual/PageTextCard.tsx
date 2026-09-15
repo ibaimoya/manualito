@@ -15,6 +15,7 @@ import i18n from '@/app/i18n';
 import type { ManualDetailPage } from '@/shared/api/client';
 import {
   confidenceTone,
+  emptyPageStatus,
   pageStatus,
   STATUS_FG_CLASS,
   STATUS_HELP_TONE,
@@ -249,7 +250,6 @@ function EditBox({
   );
 }
 
-/** Lectura y edición ocupan el mismo espacio del panel, incluido su pie. */
 export function PageTextCard({
   page,
   pageCount,
@@ -260,6 +260,7 @@ export function PageTextCard({
   busy,
   saving,
   reprocessing,
+  reader = false,
   onCancelEdit,
   onSave,
   onReprocessPage,
@@ -274,6 +275,7 @@ export function PageTextCard({
   busy: boolean;
   saving: boolean;
   reprocessing: boolean;
+  reader?: boolean;
   onCancelEdit: () => void;
   onSave: (text: string) => void;
   onReprocessPage: () => void;
@@ -281,7 +283,7 @@ export function PageTextCard({
 }>) {
   const { t } = useTranslation('manual');
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const status = pageStatus(page);
+  const status = reader ? emptyPageStatus() : pageStatus(page);
   const StatusIcon = status.Icon;
   const scrollRef = useRef<HTMLDivElement>(null);
   const position = useRef<ReadingPosition>({ top: 0, offset: 0 });
@@ -322,29 +324,31 @@ export function PageTextCard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-bg">
-      <div className={STATUS_ROW}>
-        <Tooltip content={status.tip} touch>
-          <button
-            type="button"
-            className="inline-flex min-w-0 cursor-help items-center gap-2 text-start outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={status.label}
-          >
-            <StatusIcon
-              size={14}
-              aria-hidden="true"
-              className={cn('shrink-0', STATUS_FG_CLASS[status.tone])}
-            />
-            <span className="truncate">{status.label}</span>
-          </button>
-        </Tooltip>
-      </div>
+      {reader ? null : (
+        <div className={STATUS_ROW}>
+          <Tooltip content={status.tip} touch>
+            <button
+              type="button"
+              className="inline-flex min-w-0 cursor-help items-center gap-2 text-start outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label={status.label}
+            >
+              <StatusIcon
+                size={14}
+                aria-hidden="true"
+                className={cn('shrink-0', STATUS_FG_CLASS[status.tone])}
+              />
+              <span className="truncate">{status.label}</span>
+            </button>
+          </Tooltip>
+        </div>
+      )}
       <article
         aria-label={t('page.articleLabel', { pageCount, pageNumber: page.page_number })}
         className="min-h-0 flex-1 overflow-hidden px-5 sm:px-7"
       >
         <div
           ref={scrollRef}
-          className={cn(TEXT_BODY, TEXT_SCROLL, unavailable && 'pe-0')}
+          className={cn(TEXT_BODY, TEXT_SCROLL, (unavailable || reader) && 'pe-0')}
           onScroll={(event) => {
             const scroller = event.currentTarget;
             position.current.top = scroller.scrollTop;
@@ -373,7 +377,7 @@ export function PageTextCard({
                       )}
                     >
                       <CorrectionText
-                        line={line}
+                        line={reader ? { ...line, corrections: [] } : line}
                         lineStart={lineOffset}
                         search={matches}
                         activeIndex={activeMatch}
@@ -385,43 +389,47 @@ export function PageTextCard({
                       />
                     </span>
                   </p>
-                  <div
-                    aria-hidden={!useConfidence}
-                    inert={!useConfidence}
-                    className={cn(
-                      'absolute -end-14 top-0 w-12 transition-opacity duration-150 motion-reduce:transition-none',
-                      useConfidence ? 'opacity-100' : 'opacity-0',
-                    )}
-                  >
-                    <ConfidenceValue confidence={line.confidence} />
-                  </div>
+                  {reader ? null : (
+                    <div
+                      aria-hidden={!useConfidence}
+                      inert={!useConfidence}
+                      className={cn(
+                        'absolute -end-14 top-0 w-12 transition-opacity duration-150 motion-reduce:transition-none',
+                        useConfidence ? 'opacity-100' : 'opacity-0',
+                      )}
+                    >
+                      <ConfidenceValue confidence={line.confidence} />
+                    </div>
+                  )}
                 </div>
               );
             })
           )}
         </div>
       </article>
-      <div className={FOOTER}>
-        <p className="mr-auto min-w-0 truncate text-xs tabular-nums text-fg-3">
-          {t('text.characterCount', {
-            count: text.length,
-            formattedCount: formatCount(text.length),
-          })}
-        </p>
-        {showRecovery ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className={QUIET_ACTION}
-            loading={reprocessing}
-            disabled={busy || saving}
-            onClick={onReprocessPage}
-          >
-            <ArrowClockwiseIcon data-icon-motion="rotate" size={16} aria-hidden="true" />
-            {t('buttons.readAgain')}
-          </Button>
-        ) : null}
-      </div>
+      {reader ? null : (
+        <div className={FOOTER}>
+          <p className="mr-auto min-w-0 truncate text-xs tabular-nums text-fg-3">
+            {t('text.characterCount', {
+              count: text.length,
+              formattedCount: formatCount(text.length),
+            })}
+          </p>
+          {showRecovery ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={QUIET_ACTION}
+              loading={reprocessing}
+              disabled={busy || saving}
+              onClick={onReprocessPage}
+            >
+              <ArrowClockwiseIcon data-icon-motion="rotate" size={16} aria-hidden="true" />
+              {t('buttons.readAgain')}
+            </Button>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

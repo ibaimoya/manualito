@@ -60,6 +60,7 @@ function PageButton({
   active,
   hits,
   indicatorId,
+  reader,
   onSelect,
 }: Readonly<{
   manualId: string;
@@ -68,11 +69,13 @@ function PageButton({
   hits: number;
   /** Sin identificador, la selección cambia sin desplazamiento. */
   indicatorId: string | undefined;
+  reader: boolean;
   onSelect: () => void;
 }>) {
   const { t } = useTranslation('manual');
   const st = pageStatus(page);
   const hitsLabel = hits > 0 ? t('page.matches', { count: hits }) : '';
+  const pageNumber = page.page_number;
   return (
     <div
       className={cn(
@@ -105,19 +108,17 @@ function PageButton({
         type="button"
         onClick={onSelect}
         aria-current={active ? 'true' : undefined}
-        aria-label={t('page.buttonLabel', {
-          hits: hitsLabel,
-          pageNumber: page.page_number,
-          status: st.label,
-        })}
+        aria-label={
+          reader
+            ? t('page.number', { pageNumber }) + hitsLabel
+            : t('page.buttonLabel', { hits: hitsLabel, pageNumber, status: st.label })
+        }
         className="flex min-h-10 min-w-0 flex-1 shrink-0 flex-col items-center justify-center gap-0.5 self-stretch rounded-[inherit] after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary/40 pointer-coarse:min-h-11 pointer-coarse:min-w-11 @4xl/app:flex-row @4xl/app:justify-start @4xl/app:gap-3"
       >
         <PaperThumb
-          key={page.page_number}
-          failed={st.key === 'failed'}
-          imageUrl={
-            page.image_available ? api.manualPageImageUrl(manualId, page.page_number) : null
-          }
+          key={pageNumber}
+          failed={!reader && st.key === 'failed'}
+          imageUrl={page.image_available ? api.manualPageImageUrl(manualId, pageNumber) : null}
         />
 
         {/* número compacto (móvil) */}
@@ -146,13 +147,15 @@ function PageButton({
           </span>
         ) : null}
       </button>
-      <HelpIndicator
-        icon={st.Icon}
-        label={st.tip}
-        tone={STATUS_HELP_TONE[st.tone]}
-        iconClassName={page.ocr_status === 'processing' ? 'animate-spin' : undefined}
-        className="size-8 min-h-8 min-w-8 shrink-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-      />
+      {reader ? null : (
+        <HelpIndicator
+          icon={st.Icon}
+          label={st.tip}
+          tone={STATUS_HELP_TONE[st.tone]}
+          iconClassName={page.ocr_status === 'processing' ? 'animate-spin' : undefined}
+          className="size-8 min-h-8 min-w-8 shrink-0 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+        />
+      )}
     </div>
   );
 }
@@ -183,17 +186,20 @@ function Legend() {
   );
 }
 
+/** Índice de páginas con diagnósticos del OCR solo para el propietario. */
 export function PageThumbRail({
   manualId,
   pages,
   activePage,
   hitsByPage,
+  reader = false,
   onSelect,
 }: Readonly<{
   manualId: string;
   pages: readonly ManualDetailPage[];
   activePage: number;
   hitsByPage: ReadonlyMap<number, number>;
+  reader?: boolean;
   onSelect: (pageNumber: number) => void;
 }>) {
   const { t } = useTranslation('manual');
@@ -240,17 +246,19 @@ export function PageThumbRail({
           <h2 className="text-sm font-semibold text-fg">{t('page.heading')}</h2>
           <span className="text-xs font-normal text-fg-2 tabular-nums">{pages.length}</span>
         </div>
-        <div className="mb-2 px-1">
-          <Tooltip content={<Legend />} touch>
-            <button
-              type="button"
-              className="inline-flex min-h-8 items-center gap-2 text-xs text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11"
-            >
-              <InfoIcon size={14} aria-hidden="true" />
-              {t('page.legend')}
-            </button>
-          </Tooltip>
-        </div>
+        {reader ? null : (
+          <div className="mb-2 px-1">
+            <Tooltip content={<Legend />} touch>
+              <button
+                type="button"
+                className="inline-flex min-h-8 items-center gap-2 text-xs text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary pointer-coarse:min-h-11"
+              >
+                <InfoIcon size={14} aria-hidden="true" />
+                {t('page.legend')}
+              </button>
+            </Tooltip>
+          </div>
+        )}
       </div>
 
       <motion.div
@@ -266,6 +274,7 @@ export function PageThumbRail({
             active={page.page_number === activePage}
             hits={hitsByPage.get(page.page_number) ?? 0}
             indicatorId={reducedMotion ? undefined : indicatorId}
+            reader={reader}
             onSelect={() => onSelect(page.page_number)}
           />
         ))}

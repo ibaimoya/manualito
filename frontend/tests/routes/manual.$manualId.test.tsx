@@ -58,6 +58,7 @@ function mockSinglePageManual(
         chunks_indexed: 0,
         created_at: '2026-05-26T10:00:00.000Z',
         indexed_at: null,
+        is_own: true,
         ...manual,
         pages: [
           {
@@ -269,6 +270,7 @@ describe('/manual/$manualId · lectura', () => {
           chunks_indexed: 2,
           created_at: '2026-05-26T10:00:00.000Z',
           indexed_at: '2026-05-26T10:00:10.000Z',
+          is_own: true,
           pages: [{ ...dupPage, page_number: 1, dedup_status: 'none' }, dupPage],
         }),
       ),
@@ -389,6 +391,7 @@ describe('/manual/$manualId · edición de texto', () => {
           chunks_indexed: 2,
           created_at: '2026-05-26T10:00:00.000Z',
           indexed_at: '2026-05-26T10:00:10.000Z',
+          is_own: true,
           pages: [
             edited ?? {
               page_number: 1,
@@ -637,6 +640,172 @@ describe('/manual/$manualId · edición de texto', () => {
 
     expect(await screen.findByText('El manual se está procesando')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Texto de la página 1' })).toBeInTheDocument();
+  });
+});
+
+describe('/manual/$manualId · manual compartido por otra persona', () => {
+  const MANAGEMENT_BUTTONS = [
+    'Volver a leer',
+    'Renombrar manual',
+    'Eliminar manual',
+    'Editar',
+    /Releer esta página/,
+    /Compartido como Anónimo/,
+  ];
+
+  function renderSharedManual(page?: number) {
+    server.use(manualDetailWithPages({ is_own: false, visibility: 'shared' }));
+    return mountManual(page);
+  }
+
+  it('abre en el original y solo ofrece lectura, navegación, búsqueda y zoom', async () => {
+    const { container } = renderSharedManual();
+    const user = userEvent.setup();
+    const compare = await screen.findByRole('radio', { name: 'Comparar' });
+    const views = compare.closest('[role="radiogroup"]') as HTMLElement;
+    expect(within(views).getByRole('radio', { name: 'Original' })).toBeChecked();
+    expect(screen.getByText('Compartido · Solo lectura')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Página 1 de Catan' })).toHaveAttribute(
+      'src',
+      '/api/manuals/test-manual-001/pages/1/image',
+    );
+    expect(screen.getByRole('group', { name: 'Controles de la imagen' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Buscar en el texto del manual' })).toBeEnabled();
+    const rail = screen.getByRole('navigation', { name: 'Páginas del manual' });
+    expect(within(rail).getByRole('button', { name: 'Página 2' })).toBeInTheDocument();
+    expect(within(rail).getAllByRole('button')).toHaveLength(2);
+    expect(
+      screen.queryByRole('button', { name: 'Estados de las páginas' }),
+    ).not.toBeInTheDocument();
+    for (const name of MANAGEMENT_BUTTONS) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole('switch', { name: /Confianza por línea/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+
+    await user.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    expect(await screen.findByRole('img', { name: 'Página 2 de Catan' })).toBeInTheDocument();
+    await user.click(within(views).getByRole('radio', { name: 'Texto' }));
+    const article = screen.getByRole('article');
+    expect(article).toHaveAccessibleName('Página 2 de 2');
+    expect(article).toHaveTextContent('EL LADRÓN');
+    expect(screen.queryByRole('button', { name: 'Poco clara' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/caracteres/)).not.toBeInTheDocument();
+    for (const name of MANAGEMENT_BUTTONS) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole('switch', { name: /Confianza por línea/ })).not.toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Buscar en el texto del manual' }),
+      'tablero',
+    );
+    expect(await screen.findByText('1 / 1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Coincidencia siguiente' }));
+    expect(await screen.findByRole('article')).toHaveAccessibleName('Página 1 de 2');
+    await user.click(within(views).getByRole('radio', { name: 'Original' }));
+    await user.click(screen.getByRole('button', { name: 'Ampliar original' }));
+    expect(await screen.findByRole('dialog', { name: 'Imagen de la página' })).toBeInTheDocument();
+  });
+
+  it('respeta la página citada y cae al texto cuando esa página no tiene imagen', async () => {
+    server.use(
+      http.get('/api/manuals/:manualId', ({ params }) =>
+        HttpResponse.json({
+          id: params.manualId,
+          game_id: 'test-game-001',
+          game_name: 'Catan',
+          title: 'Reglas de Ana',
+          status: 'active',
+          visibility: 'shared',
+          anonymous: false,
+          source_type: 'pdf',
+          page_count: 2,
+          duplicate_page_count: 0,
+          language: 'spa',
+          chunks_indexed: 2,
+          created_at: '2026-05-26T10:00:00.000Z',
+          indexed_at: '2026-05-26T10:00:10.000Z',
+          is_own: false,
+          pages: [
+            {
+              page_number: 1,
+              ocr_status: 'completed',
+              text_source: 'pdf_text',
+              text_quality: 'ok',
+              dedup_status: 'none',
+              image_available: true,
+              image_width: 800,
+              image_height: 1200,
+              ocr_confidence_mean: null,
+              ocr_lines: [{ text: 'Primera página.', confidence: null }],
+            },
+            {
+              page_number: 2,
+              ocr_status: 'completed',
+              text_source: 'pdf_text',
+              text_quality: 'ok',
+              dedup_status: 'none',
+              image_available: false,
+              image_width: null,
+              image_height: null,
+              ocr_confidence_mean: null,
+              ocr_lines: [{ text: 'Gana quien llegue a diez puntos.', confidence: null }],
+            },
+          ],
+        }),
+      ),
+    );
+    mountManual(2);
+    const compare = await screen.findByRole('radio', { name: 'Comparar' });
+    const views = compare.closest('[role="radiogroup"]') as HTMLElement;
+    expect(within(views).getByRole('radio', { name: 'Texto' })).toBeChecked();
+    expect(screen.getByRole('article')).toHaveAccessibleName('Página 2 de 2');
+    expect(screen.getByRole('article')).toHaveTextContent('Gana quien llegue a diez puntos.');
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Compartido con mi nombre/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('una página fallida se presenta sin texto, sin diagnóstico ni invitación a corregir', async () => {
+    mockSinglePageManual(
+      { ocr_status: 'failed', image_available: false, image_width: null, image_height: null },
+      { is_own: false, visibility: 'shared' },
+    );
+    mountManual();
+    expect(await screen.findByRole('article', { name: 'Página 1 de 1' })).toHaveTextContent(
+      'Sin texto disponible',
+    );
+    const compare = screen.getByRole('radio', { name: 'Comparar' });
+    const views = compare.closest('[role="radiogroup"]') as HTMLElement;
+    expect(within(views).getByRole('radio', { name: 'Texto' })).toBeChecked();
+    expect(screen.queryByText('No pudimos leer esta página')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reintenta/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Error de lectura' })).not.toBeInTheDocument();
+    for (const name of MANAGEMENT_BUTTONS) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it('quien comparte su propio manual conserva todos los controles', async () => {
+    server.use(manualDetailWithPages({ visibility: 'shared' }));
+    mountManual(2);
+    const user = userEvent.setup();
+    expect(await screen.findByRole('button', { name: 'Volver a leer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Renombrar manual' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Eliminar manual' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Compartido como Anónimo/ })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /Confianza por línea/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Comparar' })).toBeChecked();
+    expect(screen.getByRole('button', { name: /Releer esta página/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Poco clara' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Estados de las páginas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Página 2 · Poco clara' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Volver a leer' }));
+    expect(await screen.findByRole('dialog', { name: 'Reprocesar manual' })).toBeInTheDocument();
   });
 });
 

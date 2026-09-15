@@ -1098,7 +1098,7 @@ const SOURCE_AVATAR =
 const SOURCE_AVATAR_MOTION =
   'transition-transform duration-150 ease-[var(--ease-mn)] motion-reduce:transition-none group-hover/source:scale-[1.04] group-focus-visible/source:scale-[1.04] group-aria-expanded/source:scale-[1.04]';
 
-// Solo los manuales propios y disponibles permiten abrir la página citada.
+// La fuente se puede abrir mientras siga disponible para este usuario.
 function SourceRef({
   source,
   available,
@@ -1114,12 +1114,7 @@ function SourceRef({
   const title = source.manual_title ?? t('sources.unnamed');
   const uploadedBy = useUploadedByText(source.author_name);
   const provenance = source.is_own ? t('sources.own') : uploadedBy;
-  const clickable = source.is_own && available;
-  const reason = clickable
-    ? null
-    : source.is_own
-      ? t('sources.unavailable')
-      : t('sources.communityManual');
+  const reason = available ? null : t('sources.unavailable');
   const details = (
     <>
       <span className="block font-semibold [overflow-wrap:anywhere]">{title}</span>
@@ -1134,7 +1129,7 @@ function SourceRef({
     </span>
   );
 
-  if (clickable) {
+  if (available) {
     return (
       <>
         <Tooltip content={details} touch="confirm" touchHint={t('sources.tapAgain')}>

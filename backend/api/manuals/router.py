@@ -13,8 +13,8 @@ from api.auth.dependencies import CsrfProtection, CurrentAuth, client_ip
 from api.games.dependencies import ValidGameFormId
 from api.manuals.exceptions import ManualNotFoundError
 from api.manuals.repository import (
-    get_user_manual_detail,
-    get_user_manual_page_image_asset,
+    get_readable_manual_detail,
+    get_readable_manual_page_image_asset,
     get_user_manual_processing_status,
     list_user_manuals,
 )
@@ -100,10 +100,10 @@ async def get_manual_handler(
     session: DbSession,
     auth: CurrentAuth,
 ) -> ManualDetailResponse:
-    """Devuelve el detalle de un manual propio."""
-    detail = await get_user_manual_detail(
+    """Abre un manual al que el usuario tiene acceso."""
+    detail = await get_readable_manual_detail(
         session,
-        owner_user_id=auth.user.id,
+        current_user_id=auth.user.id,
         manual_id=manual_id,
     )
     return ManualDetailResponse.model_validate(detail)
@@ -132,10 +132,10 @@ async def get_manual_page_image_handler(
     session: DbSession,
     auth: CurrentAuth,
 ) -> FileResponse:
-    """Devuelve la imagen original o renderizada de una página propia."""
-    asset = await get_user_manual_page_image_asset(
+    """Sirve la imagen de la página tras comprobar el acceso al manual."""
+    asset = await get_readable_manual_page_image_asset(
         session,
-        owner_user_id=auth.user.id,
+        current_user_id=auth.user.id,
         manual_id=manual_id,
         page_number=page_number,
     )

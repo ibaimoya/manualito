@@ -77,7 +77,7 @@ export function ConversationsSection({
               to="/chat/$gameId"
               params={{ gameId }}
               search={{}}
-              className="icon-feedback inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="icon-feedback inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-semibold text-fg-2 transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <PlusIcon data-icon-motion="plus" size={16} aria-hidden="true" />
               {t('section.new')}

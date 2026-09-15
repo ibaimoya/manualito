@@ -429,6 +429,12 @@
   }
 }
 @media (max-width: 760px) {
+  .viewport {
+    scrollbar-gutter: stable both-edges;
+  }
+  .root[data-custom-illustration='false'] .illustration {
+    width: 100%;
+  }
   .header {
     padding: 16px 24px;
     gap: 8px;

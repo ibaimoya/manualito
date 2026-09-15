@@ -165,7 +165,12 @@ export function ScreenTopBar({
   const { t } = useTranslation('shell');
 
   return (
-    <header className={cn(TOPBAR_CHROME, 'flex')}>
+    <header
+      className={cn(
+        TOPBAR_CHROME,
+        'flex max-md:grid max-md:grid-cols-[44px_minmax(0,1fr)_44px] max-md:gap-2',
+      )}
+    >
       <div className="flex shrink-0 items-center gap-3">
         <BackButton />
         {/* Divisor entre el botón y las migajas (solo en md, donde hay migajas). */}
@@ -193,7 +198,7 @@ export function ScreenTopBar({
       </nav>
 
       {/* móvil: título centrado. */}
-      <h1 className="min-w-0 flex-1 truncate text-center font-display text-lg font-bold tracking-tight md:hidden">
+      <h1 className="min-w-0 flex-1 truncate text-center max-md:col-start-2 font-display text-lg font-bold tracking-tight md:hidden">
         {crumb}
       </h1>
 

@@ -335,7 +335,7 @@ function NewManualScreen() {
 
         <section className="flex flex-col gap-4">
           <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
-          <div className="grid grid-cols-1 gap-2.5 @sm/app:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2.5 max-md:grid-cols-3 @sm/app:grid-cols-3">
             <SourceFileControl
               inputId={cameraInputId}
               icon={<CameraIcon size={19} />}
@@ -760,7 +760,7 @@ function SourceFileControl({
         htmlFor={inputId}
         aria-disabled={disabled || undefined}
         className={cn(
-          'icon-feedback flex min-h-[88px] flex-col items-start gap-2 rounded-2xl border border-border bg-surface p-3.5 text-left transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-primary/20',
+          'icon-feedback flex min-h-[88px] max-md:h-full flex-col items-start gap-2 rounded-2xl border border-border bg-surface p-3.5 text-left transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-4 peer-focus-visible:ring-primary/20',
           disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:bg-surface-2',
         )}
       >

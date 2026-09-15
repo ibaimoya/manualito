@@ -252,7 +252,11 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
             {t('manuals.heading')}
           </h2>
         </div>
-        <Button asChild variant="ghost" className="shrink-0 px-0">
+        <Button
+          asChild
+          variant="ghost"
+          className="shrink-0 px-0 not-disabled:not-aria-disabled:hover:bg-transparent not-disabled:not-aria-disabled:hover:text-fg not-disabled:not-aria-disabled:active:bg-transparent"
+        >
           <Link to="/capture/source" search={{ gameId: game.id }}>
             <AddManualIcon size={18} />
             {t('manuals.add')}

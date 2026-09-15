@@ -119,10 +119,13 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
     >
       <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-semibold text-fg">{t('edit.avatar')}</legend>
-        <div className="flex flex-wrap items-start gap-4 rounded-2xl border border-border bg-surface p-3.5">
+        <div className="flex flex-wrap items-start gap-4 max-md:justify-center rounded-2xl border border-border bg-surface p-3.5">
           <Avatar name={username || user.username} size={64} color={color} figure={figure} />
           <div className="flex min-w-0 flex-1 basis-48 flex-col gap-2.5">
-            <fieldset aria-label={t('edit.avatarColor')} className="flex flex-wrap gap-2">
+            <fieldset
+              aria-label={t('edit.avatarColor')}
+              className="flex flex-wrap gap-2 max-md:justify-center"
+            >
               {COLORS.map((option) => {
                 const label = t(option.key);
                 return (
@@ -133,7 +136,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                       aria-label={label}
                       onClick={() => setColor(option.value)}
                       className={cn(
-                        'transition-control size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
+                        'transition-control size-8 shrink-0 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
                         option.className,
                         color === option.value
                           ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
@@ -144,7 +147,10 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                 );
               })}
             </fieldset>
-            <fieldset aria-label={t('edit.avatarFigure')} className="flex flex-wrap gap-1.5">
+            <fieldset
+              aria-label={t('edit.avatarFigure')}
+              className="flex flex-wrap gap-1.5 max-md:grid max-md:grid-cols-4 max-md:justify-items-center"
+            >
               {FIGURES.map((option) => {
                 const selected = figure === option.value;
                 const label = t(option.key);
@@ -156,7 +162,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
                       aria-label={label}
                       onClick={() => setFigure(option.value)}
                       className={cn(
-                        'transition-control grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
+                        'transition-control grid size-9 shrink-0 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
                         selected
                           ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
                           : 'hover:bg-surface-2',

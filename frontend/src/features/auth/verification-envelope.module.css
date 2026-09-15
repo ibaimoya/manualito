@@ -237,3 +237,13 @@
     line-height: 1.35;
   }
 }
+@media (max-width: 760px) and (max-height: 700px) {
+  .stage {
+    height: 190px;
+  }
+  .scene {
+    height: 330px;
+    transform: scale(0.55);
+    transform-origin: top center;
+  }
+}

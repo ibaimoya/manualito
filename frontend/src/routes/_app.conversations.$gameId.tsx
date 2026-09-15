@@ -92,7 +92,9 @@ function ConversationsScreen() {
         ]}
         actions={
           counter === null ? null : (
-            <span className="text-xs font-normal text-fg-2 tabular-nums">{counter}</span>
+            <span className="hidden text-xs font-normal text-fg-2 tabular-nums md:inline">
+              {counter}
+            </span>
           )
         }
       />
@@ -123,6 +125,10 @@ function ConversationsScreen() {
               className="pl-10"
             />
           </div>
+        ) : null}
+
+        {counter ? (
+          <p className="mb-3 text-right text-xs text-fg-2 tabular-nums md:hidden">{counter}</p>
         ) : null}
 
         <SkeletonSwap pending={conversations.isPending && !unavailable} skeleton={<ListSkeleton />}>

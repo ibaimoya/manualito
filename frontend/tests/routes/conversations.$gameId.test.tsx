@@ -62,7 +62,8 @@ describe('/conversations/$gameId', () => {
   it('lista las conversaciones con contador y FAB de nueva', async () => {
     const { qc } = renderConversations();
     expect(await screen.findByText('Dudas de preparación')).toBeInTheDocument();
-    expect(screen.getByText('1 guardada')).toBeInTheDocument();
+    // jsdom conserva las cabeceras de escritorio y móvil sin aplicar sus breakpoints.
+    expect(screen.getAllByText('1 guardada').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Nueva conversación/ })).toHaveAttribute(
       'href',
       '/chat/test-game-001',
@@ -132,7 +133,7 @@ describe('/conversations/$gameId', () => {
     await screen.findByText('Dudas de preparación');
     const search = screen.getByRole('searchbox', { name: 'Filtrar conversaciones por título' });
     await user.type(search, 'preparación');
-    expect(await screen.findByText('1 de 1')).toBeInTheDocument();
+    expect((await screen.findAllByText('1 de 1')).length).toBeGreaterThan(0);
     await user.clear(search);
     await user.type(search, 'no existe');
     await waitFor(() => {

@@ -216,7 +216,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
       </motion.nav>
 
       {user ? (
-        <footer className="shrink-0 border-t border-border p-3">
+        <footer className="grid min-h-[var(--chat-composer-height,0px)] shrink-0 items-end border-t border-border p-3">
           <UserCard user={user} collapsed={collapsed} />
         </footer>
       ) : null}

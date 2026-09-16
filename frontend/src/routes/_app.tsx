@@ -55,7 +55,7 @@ function AppLayout() {
 
   return (
     // h-dvh exacto. Debe desbordar #main-content, no este wrapper.
-    <div className="flex h-dvh flex-col bg-bg text-fg">
+    <div data-app-shell className="flex h-dvh flex-col bg-bg text-fg">
       {/* Skip-link (WCAG 2.4.1). Oculto hasta recibir foco con Tab. */}
       <a
         href="#main-content"

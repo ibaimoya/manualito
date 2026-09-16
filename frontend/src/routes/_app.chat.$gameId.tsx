@@ -14,6 +14,7 @@ import {
   useEffect,
   useEffectEvent,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -108,26 +109,6 @@ function takeInitialQuestion(queue: RefObject<string | null>, gameLoaded: boolea
   const question = queue.current;
   queue.current = null;
   return question;
-}
-
-function useCompletedAssistantAnimation(
-  messages: readonly ConversationMessage[],
-  setAnimateId: (id: string) => void,
-): void {
-  const knownAssistantStatusRef = useRef<Map<string, ConversationMessage['status']> | null>(null);
-
-  useEffect(() => {
-    const previous = knownAssistantStatusRef.current;
-    const next = new Map<string, ConversationMessage['status']>();
-    for (const message of messages) {
-      if (message.role !== 'assistant') continue;
-      next.set(message.id, message.status);
-      if (previous?.get(message.id) === 'pending' && message.status === 'completed') {
-        setAnimateId(message.id);
-      }
-    }
-    knownAssistantStatusRef.current = next;
-  }, [messages, setAnimateId]);
 }
 
 function useMarkConversationSeen(conversationId: string | null, seenAt: string | undefined): void {
@@ -490,8 +471,6 @@ function ChatSessionScreen({
     turns,
   );
 
-  useCompletedAssistantAnimation(messages, setAnimateId);
-
   const waitingForReply = askMutation.isPending || hasPendingAssistant;
   const sendPending = waitingForReply && canAsk;
 
@@ -699,12 +678,31 @@ function ChatComposerBar({
   sendPending: boolean;
 }>) {
   const { t } = useTranslation('chat');
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const shell = bar?.closest<HTMLElement>('[data-app-shell]');
+    if (!bar || !shell) return;
+    const syncHeight = () => {
+      shell.style.setProperty('--chat-composer-height', `${bar.getBoundingClientRect().height}px`);
+    };
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(bar, { box: 'border-box' });
+    return () => {
+      observer.disconnect();
+      shell.style.removeProperty('--chat-composer-height');
+    };
+  }, []);
+
   const placeholder = canAsk
     ? t('composer.placeholder', { gameName: gameName ?? t('fallback.gameName') })
     : t('composer.disabledPlaceholder');
 
   return (
     <div
+      ref={barRef}
       className="shrink-0 border-t border-border bg-bg pt-3"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}
     >
@@ -933,15 +931,21 @@ function BotBubble({
   availableManualIds: ReadonlySet<string> | null;
 }>) {
   const { t } = useTranslation('chat');
-  // Solo las respuestas completadas se escriben letra a letra; los hooks van
-  // siempre en el mismo orden (pending/failed se pintan abajo sin usarlos).
+  const [arrival, setArrival] = useState({ status: msg.status, reveal: false });
+  if (arrival.status !== msg.status) {
+    setArrival({
+      status: msg.status,
+      reveal: arrival.status === 'pending' && msg.status === 'completed',
+    });
+  }
   const ready = msg.status === 'completed';
-  const { shown, done } = useTypewriter(msg.content, animate && ready);
+  const revealing = (animate || arrival.reveal) && ready;
+  const { shown, done } = useTypewriter(msg.content, revealing);
 
   // Mientras se escribe, seguimos pegados al fondo.
   useEffect(() => {
-    if (animate && ready) onReveal();
-  }, [shown, animate, ready, onReveal]);
+    if (revealing) onReveal();
+  }, [shown, revealing, onReveal]);
 
   if (msg.status === 'pending') {
     return <BotStatusBubble label={t('status.generating')} visibleLabel={false} />;

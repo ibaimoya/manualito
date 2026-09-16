@@ -387,6 +387,16 @@ describe('/chat/$gameId', () => {
       expect(sends).toBe(1);
       await waitFor(
         () => {
+          const partial = screen.getByText(
+            (text) =>
+              text.startsWith('Respuesta') && 'Respuesta generada por polling.'.startsWith(text),
+          );
+          expect(partial.textContent).not.toBe('Respuesta generada por polling.');
+        },
+        { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
+      );
+      await waitFor(
+        () => {
           expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS);
           expect(screen.getByText('Respuesta generada por polling.')).toBeInTheDocument();
         },

@@ -485,3 +485,11 @@ frontend/dev-dist/
 /docs/benchmarks/ocr_preprocessing/outputs/tmp_preprocessed/
 /docs/benchmarks/ocr_preprocessing/outputs/results.json
 /docs/benchmarks/rag/recuperacion/outputs/.ranx-runtime/
+
+# Artefactos locales de desarrollo y revisión
+/.playwright-cli/
+/.tanstack/
+/.unlazy/
+/frontend/.playwright-cli/
+/frontend/.tanstack/
+/output/

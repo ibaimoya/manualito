@@ -3,7 +3,8 @@
     "ariaLabel": "Your account"
   },
   "empty": {
-    "description": "You haven't looked up a rulebook yet. Tap <b>New manual</b> to get started."
+    "description": "Find a game you would like to learn and look up its rules.",
+    "explore": "Explore games"
   },
   "error": {
     "manuals": "Try again to see your recent rulebooks.",

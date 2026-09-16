@@ -3,7 +3,8 @@
     "ariaLabel": "Tu cuenta"
   },
   "empty": {
-    "description": "Aún no has consultado ningún manual. Pulsa <b>Nuevo manual</b> para empezar."
+    "description": "Encuentra un juego que te apetezca aprender y consulta sus reglas.",
+    "explore": "Explorar juegos"
   },
   "error": {
     "manuals": "Vuelve a intentarlo para consultar tus últimos manuales.",

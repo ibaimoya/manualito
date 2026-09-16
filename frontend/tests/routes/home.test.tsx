@@ -59,7 +59,7 @@ describe('/home', () => {
     await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
     expect(button).toBeDisabled();
     expect(notice).toBeInTheDocument();
-    expect(screen.queryByText(/Aún no has consultado/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Encuentra un juego/)).not.toBeInTheDocument();
 
     response.resolve();
     expect(await screen.findByText('Catan')).toBeInTheDocument();
@@ -93,8 +93,11 @@ describe('/home', () => {
   it('mantiene el estado vacío conocido si falla una actualización', async () => {
     server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
     const { qc } = renderHome();
-    const para = await screen.findByText(/Aún no has consultado/, { selector: 'p' });
-    expect(para.textContent).toMatch(/Pulsa\s+Nuevo manual\s+para empezar/);
+    const para = await screen.findByText(/Encuentra un juego/, { selector: 'p' });
+    expect(screen.getByRole('link', { name: 'Explorar juegos' })).toHaveAttribute(
+      'href',
+      '/explore',
+    );
     expect(await screen.findByRole('link', { name: 'Ver Carcassonne' })).toHaveAttribute(
       'href',
       '/game/rec-1',
@@ -124,7 +127,7 @@ describe('/home', () => {
     server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [manual()] })));
     renderHome();
     expect(await screen.findByText('Catan')).toBeInTheDocument();
-    expect(screen.queryByText(/Pulsa Nuevo manual para empezar/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Encuentra un juego/)).not.toBeInTheDocument();
   });
 
   it('excluye solo los juegos de los seis recientes, también al mezclar', async () => {

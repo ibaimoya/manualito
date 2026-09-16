@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon, PlusIcon, GearSixIcon } from '@phosphor-icons/react';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { Meeple, Monogram } from '@/shared/components/Brand';
 import { Avatar } from '@/shared/components/Avatar';
 import { RecoveryNotice } from '@/shared/components/recovery/RecoveryNotice';
@@ -182,6 +182,7 @@ function RecentSkeleton() {
 }
 
 function EmptyRecents() {
+  const { t } = useTranslation('home');
   return (
     <section className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-strong bg-surface/60 px-6 py-8 text-center">
       <div
@@ -190,9 +191,13 @@ function EmptyRecents() {
       >
         <Meeple size={28} color="currentColor" />
       </div>
-      <p className="max-w-xs text-sm text-fg-2">
-        <Trans ns="home" i18nKey="empty.description" components={{ b: <strong /> }} />
-      </p>
+      <p className="max-w-sm text-sm leading-relaxed text-fg-2">{t('empty.description')}</p>
+      <Button asChild variant="ghost" size="sm">
+        <Link to="/explore">
+          {t('empty.explore')}
+          <ArrowRightIcon aria-hidden="true" size={16} />
+        </Link>
+      </Button>
     </section>
   );
 }

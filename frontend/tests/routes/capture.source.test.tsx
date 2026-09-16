@@ -104,6 +104,87 @@ function imageFilesWithTotalSize(totalSize: number): File[] {
 }
 
 describe('/capture/source · nuevo manual', () => {
+  // DataTransfer pertenece al navegador y jsdom no implementa el arrastre de archivos.
+  function fileTransfer(files: File[] = []) {
+    return { types: ['Files'], files, dropEffect: 'none' };
+  }
+
+  it('mantiene el destino al cruzar sus controles y lo oculta al cancelar', async () => {
+    renderSource();
+    await screen.findByRole('combobox', { name: /Buscar juego/i });
+    const source = screen.getByTestId('picker-gallery');
+    const zone = source.closest('[data-file-drop]')!;
+    const dataTransfer = fileTransfer();
+    fireEvent.dragEnter(window, { dataTransfer });
+    fireEvent.dragEnter(source, { dataTransfer });
+    fireEvent.dragLeave(source, { dataTransfer });
+    expect(zone).toHaveAttribute('data-file-drop', 'active');
+    expect(screen.getByText('Elige primero el juego')).toBeVisible();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(zone).toHaveAttribute('data-file-drop', 'idle');
+    fireEvent.dragEnter(window, { dataTransfer });
+    fireEvent.blur(window);
+    expect(zone).toHaveAttribute('data-file-drop', 'idle');
+  });
+
+  it('añade las imágenes soltadas junto a las elegidas sin enviar el manual', async () => {
+    const user = userEvent.setup();
+    renderSource();
+    await pickGame(user, 'Wingspan');
+    const source = screen.getByTestId('picker-gallery');
+    await user.upload(source, imageFile('primera.jpg'));
+    fireEvent.drop(source, { dataTransfer: fileTransfer([imageFile('segunda.jpg')]) });
+    expect(screen.getByText('primera.jpg')).toBeInTheDocument();
+    expect(screen.getByText('segunda.jpg')).toBeInTheDocument();
+    expect(screen.getByText('2 / 30 páginas')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Procesar 2 páginas' })[0]).toBeEnabled();
+    expect(screen.queryByText('ProcessingScreen')).not.toBeInTheDocument();
+  });
+
+  it('acepta un PDF y conserva el primero si se suelta otro', async () => {
+    const user = userEvent.setup();
+    renderSource();
+    await pickGame(user, 'Wingspan');
+    const source = screen.getByTestId('picker-pdf');
+    fireEvent.drop(source, { dataTransfer: fileTransfer([pdfFile(10)]) });
+    expect(screen.getByText('PDF listo para procesar')).toBeInTheDocument();
+    fireEvent.drop(source, {
+      dataTransfer: fileTransfer([new File(['pdf'], 'otro.pdf', { type: 'application/pdf' })]),
+    });
+    expect(await screen.findByText('Ya has añadido un PDF')).toBeInTheDocument();
+    expect(screen.getByText('manual.pdf')).toBeInTheDocument();
+    expect(screen.queryByText('otro.pdf')).not.toBeInTheDocument();
+  });
+
+  it('rechaza formatos mezclados y aplica los límites al soltar', async () => {
+    const user = userEvent.setup();
+    renderSource();
+    await pickGame(user, 'Wingspan');
+    const source = screen.getByTestId('picker-gallery');
+    fireEvent.drop(source, { dataTransfer: fileTransfer([imageFile('foto.jpg'), pdfFile(10)]) });
+    expect(await screen.findByText('Elige un solo formato')).toBeInTheDocument();
+    expect(screen.queryByText('foto.jpg')).not.toBeInTheDocument();
+    fireEvent.drop(source, {
+      dataTransfer: fileTransfer([imageFile('grande.jpg', MAX_IMAGE_BYTES + 1)]),
+    });
+    expect(await screen.findByText('Imagen demasiado grande')).toBeInTheDocument();
+    expect(screen.queryByText('grande.jpg')).not.toBeInTheDocument();
+  });
+
+  it('no recibe archivos sin juego ni fuera del destino y libera los eventos al salir', async () => {
+    const view = renderSource();
+    await screen.findByRole('combobox', { name: /Buscar juego/i });
+    const dataTransfer = fileTransfer([imageFile('foto.jpg')]);
+    fireEvent.drop(screen.getByTestId('picker-gallery'), { dataTransfer });
+    expect(screen.queryByText('foto.jpg')).not.toBeInTheDocument();
+    expect(fireEvent.drop(window, { dataTransfer })).toBe(false);
+    expect(fireEvent.drop(window, { dataTransfer: { types: ['text/plain'], files: [] } })).toBe(
+      true,
+    );
+    view.unmount();
+    expect(fireEvent.drop(window, { dataTransfer })).toBe(true);
+  });
+
   it('arranca eligiendo juego y con las fuentes deshabilitadas', async () => {
     renderSource();
     expect(await screen.findByRole('heading', { name: /Nuevo manual/i })).toBeInTheDocument();
@@ -343,7 +424,7 @@ describe('/capture/source · nuevo manual', () => {
 
     await user.click(screen.getByRole('button', { name: 'Quitar página 1' }));
 
-    expect(await screen.findByText(/Aún no hay páginas/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Puedes añadir un PDF/i)).toBeInTheDocument();
     expect(screen.getByTestId('picker-gallery')).toBeEnabled();
     expect(screen.getByTestId('picker-pdf')).toBeEnabled();
   });
@@ -359,7 +440,7 @@ describe('/capture/source · nuevo manual', () => {
 
     await user.click(screen.getByRole('button', { name: 'Quitar PDF' }));
 
-    expect(await screen.findByText(/Aún no hay páginas/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Puedes añadir un PDF/i)).toBeInTheDocument();
     expect(screen.getByTestId('picker-gallery')).toBeEnabled();
     expect(screen.getByTestId('picker-pdf')).toBeEnabled();
   });
@@ -598,7 +679,7 @@ describe('/capture/source, nombre e identificación', () => {
     await user.upload(screen.getByTestId('picker-gallery'), imageFiles(2));
     await user.click(await screen.findByRole('button', { name: 'Quitar página 1' }));
     await user.click(screen.getByRole('button', { name: 'Quitar página 1' }));
-    expect(await screen.findByText(/Aún no hay páginas/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Puedes añadir un PDF/i)).toBeInTheDocument();
     expect(name).toHaveValue('Mis reglas caseras');
     await user.upload(screen.getByTestId('picker-pdf'), pdfFile(1));
     expect(await screen.findByText('manual.pdf')).toBeInTheDocument();

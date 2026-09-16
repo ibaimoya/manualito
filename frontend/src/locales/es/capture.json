@@ -23,8 +23,14 @@
       "named": "Con mi nombre"
     }
   },
+  "drop": {
+    "busy": "Estamos subiendo tu manual",
+    "chooseGame": "Elige primero el juego",
+    "formats": "Un PDF o imágenes de sus páginas",
+    "release": "Suelta aquí tu manual"
+  },
   "empty": {
-    "pages": "Aún no hay páginas. Usa la cámara, la galería o sube un PDF."
+    "pages": "Puedes añadir un PDF o fotos de sus páginas."
   },
   "feedback": {
     "chooseGame": {
@@ -96,12 +102,20 @@
       "description": "Usa la cámara, la galería o sube un PDF.",
       "title": "Añade páginas"
     },
+    "imagesAlreadyAdded": {
+      "description": "Quítalas antes de añadir un PDF.",
+      "title": "Ya has añadido imágenes"
+    },
     "imageTooLarge": {
       "description": "Cada imagen puede ocupar {{max}} MB.",
       "title": "Imagen demasiado grande"
     },
+    "mixedFiles": {
+      "description": "Añade un PDF o imágenes de sus páginas, sin mezclarlos.",
+      "title": "Elige un solo formato"
+    },
     "pdfAlreadyAdded": {
-      "description": "Bórralo para subir imágenes.",
+      "description": "Quítalo antes de añadir otros archivos.",
       "title": "Ya has añadido un PDF"
     },
     "pdfTooLarge": {
@@ -118,10 +132,6 @@
     },
     "unsupportedImage": {
       "description": "Usa JPG, PNG o WebP.",
-      "title": "Formato no soportado"
-    },
-    "unsupportedPdf": {
-      "description": "Selecciona un PDF.",
       "title": "Formato no soportado"
     }
   }

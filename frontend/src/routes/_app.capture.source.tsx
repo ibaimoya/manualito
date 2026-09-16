@@ -23,6 +23,9 @@ import {
 import { TrashIcon, CameraIcon } from '@/shared/components/action-icons';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { motion, MotionConfig, useReducedMotion } from 'motion/react';
+import { ManualDropZone } from '@/features/upload/ManualDropZone';
+import { MB, MAX_PAGES, selectManualFiles } from '@/features/upload/manual-files';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,16 +47,7 @@ export const Route = createFileRoute('/_app/capture/source')({
   component: NewManualScreen,
 });
 
-const MB = 1_000_000;
-const MAX_IMAGE_MB = 30;
-const MAX_PDF_MB = 95;
-const MAX_TOTAL_MB = 95;
-const MAX_IMAGE_BYTES = MAX_IMAGE_MB * MB;
-const MAX_PDF_BYTES = MAX_PDF_MB * MB;
-const MAX_TOTAL_BYTES = MAX_TOTAL_MB * MB;
-const MAX_PAGES = 30;
 const MAX_TITLE_LENGTH = 255;
-const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type Mode = 'images' | 'pdf';
 type UploadPage = Readonly<{ id: string; file: File }>;
@@ -191,83 +185,26 @@ function NewManualScreen() {
     });
   }
 
-  function addImages(incoming: File[]): void {
-    if (incoming.length === 0) return;
-    if (mode === 'pdf') {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.pdfAlreadyAdded.title" />, {
-        description: <LiveTrans ns="capture" i18nKey="validation.pdfAlreadyAdded.description" />,
-      });
-      return;
-    }
-    const valid = incoming.filter((file) => IMAGE_TYPES.has(file.type));
-    if (valid.length < incoming.length) {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.unsupportedImage.title" />, {
-        description: <LiveTrans ns="capture" i18nKey="validation.unsupportedImage.description" />,
-      });
-    }
-    if (valid.some((file) => file.size > MAX_IMAGE_BYTES)) {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.imageTooLarge.title" />, {
+  function addFiles(incoming: File[]): void {
+    if (busy || game === null) return;
+    const { files, issue, max } = selectManualFiles(
+      pages.map((page) => page.file),
+      incoming,
+    );
+    if (issue) {
+      toast.warning(<LiveTrans ns="capture" i18nKey={`validation.${issue}.title`} />, {
         description: (
-          <LiveTrans
-            ns="capture"
-            i18nKey="validation.imageTooLarge.description"
-            values={{ max: MAX_IMAGE_MB }}
-          />
+          <LiveTrans ns="capture" i18nKey={`validation.${issue}.description`} values={{ max }} />
         ),
       });
-      return;
     }
-    const next = [...pages.map((page) => page.file), ...valid];
-    if (next.length > MAX_PAGES) {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.tooManyPages.title" />, {
-        description: (
-          <LiveTrans
-            ns="capture"
-            i18nKey="validation.tooManyPages.description"
-            values={{ max: MAX_PAGES }}
-          />
-        ),
-      });
-      return;
+    if (files.length) {
+      setPages((current) => [
+        ...current,
+        ...files.map((file) => ({ id: crypto.randomUUID(), file })),
+      ]);
     }
-    if (next.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_BYTES) {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.totalTooLarge.title" />, {
-        description: (
-          <LiveTrans
-            ns="capture"
-            i18nKey="validation.totalTooLarge.description"
-            values={{ max: MAX_TOTAL_MB }}
-          />
-        ),
-      });
-      return;
-    }
-    setPages([...pages, ...valid.map((file) => ({ id: crypto.randomUUID(), file }))]);
   }
-
-  function addPdf(file: File | undefined): void {
-    if (!file) return;
-    if (file.type !== 'application/pdf') {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.unsupportedPdf.title" />, {
-        description: <LiveTrans ns="capture" i18nKey="validation.unsupportedPdf.description" />,
-      });
-      return;
-    }
-    if (file.size > MAX_PDF_BYTES) {
-      toast.warning(<LiveTrans ns="capture" i18nKey="validation.pdfTooLarge.title" />, {
-        description: (
-          <LiveTrans
-            ns="capture"
-            i18nKey="validation.pdfTooLarge.description"
-            values={{ max: MAX_PDF_MB }}
-          />
-        ),
-      });
-      return;
-    }
-    setPages([{ id: crypto.randomUUID(), file }]);
-  }
-
   function removePage(index: number): void {
     setPages((current) => current.filter((_, i) => i !== index));
   }
@@ -336,115 +273,117 @@ function NewManualScreen() {
           ) : null}
         </section>
 
-        <section className="flex flex-col gap-4">
-          <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
-          <div
-            className="grid grid-cols-1 gap-2.5 max-md:grid-cols-3 @sm/app:grid-cols-3"
-            {...tourTarget('upload-sources')}
-          >
-            <SourceFileControl
-              inputId={cameraInputId}
-              icon={<CameraIcon size={19} />}
-              label={t('sources.camera.label')}
-              sub={t('sources.camera.description')}
-              disabled={busy || game === null || mode === 'pdf'}
-              input={{
-                accept: 'image/jpeg,image/png,image/webp',
-                ariaLabel: t('sources.camera.ariaLabel'),
-                capture: 'environment',
-                testId: 'picker-camera',
-                onChange: (event) => {
-                  addImages(Array.from(event.target.files ?? []));
-                  event.target.value = '';
-                },
-              }}
-            />
-            <SourceFileControl
-              inputId={galleryInputId}
-              icon={<ImageIcon aria-hidden="true" size={19} />}
-              label={t('sources.gallery.label')}
-              sub={t('sources.gallery.description')}
-              disabled={busy || game === null || mode === 'pdf'}
-              input={{
-                accept: 'image/jpeg,image/png,image/webp',
-                ariaLabel: t('sources.gallery.ariaLabel'),
-                multiple: true,
-                testId: 'picker-gallery',
-                onChange: (event) => {
-                  addImages(Array.from(event.target.files ?? []));
-                  event.target.value = '';
-                },
-              }}
-            />
-            <SourceFileControl
-              inputId={pdfInputId}
-              icon={<FileTextIcon aria-hidden="true" size={19} />}
-              label={t('sources.pdf.label')}
-              sub={t('sources.pdf.description')}
-              disabled={busy || game === null || mode === 'images'}
-              input={{
-                accept: 'application/pdf',
-                ariaLabel: t('sources.pdf.ariaLabel'),
-                testId: 'picker-pdf',
-                onChange: (event) => {
-                  addPdf(event.target.files?.[0]);
-                  event.target.value = '';
-                },
-              }}
-            />
-          </div>
+        <MotionConfig reducedMotion="user" transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}>
+          <section className="flex flex-col gap-4">
+            <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
+            <ManualDropZone onFiles={addFiles} disabled={busy || game === null} busy={busy}>
+              <div
+                className="grid grid-cols-1 gap-2.5 max-md:grid-cols-3 @sm/app:grid-cols-3"
+                {...tourTarget('upload-sources')}
+              >
+                <SourceFileControl
+                  inputId={cameraInputId}
+                  icon={<CameraIcon size={19} />}
+                  label={t('sources.camera.label')}
+                  sub={t('sources.camera.description')}
+                  disabled={busy || game === null || mode === 'pdf'}
+                  input={{
+                    accept: 'image/jpeg,image/png,image/webp',
+                    ariaLabel: t('sources.camera.ariaLabel'),
+                    capture: 'environment',
+                    testId: 'picker-camera',
+                    onChange: (event) => {
+                      addFiles(Array.from(event.target.files ?? []));
+                      event.target.value = '';
+                    },
+                  }}
+                />
+                <SourceFileControl
+                  inputId={galleryInputId}
+                  icon={<ImageIcon aria-hidden="true" size={19} />}
+                  label={t('sources.gallery.label')}
+                  sub={t('sources.gallery.description')}
+                  disabled={busy || game === null || mode === 'pdf'}
+                  input={{
+                    accept: 'image/jpeg,image/png,image/webp',
+                    ariaLabel: t('sources.gallery.ariaLabel'),
+                    multiple: true,
+                    testId: 'picker-gallery',
+                    onChange: (event) => {
+                      addFiles(Array.from(event.target.files ?? []));
+                      event.target.value = '';
+                    },
+                  }}
+                />
+                <SourceFileControl
+                  inputId={pdfInputId}
+                  icon={<FileTextIcon aria-hidden="true" size={19} />}
+                  label={t('sources.pdf.label')}
+                  sub={t('sources.pdf.description')}
+                  disabled={busy || game === null || mode === 'images'}
+                  input={{
+                    accept: 'application/pdf',
+                    ariaLabel: t('sources.pdf.ariaLabel'),
+                    testId: 'picker-pdf',
+                    onChange: (event) => {
+                      addFiles(Array.from(event.target.files ?? []));
+                      event.target.value = '';
+                    },
+                  }}
+                />
+              </div>
 
-          {pages.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border-strong bg-surface px-4 py-8 text-center text-sm text-fg-3">
-              {t('empty.pages')}
-            </p>
-          ) : (
-            <div
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
-              {...tourTarget('upload-pages')}
-            >
-              <PageCounter count={pages.length} mode={mode} />
-              <ul className="flex flex-col gap-2">
-                {pages.map(({ id, file }, index) => (
-                  <PageRow
-                    key={id}
-                    file={file}
-                    index={index}
-                    total={pages.length}
-                    mode={mode}
-                    disabled={busy || game === null}
-                    onMove={movePage}
-                    onRemove={removePage}
-                  />
-                ))}
-              </ul>
+              {pages.length === 0 ? (
+                <p className="px-1 py-3 text-sm leading-relaxed text-fg-3">{t('empty.pages')}</p>
+              ) : (
+                <div
+                  className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
+                  {...tourTarget('upload-pages')}
+                >
+                  <PageCounter count={pages.length} mode={mode} />
+                  <ul className="flex flex-col gap-2">
+                    {pages.map(({ id, file }, index) => (
+                      <PageRow
+                        key={id}
+                        file={file}
+                        index={index}
+                        total={pages.length}
+                        mode={mode}
+                        disabled={busy || game === null}
+                        onMove={movePage}
+                        onRemove={removePage}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </ManualDropZone>
+
+            <div {...tourTarget('upload-share')}>
+              <ShareToggle checked={share} onChange={setShare} disabled={busy || game === null} />
             </div>
-          )}
+            {share ? (
+              <ShareOptions
+                showName={showName}
+                onShowNameChange={setShowName}
+                disabled={busy || game === null}
+              />
+            ) : null}
 
-          <div {...tourTarget('upload-share')}>
-            <ShareToggle checked={share} onChange={setShare} disabled={busy || game === null} />
-          </div>
-          {share ? (
-            <ShareOptions
-              showName={showName}
-              onShowNameChange={setShowName}
-              disabled={busy || game === null}
-            />
-          ) : null}
-
-          <Button
-            block
-            size="lg"
-            className="hidden md:flex"
-            loading={busy}
-            disabled={!ready}
-            onClick={submitManual}
-            {...tourTarget('upload-submit')}
-          >
-            <SparkleIcon aria-hidden="true" size={18} />
-            {ctaLabel}
-          </Button>
-        </section>
+            <Button
+              block
+              size="lg"
+              className="hidden md:flex"
+              loading={busy}
+              disabled={!ready}
+              onClick={submitManual}
+              {...tourTarget('upload-submit')}
+            >
+              <SparkleIcon aria-hidden="true" size={18} />
+              {ctaLabel}
+            </Button>
+          </section>
+        </MotionConfig>
       </div>
 
       <footer className="sticky bottom-0 border-t border-border bg-bg/95 p-4 backdrop-blur md:hidden">
@@ -648,7 +587,10 @@ function PageCounter({ count, mode }: Readonly<{ count: number; mode: Mode | nul
       </span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
         <div
-          className={cn('h-full rounded-full', over ? 'bg-error' : 'bg-primary')}
+          className={cn(
+            'h-full rounded-full transition-[width] duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
+            over ? 'bg-error' : 'bg-primary',
+          )}
           style={{ width: `${Math.min(100, (count / MAX_PAGES) * 100)}%` }}
         />
       </div>
@@ -685,8 +627,14 @@ function PageRow({
   );
 
   const isPdf = mode === 'pdf';
+  const reduceMotion = useReducedMotion();
   return (
-    <li className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-bg p-2.5 @sm/app:flex-nowrap">
+    <motion.li
+      layout="position"
+      initial={{ opacity: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-bg p-2.5 @sm/app:flex-nowrap"
+    >
       {file.type.startsWith('image/') ? (
         <img
           ref={attachPreview}
@@ -735,7 +683,7 @@ function PageRow({
           icon={<TrashIcon size={17} />}
         />
       </div>
-    </li>
+    </motion.li>
   );
 }
 
@@ -792,7 +740,7 @@ function SourceFileControl({
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-bold text-fg">{label}</span>
-          <span className="mt-0.5 block text-xs text-fg-3">{sub}</span>
+          <span className="mt-0.5 block text-xs text-fg-3 max-[360px]:hidden">{sub}</span>
         </span>
       </label>
     </div>

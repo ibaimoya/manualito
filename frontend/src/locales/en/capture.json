@@ -23,8 +23,14 @@
       "named": "With my name"
     }
   },
+  "drop": {
+    "busy": "Your manual is uploading",
+    "chooseGame": "Choose the game first",
+    "formats": "One PDF or images of its pages",
+    "release": "Drop your manual here"
+  },
   "empty": {
-    "pages": "No pages yet. Use the camera, your gallery, or upload a PDF."
+    "pages": "Add one PDF or photos of its pages."
   },
   "feedback": {
     "chooseGame": {
@@ -96,12 +102,20 @@
       "description": "Use the camera, your gallery, or upload a PDF.",
       "title": "Add some pages"
     },
+    "imagesAlreadyAdded": {
+      "description": "Remove them before adding a PDF.",
+      "title": "You have already added images"
+    },
     "imageTooLarge": {
       "description": "Each image can be up to {{max}} MB.",
       "title": "That image is too big"
     },
+    "mixedFiles": {
+      "description": "Add one PDF or images of its pages, without mixing them.",
+      "title": "Choose one format"
+    },
     "pdfAlreadyAdded": {
-      "description": "Remove it before adding images.",
+      "description": "Remove it before adding other files.",
       "title": "You've already added a PDF"
     },
     "pdfTooLarge": {
@@ -118,10 +132,6 @@
     },
     "unsupportedImage": {
       "description": "Use JPG, PNG, or WebP.",
-      "title": "That file format isn't supported"
-    },
-    "unsupportedPdf": {
-      "description": "Choose a PDF.",
       "title": "That file format isn't supported"
     }
   }

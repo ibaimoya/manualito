@@ -15,7 +15,7 @@ type ModalFrameProps = Readonly<{
   contentClassName?: string;
   dataKind: DialogDataKind;
   handle?: ReactNode;
-  /** Radix enfoca el primer focusable (la X); permite redirigirlo a un campo. */
+  /** Permite dirigir el foco inicial a un campo en lugar del botón de cierre. */
   onOpenAutoFocus?: (event: Event) => void;
 }>;
 
@@ -121,7 +121,7 @@ export const ModalBody = ({ children, className }: ModalBodyProps) => (
 );
 
 /**
- * Dialog centrado para desktop ("md+"): fade + zoom-in, ancho fijo (max-w-md
+ * Dialog centrado para desktop ("md+"). Fade + zoom-in, ancho fijo (max-w-md
  * por defecto). La variante móvil anclada abajo vive en ResponsiveModal.
  */
 
@@ -143,7 +143,7 @@ export const Dialog = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
+  /** Clases extra para el panel (anchura/altura). Sobrescriben las default. */
   contentClassName?: string;
   onOpenAutoFocus?: (event: Event) => void;
 }>) => (

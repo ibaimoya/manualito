@@ -10,6 +10,9 @@ import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { DeleteAccountButton } from '@/features/account/DeleteAccount';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { LanguageCards } from '@/features/language/LanguageCards';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
+import type { TourTarget } from '@/features/tutorial/types';
 import { Avatar } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
 
@@ -23,10 +26,11 @@ function SettingsScreen() {
 
   return (
     <div className="page-frame page-stack mx-auto max-w-4xl">
-      <header>
+      <header className="flex items-start justify-between gap-3">
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
           {t('heading')}
         </h1>
+        <HelpMenuButton className="-mr-2 md:hidden" />
       </header>
 
       <div className="flex flex-col gap-6">
@@ -34,7 +38,12 @@ function SettingsScreen() {
 
         <Group title={t('appearance.group')}>
           {/* Hint estático que no cambia al alternar el modo */}
-          <Row label={t('appearance.theme')} hint={t('appearance.themeHint')} stacked>
+          <Row
+            label={t('appearance.theme')}
+            hint={t('appearance.themeHint')}
+            stacked
+            tour="settings-theme"
+          >
             <SegmentedControl<ThemeMode>
               value={theme.mode}
               onChange={theme.setMode}
@@ -76,7 +85,11 @@ function SettingsScreen() {
               ]}
             />
           </Row>
-          <Row label={t('appearance.accentColor')} hint={t('appearance.accentColorHint')}>
+          <Row
+            label={t('appearance.accentColor')}
+            hint={t('appearance.accentColorHint')}
+            tour="settings-accent"
+          >
             <SegmentedControl<AccentVariant>
               value={theme.accent}
               onChange={theme.setAccent}
@@ -87,7 +100,12 @@ function SettingsScreen() {
               ]}
             />
           </Row>
-          <Row label={t('appearance.language')} hint={t('appearance.languageHint')} stacked>
+          <Row
+            label={t('appearance.language')}
+            hint={t('appearance.languageHint')}
+            stacked
+            tour="settings-language"
+          >
             <LanguageCards />
           </Row>
         </Group>
@@ -119,6 +137,7 @@ function AccountSection() {
     <Group title={t('account.group')}>
       <Link
         to="/profile"
+        {...tourTarget('settings-account')}
         className="icon-feedback flex items-center gap-3.5 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       >
         <Avatar
@@ -161,7 +180,7 @@ function PrivacyDataSection() {
   const { t } = useTranslation('settings');
 
   return (
-    <Group title={t('privacy.group')}>
+    <Group title={t('privacy.group')} tour="settings-privacy">
       <Row label={t('privacy.files')} hint={t('privacy.filesHint')} />
       {user ? (
         <Row label={t('privacy.deleteAccount')} hint={t('privacy.deleteAccountHint')}>
@@ -175,10 +194,11 @@ function PrivacyDataSection() {
 function Group({
   title,
   hint,
+  tour,
   children,
-}: Readonly<{ title: string; hint?: string; children: ReactNode }>) {
+}: Readonly<{ title: string; hint?: string; tour?: TourTarget; children: ReactNode }>) {
   return (
-    <section aria-label={title}>
+    <section aria-label={title} {...(tour ? tourTarget(tour) : {})}>
       <div className="mb-2.5 px-1">
         <h2 className="font-display text-lg font-bold tracking-tight text-fg">{title}</h2>
         {hint ? <p className="mt-0.5 text-xs text-fg-3">{hint}</p> : null}
@@ -192,16 +212,19 @@ function Row({
   label,
   hint,
   stacked,
+  tour,
   children,
 }: Readonly<{
   label: string;
   hint?: string;
   /** Control ancho en móvil bajo el label */
   stacked?: boolean;
+  tour?: TourTarget;
   children?: ReactNode;
 }>) {
   return (
     <div
+      {...(tour ? tourTarget(tour) : {})}
       className={cn(
         'gap-[var(--m-space-3)] p-[var(--m-space-4)]',
         stacked ? 'flex flex-col items-end md:flex-row md:items-center' : 'flex items-center',

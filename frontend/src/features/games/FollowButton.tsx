@@ -7,6 +7,7 @@ import { useToggleFollow } from '@/features/games/use-games';
 import { cn } from '@/shared/lib/cn';
 import { readMediaSnapshot, useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { LiveTrans } from '@/shared/components/LiveTrans';
+import { tourTarget } from '@/features/tutorial/targets';
 
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -55,6 +56,7 @@ export function FollowButton({
   return (
     <span className="inline-flex w-36 shrink-0">
       <motion.button
+        {...tourTarget('game-follow')}
         type="button"
         aria-pressed={following}
         aria-busy={toggle.isPending}

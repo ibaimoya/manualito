@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { ContactEmail } from '@/features/help/ContactEmail';
 import { LanguagesIcon, PrivacyIcon, ReliabilityIcon } from '@/features/help/faq-icons';
 import '@/features/help/faq.css';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
 import { Monogram } from '@/shared/components/Brand';
 import { CameraIcon, ExtractedTextIcon } from '@/shared/components/action-icons';
 import { IllustrationBadge } from '@/shared/components/IllustrationBadge';
@@ -81,6 +82,10 @@ function AboutScreen() {
 
   return (
     <div className="page-frame page-stack mx-auto max-w-5xl">
+      {/* En móvil la ayuda contextual sigue disponible también en la página de ayuda. */}
+      <div className="-mb-4 flex justify-end md:hidden">
+        <HelpMenuButton className="-mr-2" />
+      </div>
       <header className="flex flex-col items-center gap-3 text-center">
         <Monogram size={64} radius={16} />
         <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-fg md:text-4xl">
@@ -106,7 +111,7 @@ function AboutScreen() {
                   </IllustrationBadge>
                   <span className="mono text-[11px] tracking-[0.12em] text-fg-3">{step.n}</span>
                 </div>
-                {/* min-h de 2 líneas en md: "Te lo explicamos" parte y desalineaba los cuerpos. */}
+                {/* min-h de 2 líneas en md. "Te lo explicamos" parte y desalineaba los cuerpos. */}
                 <h3 className="font-display text-base font-bold text-fg @4xl/app:min-h-12">
                   {t(step.titleKey)}
                 </h3>

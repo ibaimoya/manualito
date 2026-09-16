@@ -12,6 +12,8 @@ import { ManualCard } from '@/features/manual/ManualCard';
 import { manualsQueryOptions } from '@/features/manual/use-manuals';
 import { DiscoverGames } from '@/features/games/DiscoverGames';
 import { HomeGreeting } from '@/features/home/HomeGreeting';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
 import { useAuth } from '@/features/auth/use-auth';
 import { formatRelative } from '@/shared/lib/relativeDate';
 import { type ManualSummary } from '@/shared/api/client';
@@ -30,23 +32,26 @@ function HomeScreen() {
   const firstName = user?.username?.split(/\s+/)[0];
   return (
     <div className="page-frame page-stack">
-      {/* Header de móvil — oculto en md+ porque la Sidebar ya muestra Brand. */}
+      {/* En escritorio la marca ya aparece en el menú lateral. */}
       <header className="flex items-center justify-between md:hidden">
         <div className="flex items-center gap-3">
           <Monogram size={36} radius={10} />
           <span className="font-display text-xl font-bold tracking-tight">Manualito</span>
         </div>
-        <Link
-          to="/settings"
-          className="grid size-11 place-items-center rounded-xl text-fg-2"
-          aria-label={t('account.ariaLabel')}
-        >
-          {user ? (
-            <Avatar name={user.username || user.email} size={36} />
-          ) : (
-            <GearSixIcon data-icon-motion="rotate" aria-hidden="true" size={20} />
-          )}
-        </Link>
+        <div className="flex items-center gap-1">
+          <HelpMenuButton />
+          <Link
+            to="/settings"
+            className="grid size-11 place-items-center rounded-xl text-fg-2"
+            aria-label={t('account.ariaLabel')}
+          >
+            {user ? (
+              <Avatar name={user.username || user.email} size={36} />
+            ) : (
+              <GearSixIcon data-icon-motion="rotate" aria-hidden="true" size={20} />
+            )}
+          </Link>
+        </div>
       </header>
 
       <section
@@ -63,20 +68,23 @@ function HomeScreen() {
 
       <HeroCta />
 
-      <SkeletonSwap pending={loadingManuals} skeleton={<RecentSkeleton />}>
-        {recentUnavailable ? (
-          <RecoveryNotice
-            title={t('error.title')}
-            description={t('error.manuals')}
-            onRetry={() => void manuals.refetch()}
-            retrying={manuals.isFetching}
-          />
-        ) : recentManuals.length > 0 ? (
-          <RecentManuals manuals={recentManuals} />
-        ) : (
-          <EmptyRecents />
-        )}
-      </SkeletonSwap>
+      {/* El objetivo permanece montado durante la carga y cuando no hay manuales. */}
+      <div {...tourTarget('home-activity')}>
+        <SkeletonSwap pending={loadingManuals} skeleton={<RecentSkeleton />}>
+          {recentUnavailable ? (
+            <RecoveryNotice
+              title={t('error.title')}
+              description={t('error.manuals')}
+              onRetry={() => void manuals.refetch()}
+              retrying={manuals.isFetching}
+            />
+          ) : recentManuals.length > 0 ? (
+            <RecentManuals manuals={recentManuals} />
+          ) : (
+            <EmptyRecents />
+          )}
+        </SkeletonSwap>
+      </div>
 
       {!loadingManuals && (
         <DiscoverGames excludedGameIds={recentManuals.map((manual) => manual.game_id)} />
@@ -88,7 +96,7 @@ function HomeScreen() {
 function HeroCta() {
   const { t } = useTranslation('home');
 
-  // @container: el HeroCta se adapta a su contenedor, no al viewport.
+  // @container. El HeroCta se adapta a su contenedor, no al viewport.
   return (
     <Card
       className="@container relative overflow-hidden border-0 p-5 text-fg-inv shadow-md"
@@ -108,7 +116,7 @@ function HeroCta() {
           variant="secondary"
           className="bg-bg text-primary-700 @md:w-auto @md:shrink-0 @md:px-6"
         >
-          <Link to="/capture/source">
+          <Link to="/capture/source" {...tourTarget('nav-new-manual')}>
             <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} />
             {t('hero.newManual')}
             <ArrowRightIcon

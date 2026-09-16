@@ -15,6 +15,8 @@ import {
   PasswordInput,
 } from '@/features/auth/auth-controls';
 import { useAuth } from '@/features/auth/use-auth';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
 import { accountApi } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
 import { SectionHead } from '@/shared/components/SectionHead';
@@ -44,10 +46,11 @@ function SecurityScreen() {
   if (!user) return null;
   return (
     <div className="page-frame page-stack mx-auto max-w-4xl">
-      <header>
+      <header className="flex items-start justify-between gap-3">
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
           {t('heading')}
         </h1>
+        <HelpMenuButton className="-mr-2 md:hidden" />
       </header>
       <div className="flex flex-col gap-6">
         <LastAccessSection lastLoginAt={user.last_login_at} />
@@ -62,7 +65,7 @@ function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | nul
   const { t } = useTranslation('security');
   if (lastLoginAt === null) return null;
   return (
-    <section aria-label={t('lastAccess.title')}>
+    <section aria-label={t('lastAccess.title')} {...tourTarget('security-last-access')}>
       <SectionHead eyebrow={t('lastAccess.eyebrow')} title={t('lastAccess.title')} />
       <Card className="flex items-center gap-3.5 p-5">
         <span
@@ -118,7 +121,7 @@ function ChangePasswordSection() {
   }
 
   return (
-    <section aria-label={t('password.title')}>
+    <section aria-label={t('password.title')} {...tourTarget('security-password')}>
       <SectionHead eyebrow={t('password.eyebrow')} title={t('password.title')} />
       <Card className="p-5">
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">

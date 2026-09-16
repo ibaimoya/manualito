@@ -14,6 +14,7 @@ import { accountApi, type AccountStats } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
 import { SectionHead } from '@/shared/components/SectionHead';
 import { LiveTrans } from '@/shared/components/LiveTrans';
+import { tourTarget } from '@/features/tutorial/targets';
 
 type DeleteAccountFormProps = Readonly<{
   username: string;
@@ -47,7 +48,7 @@ export function DeleteAccountSection({ username }: Readonly<{ username: string }
   const stats = useQuery(accountStatsQueryOptions());
 
   return (
-    <section aria-label={t('delete.sectionTitle')}>
+    <section aria-label={t('delete.sectionTitle')} {...tourTarget('security-delete')}>
       <SectionHead eyebrow={t('delete.dangerZone')} title={t('delete.sectionTitle')} />
       <DeleteAccountForm username={username} stats={stats.data} submitLabel={t('delete.submit')} />
     </section>

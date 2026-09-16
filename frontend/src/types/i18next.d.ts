@@ -17,6 +17,7 @@ import type profile from '../locales/es/profile.json';
 import type security from '../locales/es/security.json';
 import type settings from '../locales/es/settings.json';
 import type shell from '../locales/es/shell.json';
+import type tutorial from '../locales/es/tutorial.json';
 
 /* Claves tipadas desde los JSON en español, el idioma que manda */
 declare module 'i18next' {
@@ -41,6 +42,7 @@ declare module 'i18next' {
       security: typeof security;
       settings: typeof settings;
       shell: typeof shell;
+      tutorial: typeof tutorial;
     };
   }
 }

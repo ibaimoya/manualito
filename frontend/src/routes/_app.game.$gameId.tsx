@@ -25,6 +25,7 @@ import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
 import { SuggestedQuestions } from '@/features/games/SuggestedQuestions';
+import { tourTarget } from '@/features/tutorial/targets';
 import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
 import { mapApiError } from '@/shared/api/error-mapper';
@@ -61,7 +62,7 @@ function GameHubScreen() {
         skeleton={<HubSkeleton />}
         className="grow"
       >
-        {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
+        {/* Un refetch fallido deja isError con data en cache. Mejor lo cacheado. */}
         {detail.isFetched && detail.data === undefined ? (
           <HubError
             error={detail.error}
@@ -78,7 +79,7 @@ function GameHubScreen() {
 function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   const [rateOpen, setRateOpen] = useState(false);
-  // Estrella pulsada en la cabecera: se precarga en el diálogo, no se guarda.
+  // Estrella pulsada en la cabecera. Se precarga en el diálogo, no se guarda.
   const [presetScore, setPresetScore] = useState<number | null>(null);
   const canAsk = game.manuals.length > 0;
   const totalPages = game.manuals.reduce((sum, manual) => sum + manual.page_count, 0);
@@ -93,7 +94,9 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
       <div className="flex-1">
         <div className="page-frame page-stack">
           <GameHeader game={game} onRate={openRating} />
-          <ExplanationSection gameId={game.id} hasManuals={canAsk} />
+          <div {...tourTarget('game-explanation')}>
+            <ExplanationSection gameId={game.id} hasManuals={canAsk} />
+          </div>
           {canAsk || game.conversations_count > 0 ? (
             <ConversationsSection gameId={game.id} canAsk={canAsk} showViewAll />
           ) : null}
@@ -142,7 +145,14 @@ function GameHeader({
         </h1>
       </div>
       <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 @2xl/app:col-span-1 @2xl/app:self-start">
-        <RatingStars value={game.my_rating?.score ?? 0} size={26} align="start" onSelect={onRate} />
+        <div {...tourTarget('game-rating')}>
+          <RatingStars
+            value={game.my_rating?.score ?? 0}
+            size={26}
+            align="start"
+            onSelect={onRate}
+          />
+        </div>
         <FollowButton gameId={game.id} following={game.is_following} />
       </div>
     </header>
@@ -176,7 +186,7 @@ function ExplanationSection({
     );
   }
 
-  // Un sondeo fallido con datos en cache: mejor seguir mostrando lo que haya.
+  // Un sondeo fallido con datos en cache. Mejor seguir mostrando lo que haya.
   if (explanation.isError && explanation.data === undefined) {
     const notFound = explanation.error instanceof ApiError && explanation.error.status === 404;
     return (
@@ -199,8 +209,8 @@ function ExplanationSection({
     );
   }
 
-  // Sin datos aún o generando: el resumen llega primero y el resto se rellena;
-  // los huecos pendientes se pintan con spinner. Listo: las 4 secciones están.
+  // Sin datos aún o generando. El resumen llega primero y el resto se rellena.
+  // los huecos pendientes se pintan con spinner. Listo. Las 4 secciones están.
   const data = explanation.data;
   const sections = data?.sections ?? {};
   if (data?.status === 'failed' && Object.keys(sections).length === 0) {
@@ -242,7 +252,7 @@ function ExplanationSection({
 function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   return (
-    <section aria-labelledby="game-manuals">
+    <section aria-labelledby="game-manuals" {...tourTarget('game-manuals')}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
           <span className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
@@ -369,6 +379,7 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
     <div
       className="sticky bottom-0 z-10 border-t border-border bg-bg/95 pt-2.5 backdrop-blur"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
+      {...tourTarget('game-composer')}
     >
       <div className="page-frame">
         <SuggestedQuestions onSelect={ask} suspended={writing || question.length > 0} />

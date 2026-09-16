@@ -5,6 +5,7 @@ const KEY = {
   language: 'manualito.language',
   onboardingSeen: 'manualito.onboarding.seen',
   conversationsSeen: 'manualito.conversations.seen',
+  tutorialSeen: 'manualito.tutorial.seen',
 } as const;
 
 const SettingsSchema = z.object({
@@ -18,10 +19,12 @@ const LanguageSchema = z.enum(['es', 'en']);
 export type StoredLanguage = z.output<typeof LanguageSchema>;
 const DEFAULT_LANGUAGE: StoredLanguage = 'es';
 
-// Marca de lectura por conversación: el último "updated_at" que el usuario vio
+// Marca de lectura por conversación. El último "updated_at" que el usuario vio
 // al abrir el chat. Si el de la lista es más nuevo, hay respuesta sin leer.
 const ConversationsSeenSchema = z.record(z.string(), z.string());
 type ConversationsSeen = z.output<typeof ConversationsSeenSchema>;
+
+const TutorialSeenSchema = z.record(z.string(), z.literal(true));
 
 function safeRead<S extends z.ZodTypeAny>(
   key: string,
@@ -111,6 +114,15 @@ export const storage = {
     const seen = safeRead(KEY.conversationsSeen, ConversationsSeenSchema, {});
     if (seen[conversationId] === updatedAt) return;
     safeWrite(KEY.conversationsSeen, { ...seen, [conversationId]: updatedAt });
+  },
+
+  isTutorialSeen(userId: string): boolean {
+    return safeRead(KEY.tutorialSeen, TutorialSeenSchema, {})[userId] === true;
+  },
+  markTutorialSeen(userId: string): void {
+    const seen = safeRead(KEY.tutorialSeen, TutorialSeenSchema, {});
+    if (seen[userId] === true) return;
+    safeWrite(KEY.tutorialSeen, { ...seen, [userId]: true });
   },
 };
 

@@ -36,6 +36,7 @@ import { useRetypingTitle, useTypewriter } from '@/features/conversations/use-ty
 import { GameCover } from '@/features/games/GameCover';
 import { gameDetailKey, gameDetailQueryOptions, myGamesKey } from '@/features/games/use-games';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
+import { tourTarget } from '@/features/tutorial/targets';
 import { Meeple } from '@/shared/components/Brand';
 import { Markdown } from '@/shared/components/Markdown';
 import { UploaderAvatar, useUploadedByText } from '@/shared/components/UploadedBy';
@@ -55,10 +56,10 @@ import { toastApiError } from '@/shared/lib/toastApiError';
 import { LiveTrans } from '@/shared/components/LiveTrans';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
-// q comparte cota con el backend; c reabre una conversación guardada.
+// q comparte cota con el backend. C reabre una conversación guardada.
 type ChatSearch = { q?: string; c?: string };
 
-// validateSearch tolerante: un parámetro presente pero inválido se ignora (queda undefined).
+// validateSearch tolerante. Un parámetro presente pero inválido se ignora (queda undefined).
 function readChatSearch(search: Record<string, unknown>): ChatSearch {
   const text = (value: unknown, max?: number): string | undefined => {
     if (typeof value !== 'string' || value.length < 1) return undefined;
@@ -68,7 +69,7 @@ function readChatSearch(search: Record<string, unknown>): ChatSearch {
   return { q: text(search.q, QUESTION_MAX), c: text(search.c) };
 }
 
-// Tarjetas de la bienvenida: preguntas genéricas válidas para cualquier manual.
+// Tarjetas de la bienvenida. Preguntas genéricas válidas para cualquier manual.
 type ChatKey = ParseKeys<'chat'>;
 
 const WELCOME_SUGGESTIONS: ReadonlyArray<ChatKey> = [
@@ -172,14 +173,14 @@ function useChatNavigation(gameId: string, initialConversationId: string | undef
 }
 
 function useGameChatContext(gameId: string) {
-  // El detalle del juego da el nombre de cabecera y el pool de manuales vivo:
+  // El detalle del juego da el nombre de cabecera y el pool de manuales vivo.
   // sin manuales no se puede preguntar, y las citas a un manual borrado dejan
   // de ser clicables (no se enlaza a un manual que ya no existe).
   const game = useQuery(gameDetailQueryOptions(gameId));
   const gameName = game.data?.name ?? null;
   const canAsk = (game.data?.manuals.length ?? 0) > 0;
   const { gameIds: processingGameIds } = useProcessingManuals();
-  // null mientras el detalle del juego no ha cargado: no marcamos una cita como
+  // null mientras el detalle del juego no ha cargado. No marcamos una cita como
   // no disponible hasta saber qué manuales siguen en el pool.
   const availableManualIds = useMemo<ReadonlySet<string> | null>(
     () => (game.data ? new Set(game.data.manuals.map((manual) => manual.id)) : null),
@@ -206,7 +207,7 @@ function useConversationMessages(
     refetchInterval: (query) => pendingAssistantPollInterval(query.state.data),
   });
   const historyLoading = conversationId !== null && history.isPending;
-  // El servidor ya incluye los turnos nuevos al refrescar: dedupe por id.
+  // El servidor ya incluye los turnos nuevos al refrescar. Dedupe por id.
   const messages = useMemo(
     () => mergeConversationMessages(history.data ?? [], turns),
     [history.data, turns],
@@ -260,7 +261,7 @@ async function sendConversationTurn(args: {
   if (activeConversationId === null) {
     activeConversationId = (await conversationsApi.create(gameId, signal)).id;
     signal.throwIfAborted();
-    // Guardado ya: un reintento reutiliza la conversación, no crea otra.
+    // Guardado ya. Un reintento reutiliza la conversación, no crea otra.
     setConversationId(activeConversationId);
   }
   return conversationsApi.sendMessage(activeConversationId, question, undefined, signal);
@@ -278,7 +279,7 @@ function refreshAfterTurn(
   queryClient
     .invalidateQueries({ queryKey: conversationsKey(data.conversation.game_id) })
     .catch(() => undefined);
-  // Chatear sigue el juego en el backend: refresca detalle (botón) y biblioteca.
+  // Chatear sigue el juego en el backend. Refresca detalle (botón) y biblioteca.
   queryClient
     .invalidateQueries({ queryKey: gameDetailKey(data.conversation.game_id) })
     .catch(() => undefined);
@@ -346,7 +347,7 @@ function useAskFlow(args: {
       setAnimateId(completedAssistantAnimationId(data.assistant_message));
       setConversationId(data.conversation.id);
       refreshAfterTurn(queryClient, data);
-      // Fija ?c en la URL (replace): refrescar reabre esta misma conversación.
+      // Fija ?c en la URL (replace). Refrescar reabre esta misma conversación.
       openConversation(data.conversation.id);
     },
   });
@@ -446,7 +447,7 @@ function ChatSessionScreen({
   const { t: tChat } = useTranslation('chat');
   const { t: tShell } = useTranslation('shell');
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  // Id de la última respuesta recién llegada: solo esa se escribe letra a letra.
+  // Id de la última respuesta recién llegada. Solo esa se escribe letra a letra.
   const [animateId, setAnimateId] = useState<string | null>(null);
   const initialQueueRef = useRef<string | null>(initialQ ?? null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -477,7 +478,7 @@ function ChatSessionScreen({
     clearConversationRoute,
   });
 
-  // Dispara ?q una vez —cuando ya se sabe si hay manuales— y lo quita de la URL.
+  // Envía ?q una vez cuando hay manuales y lo retira de la URL.
   useInitialQuestion({
     queue: initialQueueRef,
     gameLoaded: game.data !== undefined,
@@ -504,7 +505,7 @@ function ChatSessionScreen({
       behavior: reducedMotion ? 'instant' : 'smooth',
     });
   });
-  // Los mensajes nuevos siguen el fondo; cambiar la preferencia no cambia la lectura.
+  // Los mensajes nuevos siguen el fondo. Cambiar la preferencia no cambia la lectura.
   useEffect(() => {
     scrollToLatest();
   }, [messages.length, pendingQuestion, askMutation.isPending, hasPendingAssistant]);
@@ -528,12 +529,11 @@ function ChatSessionScreen({
     messages.length === 0 && pendingQuestion === null && !historyLoading && !history.isError;
   const hasConversation = !showEmpty;
   const showReadOnlyEmpty = showEmpty && canAsk === false;
-  // Hasta que el backend nombra la conversación seguimos en "Nueva conversación",
-  // así el título solo se reescribe una vez: cuando llega el nombre real.
+  // Conserva el título provisional hasta recibir el nombre de la conversación.
   const convSummary = useConversationSummary(conversationId, conversations.data);
   const titleTarget = convSummary?.title ?? tChat('fallback.conversationTitle');
 
-  // Mirar el chat lo marca como leído (su updated_at actual); si la respuesta se
+  // Mirar el chat lo marca como leído (su updated_at actual). Si la respuesta se
   // completa estando aquí, el poll lo actualiza y la conversación sigue leída.
   const seenAt = convSummary?.updated_at;
   useMarkConversationSeen(conversationId, seenAt);
@@ -658,7 +658,7 @@ function ChatConversation({
   return (
     <div className="page-frame py-5">
       <SkeletonSwap pending={historyLoading && !pendingQuestion} skeleton={<HistorySkeleton />}>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4" {...tourTarget('chat-messages')}>
           {historyError ? (
             <p className="py-6 text-center text-sm text-fg-3">{t('error.history')}</p>
           ) : null}
@@ -710,21 +710,23 @@ function ChatComposerBar({
     >
       <div className="page-frame">
         {canAsk ? null : <SourcesUnavailableNotice />}
-        <MessageComposer
-          value={draft}
-          onChange={onDraftChange}
-          onSubmit={() => onSubmit(draft)}
-          placeholder={placeholder}
-          maxLength={QUESTION_MAX}
-          disabled={disabled}
-          sendPending={sendPending}
-        />
+        <div {...tourTarget('chat-composer')}>
+          <MessageComposer
+            value={draft}
+            onChange={onDraftChange}
+            onSubmit={() => onSubmit(draft)}
+            placeholder={placeholder}
+            maxLength={QUESTION_MAX}
+            disabled={disabled}
+            sendPending={sendPending}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-/** Avatar circular del bot: ficha de la marca sobre un disco ámbar claro. */
+/** Avatar circular del bot. Ficha de la marca sobre un disco ámbar claro. */
 function ChatBotAvatar({ size = 34 }: Readonly<{ size?: number }>) {
   return (
     <span
@@ -732,7 +734,7 @@ function ChatBotAvatar({ size = 34 }: Readonly<{ size?: number }>) {
       className="grid shrink-0 place-items-center rounded-full border border-border bg-primary-100 text-primary-700"
       style={{ width: size, height: size }}
     >
-      {/* La masa visual de la ficha cae abajo: la subimos un pelo para centrarla. */}
+      {/* La masa visual de la ficha cae abajo. La subimos un pelo para centrarla. */}
       <span
         className="grid place-items-center"
         style={{ transform: `translateY(-${Math.max(1, Math.round(size * 0.035))}px)` }}
@@ -743,7 +745,7 @@ function ChatBotAvatar({ size = 34 }: Readonly<{ size?: number }>) {
   );
 }
 
-/** Cabecera del chat: portada + título de la conversación + juego + "Nueva". */
+/** Cabecera del chat. Portada + título de la conversación + juego + "Nueva". */
 function ChatHeader({
   gameName,
   title,
@@ -783,6 +785,7 @@ function ChatHeader({
             onClick={onNew}
             className="h-11 min-w-11 shrink-0 rounded-lg"
             aria-label={t('aria.newConversation')}
+            {...tourTarget('chat-new')}
           >
             <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} className="shrink-0" />
             <span className="hidden sm:inline">{t('actions.new')}</span>
@@ -793,7 +796,7 @@ function ChatHeader({
   );
 }
 
-/** Estado vacío: en vez de un lienzo en blanco, guía con preguntas-tarjeta. */
+/** Estado vacío. En vez de un lienzo en blanco, guía con preguntas-tarjeta. */
 function ChatWelcome({
   gameName,
   onPick,
@@ -817,7 +820,7 @@ function ChatWelcome({
         <p className="mono mb-3 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-fg-3">
           {t('welcome.try')}
         </p>
-        <div className="grid gap-2.5 sm:grid-cols-2">
+        <div className="grid gap-2.5 sm:grid-cols-2" {...tourTarget('chat-suggestions')}>
           {WELCOME_SUGGESTIONS.map((key) => {
             const question = t(key);
             return (
@@ -848,7 +851,7 @@ function ChatWelcome({
   );
 }
 
-/** Conversación sin mensajes de un juego que ya no tiene manuales: solo lectura. */
+/** Conversación sin mensajes de un juego que ya no tiene manuales. Solo lectura. */
 function ReadOnlyEmpty({ gameName }: Readonly<{ gameName: string | null }>) {
   const { t } = useTranslation('chat');
 
@@ -1072,7 +1075,10 @@ function SourceChips({
   }
   const pages = [...byPage.entries()].sort((a, b) => a[1].page - b[1].page);
   return (
-    <div className="mt-[13px] border-t border-dashed border-border-strong pt-2.5">
+    <div
+      className="mt-[13px] border-t border-dashed border-border-strong pt-2.5"
+      {...tourTarget('chat-sources')}
+    >
       <p id={headingId} className="mb-1.5 text-xs font-medium text-fg-3">
         {t('sources.heading')}
       </p>

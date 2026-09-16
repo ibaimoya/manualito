@@ -40,6 +40,8 @@ import { ViewerControlGlyph } from '@/features/manual/ViewerControlGlyph';
 import controlMotion from '@/features/manual/viewer-control-motion.module.css';
 import { pageStatus } from '@/features/manual/pageStatus';
 import { usePageSearch } from '@/features/manual/usePageSearch';
+import { tourTarget } from '@/features/tutorial/targets';
+import { useTutorialViews } from '@/features/tutorial/views';
 import {
   manualDetailQueryOptions,
   manualsKey,
@@ -58,7 +60,7 @@ import { toastApiError } from '@/shared/lib/toastApiError';
 import { LiveTrans } from '@/shared/components/LiveTrans';
 
 export const Route = createFileRoute('/_app/manual/$manualId')({
-  // "page" opcional: las citas del chat abren el manual en la página citada.
+  // "page" opcional. Las citas del chat abren el manual en la página citada.
   validateSearch: (search: Record<string, unknown>): { page?: number } => {
     const page = Number(search.page);
     return Number.isInteger(page) && page > 0 ? { page } : {};
@@ -88,7 +90,7 @@ function editErrorToast(error: unknown): void {
   });
 }
 
-/** El foco está en un campo de texto: no robar las flechas para navegar. */
+/** El foco está en un campo de texto. No robar las flechas para navegar. */
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
@@ -96,7 +98,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** Página inicial: la citada por el chat si existe en el manual; si no, la primera. */
+/** Página inicial. La citada por el chat si existe en el manual. Si no, la primera. */
 function resolveInitialPage(
   pages: readonly ManualDetailPage[],
   initialPage: number | undefined,
@@ -339,7 +341,7 @@ function ManualDetailLoaded({
     onSuccess: () => {
       setReprocessOpen(false);
       qc.invalidateQueries({ queryKey: detailKey }).catch(() => undefined);
-      // Reprocesar vuelve a poner el manual en "indexing": refresca la lista para
+      // Reprocesar vuelve a poner el manual en "indexing". Refresca la lista para
       // que las ruletas contextuales de la biblioteca vuelvan a encenderse.
       qc.invalidateQueries({ queryKey: manualsKey }).catch(() => undefined);
     },
@@ -447,6 +449,11 @@ function ManualDetailLoaded({
     busy,
   );
 
+  useTutorialViews('viewer', view, setView, {
+    text: canEdit ? ['viewer-edit'] : [],
+    compare: ['viewer-compare'],
+  });
+
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col" data-testid="manual-workspace">
@@ -474,7 +481,7 @@ function ManualDetailLoaded({
             />
           </div>
           {manual.is_own ? (
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1" {...tourTarget('viewer-manage')}>
               <Button
                 variant="ghost"
                 size="sm"
@@ -611,6 +618,7 @@ function ManualDetailLoaded({
                       className="rounded-[6px] font-medium hover:bg-fg/[0.04] aria-pressed:bg-fg/[0.06]"
                       aria-pressed={editing}
                       disabled={saveText.isPending}
+                      {...tourTarget('viewer-edit')}
                       onClick={() => {
                         if (editing) cancelEdit();
                         else setEditingPage(page.page_number);
@@ -1017,6 +1025,7 @@ function SearchField({
   const hasQuery = query.trim().length > 0;
   return (
     <div
+      {...tourTarget('viewer-search')}
       className={cn(
         'flex h-10 w-full min-w-0 flex-auto @3xl/app:max-w-[340px] items-center gap-2 rounded-xl border bg-card pl-3.5 pr-1 transition-colors @2xl/app:w-auto @2xl/app:flex-1 pointer-coarse:h-12',
         !disabled && hasQuery

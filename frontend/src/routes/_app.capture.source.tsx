@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { GameTypeahead, SelectedGameChip } from '@/features/upload/GameTypeahead';
 import { gameDetailKey, gameDetailQueryOptions, myGamesKey } from '@/features/games/use-games';
 import { manualsKey } from '@/features/manual/use-manuals';
+import { tourTarget } from '@/features/tutorial/targets';
 import { api, isAbortApiError, type GameSearchItem } from '@/shared/api/client';
 import type { GameDetail } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
@@ -36,7 +37,7 @@ import { toastApiError } from '@/shared/lib/toastApiError';
 import { LiveTrans } from '@/shared/components/LiveTrans';
 
 export const Route = createFileRoute('/_app/capture/source')({
-  // "gameId" opcional: si entras desde el hub de un juego, llega preseleccionado.
+  // "gameId" opcional. Si entras desde el hub de un juego, llega preseleccionado.
   validateSearch: (search: Record<string, unknown>): { gameId?: string } => ({
     gameId: typeof search.gameId === 'string' && search.gameId ? search.gameId : undefined,
   }),
@@ -87,19 +88,19 @@ function NewManualScreen() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { gameId } = Route.useSearch();
-  // Juego de origen (si entras desde su hub) preseleccionado; solo valor inicial.
+  // Juego de origen (si entras desde su hub) preseleccionado. Solo valor inicial.
   const presetDetail = useQuery({
     ...gameDetailQueryOptions(gameId ?? ''),
     enabled: Boolean(gameId),
   });
   const presetGame = presetDetail.data ? toGameSearchItem(presetDetail.data) : null;
-  // "undefined" ⇒ usa el preseleccionado; al elegir o quitar, manda tu elección.
+  // "undefined" ⇒ usa el preseleccionado. Al elegir o quitar, manda tu elección.
   const [chosenGame, setChosenGame] = useState<GameSearchItem | null | undefined>(undefined);
   const game = chosenGame === undefined ? presetGame : chosenGame;
   const [pages, setPages] = useState<UploadPage[]>([]);
   // Un manual usa imágenes XOR un PDF, nunca ambos.
   const mode = deriveUploadMode(pages);
-  // Compartir con la comunidad: activado por defecto (manda visibility 'shared').
+  // Compartir con la comunidad. Activado por defecto (manda visibility 'shared').
   const [share, setShare] = useState(true);
   const [showName, setShowName] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -152,10 +153,10 @@ function NewManualScreen() {
       });
     },
     onSuccess: (data, input) => {
-      // Subir un manual sigue el juego en el backend: refresca detalle y biblioteca.
+      // Subir un manual sigue el juego en el backend. Refresca detalle y biblioteca.
       qc.invalidateQueries({ queryKey: gameDetailKey(data.game_id) }).catch(() => undefined);
       qc.invalidateQueries({ queryKey: myGamesKey }).catch(() => undefined);
-      // Y la lista de manuales: alimenta las ruletas contextuales (portada/tarjeta),
+      // Y la lista de manuales. Alimenta las ruletas contextuales (portada/tarjeta),
       // que si no, no se enteran de que el nuevo manual está indexándose.
       qc.invalidateQueries({ queryKey: manualsKey }).catch(() => undefined);
       navigate({
@@ -298,14 +299,16 @@ function NewManualScreen() {
       <div className="page-frame grid flex-1 grid-cols-1 content-start gap-8 py-6 @3xl/app:grid-cols-2 @3xl/app:gap-10 lg:py-8">
         <section className="flex flex-col gap-5">
           <StepHeader n={1} title={t('steps.game')} done={game !== null} />
-          {game ? (
-            <SelectedGameChip game={game} onChange={() => setChosenGame(null)} />
-          ) : (
-            <GameTypeahead onSelect={setChosenGame} focusOnMount />
-          )}
+          <div {...tourTarget('upload-game')}>
+            {game ? (
+              <SelectedGameChip game={game} onChange={() => setChosenGame(null)} />
+            ) : (
+              <GameTypeahead onSelect={setChosenGame} focusOnMount />
+            )}
+          </div>
           <p className="text-sm leading-relaxed text-fg-2">{t('game.description')}</p>
           {game ? (
-            <div>
+            <div {...tourTarget('upload-name')}>
               <label
                 htmlFor={titleInputId}
                 className="mb-1.5 block px-3.5 text-sm font-semibold text-fg"
@@ -335,7 +338,10 @@ function NewManualScreen() {
 
         <section className="flex flex-col gap-4">
           <StepHeader n={2} title={t('steps.pages')} done={pages.length > 0} />
-          <div className="grid grid-cols-1 gap-2.5 max-md:grid-cols-3 @sm/app:grid-cols-3">
+          <div
+            className="grid grid-cols-1 gap-2.5 max-md:grid-cols-3 @sm/app:grid-cols-3"
+            {...tourTarget('upload-sources')}
+          >
             <SourceFileControl
               inputId={cameraInputId}
               icon={<CameraIcon size={19} />}
@@ -393,7 +399,10 @@ function NewManualScreen() {
               {t('empty.pages')}
             </p>
           ) : (
-            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+            <div
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4"
+              {...tourTarget('upload-pages')}
+            >
               <PageCounter count={pages.length} mode={mode} />
               <ul className="flex flex-col gap-2">
                 {pages.map(({ id, file }, index) => (
@@ -412,7 +421,9 @@ function NewManualScreen() {
             </div>
           )}
 
-          <ShareToggle checked={share} onChange={setShare} disabled={busy || game === null} />
+          <div {...tourTarget('upload-share')}>
+            <ShareToggle checked={share} onChange={setShare} disabled={busy || game === null} />
+          </div>
           {share ? (
             <ShareOptions
               showName={showName}
@@ -428,6 +439,7 @@ function NewManualScreen() {
             loading={busy}
             disabled={!ready}
             onClick={submitManual}
+            {...tourTarget('upload-submit')}
           >
             <SparkleIcon aria-hidden="true" size={18} />
             {ctaLabel}
@@ -436,7 +448,14 @@ function NewManualScreen() {
       </div>
 
       <footer className="sticky bottom-0 border-t border-border bg-bg/95 p-4 backdrop-blur md:hidden">
-        <Button block size="lg" loading={busy} disabled={!ready} onClick={submitManual}>
+        <Button
+          block
+          size="lg"
+          loading={busy}
+          disabled={!ready}
+          onClick={submitManual}
+          {...tourTarget('upload-submit')}
+        >
           <SparkleIcon aria-hidden="true" size={18} />
           {ctaLabel}
         </Button>
@@ -463,8 +482,8 @@ function StepHeader({ n, title, done }: Readonly<{ n: number; title: string; don
 }
 
 /**
- * Interruptor "compartir con la comunidad": toda la tarjeta es el control
- * (role=switch) para una zona táctil amplia; la pastilla de la derecha es decorativa.
+ * Interruptor "compartir con la comunidad". Toda la tarjeta es el control
+ * (role=switch) para una zona táctil amplia. La pastilla de la derecha es decorativa.
  */
 type SwitchProps = Readonly<{
   checked: boolean;
@@ -495,7 +514,7 @@ function ShareOptions({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" {...tourTarget('upload-share-options')}>
       <button
         type="button"
         aria-expanded={open}

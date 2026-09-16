@@ -40,6 +40,7 @@ import {
   conversationsQueryOptions,
   useConversationsRead,
 } from '@/features/conversations/use-conversations';
+import { tourTarget } from '@/features/tutorial/targets';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 import { cn } from '@/shared/lib/cn';
@@ -100,7 +101,10 @@ function ConversationsScreen() {
       />
 
       <div className="page-frame relative flex flex-1 flex-col py-6 lg:py-8">
-        <header className="mb-6 flex items-center gap-4 @3xl/app:mb-8">
+        <header
+          className="mb-6 flex items-center gap-4 @3xl/app:mb-8"
+          {...tourTarget('conversations-header')}
+        >
           <GameCover name={gameName} size={56} radius={14} processing={gameIds.has(gameId)} />
           <div className="min-w-0 flex-1 space-y-2">
             <p className="page-eyebrow break-words">{t('header.subtitle', { gameName })}</p>
@@ -109,7 +113,7 @@ function ConversationsScreen() {
         </header>
 
         {all.length > 0 ? (
-          <div className="relative mb-4">
+          <div className="relative mb-4" {...tourTarget('conversations-filter')}>
             <MagnifyingGlassIcon
               data-icon-motion="search"
               size={16}
@@ -161,7 +165,11 @@ function ConversationsScreen() {
           ) : null}
 
           {visible.length > 0 && (
-            <ul className="conversation-list" aria-label={t('page.listLabel')}>
+            <ul
+              className="conversation-list"
+              aria-label={t('page.listLabel')}
+              {...tourTarget('conversations-list')}
+            >
               {visible.map((conversation) => (
                 <ConversationRow
                   key={conversation.id}
@@ -179,7 +187,12 @@ function ConversationsScreen() {
             asChild
             className="sticky bottom-6 z-10 mt-6 h-13 self-end rounded-full text-[15px] font-bold shadow-lg motion-safe:active:scale-[0.96]"
           >
-            <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
+            <Link
+              to="/chat/$gameId"
+              params={{ gameId }}
+              search={{}}
+              {...tourTarget('conversations-new')}
+            >
               <PlusIcon data-icon-motion="plus" size={18} aria-hidden="true" />
               {t('actions.newConversation')}
             </Link>
@@ -247,7 +260,7 @@ function ConversationRow({
           tone="accent"
           className="relative z-[1]"
         />
-        {/* El área principal cubre la fila; el menú conserva su propio control. */}
+        {/* El área principal cubre la fila. El menú conserva su propio control. */}
         <button
           type="button"
           onClick={openChat}
@@ -284,6 +297,7 @@ function ConversationRow({
             <button
               type="button"
               aria-label={t('aria.optionsFor', { title })}
+              {...tourTarget('conversations-row-menu')}
               className="icon-feedback relative z-10 grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg data-[state=open]:text-fg"
             >
               <DotsThreeVerticalIcon aria-hidden="true" size={17} />
@@ -392,7 +406,7 @@ function RenameDialog({
 }
 
 /**
- * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar:
+ * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar.
  * cada apertura arranca con el título actual, sin borradores abandonados.
  */
 function RenameForm({

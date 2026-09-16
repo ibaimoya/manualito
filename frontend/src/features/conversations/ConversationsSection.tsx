@@ -10,6 +10,7 @@ import { TrashIcon } from '@/shared/components/action-icons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
+import { tourTarget } from '@/features/tutorial/targets';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { cn } from '@/shared/lib/cn';
 import { formatRelative } from '@/shared/lib/relativeDate';
@@ -25,7 +26,7 @@ import './conversation-list.css';
 const MAX_ROWS = 8;
 
 /**
- * Conversaciones pasadas del juego, en la pantalla de resultado: retomar
+ * Conversaciones pasadas del juego, en la pantalla de resultado. Retomar
  * una donde se quedó o empezar otra desde cero.
  */
 export function ConversationsSection({
@@ -53,7 +54,11 @@ export function ConversationsSection({
   const conversations = data ?? [];
 
   return (
-    <section aria-labelledby="result-conversations" className="pt-1">
+    <section
+      aria-labelledby="result-conversations"
+      className="pt-1"
+      {...tourTarget('game-conversations')}
+    >
       <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <h2
           id="result-conversations"

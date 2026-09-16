@@ -13,10 +13,13 @@ import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useSidebarCollapsed } from '@/shared/hooks/useSidebarCollapsed';
 import { useAuth } from '@/features/auth/use-auth';
 import { LanguageMenu } from '@/features/language/LanguageMenu';
+import { tourTarget } from '@/features/tutorial/targets';
+import { TutorialProvider } from '@/features/tutorial/TutorialProvider';
+import type { TourTarget } from '@/features/tutorial/types';
 import { cn } from '@/shared/lib/cn';
 import { VerifyEmailBanner } from '@/features/auth/verify-email-banner';
 
-// Rutas inmersivas: sin barra de navegación (ocupan toda la pantalla).
+// Rutas inmersivas. Sin barra de navegación (ocupan toda la pantalla).
 const IMMERSIVE_PREFIXES = [
   '/capture',
   '/processing',
@@ -30,10 +33,10 @@ function showsNav(pathname: string): boolean {
   return !IMMERSIVE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** Área autenticada: redirige a login si no hay sesión y monta el shell. */
+/** Área autenticada. Redirige a login si no hay sesión y monta el shell. */
 export const Route = createFileRoute('/_app')({
   beforeLoad: ({ context, location }) => {
-    // /privacy es legal y pública: se ve con o sin sesión, pero dentro del shell
+    // /privacy es legal y pública. Se ve con o sin sesión, pero dentro del shell
     // (sidebar + breadcrumb). El resto del área exige login.
     if (!context.user && location.pathname !== '/privacy') {
       throw redirect({ to: '/login', search: { redirect: location.href } });
@@ -51,9 +54,9 @@ function AppLayout() {
   const { collapsed, toggle } = useSidebarCollapsed();
 
   return (
-    // h-dvh exacto: debe desbordar #main-content, no este wrapper.
+    // h-dvh exacto. Debe desbordar #main-content, no este wrapper.
     <div className="flex h-dvh flex-col bg-bg text-fg">
-      {/* Skip-link (WCAG 2.4.1): oculto hasta recibir foco con Tab. */}
+      {/* Skip-link (WCAG 2.4.1). Oculto hasta recibir foco con Tab. */}
       <a
         href="#main-content"
         className="fixed left-3 top-3 z-[60] -translate-y-20 rounded-xl bg-primary px-4 py-2 font-semibold text-fg-inv shadow-md transition-transform duration-200 ease-[var(--ease-mn)] focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30"
@@ -89,6 +92,7 @@ function AppLayout() {
       </main>
 
       {showNav && !isDesktop ? <BottomNav pathname={location.pathname} /> : null}
+      <TutorialProvider />
     </div>
   );
 }
@@ -106,10 +110,10 @@ function BottomNav({ pathname }: Readonly<{ pathname: string }>) {
         <NavItem to="/home" pathname={pathname} icon={HouseIcon}>
           {t('navigation.home')}
         </NavItem>
-        <NavItem to="/history" pathname={pathname} icon={BookOpenIcon}>
+        <NavItem to="/history" pathname={pathname} icon={BookOpenIcon} tour="nav-library">
           {t('navigation.library')}
         </NavItem>
-        <NavItem to="/explore" pathname={pathname} icon={CompassIcon}>
+        <NavItem to="/explore" pathname={pathname} icon={CompassIcon} tour="nav-explore">
           {t('navigation.explore')}
         </NavItem>
         <NavItem to="/settings" pathname={pathname} icon={GearSixIcon}>
@@ -124,11 +128,13 @@ function NavItem({
   to,
   pathname,
   icon: NavIcon,
+  tour,
   children,
 }: Readonly<{
   to: '/home' | '/history' | '/explore' | '/settings';
   pathname: string;
   icon: Icon;
+  tour?: TourTarget;
   children: string;
 }>) {
   const active = pathname === to;
@@ -137,6 +143,7 @@ function NavItem({
       <Link
         to={to}
         aria-current={active ? 'page' : undefined}
+        {...(tour ? tourTarget(tour) : {})}
         className={cn(
           'icon-feedback flex min-h-[44px] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-semibold transition-colors',
           active ? 'text-primary' : 'text-fg-3 hover:text-fg-2',

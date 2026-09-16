@@ -40,6 +40,9 @@ import {
 } from '@/features/manual/use-manuals';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { ManualThumbnail } from '@/features/manual/ManualThumbnail';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
+import { useTutorialViews } from '@/features/tutorial/views';
 import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
 import { type MyGame, type MyGamesResponse } from '@/shared/api/games';
@@ -78,35 +81,61 @@ function HistoryScreen() {
   const games = useQuery(myGamesQueryOptions());
   const manuals = useQuery(manualsQueryOptions());
   const activeQuery = view === 'games' ? games : manuals;
+  const loading = activeQuery.isPending && activeQuery.errorUpdateCount === 0;
 
   const gameItems = games.data?.games ?? [];
   const manualItems = manuals.data ?? [];
+  useTutorialViews(
+    'library',
+    view,
+    setView,
+    {
+      games: gameItems.length > 0 ? ['library-search', 'library-game-card'] : ['library-empty'],
+      manuals:
+        manualItems.length === 0
+          ? ['library-empty']
+          : filterManuals(manualItems, manualQuery).length > 0
+            ? ['library-search', 'library-manual-card']
+            : ['library-search'],
+    },
+    !games.isPending && !manuals.isPending,
+  );
 
   return (
     <div className="page-frame page-stack">
-      <h1 className="page-title">{t('title')}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="page-title">{t('title')}</h1>
+        <HelpMenuButton className="-mr-2 md:hidden" />
+      </div>
 
       <div className="flex flex-col gap-3 @2xl/app:flex-row @2xl/app:items-center @2xl/app:gap-4">
-        <SegmentedControl
-          className="[&_[role=radio]]:min-h-9"
-          value={view}
-          onChange={setView}
-          ariaLabel={t('tabs.ariaLabel')}
-          options={[
-            {
-              value: 'games',
-              label: t('tabs.games'),
-              icon: <LibraryDiceIcon />,
-              count: games.data?.games.length,
-            },
-            {
-              value: 'manuals',
-              label: t('tabs.manuals'),
-              icon: <ScrollIcon aria-hidden="true" />,
-              count: manuals.data?.length,
-            },
-          ]}
-        />
+        {/* Espera al resultado de la consulta para incluir los pasos disponibles. */}
+        <div
+          className="grid"
+          data-tour-view={view}
+          {...(loading ? {} : tourTarget('library-tabs'))}
+        >
+          <SegmentedControl
+            className="[&_[role=radio]]:min-h-9"
+            value={view}
+            onChange={setView}
+            ariaLabel={t('tabs.ariaLabel')}
+            options={[
+              {
+                value: 'games',
+                label: t('tabs.games'),
+                icon: <LibraryDiceIcon />,
+                count: games.data?.games.length,
+              },
+              {
+                value: 'manuals',
+                label: t('tabs.manuals'),
+                icon: <ScrollIcon aria-hidden="true" />,
+                count: manuals.data?.length,
+              },
+            ]}
+          />
+        </div>
         <div className="@2xl/app:ml-auto @2xl/app:w-80">
           {view === 'games' && gameItems.length > 0 ? <GameJumpSearch games={gameItems} /> : null}
           {view === 'manuals' && manualItems.length > 0 ? (
@@ -117,7 +146,7 @@ function HistoryScreen() {
 
       <SkeletonSwap
         key={view}
-        pending={activeQuery.isPending && activeQuery.errorUpdateCount === 0}
+        pending={loading}
         skeleton={
           <div className={view === 'games' ? GAME_GRID : MANUAL_GRID}>
             {[0, 1, 2, 3].map((i) =>
@@ -136,7 +165,6 @@ function HistoryScreen() {
   );
 }
 
-// ── Vistas ────────────────────────────────────────────────────────────────
 function GamesView({ query }: Readonly<{ query: UseQueryResult<MyGamesResponse> }>) {
   if (query.data === undefined && query.errorUpdateCount > 0) {
     return (
@@ -154,6 +182,16 @@ function GamesView({ query }: Readonly<{ query: UseQueryResult<MyGamesResponse> 
   );
 }
 
+function filterManuals(
+  manuals: readonly ManualSummary[],
+  filter: string,
+): readonly ManualSummary[] {
+  const term = filter.trim().toLowerCase();
+  return term
+    ? manuals.filter((manual) => (manual.title ?? manual.game_name).toLowerCase().includes(term))
+    : manuals;
+}
+
 function ManualsView({
   query,
   filter,
@@ -168,10 +206,7 @@ function ManualsView({
   const manuals = query.data ?? [];
   if (manuals.length === 0) return <LibEmpty tab="manuals" />;
 
-  const term = filter.trim().toLowerCase();
-  const shown = term
-    ? manuals.filter((m) => (m.title ?? m.game_name).toLowerCase().includes(term))
-    : manuals;
+  const shown = filterManuals(manuals, filter);
   if (shown.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-fg-2">
@@ -188,7 +223,6 @@ function ManualsView({
   );
 }
 
-// ── Tarjeta de juego — estantería (portada arriba) ──────────────────────────
 function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
   const { t } = useTranslation('library');
   const { gameIds, processingByGame } = useProcessingManuals();
@@ -199,6 +233,7 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
       to="/game/$gameId"
       params={{ gameId: game.id }}
       aria-label={t(processing ? 'aria.openGameProcessing' : 'aria.openGame', { game: game.name })}
+      {...tourTarget('library-game-card')}
       className={cn(
         'game-shelf-card flex flex-col overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-xs',
         'hover:border-border-strong',
@@ -260,7 +295,6 @@ function GameShelfCard({ game }: Readonly<{ game: MyGame }>) {
   );
 }
 
-// ── Tarjeta de manual — fila tipo documento (estado prominente) ─────────────
 function ManualDocCard({
   manual,
   onDelete,
@@ -303,6 +337,7 @@ function ManualDocCard({
           'manual-interaction relative flex gap-3.5 rounded-2xl border border-border bg-card p-3.5 shadow-xs',
           'hover:border-border-strong',
         )}
+        {...tourTarget('library-manual-card')}
       >
         <ManualThumbnail
           color={gameColor(name)}
@@ -436,14 +471,16 @@ function ManualIndicators({ manual }: Readonly<{ manual: ManualSummary }>) {
   );
 }
 
-// ── Filtro de manuales (filtra la lista, no navega) ─────────────────────────
 function ManualFilter({
   value,
   onChange,
 }: Readonly<{ value: string; onChange: (next: string) => void }>) {
   const { t } = useTranslation('library');
   return (
-    <div className="search-feedback flex h-11 w-full items-center gap-2.5 rounded-2xl border border-border-strong bg-bg px-3.5 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
+    <div
+      className="search-feedback flex h-11 w-full items-center gap-2.5 rounded-2xl border border-border-strong bg-bg px-3.5 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20"
+      {...tourTarget('library-search')}
+    >
       <MagnifyingGlassIcon
         data-icon-motion="search"
         size={20}
@@ -472,7 +509,6 @@ function ManualFilter({
   );
 }
 
-// ── Estados vacío / error / carga ───────────────────────────────────────────
 function LibEmpty({ tab }: Readonly<{ tab: View }>) {
   const { t } = useTranslation('library');
   const copy =
@@ -480,7 +516,10 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
       ? { hint: t('empty.games.hint'), title: t('empty.games.title') }
       : { hint: t('empty.manuals.hint'), title: t('empty.manuals.title') };
   return (
-    <div className="mt-2 flex flex-col items-center gap-1.5 rounded-[20px] border-[1.5px] border-dashed border-border-strong bg-surface px-6 py-[52px] text-center">
+    <div
+      className="mt-2 flex flex-col items-center gap-1.5 rounded-[20px] border-[1.5px] border-dashed border-border-strong bg-surface px-6 py-[52px] text-center"
+      {...tourTarget('library-empty')}
+    >
       <div className="mb-2 flex items-end gap-1.5">
         <span className="rotate-[-12deg] opacity-30">
           <Meeple size={28} color="var(--m-text-3)" />
@@ -494,7 +533,7 @@ function LibEmpty({ tab }: Readonly<{ tab: View }>) {
       </div>
       <h2 className="font-display text-[19px] font-bold text-fg">{copy.title}</h2>
       <p className="max-w-sm text-sm leading-relaxed text-fg-2">{copy.hint}</p>
-      {/* Juegos se nutre de seguir (Explorar); subir manual va solo en Manuales. */}
+      {/* Juegos se nutre de seguir (Explorar). Subir manual va solo en Manuales. */}
       {tab === 'games' ? (
         <Button asChild size="lg" className="mt-3.5">
           <Link to="/explore">
@@ -566,7 +605,6 @@ function ManualSkeleton() {
   );
 }
 
-// ── Utilidades de presentación ──────────────────────────────────────────────
 function Dot() {
   return (
     <span aria-hidden="true" className="text-border-strong">
@@ -575,7 +613,7 @@ function Dot() {
   );
 }
 
-/** Barra de progreso de indexado, relleno degradado. Decorativa: el progreso
+/** Barra de progreso de indexado, relleno degradado. Decorativa. El progreso
  *  real lo anuncia el texto "LEYENDO PÁGINA X DE Y · %" (con aria-live) al lado,
  *  así que la barra es solo visual y no duplica el rol progressbar. */
 function ProgressBar({ pct }: Readonly<{ pct: number }>) {
@@ -616,7 +654,7 @@ function manualStatusView(
         icon: WarningIcon,
       };
     case 'pending_review':
-      // OCR dudoso en alguna página (fallo o baja confianza): no es moderación,
+      // OCR dudoso en alguna página (fallo o baja confianza). No es moderación,
       // avisa de que conviene repasar el texto. Ámbar + triángulo = "algo pasa".
       return {
         tone: 'warning',

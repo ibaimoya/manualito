@@ -4,6 +4,7 @@ import { MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
+import { tourTarget } from '@/features/tutorial/targets';
 
 export type JumpGame = Readonly<{ id: string; name: string }>;
 
@@ -12,7 +13,7 @@ type Props = Readonly<{ games: ReadonlyArray<JumpGame> }>;
 const MAX_RESULTS = 8;
 
 /**
- * Buscador de la pestaña Juegos: filtra tus juegos en local y al elegir salta a
+ * Buscador de la pestaña Juegos. Filtra tus juegos en local y al elegir salta a
  * su hub. Combobox accesible (flechas, Enter, Esc), sin red ni atribución.
  */
 export function GameJumpSearch({ games }: Props) {
@@ -67,7 +68,7 @@ export function GameJumpSearch({ games }: Props) {
   }
 
   return (
-    <div className="relative w-full md:w-80">
+    <div className="relative w-full md:w-80" {...tourTarget('library-search')}>
       <div
         className={cn(
           'search-feedback flex h-11 items-center gap-2.5 border bg-bg px-3.5 transition-colors',

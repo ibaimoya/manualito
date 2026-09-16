@@ -8,15 +8,15 @@ import {
 } from './dialog';
 import { useNamedMediaQuery } from '@/shared/hooks/useMediaQuery';
 
-// Variante móvil: panel anclado abajo con asa táctil.
+// Variante móvil. Panel anclado abajo con asa táctil.
 const SHEET_CONTENT_CLASS =
   'fixed bottom-0 left-0 right-0 z-50 mx-auto max-h-[calc(100dvh-1rem)] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-lg';
 const SHEET_HEADER_CLASS = 'flex items-start justify-between gap-3 px-5 pb-2 pt-4';
 
 /**
- * Modal responsive: panel centrado en desktop, anclado abajo en móvil.
+ * Modal responsive. Panel centrado en desktop, anclado abajo en móvil.
  * Las dos variantes comparten un único ModalFrame (solo cambian clases y
- * atributos): cruzar el breakpoint con el modal abierto no desmonta el
+ * atributos). Cruzar el breakpoint con el modal abierto no desmonta el
  * contenido, así que el borrador del formulario sobrevive.
  */
 export function ResponsiveModal({
@@ -34,7 +34,7 @@ export function ResponsiveModal({
   title: string;
   description?: string;
   children: ReactNode;
-  /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
+  /** Clases extra para el panel (anchura/altura). Sobrescriben las default. */
   contentClassName?: string;
   bodyClassName?: string;
   onOpenAutoFocus?: (event: Event) => void;

@@ -7,21 +7,24 @@ import {
   GearSixIcon,
   type Icon,
 } from '@phosphor-icons/react';
-import { type ReactNode, useId } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { motion, type TargetAndTransition } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Tooltip } from '@/components/ui/tooltip';
+import { HelpDisclosure, HelpMenu, HelpMenuTrigger } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
+import type { TourTarget } from '@/features/tutorial/types';
 import { Avatar } from '@/shared/components/Avatar';
 import { LockUp, Monogram } from '@/shared/components/Brand';
 import { cn } from '@/shared/lib/cn';
+import { NAVIGATION_SPRING } from '@/shared/lib/navigationMotion';
 import { elideEmail } from '@/shared/lib/elideEmail';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { ExploreIcon, SidebarToggleIcon } from './navigation-icons';
 
-// El shell conserva el estado de plegado para ajustar también el contenido.
-type NavTo = '/home' | '/history' | '/explore' | '/settings' | '/about';
+type NavTo = '/home' | '/history' | '/explore' | '/settings';
 
 type SidebarUser = Readonly<{
   username: string;
@@ -44,25 +47,40 @@ type NavKey =
   | 'navigation.library'
   | 'navigation.settings';
 
-type NavItem = { to: NavTo; icon: Icon; label: NavKey; hover?: TargetAndTransition };
+type NavLinkItem = {
+  kind: 'link';
+  to: NavTo;
+  icon: Icon;
+  label: NavKey;
+  hover?: TargetAndTransition;
+  tour?: TourTarget;
+};
 
-const NAV_MAIN: NavItem[] = [
-  { to: '/home', icon: HouseIcon, label: 'navigation.home' },
-  { to: '/history', icon: BookOpenIcon, label: 'navigation.library' },
+type NavMenuItem = { kind: 'help'; icon: Icon; label: NavKey; hover?: TargetAndTransition };
+
+type NavItem = NavLinkItem | NavMenuItem;
+
+const NAV_ITEMS: NavItem[] = [
+  { kind: 'link', to: '/home', icon: HouseIcon, label: 'navigation.home' },
   {
+    kind: 'link',
+    to: '/history',
+    icon: BookOpenIcon,
+    label: 'navigation.library',
+    tour: 'nav-library',
+  },
+  {
+    kind: 'link',
     to: '/explore',
     icon: ExploreIcon,
     label: 'navigation.explore',
+    tour: 'nav-explore',
     hover: {
       transform: 'rotate(0deg) scale(1)',
     },
   },
-];
-
-// Utilidades de soporte, ancladas abajo junto al perfil.
-const NAV_FOOTER: NavItem[] = [
   {
-    to: '/about',
+    kind: 'help',
     icon: QuestionIcon,
     label: 'navigation.help',
     hover: {
@@ -76,6 +94,7 @@ const NAV_FOOTER: NavItem[] = [
     },
   },
   {
+    kind: 'link',
     to: '/settings',
     icon: GearSixIcon,
     label: 'navigation.settings',
@@ -90,6 +109,19 @@ const NAV_FOOTER: NavItem[] = [
 export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) {
   const { t } = useTranslation('shell');
   const indicatorId = useId();
+  const [help, setHelp] = useState<{
+    pathname: string;
+    open: boolean;
+    selected: 'help' | 'faq';
+  } | null>(null);
+  const helpActive = help?.pathname === pathname;
+  const helpOpen = !collapsed && helpActive && help.open;
+  const highlighted = helpActive ? help.selected : pathname;
+  const setHelpOpen = (open: boolean) => {
+    setHelp({ pathname, open, selected: 'help' });
+  };
+  const openFaq = () => setHelp({ pathname: '/about', open: true, selected: 'faq' });
+  const resetHelp = () => setHelp(null);
 
   return (
     <motion.aside
@@ -104,7 +136,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         collapsed ? 'w-[72px]' : 'w-60',
       )}
     >
-      {/* Cabecera de altura fija: la columna no salta verticalmente al plegar. */}
+      {/* Cabecera de altura fija. La columna no salta verticalmente al plegar. */}
       <div
         className={cn(
           'flex h-[72px] shrink-0 items-center',
@@ -122,7 +154,10 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         )}
         <button
           type="button"
-          onClick={onToggle}
+          onClick={() => {
+            resetHelp();
+            onToggle?.();
+          }}
           aria-expanded={!collapsed}
           aria-label={t(collapsed ? 'sidebar.toggle.expand' : 'sidebar.toggle.collapse')}
           className={cn(
@@ -153,7 +188,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
 
       <div className={cn('shrink-0 pb-4', collapsed ? 'px-2' : 'px-3')}>
         <Button asChild block aria-label={collapsed ? t('navigation.newManual') : undefined}>
-          <Link to="/capture/source">
+          <Link to="/capture/source" {...tourTarget('nav-new-manual')}>
             <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} />
             {collapsed ? null : t('navigation.newManual')}
           </Link>
@@ -169,17 +204,14 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
         aria-label={t('navigation.aria.sections')}
       >
         <NavList
-          items={NAV_MAIN}
           pathname={pathname}
           collapsed={collapsed}
           indicatorId={indicatorId}
-        />
-        <NavList
-          items={NAV_FOOTER}
-          pathname={pathname}
-          collapsed={collapsed}
-          indicatorId={indicatorId}
-          className="mt-auto pb-3"
+          helpOpen={helpOpen}
+          setHelpOpen={setHelpOpen}
+          highlighted={highlighted}
+          onOpenFaq={openFaq}
+          onNavigate={resetHelp}
         />
       </motion.nav>
 
@@ -193,17 +225,23 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
 }
 
 function NavList({
-  items,
   pathname,
   collapsed,
   indicatorId,
-  className,
+  helpOpen,
+  setHelpOpen,
+  highlighted,
+  onOpenFaq,
+  onNavigate,
 }: Readonly<{
-  items: NavItem[];
   pathname: string;
   collapsed: boolean;
   indicatorId: string;
-  className?: string;
+  helpOpen: boolean;
+  setHelpOpen: (open: boolean) => void;
+  highlighted: string;
+  onOpenFaq: () => void;
+  onNavigate: () => void;
 }>) {
   const { t } = useTranslation('shell');
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -212,64 +250,110 @@ function NavList({
   );
 
   return (
-    <ul className={cn('flex flex-col gap-1', className)}>
-      {items.map((item) => {
+    <ul className="flex flex-1 flex-col gap-1 pb-3">
+      {NAV_ITEMS.map((item) => {
         const label = t(item.label);
-        const active = pathname === item.to;
+        const active = item.kind === 'link' && pathname === item.to;
+        const selected =
+          item.kind === 'help'
+            ? ['help', 'faq', '/about'].includes(highlighted)
+            : highlighted === item.to;
+        const itemClass = cn(
+          'navigation-link relative flex min-h-11 items-center rounded-xl text-sm font-semibold',
+          collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
+          selected ? 'text-primary-700' : 'text-fg-2 hover:text-fg',
+        );
+        const indicator = selected ? (
+          <motion.span
+            key={reducedMotion ? 'static' : 'animated'}
+            layoutId={reducedMotion ? undefined : indicatorId}
+            initial={false}
+            aria-hidden="true"
+            data-navigation-indicator=""
+            className="pointer-events-none absolute inset-0 -z-10 bg-primary-100"
+            style={{ borderRadius: 12 }}
+            transition={NAVIGATION_SPRING}
+          />
+        ) : null;
+        const content = (
+          <>
+            <motion.span
+              aria-hidden="true"
+              className="navigation-icon grid h-6 w-6 shrink-0 place-items-center"
+              variants={{
+                static: { transform: 'rotate(0deg) scale(1)', transition: { duration: 0 } },
+                rest: {
+                  transform: 'rotate(0deg) scale(1)',
+                  transition: { duration: 0.12 },
+                },
+                hover: item.hover ?? {
+                  transform: [
+                    null,
+                    'rotate(-12deg) scale(1)',
+                    'rotate(8deg) scale(1)',
+                    'rotate(-4deg) scale(1)',
+                    'rotate(0deg) scale(1)',
+                  ],
+                  transition: { duration: 0.32, ease: 'easeInOut' },
+                },
+              }}
+            >
+              <item.icon size={20} weight={active ? 'duotone' : undefined} aria-hidden="true" />
+            </motion.span>
+            <span className={cn(collapsed && 'sr-only')}>{label}</span>
+          </>
+        );
         return (
           <motion.li
-            key={item.to}
+            key={item.kind === 'link' ? item.to : item.kind}
+            className={item.kind === 'help' ? 'mt-auto' : undefined}
             initial={false}
             animate={canAnimate ? 'rest' : 'static'}
             whileHover={canAnimate ? 'hover' : undefined}
           >
-            <MaybeTip show={collapsed} label={label}>
-              <Link
-                to={item.to}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'navigation-link relative flex min-h-11 items-center rounded-xl text-sm font-semibold',
-                  collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
-                  active ? 'text-primary-700' : 'text-fg-2 hover:text-fg',
-                )}
+            {item.kind === 'help' && !collapsed ? (
+              <HelpDisclosure
+                className={itemClass}
+                open={helpOpen}
+                onOpenChange={setHelpOpen}
+                indicator={indicator}
+                highlighted={helpOpen && highlighted === 'faq' ? 'faq' : 'help'}
+                onOpenFaq={onOpenFaq}
               >
-                {active && (
-                  <motion.span
-                    key={reducedMotion ? 'static' : 'animated'}
-                    layoutId={reducedMotion ? undefined : indicatorId}
-                    initial={false}
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 -z-10 bg-primary-100"
-                    style={{ borderRadius: 12 }}
-                    transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-                  />
-                )}
-                <motion.span
-                  aria-hidden="true"
-                  className="navigation-icon grid h-6 w-6 shrink-0 place-items-center"
-                  variants={{
-                    static: { transform: 'rotate(0deg) scale(1)', transition: { duration: 0 } },
-                    rest: {
-                      transform: 'rotate(0deg) scale(1)',
-                      transition: { duration: 0.12 },
-                    },
-                    hover: item.hover ?? {
-                      transform: [
-                        null,
-                        'rotate(-12deg) scale(1)',
-                        'rotate(8deg) scale(1)',
-                        'rotate(-4deg) scale(1)',
-                        'rotate(0deg) scale(1)',
-                      ],
-                      transition: { duration: 0.32, ease: 'easeInOut' },
-                    },
-                  }}
+                {content}
+              </HelpDisclosure>
+            ) : item.kind === 'help' ? (
+              <HelpMenu side="top" align="start">
+                <MaybeTip show={collapsed} label={label}>
+                  <HelpMenuTrigger asChild>
+                    <button
+                      type="button"
+                      {...tourTarget('nav-help')}
+                      className={cn(
+                        itemClass,
+                        'w-full text-left data-[state=open]:bg-primary-100 data-[state=open]:text-primary-700',
+                      )}
+                    >
+                      {indicator}
+                      {content}
+                    </button>
+                  </HelpMenuTrigger>
+                </MaybeTip>
+              </HelpMenu>
+            ) : (
+              <MaybeTip show={collapsed} label={label}>
+                <Link
+                  to={item.to}
+                  onClick={onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  {...(item.tour ? tourTarget(item.tour) : {})}
+                  className={itemClass}
                 >
-                  <item.icon size={20} weight={active ? 'duotone' : undefined} aria-hidden="true" />
-                </motion.span>
-                <span className={cn(collapsed && 'sr-only')}>{label}</span>
-              </Link>
-            </MaybeTip>
+                  {indicator}
+                  {content}
+                </Link>
+              </MaybeTip>
+            )}
           </motion.li>
         );
       })}
@@ -277,7 +361,6 @@ function NavList({
   );
 }
 
-/** Envuelve el disparador en un tooltip solo cuando la sidebar está plegada. */
 function MaybeTip({
   show,
   label,

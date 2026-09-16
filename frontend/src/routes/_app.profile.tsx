@@ -21,6 +21,8 @@ import { useAuth, useLogout } from '@/features/auth/use-auth';
 import { useResendVerification } from '@/features/auth/use-resend-verification';
 import { EditProfileDialog } from '@/features/profile/EditProfileDialog';
 import { accountStatsQueryOptions } from '@/features/profile/use-account';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
 import type { AuthUser } from '@/shared/api/auth';
 import i18n from '@/app/i18n';
 import { Avatar } from '@/shared/components/Avatar';
@@ -62,7 +64,10 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
 
   return (
     <div className="page-frame page-stack mx-auto max-w-5xl">
-      <Card className="bg-surface p-5 shadow-none @md/app:p-6 @3xl/app:p-8">
+      <Card
+        className="bg-surface p-5 shadow-none @md/app:p-6 @3xl/app:p-8"
+        {...tourTarget('profile-identity')}
+      >
         <div className="flex flex-col gap-6 @3xl/app:flex-row @3xl/app:items-center @3xl/app:gap-8">
           <div className="flex min-w-0 flex-1 flex-col items-start gap-4 @md/app:flex-row @md/app:items-center @md/app:gap-5">
             <Avatar
@@ -94,6 +99,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
                     iconClassName="translate-y-px"
                   />
                 )}
+                <HelpMenuButton className="ml-auto -mr-2 md:hidden" />
               </div>
               <p className="mono mt-0.5 truncate text-sm text-fg-3">@{user.username}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
@@ -108,7 +114,10 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 border-t border-border pt-4 @3xl/app:w-44 @3xl/app:shrink-0 @3xl/app:grid-cols-1 @3xl/app:border-l @3xl/app:border-t-0 @3xl/app:pl-5 @3xl/app:pt-0">
+          <div
+            className="grid grid-cols-2 gap-2 border-t border-border pt-4 @3xl/app:w-44 @3xl/app:shrink-0 @3xl/app:grid-cols-1 @3xl/app:border-l @3xl/app:border-t-0 @3xl/app:pl-5 @3xl/app:pt-0"
+            {...tourTarget('profile-actions')}
+          >
             <Button
               variant="ghost"
               size="sm"
@@ -148,7 +157,7 @@ function ProfileLoaded({ user }: Readonly<{ user: AuthUser }>) {
         </div>
       </Card>
 
-      <section aria-label={t('activity.section')}>
+      <section aria-label={t('activity.section')} {...tourTarget('profile-activity')}>
         <SectionHead eyebrow={t('activity.section')} title={t('activity.title')} />
         <StatCards />
       </section>

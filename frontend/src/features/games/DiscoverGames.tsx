@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { SkeletonSwap } from '@/components/ui/skeleton-swap';
+import { tourTarget } from '@/features/tutorial/targets';
 import { type GameSearchItem } from '@/shared/api/client';
 import { GameCover } from './GameCover';
 import { ShuffleGlyph } from './ShuffleGlyph';
@@ -35,7 +36,11 @@ export function DiscoverGames({
   if (isSuccess && games.length === 0) return emptyState ?? null;
 
   return (
-    <section aria-labelledby={headingId} className="space-y-3">
+    <section
+      aria-labelledby={headingId}
+      className="space-y-3"
+      {...tourTarget('explore-suggestions')}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id={headingId} className="font-display text-lg font-semibold text-fg">
           {t('discovery.heading')}

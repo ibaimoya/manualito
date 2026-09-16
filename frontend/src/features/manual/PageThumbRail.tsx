@@ -7,8 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { HelpIndicator } from '@/components/ui/help-indicator';
 import type { ManualDetailPage } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
-import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { pageStatus, pageStatusLegend, STATUS_HELP_TONE } from '@/features/manual/pageStatus';
+import { tourTarget } from '@/features/tutorial/targets';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 
 /** Índice de páginas vertical en escritorio y horizontal en móvil. */
 
@@ -161,7 +162,7 @@ function PageButton({
 }
 
 function Legend() {
-  // Dos columnas alineadas: con 6 estados, el wrap libre quedaba descuadrado.
+  // Dos columnas alineadas. Con 6 estados, el wrap libre quedaba descuadrado.
   // La leyenda conserva texto y forma para no depender solo del color.
   return (
     <div className="grid grid-cols-2 gap-x-2.5 gap-y-2">
@@ -234,11 +235,12 @@ export function PageThumbRail({
     return () => observer.disconnect();
   }, [activePage]);
 
-  // Un solo <nav> (landmark único); escritorio y móvil se alternan por media query.
+  // Un solo <nav> (landmark único). Escritorio y móvil se alternan por media query.
   return (
     <nav
       aria-label={t('page.navLabel')}
       className="min-w-0 @4xl/app:flex @4xl/app:min-h-0 @4xl/app:flex-1 @4xl/app:flex-col"
+      {...tourTarget('viewer-pages')}
     >
       {/* Cabecera y leyenda de escritorio. */}
       <div className="hidden @4xl/app:block">

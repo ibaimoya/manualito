@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import i18n from '@/app/i18n';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server } from '@tests/_helpers/server';
@@ -52,6 +54,21 @@ function renderBanner(user: AuthUser | null) {
 }
 
 describe('VerifyEmailBanner', () => {
+  it('reenvía en el idioma actual aunque haya cambiado con el banner abierto', async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post('/api/auth/email/resend', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ detail: 'ok' });
+      }),
+    );
+    renderBanner(BASE);
+    await act(() => i18n.changeLanguage('en'));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Resend' }));
+    await waitFor(() => expect(body).toEqual({ email: 'ana@example.com', locale: 'en' }));
+  });
+
   it('se muestra si el email no está verificado', () => {
     renderBanner(BASE);
     expect(screen.getByText(/Verifica tu email/i)).toBeInTheDocument();

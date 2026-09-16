@@ -57,6 +57,7 @@ jobs:
 
       - name: Renderizar Docker Compose
         run: |
+          install -d -m 0700 secrets
           install -m 0600 /dev/null secrets/tunnel_token.txt
           trap 'rm -f secrets/tunnel_token.txt' EXIT
           docker compose config --quiet
@@ -252,7 +253,8 @@ jobs:
         run: pnpm routes:generate
 
       - name: Tests con cobertura
-        run: pnpm test:coverage
+        # Limita la carga de los tests sobre el runner compartido.
+        run: pnpm test:coverage --maxWorkers=2
 
       - name: Guardar cobertura del frontend
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

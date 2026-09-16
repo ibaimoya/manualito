@@ -72,7 +72,7 @@ function updateError(error: unknown, takenMessage: string, fallbackMessage: stri
 }
 
 function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: () => void }>) {
-  const { t } = useTranslation('profile');
+  const { t, i18n } = useTranslation('profile');
   const qc = useQueryClient();
   const usernameId = useId();
   const emailId = useId();
@@ -81,7 +81,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
   const [color, setColor] = useState<AvatarColor>(user.avatar_color ?? 'accent');
   const [figure, setFigure] = useState<AvatarFigure>(user.avatar_figure ?? 'initials');
 
-  const changes: UpdateProfileInput = {};
+  const changes: Omit<UpdateProfileInput, 'locale'> = {};
   if (username.trim() !== user.username && username.trim().length > 0) {
     changes.username = username.trim();
   }
@@ -92,7 +92,11 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
   const emailChanged = changes.email !== undefined;
 
   const save = useMutation({
-    mutationFn: () => accountApi.updateProfile(changes),
+    mutationFn: () =>
+      accountApi.updateProfile({
+        ...changes,
+        locale: i18n.resolvedLanguage === 'en' ? 'en' : 'es',
+      }),
     onSuccess: (data) => {
       qc.setQueryData(AUTH_ME_KEY, data);
       onClose();

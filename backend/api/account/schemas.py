@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import EmailStr, Field
 
 from api import config
+from api.auth.schemas import EmailLocale
 from api.schemas import StrictModel
 from database.models.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 
@@ -36,6 +37,7 @@ class UpdateProfileRequest(StrictModel):
     email: EmailStr | None = Field(default=None, max_length=EMAIL_MAX_LENGTH)
     avatar_color: AvatarColor | None = None
     avatar_figure: AvatarFigure | None = None
+    locale: EmailLocale
 
 
 class ChangePasswordRequest(StrictModel):

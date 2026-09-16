@@ -9,8 +9,10 @@ la detiene con el mismo perfil.
 
 La aplicación completa queda en `https://localhost`; `http://localhost`
 redirige con 308 y la API solo se alcanza bajo `/api/*`. OpenAPI está disponible
-en `https://localhost/docs`. Flower y Mailpit mantienen sus puertos locales
-`5555` y `8025`.
+en `https://localhost/docs`. Flower mantiene su puerto local `5555`.
+Mailpit utiliza el puerto `8025` cuando se selecciona como servicio de correo.
+El certificado de `localhost` es local y el navegador puede mostrar un aviso
+de confianza.
 
 ### Windows
 
@@ -45,12 +47,11 @@ docker en Linux [aquí](https://www.digitalocean.com/community/tutorials/how-to-
 4. Si Manualito ya está arrancado, pregunta si debe pararlo antes de medir VRAM.
 5. Recomienda un perfil LLM.
 6. Recomienda OCR.
-7. Pide confirmación.
-8. Guarda `deploy/local/selected.env`.
-9. Prepara Docker Compose con los overrides necesarios y espera a que Caddy esté
-   sano.
-10. En modo interactivo, ofrece confiar una vez en la CA local. En CI o modo no
-    interactivo muestra el comando manual y continúa.
+7. Permite elegir Mailpit para pruebas locales o Resend para enviar correos reales.
+8. Pide confirmación.
+9. Crea en `secrets/` las credenciales que falten y guarda `deploy/local/selected.env`.
+10. Prepara Docker Compose con los overrides necesarios.
+11. Ofrece arrancar la aplicación al terminar.
 
 La recomendación es conservadora, úsala a no ser que sepas lo que estás cambiando.
 
@@ -90,40 +91,13 @@ responsabilidad.
 | `deploy/linux/manualito.sh` | lógica común de `setup.sh`, `start.sh` y `stop.sh` |
 | `deploy/compose/accelerators/` | overrides de aceleración |
 | `deploy/compose/ocr/` | overrides de OCR |
+| `deploy/compose/mail/` | configuración de envío con Resend |
 | `deploy/profiles/llm/` | perfiles de modelo |
 | `deploy/local/selected.env` | selección local generada por `setup` |
 | `deploy/local/logs/` | logs completos de Docker |
 
 `deploy/local/` es estado local de la máquina. No representa una configuración
 portable del proyecto.
-
-## HTTPS y CA local
-
-Caddy conserva su CA en el volumen `caddy-data`; solo `root.crt` puede copiarse
-al host. `root.key` nunca sale del volumen. Confiar o dejar de confiar en la CA
-es una decisión explícita del usuario y `stop` no modifica el almacén de
-certificados.
-
-En Windows, la instalación se limita al almacén Root del usuario y no requiere
-UAC:
-
-```powershell
-.\local-ca.bat trust
-.\local-ca.bat status
-.\local-ca.bat untrust
-```
-
-En Debian o Ubuntu, la implementación usa `sudo update-ca-certificates`:
-
-```bash
-./local-ca.sh trust
-./local-ca.sh status
-./local-ca.sh untrust
-```
-
-Las huellas que Manualito instala se registran en el estado local del usuario.
-La rotación retira únicamente huellas registradas por Manualito; nunca elimina
-certificados por nombre o sujeto.
 
 ## Redes y túnel opcional
 
@@ -148,6 +122,13 @@ El init `edge-ca-init` copia únicamente `root.crt` al volumen `edge-ca`.
 `cloudflared` verifica con esa CA el origen HTTPS y Caddy acepta
 `CF-Connecting-IP` solo desde la subred de `edge-net`. Las rutas `/docs`,
 `/redoc` y `/openapi.json` responden 404 en el hostname configurado.
+
+## Correos de cuenta
+
+El setup permite elegir Mailpit, seleccionado por defecto, o Resend para el
+envío por SMTP. La elección se conserva al arrancar y parar la aplicación.
+La [documentación de correo](MAIL.md) describe el flujo de envío, la
+configuración de cada entorno y la gestión de credenciales y reintentos.
 
 ## Logs
 

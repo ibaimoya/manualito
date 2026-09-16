@@ -13,8 +13,7 @@
 # .env files
 .env.local
 !config/*.env
-!secrets/*.txt
-secrets/tunnel_token.txt
+/secrets/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

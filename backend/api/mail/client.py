@@ -1,7 +1,11 @@
-"""Cliente SMTP pequeño para correos transaccionales."""
+"""Envío de correos transaccionales por SMTP."""
 
+from datetime import UTC, datetime
+from email.headerregistry import Address
 from email.message import EmailMessage
+from email.utils import format_datetime, parseaddr
 from pathlib import Path
+from uuid import uuid4
 
 import aiosmtplib
 
@@ -17,12 +21,22 @@ async def send_email(
     subject: str,
     text_body: str,
     html_body: str | None = None,
+    idempotency_key: str | None = None,
+    message_date: str | None = None,
 ) -> None:
     """Envía un correo de texto y, si se indica, una alternativa HTML con logo."""
     message = EmailMessage()
     message["From"] = config.SMTP_FROM_EMAIL
     message["To"] = to_email
     message["Subject"] = subject
+    message_key = idempotency_key or str(uuid4())
+    sender_domain = Address(addr_spec=parseaddr(config.SMTP_FROM_EMAIL)[1]).domain
+    message["Message-ID"] = f"<{message_key}@{sender_domain}>"
+    message["Date"] = message_date or format_datetime(datetime.now(UTC), usegmt=True)
+    if config.SMTP_REPLY_TO:
+        message["Reply-To"] = config.SMTP_REPLY_TO
+    if idempotency_key:
+        message["Resend-Idempotency-Key"] = idempotency_key
     message.set_content(text_body)
     if html_body is not None:
         html_part = EmailMessage()
@@ -35,7 +49,8 @@ async def send_email(
             disposition="inline",
             filename="manualito-logo.png",
         )
-        message.make_alternative()
+        html_part.set_boundary(f"manualito-related-{message_key}")
+        message.make_alternative(boundary=f"manualito-alternative-{message_key}")
         message.attach(html_part)
 
     await aiosmtplib.send(

@@ -65,6 +65,7 @@ async def register_handler(
         to_email=result.user.email,
         username=result.user.username,
         token=result.verification_token,
+        locale=payload.locale,
     )
     return _auth_response_with_cookies(
         response,
@@ -146,6 +147,7 @@ async def resend_verification_email_handler(
             to_email=email_job.email,
             username=email_job.username,
             token=email_job.token,
+            locale=payload.locale,
         )
     return AuthMessageResponse(detail=VERIFICATION_EMAIL_SENT_DETAIL)
 
@@ -168,6 +170,7 @@ async def forgot_password_handler(
             to_email=email_job.email,
             username=email_job.username,
             token=email_job.token,
+            locale=payload.locale,
         )
     return AuthMessageResponse(detail=PASSWORD_RESET_EMAIL_SENT_DETAIL)
 

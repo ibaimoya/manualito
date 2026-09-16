@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as ProfileRoute } from '@/routes/_app.profile';
 import { renderRoute, routeComponent, TEST_USER } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
+import i18n from '@/app/i18n';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -60,6 +61,36 @@ describe('/profile · identidad', () => {
     expect(within(dialog).getByRole('group', { name: 'Color del avatar' })).toBeInTheDocument();
     expect(within(dialog).getByRole('group', { name: 'Figura del avatar' })).toBeInTheDocument();
   });
+
+  it.each(['es', 'en'] as const)(
+    'pide la nueva verificación en %s al cambiar el email',
+    async (locale) => {
+      let body: Record<string, unknown> | undefined;
+      server.use(
+        http.patch('/api/me', async ({ request }) => {
+          body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            user: { ...TEST_USER, email: 'new@example.com', email_verified_at: null },
+            csrf_token: 'csrf-test-token',
+          });
+        }),
+      );
+      const user = userEvent.setup();
+      renderProfile();
+      await user.click(await screen.findByRole('button', { name: 'Editar perfil' }));
+      const dialog = await screen.findByRole('dialog');
+      await act(() => i18n.changeLanguage(locale));
+      const save = within(dialog).getByRole('button', {
+        name: locale === 'en' ? 'Save changes' : 'Guardar cambios',
+      });
+      expect(save).toBeDisabled();
+      const email = within(dialog).getByLabelText('Email');
+      await user.clear(email);
+      await user.type(email, 'new@example.com');
+      await user.click(save);
+      await waitFor(() => expect(body).toEqual({ email: 'new@example.com', locale }));
+    },
+  );
 });
 
 describe('/profile · actividad', () => {

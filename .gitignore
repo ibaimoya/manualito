@@ -480,11 +480,10 @@ frontend/dev-dist/
 
 # Documentación interna generada o de trabajo
 /docs/architecture/
-/docs/benchmarks/ocr_preprocessing/dataset/**
-!/docs/benchmarks/ocr_preprocessing/dataset/manifest.json
-/docs/benchmarks/ocr_preprocessing/outputs/tmp_preprocessed/
-/docs/benchmarks/ocr_preprocessing/outputs/results.json
-/docs/benchmarks/rag/recuperacion/outputs/.ranx-runtime/
+/docs/benchmarks/ocr/preprocessing/dataset/raw/
+/docs/benchmarks/ocr/preprocessing/.tmp_preprocessed/
+/docs/benchmarks/rag/retrieval/.ranx-runtime/
+**/.ipynb_checkpoints/
 
 # Artefactos locales de desarrollo y revisión
 /.playwright-cli/

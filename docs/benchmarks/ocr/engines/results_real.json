@@ -1,0 +1,824 @@
+{
+  "fecha": "2026-05-03",
+  "metrica": "matching aproximado de fragmentos reales",
+  "umbral_fragmento_detectado_wer": 0.35,
+  "motores": [
+    "PaddleOCR CPU",
+    "PaddleOCR GPU",
+    "Tesseract",
+    "EasyOCR"
+  ],
+  "imagenes_reales": [
+    {
+      "id": "test1",
+      "nombre": "Periódico Granma",
+      "archivo": "test1.jpg"
+    },
+    {
+      "id": "test2",
+      "nombre": "Manual Merck Veterinaria",
+      "archivo": "test2.jpg"
+    },
+    {
+      "id": "test3",
+      "nombre": "Diario de Burgos (1928)",
+      "archivo": "test3.jpg"
+    }
+  ],
+  "detalle": {
+    "PaddleOCR CPU": [
+      {
+        "imagen_id": "test1",
+        "imagen_nombre": "Periódico Granma",
+        "archivo": "test1.jpg",
+        "prediccion_path": "outputs_real\\test1__paddleocr_cpu.txt",
+        "fragmentos_gt": 5,
+        "tiempo_s": 18.1601,
+        "confianza": 0.9509,
+        "cer_medio": 0.0358,
+        "wer_medio": 0.0543,
+        "precision": 0.9642,
+        "fragmentos_detectados": "5/5",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Granma",
+            "texto_match": "granma",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Hoy, en Pinar del Rio, Acto Central por el Dia de la Rebeldia Nacional",
+            "texto_match": "en pinar del rio acto central por el dia de la rebeldia nacional",
+            "cer": 0.0588,
+            "wer": 0.0714,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Mañana, en Pinar del Rio, acto central por el Dia de la Rebeldia Nacional",
+            "texto_match": "manana en pinar del rio acto central por el dia de la rebeldia nacional",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Hoy, Gala cultural por la efemeride",
+            "texto_match": "hoy gala cultural por la efemeride",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Lista la Plaza para la celebracion del 26 de Julio",
+            "texto_match": "lista la plaza para la celebracion ac de julio",
+            "cer": 0.12,
+            "wer": 0.2,
+            "detectado": true
+          }
+        ]
+      },
+      {
+        "imagen_id": "test2",
+        "imagen_nombre": "Manual Merck Veterinaria",
+        "archivo": "test2.jpg",
+        "prediccion_path": "outputs_real\\test2__paddleocr_cpu.txt",
+        "fragmentos_gt": 6,
+        "tiempo_s": 17.1918,
+        "confianza": 0.9639,
+        "cer_medio": 0.2556,
+        "wer_medio": 0.328,
+        "precision": 0.7444,
+        "fragmentos_detectados": "3/6",
+        "fragmentos": [
+          {
+            "fragmento_gt": "EL MANUAL MERCK DE VETERINARIA",
+            "texto_match": "el libro de veterinaria",
+            "cer": 0.3333,
+            "wer": 0.4,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "CUARTA EDICION",
+            "texto_match": "cuarta edicion",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "La Fuente de Informacion Mas Digna de Confianza Puesta al Dia",
+            "texto_match": "la fuente de intormacion el mas digna de confianza puesta al di",
+            "cer": 0.082,
+            "wer": 0.2727,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Imprescindible en su Biblioteca",
+            "texto_match": "veterinaria en su biblioteca",
+            "cer": 0.3548,
+            "wer": 0.25,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El libro de Veterinaria mas importante del mundo",
+            "texto_match": "el libro de veterinaria la principal fuente",
+            "cer": 0.3333,
+            "wer": 0.5,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Incorpora todas las actualizaciones y descubrimientos realizados en los ultimos cuatro",
+            "texto_match": "incorpora todas las actualizaciones y indice de materias descubrimientos",
+            "cer": 0.4302,
+            "wer": 0.5455,
+            "detectado": false
+          }
+        ]
+      },
+      {
+        "imagen_id": "test3",
+        "imagen_nombre": "Diario de Burgos (1928)",
+        "archivo": "test3.jpg",
+        "prediccion_path": "outputs_real\\test3__paddleocr_cpu.txt",
+        "fragmentos_gt": 9,
+        "tiempo_s": 314.3013,
+        "confianza": 0.9585,
+        "cer_medio": 0.0361,
+        "wer_medio": 0.0963,
+        "precision": 0.9639,
+        "fragmentos_detectados": "9/9",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Diario de Burgos",
+            "texto_match": "lario de burgos",
+            "cer": 0.125,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Año XXXVIII, Num. 11273.-Burgos",
+            "texto_match": "ano xxxviii num 11273 burgos",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Jueves 22 de Marzo de 1928",
+            "texto_match": "jueves 22 de marzo de 1928",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El servicio telefonico",
+            "texto_match": "el servicio telefonico",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Las nuevas tarifas",
+            "texto_match": "las nuevas tarifas",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "EN EL ATENEO",
+            "texto_match": "y el ateneo",
+            "cer": 0.1667,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Una conferencia y un concierto",
+            "texto_match": "una conferencla y un concierto",
+            "cer": 0.0333,
+            "wer": 0.2,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "AYUNTAMIENTO",
+            "texto_match": "ayuntamiento",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Sesion de la permanente",
+            "texto_match": "sesion de la permanente",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          }
+        ]
+      }
+    ],
+    "PaddleOCR GPU": [
+      {
+        "imagen_id": "test1",
+        "imagen_nombre": "Periódico Granma",
+        "archivo": "test1.jpg",
+        "prediccion_path": "outputs_real\\test1__paddleocr_gpu.txt",
+        "fragmentos_gt": 5,
+        "tiempo_s": 0.8958,
+        "confianza": 0.9446,
+        "cer_medio": 0.0358,
+        "wer_medio": 0.0543,
+        "precision": 0.9642,
+        "fragmentos_detectados": "5/5",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Granma",
+            "texto_match": "granma",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Hoy, en Pinar del Rio, Acto Central por el Dia de la Rebeldia Nacional",
+            "texto_match": "en pinar del rio acto central por el dia de la rebeldia nacional",
+            "cer": 0.0588,
+            "wer": 0.0714,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Mañana, en Pinar del Rio, acto central por el Dia de la Rebeldia Nacional",
+            "texto_match": "manana en pinar del rio acto central por el dia de la rebeldia nacional",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Hoy, Gala cultural por la efemeride",
+            "texto_match": "hoy gala cultural por la efemeride",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Lista la Plaza para la celebracion del 26 de Julio",
+            "texto_match": "lista la plaza para la celebracion ac de julio",
+            "cer": 0.12,
+            "wer": 0.2,
+            "detectado": true
+          }
+        ]
+      },
+      {
+        "imagen_id": "test2",
+        "imagen_nombre": "Manual Merck Veterinaria",
+        "archivo": "test2.jpg",
+        "prediccion_path": "outputs_real\\test2__paddleocr_gpu.txt",
+        "fragmentos_gt": 6,
+        "tiempo_s": 0.4213,
+        "confianza": 0.964,
+        "cer_medio": 0.2556,
+        "wer_medio": 0.328,
+        "precision": 0.7444,
+        "fragmentos_detectados": "3/6",
+        "fragmentos": [
+          {
+            "fragmento_gt": "EL MANUAL MERCK DE VETERINARIA",
+            "texto_match": "el libro de veterinaria",
+            "cer": 0.3333,
+            "wer": 0.4,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "CUARTA EDICION",
+            "texto_match": "cuarta edicion",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "La Fuente de Informacion Mas Digna de Confianza Puesta al Dia",
+            "texto_match": "la fuente de intormacion el mas digna de confianza puesta al di",
+            "cer": 0.082,
+            "wer": 0.2727,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Imprescindible en su Biblioteca",
+            "texto_match": "veterinaria en su biblioteca",
+            "cer": 0.3548,
+            "wer": 0.25,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El libro de Veterinaria mas importante del mundo",
+            "texto_match": "el libro de veterinaria la principal fuente",
+            "cer": 0.3333,
+            "wer": 0.5,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Incorpora todas las actualizaciones y descubrimientos realizados en los ultimos cuatro",
+            "texto_match": "incorpora todas las actualizaciones y indice de materias descubrimientos",
+            "cer": 0.4302,
+            "wer": 0.5455,
+            "detectado": false
+          }
+        ]
+      },
+      {
+        "imagen_id": "test3",
+        "imagen_nombre": "Diario de Burgos (1928)",
+        "archivo": "test3.jpg",
+        "prediccion_path": "outputs_real\\test3__paddleocr_gpu.txt",
+        "fragmentos_gt": 9,
+        "tiempo_s": 32.8899,
+        "confianza": 0.959,
+        "cer_medio": 0.0361,
+        "wer_medio": 0.0963,
+        "precision": 0.9639,
+        "fragmentos_detectados": "9/9",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Diario de Burgos",
+            "texto_match": "lario de burgos",
+            "cer": 0.125,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Año XXXVIII, Num. 11273.-Burgos",
+            "texto_match": "ano xxxviii num 11273 burgos",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Jueves 22 de Marzo de 1928",
+            "texto_match": "jueves 22 de marzo de 1928",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El servicio telefonico",
+            "texto_match": "el servicio telefonico",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Las nuevas tarifas",
+            "texto_match": "las nuevas tarifas",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "EN EL ATENEO",
+            "texto_match": "y el ateneo",
+            "cer": 0.1667,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Una conferencia y un concierto",
+            "texto_match": "una conferencla y un concierto",
+            "cer": 0.0333,
+            "wer": 0.2,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "AYUNTAMIENTO",
+            "texto_match": "ayuntamiento",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Sesion de la permanente",
+            "texto_match": "sesion de la permanente",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          }
+        ]
+      }
+    ],
+    "Tesseract": [
+      {
+        "imagen_id": "test1",
+        "imagen_nombre": "Periódico Granma",
+        "archivo": "test1.jpg",
+        "prediccion_path": "outputs_real\\test1__tesseract.txt",
+        "fragmentos_gt": 5,
+        "tiempo_s": 0.3876,
+        "confianza": 0.4215,
+        "cer_medio": 0.5962,
+        "wer_medio": 0.8848,
+        "precision": 0.4038,
+        "fragmentos_detectados": "0/5",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Granma",
+            "texto_match": "ona",
+            "cer": 0.6667,
+            "wer": 1.0,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Hoy, en Pinar del Rio, Acto Central por el Dia de la Rebeldia Nacional",
+            "texto_match": "q a martes 25 hoys la cultural por l sal do a 00m oia",
+            "cer": 0.6324,
+            "wer": 0.9286,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Mañana, en Pinar del Rio, acto central por el Dia de la Rebeldia Nacional",
+            "texto_match": "martes 25 hoys la cultural por l sal do a 00m oia",
+            "cer": 0.6197,
+            "wer": 0.9286,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Hoy, Gala cultural por la efemeride",
+            "texto_match": "hoys la cultural por l sal",
+            "cer": 0.3824,
+            "wer": 0.6667,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Lista la Plaza para la celebracion del 26 de Julio",
+            "texto_match": "martes 25 hoys la cultural por l sal do",
+            "cer": 0.68,
+            "wer": 0.9,
+            "detectado": false
+          }
+        ]
+      },
+      {
+        "imagen_id": "test2",
+        "imagen_nombre": "Manual Merck Veterinaria",
+        "archivo": "test2.jpg",
+        "prediccion_path": "outputs_real\\test2__tesseract.txt",
+        "fragmentos_gt": 6,
+        "tiempo_s": 0.7221,
+        "confianza": 0.6635,
+        "cer_medio": 0.0035,
+        "wer_medio": 0.0417,
+        "precision": 0.9965,
+        "fragmentos_detectados": "6/6",
+        "fragmentos": [
+          {
+            "fragmento_gt": "EL MANUAL MERCK DE VETERINARIA",
+            "texto_match": "el manual merck de veterinaria",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "CUARTA EDICION",
+            "texto_match": "cuarta edicion",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "La Fuente de Informacion Mas Digna de Confianza Puesta al Dia",
+            "texto_match": "la fuente de informacion mas digna de confianza puesta al dia",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Imprescindible en su Biblioteca",
+            "texto_match": "imprescindible en su biblioteca",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El libro de Veterinaria mas importante del mundo",
+            "texto_match": "ellibro de veterinaria mas importante del mundo",
+            "cer": 0.0208,
+            "wer": 0.25,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Incorpora todas las actualizaciones y descubrimientos realizados en los ultimos cuatro",
+            "texto_match": "incorpora todas las actualizaciones y descubrimientos realizados en los ultimos cuatro",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          }
+        ]
+      },
+      {
+        "imagen_id": "test3",
+        "imagen_nombre": "Diario de Burgos (1928)",
+        "archivo": "test3.jpg",
+        "prediccion_path": "outputs_real\\test3__tesseract.txt",
+        "fragmentos_gt": 9,
+        "tiempo_s": 19.6372,
+        "confianza": 0.8484,
+        "cer_medio": 0.0167,
+        "wer_medio": 0.0815,
+        "precision": 0.9833,
+        "fragmentos_detectados": "9/9",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Diario de Burgos",
+            "texto_match": "diario de burgos",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Año XXXVIII, Num. 11273.-Burgos",
+            "texto_match": "ano xxxvil num 11273 burgos",
+            "cer": 0.0714,
+            "wer": 0.2,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Jueves 22 de Marzo de 1928",
+            "texto_match": "jueves 22 de marzo de 1928",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El servicio telefonico",
+            "texto_match": "l servicio telefonico",
+            "cer": 0.0455,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Las nuevas tarifas",
+            "texto_match": "las nuevas tarifas",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "EN EL ATENEO",
+            "texto_match": "en el ateneo",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Una conferencia y un concierto",
+            "texto_match": "una conferencla y un concierto",
+            "cer": 0.0333,
+            "wer": 0.2,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "AYUNTAMIENTO",
+            "texto_match": "ayuntamiento",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Sesion de la permanente",
+            "texto_match": "sesion de la permanente",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          }
+        ]
+      }
+    ],
+    "EasyOCR": [
+      {
+        "imagen_id": "test1",
+        "imagen_nombre": "Periódico Granma",
+        "archivo": "test1.jpg",
+        "prediccion_path": "outputs_real\\test1__easyocr.txt",
+        "fragmentos_gt": 5,
+        "tiempo_s": 5.5937,
+        "confianza": 0.3563,
+        "cer_medio": 0.233,
+        "wer_medio": 0.2095,
+        "precision": 0.767,
+        "fragmentos_detectados": "4/5",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Granma",
+            "texto_match": "granma",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Hoy, en Pinar del Rio, Acto Central por el Dia de la Rebeldia Nacional",
+            "texto_match": "en pinar del rio central por el dia de la rebeldia nacional",
+            "cer": 0.1324,
+            "wer": 0.1429,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Mañana, en Pinar del Rio, acto central por el Dia de la Rebeldia Nacional",
+            "texto_match": "manana en pinar del rio central por el dia de la rebeldia nacional",
+            "cer": 0.0704,
+            "wer": 0.0714,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Hoy, Gala cultural por la efemeride",
+            "texto_match": "gala cultural por la dolos",
+            "cer": 0.3824,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Lista la Plaza para la celebracion del 26 de Julio",
+            "texto_match": "lista la la hel 26 de tour",
+            "cer": 0.58,
+            "wer": 0.5,
+            "detectado": false
+          }
+        ]
+      },
+      {
+        "imagen_id": "test2",
+        "imagen_nombre": "Manual Merck Veterinaria",
+        "archivo": "test2.jpg",
+        "prediccion_path": "outputs_real\\test2__easyocr.txt",
+        "fragmentos_gt": 6,
+        "tiempo_s": 5.6069,
+        "confianza": 0.5039,
+        "cer_medio": 0.2979,
+        "wer_medio": 0.4303,
+        "precision": 0.7021,
+        "fragmentos_detectados": "1/6",
+        "fragmentos": [
+          {
+            "fragmento_gt": "EL MANUAL MERCK DE VETERINARIA",
+            "texto_match": "el libro de veterinaria",
+            "cer": 0.3333,
+            "wer": 0.4,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "CUARTA EDICION",
+            "texto_match": "cuarta edicion",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "La Fuente de Informacion Mas Digna de Confianza Puesta al Dia",
+            "texto_match": "la fuente de informacion ai el 57 mas diqna de covfianza puesta al dia",
+            "cer": 0.1803,
+            "wer": 0.4545,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Imprescindible en su Biblioteca",
+            "texto_match": "imprescindible de veterinaria su biblioteca",
+            "cer": 0.3871,
+            "wer": 0.5,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "El libro de Veterinaria mas importante del mundo",
+            "texto_match": "el libro de veterinaria arincipg tuente consulta",
+            "cer": 0.375,
+            "wer": 0.5,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Incorpora todas las actualizaciones y descubrimientos realizados en los ultimos cuatro",
+            "texto_match": "incorpora todas las indice de materias actualizaciones descubrimientos palrie sistemus songuinoo",
+            "cer": 0.5116,
+            "wer": 0.7273,
+            "detectado": false
+          }
+        ]
+      },
+      {
+        "imagen_id": "test3",
+        "imagen_nombre": "Diario de Burgos (1928)",
+        "archivo": "test3.jpg",
+        "prediccion_path": "outputs_real\\test3__easyocr.txt",
+        "fragmentos_gt": 9,
+        "tiempo_s": 71.2133,
+        "confianza": 0.7406,
+        "cer_medio": 0.1047,
+        "wer_medio": 0.1407,
+        "precision": 0.8953,
+        "fragmentos_detectados": "8/9",
+        "fragmentos": [
+          {
+            "fragmento_gt": "Diario de Burgos",
+            "texto_match": "diario de burgos",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Año XXXVIII, Num. 11273.-Burgos",
+            "texto_match": "xxxviil num 11273 burgos",
+            "cer": 0.1786,
+            "wer": 0.4,
+            "detectado": false
+          },
+          {
+            "fragmento_gt": "Jueves 22 de Marzo de 1928",
+            "texto_match": "jueves 22 de marzo de 1928",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "El servicio telefonico",
+            "texto_match": "el servicio en",
+            "cer": 0.3636,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Las nuevas tarifas",
+            "texto_match": "las nuevas tarifas",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "EN EL ATENEO",
+            "texto_match": "en el paseo",
+            "cer": 0.3333,
+            "wer": 0.3333,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Una conferencia y un concierto",
+            "texto_match": "una confevencla y un concierto",
+            "cer": 0.0667,
+            "wer": 0.2,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "AYUNTAMIENTO",
+            "texto_match": "ayuntamiento",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          },
+          {
+            "fragmento_gt": "Sesion de la permanente",
+            "texto_match": "sesion de la permanente",
+            "cer": 0.0,
+            "wer": 0.0,
+            "detectado": true
+          }
+        ]
+      }
+    ]
+  },
+  "resumen": [
+    {
+      "nombre": "PaddleOCR CPU",
+      "etiqueta": "PaddleOCR\nCPU",
+      "color": "#89b4fa",
+      "imagenes_evaluadas": 3,
+      "cer_medio": 0.1092,
+      "wer_medio": 0.1595,
+      "precision": 0.8908,
+      "velocidad_s": 116.5511,
+      "confianza_media": 0.9578
+    },
+    {
+      "nombre": "PaddleOCR GPU",
+      "etiqueta": "PaddleOCR\nGPU",
+      "color": "#74c7ec",
+      "imagenes_evaluadas": 3,
+      "cer_medio": 0.1092,
+      "wer_medio": 0.1595,
+      "precision": 0.8908,
+      "velocidad_s": 11.4023,
+      "confianza_media": 0.9559
+    },
+    {
+      "nombre": "Tesseract",
+      "etiqueta": "Tesseract",
+      "color": "#fab387",
+      "imagenes_evaluadas": 3,
+      "cer_medio": 0.2055,
+      "wer_medio": 0.336,
+      "precision": 0.7945,
+      "velocidad_s": 6.9156,
+      "confianza_media": 0.6445
+    },
+    {
+      "nombre": "EasyOCR",
+      "etiqueta": "EasyOCR",
+      "color": "#a6e3a1",
+      "imagenes_evaluadas": 3,
+      "cer_medio": 0.2119,
+      "wer_medio": 0.2602,
+      "precision": 0.7881,
+      "velocidad_s": 27.4713,
+      "confianza_media": 0.5336
+    }
+  ]
+}

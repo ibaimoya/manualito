@@ -1,0 +1,107 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "delete": "Borrar",
+    "exploreGames": "Explorar juegos",
+    "retry": "Reintentar",
+    "uploadManual": "Subir un manual"
+  },
+  "aria": {
+    "confirmDeletion": "Confirmar borrado",
+    "deleteManual": "Borrar {{manual}}",
+    "openGame": "Abrir {{game}}",
+    "openGameProcessing": "Abrir {{game}} (procesando un manual)",
+    "openManual": "Abrir {{manual}}"
+  },
+  "duplicatePages": {
+    "detail_one": "Una página es idéntica a otra que ya habías subido: no se vuelve a leer ni cuenta para la explicación.",
+    "detail_other": "{{count}} páginas son idénticas a otras que ya habías subido: no se vuelven a leer ni cuentan para la explicación.",
+    "hintSuffix": "Ábrelo para revisarlo.",
+    "label_one": "1 página duplicada",
+    "label_other": "{{count}} páginas duplicadas"
+  },
+  "empty": {
+    "games": {
+      "hint": "Sigue juegos desde Explorar. También empiezas a seguir uno al subir su manual, abrir un chat o valorarlo.",
+      "title": "Aún no sigues ningún juego"
+    },
+    "manuals": {
+      "hint": "Sube el PDF o las fotos de las reglas de un juego y Manualito las leerá por ti.",
+      "title": "Aún no has subido manuales"
+    }
+  },
+  "error": {
+    "description": {
+      "games": "Vuelve a intentarlo para ver los juegos que sigues.",
+      "manuals": "Vuelve a intentarlo para ver los manuales que has subido."
+    },
+    "title": "No pudimos cargar tu biblioteca"
+  },
+  "gameCard": {
+    "activity": "Actividad · {{relative}}",
+    "chats_one": "{{count}} chat",
+    "chats_other": "{{count}} chats",
+    "manuals_one": "{{count}} manual",
+    "manuals_other": "{{count}} manuales",
+    "open": "Abrir {{game}}",
+    "openProcessing": "Abrir {{game}} (procesando un manual)",
+    "processing": "Leyendo el manual",
+    "progress": {
+      "available": "Disponible en unos segundos",
+      "page": "Página {{page}} de {{total}} · disponible en unos segundos"
+    }
+  },
+  "gameSearch": {
+    "clear": "Limpiar búsqueda",
+    "inputAriaLabel": "Saltar a un juego",
+    "listLabel": "Tus juegos",
+    "noResults": "Ningún juego coincide con «{{query}}».",
+    "placeholder": "Buscar entre tus juegos…"
+  },
+  "manualCard": {
+    "chunks": "{{count}} fragmentos",
+    "deleteConfirm": "¿Borrar este manual de {{game}}?",
+    "format": {
+      "pdf": "PDF",
+      "photos": "Fotos"
+    },
+    "manualOf": "Manual de {{game}}",
+    "pageCount_one": "{{count}} pág.",
+    "pageCount_other": "{{count}} pág.",
+    "progress": {
+      "page": "Leyendo página {{page}} de {{total}}"
+    },
+    "visibility": {
+      "private": "Privado",
+      "privateHelp": "Manual privado",
+      "shared": "Compartido",
+      "sharedHelp": "Compartido con la comunidad"
+    }
+  },
+  "manualSearch": {
+    "clear": "Limpiar filtro",
+    "inputAriaLabel": "Filtrar tus manuales",
+    "noResults": "Ningún manual coincide con «{{query}}».",
+    "placeholder": "Buscar entre tus manuales…"
+  },
+  "status": {
+    "active": "Listo",
+    "failed": "Error",
+    "hidden": "Oculto",
+    "indexing": "Procesando…",
+    "pendingReview": "Revisar"
+  },
+  "statusHelp": {
+    "active": "Manual listo para consultar",
+    "failed": "No se ha podido procesar este manual",
+    "hidden": "Este manual está oculto",
+    "indexing": "Procesando el manual. El texto estará disponible al terminar.",
+    "pendingReview": "Hay páginas cuya extracción necesita revisión"
+  },
+  "tabs": {
+    "ariaLabel": "Cambiar entre juegos y manuales",
+    "games": "Juegos",
+    "manuals": "Manuales"
+  },
+  "title": "Mi biblioteca"
+}

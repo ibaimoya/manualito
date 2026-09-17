@@ -92,3 +92,20 @@ def test_float_env_rejects_invalid_or_too_small_values(monkeypatch):
     monkeypatch.setenv("TEST_FLOAT", "0")
     with pytest.raises(ValueError, match=r"TEST_FLOAT debe ser mayor o igual que 1\.0"):
         config._float_env("TEST_FLOAT", default=120.0, minimum=1.0)
+
+
+def test_correction_model_vacio_se_normaliza_a_none(monkeypatch):
+    """Una variable de modelo corrector vacía equivale a no configurarlo."""
+    import importlib
+
+    monkeypatch.setenv("OLLAMA_CORRECTION_MODEL", "")
+    try:
+        importlib.reload(config)
+        assert config.OLLAMA_CORRECTION_MODEL is None
+
+        monkeypatch.setenv("OLLAMA_CORRECTION_MODEL", "gemma4:e4b")
+        importlib.reload(config)
+        assert config.OLLAMA_CORRECTION_MODEL == "gemma4:e4b"
+    finally:
+        monkeypatch.delenv("OLLAMA_CORRECTION_MODEL", raising=False)
+        importlib.reload(config)

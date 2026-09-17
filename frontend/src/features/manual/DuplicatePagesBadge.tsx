@@ -1,27 +1,27 @@
-import { Copy } from 'lucide-react';
+import { CopyIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 
 /**
- * Aviso ámbar de páginas duplicadas en una tarjeta de manual (biblioteca y hub
- * del juego). Una página subida dos veces no se reprocesa ni cuenta para la
- * explicación; es información, no un error, de ahí el tono ámbar. Decorativo en
- * color: el "title" lo explica al pasar el ratón (cursor de ayuda).
+ * Cantidad de páginas duplicadas. El detalle explica la reutilización sin
+ * confundirla con un error de lectura.
  */
 export function DuplicatePagesBadge({
   count,
   openHint = false,
-}: Readonly<{ count: number; openHint?: boolean }>) {
-  const label = count === 1 ? '1 página duplicada' : `${count} páginas duplicadas`;
-  const detail =
-    count === 1
-      ? 'Una página es idéntica a otra que ya habías subido: no se vuelve a leer ni cuenta para la explicación.'
-      : `${count} páginas son idénticas a otras que ya habías subido: no se vuelven a leer ni cuentan para la explicación.`;
+  passive = false,
+}: Readonly<{ count: number; openHint?: boolean; passive?: boolean }>) {
+  const { t } = useTranslation('library');
+  const detail = t('duplicatePages.detail', { count });
   return (
-    <span
-      title={openHint ? `${detail} Ábrelo para revisarlo.` : detail}
-      className="inline-flex cursor-help items-center gap-1.5 self-start rounded-[9px] border border-warning/40 bg-warning-bg px-2.5 py-[5px] text-[11.5px] font-bold leading-tight text-warning"
+    <HelpIndicator
+      icon={CopyIcon}
+      tone="warning"
+      label={openHint ? `${detail} ${t('duplicatePages.hintSuffix')}` : detail}
+      passive={passive}
+      className="self-start text-xs tabular-nums"
     >
-      <Copy size={13} strokeWidth={2.2} aria-hidden="true" className="shrink-0" />
-      {label}
-    </span>
+      {count}
+    </HelpIndicator>
   );
 }

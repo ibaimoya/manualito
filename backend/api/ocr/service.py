@@ -7,6 +7,7 @@ import httpx
 from api import client as internal_client
 from api import config
 from api.manuals.dto import ValidatedManualImage
+from api.ocr.correction import correct_ocr_lines
 from common.ocr.postprocessing import OcrPostprocessConfig, postprocess_ocr_lines
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,8 @@ async def run_ocr(
         byte_size=image.byte_size,
         content_type=image.mime_type,
     )
-    return postprocess_ocr_lines(lines, config=_postprocess_config())
+    processed = postprocess_ocr_lines(lines, config=_postprocess_config())
+    return await correct_ocr_lines(processed, client=client)
 
 
 def _postprocess_config() -> OcrPostprocessConfig:

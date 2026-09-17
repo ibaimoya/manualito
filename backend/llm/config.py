@@ -42,6 +42,7 @@ def _float_env(name: str, *, default: float, minimum: float | None = None) -> fl
 
 OLLAMA_URL = os.environ["OLLAMA_URL"]
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "granite3.3:2b")
+OLLAMA_CORRECTION_MODEL = os.getenv("OLLAMA_CORRECTION_MODEL") or None
 OLLAMA_KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE")
 OLLAMA_PRELOAD_ON_STARTUP = _bool_env("OLLAMA_PRELOAD_ON_STARTUP", default=False)
 OLLAMA_TIMEOUT = _float_env("OLLAMA_TIMEOUT", default=120.0, minimum=1.0)

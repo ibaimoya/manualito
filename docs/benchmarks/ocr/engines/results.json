@@ -1,0 +1,310 @@
+{
+  "fecha": "2026-05-03",
+  "n_repeticiones": 3,
+  "motores": [
+    "PaddleOCR CPU",
+    "PaddleOCR GPU",
+    "Tesseract",
+    "EasyOCR"
+  ],
+  "imagenes_sinteticas": [
+    {
+      "id": "limpio",
+      "categoria": "limpio",
+      "texto_gt": "En Catan el objetivo es ser el primer jugador en alcanzar diez puntos de victoria."
+    },
+    {
+      "id": "fuente_pequena",
+      "categoria": "fuente_pequena",
+      "texto_gt": "Los recursos disponibles son madera, arcilla, lana, trigo y mineral."
+    },
+    {
+      "id": "parrafo",
+      "categoria": "parrafo",
+      "texto_gt": "Para construir un poblado necesitas una madera, una arcilla, una lana y un trigo. Para construir una ciudad necesitas dos trigos y tres minerales. Las carreteras cuestan una madera y una arcilla cada una."
+    },
+    {
+      "id": "ruido",
+      "categoria": "ruido",
+      "texto_gt": "El ladrón se activa cuando alguien saca un siete con los dados."
+    },
+    {
+      "id": "bajo_contraste",
+      "categoria": "bajo_contraste",
+      "texto_gt": "Los puertos permiten cambiar recursos a una tasa favorable."
+    },
+    {
+      "id": "especiales",
+      "categoria": "especiales",
+      "texto_gt": "¡El niño preguntó: ¿por qué no había más información sobre la muñeca española?"
+    }
+  ],
+  "detalle": {
+    "PaddleOCR CPU": [
+      {
+        "imagen_id": "limpio",
+        "imagen_nombre": "Texto limpio",
+        "texto_pred": "En Catan el objetivo es ser el primer jugador en alcanzar diez",
+        "cer": 0.2439,
+        "wer": 0.2,
+        "tiempo_s": 1.9435,
+        "confianza": 0.9918
+      },
+      {
+        "imagen_id": "fuente_pequena",
+        "imagen_nombre": "Fuente pequeña",
+        "texto_pred": "os recursos disponibles son madera, arcilla, lana, trigo y míneral.",
+        "cer": 0.0294,
+        "wer": 0.2,
+        "tiempo_s": 1.9118,
+        "confianza": 0.9825
+      },
+      {
+        "imagen_id": "parrafo",
+        "imagen_nombre": "Párrafo multilínea",
+        "texto_pred": "Para construir un poblado necesitas una madera, una arcilla una lana y un trigo. Para construir una ciudad necesitas dos trigos y tres minerales. Las carreteras cuestan una madera una arcilla cada una",
+        "cer": 0.0147,
+        "wer": 0.0588,
+        "tiempo_s": 4.4342,
+        "confianza": 0.9866
+      },
+      {
+        "imagen_id": "ruido",
+        "imagen_nombre": "Ruido sal-pimienta",
+        "texto_pred": " ladrón se activa cuando alguien saca un siete con los dad",
+        "cer": 0.0952,
+        "wer": 0.1667,
+        "tiempo_s": 1.9051,
+        "confianza": 0.9894
+      },
+      {
+        "imagen_id": "bajo_contraste",
+        "imagen_nombre": "Bajo contraste",
+        "texto_pred": "_os puertos permiten cambiar recursos a una tasa favorable",
+        "cer": 0.0339,
+        "wer": 0.2222,
+        "tiempo_s": 1.9102,
+        "confianza": 0.9914
+      },
+      {
+        "imagen_id": "especiales",
+        "imagen_nombre": "Caracteres especiales",
+        "texto_pred": "El niño preguntó: ¿por qué no había más información sobre",
+        "cer": 0.2692,
+        "wer": 0.3077,
+        "tiempo_s": 1.9695,
+        "confianza": 0.9868
+      }
+    ],
+    "PaddleOCR GPU": [
+      {
+        "imagen_id": "limpio",
+        "imagen_nombre": "Texto limpio",
+        "texto_pred": "En Catan el objetivo es ser el primer jugador en alcanzar diez",
+        "cer": 0.2439,
+        "wer": 0.2,
+        "tiempo_s": 0.0276,
+        "confianza": 0.9913
+      },
+      {
+        "imagen_id": "fuente_pequena",
+        "imagen_nombre": "Fuente pequeña",
+        "texto_pred": "os recursos disponibles son madera, arcilla, lana, trigo y míneral.",
+        "cer": 0.0294,
+        "wer": 0.2,
+        "tiempo_s": 0.0258,
+        "confianza": 0.984
+      },
+      {
+        "imagen_id": "parrafo",
+        "imagen_nombre": "Párrafo multilínea",
+        "texto_pred": "Para construir un poblado necesitas una madera, una arcilla una lana y un trigo. Para construir una ciudad necesitas dos trigos y tres minerales. Las carreteras cuestan una madera una arcilla cada una",
+        "cer": 0.0147,
+        "wer": 0.0588,
+        "tiempo_s": 0.0488,
+        "confianza": 0.9864
+      },
+      {
+        "imagen_id": "ruido",
+        "imagen_nombre": "Ruido sal-pimienta",
+        "texto_pred": " ladrón se activa cuando alguien saca un siete con los dad",
+        "cer": 0.0952,
+        "wer": 0.1667,
+        "tiempo_s": 0.0256,
+        "confianza": 0.9896
+      },
+      {
+        "imagen_id": "bajo_contraste",
+        "imagen_nombre": "Bajo contraste",
+        "texto_pred": "_os puertos permiten cambiar recursos a una tasa favorable",
+        "cer": 0.0339,
+        "wer": 0.2222,
+        "tiempo_s": 0.0248,
+        "confianza": 0.9849
+      },
+      {
+        "imagen_id": "especiales",
+        "imagen_nombre": "Caracteres especiales",
+        "texto_pred": "El niño preguntó: ¿por qué no había más información sobre",
+        "cer": 0.2692,
+        "wer": 0.3077,
+        "tiempo_s": 0.0251,
+        "confianza": 0.9872
+      }
+    ],
+    "Tesseract": [
+      {
+        "imagen_id": "limpio",
+        "imagen_nombre": "Texto limpio",
+        "texto_pred": "En Catan el objetivo es ser el primer jugador en alcanzar diez f",
+        "cer": 0.2317,
+        "wer": 0.2,
+        "tiempo_s": 0.1635,
+        "confianza": 0.9185
+      },
+      {
+        "imagen_id": "fuente_pequena",
+        "imagen_nombre": "Fuente pequeña",
+        "texto_pred": "Los recursos disponibles son madera, arcilla, lana, trigo y mineral.",
+        "cer": 0.0,
+        "wer": 0.0,
+        "tiempo_s": 0.1549,
+        "confianza": 0.906
+      },
+      {
+        "imagen_id": "parrafo",
+        "imagen_nombre": "Párrafo multilínea",
+        "texto_pred": "Para construir un poblado necesitas una madera, una arcilla,\nUna lana y un trigo. Para construir una ciudad necesitas dos\ntrigos y tres minerales. Las carreteras cuestan una madera y\nUna arcilla cada ",
+        "cer": 0.0,
+        "wer": 0.0,
+        "tiempo_s": 0.2395,
+        "confianza": 0.9459
+      },
+      {
+        "imagen_id": "ruido",
+        "imagen_nombre": "Ruido sal-pimienta",
+        "texto_pred": "El-ladrón se: activa cuando alguien saca un siste:con los dados",
+        "cer": 0.0794,
+        "wer": 0.5,
+        "tiempo_s": 0.165,
+        "confianza": 0.7238
+      },
+      {
+        "imagen_id": "bajo_contraste",
+        "imagen_nombre": "Bajo contraste",
+        "texto_pred": "Los puertos permiten cambiar recursos a una tasa favorable.",
+        "cer": 0.0,
+        "wer": 0.0,
+        "tiempo_s": 0.1665,
+        "confianza": 0.96
+      },
+      {
+        "imagen_id": "especiales",
+        "imagen_nombre": "Caracteres especiales",
+        "texto_pred": "¡El niño preguntó: ¿por qué no había más información sobre la",
+        "cer": 0.2179,
+        "wer": 0.1538,
+        "tiempo_s": 0.1673,
+        "confianza": 0.96
+      }
+    ],
+    "EasyOCR": [
+      {
+        "imagen_id": "limpio",
+        "imagen_nombre": "Texto limpio",
+        "texto_pred": "En Catan el objetivo es ser el primer jugador en alcanzar diez",
+        "cer": 0.2439,
+        "wer": 0.2,
+        "tiempo_s": 0.6213,
+        "confianza": 0.9003
+      },
+      {
+        "imagen_id": "fuente_pequena",
+        "imagen_nombre": "Fuente pequeña",
+        "texto_pred": "Los recursos disponibles son madera, arcilla Iana y mineral. tigo",
+        "cer": 0.2059,
+        "wer": 0.4,
+        "tiempo_s": 0.6393,
+        "confianza": 0.7891
+      },
+      {
+        "imagen_id": "parrafo",
+        "imagen_nombre": "Párrafo multilínea",
+        "texto_pred": "Para construir un poblado necesitas una madera; una arcilla; una lana y un trigo. Para construir una ciudad necesitas dos trigos y tres minerales. Las carreteras cuestan una madera y una arcilla cada ",
+        "cer": 0.0147,
+        "wer": 0.0882,
+        "tiempo_s": 1.2879,
+        "confianza": 0.8135
+      },
+      {
+        "imagen_id": "ruido",
+        "imagen_nombre": "Ruido sal-pimienta",
+        "texto_pred": "El.lädrón' se activa cuando alguien saca un siete con los dados",
+        "cer": 0.0635,
+        "wer": 0.25,
+        "tiempo_s": 0.6486,
+        "confianza": 0.4567
+      },
+      {
+        "imagen_id": "bajo_contraste",
+        "imagen_nombre": "Bajo contraste",
+        "texto_pred": "Los puertos permiten cambiar recursos a una tasa favorable.",
+        "cer": 0.0,
+        "wer": 0.0,
+        "tiempo_s": 0.6049,
+        "confianza": 0.9439
+      },
+      {
+        "imagen_id": "especiales",
+        "imagen_nombre": "Caracteres especiales",
+        "texto_pred": "iEl niño preguntó: &por no había más información sobre la qué",
+        "cer": 0.2692,
+        "wer": 0.3846,
+        "tiempo_s": 0.6343,
+        "confianza": 0.8053
+      }
+    ]
+  },
+  "resumen": [
+    {
+      "nombre": "PaddleOCR CPU",
+      "etiqueta": "PaddleOCR\nCPU",
+      "color": "#89b4fa",
+      "cer_medio": 0.1144,
+      "wer_medio": 0.1926,
+      "precision": 0.8856,
+      "velocidad_s": 2.3457,
+      "confianza_media": 0.9881
+    },
+    {
+      "nombre": "PaddleOCR GPU",
+      "etiqueta": "PaddleOCR\nGPU",
+      "color": "#74c7ec",
+      "cer_medio": 0.1144,
+      "wer_medio": 0.1926,
+      "precision": 0.8856,
+      "velocidad_s": 0.0296,
+      "confianza_media": 0.9872
+    },
+    {
+      "nombre": "Tesseract",
+      "etiqueta": "Tesseract",
+      "color": "#fab387",
+      "cer_medio": 0.0882,
+      "wer_medio": 0.1423,
+      "precision": 0.9118,
+      "velocidad_s": 0.1761,
+      "confianza_media": 0.9024
+    },
+    {
+      "nombre": "EasyOCR",
+      "etiqueta": "EasyOCR",
+      "color": "#a6e3a1",
+      "cer_medio": 0.1329,
+      "wer_medio": 0.2205,
+      "precision": 0.8671,
+      "velocidad_s": 0.7394,
+      "confianza_media": 0.7848
+    }
+  ]
+}

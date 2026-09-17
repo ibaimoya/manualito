@@ -1,0 +1,494 @@
+<div id="acronimo-popover" class="acronimo-popover" role="tooltip" hidden>
+  <span class="acronimo-popover__texto"></span>
+  <span class="acronimo-popover__pista">
+    Ver en la bibliografía
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 12h14"></path>
+      <path d="m12 5 7 7-7 7"></path>
+    </svg>
+  </span>
+</div>
+
+<script>
+  const RETRASO_APARICION = 400;
+  const VENTANA_INSTANTANEA = 500;
+  const RETRASO_SALIDA = 80;
+  const DURACION_SALIDA = 140;
+  const FUNDIDO_TEXTO = 70;
+  const TOLERANCIA_ZONA = 24;
+  const MARGEN_ORIGEN = 56;
+  const QUIETO_ZONA = 400;
+
+  interface Medidas {
+    ancho: number;
+    alto: number;
+  }
+
+  interface Colocacion {
+    x: number;
+    y: number;
+    debajo: boolean;
+  }
+
+  const popover = document.querySelector<HTMLElement>('.acronimo-popover');
+  const referencias = Array.from(
+    document.querySelectorAll<HTMLElement>('abbr.acronimo, a.cita'),
+  );
+
+  if (popover && referencias.length > 0) {
+    const texto = popover.querySelector<HTMLElement>('.acronimo-popover__texto');
+    // title sirve de respaldo sin JavaScript y se retira para evitar dos avisos.
+    for (const referencia of referencias) {
+      referencia.removeAttribute('title');
+      referencia.setAttribute('aria-describedby', popover.id);
+    }
+    document.body.append(popover);
+    const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
+
+    interface Punto {
+      x: number;
+      y: number;
+    }
+
+    let objetivo: HTMLElement | null = null;
+    let timerMostrar: number | undefined;
+    let timerSalida: number | undefined;
+    let timerOcultar: number | undefined;
+    let timerMorph: number | undefined;
+    let timerQuieto: number | undefined;
+    let ultimoCierre = -Infinity;
+    let zona: Punto[] | null = null;
+    let ultimoPunto: Punto = { x: 0, y: 0 };
+    let focoDesdePuntero = false;
+
+    /* offsetWidth ignora el scale de entrada, getBoundingClientRect mediría la caja encogida. */
+    const medir = (): Medidas => {
+      popover.style.width = 'auto';
+      popover.style.height = 'auto';
+      return { ancho: popover.offsetWidth + 1, alto: popover.offsetHeight };
+    };
+
+    const colocar = (abbr: HTMLElement, tam: Medidas): Colocacion => {
+      const ancla = abbr.getBoundingClientRect();
+      const margen = 8;
+      const x = Math.min(
+        Math.max(ancla.left + ancla.width / 2 - tam.ancho / 2, margen),
+        window.innerWidth - tam.ancho - margen,
+      );
+      // Debajo solo cuando arriba pisaría la cabecera fija.
+      const debajo = ancla.top - tam.alto - margen < 72;
+      const y = debajo ? ancla.bottom + margen : ancla.top - tam.alto - margen;
+      return { x, y, debajo };
+    };
+
+    const aplicar = (pos: Colocacion, tam: Medidas): void => {
+      popover.style.translate = `${pos.x}px ${pos.y}px`;
+      popover.style.width = `${tam.ancho}px`;
+      popover.style.height = `${tam.alto}px`;
+      popover.style.transformOrigin = pos.debajo ? 'top center' : 'bottom center';
+    };
+
+    const abrir = (abbr: HTMLElement, expansion: string, sinAnimacion: boolean): void => {
+      if (texto) {
+        texto.removeAttribute('data-cambiando');
+        texto.textContent = expansion;
+      }
+      popover.hidden = false;
+      popover.setAttribute('data-teleport', '');
+      const tam = medir();
+      aplicar(colocar(abbr, tam), tam);
+      void popover.offsetWidth;
+      popover.removeAttribute('data-teleport');
+      popover.toggleAttribute('data-instant', sinAnimacion);
+      popover.setAttribute('data-visible', '');
+    };
+
+    const morfar = (abbr: HTMLElement, expansion: string): void => {
+      popover.removeAttribute('data-instant');
+      texto?.setAttribute('data-cambiando', '');
+      clearTimeout(timerMorph);
+      timerMorph = window.setTimeout(() => {
+        if (!texto) return;
+        const anchoActual = popover.style.width;
+        const altoActual = popover.style.height;
+        popover.setAttribute('data-teleport', '');
+        texto.textContent = expansion;
+        const tam = medir();
+        popover.style.width = anchoActual;
+        popover.style.height = altoActual;
+        void popover.offsetWidth;
+        popover.removeAttribute('data-teleport');
+        aplicar(colocar(abbr, tam), tam);
+        texto.removeAttribute('data-cambiando');
+      }, FUNDIDO_TEXTO);
+    };
+
+    let destinoActual: string | null = null;
+
+    const mostrar = (abbr: HTMLElement, inmediato = false): void => {
+      const expansion = abbr.dataset.expansion ?? '';
+      destinoActual = abbr.dataset.destino ?? null;
+      popover.toggleAttribute('data-enlazado', destinoActual !== null);
+      const visible = popover.hasAttribute('data-visible');
+      const recienCerrado = performance.now() - ultimoCierre < VENTANA_INSTANTANEA;
+      objetivo = abbr;
+      clearTimeout(timerMostrar);
+      clearTimeout(timerOcultar);
+      if (visible && !popover.hidden) {
+        morfar(abbr, expansion);
+        return;
+      }
+      if (inmediato || recienCerrado) {
+        abrir(abbr, expansion, recienCerrado && !inmediato);
+        return;
+      }
+      timerMostrar = window.setTimeout(() => abrir(abbr, expansion, false), RETRASO_APARICION);
+    };
+
+    const ocultar = (): void => {
+      limpiarZona();
+      clearTimeout(timerMostrar);
+      clearTimeout(timerSalida);
+      clearTimeout(timerOcultar);
+      clearTimeout(timerMorph);
+      if (popover.hasAttribute('data-visible')) ultimoCierre = performance.now();
+      popover.removeAttribute('data-visible');
+      popover.removeAttribute('data-instant');
+      objetivo = null;
+      if (menosMovimiento.matches) {
+        popover.hidden = true;
+        return;
+      }
+      timerOcultar = window.setTimeout(() => {
+        popover.hidden = true;
+      }, DURACION_SALIDA);
+    };
+
+    const buscarAbbr = (nodo: EventTarget | null): HTMLElement | null => {
+      if (!(nodo instanceof Element)) return null;
+      const abbr = nodo.closest('abbr.acronimo, a.cita');
+      return abbr instanceof HTMLElement ? abbr : null;
+    };
+
+    const limpiarZona = (): void => {
+      if (!zona) return;
+      zona = null;
+      clearTimeout(timerQuieto);
+      document.removeEventListener('pointermove', handleZonaMove);
+    };
+
+    const enZona = (p: Punto): boolean => {
+      if (!zona) return false;
+      const signo = (a: Punto, b: Punto, c: Punto): number =>
+        (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      let negativo = false;
+      let positivo = false;
+      for (let i = 0; i < zona.length; i++) {
+        const d = signo(zona[i]!, zona[(i + 1) % zona.length]!, p);
+        if (d < 0) negativo = true;
+        if (d > 0) positivo = true;
+      }
+      return !(negativo && positivo);
+    };
+
+    /* Permanecer dentro de la zona conserva el popover salvo que cambie la sigla objetivo. */
+    const resolverQuieto = (): void => {
+      const debajo = document.elementFromPoint(ultimoPunto.x, ultimoPunto.y);
+      const abbr = buscarAbbr(debajo);
+      if (abbr && abbr !== objetivo) {
+        limpiarZona();
+        mostrar(abbr);
+      }
+    };
+
+    const handleZonaMove = (ev: PointerEvent): void => {
+      ultimoPunto = { x: ev.clientX, y: ev.clientY };
+      const destino = ev.target instanceof Element ? ev.target : null;
+      if (destino && popover.contains(destino)) {
+        limpiarZona();
+        return;
+      }
+      const abbr = buscarAbbr(destino);
+      if (abbr === objetivo && objetivo !== null) {
+        limpiarZona();
+        return;
+      }
+      if (enZona(ultimoPunto)) {
+        clearTimeout(timerQuieto);
+        timerQuieto = window.setTimeout(resolverQuieto, QUIETO_ZONA);
+        return;
+      }
+      // Fuera de la zona de tolerancia el cambio de objetivo es inmediato.
+      limpiarZona();
+      if (abbr) {
+        mostrar(abbr);
+      } else {
+        clearTimeout(timerSalida);
+        timerSalida = window.setTimeout(ocultar, RETRASO_SALIDA);
+      }
+    };
+
+    /* Trapecio con banda ancha en el origen, un vértice puntual expulsa las salidas rasantes. */
+    const iniciarZona = (x: number, y: number): void => {
+      limpiarZona();
+      const caja = popover.getBoundingClientRect();
+      const desdeAbajo = y >= caja.bottom;
+      // El polígono solapa hacia dentro del popover, hacia fuera dejaría una franja muerta.
+      const borde = desdeAbajo ? caja.bottom - 4 : caja.top + 4;
+      const holgura = desdeAbajo ? 8 : -8;
+      zona = [
+        { x: x - MARGEN_ORIGEN, y: y + holgura },
+        { x: caja.left - TOLERANCIA_ZONA, y: borde },
+        { x: caja.right + TOLERANCIA_ZONA, y: borde },
+        { x: x + MARGEN_ORIGEN, y: y + holgura },
+      ];
+      ultimoPunto = { x, y };
+      document.addEventListener('pointermove', handleZonaMove);
+    };
+
+    document.addEventListener('pointerover', (ev) => {
+      const abbr = buscarAbbr(ev.target);
+      if (abbr) {
+        clearTimeout(timerSalida);
+        // Con el triángulo activo decide el movimiento, no el elemento pisado.
+        if (zona && abbr !== objetivo) return;
+        if (objetivo !== abbr || popover.hidden) mostrar(abbr);
+        return;
+      }
+      if (ev.target instanceof Node && popover.contains(ev.target)) clearTimeout(timerSalida);
+    });
+
+    document.addEventListener('pointerout', (ev) => {
+      const dentro =
+        buscarAbbr(ev.target) !== null ||
+        (ev.target instanceof Node && popover.contains(ev.target));
+      if (!dentro) return;
+      const destino = ev.relatedTarget;
+      if (destino instanceof Node && popover.contains(destino)) return;
+      if (buscarAbbr(destino) === objetivo && objetivo !== null) return;
+      clearTimeout(timerSalida);
+      // La salida del propio popover también entra en gracia, un roce del borde no debe cerrar.
+      if (ev.pointerType === 'mouse' && popover.hasAttribute('data-visible')) {
+        iniciarZona(ev.clientX, ev.clientY);
+        return;
+      }
+      timerSalida = window.setTimeout(ocultar, RETRASO_SALIDA);
+    });
+
+    document.addEventListener('click', (ev) => {
+      const abbr = buscarAbbr(ev.target);
+      if (abbr) {
+        if (objetivo === abbr && popover.hasAttribute('data-visible')) {
+          if (focoDesdePuntero) ocultar();
+        } else {
+          mostrar(abbr, true);
+        }
+        return;
+      }
+      if (ev.target instanceof Node && popover.contains(ev.target)) {
+        // La tarjeta de una cita lleva a su entrada de la bibliografía.
+        if (destinoActual) location.assign(destinoActual);
+        return;
+      }
+      ocultar();
+    });
+
+    document.addEventListener(
+      'pointerdown',
+      () => {
+        focoDesdePuntero = true;
+        requestAnimationFrame(() => {
+          focoDesdePuntero = false;
+        });
+      },
+      true,
+    );
+
+    document.addEventListener('focusin', (ev) => {
+      const abbr = buscarAbbr(ev.target);
+      if (abbr && !focoDesdePuntero) mostrar(abbr, true);
+    });
+
+    document.addEventListener('focusout', (ev) => {
+      if (buscarAbbr(ev.target)) ocultar();
+    });
+
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') ocultar();
+    });
+
+    // Guarda barata para el hot path, durante el scroll normal no hay nada que cerrar.
+    const cerrarSiActivo = (): void => {
+      if (objetivo === null && popover.hidden) return;
+      ocultar();
+    };
+
+    document.addEventListener('scroll', cerrarSiActivo, { passive: true, capture: true });
+    window.addEventListener('resize', cerrarSiActivo);
+  }
+</script>
+
+<style is:global>
+  abbr.acronimo {
+    position: relative;
+    margin-inline: -0.15em;
+    padding-inline: 0.15em;
+    border-radius: 0.3em;
+    text-decoration: none;
+    cursor: help;
+    transition: background-color 160ms ease;
+  }
+
+  /* Trazo propio en vez del subrayado punteado nativo, que no deja afinar tamaño ni aire. */
+  abbr.acronimo::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0.2em;
+    inset-block-end: 0.05em;
+    block-size: 1px;
+    background: repeating-linear-gradient(
+      to right,
+      var(--sl-color-gray-3) 0 3px,
+      transparent 3px 7px
+    );
+    opacity: 0.35;
+    transition: opacity 160ms ease;
+  }
+
+  /* En claro la misma opacidad se percibe más fuerte por el contraste del fondo. */
+  :root[data-theme='light'] abbr.acronimo::after {
+    opacity: 0.25;
+  }
+
+  abbr.acronimo:hover {
+    background: var(--m-hover);
+  }
+
+  abbr.acronimo:hover::after,
+  abbr.acronimo:focus-visible::after,
+  :root[data-theme='light'] abbr.acronimo:hover::after {
+    opacity: 0.85;
+  }
+
+  abbr.acronimo:focus-visible {
+    background: var(--m-hover);
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Diana de al menos 24px y píldora al hover, que el número invite al clic. */
+  a.cita {
+    margin: -0.3em -0.15em;
+    padding: 0.3em 0.15em;
+    border-radius: 0.3em;
+    text-decoration: none;
+    transition: background-color 160ms ease;
+  }
+
+  a.cita:hover,
+  a.cita:focus-visible {
+    background: var(--m-hover);
+  }
+
+  .acronimo-popover {
+    box-sizing: border-box;
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: 70;
+    max-inline-size: min(20rem, calc(100vw - 1rem));
+    padding: 0.4375rem 0.6875rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: var(--m-r-md);
+    background: var(--sl-color-bg-nav);
+    box-shadow: var(--sl-shadow-md);
+    color: var(--sl-color-gray-1);
+    font-size: var(--sl-text-xs);
+    line-height: 1.4;
+    user-select: none;
+    opacity: 0;
+    scale: 0.96;
+    transition:
+      opacity 160ms var(--m-ease-salida),
+      scale 180ms var(--m-ease-salida),
+      translate 200ms var(--m-ease-salida),
+      width 200ms var(--m-ease-salida),
+      height 200ms var(--m-ease-salida);
+  }
+
+  .acronimo-popover[data-visible] {
+    opacity: 1;
+    scale: 1;
+  }
+
+  /* Con destino la tarjeta es clicable y lo anuncia con pista, cursor y borde. */
+  .acronimo-popover[data-enlazado] {
+    cursor: pointer;
+  }
+
+  .acronimo-popover[data-enlazado]:hover {
+    border-color: var(--sl-color-gray-4);
+  }
+
+  .acronimo-popover__pista {
+    display: none;
+    align-items: center;
+    gap: 0.25rem;
+    margin-block-start: 0.125rem;
+    color: var(--sl-color-gray-3);
+    font-size: 0.6875rem;
+  }
+
+  .acronimo-popover[data-enlazado] .acronimo-popover__pista {
+    display: flex;
+  }
+
+  .acronimo-popover__pista svg {
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    transition: translate 160ms var(--m-ease-salida);
+  }
+
+  /* La flecha avanza hacia el destino, la misma señal que el resto de enlaces. */
+  @media (hover: hover) and (pointer: fine) {
+    .acronimo-popover[data-enlazado]:hover .acronimo-popover__pista svg {
+      translate: 2px 0;
+    }
+  }
+
+  .acronimo-popover[hidden] {
+    display: none;
+  }
+
+  .acronimo-popover[data-teleport],
+  .acronimo-popover[data-instant] {
+    transition-duration: 0ms;
+  }
+
+  .acronimo-popover__texto {
+    transition: opacity 120ms ease;
+  }
+
+  .acronimo-popover__texto[data-cambiando] {
+    opacity: 0;
+    transition-duration: 60ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    abbr.acronimo,
+    abbr.acronimo::after,
+    .acronimo-popover,
+    .acronimo-popover__texto,
+    .acronimo-popover__pista svg {
+      transition: none;
+    }
+  }
+</style>

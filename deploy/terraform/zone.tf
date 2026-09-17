@@ -6,3 +6,5 @@ resource "cloudflare_dns_record" "app" {
   ttl     = 1
   proxied = true
 }
+
+# docs.manualito.dev lo crea y gestiona el Worker manualito-docs (custom domain), no Terraform.

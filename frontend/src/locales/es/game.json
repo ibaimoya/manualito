@@ -1,0 +1,138 @@
+{
+  "composer": {
+    "aria": {
+      "carousel": "carrusel",
+      "next": "Pregunta siguiente",
+      "pause": "Pausar preguntas",
+      "previous": "Pregunta anterior",
+      "resume": "Reanudar preguntas",
+      "suggestedQuestions": "Preguntas sugeridas"
+    },
+    "placeholder": "Pregunta sobre {{gameName}}…"
+  },
+  "error": {
+    "backToHistory": "Ir a mi biblioteca",
+    "connectionDescription": "No hemos podido conectar con el servidor. Comprueba tu conexión y vuelve a intentarlo.",
+    "connectionTitle": "No podemos cargar este juego",
+    "loadDescription": "No hemos podido abrir la ficha. Vuelve a intentarlo o elige otro juego de tu biblioteca.",
+    "loadTitle": "El juego no ha cargado",
+    "notFoundDescription": "Puede que se haya retirado del catálogo. En tu biblioteca puedes elegir otro juego.",
+    "notFoundTitle": "No hemos encontrado este juego"
+  },
+  "explanation": {
+    "aiGenerated": "Generado con IA",
+    "aria": {
+      "game": "Explicación del juego",
+      "preparing": "Preparando la explicación"
+    },
+    "blocks": {
+      "setup": "Preparación",
+      "turns": "¿Cómo van los turnos?",
+      "victory": "¿Cómo se gana?"
+    },
+    "empty": {
+      "description": "Sube el manual de este juego y te lo explicamos en claro: preparación, turnos y cómo se gana.",
+      "title": "Aún no hay manuales"
+    },
+    "error": {
+      "failed": "No hemos podido generar la explicación. Tus manuales y conversaciones están a salvo.",
+      "notFound": "El manual aún se está indexando: la explicación estará lista en un momento."
+    },
+    "retry": "Reintentar",
+    "summary": "Resumen rápido"
+  },
+  "follow": {
+    "aria": {
+      "follow": "Seguir este juego",
+      "unfollow": "Dejar de seguir este juego"
+    },
+    "error": "No se ha guardado el cambio. Inténtalo de nuevo.",
+    "follow": "Seguir",
+    "following": "Siguiendo"
+  },
+  "footer": {
+    "explanation_one": "Explicación generada de {{count}} manual",
+    "explanation_other": "Explicación generada de {{count}} manuales",
+    "pages_one": "{{count}} página",
+    "pages_other": "{{count}} páginas"
+  },
+  "header": {
+    "boardGame": "Juego de mesa",
+    "boardGameWithYear": "Juego de mesa · {{year}}"
+  },
+  "manuals": {
+    "add": "Añadir manual",
+    "empty": "Todavía no hay manuales de {{gameName}}.",
+    "extracted": "Texto extraído",
+    "heading": "Manuales · fuentes",
+    "pages_one": "{{count}} página",
+    "pages_other": "{{count}} páginas",
+    "pdf": "Manual en PDF",
+    "photos": "Manual en fotos",
+    "readShared": "Abrir {{label}}",
+    "shared": "Compartido por la comunidad",
+    "sourceLabel": "De dónde sale la explicación",
+    "viewExtracted": "Ver texto extraído de {{label}}"
+  },
+  "navigation": {
+    "game": "Juego",
+    "library": "Biblioteca"
+  },
+  "questions": {
+    "blocked": "¿Y si no puedo jugar?",
+    "duration": "¿Cuánto dura una partida?",
+    "ends": "¿Cuándo acaba la partida?",
+    "example": "¿Me das un ejemplo?",
+    "firstPlayer": "¿Quién empieza?",
+    "materials": "¿Qué necesito para jugar?",
+    "passTurn": "¿Puedo pasar turno?",
+    "players": "¿Cuántos podemos jugar?",
+    "preparation": "¿Cómo se prepara?",
+    "scoring": "¿Cómo se cuentan los puntos?",
+    "teams": "¿Podemos jugar en equipo?",
+    "tie": "¿Y si empatamos?",
+    "turn": "¿Qué hago en mi turno?",
+    "victory": "¿Cómo se gana?"
+  },
+  "rating": {
+    "actions": {
+      "cancel": "Cancelar",
+      "remove": "Quitar valoración",
+      "save": "Guardar",
+      "update": "Actualizar"
+    },
+    "aria": {
+      "group": "Puntúa este juego",
+      "rated": "Valoración: {{score}} de 5",
+      "star_one": "{{count}} estrella",
+      "star_other": "{{count}} estrellas",
+      "unrated": "Sin valorar"
+    },
+    "dialog": {
+      "editDescription": "Puedes cambiar tu valoración cuando quieras.",
+      "newDescription": "Tu valoración nos ayuda a conocerte un poco más.",
+      "title": "¿Qué te ha parecido {{gameName}}?"
+    },
+    "labels": {
+      "absolutelyBonkers": "Es una locura",
+      "expectedMore": "Me esperaba algo más",
+      "likedIt": "Me ha gustado",
+      "notForMe": "No me ha convencido",
+      "reallyGood": "Es muy bueno"
+    },
+    "note": {
+      "label": "Añade una nota",
+      "optional": "Opcional",
+      "placeholder": "«Mejor con 4 jugadores…»"
+    },
+    "prompt": "Toca una estrella",
+    "toast": {
+      "removed": "Valoración quitada",
+      "removeError": "No hemos podido quitar la valoración",
+      "retry": "Inténtalo de nuevo en un momento.",
+      "saved": "Valoración guardada",
+      "saveError": "No hemos podido guardar la valoración",
+      "updated": "Valoración actualizada"
+    }
+  }
+}

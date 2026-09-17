@@ -1,4 +1,4 @@
-minimum_pre_commit_version: "4.6.0"
+minimum_pre_commit_version: "4.6.1"
 default_install_hook_types: [pre-commit, commit-msg]
 
 repos:

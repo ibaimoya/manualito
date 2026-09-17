@@ -1,0 +1,84 @@
+{
+  "banner": {
+    "dismiss": "Descartar aviso",
+    "message": "Verifica tu email para asegurar tu cuenta.",
+    "openMail": "Abrir mi correo",
+    "resend": "Reenviar",
+    "resent": "Reenviado · {{seconds}}s",
+    "sending": "Enviando…"
+  },
+  "loading": {
+    "ariaLabel": "Cargando contenido",
+    "text": "Cargando…"
+  },
+  "meta": {
+    "description": "Explica cualquier manual de juego de mesa en segundos.",
+    "title": "Manualito · Aprende juegos de mesa sin leer manuales"
+  },
+  "navigation": {
+    "aria": {
+      "main": "Navegación principal",
+      "sections": "Secciones de la app"
+    },
+    "explore": "Explorar",
+    "help": "Ayuda",
+    "home": "Inicio",
+    "library": "Biblioteca",
+    "newManual": "Nuevo manual",
+    "settings": "Ajustes"
+  },
+  "notifications": {
+    "dismiss": "Cerrar notificación",
+    "label": "Notificaciones"
+  },
+  "recovery": {
+    "details": "Detalles técnicos",
+    "error": {
+      "description": "Ha ocurrido un error al cargarla. Prueba otra vez y, si sigue fallando, escríbenos.",
+      "title": "No hemos podido abrir esta página"
+    },
+    "home": "Volver al inicio",
+    "not-found": {
+      "description": "Puede que el enlace haya cambiado o que la página ya no exista. Vuelve al inicio para seguir con tus juegos.",
+      "title": "Esta página no está en el manual"
+    },
+    "offline": {
+      "description": "Comprueba tu conexión y vuelve a intentarlo. Si tienes conexión, puede que el servicio no esté disponible en este momento.",
+      "title": "No podemos conectar"
+    },
+    "retry": "Reintentar",
+    "retryFailed": "Sigue sin funcionar. Puedes volver al inicio o escribirnos.",
+    "support": "Contactar con soporte"
+  },
+  "sidebar": {
+    "aria": {
+      "brandHome": "Manualito · ir al inicio",
+      "profile": "Tu perfil"
+    },
+    "toggle": {
+      "collapse": "Contraer menú",
+      "expand": "Expandir menú"
+    }
+  },
+  "skipLink": "Saltar al contenido",
+  "storage": {
+    "denied": {
+      "description": "Tu navegador bloquea el almacenamiento (modo privado o cookies desactivadas).",
+      "title": "No podemos guardar localmente"
+    },
+    "quota": {
+      "description": "Libera espacio desde la configuración de almacenamiento de tu navegador.",
+      "title": "Espacio local agotado"
+    }
+  },
+  "topbar": {
+    "aria": {
+      "breadcrumb": "Ruta de navegación"
+    },
+    "titles": {
+      "privacy": "Política de privacidad",
+      "profile": "Perfil",
+      "security": "Cuenta"
+    }
+  }
+}

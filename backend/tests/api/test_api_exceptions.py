@@ -3,6 +3,7 @@ import json
 import pytest
 from fastapi.exceptions import RequestValidationError
 from limits import RateLimitItemPerMinute
+from pydantic import ValidationError
 from slowapi.errors import RateLimitExceeded
 from slowapi.wrappers import Limit
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -13,7 +14,12 @@ from api.auth.exceptions import (
     InvalidEmailVerificationTokenError,
     InvalidPasswordResetTokenError,
     PasswordValidationError,
+    UsernameValidationError,
 )
+from api.auth.passwords import validate_password_policy
+from api.auth.schemas import RegisterRequest
+from api.auth.username import build_username_key, normalize_username
+from api.conversations.schemas import RenameConversationRequest, SendMessageRequest
 from api.exceptions import (
     ApiError,
     ImageTooLargeError,
@@ -39,6 +45,8 @@ from api.manuals.exceptions import (
     ManualRequestTooLargeError,
     ManualTooLargeError,
 )
+from api.manuals.schemas import EditPageTextRequest
+from api.ratings.schemas import RateGameRequest
 
 
 def test_api_exceptions_inherit_from_api_error():
@@ -183,18 +191,20 @@ def test_operational_handlers_keep_same_error_envelope(
 
 
 @pytest.mark.parametrize(
-    ("exception", "detail"),
+    ("exception", "detail", "maximum"),
     [
-        (ImageTooLargeError(), "La imagen no puede superar 30 MB."),
-        (PdfTooLargeError(), "El PDF no puede superar 95 MB."),
-        (ManualTooLargeError(), "El manual no puede superar 95 MB."),
+        (ImageTooLargeError(), "La imagen no puede superar 30 MB.", 30),
+        (PdfTooLargeError(), "El PDF no puede superar 95 MB.", 95),
+        (ManualTooLargeError(), "El manual no puede superar 95 MB.", 95),
+        (ManualPageLimitExceededError(), "El manual no puede superar 30 páginas.", 30),
     ],
 )
-def test_upload_limit_errors_use_decimal_megabytes(exception, detail):
-    """Los mensajes muestran los mismos MB decimales que aplica el backend."""
+def test_upload_limit_errors_expose_decimal_megabytes_or_pages(exception, detail, maximum):
+    """El cliente recibe el límite del mensaje sin analizar la frase española."""
     response = domain_exception_handler(None, exception)
 
     assert _json_body(response)["detail"] == detail
+    assert _json_body(response)["errors"][0]["params"] == {"max": maximum}
 
 
 def test_domain_exception_handler_accepts_registered_base_subclasses():
@@ -249,6 +259,7 @@ def test_rate_limit_handler_returns_stable_public_envelope():
             "field": None,
             "code": "rate_limited",
             "message": "Demasiados intentos. Inténtalo más tarde.",
+            "params": {},
         }
     ]
     assert response.headers["Retry-After"] == "60"
@@ -288,6 +299,7 @@ def test_auth_validation_handler_serializes_domain_field_errors():
             "field": "password",
             "code": "password_too_short",
             "message": "La contraseña es demasiado corta.",
+            "params": {},
         }
     ]
 
@@ -309,6 +321,111 @@ def test_auth_form_validation_error_accepts_multiple_errors():
         "email_invalid",
         "password_too_short",
     ]
+
+
+@pytest.mark.parametrize(
+    ("model", "payload", "field", "code", "params"),
+    [
+        (
+            RegisterRequest,
+            {"email": "user@example.com", "username": "reader", "password": "short"},
+            "password",
+            "password_too_short",
+            {"min": 12},
+        ),
+        (
+            RegisterRequest,
+            {"email": "user@example.com", "username": "reader", "password": "private" * 20},
+            "password",
+            "password_too_long",
+            {"max": 128},
+        ),
+        (
+            RegisterRequest,
+            {
+                "email": "a" * 255 + "@example.com",
+                "username": "reader",
+                "password": "secure-password",
+            },
+            "email",
+            "email_too_long",
+            {"max": 254},
+        ),
+        (
+            RegisterRequest,
+            {"email": "user@example.com", "username": "u" * 21, "password": "secure-password"},
+            "username",
+            "username_too_long",
+            {"max": 20},
+        ),
+        (RenameConversationRequest, {"title": "t" * 81}, "title", "title_too_long", {"max": 80}),
+        (SendMessageRequest, {"content": "m" * 4001}, "content", "message_too_long", {"max": 4000}),
+        (EditPageTextRequest, {"text": "t" * 20001}, "text", "text_too_long", {"max": 20000}),
+        (RateGameRequest, {"score": 3, "note": "n" * 121}, "note", "invalid_request", {"max": 120}),
+    ],
+)
+def test_real_pydantic_length_errors_publish_only_numeric_limits(
+    model, payload, field, code, params
+):
+    """Modelos reales producen ctx; el handler publica el límite, nunca el valor recibido."""
+    with pytest.raises(ValidationError) as caught:
+        model.model_validate(payload)
+
+    errors = [{**error, "loc": ("body", *error["loc"])} for error in caught.value.errors()]
+    response = validation_exception_handler(None, RequestValidationError(errors))
+    body = _json_body(response)
+    error = next(error for error in body["errors"] if error["field"] == field)
+
+    assert response.status_code == 422
+    assert error["code"] == code
+    assert error["params"] == params
+    assert all(type(value) is int for value in error["params"].values())
+    assert payload[field] not in body["detail"]
+    assert payload[field] not in error["message"]
+    assert {"ctx", "input", "type", "url"}.isdisjoint(error)
+
+
+@pytest.mark.parametrize(
+    ("validator", "value", "code", "params"),
+    [
+        (validate_password_policy, "short", "password_too_short", {"min": 12}),
+        (validate_password_policy, "private" * 20, "password_too_long", {"max": 128}),
+        (normalize_username, "u" * 21, "username_too_long", {"max": 20}),
+        (build_username_key, "u" * 161, "username_key_too_long", {"max": 160}),
+    ],
+)
+def test_real_auth_validators_preserve_limits_through_http_handler(validator, value, code, params):
+    """Las validaciones de dominio conservan sus límites al llegar al contrato público."""
+    with pytest.raises((PasswordValidationError, UsernameValidationError)) as caught:
+        validator(value)
+
+    response = auth_validation_handler(None, caught.value)
+    error = _json_body(response)["errors"][0]
+
+    assert response.status_code == 422
+    assert error["code"] == code
+    assert error["params"] == params
+
+
+def test_length_parameters_do_not_forward_other_validation_context():
+    """La frontera de Pydantic solo admite los dos límites enteros explícitos."""
+    response = validation_exception_handler(
+        None,
+        RequestValidationError(
+            [
+                {
+                    "type": "string_too_long",
+                    "loc": ("body", "username"),
+                    "input": "private-user-value",
+                    "ctx": {"max_length": 20, "min_length": True, "input": "private-context"},
+                }
+            ]
+        ),
+    )
+
+    error = _json_body(response)["errors"][0]
+    assert error["params"] == {"max": 20}
+    assert "private" not in json.dumps(error)
 
 
 def _json_body(response):

@@ -1,0 +1,138 @@
+{
+  "actions": {
+    "moveDown": "Move page {{page}} down",
+    "moveUp": "Move page {{page}} up",
+    "process": "Process",
+    "processPages_one": "Process {{count}} page",
+    "processPages_other": "Process {{count}} pages",
+    "processPdf": "Process 1 PDF",
+    "removePage": "Remove page {{page}}",
+    "removePdf": "Remove PDF"
+  },
+  "consent": {
+    "ariaLabel": "Share this rulebook with the community",
+    "author": {
+      "description": "Others will see that you uploaded this manual.",
+      "label": "Share under my name"
+    },
+    "description": "Help others ask questions without uploading their rulebook.",
+    "label": "Share with the community",
+    "options": {
+      "anonymous": "Anonymous",
+      "label": "Sharing options",
+      "named": "With my name"
+    }
+  },
+  "drop": {
+    "busy": "Your manual is uploading",
+    "chooseGame": "Choose the game first",
+    "formats": "One PDF or images of its pages",
+    "release": "Drop your manual here"
+  },
+  "empty": {
+    "pages": "Add one PDF or photos of its pages."
+  },
+  "feedback": {
+    "chooseGame": {
+      "description": "Pick a game before you process the rulebook.",
+      "title": "Choose a game"
+    },
+    "unexpected": {
+      "description": "Please try again in a moment.",
+      "title": "Something went wrong"
+    }
+  },
+  "game": {
+    "description": "We look up the game on BoardGameGeek to connect the rulebook to its library and make answers better."
+  },
+  "name": {
+    "help": "Leave the suggested name or enter your own.",
+    "label": "Manual name (optional)",
+    "suggested": "{{gameName}} manual"
+  },
+  "pages": {
+    "counter_one": "{{count}} / {{max}} page",
+    "counter_other": "{{count}} / {{max}} pages",
+    "label": "Page {{page}}",
+    "pdfReady": "PDF ready to process"
+  },
+  "processing": {
+    "backToLibrary": "Go to my library",
+    "connectionDescription": "We couldn't reach the server to check progress. Check your connection and try again.",
+    "connectionTitle": "We can't check progress",
+    "description": "It can take longer with PDFs or multiple pages. You can minimize the app if you'd like.",
+    "failureDescription": "We couldn't read this file. Try clearer photos or another copy of the rulebook.",
+    "failureTitle": "We couldn't process it",
+    "info": "Your files are used to process and index this rulebook.",
+    "loadDescription": "We couldn't check the rulebook's status. Try again to find out whether it has finished.",
+    "loadTitle": "We can't check your rulebook",
+    "notFoundDescription": "It may have been deleted. Open another rulebook from your library or upload it again.",
+    "notFoundTitle": "We couldn't find this rulebook",
+    "pageCount_one": "{{completed}}/{{count}} page",
+    "pageCount_other": "{{completed}}/{{count}} pages",
+    "progressLabel": "Progress: {{progress}} percent",
+    "title": "Reading your rulebook…",
+    "unnamed": "Unnamed rulebook",
+    "uploadAnother": "Upload another rulebook"
+  },
+  "sources": {
+    "camera": {
+      "ariaLabel": "Take a photo with your camera",
+      "description": "One photo at a time",
+      "label": "Camera"
+    },
+    "gallery": {
+      "ariaLabel": "Choose images from your gallery",
+      "description": "Several photos at once",
+      "label": "Gallery"
+    },
+    "pdf": {
+      "ariaLabel": "Choose a PDF",
+      "description": "One document",
+      "label": "PDF"
+    }
+  },
+  "steps": {
+    "game": "Choose the game",
+    "pages": "Add your pages"
+  },
+  "title": "New rulebook",
+  "validation": {
+    "addPages": {
+      "description": "Use the camera, your gallery, or upload a PDF.",
+      "title": "Add some pages"
+    },
+    "imagesAlreadyAdded": {
+      "description": "Remove them before adding a PDF.",
+      "title": "You have already added images"
+    },
+    "imageTooLarge": {
+      "description": "Each image can be up to {{max}} MB.",
+      "title": "That image is too big"
+    },
+    "mixedFiles": {
+      "description": "Add one PDF or images of its pages, without mixing them.",
+      "title": "Choose one format"
+    },
+    "pdfAlreadyAdded": {
+      "description": "Remove it before adding other files.",
+      "title": "You've already added a PDF"
+    },
+    "pdfTooLarge": {
+      "description": "The PDF can be up to {{max}} MB.",
+      "title": "That PDF is too big"
+    },
+    "tooManyPages": {
+      "description": "A rulebook can have up to {{max}} images.",
+      "title": "That's too many pages"
+    },
+    "totalTooLarge": {
+      "description": "The total can't be more than {{max}} MB.",
+      "title": "Those files are too big"
+    },
+    "unsupportedImage": {
+      "description": "Use JPG, PNG, or WebP.",
+      "title": "That file format isn't supported"
+    }
+  }
+}

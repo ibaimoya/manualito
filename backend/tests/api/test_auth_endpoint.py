@@ -74,6 +74,7 @@ def test_register_rejects_role_escalation(client, override_db_session):
     response = client.post(
         "/api/auth/register",
         json={
+            "locale": "es",
             "email": _VALID_TEST_EMAIL,
             "username": _VALID_TEST_USERNAME,
             "password": _VALID_TEST_PASSWORD,
@@ -103,6 +104,7 @@ def test_register_rejects_invalid_username(
     response = client.post(
         "/api/auth/register",
         json={
+            "locale": "es",
             "email": _VALID_TEST_EMAIL,
             "username": username,
             "password": _VALID_TEST_PASSWORD,
@@ -182,7 +184,7 @@ def test_register_request_validation_returns_field_error(
     code: str,
 ):
     """Los errores de schema llegan con field/code estables para formularios."""
-    response = client.post("/api/auth/register", json=payload)
+    response = client.post("/api/auth/register", json={**payload, "locale": "es"})
 
     assert response.status_code == 422
     body = response.json()
@@ -264,7 +266,9 @@ def test_logout_requires_csrf_and_clears_cookies(client, monkeypatch, override_d
     assert "Max-Age=0" in response.headers["set-cookie"]
 
 
+@pytest.mark.parametrize("locale", ["es", "en"])
 def test_register_success_sets_session_cookie_and_filters_user_response(
+    locale,
     client,
     monkeypatch,
     override_db_session,
@@ -288,6 +292,7 @@ def test_register_success_sets_session_cookie_and_filters_user_response(
     response = client.post(
         "/api/auth/register",
         json={
+            "locale": locale,
             "email": _VALID_TEST_EMAIL,
             "username": _VALID_TEST_USERNAME,
             "password": _VALID_TEST_PASSWORD,
@@ -306,6 +311,7 @@ def test_register_success_sets_session_cookie_and_filters_user_response(
     assert config.AUTH_CSRF_COOKIE_NAME in session_cookie
     assert "HttpOnly" in session_cookie
     assert schedule_mock.call_count == 1
+    assert schedule_mock.call_args.kwargs["locale"] == locale
 
 
 def test_verify_email_uses_token_without_csrf(client, monkeypatch, override_db_session):
@@ -333,7 +339,9 @@ def test_verify_email_invalid_token_maps_to_400(client, monkeypatch, override_db
     _assert_error(response.json(), field=None, code="email_verification_token_invalid")
 
 
+@pytest.mark.parametrize("locale", ["es", "en"])
 def test_resend_verification_email_is_uniform_and_best_effort(
+    locale,
     client,
     monkeypatch,
     override_db_session,
@@ -352,14 +360,20 @@ def test_resend_verification_email_is_uniform_and_best_effort(
     )
     monkeypatch.setattr("api.auth.router.schedule_verification_email", schedule_mock)
 
-    response = client.post("/api/auth/email/resend", json={"email": _VALID_TEST_EMAIL})
+    response = client.post(
+        "/api/auth/email/resend", json={"email": _VALID_TEST_EMAIL, "locale": locale}
+    )
 
     assert response.status_code == 200
     assert response.json()["detail"].startswith("Si existe una cuenta")
     assert schedule_mock.call_count == 1
+    assert schedule_mock.call_args.kwargs["locale"] == locale
 
 
-def test_forgot_password_is_uniform_and_best_effort(client, monkeypatch, override_db_session):
+@pytest.mark.parametrize("locale", ["es", "en"])
+def test_forgot_password_is_uniform_and_best_effort(
+    client, monkeypatch, override_db_session, locale
+):
     """Forgot password no enumera cuentas y agenda email si procede."""
     schedule_mock = MagicMock()
     monkeypatch.setattr(
@@ -374,11 +388,14 @@ def test_forgot_password_is_uniform_and_best_effort(client, monkeypatch, overrid
     )
     monkeypatch.setattr("api.auth.router.schedule_password_reset_email", schedule_mock)
 
-    response = client.post("/api/auth/password/forgot", json={"email": _VALID_TEST_EMAIL})
+    response = client.post(
+        "/api/auth/password/forgot", json={"email": _VALID_TEST_EMAIL, "locale": locale}
+    )
 
     assert response.status_code == 200
     assert response.json()["detail"].startswith("Si existe una cuenta")
     assert schedule_mock.call_count == 1
+    assert schedule_mock.call_args.kwargs["locale"] == locale
 
 
 def test_reset_password_uses_token_without_csrf(client, monkeypatch, override_db_session):
@@ -422,6 +439,7 @@ def test_register_duplicate_identity_maps_to_409(client, monkeypatch, override_d
     response = client.post(
         "/api/auth/register",
         json={
+            "locale": "es",
             "email": _VALID_TEST_EMAIL,
             "username": _VALID_TEST_USERNAME,
             "password": _VALID_TEST_PASSWORD,
@@ -515,10 +533,7 @@ def _auth_session() -> AuthenticatedSession:
 def _assert_error(body: dict, *, field: str | None, code: str) -> None:
     """Comprueba un error público sin depender del texto visible."""
     assert "detail" in body
-    assert any(
-        error["field"] == field and error["code"] == code
-        for error in body["errors"]
-    )
+    assert any(error["field"] == field and error["code"] == code for error in body["errors"])
 
 
 def _json_body(response) -> dict:

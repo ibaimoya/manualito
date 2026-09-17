@@ -1,0 +1,30 @@
+{
+  "account": {
+    "ariaLabel": "Tu cuenta"
+  },
+  "empty": {
+    "description": "Encuentra un juego que te apetezca aprender y consulta sus reglas.",
+    "explore": "Explorar juegos"
+  },
+  "error": {
+    "manuals": "Vuelve a intentarlo para consultar tus últimos manuales.",
+    "title": "Tus manuales no se han cargado"
+  },
+  "greeting": {
+    "anonymous": "Hola",
+    "description": "Saca foto al manual y te lo explico paso a paso, sin tener que leerlo entero.",
+    "named": "Hola, <player>{{firstName}}</player>",
+    "question": "¿Qué juego vamos a aprender?",
+    "wave": "Saludar"
+  },
+  "hero": {
+    "description": "Sube las páginas del manual desde la cámara, la galería o un PDF, y yo te lo explico.",
+    "newManual": "Nuevo manual",
+    "title": "Aprende un juego nuevo"
+  },
+  "recent": {
+    "heading": "Recientes",
+    "viewAll": "Ver todo",
+    "viewAllAriaLabel": "Ver todos tus juegos"
+  }
+}

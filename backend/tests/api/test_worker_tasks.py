@@ -1,4 +1,10 @@
-from unittest.mock import AsyncMock, Mock
+from contextlib import contextmanager
+from datetime import UTC, datetime
+from email import policy
+from email.utils import parsedate_to_datetime
+from ssl import SSLCertVerificationError
+from traceback import format_exception
+from unittest.mock import ANY, AsyncMock, Mock
 from uuid import UUID
 
 import pytest
@@ -11,6 +17,7 @@ import api.worker.tasks.mail as mail_tasks
 import api.worker.tasks.maintenance as maintenance_tasks
 import api.worker.tasks.manuals as manual_tasks
 from api import config
+from api.manuals.dto import ReconciliationPlan
 from api.worker.celery import celery_app
 
 _USER_ID = UUID("018fd000-0000-7000-8000-000000000010")
@@ -23,10 +30,11 @@ _ASSISTANT_MESSAGE_ID = UUID("018fd000-0000-7000-8000-000000000014")
 
 def test_chat_task_marks_pending_reply_failed_when_lock_wait_expires(monkeypatch):
     """Si el lock no se libera tras los reintentos, el mensaje no queda pending."""
+    generate_mock = AsyncMock(return_value=False)
     monkeypatch.setattr(
         conversation_tasks.service,
         "generate_pending_reply",
-        AsyncMock(return_value=False),
+        generate_mock,
     )
     fail_mock = AsyncMock()
     monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
@@ -37,8 +45,120 @@ def test_chat_task_marks_pending_reply_failed_when_lock_wait_expires(monkeypatch
         str(_USER_MESSAGE_ID),
         str(_ASSISTANT_MESSAGE_ID),
         4,
+        "en",
         conversation_tasks.LOCK_BUSY_MAX_RETRIES,
         0,
+    )
+
+    generate_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _USER_MESSAGE_ID,
+        _ASSISTANT_MESSAGE_ID,
+        4,
+        "en",
+    )
+    fail_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _ASSISTANT_MESSAGE_ID,
+        "generation_failed",
+    )
+
+
+def test_chat_task_completes_without_retry(monkeypatch):
+    """Una respuesta completada conserva el idioma y no se reencola."""
+    generate_mock = AsyncMock(return_value=True)
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(conversation_tasks.service, "generate_pending_reply", generate_mock)
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    conversation_tasks.generate_chat_reply_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+    )
+
+    generate_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _USER_MESSAGE_ID,
+        _ASSISTANT_MESSAGE_ID,
+        4,
+        "en",
+    )
+    fail_mock.assert_not_awaited()
+    retry_mock.assert_not_called()
+
+
+def test_chat_task_retries_external_errors_with_language(monkeypatch):
+    """Un fallo externo reencola los mismos datos y conserva el idioma."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(side_effect=ConnectionError("llm caído")),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    conversation_id = str(_CONVERSATION_ID)
+    user_message_id = str(_USER_MESSAGE_ID)
+    assistant_message_id = str(_ASSISTANT_MESSAGE_ID)
+
+    with pytest.raises(Retry):
+        conversation_tasks.generate_chat_reply_task.run(
+            user_id,
+            conversation_id,
+            user_message_id,
+            assistant_message_id,
+            4,
+            "en",
+            7,
+            1,
+        )
+
+    fail_mock.assert_not_awaited()
+    assert retry_mock.call_args.kwargs["countdown"] == 10
+    assert retry_mock.call_args.kwargs["args"] == (
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+        7,
+        2,
+    )
+
+
+def test_chat_task_fails_when_external_retries_are_exhausted(monkeypatch):
+    """Al agotar fallos externos el mensaje pendiente queda marcado como fallido."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(side_effect=TimeoutError("llm caído")),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    conversation_tasks.generate_chat_reply_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "es",
+        0,
+        conversation_tasks.EXTERNAL_ERROR_MAX_RETRIES,
     )
 
     fail_mock.assert_awaited_once_with(
@@ -46,6 +166,105 @@ def test_chat_task_marks_pending_reply_failed_when_lock_wait_expires(monkeypatch
         _CONVERSATION_ID,
         _ASSISTANT_MESSAGE_ID,
         "generation_failed",
+    )
+    retry_mock.assert_not_called()
+
+
+def test_chat_task_marks_pending_reply_failed_on_soft_timeout(monkeypatch):
+    """Un límite blando agotado no deja el mensaje en estado pendiente."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(side_effect=SoftTimeLimitExceeded()),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+
+    conversation_tasks.generate_chat_reply_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "es",
+    )
+
+    fail_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _ASSISTANT_MESSAGE_ID,
+        "generation_failed",
+    )
+    retry_mock.assert_not_called()
+
+
+def test_chat_task_retries_when_lock_is_temporarily_busy(monkeypatch):
+    """Un lock ocupado reencola el turno sin cambiar idioma ni contador externo."""
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "generate_pending_reply",
+        AsyncMock(return_value=False),
+    )
+    fail_mock = AsyncMock()
+    retry_mock = Mock(side_effect=Retry())
+    monkeypatch.setattr(conversation_tasks.service, "fail_pending_reply", fail_mock)
+    monkeypatch.setattr(conversation_tasks.generate_chat_reply_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    conversation_id = str(_CONVERSATION_ID)
+    user_message_id = str(_USER_MESSAGE_ID)
+    assistant_message_id = str(_ASSISTANT_MESSAGE_ID)
+
+    with pytest.raises(Retry):
+        conversation_tasks.generate_chat_reply_task.run(
+            user_id,
+            conversation_id,
+            user_message_id,
+            assistant_message_id,
+            4,
+            "en",
+            3,
+            1,
+        )
+
+    fail_mock.assert_not_awaited()
+    assert retry_mock.call_args.kwargs["countdown"] == (conversation_tasks.LOCK_BUSY_RETRY_SECONDS)
+    assert retry_mock.call_args.kwargs["args"] == (
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+        4,
+        1,
+    )
+
+
+def test_title_task_forwards_resolved_language(monkeypatch):
+    """La tarea de título recibe el mismo idioma que la respuesta del turno."""
+    refresh_mock = AsyncMock()
+    monkeypatch.setattr(
+        conversation_tasks.service,
+        "refresh_conversation_title",
+        refresh_mock,
+    )
+
+    conversation_tasks.refresh_conversation_title_task.run(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        "Fallback",
+        "en",
+    )
+
+    refresh_mock.assert_awaited_once_with(
+        _USER_ID,
+        _CONVERSATION_ID,
+        _USER_MESSAGE_ID,
+        "Fallback",
+        "en",
     )
 
 
@@ -62,11 +281,12 @@ def test_game_task_marks_explanation_failed_when_lock_wait_expires(monkeypatch):
     game_tasks.generate_game_explanation_task.run(
         str(_USER_ID),
         str(_GAME_ID),
+        "a" * 64,
         game_tasks.LOCK_BUSY_MAX_RETRIES,
         0,
     )
 
-    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    fail_mock.assert_awaited_once_with(_GAME_ID, "a" * 64, "generation_failed")
 
 
 def test_game_task_completes_without_retry_when_generation_finishes(monkeypatch):
@@ -78,9 +298,9 @@ def test_game_task_completes_without_retry_when_generation_finishes(monkeypatch)
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
 
-    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID))
+    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), "a" * 64)
 
-    generate_mock.assert_awaited_once_with(_USER_ID, _GAME_ID)
+    generate_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "a" * 64)
     fail_mock.assert_not_awaited()
     retry_mock.assert_not_called()
 
@@ -96,14 +316,16 @@ def test_game_task_retries_external_errors_with_separate_counter(monkeypatch):
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    game_id = str(_GAME_ID)
 
     with pytest.raises(Retry):
-        game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), 7, 1)
+        game_tasks.generate_game_explanation_task.run(user_id, game_id, "a" * 64, 7, 1)
 
     fail_mock.assert_not_awaited()
     retry_mock.assert_called_once()
     assert retry_mock.call_args.kwargs["countdown"] == 10
-    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), 7, 2)
+    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), "a" * 64, 7, 2)
 
 
 def test_game_task_fails_explanation_when_external_retries_are_exhausted(monkeypatch):
@@ -121,11 +343,12 @@ def test_game_task_fails_explanation_when_external_retries_are_exhausted(monkeyp
     game_tasks.generate_game_explanation_task.run(
         str(_USER_ID),
         str(_GAME_ID),
+        "a" * 64,
         3,
         game_tasks.EXTERNAL_ERROR_MAX_RETRIES,
     )
 
-    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    fail_mock.assert_awaited_once_with(_GAME_ID, "a" * 64, "generation_failed")
     retry_mock.assert_not_called()
 
 
@@ -141,9 +364,9 @@ def test_game_task_marks_explanation_failed_on_soft_timeout(monkeypatch):
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
 
-    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID))
+    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), "a" * 64)
 
-    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    fail_mock.assert_awaited_once_with(_GAME_ID, "a" * 64, "generation_failed")
     retry_mock.assert_not_called()
 
 
@@ -158,14 +381,16 @@ def test_game_task_retries_when_gpu_lock_is_temporarily_busy(monkeypatch):
     retry_mock = Mock(side_effect=Retry())
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
+    user_id = str(_USER_ID)
+    game_id = str(_GAME_ID)
 
     with pytest.raises(Retry):
-        game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), 4, 1)
+        game_tasks.generate_game_explanation_task.run(user_id, game_id, "a" * 64, 4, 1)
 
     fail_mock.assert_not_awaited()
     retry_mock.assert_called_once()
     assert retry_mock.call_args.kwargs["countdown"] == game_tasks.LOCK_BUSY_RETRY_SECONDS
-    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), 5, 1)
+    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), "a" * 64, 5, 1)
 
 
 def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):
@@ -188,69 +413,147 @@ def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):
             "<html>secreto</html>",
         ),
         argsrepr=mail_tasks.REDACTED_EMAIL_ARGS,
+        headers={"mail_date": ANY},
     )
+    queued_date = parsedate_to_datetime(apply_mock.call_args.kwargs["headers"]["mail_date"])
+    assert queued_date <= datetime.now(UTC)
 
 
-def test_send_email_task_forwards_html_body(monkeypatch):
-    """La task de correo conserva la alternativa HTML al invocar el cliente SMTP."""
-    send_mock = AsyncMock()
-    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
+@pytest.fixture
+def smtp_mail_transport(monkeypatch):
+    """Aísla la red SMTP y conserva el cliente y los reintentos reales."""
+    smtp_send = AsyncMock()
+    monkeypatch.setattr(mail_tasks.aiosmtplib, "send", smtp_send)
+    return smtp_send
 
-    mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto", "<html>Texto</html>")
 
-    send_mock.assert_awaited_once_with(
-        to_email="user@example.com",
-        subject="Asunto",
-        text_body="Texto",
-        html_body="<html>Texto</html>",
+@contextmanager
+def _mail_request(retries=0):
+    mail_tasks.send_email_task.push_request(
+        id="fcd3a3c5-02a1-4ed8-b68c-09f26b5c57f6",
+        args=("user@example.com", "Asunto", "Texto", "<html>Texto</html>"),
+        kwargs={},
+        retries=retries,
+        is_eager=True,
+        called_directly=False,
+        headers={"mail_date": "Wed, 16 Sep 2026 10:00:00 GMT"},
     )
-
-
-def test_send_email_task_retries_smtp_errors(monkeypatch):
-    """La task de correo reintenta errores SMTP transitorios."""
-    send_mock = AsyncMock(side_effect=mail_tasks.aiosmtplib.SMTPException("smtp down"))
-    retry_mock = Mock(side_effect=Retry())
-    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
-    monkeypatch.setattr(mail_tasks.send_email_task, "retry", retry_mock)
-
-    mail_tasks.send_email_task.push_request(retries=0)
     try:
-        with pytest.raises(Retry):
-            mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto")
+        yield
     finally:
         mail_tasks.send_email_task.pop_request()
 
-    retry_mock.assert_called_once()
-    assert retry_mock.call_args.kwargs["countdown"] == 30
-    assert isinstance(retry_mock.call_args.kwargs["exc"], mail_tasks.aiosmtplib.SMTPException)
+
+def test_send_email_task_forwards_html_body(smtp_mail_transport):
+    with _mail_request():
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
+
+    message = smtp_mail_transport.await_args.args[0]
+    assert message["To"] == "user@example.com"
+    assert message.get_body(preferencelist=("plain",)).get_content().strip() == "Texto"
+    assert message.get_body(preferencelist=("html",)).get_content().strip() == "<html>Texto</html>"
+    assert message["Resend-Idempotency-Key"] == "fcd3a3c5-02a1-4ed8-b68c-09f26b5c57f6"
 
 
-def test_send_email_task_stops_when_retries_are_exhausted(monkeypatch):
-    """La task de correo registra el fallo final sin reintentar indefinidamente."""
-    send_mock = AsyncMock(side_effect=OSError("network down"))
-    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
-    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
-    monkeypatch.setattr(mail_tasks.send_email_task, "retry", retry_mock)
+@pytest.mark.parametrize(
+    "smtp_error",
+    [
+        OSError("private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPServerDisconnected("private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPTimeoutError("private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPDataError(451, "private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPAuthenticationError(454, "private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPRecipientsRefused(
+            [
+                mail_tasks.aiosmtplib.SMTPRecipientRefused(
+                    450, "private-provider-message", "private-email"
+                )
+            ]
+        ),
+        SoftTimeLimitExceeded(),
+    ],
+)
+def test_send_email_task_retries_transient_errors(smtp_mail_transport, smtp_error):
+    smtp_mail_transport.side_effect = smtp_error
 
-    mail_tasks.send_email_task.push_request(retries=mail_tasks.send_email_task.max_retries)
-    try:
-        mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto")
-    finally:
-        mail_tasks.send_email_task.pop_request()
+    with _mail_request(), pytest.raises(Retry) as caught:
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
 
-    retry_mock.assert_not_called()
+    retry = caught.value
+    assert retry.when == 30
+    assert isinstance(retry.exc, mail_tasks.MailDeliveryError)
+    assert retry.sig.options["task_id"] == "fcd3a3c5-02a1-4ed8-b68c-09f26b5c57f6"
+    assert retry.sig.options["argsrepr"] == mail_tasks.REDACTED_EMAIL_ARGS
+    assert retry.sig.options["headers"] == {"mail_date": "Wed, 16 Sep 2026 10:00:00 GMT"}
+    assert retry.__context__ is None
+    assert "private-provider-message" not in "".join(format_exception(retry))
 
 
-def test_send_email_task_logs_soft_timeout(monkeypatch):
-    """La task de correo no reintenta si Celery corta por soft timeout."""
-    send_mock = AsyncMock(side_effect=mail_tasks.SoftTimeLimitExceeded())
-    retry_mock = Mock(side_effect=AssertionError("no debe reintentarse"))
-    monkeypatch.setattr(mail_tasks, "send_email", send_mock)
-    monkeypatch.setattr(mail_tasks.send_email_task, "retry", retry_mock)
+@pytest.mark.parametrize("retries", [1, 2])
+def test_send_email_task_increases_retry_delay(smtp_mail_transport, retries):
+    smtp_mail_transport.side_effect = ConnectionError("private-provider-message")
 
-    mail_tasks.send_email_task.run("user@example.com", "Asunto", "Texto")
+    with _mail_request(retries), pytest.raises(Retry) as caught:
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
 
-    retry_mock.assert_not_called()
+    assert caught.value.when == 30 * 2**retries
+
+
+@pytest.mark.parametrize(
+    "smtp_error",
+    [
+        mail_tasks.aiosmtplib.SMTPDataError(550, "private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPAuthenticationError(535, "private-provider-message"),
+        mail_tasks.aiosmtplib.SMTPRecipientsRefused(
+            [
+                mail_tasks.aiosmtplib.SMTPRecipientRefused(
+                    550, "private-provider-message", "private-email"
+                )
+            ]
+        ),
+        mail_tasks.aiosmtplib.SMTPNotSupported("private-provider-message"),
+        SSLCertVerificationError("private-provider-message"),
+    ],
+)
+def test_send_email_task_fails_without_retrying_permanent_errors(smtp_mail_transport, smtp_error):
+    smtp_mail_transport.side_effect = smtp_error
+
+    with _mail_request(), pytest.raises(mail_tasks.MailDeliveryError) as caught:
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
+
+    assert caught.value.__context__ is None
+    assert "private-provider-message" not in "".join(format_exception(caught.value))
+
+
+@pytest.mark.parametrize(
+    "smtp_error", [ConnectionError("private-provider-message"), SoftTimeLimitExceeded()]
+)
+def test_send_email_task_fails_when_retries_are_exhausted(smtp_mail_transport, smtp_error):
+    smtp_mail_transport.side_effect = smtp_error
+
+    with (
+        _mail_request(mail_tasks.send_email_task.max_retries),
+        pytest.raises(mail_tasks.MailDeliveryError) as caught,
+    ):
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
+
+    assert caught.value.__context__ is None
+    assert "private-provider-message" not in "".join(format_exception(caught.value))
+
+
+def test_send_email_task_preserves_complete_message_after_retry(smtp_mail_transport):
+    smtp_mail_transport.side_effect = [ConnectionError("connection lost"), None]
+    with _mail_request(), pytest.raises(Retry):
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
+    with _mail_request(retries=1):
+        mail_tasks.send_email_task.run(*mail_tasks.send_email_task.request.args)
+
+    keys = [call.args[0]["Resend-Idempotency-Key"] for call in smtp_mail_transport.await_args_list]
+    assert keys == ["fcd3a3c5-02a1-4ed8-b68c-09f26b5c57f6"] * 2
+    messages = [
+        call.args[0].as_bytes(policy=policy.SMTP) for call in smtp_mail_transport.await_args_list
+    ]
+    assert messages[0] == messages[1]
 
 
 def test_celery_config_is_strict_and_ignores_results_by_default():
@@ -268,9 +571,7 @@ def test_all_worker_tasks_have_explicit_declared_routes():
     """Toda task propia debe apuntar a una cola existente."""
     routes = celery_app.conf.task_routes
     queues = {queue.name for queue in celery_app.conf.task_queues}
-    task_names = {
-        name for name in celery_app.tasks if name.startswith("api.worker.tasks.")
-    }
+    task_names = {name for name in celery_app.tasks if name.startswith("api.worker.tasks.")}
 
     assert task_names
     for task_name in task_names:
@@ -335,9 +636,11 @@ def test_process_manual_page_task_marks_failed_on_soft_timeout(monkeypatch):
     finalize_delay = Mock()
     monkeypatch.setattr(manual_tasks.service, "fail_manual_page", fail_mock)
     monkeypatch.setattr(manual_tasks.finalize_manual_task, "delay", finalize_delay)
+    manual_id = str(_MANUAL_ID)
+    page_id_value = str(page_id)
 
     with pytest.raises(SoftTimeLimitExceeded):
-        manual_tasks.process_manual_page_task.run(str(_MANUAL_ID), str(page_id))
+        manual_tasks.process_manual_page_task.run(manual_id, page_id_value)
 
     fail_mock.assert_awaited_once_with(_MANUAL_ID, page_id)
     finalize_delay.assert_called_once_with(str(_MANUAL_ID))
@@ -352,9 +655,10 @@ def test_finalize_manual_task_marks_manual_failed_on_soft_timeout(monkeypatch):
     )
     fail_mock = AsyncMock()
     monkeypatch.setattr(manual_tasks.service, "fail_manual", fail_mock)
+    manual_id = str(_MANUAL_ID)
 
     with pytest.raises(SoftTimeLimitExceeded):
-        manual_tasks.finalize_manual_task.run(str(_MANUAL_ID))
+        manual_tasks.finalize_manual_task.run(manual_id)
 
     fail_mock.assert_awaited_once_with(_MANUAL_ID)
 
@@ -372,3 +676,83 @@ def test_recover_stale_manual_pages_enqueues_finalizers(monkeypatch):
     maintenance_tasks.recover_stale_manual_pages.run()
 
     finalize_delay.assert_called_once_with(str(_MANUAL_ID))
+
+
+def test_reindex_manual_task_parsea_uuid(monkeypatch) -> None:
+    """La tarea entrega al servicio el UUID deserializado del manual."""
+    reindex_mock = AsyncMock()
+    monkeypatch.setattr(manual_tasks.service, "reindex_manual", reindex_mock)
+
+    manual_tasks.reindex_manual_task.run(str(_MANUAL_ID))
+
+    reindex_mock.assert_awaited_once_with(_MANUAL_ID)
+
+
+@pytest.mark.parametrize(
+    ("plan", "expected_deletions", "expected_reindexes"),
+    [
+        (
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "11111111-1111-4111-8111-111111111111": [
+                        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                    ],
+                    "22222222-2222-4222-8222-222222222222": [
+                        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    ],
+                },
+                stale_manual_ids=[
+                    "33333333-3333-4333-8333-333333333333",
+                    "44444444-4444-4444-8444-444444444444",
+                ],
+            ),
+            {
+                "11111111-1111-4111-8111-111111111111": [
+                    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                ],
+                "22222222-2222-4222-8222-222222222222": [
+                    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                ],
+            },
+            [
+                "33333333-3333-4333-8333-333333333333",
+                "44444444-4444-4444-8444-444444444444",
+            ],
+        ),
+        (
+            ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[]),
+            {},
+            [],
+        ),
+    ],
+    ids=["plan-poblado", "plan-vacio"],
+)
+def test_reconcile_rag_index_encola_el_plan(
+    monkeypatch: pytest.MonkeyPatch,
+    plan: ReconciliationPlan,
+    expected_deletions: dict[str, list[str]],
+    expected_reindexes: list[str],
+) -> None:
+    """La tarea encola exactamente las reparaciones incluidas en el plan."""
+    plan_mock = AsyncMock(return_value=plan)
+    delete_delay = Mock()
+    reindex_delay = Mock()
+    monkeypatch.setattr(maintenance_tasks.manuals_service, "plan_index_repair", plan_mock)
+    monkeypatch.setattr(
+        maintenance_tasks.delete_chunks_from_rag_task,
+        "delay",
+        delete_delay,
+    )
+    monkeypatch.setattr(maintenance_tasks.reindex_manual_task, "delay", reindex_delay)
+
+    maintenance_tasks.reconcile_rag_index.run()
+
+    plan_mock.assert_awaited_once_with()
+    assert delete_delay.call_count == len(expected_deletions)
+    for manual_id, chunk_ids in expected_deletions.items():
+        delete_delay.assert_any_call(manual_id, chunk_ids)
+    assert reindex_delay.call_count == len(expected_reindexes)
+    for manual_id in expected_reindexes:
+        reindex_delay.assert_any_call(manual_id)

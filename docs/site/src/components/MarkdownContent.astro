@@ -1,0 +1,10 @@
+---
+import '@astrojs/starlight/style/markdown.css';
+
+const { id } = Astro.locals.starlightRoute;
+const documentoAcademico = id.startsWith('memoria/') || id.startsWith('anexos/');
+---
+
+<div class:list={['sl-markdown-content', { 'documento-academico': documentoAcademico }]}>
+  <slot />
+</div>

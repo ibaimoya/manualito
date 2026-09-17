@@ -1,0 +1,26 @@
+.view-text-line {
+  transform-origin: 96px 152px;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .view-text-line,
+  .view-image-sun,
+  .view-compare-divider {
+    transition: transform var(--m-dur) var(--m-easing);
+  }
+
+  .manual-view-option:hover {
+    .view-text-line {
+      transform: scaleX(1.2);
+    }
+    .view-text-line-last {
+      transform: scaleX(0.7);
+    }
+    .view-image-sun {
+      transform: translate(12px, -12px);
+    }
+    .view-compare-divider {
+      transform: translateX(24px);
+    }
+  }
+}

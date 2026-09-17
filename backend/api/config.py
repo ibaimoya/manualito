@@ -3,7 +3,7 @@
 from pathlib import Path
 from urllib.parse import quote
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_INTERACTIVE_ACTION_RATE_LIMIT = "30/minute"
@@ -17,7 +17,12 @@ _REDIS_ALLOW_EMPTY_CREDENTIAL_ENV = f"REDIS_ALLOW_EMPTY_{_CREDENTIAL_ENV_TOKEN}"
 class ApiSettings(BaseSettings):
     """Carga variables de entorno de API con tipos validados al arrancar."""
 
-    model_config = SettingsConfigDict(env_prefix="", extra="ignore", populate_by_name=True)
+    model_config = SettingsConfigDict(
+        env_prefix="",
+        extra="ignore",
+        populate_by_name=True,
+        hide_input_in_errors=True,
+    )
 
     app_version: str = Field(min_length=1)
     max_image_size: int = Field(default=30_000_000, ge=1)
@@ -36,6 +41,9 @@ class ApiSettings(BaseSettings):
     ocr_postprocess_very_short_text_max_chars: int = Field(default=4, ge=0)
     ocr_postprocess_symbol_noise_ratio: float = Field(default=0.60, ge=0, le=1)
     ocr_postprocess_min_alnum_to_keep: int = Field(default=1, ge=0)
+    ocr_correction_discard_below: float = Field(default=0.5, ge=0, le=1)
+    ocr_correction_llm_below: float = Field(default=0.85, ge=0, le=1)
+    ollama_correction_model: str = ""
     ocr_url: str
     rag_url: str
     llm_url: str
@@ -67,13 +75,11 @@ class ApiSettings(BaseSettings):
     celery_maintenance_soft_time_limit: int = Field(default=60, ge=1)
     celery_maintenance_hard_time_limit: int = Field(default=90, ge=1)
     ocr_service_timeout: float = Field(default=300.0, gt=0)
-    internal_json_timeout: float = Field(default=120.0, gt=0)
+    internal_json_timeout: float = Field(default=150.0, gt=0)
     asset_storage_dir: str = "/app/storage/assets"
     asset_pending_batch_ttl_seconds: int = Field(default=24 * 60 * 60, ge=60)
     manual_dispatch_recovery_delay_seconds: int = Field(default=5 * 60, ge=60)
     manual_dispatch_recovery_batch_size: int = Field(default=100, ge=1, le=1_000)
-
-    rag_retrieval_multiplier: int = Field(default=4, ge=1)
 
     bgg_external_search_min_length: int = Field(default=3, ge=1)
     bgg_cache_result_limit: int = Field(default=50, ge=1)
@@ -101,11 +107,14 @@ class ApiSettings(BaseSettings):
     smtp_host: str = "mailpit"
     smtp_port: int = Field(default=1025, ge=1, le=65535)
     smtp_username: str | None = None
-    smtp_password: str | None = None
+    smtp_password: SecretStr | None = Field(default=None, repr=False)
+    smtp_password_file: str | None = None
+    _smtp_file_password: SecretStr | None = None
     smtp_starttls: bool = False
     smtp_use_tls: bool = False
     smtp_timeout: float = Field(default=10.0, gt=0)
     smtp_from_email: str = "no-reply@manualito.local"
+    smtp_reply_to: str | None = None
     email_verification_token_minutes: int = Field(default=24 * 60, ge=1)
     password_reset_token_minutes: int = Field(default=30, ge=1)
     auth_email_resend_rate_limit: str = "3/minute"
@@ -120,6 +129,37 @@ class ApiSettings(BaseSettings):
     password_min_length: int = Field(default=12, ge=1)
     password_max_length: int = Field(default=128, ge=1)
     password_hash_concurrency: int = Field(default=4, ge=1)
+
+    @property
+    def resolved_smtp_password(self) -> str | None:
+        """Obtiene la contraseña para autenticar el envío."""
+        credential = self._smtp_file_password or self.smtp_password
+        return credential.get_secret_value() if credential is not None else None
+
+    @model_validator(mode="after")
+    def _validate_smtp_transport(self) -> "ApiSettings":
+        """Impide activar TLS directo y STARTTLS a la vez."""
+        if self.smtp_use_tls and self.smtp_starttls:
+            raise ValueError("SMTP_USE_TLS y SMTP_STARTTLS no pueden estar activos a la vez.")
+        return self
+
+    @model_validator(mode="after")
+    def _load_smtp_file_password(self) -> "ApiSettings":
+        """Lee la contraseña del archivo de secretos."""
+        if self.smtp_password_file is None:
+            return self
+        if self.smtp_password is not None:
+            raise ValueError("Configura solo SMTP_PASSWORD_FILE o SMTP_PASSWORD.")
+        try:
+            credential = Path(self.smtp_password_file).read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError):
+            raise ValueError(
+                "SMTP_PASSWORD_FILE debe apuntar a un archivo UTF-8 legible."
+            ) from None
+        if not credential:
+            raise ValueError("SMTP_PASSWORD_FILE no puede estar vacío.")
+        self._smtp_file_password = SecretStr(credential)
+        return self
 
     @property
     def resolved_auth_session_cookie_name(self) -> str:
@@ -157,6 +197,15 @@ class ApiSettings(BaseSettings):
             )
         auth = f":{quote(credential, safe='')}@" if credential else ""
         return f"redis://{auth}{self.redis_host}:{self.redis_port}/{database}"
+
+    @model_validator(mode="after")
+    def _validate_ocr_correction_thresholds(self) -> "ApiSettings":
+        """Evita una franja LLM vacía por umbrales de corrección cruzados."""
+        if self.ocr_correction_llm_below < self.ocr_correction_discard_below:
+            raise ValueError(
+                "OCR_CORRECTION_LLM_BELOW debe ser mayor o igual que OCR_CORRECTION_DISCARD_BELOW."
+            )
+        return self
 
     @model_validator(mode="after")
     def _validate_celery_time_limits(self) -> "ApiSettings":
@@ -228,6 +277,9 @@ OCR_POSTPROCESS_SHORT_TEXT_MAX_ALNUM = settings.ocr_postprocess_short_text_max_a
 OCR_POSTPROCESS_VERY_SHORT_TEXT_MAX_CHARS = settings.ocr_postprocess_very_short_text_max_chars
 OCR_POSTPROCESS_SYMBOL_NOISE_RATIO = settings.ocr_postprocess_symbol_noise_ratio
 OCR_POSTPROCESS_MIN_ALNUM_TO_KEEP = settings.ocr_postprocess_min_alnum_to_keep
+OCR_CORRECTION_DISCARD_BELOW = settings.ocr_correction_discard_below
+OCR_CORRECTION_LLM_BELOW = settings.ocr_correction_llm_below
+OLLAMA_CORRECTION_MODEL = settings.ollama_correction_model
 OCR_URL = settings.ocr_url
 RAG_URL = settings.rag_url
 LLM_URL = settings.llm_url
@@ -253,7 +305,6 @@ ASSET_STORAGE_DIR = settings.asset_storage_dir
 ASSET_PENDING_BATCH_TTL_SECONDS = settings.asset_pending_batch_ttl_seconds
 MANUAL_DISPATCH_RECOVERY_DELAY_SECONDS = settings.manual_dispatch_recovery_delay_seconds
 MANUAL_DISPATCH_RECOVERY_BATCH_SIZE = settings.manual_dispatch_recovery_batch_size
-RAG_RETRIEVAL_MULTIPLIER = settings.rag_retrieval_multiplier
 
 BGG_EXTERNAL_SEARCH_MIN_LENGTH = settings.bgg_external_search_min_length
 BGG_CACHE_RESULT_LIMIT = settings.bgg_cache_result_limit
@@ -280,11 +331,12 @@ FRONTEND_PUBLIC_URL = settings.frontend_public_url
 SMTP_HOST = settings.smtp_host
 SMTP_PORT = settings.smtp_port
 SMTP_USERNAME = settings.smtp_username
-SMTP_PASSWORD = settings.smtp_password
+SMTP_PASSWORD = settings.resolved_smtp_password
 SMTP_STARTTLS = settings.smtp_starttls
 SMTP_USE_TLS = settings.smtp_use_tls
 SMTP_TIMEOUT = settings.smtp_timeout
 SMTP_FROM_EMAIL = settings.smtp_from_email
+SMTP_REPLY_TO = settings.smtp_reply_to
 EMAIL_VERIFICATION_TOKEN_MINUTES = settings.email_verification_token_minutes
 PASSWORD_RESET_TOKEN_MINUTES = settings.password_reset_token_minutes
 AUTH_EMAIL_RESEND_RATE_LIMIT = settings.auth_email_resend_rate_limit

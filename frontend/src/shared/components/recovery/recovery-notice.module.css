@@ -1,0 +1,32 @@
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-block: 28px;
+  border-top: 1px solid var(--m-border);
+}
+
+.icon {
+  margin-bottom: 16px;
+  color: var(--m-text-2);
+}
+
+.title {
+  max-width: 44ch;
+  font-family: var(--m-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.description {
+  max-width: 44ch;
+  margin-top: 10px;
+  margin-bottom: 22px;
+  color: var(--m-text-2);
+  font-size: 15px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}

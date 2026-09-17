@@ -11,10 +11,11 @@ describe('auth-controls', () => {
     expect(isEmail('marta @example.com')).toBe(false);
   });
 
-  it('muestra errores solo cuando corresponde', () => {
-    expect(emailFieldError('', false)).toBeUndefined();
-    expect(emailFieldError('', true)).toBe('Ese email no parece válido');
-    expect(passwordTooShortError('corta', true)).toBe('Mínimo 12 caracteres');
-    expect(passwordTooShortError('contraseña larga', true)).toBeUndefined();
+  it('describe los errores de email y longitud de contraseña', () => {
+    expect(emailFieldError('')).toBe('Ese email no parece válido');
+    expect(emailFieldError('marta@')).toBe('Ese email no parece válido');
+    expect(emailFieldError('marta@example.com')).toBeUndefined();
+    expect(passwordTooShortError('corta')).toBe('Mínimo 12 caracteres');
+    expect(passwordTooShortError('contraseña larga')).toBeUndefined();
   });
 });

@@ -1,0 +1,10 @@
+{
+  "name": "manualito-docs",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  "workers_dev": false,
+  "routes": [{ "pattern": "docs.manualito.dev", "custom_domain": true }]
+}

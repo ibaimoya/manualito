@@ -1,36 +1,89 @@
-import { type ReactNode } from 'react';
-import { LockUp, Meeple } from '@/shared/components/Brand';
+import { type ReactNode, useLayoutEffect, useRef, useState } from 'react';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { motion } from 'motion/react';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
+import { LanguagePill } from '@/features/language/LanguagePill';
+import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
+import { WelcomeBook } from '@/features/onboarding/WelcomeBook';
+import { WelcomeThemeToggle } from '@/features/onboarding/WelcomeThemeToggle';
+import { Monogram, Wordmark } from '@/shared/components/Brand';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import styles from './entry.module.css';
 
-/**
- * Lienzo de las pantallas sin sesión (login/registro/recuperar): fondo cálido,
- * logo y tarjeta centrada. Escritorio y móvil comparten layout (la tarjeta se
- * adapta al ancho).
- */
-export function AuthShell({ children }: Readonly<{ children: ReactNode }>) {
+/** La cabecera y la ilustración permanecen montadas al cambiar de pantalla. */
+export function AuthShell({
+  children,
+  illustration,
+}: Readonly<{ children: ReactNode; illustration?: ReactNode }>) {
+  const { t } = useTranslation('onboarding');
+  const { t: authT } = useTranslation('auth');
+  const pathname = useRouterState({ select: (state) => state.matches.at(-1)?.pathname });
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const welcome = pathname === '/onboarding';
+  const registration = pathname === '/register';
+  const viewport = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const previousPath = useRef(pathname);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    if (previousPath.current === pathname) return;
+    previousPath.current = pathname;
+    viewport.current?.scrollTo({ top: 0, behavior: 'instant' });
+    const heading = content.current?.querySelector('h1');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+  }, [pathname]);
+
   return (
-    // h-dvh + scroll interno: un min-h creciente cortaría el form en viewports bajos.
-    <div className="relative h-dvh overflow-y-auto bg-surface">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            'radial-gradient(55% 45% at 85% 10%, rgba(224,122,31,.12), transparent 60%),' +
-            'radial-gradient(45% 40% at 6% 96%, rgba(44,110,145,.10), transparent 60%)',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed -bottom-16 -right-14 text-fg opacity-[0.04]"
-      >
-        <Meeple size={400} />
-      </div>
-      <div className="relative mx-auto flex min-h-full w-full max-w-[420px] flex-col items-center justify-center gap-6 px-6 py-10">
-        <LockUp withTagline={false} />
-        <div className="w-full rounded-2xl border border-border bg-card p-7 shadow-md sm:p-8">
-          {children}
+    <div
+      className={styles.root}
+      data-welcome={welcome}
+      data-register={registration}
+      data-custom-illustration={Boolean(illustration)}
+    >
+      <header className={styles.header}>
+        <a href="https://manualito.dev" className={styles.brand} aria-label={t('actions.website')}>
+          <div className={styles.brandArtwork} aria-hidden="true">
+            <Monogram size={34} radius={10} />
+            <Wordmark size={23} />
+          </div>
+        </a>
+        <div className={styles.preferences}>
+          <WelcomeThemeToggle />
+          <LanguagePill className={styles.language} />
         </div>
-      </div>
+      </header>
+
+      <motion.div ref={viewport} layoutScroll className={styles.viewport}>
+        <main className={styles.main}>
+          <motion.div
+            className={styles.illustration}
+            layout={reducedMotion ? false : 'position'}
+            layoutDependency={pathname}
+            transition={{ layout: { duration: 0.3, ease: [0.23, 1, 0.32, 1] } }}
+          >
+            {illustration ?? <WelcomeBook />}
+          </motion.div>
+          <div ref={content} className={styles.panel}>
+            {!welcome && (
+              <Link to="/onboarding" className={styles.back}>
+                <ArrowLeftIcon data-icon-motion="back" size={18} aria-hidden="true" />
+                <span>{authT('actions.backToWelcome')}</span>
+              </Link>
+            )}
+            {children}
+          </div>
+        </main>
+      </motion.div>
+
+      <footer className={styles.footer}>
+        <button type="button" className={styles.privacy} onClick={() => setPrivacyOpen(true)}>
+          <span>{t('actions.privacy')}</span>
+        </button>
+      </footer>
+      <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
     </div>
   );
 }

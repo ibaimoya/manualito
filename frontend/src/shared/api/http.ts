@@ -26,23 +26,19 @@ const BASE_URL = '/api';
 export const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
 export class ApiError extends Error {
-  public readonly view: ApiErrorView;
   public readonly status: number | undefined;
   public readonly raw: unknown;
 
-  constructor(view: ApiErrorView, status: number | undefined, raw: unknown) {
-    super(view.message);
+  constructor(status: number | undefined, raw: unknown) {
+    super(mapApiError({ status, raw }).message);
     this.name = 'ApiError';
-    this.view = view;
     this.status = status;
     this.raw = raw;
   }
-}
 
-export interface ApiErrorNotification {
-  title: string;
-  id: string;
-  description: string;
+  get view(): ApiErrorView {
+    return mapApiError(this);
+  }
 }
 
 export function isAbortApiError(error: unknown): boolean {
@@ -52,21 +48,6 @@ export function isAbortApiError(error: unknown): boolean {
     error.raw instanceof DOMException &&
     error.raw.name === 'AbortError'
   );
-}
-
-export function apiErrorNotification(
-  error: unknown,
-  idPrefix: string,
-  fallback: ApiErrorNotification,
-): ApiErrorNotification {
-  if (error instanceof ApiError) {
-    return {
-      title: error.view.title,
-      id: `${idPrefix}-${error.view.code}`,
-      description: error.view.message,
-    };
-  }
-  return fallback;
 }
 
 // CSRF double-submit: la cookie legible viaja en X-CSRF-Token (nombres en api/config.py).
@@ -104,12 +85,6 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-/** Une un AbortSignal externo al controlador interno (timeout). */
-function linkExternalSignal(controller: AbortController, external: AbortSignal | undefined): void {
-  if (!external) return;
-  external.addEventListener('abort', () => controller.abort(external.reason), { once: true });
-}
-
 /** Cabeceras de la petición + token CSRF reflejado en mutaciones. */
 function buildHeaders(
   method: string,
@@ -140,13 +115,16 @@ async function readErrorBody(response: Response): Promise<unknown> {
 function toApiError(err: unknown): ApiError {
   if (err instanceof ApiError) return err;
   if (err instanceof DOMException && err.name === 'TimeoutError') {
-    return new ApiError(mapApiError({ status: 504 }), 504, err);
+    return new ApiError(504, err);
   }
-  return new ApiError(mapApiError(err), undefined, err);
+  return new ApiError(undefined, err);
 }
 
-/** fetch con timeout + CSRF + traducción de errores. Devuelve la respuesta OK. */
-async function executeRequest(path: string, opts: RequestOptions): Promise<Response> {
+async function executeRequest<T>(
+  path: string,
+  opts: RequestOptions,
+  readResponse: (response: Response) => Promise<T>,
+): Promise<T> {
   const url = path.startsWith('/') ? `${BASE_URL}${path}` : `${BASE_URL}/${path}`;
   const method = opts.method ?? 'GET';
   const controller = new AbortController();
@@ -154,21 +132,20 @@ async function executeRequest(path: string, opts: RequestOptions): Promise<Respo
     () => controller.abort(new DOMException('Timeout', 'TimeoutError')),
     opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   );
-  linkExternalSignal(controller, opts.signal);
 
   try {
     const response = await fetch(url, {
       method,
       body: opts.body,
       headers: buildHeaders(method, opts.headers),
-      signal: controller.signal,
+      signal: opts.signal ? AbortSignal.any([opts.signal, controller.signal]) : controller.signal,
       credentials: 'same-origin',
     });
     if (!response.ok) {
       const raw = await readErrorBody(response);
-      throw new ApiError(mapApiError({ status: response.status, raw }), response.status, raw);
+      throw new ApiError(response.status, raw);
     }
-    return response;
+    return await readResponse(response);
   } catch (err) {
     throw toApiError(err);
   } finally {
@@ -188,13 +165,12 @@ async function parseBody<T>(response: Response): Promise<T> {
 
 /** Petición con cuerpo tipado (endpoints que devuelven JSON). */
 export async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const response = await executeRequest(path, opts);
-  return parseBody<T>(response);
+  return executeRequest(path, opts, parseBody<T>);
 }
 
 /** Mutación sin cuerpo de respuesta (204): logout, borrados. */
 export async function requestVoid(path: string, opts: RequestOptions = {}): Promise<void> {
-  await executeRequest(path, opts);
+  await executeRequest(path, opts, async () => undefined);
 }
 
 /** Query-string ("?a=1&b=2") omitiendo null/undefined; vacío si no hay params. */

@@ -1,0 +1,123 @@
+.symbol {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 144px;
+  height: 144px;
+  margin: 0 auto 24px;
+  color: var(--m-primary-700);
+}
+
+.icon,
+.retry {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.symbol [data-recovery-gesture] {
+  transform-origin: center;
+}
+.search {
+  position: relative;
+}
+.lens {
+  /* El cristal de MagnifyingGlass está centrado en (112, 112) de 256. */
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-right: 12.5%;
+  padding-bottom: 12.5%;
+}
+.cross,
+.meeple {
+  grid-area: 1 / 1;
+  transform-origin: center;
+}
+.meeple {
+  opacity: 0;
+  transform: scale(0.7) rotate(-12deg);
+}
+
+.retry {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.symbol[data-retrying='true'] .icon {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.symbol[data-retrying='true'] .retry {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .search {
+    transform-origin: center;
+    transition: transform var(--m-dur-slow) var(--m-easing);
+  }
+
+  .icon,
+  .retry,
+  .cross,
+  .meeple {
+    transition:
+      opacity var(--m-dur) var(--m-easing),
+      transform var(--m-dur) var(--m-easing);
+  }
+
+  .retry svg {
+    animation-duration: 1.1s;
+    animation-play-state: paused;
+  }
+
+  .symbol[data-retrying='true'] .retry svg {
+    animation-play-state: running;
+  }
+
+  @starting-style {
+    .icon {
+      opacity: 0;
+      transform: translateY(8px) scale(0.96);
+    }
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .symbol:hover .search {
+    transform: rotate(-12deg);
+  }
+  .symbol:hover .cross {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  .symbol:hover .meeple {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@container (max-width: 480px) {
+  .symbol {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+  }
+  .icon > svg,
+  .search > svg {
+    width: 108px;
+    height: 108px;
+  }
+  .icon > .alert {
+    width: 118px;
+    height: 118px;
+  }
+  .retry > svg {
+    width: 96px;
+    height: 96px;
+  }
+}

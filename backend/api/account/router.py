@@ -65,6 +65,7 @@ async def update_profile_handler(
             to_email=result.email_job.email,
             username=result.email_job.username,
             token=result.email_job.token,
+            locale=payload.locale,
         )
     return AuthResponse(user=to_public_user(result.user), csrf_token=auth.csrf_token)
 

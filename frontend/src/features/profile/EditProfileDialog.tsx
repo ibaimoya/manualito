@@ -1,9 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Info } from 'lucide-react';
+import { type ParseKeys } from 'i18next';
+import { InfoIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 import { AuthAlert } from '@/features/auth/auth-alert';
@@ -13,45 +16,48 @@ import type { AuthUser, AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Avatar, AvatarGlyph } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
 
-const COLORS: ReadonlyArray<{ value: AvatarColor; className: string; label: string }> = [
-  { value: 'accent', className: 'bg-accent', label: 'Azul petróleo' },
-  { value: 'primary', className: 'bg-primary', label: 'Ámbar' },
-  { value: 'contrast', className: 'bg-primary-700', label: 'Tostado' },
-  { value: 'success', className: 'bg-success', label: 'Verde' },
-  { value: 'warning', className: 'bg-warning', label: 'Dorado' },
+type ProfileKey = ParseKeys<'profile'>;
+
+const COLORS: ReadonlyArray<{ value: AvatarColor; className: string; key: ProfileKey }> = [
+  { value: 'accent', className: 'bg-accent', key: 'avatar.colors.accent' },
+  { value: 'primary', className: 'bg-primary', key: 'avatar.colors.primary' },
+  { value: 'contrast', className: 'bg-primary-700', key: 'avatar.colors.contrast' },
+  { value: 'success', className: 'bg-success', key: 'avatar.colors.success' },
+  { value: 'warning', className: 'bg-warning', key: 'avatar.colors.warning' },
 ];
 
-const FIGURES: ReadonlyArray<{ value: AvatarFigure; label: string }> = [
-  { value: 'initials', label: 'Iniciales' },
-  { value: 'meeple', label: 'Meeple' },
-  { value: 'dice', label: 'Dado' },
-  { value: 'crown', label: 'Corona' },
-  { value: 'flag', label: 'Bandera' },
-  { value: 'sparkle', label: 'Chispa' },
-  { value: 'book', label: 'Libro' },
-  { value: 'bulb', label: 'Idea' },
-  { value: 'zap', label: 'Rayo' },
-  { value: 'hourglass', label: 'Reloj de arena' },
-  { value: 'trophy', label: 'Trofeo' },
-  { value: 'puzzle', label: 'Puzle' },
-  { value: 'swords', label: 'Espadas' },
-  { value: 'ghost', label: 'Fantasma' },
-  { value: 'shield', label: 'Escudo' },
-  { value: 'rocket', label: 'Cohete' },
+const FIGURES: ReadonlyArray<{ value: AvatarFigure; key: ProfileKey }> = [
+  { value: 'initials', key: 'avatar.figures.initials' },
+  { value: 'meeple', key: 'avatar.figures.meeple' },
+  { value: 'dice', key: 'avatar.figures.dice' },
+  { value: 'crown', key: 'avatar.figures.crown' },
+  { value: 'flag', key: 'avatar.figures.flag' },
+  { value: 'sparkle', key: 'avatar.figures.sparkle' },
+  { value: 'book', key: 'avatar.figures.book' },
+  { value: 'bulb', key: 'avatar.figures.bulb' },
+  { value: 'zap', key: 'avatar.figures.zap' },
+  { value: 'hourglass', key: 'avatar.figures.hourglass' },
+  { value: 'trophy', key: 'avatar.figures.trophy' },
+  { value: 'puzzle', key: 'avatar.figures.puzzle' },
+  { value: 'swords', key: 'avatar.figures.swords' },
+  { value: 'ghost', key: 'avatar.figures.ghost' },
+  { value: 'shield', key: 'avatar.figures.shield' },
+  { value: 'rocket', key: 'avatar.figures.rocket' },
 ];
 
-/** Editor de identidad: avatar (color + figura), usuario y email. */
 export function EditProfileDialog({
   open,
   onOpenChange,
   user,
 }: Readonly<{ open: boolean; onOpenChange: (open: boolean) => void; user: AuthUser }>) {
+  const { t } = useTranslation('profile');
+
   return (
     <ResponsiveModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Editar perfil"
-      description="Tu identidad en Manualito."
+      title={t('edit.title')}
+      description={t('edit.description')}
       contentClassName="max-w-lg"
       bodyClassName="max-h-[70dvh] overflow-y-auto"
     >
@@ -60,18 +66,14 @@ export function EditProfileDialog({
   );
 }
 
-function updateError(error: unknown): string {
-  if (error instanceof ApiError && error.status === 409) {
-    return 'Ese email o nombre de usuario ya está en uso — prueba otro.';
-  }
+function updateError(error: unknown, takenMessage: string, fallbackMessage: string): string {
+  if (error instanceof ApiError && error.status === 409) return takenMessage;
   if (error instanceof ApiError) return error.view.message;
-  return 'No hemos podido guardar los cambios. Inténtalo de nuevo en un momento.';
+  return fallbackMessage;
 }
 
-function EditProfileForm({
-  user,
-  onClose,
-}: Readonly<{ user: AuthUser; onClose: () => void }>) {
+function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: () => void }>) {
+  const { t, i18n } = useTranslation('profile');
   const qc = useQueryClient();
   const usernameId = useId();
   const emailId = useId();
@@ -80,7 +82,7 @@ function EditProfileForm({
   const [color, setColor] = useState<AvatarColor>(user.avatar_color ?? 'accent');
   const [figure, setFigure] = useState<AvatarFigure>(user.avatar_figure ?? 'initials');
 
-  const changes: UpdateProfileInput = {};
+  const changes: Omit<UpdateProfileInput, 'locale'> = {};
   if (username.trim() !== user.username && username.trim().length > 0) {
     changes.username = username.trim();
   }
@@ -91,15 +93,17 @@ function EditProfileForm({
   const emailChanged = changes.email !== undefined;
 
   const save = useMutation({
-    mutationFn: () => accountApi.updateProfile(changes),
+    mutationFn: () =>
+      accountApi.updateProfile({
+        ...changes,
+        locale: i18n.resolvedLanguage === 'en' ? 'en' : 'es',
+      }),
     onSuccess: (data) => {
       qc.setQueryData(AUTH_ME_KEY, data);
       onClose();
-      toast.success('Perfil actualizado', {
+      toast.success(t('edit.success'), {
         id: 'profile-update',
-        description: emailChanged
-          ? 'Te hemos enviado un enlace para verificar el email nuevo.'
-          : undefined,
+        description: emailChanged ? t('edit.emailChangeSuccess') : undefined,
       });
     },
   });
@@ -113,53 +117,66 @@ function EditProfileForm({
       }}
       className="flex flex-col gap-4"
     >
-      <fieldset>
-        <legend className="mb-1.5 text-sm font-semibold text-fg">Avatar</legend>
-        <div className="flex items-start gap-4 rounded-2xl border border-border bg-surface p-3.5">
+      <fieldset className="min-w-0">
+        <legend className="mb-1.5 text-sm font-semibold text-fg">{t('edit.avatar')}</legend>
+        <div className="flex flex-wrap items-start gap-4 max-md:justify-center rounded-2xl border border-border bg-surface p-3.5">
           <Avatar name={username || user.username} size={64} color={color} figure={figure} />
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <fieldset aria-label="Color del avatar" className="flex gap-2">
-              {COLORS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={color === option.value}
-                  aria-label={option.label}
-                  onClick={() => setColor(option.value)}
-                  className={cn(
-                    'size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] transition-transform',
-                    option.className,
-                    color === option.value
-                      ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
-                      : 'hover:scale-110',
-                  )}
-                />
-              ))}
+          <div className="flex min-w-0 flex-1 basis-48 flex-col gap-2.5">
+            <fieldset
+              aria-label={t('edit.avatarColor')}
+              className="flex flex-wrap gap-2 max-md:justify-center"
+            >
+              {COLORS.map((option) => {
+                const label = t(option.key);
+                return (
+                  <Tooltip key={option.value} content={label}>
+                    <button
+                      type="button"
+                      aria-pressed={color === option.value}
+                      aria-label={label}
+                      onClick={() => setColor(option.value)}
+                      className={cn(
+                        'transition-control size-8 shrink-0 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
+                        option.className,
+                        color === option.value
+                          ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                          : 'motion-safe:hover:scale-110',
+                      )}
+                    />
+                  </Tooltip>
+                );
+              })}
             </fieldset>
-            <fieldset aria-label="Figura del avatar" className="flex flex-wrap gap-1.5">
+            <fieldset
+              aria-label={t('edit.avatarFigure')}
+              className="flex flex-wrap gap-1.5 max-md:grid max-md:grid-cols-4 max-md:justify-items-center"
+            >
               {FIGURES.map((option) => {
                 const selected = figure === option.value;
+                const label = t(option.key);
                 return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={option.label}
-                    title={option.label}
-                    onClick={() => setFigure(option.value)}
-                    className={cn(
-                      'grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 transition-colors',
-                      selected ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg' : 'hover:bg-surface-2',
-                    )}
-                  >
-                    {option.value === 'initials' ? (
-                      <span className="font-display text-xs font-extrabold">
-                        {(username || user.username).trim().charAt(0).toUpperCase()}
-                      </span>
-                    ) : (
-                      <AvatarGlyph figure={option.value} size={30} />
-                    )}
-                  </button>
+                  <Tooltip key={option.value} content={label} side="bottom">
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={label}
+                      onClick={() => setFigure(option.value)}
+                      className={cn(
+                        'transition-control grid size-9 shrink-0 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
+                        selected
+                          ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                          : 'hover:bg-surface-2',
+                      )}
+                    >
+                      {option.value === 'initials' ? (
+                        <span className="font-display text-xs font-extrabold">
+                          {(username || user.username).trim().charAt(0).toUpperCase()}
+                        </span>
+                      ) : (
+                        <AvatarGlyph figure={option.value} size={30} />
+                      )}
+                    </button>
+                  </Tooltip>
                 );
               })}
             </fieldset>
@@ -169,7 +186,7 @@ function EditProfileForm({
 
       <div>
         <label htmlFor={usernameId} className="mb-1.5 block text-sm font-semibold text-fg">
-          Nombre de usuario
+          {t('edit.username')}
         </label>
         <Input
           id={usernameId}
@@ -182,7 +199,7 @@ function EditProfileForm({
 
       <div>
         <label htmlFor={emailId} className="mb-1.5 block text-sm font-semibold text-fg">
-          Email
+          {t('edit.email')}
         </label>
         <Input
           id={emailId}
@@ -192,23 +209,24 @@ function EditProfileForm({
         />
         {emailChanged ? (
           <p className="mt-2 flex items-start gap-2 rounded-xl bg-accent-100 px-3 py-2.5 text-xs leading-relaxed text-fg">
-            <Info size={14} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
-            Si cambias el email tendrás que volver a verificarlo: te enviaremos un enlace a la
-            dirección nueva.
+            <InfoIcon size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
+            {t('edit.emailChangeNotice')}
           </p>
         ) : null}
       </div>
 
       {save.isError ? (
-        <AuthAlert title="No se han guardado los cambios">{updateError(save.error)}</AuthAlert>
+        <AuthAlert title={t('edit.saveError')}>
+          {updateError(save.error, t('edit.usernameTaken'), t('edit.updateError'))}
+        </AuthAlert>
       ) : null}
 
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>
-          Cancelar
+          {t('edit.cancel')}
         </Button>
         <Button type="submit" loading={save.isPending} disabled={!dirty}>
-          Guardar cambios
+          {t('edit.save')}
         </Button>
       </div>
     </form>

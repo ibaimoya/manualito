@@ -1,0 +1,482 @@
+/* Fuentes y colores tomados de frontend/src/styles/tokens.css. */
+:root {
+  --m-primary-500: #f6953b;
+  --m-text: #f7eddc;
+  --m-hit: 2.75rem;
+  --m-r-md: 0.75rem;
+  --m-r-lg: 1.25rem;
+  --m-ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --m-hover: var(--sl-color-gray-6);
+  --m-font-display:
+    'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --sl-font: 'Inter Variable';
+  --sl-font-mono: 'JetBrains Mono Variable';
+
+  --sl-color-white: #f7eddc;
+  --sl-color-gray-1: #f7eddc;
+  --sl-color-gray-2: #d3c2a8;
+  --sl-color-gray-3: #a28f75;
+  --sl-color-gray-4: #a28f75;
+  --sl-color-gray-5: #3e301c;
+  --sl-color-gray-6: #231b11;
+  --sl-color-black: #15100b;
+
+  --sl-color-accent-low: #4a2d10;
+  --sl-color-accent: #f6953b;
+  --sl-color-accent-high: #ffb46a;
+  --sl-color-text-accent: #ffb46a;
+  --sl-color-text-invert: #1f1611;
+  --sl-color-bg: #15100b;
+  --sl-color-bg-nav: #231b11;
+  --sl-color-bg-sidebar: #231b11;
+  --sl-color-bg-inline-code: #3e301c;
+  --sl-color-bg-accent: #ffb46a;
+  --sl-color-hairline-light: #3e301c;
+  --sl-color-hairline: #231b11;
+  --sl-color-hairline-shade: #15100b;
+}
+
+:root[data-theme='light'] {
+  /* Subconjunto del tema claro definido en frontend/src/styles/tokens.css. */
+  --m-primary-50: #fdebd8;
+  --m-primary-500: #e07a1f;
+  --m-primary-600: #c46514;
+  --m-primary-700: #a8431f;
+  --m-accent-500: #2c6e91;
+  --m-bg: #fff8f0;
+  --m-surface: #f5e9d7;
+  --m-surface-2: #ebddc4;
+  --m-border: rgba(31, 22, 17, 0.1);
+  --m-border-strong: rgba(31, 22, 17, 0.18);
+  --m-text: #1f1611;
+  --m-text-2: #5c4a3e;
+  --m-text-inv: #fff8f0;
+  --m-shadow-xs: 0 1px 2px rgba(53, 28, 12, 0.06);
+  --m-shadow-sm:
+    0 2px 6px rgba(53, 28, 12, 0.08),
+    0 1px 2px rgba(53, 28, 12, 0.05);
+  --m-shadow-md:
+    0 8px 24px -8px rgba(53, 28, 12, 0.16),
+    0 2px 6px rgba(53, 28, 12, 0.06);
+  --m-shadow-lg:
+    0 24px 48px -16px rgba(53, 28, 12, 0.22),
+    0 6px 14px rgba(53, 28, 12, 0.08);
+  --m-hover: var(--m-surface-2);
+
+  --sl-color-white: var(--m-text);
+  --sl-color-gray-1: var(--m-text);
+  --sl-color-gray-2: var(--m-text-2);
+  --sl-color-gray-3: var(--m-text-2);
+  --sl-color-gray-4: var(--m-border-strong);
+  --sl-color-gray-5: var(--m-border);
+  --sl-color-gray-6: var(--m-surface);
+  --sl-color-gray-7: var(--m-bg);
+  --sl-color-black: var(--m-bg);
+
+  --sl-color-accent-low: var(--m-primary-50);
+  --sl-color-accent: var(--m-primary-500);
+  --sl-color-accent-high: var(--m-primary-700);
+  --sl-color-text-accent: var(--m-primary-700);
+  --sl-color-text-invert: var(--m-text-inv);
+  --sl-color-bg: var(--m-bg);
+  --sl-color-bg-nav: var(--m-bg);
+  --sl-color-bg-sidebar: var(--m-surface);
+  --sl-color-bg-inline-code: var(--m-surface);
+  --sl-color-bg-accent: var(--m-primary-700);
+  --sl-color-hairline-light: var(--m-border);
+  --sl-color-hairline: var(--m-border);
+  --sl-color-hairline-shade: var(--m-border);
+  --sl-shadow-sm: var(--m-shadow-xs);
+  --sl-shadow-md: var(--m-shadow-md);
+  --sl-shadow-lg: var(--m-shadow-lg);
+  color-scheme: light;
+}
+
+/* En claro bg-nav coincide con el fondo de página. La cabecera necesita otra superficie. */
+:root[data-theme='light'] .page > header {
+  border-color: var(--m-border-strong);
+  background-color: color-mix(in srgb, var(--m-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+:root[data-theme='light'] #starlight__sidebar a[aria-current='page'] {
+  background-color: var(--m-primary-50);
+  color: var(--m-primary-700);
+}
+
+:root[data-theme='light'] #starlight__sidebar a:not([aria-current='page']):is(:hover, :focus-visible) {
+  background-color: var(--m-surface-2);
+  color: var(--m-text);
+}
+
+:root[data-theme='light']
+  .sl-markdown-content
+  a:not(.sl-link-button):not(:where(.not-content *)) {
+  color: var(--m-accent-500);
+}
+
+:root[data-theme='light']
+  .sl-markdown-content
+  a:not(.sl-link-button):not(:where(.not-content *)):hover {
+  color: var(--m-text);
+}
+
+@media (min-width: 50rem) {
+  .sl-markdown-content.documento-academico > p {
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+}
+
+:root[data-theme='light'] .sl-link-button.primary {
+  border-color: var(--m-primary-500);
+  background: var(--m-primary-500);
+  color: var(--m-text);
+  box-shadow: var(--m-shadow-sm);
+}
+
+:root[data-theme='light'] .sl-link-button.primary:hover {
+  border-color: var(--m-primary-500);
+  background: var(--m-primary-500);
+  color: var(--m-text);
+  box-shadow: var(--m-shadow-md);
+}
+
+:root[data-theme='light'] .sl-link-button.secondary {
+  border-color: var(--m-border);
+  background: var(--m-surface);
+  color: var(--m-text);
+}
+
+:root[data-theme='light'] .sl-link-button.secondary:hover {
+  border-color: var(--m-border);
+  background: var(--m-surface-2);
+  color: var(--m-text);
+}
+
+:root[data-theme='light'] .theme-trigger:hover,
+:root[data-theme='light'] .theme-option:hover,
+:root[data-theme='light'] .theme-option:focus-visible {
+  background: var(--m-surface-2);
+}
+
+:where(.sl-link-button) {
+  box-sizing: border-box;
+  height: var(--m-hit);
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--m-r-md);
+  font-weight: 600;
+}
+
+:where(.pagination-links a) {
+  border-radius: var(--m-r-lg);
+}
+
+:where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--m-font-display);
+  letter-spacing: -0.02em;
+}
+
+.site-title {
+  align-items: center;
+  gap: 0.6375rem;
+  min-width: 0;
+  color: var(--m-text);
+  text-decoration: none;
+  white-space: nowrap;
+  transform-origin: left center;
+  transition: scale 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-title:hover {
+    scale: 1.02;
+  }
+}
+
+.site-title:active {
+  scale: 0.98;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-title {
+    transition: none;
+  }
+
+  .site-title:hover,
+  .site-title:active {
+    scale: 1;
+  }
+}
+
+/* Cascada de la sidebar vía ::details-content (Chrome 131, Firefox 143, Safari 18.4), antes corte seco.
+   Acoplada al markup interno de la sidebar de Starlight 0.41.4, revisar al actualizar. */
+@media (prefers-reduced-motion: no-preference) {
+  #starlight__sidebar {
+    interpolate-size: allow-keywords;
+  }
+
+  #starlight__sidebar details::details-content {
+    height: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      height 180ms var(--m-ease-salida),
+      opacity 140ms var(--m-ease-salida),
+      content-visibility 180ms allow-discrete;
+  }
+
+  #starlight__sidebar details[open]::details-content {
+    height: auto;
+    opacity: 1;
+    transition-duration: 300ms, 260ms, 300ms;
+  }
+
+  #starlight__sidebar summary .caret {
+    transition: transform 240ms var(--m-ease-salida);
+  }
+
+  #starlight__sidebar details > ul > li {
+    opacity: 0;
+    translate: 0 -0.25rem;
+  }
+
+  /* La transición vive en el estado abierto, así el cierre recoge todo de golpe. */
+  #starlight__sidebar details[open] > ul > li {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 160ms var(--m-ease-salida),
+      translate 160ms var(--m-ease-salida);
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(2) {
+    transition-delay: 60ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(3) {
+    transition-delay: 120ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(4) {
+    transition-delay: 180ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(5) {
+    transition-delay: 240ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(6) {
+    transition-delay: 300ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(7) {
+    transition-delay: 360ms;
+  }
+
+  #starlight__sidebar details[open] > ul > li:nth-child(n + 8) {
+    transition-delay: 420ms;
+  }
+
+  /* Hasta que la página pinta estable nada transiciona, evita el estirón en plena carga. */
+  :root:not([data-transiciones-listas]) #starlight__sidebar details::details-content,
+  :root:not([data-transiciones-listas]) #starlight__sidebar summary .caret,
+  :root:not([data-transiciones-listas]) #starlight__sidebar details > ul > li {
+    transition: none;
+  }
+}
+
+.site-title > svg {
+  flex-shrink: 0;
+  height: 2.55rem;
+  width: auto;
+  max-width: 100%;
+}
+
+.site-title > span,
+.manualito-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  overflow: visible;
+  font-family: var(--m-font-display);
+  font-weight: 800;
+  font-optical-sizing: auto;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--m-text);
+}
+
+.site-title > span {
+  font-size: 1.38125rem;
+}
+
+.site-title > span::after,
+.manualito-wordmark::after {
+  content: '.' / '';
+  margin-inline-start: 1px;
+  color: var(--m-primary-500);
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+:root starlight-theme-select .theme-trigger:focus-visible {
+  outline-color: var(--sl-color-text-accent);
+}
+
+.page > header .social-icons a {
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: var(--m-hit);
+  color: var(--sl-color-gray-2);
+}
+
+.page > header .social-icons {
+  gap: 1.125rem;
+}
+
+.page > header .header .right-group {
+  gap: 0.625rem;
+}
+
+.page > header .social-icons a:is(:hover, :focus-visible) {
+  color: var(--sl-color-white);
+}
+
+.page > header .theme-trigger {
+  gap: 0.1875rem;
+  inline-size: 2.75rem;
+}
+
+.page > header .theme-trigger__caret {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+}
+
+@media (max-width: 49.999rem) {
+  :root:not([data-has-sidebar]) .page > header > .header {
+    gap: 1.125rem;
+  }
+
+  :root:not([data-has-sidebar]) .page > header > .header > .title-wrapper {
+    margin-inline-end: auto;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .header .right-group {
+    display: flex;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .social-icons a,
+  :root:not([data-has-sidebar]) .page > header .theme-trigger {
+    block-size: 2.5rem;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .label-icon {
+    inline-size: 1.125rem;
+    block-size: 1.125rem;
+  }
+
+  :root:not([data-has-sidebar]) .page > header .theme-menu {
+    inset-block: calc(100% + 0.5rem) auto;
+    inset-inline: auto 0;
+    transform-origin: top right;
+    translate: 0 -4px;
+  }
+}
+
+@media (max-width: 23rem) {
+  :root:not([data-has-sidebar]) .right-group starlight-theme-select,
+  :root:not([data-has-sidebar]) .right-group .social-icons::after {
+    display: none;
+  }
+}
+
+@media (max-width: 22.999rem) {
+  :root[data-has-sidebar] .site-title {
+    gap: 0;
+  }
+
+  :root[data-has-sidebar] .site-title > span {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+}
+
+@media (min-width: 50rem) {
+  .page > header > .header {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem) minmax(0, 1fr);
+  }
+
+  .page > header > .header > .acciones-cabecera {
+    justify-self: end;
+  }
+
+  button[data-open-modal] {
+    height: var(--m-hit);
+    border-radius: var(--m-r-lg);
+  }
+
+  :root[data-theme='light'] button[data-open-modal] {
+    border-color: var(--m-border-strong);
+    background-color: var(--m-bg);
+    box-shadow: var(--m-shadow-xs);
+  }
+}
+
+/* El diálogo de búsqueda nace del botón que lo abre, no del centro de la pantalla.
+   Origen arriba y a la izquierda en escritorio, que es donde vive el buscador. */
+site-search dialog {
+  transform-origin: top center;
+  opacity: 0;
+  scale: 0.96;
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    display 180ms allow-discrete,
+    overlay 180ms allow-discrete;
+}
+
+site-search dialog[open] {
+  opacity: 1;
+  scale: 1;
+}
+
+@starting-style {
+  site-search dialog[open] {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+site-search dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    display 180ms allow-discrete,
+    overlay 180ms allow-discrete;
+}
+
+site-search dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  site-search dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  site-search dialog,
+  site-search dialog::backdrop {
+    transition: none;
+  }
+}

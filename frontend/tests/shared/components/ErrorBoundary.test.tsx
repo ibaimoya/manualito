@@ -1,11 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 
 function Boom(): never {
   throw new Error('Test boom!');
 }
+
+beforeEach(() => {
+  // React informa en consola de los errores de render provocados en estas pruebas.
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe('ErrorBoundary', () => {
   it('renderiza los hijos cuando no hay error', () => {
@@ -17,88 +27,49 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Hijo OK')).toBeInTheDocument();
   });
 
-  it('renderiza fallback custom cuando un hijo lanza', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    render(
-      <ErrorBoundary fallback={(err) => <p>Caught: {err.message}</p>}>
+  it('ofrece detalles cerrados y recupera los hijos al reintentar', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ErrorBoundary>
         <Boom />
       </ErrorBoundary>,
     );
-    expect(screen.getByText(/Caught: Test boom!/)).toBeInTheDocument();
-    spy.mockRestore();
+    const heading = screen.getByRole('heading', { name: 'No hemos podido abrir esta página' });
+    expect(screen.getByRole('main')).toContainElement(heading);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: /inicio/i })).toHaveAttribute(
+      'href',
+      '/',
+    );
+
+    const details = screen.getByText('Detalles técnicos').closest('details');
+    expect(details).not.toHaveAttribute('open');
+    expect(screen.getByText('Test boom!')).not.toBeVisible();
+    await user.click(screen.getByText('Detalles técnicos'));
+    expect(screen.getByText('Test boom!')).toBeVisible();
+
+    rerender(
+      <ErrorBoundary>
+        <p>Hijo recuperado</p>
+      </ErrorBoundary>,
+    );
+    expect(screen.queryByText('Hijo recuperado')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(screen.getByText('Hijo recuperado')).toBeInTheDocument();
+    expect(screen.queryByRole('main')).not.toBeInTheDocument();
   });
 
-  it('fallback por defecto cuando un hijo lanza', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('no expone detalles técnicos en producción', () => {
+    vi.stubEnv('DEV', false);
     render(
       <ErrorBoundary>
         <Boom />
       </ErrorBoundary>,
     );
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText(/Algo ha fallado/i)).toBeInTheDocument();
-    spy.mockRestore();
-  });
-
-  it('fallback custom recibe `reset` como función invocable', () => {
-
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    let receivedReset: (() => void) | null = null;
-    render(
-      <ErrorBoundary
-        fallback={(_err, reset) => {
-          receivedReset = reset;
-          return <p>fb</p>;
-        }}
-      >
-        <Boom />
-      </ErrorBoundary>,
-    );
-    expect(typeof receivedReset).toBe('function');
-    // Llamar reset() — no esperamos un re-render visible (el render del
-    // boundary tras setState dispararía otra vez Boom).  Solo necesitamos
-    // que la línea se ejecute para que V8 la marque como cubierta.
-    receivedReset!();
-    spy.mockRestore();
-  });
-
-  it('botón "Reintentar" del fallback por defecto llama a window.location.reload', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    // window.location.reload no es trivial de mockear porque `location` es
-    // readonly.  Reemplazamos el objeto completo con un proxy mockeable.
-    const reloadSpy = vi.fn();
-    const originalLocation = window.location;
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { ...originalLocation, reload: reloadSpy },
-    });
-    try {
-      render(
-        <ErrorBoundary>
-          <Boom />
-        </ErrorBoundary>,
-      );
-      const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /Reintentar/i }));
-      expect(reloadSpy).toHaveBeenCalledTimes(1);
-    } finally {
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        value: originalLocation,
-      });
-      spy.mockRestore();
-    }
-  });
-
-  it('en modo dev muestra el mensaje del error en un <pre> debajo', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    // import.meta.env.DEV es true en vitest (NODE_ENV=test ⇒ DEV=true).
-    render(
-      <ErrorBoundary>
-        <Boom />
-      </ErrorBoundary>,
-    );
-    expect(screen.getByText(/Test boom!/)).toBeInTheDocument();
-    spy.mockRestore();
+    expect(
+      screen.getByRole('heading', { name: 'No hemos podido abrir esta página' }),
+    ).toBeVisible();
+    expect(screen.queryByText('Detalles técnicos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Test boom!')).not.toBeInTheDocument();
   });
 });

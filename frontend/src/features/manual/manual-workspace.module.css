@@ -1,0 +1,75 @@
+.metadata svg {
+  flex-shrink: 0;
+  translate: 0 -0.5px;
+}
+
+.metadata :global(.help-indicator) {
+  align-self: center;
+  line-height: inherit;
+}
+
+.metadata :global(.help-indicator-glyph),
+.metadata :global(.help-indicator-glyph) svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* La hoja delantera desplaza el peso visual de Copiar hacia abajo y a la izquierda. */
+.metadata :global([data-icon='copy']) {
+  translate: 0.5px -1px;
+}
+
+.panes {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+  border-top: 1px solid var(--m-border);
+}
+
+.pane {
+  grid-area: 1 / 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--m-bg);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 160ms var(--m-easing),
+    visibility 160ms;
+}
+
+/* Las dos vistas permanecen montadas para conservar borrador, scroll y zoom. */
+.panes[data-view='text'] .original,
+.panes[data-view='compare'] .original,
+.panes[data-view='original'] .text {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@container app (min-width: 64rem) {
+  .panes[data-view='compare'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panes[data-view='compare'] .original {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    border-inline-end: 1px solid var(--m-border);
+  }
+
+  .panes[data-view='compare'] .text {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane {
+    transition: none;
+  }
+}

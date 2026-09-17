@@ -1,0 +1,42 @@
+---
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+
+interface Props {
+  alt: string;
+  id: string;
+  src: ImageMetadata;
+}
+
+const { alt, id, src } = Astro.props;
+---
+
+<figure {id}>
+  <Image {src} {alt} />
+  <figcaption><slot /></figcaption>
+</figure>
+
+<style>
+  figure {
+    margin-block: 2rem;
+  }
+
+  figure :global(img) {
+    margin-inline: auto;
+    border: 1px solid var(--sl-color-hairline-light);
+    border-radius: 0.5rem;
+  }
+
+  figcaption {
+    margin-block-start: 0.625rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  figcaption :global(p) {
+    margin: 0;
+  }
+</style>

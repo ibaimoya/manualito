@@ -1,0 +1,57 @@
+{
+  "provenance": "Transcripción de source-table.md. No existe un JSON original por consulta.",
+  "source_date": "2026-04-15",
+  "passages": 36,
+  "queries": 24,
+  "speed_documents": 100,
+  "summary": [
+    {
+      "label": "multilingual-e5-small",
+      "dimensions": 384,
+      "load_s": 3.68,
+      "ram_mb": 303.5,
+      "ms_document": 1.92,
+      "delta_symmetric": 0.0998,
+      "delta_asymmetric": 0.0281,
+      "recall1": 0.9583,
+      "recall3": 0.9583,
+      "mrr10": 0.9688
+    },
+    {
+      "label": "multilingual-e5-base",
+      "dimensions": 768,
+      "load_s": 3.53,
+      "ram_mb": 291.4,
+      "ms_document": 7.24,
+      "delta_symmetric": 0.1039,
+      "delta_asymmetric": 0.0332,
+      "recall1": 0.9167,
+      "recall3": 0.9583,
+      "mrr10": 0.9479
+    },
+    {
+      "label": "paraphrase-multilingual-MiniLM-L12-v2",
+      "dimensions": 384,
+      "load_s": 3.41,
+      "ram_mb": 314.2,
+      "ms_document": 1.99,
+      "delta_symmetric": 0.4877,
+      "delta_asymmetric": 0.0973,
+      "recall1": 0.8333,
+      "recall3": 0.9583,
+      "mrr10": 0.901
+    },
+    {
+      "label": "all-MiniLM-L6-v2",
+      "dimensions": 384,
+      "load_s": 5.56,
+      "ram_mb": 371.8,
+      "ms_document": 1.25,
+      "delta_symmetric": 0.1523,
+      "delta_asymmetric": 0.0229,
+      "recall1": 0.625,
+      "recall3": 0.875,
+      "mrr10": 0.7435
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+ "version": 1,
+ "fecha_curacion": "2026-08-20",
+ "archivo": "casos.json",
+ "sha256_canonico": "fd730bedd93da847d8dccc7868aa48b89b0c481c31eb37d97778364a49d654de",
+ "descripcion": "73 lineas OCR con verdad terreno: 37 reales de tres manuales escaneados (Conecta 4, Catan instrucciones rapidas, Rummikub) con confianza y contexto, y 36 sinteticas de las baterias de typos, diacriticos y segmentacion."
+}

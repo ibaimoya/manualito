@@ -1,0 +1,785 @@
+{
+  "modelo_embeddings": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "configs": [
+    "fix-256-0",
+    "fix-512-0",
+    "fix-1024-0",
+    "rec-256-0",
+    "rec-512-0",
+    "rec-512-64",
+    "rec-1024-128"
+  ],
+  "consultas": [
+    {
+      "query": "¿Cuántos jugadores pueden jugar a Catan?",
+      "substr": "3 o 4 jugadores"
+    },
+    {
+      "query": "¿Qué recursos necesito para construir una ciudad?",
+      "substr": "dos trigos y tres minerales"
+    },
+    {
+      "query": "¿Cuándo se activa el ladrón?",
+      "substr": "sale un 7"
+    },
+    {
+      "query": "¿Cómo funciona el puerto 2:1?",
+      "substr": "dos recursos del mismo tipo"
+    },
+    {
+      "query": "¿Cuánto dura una partida de Azul?",
+      "substr": "30 y 45 minutos"
+    },
+    {
+      "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+      "substr": "dos puntos extra"
+    },
+    {
+      "query": "¿Cuándo termina Azul?",
+      "substr": "completa una fila horizontal"
+    },
+    {
+      "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+      "substr": "siete seguidores"
+    },
+    {
+      "query": "¿Cómo se puntúa un camino en Carcassonne?",
+      "substr": "un punto por cada ficha"
+    },
+    {
+      "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+      "substr": "tres puntos por cada ciudad"
+    }
+  ],
+  "resumen": [
+    {
+      "nombre": "fix-256-0",
+      "etiqueta": "fix\n256",
+      "color": "#89b4fa",
+      "splitter": "fijo",
+      "size": 256,
+      "overlap": 0,
+      "n_chunks": 41,
+      "avg_len": 253.5,
+      "frag": 0.902,
+      "indexing_s": 0.273,
+      "q_ms": 8.04,
+      "recall1": 0.6,
+      "recall3": 0.9,
+      "recall5": 0.9,
+      "mrr": 0.743
+    },
+    {
+      "nombre": "fix-512-0",
+      "etiqueta": "fix\n512",
+      "color": "#74c7ec",
+      "splitter": "fijo",
+      "size": 512,
+      "overlap": 0,
+      "n_chunks": 21,
+      "avg_len": 494.9,
+      "frag": 0.857,
+      "indexing_s": 0.251,
+      "q_ms": 12.2,
+      "recall1": 0.5,
+      "recall3": 1.0,
+      "recall5": 1.0,
+      "mrr": 0.683
+    },
+    {
+      "nombre": "fix-1024-0",
+      "etiqueta": "fix\n1024",
+      "color": "#94e2d5",
+      "splitter": "fijo",
+      "size": 1024,
+      "overlap": 0,
+      "n_chunks": 11,
+      "avg_len": 944.8,
+      "frag": 0.818,
+      "indexing_s": 0.157,
+      "q_ms": 10.59,
+      "recall1": 0.6,
+      "recall3": 0.9,
+      "recall5": 1.0,
+      "mrr": 0.758
+    },
+    {
+      "nombre": "rec-256-0",
+      "etiqueta": "rec\n256",
+      "color": "#fab387",
+      "splitter": "recursivo",
+      "size": 256,
+      "overlap": 0,
+      "n_chunks": 74,
+      "avg_len": 138.5,
+      "frag": 0.649,
+      "indexing_s": 0.329,
+      "q_ms": 9.22,
+      "recall1": 0.5,
+      "recall3": 0.7,
+      "recall5": 1.0,
+      "mrr": 0.637
+    },
+    {
+      "nombre": "rec-512-0",
+      "etiqueta": "rec\n512",
+      "color": "#a6e3a1",
+      "splitter": "recursivo",
+      "size": 512,
+      "overlap": 0,
+      "n_chunks": 28,
+      "avg_len": 369.2,
+      "frag": 0.607,
+      "indexing_s": 0.329,
+      "q_ms": 7.47,
+      "recall1": 0.5,
+      "recall3": 0.9,
+      "recall5": 1.0,
+      "mrr": 0.675
+    },
+    {
+      "nombre": "rec-512-64",
+      "etiqueta": "rec\n512+64",
+      "color": "#f9e2af",
+      "splitter": "recursivo",
+      "size": 512,
+      "overlap": 64,
+      "n_chunks": 28,
+      "avg_len": 431.0,
+      "frag": 0.607,
+      "indexing_s": 0.326,
+      "q_ms": 8.1,
+      "recall1": 0.5,
+      "recall3": 0.8,
+      "recall5": 0.9,
+      "mrr": 0.681
+    },
+    {
+      "nombre": "rec-1024-128",
+      "etiqueta": "rec\n1024+128",
+      "color": "#f38ba8",
+      "splitter": "recursivo",
+      "size": 1024,
+      "overlap": 128,
+      "n_chunks": 13,
+      "avg_len": 915.8,
+      "frag": 0.769,
+      "indexing_s": 0.152,
+      "q_ms": 8.51,
+      "recall1": 0.9,
+      "recall3": 1.0,
+      "recall5": 1.0,
+      "mrr": 0.95
+    }
+  ],
+  "detalles": {
+    "fix-256-0": {
+      "chunks": [
+        "## Introducción a Catan\n\nCatan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes. Una partida típica de Catan",
+        " dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.\n\n## Preparación\n\nAl comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas. Cada hexágono repre",
+        "senta un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial. Los poblados valen",
+        " un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producción\n\nEl juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis car",
+        "as. El número resultante indica qué hexágonos producen recursos. Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto. Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacen",
+        "tes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrón\n\nSi sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando ",
+        "hacia abajo. Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo. Además, el jugador que lo mueve",
+        " roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.\n\n## Construcciones\n\nPara construir una carretera hay que pagar una madera y ",
+        "una arcilla al banco. Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.\n\nPara construir un poblado ",
+        "hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria. Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad",
+        ".\n\nPara construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno. Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondi",
+        "ente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercio\n\nRepartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno c",
+        "ualquiera de otro tipo; existe un puerto 2:1 por cada recurso. El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.\n\nLos jugadores",
+        " también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo\n\nLas cartas de desarrollo se compran con una lana, un trigo",
+        " y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7. El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos punto",
+        "s de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros. Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras. Las cartas de punto de victoria cuentan al final de la partida pero se mantienen ocu",
+        "ltas hasta que su dueño alcanza los diez puntos.\n\n## Final de la partida\n\nLa partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia. Los puntos se suman entre poblados, ciudades, bono de ejército",
+        " más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a Azul\n\nAzul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesli",
+        "ng en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos. El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.\n\n## Componentes\n\nLa caja incluye",
+        " un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones. También trae cien azulejos en cinco colores distintos, cinco fábrica",
+        "s redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## Preparación\n\nAl inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos juga",
+        "dores, siete para tres y nueve para cuatro. Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.\n\n## Desarrollo de la ronda\n\nCada ronda consta de tres fa",
+        "ses: oferta de fábrica, colocación en el muro y limpieza.\n\nEn la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro. El primer juga",
+        "dor que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda. Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.\n\n",
+        "La fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro\n\nEn la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de a",
+        "zulejos de esa fila del patrón se descartan. Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto. Los azulejos de",
+        " la fila de suelo restan puntos según una escala impresa.\n\n## Bonificaciones finales\n\nAl final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada ",
+        "color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partida\n\nLa partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro. Después de aplicar las bonificacion",
+        "es finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.\n\n\n## Introducción a Carcassonne\n\nCarcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año ",
+        "2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos. El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y gan",
+        "ar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## Componentes\n\nEl juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará",
+        " durante la partida para reclamar estructuras. Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.\n\n## Turno de juego\n\nEn su turno, el jugador activo roba una ficha al azar ",
+        "de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos. Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus ",
+        "seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.\n\nSolo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seg",
+        "uidor, ya sea propio o rival. El turno termina después de la colocación.\n\n## Puntuación durante la partida\n\nCuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha ",
+        "que compone el camino. Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.\n\nCuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada",
+        " escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.\n\nCuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que es",
+        "taban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación final\n\nAl final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. ",
+        "Cada ciudad no cerrada da un punto por ficha y un punto por escudo. Cada monasterio da un punto por cada ficha circundante incluyendo la propia.\n\nLos campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final.",
+        " Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.\n\n## Final de la partida\n\nLa partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tra",
+        "s las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados. En caso de empate, comparten la victoria.\n"
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 10
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 3
+        }
+      ]
+    },
+    "fix-512-0": {
+      "chunks": [
+        "## Introducción a Catan\n\nCatan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes. Una partida típica de Catan dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.\n\n## Preparación\n\nAl comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas. Cada hexágono repre",
+        "senta un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial. Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producción\n\nEl juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis car",
+        "as. El número resultante indica qué hexágonos producen recursos. Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto. Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrón\n\nSi sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando ",
+        "hacia abajo. Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo. Además, el jugador que lo mueve roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.\n\n## Construcciones\n\nPara construir una carretera hay que pagar una madera y ",
+        "una arcilla al banco. Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.\n\nPara construir un poblado hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria. Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad",
+        ".\n\nPara construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno. Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercio\n\nRepartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno c",
+        "ualquiera de otro tipo; existe un puerto 2:1 por cada recurso. El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.\n\nLos jugadores también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo\n\nLas cartas de desarrollo se compran con una lana, un trigo",
+        " y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7. El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos puntos de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros. Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras. Las cartas de punto de victoria cuentan al final de la partida pero se mantienen ocu",
+        "ltas hasta que su dueño alcanza los diez puntos.\n\n## Final de la partida\n\nLa partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia. Los puntos se suman entre poblados, ciudades, bono de ejército más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a Azul\n\nAzul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesli",
+        "ng en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos. El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.\n\n## Componentes\n\nLa caja incluye un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones. También trae cien azulejos en cinco colores distintos, cinco fábrica",
+        "s redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## Preparación\n\nAl inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos jugadores, siete para tres y nueve para cuatro. Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.\n\n## Desarrollo de la ronda\n\nCada ronda consta de tres fa",
+        "ses: oferta de fábrica, colocación en el muro y limpieza.\n\nEn la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro. El primer jugador que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda. Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.\n\n",
+        "La fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro\n\nEn la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de azulejos de esa fila del patrón se descartan. Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto. Los azulejos de",
+        " la fila de suelo restan puntos según una escala impresa.\n\n## Bonificaciones finales\n\nAl final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partida\n\nLa partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro. Después de aplicar las bonificacion",
+        "es finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.\n\n\n## Introducción a Carcassonne\n\nCarcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año 2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos. El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y gan",
+        "ar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## Componentes\n\nEl juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará durante la partida para reclamar estructuras. Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.\n\n## Turno de juego\n\nEn su turno, el jugador activo roba una ficha al azar ",
+        "de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos. Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.\n\nSolo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seg",
+        "uidor, ya sea propio o rival. El turno termina después de la colocación.\n\n## Puntuación durante la partida\n\nCuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha que compone el camino. Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.\n\nCuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada",
+        " escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.\n\nCuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación final\n\nAl final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. ",
+        "Cada ciudad no cerrada da un punto por ficha y un punto por escudo. Cada monasterio da un punto por cada ficha circundante incluyendo la propia.\n\nLos campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final. Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.\n\n## Final de la partida\n\nLa partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tra",
+        "s las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados. En caso de empate, comparten la victoria.\n"
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 1
+        }
+      ]
+    },
+    "fix-1024-0": {
+      "chunks": [
+        "## Introducción a Catan\n\nCatan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes. Una partida típica de Catan dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.\n\n## Preparación\n\nAl comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas. Cada hexágono representa un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial. Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producción\n\nEl juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis car",
+        "as. El número resultante indica qué hexágonos producen recursos. Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto. Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrón\n\nSi sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando hacia abajo. Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo. Además, el jugador que lo mueve roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.\n\n## Construcciones\n\nPara construir una carretera hay que pagar una madera y ",
+        "una arcilla al banco. Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.\n\nPara construir un poblado hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria. Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad.\n\nPara construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno. Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercio\n\nRepartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno c",
+        "ualquiera de otro tipo; existe un puerto 2:1 por cada recurso. El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.\n\nLos jugadores también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo\n\nLas cartas de desarrollo se compran con una lana, un trigo y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7. El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos puntos de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros. Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras. Las cartas de punto de victoria cuentan al final de la partida pero se mantienen ocu",
+        "ltas hasta que su dueño alcanza los diez puntos.\n\n## Final de la partida\n\nLa partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia. Los puntos se suman entre poblados, ciudades, bono de ejército más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a Azul\n\nAzul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesling en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos. El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.\n\n## Componentes\n\nLa caja incluye un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones. También trae cien azulejos en cinco colores distintos, cinco fábrica",
+        "s redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## Preparación\n\nAl inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos jugadores, siete para tres y nueve para cuatro. Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.\n\n## Desarrollo de la ronda\n\nCada ronda consta de tres fases: oferta de fábrica, colocación en el muro y limpieza.\n\nEn la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro. El primer jugador que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda. Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.\n\n",
+        "La fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro\n\nEn la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de azulejos de esa fila del patrón se descartan. Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto. Los azulejos de la fila de suelo restan puntos según una escala impresa.\n\n## Bonificaciones finales\n\nAl final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partida\n\nLa partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro. Después de aplicar las bonificacion",
+        "es finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.\n\n\n## Introducción a Carcassonne\n\nCarcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año 2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos. El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y ganar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## Componentes\n\nEl juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará durante la partida para reclamar estructuras. Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.\n\n## Turno de juego\n\nEn su turno, el jugador activo roba una ficha al azar ",
+        "de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos. Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.\n\nSolo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seguidor, ya sea propio o rival. El turno termina después de la colocación.\n\n## Puntuación durante la partida\n\nCuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha que compone el camino. Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.\n\nCuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada",
+        " escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.\n\nCuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación final\n\nAl final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. Cada ciudad no cerrada da un punto por ficha y un punto por escudo. Cada monasterio da un punto por cada ficha circundante incluyendo la propia.\n\nLos campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final. Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.\n\n## Final de la partida\n\nLa partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tra",
+        "s las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados. En caso de empate, comparten la victoria.\n"
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 4
+        }
+      ]
+    },
+    "rec-256-0": {
+      "chunks": [
+        "## Introducción a Catan",
+        "Catan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes",
+        "Una partida típica de Catan dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.",
+        "## Preparación",
+        "Al comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas",
+        "Cada hexágono representa un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial",
+        "Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.",
+        "## Recursos y producción",
+        "El juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis caras. El número resultante indica qué hexágonos producen recursos",
+        "Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto",
+        "Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.",
+        "## El ladrón",
+        "Si sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando hacia abajo",
+        "Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo",
+        "Además, el jugador que lo mueve roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.",
+        "## Construcciones",
+        "Para construir una carretera hay que pagar una madera y una arcilla al banco",
+        "Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.",
+        "Para construir un poblado hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria",
+        "Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad.",
+        "Para construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno",
+        "Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.",
+        "## Puertos y comercio",
+        "Repartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno cualquiera de otro tipo; existe un puerto 2:1 por cada recurso",
+        "El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.",
+        "Los jugadores también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo",
+        "Las cartas de desarrollo se compran con una lana, un trigo y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7",
+        "El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos puntos de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros",
+        "Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras. Las cartas de punto de victoria cuentan al final de la partida pero se mantienen ocultas hasta que su dueño alcanza los diez puntos.",
+        "## Final de la partida",
+        "La partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia",
+        "Los puntos se suman entre poblados, ciudades, bono de ejército más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.",
+        "\n## Introducción a Azul",
+        "Azul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesling en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos",
+        "El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.",
+        "## Componentes",
+        "La caja incluye un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones",
+        "También trae cien azulejos en cinco colores distintos, cinco fábricas redondas por cada par de jugadores y una bolsa común para el banco de azulejos.",
+        "## Preparación",
+        "Al inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos jugadores, siete para tres y nueve para cuatro",
+        "Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.",
+        "## Desarrollo de la ronda\n\nCada ronda consta de tres fases: oferta de fábrica, colocación en el muro y limpieza.",
+        "En la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro",
+        "El primer jugador que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda",
+        "Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.",
+        "La fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro",
+        "En la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de azulejos de esa fila del patrón se descartan",
+        "Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto",
+        "Los azulejos de la fila de suelo restan puntos según una escala impresa.",
+        "## Bonificaciones finales",
+        "Al final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.",
+        "## Final de la partida",
+        "La partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro",
+        "Después de aplicar las bonificaciones finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.",
+        "\n## Introducción a Carcassonne",
+        "Carcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año 2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos",
+        "El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y ganar puntos situando seguidores en caminos, ciudades, monasterios y campos.",
+        "## Componentes",
+        "El juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará durante la partida para reclamar estructuras",
+        "Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.",
+        "## Turno de juego",
+        "En su turno, el jugador activo roba una ficha al azar de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos",
+        "Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.",
+        "Solo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seguidor, ya sea propio o rival. El turno termina después de la colocación.\n\n## Puntuación durante la partida",
+        "Cuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha que compone el camino",
+        "Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.",
+        "Cuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.",
+        "Cuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.",
+        "## Puntuación final",
+        "Al final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. Cada ciudad no cerrada da un punto por ficha y un punto por escudo",
+        "Cada monasterio da un punto por cada ficha circundante incluyendo la propia.",
+        "Los campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final. Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.\n\n## Final de la partida",
+        "La partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tras las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados",
+        "En caso de empate, comparten la victoria."
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 4
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 4
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 5
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 1
+        }
+      ]
+    },
+    "rec-512-0": {
+      "chunks": [
+        "## Introducción a Catan\n\nCatan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes. Una partida típica de Catan dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.\n\n## Preparación",
+        "Al comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas. Cada hexágono representa un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial. Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producción",
+        "El juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis caras. El número resultante indica qué hexágonos producen recursos. Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto. Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrón",
+        "Si sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando hacia abajo. Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo",
+        "Además, el jugador que lo mueve roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.",
+        "## Construcciones\n\nPara construir una carretera hay que pagar una madera y una arcilla al banco. Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.",
+        "Para construir un poblado hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria. Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad.",
+        "Para construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno. Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercio",
+        "Repartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno cualquiera de otro tipo; existe un puerto 2:1 por cada recurso. El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.",
+        "Los jugadores también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo",
+        "Las cartas de desarrollo se compran con una lana, un trigo y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7. El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos puntos de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros. Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras",
+        "Las cartas de punto de victoria cuentan al final de la partida pero se mantienen ocultas hasta que su dueño alcanza los diez puntos.",
+        "## Final de la partida\n\nLa partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia. Los puntos se suman entre poblados, ciudades, bono de ejército más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a Azul",
+        "Azul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesling en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos. El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.\n\n## Componentes",
+        "La caja incluye un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones. También trae cien azulejos en cinco colores distintos, cinco fábricas redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## Preparación",
+        "Al inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos jugadores, siete para tres y nueve para cuatro. Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.\n\n## Desarrollo de la ronda\n\nCada ronda consta de tres fases: oferta de fábrica, colocación en el muro y limpieza.",
+        "En la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro. El primer jugador que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda. Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.",
+        "La fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro",
+        "En la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de azulejos de esa fila del patrón se descartan. Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto. Los azulejos de la fila de suelo restan puntos según una escala impresa.\n\n## Bonificaciones finales",
+        "Al final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partida",
+        "La partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro. Después de aplicar las bonificaciones finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.\n\n\n## Introducción a Carcassonne",
+        "Carcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año 2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos. El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y ganar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## Componentes",
+        "El juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará durante la partida para reclamar estructuras. Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.\n\n## Turno de juego",
+        "En su turno, el jugador activo roba una ficha al azar de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos. Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.",
+        "Solo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seguidor, ya sea propio o rival. El turno termina después de la colocación.\n\n## Puntuación durante la partida\n\nCuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha que compone el camino. Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.",
+        "Cuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.\n\nCuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación final",
+        "Al final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. Cada ciudad no cerrada da un punto por ficha y un punto por escudo. Cada monasterio da un punto por cada ficha circundante incluyendo la propia.\n\nLos campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final. Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.",
+        "## Final de la partida\n\nLa partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tras las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados. En caso de empate, comparten la victoria.\n"
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 3
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 4
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 3
+        }
+      ]
+    },
+    "rec-512-64": {
+      "chunks": [
+        "## Introducción a Catan\n\nCatan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes. Una partida típica de Catan dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.\n\n## Preparación",
+        "r diez puntos de victoria antes que los rivales.\n\n## PreparaciónAl comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas. Cada hexágono representa un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial. Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producción",
+        "esde el primer instante de la partida.\n\n## Recursos y producciónEl juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis caras. El número resultante indica qué hexágonos producen recursos. Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto. Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrón",
+        "iben uno o dos recursos según el tipo de edificio.\n\n## El ladrónSi sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando hacia abajo. Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo",
+        "ón deja de producir recursos hasta que alguien lo mueva de nuevoAdemás, el jugador que lo mueve roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.",
+        " se activa al jugar una carta de caballero, con el mismo efecto.## Construcciones\n\nPara construir una carretera hay que pagar una madera y una arcilla al banco. Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.",
+        "ed del jugador y para optar al bono de ruta comercial más larga.Para construir un poblado hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria. Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad.",
+        "s a dos aristas de distancia de cualquier otro poblado o ciudad.Para construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno. Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercio",
+        "da vez que el hexágono adyacente produce.\n\n## Puertos y comercioRepartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno cualquiera de otro tipo; existe un puerto 2:1 por cada recurso. El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.",
+        "ingún puerto, el cambio estándar con el banco es cuatro por uno.Los jugadores también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo",
+        " está permitido fuera del turno propio.\n\n## Cartas de desarrolloLas cartas de desarrollo se compran con una lana, un trigo y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7. El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos puntos de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros. Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras",
+        "cluyen monopolio, año de abundancia y construcción de carreterasLas cartas de punto de victoria cuentan al final de la partida pero se mantienen ocultas hasta que su dueño alcanza los diez puntos.",
+        "se mantienen ocultas hasta que su dueño alcanza los diez puntos.## Final de la partida\n\nLa partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia. Los puntos se suman entre poblados, ciudades, bono de ejército más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a Azul",
+        "nce primero ese umbral gana la partida.\n\n\n## Introducción a AzulAzul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesling en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos. El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.\n\n## Componentes",
+        " colores obteniendo la mayor puntuación posible.\n\n## ComponentesLa caja incluye un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones. También trae cien azulejos en cinco colores distintos, cinco fábricas redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## Preparación",
+        "res y una bolsa común para el banco de azulejos.\n\n## PreparaciónAl inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos jugadores, siete para tres y nueve para cuatro. Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.\n\n## Desarrollo de la ronda\n\nCada ronda consta de tres fases: oferta de fábrica, colocación en el muro y limpieza.",
+        "tres fases: oferta de fábrica, colocación en el muro y limpieza.En la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro. El primer jugador que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda. Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.",
+        "l patrón personal; si sobran o no caben, van a la fila de suelo.La fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro",
+        "as fábricas y el centro quedan vacíos.\n\n## Colocación en el muroEn la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de azulejos de esa fila del patrón se descartan. Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto. Los azulejos de la fila de suelo restan puntos según una escala impresa.\n\n## Bonificaciones finales",
+        "stan puntos según una escala impresa.\n\n## Bonificaciones finalesAl final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partida",
+        "s colocados en el muro suma diez puntos.\n\n## Final de la partidaLa partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro. Después de aplicar las bonificaciones finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.\n\n\n## Introducción a Carcassonne",
+        " completas se lleva la victoria.\n\n\n## Introducción a CarcassonneCarcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año 2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos. El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y ganar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## Componentes",
+        "ores en caminos, ciudades, monasterios y campos.\n\n## ComponentesEl juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará durante la partida para reclamar estructuras. Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.\n\n## Turno de juego",
+        " parcial, un tramo de camino y un monasterio.\n\n## Turno de juegoEn su turno, el jugador activo roba una ficha al azar de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos. Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.",
+        "ón en un camino, monje en un monasterio o campesino en un campo.Solo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seguidor, ya sea propio o rival. El turno termina después de la colocación.\n\n## Puntuación durante la partida\n\nCuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha que compone el camino. Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.",
+        " tiene dos ladrones empatados, ambos reciben el total de puntos.Cuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.\n\nCuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación final",
+        "eden volver a usarse en turnos posteriores.\n\n## Puntuación finalAl final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. Cada ciudad no cerrada da un punto por ficha y un punto por escudo. Cada monasterio da un punto por cada ficha circundante incluyendo la propia.\n\nLos campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final. Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.",
+        "otorga tres puntos por cada ciudad completa que toque ese campo.## Final de la partida\n\nLa partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tras las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados. En caso de empate, comparten la victoria.\n"
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 9
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 5
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 2
+        }
+      ]
+    },
+    "rec-1024-128": {
+      "chunks": [
+        "## Introducción a Catan\n\nCatan es un juego de mesa de estrategia y negociación diseñado por Klaus Teuber en 1995. Está pensado para 3 o 4 jugadores, aunque existe una expansión oficial que permite jugar hasta seis participantes. Una partida típica de Catan dura entre sesenta y noventa minutos y el objetivo es alcanzar diez puntos de victoria antes que los rivales.\n\n## Preparación\n\nAl comienzo de la partida se monta un tablero de diecinueve hexágonos de terreno rodeado por piezas marinas. Cada hexágono representa un tipo de recurso: bosque para madera, montaña para mineral, colina para arcilla, pasto para lana, campo para trigo y desierto que no produce nada. Los jugadores colocan por turno dos poblados y dos carreteras de su color inicial. Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producción",
+        "olor inicial. Los poblados valen un punto de victoria cada uno desde el primer instante de la partida.\n\n## Recursos y producciónEl juego se basa en cinco tipos de recursos: madera, arcilla, lana, trigo y mineral. Al inicio de cada turno, el jugador activo tira los dos dados de seis caras. El número resultante indica qué hexágonos producen recursos. Cada hexágono tiene asociada una ficha con un número del 2 al 12, excepto el desierto. Cuando la suma de los dados coincide con ese número, todos los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrón",
+        "los jugadores con poblados o ciudades adyacentes al hexágono reciben uno o dos recursos según el tipo de edificio.\n\n## El ladrónSi sale un 7 con la tirada inicial del turno, se activa el ladrón. Todos los jugadores con más de siete cartas de recurso en la mano deben descartar la mitad, redondeando hacia abajo. Después, el jugador que tiró los dados mueve al ladrón a cualquier hexágono del tablero, incluso uno marítimo. El hexágono donde se coloca el ladrón deja de producir recursos hasta que alguien lo mueva de nuevo. Además, el jugador que lo mueve roba una carta al azar a un rival que tenga un poblado o ciudad adyacente al hexágono bloqueado. El ladrón también se activa al jugar una carta de caballero, con el mismo efecto.\n\n## Construcciones\n\nPara construir una carretera hay que pagar una madera y una arcilla al banco. Las carreteras se colocan en las aristas entre hexágonos y no otorgan puntos de victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.",
+        "e victoria por sí mismas, pero son necesarias para expandir la red del jugador y para optar al bono de ruta comercial más larga.Para construir un poblado hay que pagar una madera, una arcilla, una lana y un trigo. Un poblado vale un punto de victoria. Solo se puede colocar en un vértice vacío, conectado a una carretera propia, y que esté al menos a dos aristas de distancia de cualquier otro poblado o ciudad.\n\nPara construir una ciudad hay que pagar dos trigos y tres minerales. La ciudad reemplaza un poblado existente del jugador y vale dos puntos de victoria en lugar de uno. Además, la ciudad produce el doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercio",
+        "l doble de recursos: dos unidades del recurso correspondiente cada vez que el hexágono adyacente produce.\n\n## Puertos y comercioRepartidos por la costa del tablero hay nueve puertos. El puerto más ventajoso es el puerto 2:1 específico, que permite intercambiar con el banco dos recursos del mismo tipo por uno cualquiera de otro tipo; existe un puerto 2:1 por cada recurso. El puerto genérico 3:1 permite cambiar tres recursos iguales por uno cualquiera. Si un jugador no tiene acceso a ningún puerto, el cambio estándar con el banco es cuatro por uno.\n\nLos jugadores también pueden comerciar entre sí durante su turno, proponiendo intercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrollo",
+        "ercambios de recursos libremente. El comercio entre jugadores no está permitido fuera del turno propio.\n\n## Cartas de desarrolloLas cartas de desarrollo se compran con una lana, un trigo y un mineral. Hay tres tipos principales: caballeros, cartas de progreso y puntos de victoria. Los caballeros mueven al ladrón como si se hubiera sacado un 7. El jugador con al menos tres caballeros jugados consigue el mayor ejército, que otorga dos puntos de victoria extra; esta ventaja pasa al rival si alguien juega más caballeros. Las cartas de progreso incluyen monopolio, año de abundancia y construcción de carreteras. Las cartas de punto de victoria cuentan al final de la partida pero se mantienen ocultas hasta que su dueño alcanza los diez puntos.\n\n## Final de la partida\n\nLa partida de Catan termina en cuanto un jugador alcanza diez puntos de victoria al comienzo de su turno y los anuncia. Los puntos se suman entre poblados, ciudades, bono de ejército más grande, bono de ruta comercial más larga y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a Azul",
+        "y cartas de desarrollo de punto de victoria. El jugador que alcance primero ese umbral gana la partida.\n\n\n## Introducción a AzulAzul es un juego abstracto de colocación de azulejos diseñado por Michael Kiesling en 2017. Está pensado para 2 a 4 jugadores y una partida típica de Azul dura entre 30 y 45 minutos. El objetivo es decorar el muro del palacio real de Évora con azulejos de colores obteniendo la mayor puntuación posible.\n\n## Componentes\n\nLa caja incluye un tablero personal por jugador con un muro cuadriculado de cinco filas y cinco columnas, una zona de patrones con filas de uno a cinco espacios, y una fila de suelo para penalizaciones. También trae cien azulejos en cinco colores distintos, cinco fábricas redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## Preparación",
+        "olores distintos, cinco fábricas redondas por cada par de jugadores y una bolsa común para el banco de azulejos.\n\n## PreparaciónAl inicio cada jugador recibe un tablero personal. En el centro de la mesa se colocan las fábricas según el número de jugadores: cinco fábricas para dos jugadores, siete para tres y nueve para cuatro. Un marcador de jugador inicial se coloca en la zona central. Se meten todos los azulejos en la bolsa y cada fábrica se rellena con cuatro azulejos al azar.\n\n## Desarrollo de la ronda\n\nCada ronda consta de tres fases: oferta de fábrica, colocación en el muro y limpieza.\n\nEn la fase de oferta, los jugadores se turnan eligiendo todos los azulejos de un mismo color de una fábrica o del centro. Los azulejos no elegidos de esa fábrica se mueven al centro. El primer jugador que toma piezas del centro en la ronda coge el marcador de jugador inicial y pierde un punto, pero será el primero en la siguiente ronda. Los azulejos obtenidos se colocan en una fila del patrón personal; si sobran o no caben, van a la fila de suelo.\n\nLa fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muro",
+        "o caben, van a la fila de suelo.\n\nLa fase termina cuando todas las fábricas y el centro quedan vacíos.\n\n## Colocación en el muroEn la fase de colocación, cada fila del patrón cuyo extremo derecho esté completo mueve un azulejo al muro, al hueco de la fila correspondiente, y el resto de azulejos de esa fila del patrón se descartan. Cada azulejo colocado en el muro puntúa inmediatamente contando los azulejos adyacentes en horizontal y vertical, incluyendo el recién colocado. Si no hay azulejos adyacentes, vale solo un punto. Los azulejos de la fila de suelo restan puntos según una escala impresa.\n\n## Bonificaciones finales\n\nAl final de la partida se añaden bonificaciones. Cada fila del muro que completa una fila horizontal suma dos puntos extra. Cada columna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partida",
+        "mna completa suma siete puntos. Cada color con los cinco azulejos colocados en el muro suma diez puntos.\n\n## Final de la partidaLa partida de Azul termina al terminar la ronda en la que un jugador completa una fila horizontal de cinco azulejos en su muro. Después de aplicar las bonificaciones finales, gana el jugador con más puntos; en caso de empate, el jugador con más filas horizontales completas se lleva la victoria.\n\n\n## Introducción a Carcassonne\n\nCarcassonne es un juego de colocación de fichas diseñado por Klaus-Jürgen Wrede en el año 2000. Está pensado para 2 a 5 jugadores, aunque existen expansiones que amplían el número, y una partida típica dura entre treinta y cuarenta y cinco minutos. El objetivo es construir el paisaje medieval del sur de Francia colocando fichas de terreno y ganar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## Componentes",
+        "ancia colocando fichas de terreno y ganar puntos situando seguidores en caminos, ciudades, monasterios y campos.\n\n## ComponentesEl juego incluye 72 fichas cuadradas con dibujos de caminos, ciudades, campos y monasterios. Cada jugador recibe al inicio siete seguidores de su color que utilizará durante la partida para reclamar estructuras. Una de las fichas se coloca al inicio en el centro como ficha de comienzo, con una ciudad parcial, un tramo de camino y un monasterio.\n\n## Turno de juego\n\nEn su turno, el jugador activo roba una ficha al azar de la pila y la coloca en el tablero compartido. La ficha debe casar con las fichas vecinas: los caminos deben continuar con caminos, las ciudades con ciudades y los campos con campos. Tras colocar la ficha, el jugador puede poner opcionalmente uno de sus seguidores sobre la ficha recién colocada, reclamando así una estructura: caballero en una ciudad, ladrón en un camino, monje en un monasterio o campesino en un campo.\n\nSolo se puede colocar un seguidor en una estructura que no esté ya ocupada por otro seguidor, ya sea propio o rival. El turno termina después de la colocación.",
+        "or en una estructura que no esté ya ocupada por otro seguidor, ya sea propio o rival. El turno termina después de la colocación.## Puntuación durante la partida\n\nCuando un camino se termina (ambos extremos cerrados por cruce, ciudad o bucle) se puntúa: el jugador con más ladrones gana un punto por cada ficha que compone el camino. Si un camino completado tiene dos ladrones empatados, ambos reciben el total de puntos.\n\nCuando una ciudad se cierra completamente sin huecos, el jugador con más caballeros dentro gana dos puntos por ficha y dos puntos extra por cada escudo que aparezca en ella. Las ciudades pequeñas de dos fichas puntúan cuatro puntos.\n\nCuando un monasterio queda rodeado por ocho fichas más la propia, el jugador con el monje dentro gana nueve puntos. Tras puntuar una estructura, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación final",
+        "a, los seguidores que estaban en ella regresan a sus dueños y pueden volver a usarse en turnos posteriores.\n\n## Puntuación finalAl final de la partida, cuando se acaban las fichas de la pila, se puntúan las estructuras incompletas. Cada camino no cerrado da un punto por ficha. Cada ciudad no cerrada da un punto por ficha y un punto por escudo. Cada monasterio da un punto por cada ficha circundante incluyendo la propia.\n\nLos campesinos, que se colocan sobre prados y nunca se recuperan durante la partida, se puntúan solo al final. Cada campesino en el campo mayoritario otorga tres puntos por cada ciudad completa que toque ese campo.\n\n## Final de la partida\n\nLa partida de Carcassonne termina cuando un jugador roba la última ficha de la pila, la coloca y realiza su última acción. Tras las puntuaciones finales de estructuras incompletas y campesinos, gana el jugador con más puntos acumulados. En caso de empate, comparten la victoria.\n"
+      ],
+      "veredictos": [
+        {
+          "query": "¿Cuántos jugadores pueden jugar a Catan?",
+          "substr": "3 o 4 jugadores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué recursos necesito para construir una ciudad?",
+          "substr": "dos trigos y tres minerales",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo se activa el ladrón?",
+          "substr": "sale un 7",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo funciona el puerto 2:1?",
+          "substr": "dos recursos del mismo tipo",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuánto dura una partida de Azul?",
+          "substr": "30 y 45 minutos",
+          "rank_hit": 2
+        },
+        {
+          "query": "¿Cómo se puntúa una fila horizontal completa en Azul?",
+          "substr": "dos puntos extra",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuándo termina Azul?",
+          "substr": "completa una fila horizontal",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cuántos seguidores tiene cada jugador en Carcassonne?",
+          "substr": "siete seguidores",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Cómo se puntúa un camino en Carcassonne?",
+          "substr": "un punto por cada ficha",
+          "rank_hit": 1
+        },
+        {
+          "query": "¿Qué pasa con los campesinos al final de Carcassonne?",
+          "substr": "tres puntos por cada ciudad",
+          "rank_hit": 1
+        }
+      ]
+    }
+  }
+}

@@ -53,28 +53,16 @@ describe('SegmentedControl', () => {
 
   it('aria-checked refleja el value controlado', () => {
     render(<Harness initial="dark" />);
-    expect(screen.getByRole('radio', { name: 'Claro' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    );
-    expect(screen.getByRole('radio', { name: 'Oscuro' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
+    expect(screen.getByRole('radio', { name: 'Claro' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: 'Oscuro' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('click sobre una opción dispara onChange (y la marca activa)', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(screen.getByRole('radio', { name: 'Auto' }));
-    expect(screen.getByRole('radio', { name: 'Auto' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
-    expect(screen.getByRole('radio', { name: 'Claro' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    );
+    expect(screen.getByRole('radio', { name: 'Auto' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Claro' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('expone aria-required y aria-orientation desde Radix RadioGroup', () => {

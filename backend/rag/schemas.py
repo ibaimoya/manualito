@@ -39,7 +39,9 @@ class RetrieveRequest(StrictModel):
     """Petición de recuperación de candidatos por juego."""
 
     game_id: str = Field(min_length=1)
+    manual_ids: list[ManualId] = Field(min_length=1)
     question: Question
+    lexical_question: Question | None = None
     top_k: TopK = 10
 
 
@@ -82,3 +84,9 @@ class DeleteResponse(StrictModel):
     manual_id: ManualId
     chunks_deleted: int = Field(ge=0)
     status: str
+
+
+class InventoryResponse(StrictModel):
+    """Respuesta de ``GET /inventory`` agrupada por manual."""
+
+    manuals: dict[str, list[str]]

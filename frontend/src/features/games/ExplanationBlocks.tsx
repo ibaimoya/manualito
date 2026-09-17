@@ -1,4 +1,12 @@
-import { Flag, RefreshCw, Sparkles, type LucideIcon } from 'lucide-react';
+import {
+  FlagIcon,
+  ArrowsClockwiseIcon,
+  SparkleIcon,
+  TrophyIcon,
+  type Icon,
+} from '@phosphor-icons/react';
+import type { ParseKeys } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import {
   Accordion,
   AccordionContent,
@@ -6,28 +14,41 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
+import { HelpIndicator } from '@/components/ui/help-indicator';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Markdown } from '@/shared/components/Markdown';
+import { IllustrationBadge, type IllustrationTone } from '@/shared/components/IllustrationBadge';
 
 export type ExplanationBlockKey = 'setup' | 'turns' | 'victory';
+type GameKey = ParseKeys<'game'>;
 
 const BLOCKS: ReadonlyArray<{
   key: ExplanationBlockKey;
-  title: string;
-  icon: LucideIcon;
-  chipClass: string;
+  title: GameKey;
+  icon: Icon;
+  motion: 'tilt' | 'rotate' | 'up';
+  tone: IllustrationTone;
 }> = [
-  { key: 'setup', title: 'Preparación', icon: Flag, chipClass: 'bg-primary-100 text-primary-700' },
+  {
+    key: 'setup',
+    title: 'explanation.blocks.setup',
+    icon: FlagIcon,
+    motion: 'tilt',
+    tone: 'primary',
+  },
   {
     key: 'turns',
-    title: '¿Cómo van los turnos?',
-    icon: RefreshCw,
-    chipClass: 'bg-accent-100 text-accent',
+    title: 'explanation.blocks.turns',
+    icon: ArrowsClockwiseIcon,
+    motion: 'rotate',
+    tone: 'accent',
   },
   {
     key: 'victory',
-    title: '¿Cómo se gana?',
-    icon: Sparkles,
-    chipClass: 'bg-warning-bg text-warning',
+    title: 'explanation.blocks.victory',
+    icon: TrophyIcon,
+    motion: 'up',
+    tone: 'green',
   },
 ];
 
@@ -45,30 +66,40 @@ export function ExplanationBlocks({
   /** Texto por apartado, o null mientras se genera. */
   content: Record<ExplanationBlockKey, string | null>;
 }>) {
+  const { t } = useTranslation('game');
+
   return (
     <>
       <Card className="bg-surface p-4">
-        <p className="mono mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-          Resumen rápido
-        </p>
-        {summary === null ? (
-          <SummaryShimmer />
-        ) : (
-          <Markdown className="text-base leading-relaxed text-fg">{summary}</Markdown>
-        )}
+        <div className="mb-1.5 flex items-center gap-0.5">
+          <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
+            {t('explanation.summary')}
+          </p>
+          <HelpIndicator
+            icon={SparkleIcon}
+            label={t('explanation.aiGenerated')}
+            className="-my-1"
+            iconSize={18}
+          />
+        </div>
+        <SkeletonSwap pending={summary === null} skeleton={<SummaryShimmer />}>
+          {summary !== null && (
+            <Markdown className="text-base leading-relaxed text-fg">{summary}</Markdown>
+          )}
+        </SkeletonSwap>
       </Card>
       <Accordion type="multiple" className="space-y-3">
-        {BLOCKS.map(({ key, title, icon: Icon, chipClass }) => {
+        {BLOCKS.map(({ key, title, icon: Icon, motion, tone }) => {
           const body = content[key];
           const pending = body === null;
           return (
             <AccordionItem key={key} value={key} disabled={pending}>
-              <AccordionTrigger headingLevel={2} loading={pending}>
+              <AccordionTrigger className="explanation-trigger" headingLevel={2} loading={pending}>
                 <div className="flex items-center gap-3">
-                  <span className={`grid h-8 w-8 place-items-center rounded-lg ${chipClass}`}>
-                    <Icon size={16} strokeWidth={2} />
-                  </span>
-                  <span>{title}</span>
+                  <IllustrationBadge tone={tone} className="explanation-icon">
+                    <Icon size={20} data-icon-motion={motion} aria-hidden="true" />
+                  </IllustrationBadge>
+                  <span>{t(title)}</span>
                 </div>
               </AccordionTrigger>
               {pending ? null : (

@@ -8,6 +8,27 @@ Caddy y el registro configurado mediante `app_hostname` (por defecto,
 `app.manualito.dev`) dentro de la zona. No contiene credenciales ni se aplica
 automáticamente.
 
+## Documentación pública
+
+La documentación de Starlight se publica en <https://docs.manualito.dev>
+mediante el Worker de assets estáticos `manualito-docs`. El fichero
+`docs/site/wrangler.jsonc` asocia el Worker con ese Custom Domain. Al desplegar,
+Cloudflare crea su registro DNS y su certificado. Por eso el dominio no forma
+parte de este estado de Terraform.
+
+Cloudflare Workers Builds está conectado al repositorio de GitHub y construye y
+publica el site cuando cambia `docs/site/*` en la rama de producción. La
+configuración del build es:
+
+| Ajuste | Valor |
+|---|---|
+| Rama de build y despliegue | `master` |
+| Directorio raíz | `docs/site` |
+| Comando de build | `pnpm install --frozen-lockfile && pnpm verify` |
+| Comando de despliegue | `npx wrangler deploy` |
+
+El workflow `.github/workflows/docs.yml` verifica y construye el site.
+
 ## Inputs
 
 | Nombre | Descripción | Default | Sensible |
@@ -41,11 +62,13 @@ automáticamente.
    terraform apply
    ```
 
-4. Guarda el token devuelto con permisos de usuario y arranca el perfil:
+4. Guarda el token en la carpeta privada de secretos y arranca el perfil:
 
    ```bash
    umask 077
+   install -d -m 0700 ../../secrets
    terraform output -raw tunnel_token > ../../secrets/tunnel_token.txt
+   chmod 0644 ../../secrets/tunnel_token.txt
    cd ../..
    docker compose --profile tunnel up -d
    ```

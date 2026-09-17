@@ -1,11 +1,25 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, MoreVertical, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
+import {
+  BookOpenIcon,
+  DotsThreeVerticalIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  ArrowsClockwiseIcon,
+  MagnifyingGlassIcon,
+  SparkleIcon,
+} from '@phosphor-icons/react';
+import { motion } from 'motion/react';
+import { TrashIcon } from '@/shared/components/action-icons';
+import { Trans, useTranslation } from 'react-i18next';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { LiveTrans } from '@/shared/components/LiveTrans';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -26,9 +40,12 @@ import {
   conversationsQueryOptions,
   useConversationsRead,
 } from '@/features/conversations/use-conversations';
+import { tourTarget } from '@/features/tutorial/targets';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import '@/features/conversations/conversation-list.css';
 
 export const Route = createFileRoute('/_app/conversations/$gameId')({
   component: ConversationsScreen,
@@ -36,20 +53,16 @@ export const Route = createFileRoute('/_app/conversations/$gameId')({
 
 const TITLE_MAX = 80;
 
-/** Contador del topbar: total guardadas, o "X de N" mientras se filtra. */
-function counterLabel(needle: string, visibleCount: number, total: number): string | null {
-  if (needle.length > 0) return `${visibleCount} de ${total}`;
-  if (total > 0) return `${total} ${total === 1 ? 'guardada' : 'guardadas'}`;
-  return null;
-}
-
 function ConversationsScreen() {
   const { gameId } = Route.useParams();
+  const { t } = useTranslation('conversations');
+  const { t: shellT } = useTranslation('shell');
   const game = useQuery(gameDetailQueryOptions(gameId));
   const conversations = useQuery(conversationsQueryOptions(gameId));
+  const unavailable = conversations.data === undefined && conversations.errorUpdateCount > 0;
   const [filter, setFilter] = useState('');
 
-  const gameName = game.data?.name ?? 'Juego';
+  const gameName = game.data?.name ?? t('fallback.gameName');
   const canAsk = (game.data?.manuals.length ?? 0) > 0;
   const { gameIds } = useProcessingManuals();
   const { isUnread } = useConversationsRead();
@@ -63,39 +76,47 @@ function ConversationsScreen() {
         : all.filter((item) => (item.title ?? '').toLowerCase().includes(needle)),
     [all, needle],
   );
-  const counter = counterLabel(needle, visible.length, all.length);
+  const counter =
+    needle.length > 0
+      ? t('counter.filtered', { visible: visible.length, total: all.length })
+      : all.length > 0
+        ? t('counter.saved', { count: all.length })
+        : null;
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
       <ScreenTopBar
-        crumb="Tus conversaciones"
+        crumb={t('page.title')}
         trail={[
-          { label: 'Biblioteca', link: linkOptions({ to: '/history' }) },
+          { label: t('page.breadcrumbLibrary'), link: linkOptions({ to: '/history' }) },
           { label: gameName, link: linkOptions({ to: '/game/$gameId', params: { gameId } }) },
         ]}
         actions={
-          counter === null ? null : <span className="mono text-[11px] text-fg-3">{counter}</span>
+          counter === null ? null : (
+            <span className="hidden text-xs font-normal text-fg-2 tabular-nums md:inline">
+              {counter}
+            </span>
+          )
         }
       />
 
-      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-28 pt-5 md:px-6">
-        <header className="mb-4 flex items-center gap-3.5">
-          <GameCover name={gameName} size={44} radius={12} processing={gameIds.has(gameId)} />
-          <div className="min-w-0 flex-1">
-            <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-              {gameName} · Pregunta y repregunta
-            </p>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-              Tus conversaciones
-            </h1>
+      <div className="page-frame relative flex flex-1 flex-col py-6 lg:py-8">
+        <header
+          className="mb-6 flex items-center gap-4 @3xl/app:mb-8"
+          {...tourTarget('conversations-header')}
+        >
+          <GameCover name={gameName} size={56} radius={14} processing={gameIds.has(gameId)} />
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="page-eyebrow break-words">{t('header.subtitle', { gameName })}</p>
+            <h1 className="page-title">{t('page.title')}</h1>
           </div>
         </header>
 
         {all.length > 0 ? (
-          <div className="relative mb-4">
-            <Search
+          <div className="relative mb-4" {...tourTarget('conversations-filter')}>
+            <MagnifyingGlassIcon
+              data-icon-motion="search"
               size={16}
-              strokeWidth={2}
               aria-hidden="true"
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-3"
             />
@@ -103,58 +124,86 @@ function ConversationsScreen() {
               preset="search"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
-              placeholder="Filtra por título…"
-              aria-label="Filtrar conversaciones por título"
+              placeholder={t('page.filterPlaceholder')}
+              aria-label={t('page.filterLabel')}
               className="pl-10"
             />
           </div>
         ) : null}
 
-        {conversations.isPending ? <ListSkeleton /> : null}
-        {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-        {conversations.isError && conversations.data === undefined ? (
-          <Card className="bg-surface p-5 text-sm text-fg-2">
-            No hemos podido cargar tus conversaciones. Inténtalo de nuevo en un momento.
-          </Card>
+        {counter ? (
+          <p className="mb-3 text-right text-xs text-fg-2 tabular-nums md:hidden">{counter}</p>
         ) : null}
 
-        {conversations.isSuccess && all.length === 0 ? (
-          <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
-        ) : null}
+        <SkeletonSwap pending={conversations.isPending && !unavailable} skeleton={<ListSkeleton />}>
+          {unavailable ? (
+            <RecoveryContent
+              headingLevel={2}
+              title={t('error.title')}
+              description={t('error.load')}
+              retrying={conversations.isFetching}
+            >
+              <div className={recoveryStyles.actions}>
+                <Button
+                  className={recoveryStyles.primary}
+                  loading={conversations.isFetching}
+                  onClick={() => void conversations.refetch()}
+                >
+                  <ArrowsClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
+                  {shellT('recovery.retry')}
+                </Button>
+              </div>
+            </RecoveryContent>
+          ) : null}
 
-        {conversations.isSuccess && all.length > 0 && visible.length === 0 ? (
-          <NoResults filter={filter} onClear={() => setFilter('')} />
-        ) : null}
+          {conversations.data !== undefined && all.length === 0 ? (
+            <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
+          ) : null}
 
-        <ul className="flex flex-col gap-2.5" aria-label="Conversaciones guardadas">
-          {visible.map((conversation) => (
-            <ConversationCard
-              key={conversation.id}
-              conversation={conversation}
-              gameId={gameId}
-              unread={isUnread(conversation)}
-            />
-          ))}
-        </ul>
+          {all.length > 0 && visible.length === 0 ? (
+            <NoResults filter={filter} onClear={() => setFilter('')} />
+          ) : null}
+
+          {visible.length > 0 && (
+            <ul
+              className="conversation-list"
+              aria-label={t('page.listLabel')}
+              {...tourTarget('conversations-list')}
+            >
+              {visible.map((conversation) => (
+                <ConversationRow
+                  key={conversation.id}
+                  conversation={conversation}
+                  gameId={gameId}
+                  unread={isUnread(conversation)}
+                />
+              ))}
+            </ul>
+          )}
+        </SkeletonSwap>
 
         {!canAsk || all.length === 0 ? null : (
-          <Link
-            to="/chat/$gameId"
-            params={{ gameId }}
-            search={{}}
-            className="fixed bottom-6 right-5 z-10 inline-flex items-center gap-2 rounded-full bg-primary px-5 font-body text-[15px] font-bold text-fg-inv shadow-lg transition-transform hover:scale-[1.03] md:right-10"
-            style={{ height: 52 }}
+          <Button
+            asChild
+            className="sticky bottom-6 z-10 mt-6 h-13 self-end rounded-full text-[15px] font-bold shadow-lg motion-safe:active:scale-[0.96]"
           >
-            <Plus size={18} strokeWidth={2.2} aria-hidden="true" />
-            Nueva conversación
-          </Link>
+            <Link
+              to="/chat/$gameId"
+              params={{ gameId }}
+              search={{}}
+              {...tourTarget('conversations-new')}
+            >
+              <PlusIcon data-icon-motion="plus" size={18} aria-hidden="true" />
+              {t('actions.newConversation')}
+            </Link>
+          </Button>
         )}
       </div>
     </div>
   );
 }
 
-function ConversationCard({
+function ConversationRow({
   conversation,
   gameId,
   unread,
@@ -163,12 +212,16 @@ function ConversationCard({
   gameId: string;
   unread: boolean;
 }>) {
+  const { t } = useTranslation('conversations');
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const title = conversation.title ?? 'Conversación sin título';
+  const title = conversation.title ?? t('fallback.conversationTitle');
   const pending = conversation.has_pending_reply;
+  const hoverMotion = useMediaQuery(
+    '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+  );
 
   function openChat(): void {
     navigate({
@@ -182,43 +235,39 @@ function ConversationCard({
     mutationFn: () => conversationsApi.remove(conversation.id),
     onSuccess: () => {
       setDeleteOpen(false);
-      toast.success('Conversación borrada', { id: 'conversation-delete' });
+      toast.success(t('toast.deleteSuccess'), { id: 'conversation-delete' });
     },
     onError: () =>
-      toast.error('No hemos podido borrarla', {
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.deleteError" />, {
         id: 'conversation-delete',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
       }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
 
   return (
-    <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
-      <Card
-        style={pending ? { borderColor: 'transparent' } : undefined}
-        className={cn(
-          'relative flex items-start gap-3 p-3.5',
-          'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-          !pending && 'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
-          'active:translate-y-0 active:shadow-xs',
-        )}
-      >
+    <motion.li
+      initial={false}
+      animate="rest"
+      whileHover={hoverMotion ? 'chat' : 'rest'}
+      className={cn('conversation-row', remove.isPending && 'pointer-events-none opacity-50')}
+    >
+      <div className="relative flex items-start gap-3 rounded-[inherit] p-3.5">
         <ConversationActivityIcon
           hasPendingReply={pending}
           unread={unread}
           size="md"
           tone="accent"
-          className="relative z-[1] transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
+          className="relative z-[1]"
         />
-        {/* Botón principal: su ::after se estira sobre toda la card, así que se
-            abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
+        {/* El área principal cubre la fila. El menú conserva su propio control. */}
         <button
           type="button"
           onClick={openChat}
           className={cn(
-            'relative z-[1] min-w-0 flex-1 cursor-pointer text-left',
-            "after:absolute after:inset-0 after:rounded-2xl after:content-['']",
-            'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
+            'min-w-0 flex-1 cursor-pointer text-left',
+            "after:absolute after:inset-0 after:z-[1] after:content-['']",
+            'focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-primary',
           )}
         >
           <span className="flex items-baseline gap-2.5">
@@ -237,7 +286,9 @@ function ConversationCard({
             </span>
           ) : (
             <span className="mt-0.5 block text-xs text-fg-3">
-              abierta el {formatShortDate(conversation.created_at)}
+              {t('conversation.openedOn', {
+                date: formatShortDate(conversation.created_at),
+              })}
             </span>
           )}
         </button>
@@ -245,29 +296,30 @@ function ConversationCard({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label={`Opciones de «${title}»`}
-              className="relative z-10 grid size-9 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface hover:text-fg data-[state=open]:bg-surface"
+              aria-label={t('aria.optionsFor', { title })}
+              {...tourTarget('conversations-row-menu')}
+              className="icon-feedback relative z-10 grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg data-[state=open]:text-fg"
             >
-              <MoreVertical size={17} strokeWidth={2} />
+              <DotsThreeVerticalIcon aria-hidden="true" size={17} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={openChat}>
-              <BookOpen size={16} strokeWidth={2} aria-hidden="true" />
-              Abrir
+              <BookOpenIcon size={16} aria-hidden="true" />
+              {t('actions.open')}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
-              <Pencil size={16} strokeWidth={2} aria-hidden="true" />
-              Renombrar
+              <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
+              {t('actions.rename')}
             </DropdownMenuItem>
             <DropdownMenuItem danger onSelect={() => setDeleteOpen(true)}>
-              <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
-              Borrar
+              <TrashIcon size={16} aria-hidden="true" />
+              {t('actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         {pending ? <span className="proc-border" aria-hidden="true" /> : null}
-      </Card>
+      </div>
 
       <RenameDialog
         open={renameOpen}
@@ -278,34 +330,38 @@ function ConversationCard({
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogHeader
-          title="Borrar conversación"
-          description="Confirma que quieres eliminarla."
+          title={t('deleteDialog.title')}
+          description={t('deleteDialog.description')}
           onClose={() => setDeleteOpen(false)}
         />
         <DialogBody>
           <div className="rounded-2xl border border-error bg-error-bg p-4 text-sm leading-relaxed text-fg">
-            <p className="font-semibold">Esta acción no se puede deshacer.</p>
+            <p className="font-semibold">{t('deleteDialog.irreversible')}</p>
             <p className="mt-1">
-              Se borrará <strong>«{title}»</strong> con todos sus mensajes. La explicación del juego
-              y tus manuales no se tocan.
+              <Trans
+                ns="conversations"
+                i18nKey="deleteDialog.body"
+                values={{ title }}
+                components={{ b: <strong /> }}
+              />
             </p>
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
-              Cancelar
+              {t('actions.cancel')}
             </Button>
             <Button
               variant="destructive"
               loading={remove.isPending}
               onClick={() => remove.mutate()}
             >
-              <Trash2 size={16} strokeWidth={2} />
-              Borrar conversación
+              <TrashIcon size={16} />
+              {t('actions.deleteConversation')}
             </Button>
           </div>
         </DialogBody>
       </Dialog>
-    </li>
+    </motion.li>
   );
 }
 
@@ -320,6 +376,7 @@ function RenameDialog({
   conversation: ConversationSummary;
   gameId: string;
 }>) {
+  const { t } = useTranslation('conversations');
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -332,8 +389,8 @@ function RenameDialog({
       }}
     >
       <DialogHeader
-        title="Renombrar conversación"
-        description="Un buen título te la devuelve de un vistazo."
+        title={t('renameDialog.title')}
+        description={t('renameDialog.description')}
         onClose={() => onOpenChange(false)}
       />
       <DialogBody>
@@ -349,7 +406,7 @@ function RenameDialog({
 }
 
 /**
- * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar:
+ * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar.
  * cada apertura arranca con el título actual, sin borradores abandonados.
  */
 function RenameForm({
@@ -363,6 +420,7 @@ function RenameForm({
   inputRef: React.RefObject<HTMLInputElement | null>;
   onClose: () => void;
 }>) {
+  const { t } = useTranslation('conversations');
   const qc = useQueryClient();
   const inputId = useId();
   const [title, setTitle] = useState(conversation.title ?? '');
@@ -371,12 +429,12 @@ function RenameForm({
     mutationFn: (next: string) => conversationsApi.rename(conversation.id, next),
     onSuccess: () => {
       onClose();
-      toast.success('Conversación renombrada', { id: 'conversation-rename' });
+      toast.success(t('toast.renameSuccess'), { id: 'conversation-rename' });
     },
     onError: () =>
-      toast.error('No hemos podido renombrarla', {
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.renameError" />, {
         id: 'conversation-rename',
-        description: 'Inténtalo de nuevo en un momento.',
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
       }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
@@ -391,8 +449,10 @@ function RenameForm({
       }}
     >
       <label htmlFor={inputId} className="mb-1.5 flex items-baseline justify-between text-sm">
-        <span className="font-semibold text-fg">Título de la conversación</span>
-        <span className="text-xs text-fg-3">máx. {TITLE_MAX} caracteres</span>
+        <span className="font-semibold text-fg">{t('renameDialog.label')}</span>
+        <span className="text-xs text-fg-3">
+          {t('renameDialog.maxLength', { count: TITLE_MAX })}
+        </span>
       </label>
       <Input
         id={inputId}
@@ -402,16 +462,15 @@ function RenameForm({
         onChange={(event) => setTitle(event.target.value)}
       />
       <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-fg-3">
-        <Sparkles size={13} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Este título lo generó la IA a partir de tu primera pregunta. Cámbialo por lo que te resulte
-        más fácil de encontrar.
+        <SparkleIcon size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
+        {t('renameDialog.aiHint')}
       </p>
       <div className="mt-4 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>
-          Cancelar
+          {t('actions.cancel')}
         </Button>
         <Button type="submit" disabled={trimmed.length === 0} loading={rename.isPending}>
-          Guardar
+          {t('actions.save')}
         </Button>
       </div>
     </form>
@@ -423,18 +482,19 @@ function EmptyState({
   gameId,
   canAsk,
 }: Readonly<{ gameName: string; gameId: string; canAsk: boolean }>) {
+  const { t } = useTranslation('conversations');
+
   return (
     <div className="rounded-2xl border-[1.5px] border-dashed border-border-strong bg-surface px-6 py-11 text-center">
-      <h2 className="font-display text-lg font-bold text-fg">Aún no has preguntado nada</h2>
+      <h2 className="font-display text-lg font-bold text-fg">{t('empty.title')}</h2>
       <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-fg-2">
-        Cuando preguntes algo sobre {gameName}, guardaremos aquí la conversación con un título corto
-        para que la retomes cuando quieras.
+        {t('empty.pageDescription', { gameName })}
       </p>
       {canAsk ? (
         <Button asChild className="mt-4">
           <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
-            <Plus size={16} strokeWidth={2} />
-            Nueva conversación
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={16} />
+            {t('actions.newConversation')}
           </Link>
         </Button>
       ) : null}
@@ -443,17 +503,19 @@ function EmptyState({
 }
 
 function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () => void }>) {
+  const { t } = useTranslation('conversations');
+
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
       <span className="grid size-12 place-items-center rounded-2xl bg-surface text-fg-3">
-        <Search size={22} strokeWidth={2} aria-hidden="true" />
+        <MagnifyingGlassIcon data-icon-motion="search" size={22} aria-hidden="true" />
       </span>
-      <p className="font-display text-base font-bold text-fg">Nada con «{filter.trim()}»</p>
-      <p className="text-sm text-fg-2">
-        Prueba con otra palabra, o pregunta directamente: la IA crea una conversación nueva.
+      <p className="font-display text-base font-bold text-fg">
+        {t('noResults.title', { filter: filter.trim() })}
       </p>
+      <p className="text-sm text-fg-2">{t('noResults.description')}</p>
       <Button variant="secondary" size="sm" className="mt-2" onClick={onClear}>
-        Limpiar búsqueda
+        {t('actions.clearSearch')}
       </Button>
     </div>
   );
@@ -461,9 +523,9 @@ function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () =
 
 function ListSkeleton() {
   return (
-    <div aria-hidden="true" className="space-y-2.5">
+    <div aria-hidden="true" className="conversation-list">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-surface-2" />
+        <div key={i} className="h-[72px] animate-pulse bg-surface-2" />
       ))}
     </div>
   );

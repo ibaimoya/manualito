@@ -71,15 +71,16 @@ def test_get_owned_conversation_raises_for_missing_or_foreign_conversation():
             await anyio.lowlevel.checkpoint()
             return FakeResult()
 
+    session = FakeSession()
+    call = partial(
+        get_owned_conversation,
+        session,
+        user_id=_USER_ID,
+        conversation_id=_CONVERSATION_ID,
+    )
+
     with pytest.raises(ConversationNotFoundError):
-        anyio.run(
-            partial(
-                get_owned_conversation,
-                FakeSession(),
-                user_id=_USER_ID,
-                conversation_id=_CONVERSATION_ID,
-            )
-        )
+        anyio.run(call)
 
 
 def test_list_game_conversations_orders_by_recent_activity():
@@ -353,16 +354,17 @@ def test_load_conversation_turn_context_rejects_hidden_game():
             await anyio.lowlevel.checkpoint()
             return FakeResult()
 
+    session = FakeSession()
+    call = partial(
+        load_conversation_turn_context,
+        session,
+        user_id=_USER_ID,
+        conversation_id=_CONVERSATION_ID,
+        history_limit=5,
+    )
+
     with pytest.raises(GameUnavailableError):
-        anyio.run(
-            partial(
-                load_conversation_turn_context,
-                FakeSession(),
-                user_id=_USER_ID,
-                conversation_id=_CONVERSATION_ID,
-                history_limit=5,
-            )
-        )
+        anyio.run(call)
 
 
 def test_soft_delete_conversation_marks_owned_row():

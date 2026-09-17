@@ -9,7 +9,12 @@ import pytest
 from api.auth.dependencies import get_current_auth, require_csrf
 from api.auth.service import AuthenticatedSession
 from api.conversations.dependencies import valid_conversation
-from api.conversations.dto import ConversationSummary, SendMessageOutcome, StoredMessage
+from api.conversations.dto import (
+    ConversationSummary,
+    ConversationTitleJob,
+    SendMessageOutcome,
+    StoredMessage,
+)
 from api.conversations.exceptions import ConversationNotFoundError
 from api.conversations.schemas import (
     ConversationResponse,
@@ -18,6 +23,7 @@ from api.conversations.schemas import (
 from api.games.dependencies import valid_game_id
 from api.main import app
 from api.rate_limit import limiter
+from common.language import Language
 from database.models.auth import AuthSession
 from database.models.constants import CONVERSATION_TITLE_MAX_LENGTH, USER_MESSAGE_MAX_LENGTH
 from database.models.conversation import Conversation
@@ -148,17 +154,25 @@ def test_send_conversation_message_persists_turn(
     override_auth_conversation_and_db,
 ):
     """Enviar mensaje delega el turno completo en el servicio."""
-    send_mock = AsyncMock(return_value=_send_message_outcome())
-    delay_mock = MagicMock()
+    send_mock = AsyncMock(
+        return_value=_send_message_outcome(language="en", with_title_job=True)
+    )
+    reply_delay_mock = MagicMock()
+    title_delay_mock = MagicMock()
     monkeypatch.setattr("api.conversations.router.send_message", send_mock)
     monkeypatch.setattr(
         "api.conversations.router.generate_chat_reply_task.delay",
-        delay_mock,
+        reply_delay_mock,
+    )
+    monkeypatch.setattr(
+        "api.conversations.router.refresh_conversation_title_task.delay",
+        title_delay_mock,
     )
 
     response = client.post(
         f"/api/conversations/{_CONVERSATION_ID}/messages",
         json={"content": "  ¿Y si empato?  ", "top_k": 4},
+        headers={"Accept-Language": "en"},
     )
 
     assert response.status_code == 200
@@ -166,7 +180,22 @@ def test_send_conversation_message_persists_turn(
     assert response.json()["assistant_message"]["status"] == "pending"
     send_mock.assert_awaited_once()
     assert send_mock.await_args.kwargs["payload"].content == "¿Y si empato?"
-    delay_mock.assert_called_once()
+    assert send_mock.await_args.kwargs["accept_language"] == "en"
+    reply_delay_mock.assert_called_once_with(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        str(_ASSISTANT_MESSAGE_ID),
+        4,
+        "en",
+    )
+    title_delay_mock.assert_called_once_with(
+        str(_USER_ID),
+        str(_CONVERSATION_ID),
+        str(_USER_MESSAGE_ID),
+        "¿Y si empato?",
+        "en",
+    )
 
 
 def test_send_conversation_message_no_relee_usuario_tras_el_servicio(
@@ -461,11 +490,25 @@ def _stored_message(role: Literal["user", "assistant"], content: str) -> StoredM
     )
 
 
-def _send_message_outcome() -> SendMessageOutcome:
+def _send_message_outcome(
+    *,
+    language: Language = "es",
+    with_title_job: bool = False,
+) -> SendMessageOutcome:
     """Construye un resultado interno de turno conversacional."""
     return SendMessageOutcome(
         conversation=_conversation_summary(),
         user_message=_stored_message("user", "¿Y si empato?"),
         assistant_message=_stored_message("assistant", "Revisa el desempate."),
-        title_job=None,
+        title_job=(
+            ConversationTitleJob(
+                user_id=_USER_ID,
+                conversation_id=_CONVERSATION_ID,
+                user_message_id=_USER_MESSAGE_ID,
+                expected_title="¿Y si empato?",
+            )
+            if with_title_job
+            else None
+        ),
+        language=language,
     )

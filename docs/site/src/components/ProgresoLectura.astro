@@ -1,0 +1,59 @@
+<div class="progreso-lectura" data-progreso-lectura aria-hidden="true"></div>
+
+<script>
+  const elemento = document.querySelector<HTMLElement>('[data-progreso-lectura]');
+  const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (elemento) {
+    const { motionValue, scroll, springValue, styleEffect, transformValue } =
+      await import('motion');
+
+    const objetivo = motionValue(0);
+    const progreso = menosMovimiento.matches
+      ? objetivo
+      : springValue(objetivo, {
+          stiffness: 1200,
+          damping: 41,
+          mass: 0.35,
+          restDelta: 0.0005,
+          restSpeed: 0.01,
+        });
+    const transform = transformValue(() => `scaleX(${progreso.get()})`);
+
+    const dejarDePintar = styleEffect(elemento, { transform });
+    const dejarDeSeguir = scroll((valor: number) => objetivo.set(valor));
+
+    const limpiar = (evento: PageTransitionEvent) => {
+      if (evento.persisted) return;
+
+      dejarDeSeguir();
+      dejarDePintar();
+      transform.destroy();
+      if (progreso !== objetivo) progreso.destroy();
+      objetivo.destroy();
+      removeEventListener('pagehide', limpiar);
+    };
+
+    addEventListener('pagehide', limpiar);
+  }
+</script>
+
+<style>
+  .progreso-lectura {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -1px;
+    block-size: 0.1875rem;
+    background: var(--sl-color-text-accent);
+    pointer-events: none;
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  @media print {
+    .progreso-lectura {
+      display: none;
+    }
+  }
+</style>

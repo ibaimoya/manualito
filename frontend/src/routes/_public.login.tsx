@@ -1,5 +1,4 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router';
-import { AuthShell } from '@/features/auth/auth-shell';
 import { LoginForm } from '@/features/auth/login-form';
 
 export const Route = createFileRoute('/_public/login')({
@@ -30,9 +29,5 @@ function LoginScreen() {
       router.navigate({ to: '/home' }).catch(() => undefined);
     }
   };
-  return (
-    <AuthShell>
-      <LoginForm onAuthenticated={onAuthenticated} />
-    </AuthShell>
-  );
+  return <LoginForm onAuthenticated={onAuthenticated} />;
 }

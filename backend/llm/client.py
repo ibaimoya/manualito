@@ -10,7 +10,7 @@ from llm import config
 logger = logging.getLogger(__name__)
 
 type JsonValue = (
-    None | bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
+    bool | int | float | str | Sequence["JsonValue"] | Mapping[str, "JsonValue"] | None
 )
 
 class OllamaResponseError(ValueError):
@@ -35,6 +35,18 @@ class _OllamaGenerateResponse(BaseModel):
     response: str = ""
 
 
+class _OllamaChatMessage(BaseModel):
+    model_config = ConfigDict(extra="ignore", strict=True)
+
+    content: str = ""
+
+
+class _OllamaChatResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore", strict=True)
+
+    message: _OllamaChatMessage = Field(default_factory=_OllamaChatMessage)
+
+
 class OllamaClient:
     """Cliente fino para encapsular las llamadas HTTP a Ollama."""
 
@@ -54,6 +66,16 @@ class OllamaClient:
             time_budget_seconds=config.OLLAMA_TIMEOUT,
         )
         return _validate_json_response(response, _OllamaGenerateResponse).response
+
+    async def chat(self, payload: Mapping[str, JsonValue]) -> str:
+        """Envía una conversación a Ollama y devuelve el contenido del mensaje."""
+        async with asyncio.timeout(config.OLLAMA_TIMEOUT):
+            response = await self.client.post(
+                f"{config.OLLAMA_URL}/api/chat",
+                json=payload,
+            )
+        response.raise_for_status()
+        return _validate_json_response(response, _OllamaChatResponse).message.content
 
     async def preload(self, payload: Mapping[str, JsonValue]) -> None:
         await self._post_generate(
@@ -76,12 +98,34 @@ class OllamaClient:
         return response
 
 
-def model_control_payload() -> dict[str, JsonValue]:
+def model_control_payload(*, model: str | None = None) -> dict[str, JsonValue]:
     """Construye los campos comunes para elegir modelo y retención en memoria."""
-    payload: dict[str, JsonValue] = {"model": config.OLLAMA_MODEL}
+    payload: dict[str, JsonValue] = {"model": model or config.OLLAMA_MODEL}
     if config.OLLAMA_KEEP_ALIVE:
         payload["keep_alive"] = config.OLLAMA_KEEP_ALIVE
     return payload
+
+
+def model_options() -> dict[str, JsonValue]:
+    """Construye las opciones de inferencia comunes a precarga y generación."""
+    return {
+        "temperature": config.OLLAMA_TEMPERATURE,
+        "num_ctx": config.OLLAMA_NUM_CTX,
+    }
+
+
+# Valores fijos de corrección OCR validados experimentalmente.
+_CORRECTION_TEMPERATURE = 0.2
+_CORRECTION_NUM_PREDICT = 220
+
+
+def correction_options() -> dict[str, JsonValue]:
+    """Construye las opciones fijas de inferencia del corrector OCR."""
+    return {
+        "temperature": _CORRECTION_TEMPERATURE,
+        "num_predict": _CORRECTION_NUM_PREDICT,
+        "num_ctx": config.OLLAMA_NUM_CTX,
+    }
 
 
 def _validate_json_response[ResponseModelT: BaseModel](
@@ -113,6 +157,14 @@ async def prepare_model_on_startup(client: httpx.AsyncClient) -> None:
         )
         return
 
+    correction_model = config.OLLAMA_CORRECTION_MODEL
+    if correction_model and correction_model not in model_names:
+        logger.warning(
+            "Modelo corrector '%s' no encontrado en Ollama. Modelos disponibles: %s",
+            correction_model,
+            model_names,
+        )
+
     if config.OLLAMA_MODEL not in model_names:
         logger.warning(
             "Modelo '%s' no encontrado en Ollama. Modelos disponibles: %s",
@@ -126,7 +178,9 @@ async def prepare_model_on_startup(client: httpx.AsyncClient) -> None:
         return
 
     try:
-        await ollama.preload({**model_control_payload(), "stream": False})
+        await ollama.preload(
+            {**model_control_payload(), "stream": False, "options": model_options()}
+        )
     except (TimeoutError, httpx.HTTPError):
         logger.warning(
             "No se pudo precargar el modelo '%s' en Ollama.",

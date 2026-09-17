@@ -140,3 +140,12 @@ def _enqueue_manual_pages(manual_id: str, page_ids: list[UUID]) -> None:
 def _uuids(values: list[str]) -> list[UUID]:
     """Convierte IDs opacos serializados por Celery a UUID."""
     return [UUID(value) for value in values]
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="api.worker.tasks.manuals.reindex_manual_task",
+    **RAG_TASK_OPTIONS,
+)
+def reindex_manual_task(manual_id: str) -> None:
+    """Reindexa directamente un manual desincronizado."""
+    anyio.run(service.reindex_manual, UUID(manual_id))

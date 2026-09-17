@@ -5,7 +5,12 @@ import anyio
 from api import config
 from api.manuals import service as manuals_service
 from api.worker.celery import celery_app
-from api.worker.tasks.manuals import finalize_manual_task, process_manual_task
+from api.worker.tasks.manuals import (
+    delete_chunks_from_rag_task,
+    finalize_manual_task,
+    process_manual_task,
+    reindex_manual_task,
+)
 
 MAINTENANCE_TASK_OPTIONS = {
     "soft_time_limit": config.CELERY_MAINTENANCE_SOFT_TIME_LIMIT,
@@ -42,3 +47,16 @@ def recover_manuals_pending_dispatch() -> None:
     manual_ids = anyio.run(manuals_service.recover_manuals_pending_dispatch)
     for manual_id in manual_ids:
         process_manual_task.delay(str(manual_id))
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="api.worker.tasks.maintenance.reconcile_rag_index",
+    **MAINTENANCE_TASK_OPTIONS,
+)
+def reconcile_rag_index() -> None:
+    """Encola las reparaciones necesarias para sincronizar el índice RAG."""
+    plan = anyio.run(manuals_service.plan_index_repair)
+    for manual_id, chunk_ids in plan.orphan_chunk_ids.items():
+        delete_chunks_from_rag_task.delay(manual_id, chunk_ids)
+    for manual_id in plan.stale_manual_ids:
+        reindex_manual_task.delay(manual_id)

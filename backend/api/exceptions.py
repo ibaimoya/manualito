@@ -1,5 +1,6 @@
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from typing import Any, cast
 
 from fastapi import FastAPI, Request
@@ -50,9 +51,10 @@ METHOD_NOT_ALLOWED_DETAIL = "Método no permitido."
 _MB = 1_000_000
 
 
-def _format_megabytes(byte_count: int) -> str:
+def _megabytes(byte_count: int) -> int:
     """Expresa límites configurados en MB para mensajes públicos."""
-    return str(byte_count // _MB)
+    return byte_count // _MB
+
 
 _MISSING_FIELD_ERRORS = {
     "email": ("email_required", "El email es obligatorio."),
@@ -170,6 +172,7 @@ class ErrorResponseConfig:
     status_code: int
     code: str
     detail: str | None = None
+    params: dict[str, int] = dataclass_field(default_factory=dict)
 
 
 def validation_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
@@ -202,8 +205,9 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
     ),
     ImageTooLargeError: ErrorResponseConfig(
         status_code=413,
-        detail=f"La imagen no puede superar {_format_megabytes(config.MAX_IMAGE_SIZE)} MB.",
+        detail=f"La imagen no puede superar {_megabytes(config.MAX_IMAGE_SIZE)} MB.",
         code="image_too_large",
+        params={"max": _megabytes(config.MAX_IMAGE_SIZE)},
     ),
     InvalidImageError: ErrorResponseConfig(
         status_code=415,
@@ -212,8 +216,9 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
     ),
     PdfTooLargeError: ErrorResponseConfig(
         status_code=413,
-        detail=f"El PDF no puede superar {_format_megabytes(config.MAX_MANUAL_PDF_SIZE)} MB.",
+        detail=f"El PDF no puede superar {_megabytes(config.MAX_MANUAL_PDF_SIZE)} MB.",
         code="pdf_too_large",
+        params={"max": _megabytes(config.MAX_MANUAL_PDF_SIZE)},
     ),
     InvalidPdfError: ErrorResponseConfig(
         status_code=415,
@@ -224,6 +229,7 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
         status_code=413,
         detail=f"El manual no puede superar {config.MAX_MANUAL_PAGES} páginas.",
         code="manual_too_many_pages",
+        params={"max": config.MAX_MANUAL_PAGES},
     ),
     InternalServiceUnavailableError: ErrorResponseConfig(
         status_code=502,
@@ -289,11 +295,9 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
     ),
     ManualTooLargeError: ErrorResponseConfig(
         status_code=413,
-        detail=(
-            "El manual no puede superar "
-            f"{_format_megabytes(config.MAX_MANUAL_TOTAL_SIZE)} MB."
-        ),
+        detail=(f"El manual no puede superar {_megabytes(config.MAX_MANUAL_TOTAL_SIZE)} MB."),
         code="manual_too_large",
+        params={"max": _megabytes(config.MAX_MANUAL_TOTAL_SIZE)},
     ),
     ManualRequestTooLargeError: ErrorResponseConfig(
         status_code=413,
@@ -351,15 +355,12 @@ _DOMAIN_ERROR_CONFIGS: Mapping[type[Exception], ErrorResponseConfig] = {
 def domain_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Traduce excepciones de dominio con una tabla explícita."""
     config = _domain_error_config(exc)
-    detail = (
-        config.detail
-        if config.detail is not None
-        else cast(PublicDetailApiError, exc).detail
-    )
+    detail = config.detail if config.detail is not None else cast(PublicDetailApiError, exc).detail
     return _coded_api_error_response(
         status_code=config.status_code,
         detail=detail,
         code=config.code,
+        params=config.params,
     )
 
 
@@ -449,13 +450,14 @@ def _coded_api_error_response(
     status_code: int,
     detail: str,
     code: str,
+    params: dict[str, int] | None = None,
     headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
     """Construye un error general con código estable y field nulo."""
     return _api_error_response(
         status_code=status_code,
         detail=detail,
-        errors=[_field_error(field=None, code=code, message=detail)],
+        errors=[_field_error(field=None, code=code, message=detail, params=params)],
         headers=headers,
     )
 
@@ -476,15 +478,22 @@ def _rate_limit_headers(exc: RateLimitExceeded) -> dict[str, str]:
     }
 
 
-def _field_error(*, field: str | None, code: str, message: str) -> ApiFieldError:
+def _field_error(
+    *,
+    field: str | None,
+    code: str,
+    message: str,
+    params: dict[str, int] | None = None,
+) -> ApiFieldError:
     """Crea un error de campo serializable."""
-    return ApiFieldError(field=field, code=code, message=message)
+    return ApiFieldError(field=field, code=code, message=message, params=params or {})
 
 
 def _auth_field_errors(errors: Iterable[AuthFieldError]) -> list[ApiFieldError]:
     """Traduce errores de dominio de auth al contrato HTTP público."""
     return [
-        _field_error(field=error.field, code=error.code, message=error.message) for error in errors
+        _field_error(field=error.field, code=error.code, message=error.message, params=error.params)
+        for error in errors
     ]
 
 
@@ -515,12 +524,12 @@ def _map_request_validation_error(error: dict[str, Any]) -> ApiFieldError:
     if error_type == "missing":
         return _mapped_or_generic(field, _MISSING_FIELD_ERRORS)
     if error_type == "string_too_short":
-        return _mapped_or_generic(field, _TOO_SHORT_FIELD_ERRORS)
+        return _mapped_or_generic(field, _TOO_SHORT_FIELD_ERRORS, _length_error_params(error))
     if error_type == "string_too_long":
-        return _mapped_or_generic(field, _TOO_LONG_FIELD_ERRORS)
+        return _mapped_or_generic(field, _TOO_LONG_FIELD_ERRORS, _length_error_params(error))
     if field == "email":
         if _email_input_is_too_long(error):
-            return _mapped_or_generic(field, _TOO_LONG_FIELD_ERRORS)
+            return _mapped_or_generic(field, _TOO_LONG_FIELD_ERRORS, {"max": EMAIL_MAX_LENGTH})
         return _field_error(
             field=field,
             code="email_invalid",
@@ -532,6 +541,18 @@ def _map_request_validation_error(error: dict[str, Any]) -> ApiFieldError:
         code="invalid_request",
         message="El campo no tiene un valor válido.",
     )
+
+
+def _length_error_params(error: dict[str, Any]) -> dict[str, int]:
+    """Publica solo límites enteros de longitud, nunca input ni el ctx completo."""
+    context = error.get("ctx")
+    if not isinstance(context, dict):
+        return {}
+    return {
+        public_key: context[key]
+        for key, public_key in (("min_length", "min"), ("max_length", "max"))
+        if type(context.get(key)) is int
+    }
 
 
 def _email_input_is_too_long(error: dict[str, Any]) -> bool:
@@ -552,13 +573,15 @@ def _field_from_loc(loc: object) -> str | None:
 def _mapped_or_generic(
     field: str,
     mapping: dict[str, tuple[str, str]],
+    params: dict[str, int] | None = None,
 ) -> ApiFieldError:
     """Usa un código conocido si existe o cae a un error genérico estable."""
     if field in mapping:
         code, message = mapping[field]
-        return _field_error(field=field, code=code, message=message)
+        return _field_error(field=field, code=code, message=message, params=params)
     return _field_error(
         field=field,
         code="invalid_request",
         message="El campo no tiene un valor válido.",
+        params=params,
     )

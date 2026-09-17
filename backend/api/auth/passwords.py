@@ -19,11 +19,13 @@ def validate_password_policy(password: str) -> None:
         raise PasswordValidationError(
             "password_too_short",
             f"La contraseña debe tener al menos {config.PASSWORD_MIN_LENGTH} caracteres.",
+            params={"min": config.PASSWORD_MIN_LENGTH},
         )
     if len(password) > config.PASSWORD_MAX_LENGTH:
         raise PasswordValidationError(
             "password_too_long",
             f"La contraseña no puede superar {config.PASSWORD_MAX_LENGTH} caracteres.",
+            params={"max": config.PASSWORD_MAX_LENGTH},
         )
 
 

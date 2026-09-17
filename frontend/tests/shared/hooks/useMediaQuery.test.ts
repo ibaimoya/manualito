@@ -93,7 +93,6 @@ describe('useMediaQuery', () => {
     unmount();
     expect(mql.listeners.size).toBe(0);
   });
-
 });
 
 describe('queries semánticas', () => {

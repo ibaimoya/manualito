@@ -1,0 +1,30 @@
+{
+  "account": {
+    "ariaLabel": "Your account"
+  },
+  "empty": {
+    "description": "Find a game you would like to learn and look up its rules.",
+    "explore": "Explore games"
+  },
+  "error": {
+    "manuals": "Try again to see your recent rulebooks.",
+    "title": "Your rulebooks haven't loaded"
+  },
+  "greeting": {
+    "anonymous": "Hi",
+    "description": "Snap a photo of the rulebook and I'll walk you through it, no need to read the whole thing.",
+    "named": "Hi, <player>{{firstName}}</player>",
+    "question": "What game are we learning?",
+    "wave": "Say hello"
+  },
+  "hero": {
+    "description": "Upload pages from the camera, your gallery, or a PDF, and I'll explain everything as we go.",
+    "newManual": "New manual",
+    "title": "Learn a new game"
+  },
+  "recent": {
+    "heading": "Recent",
+    "viewAll": "View all",
+    "viewAllAriaLabel": "View all your games"
+  }
+}

@@ -46,7 +46,7 @@ export function usePageSearch(pages: readonly ManualDetailPage[]) {
     return { hitsByPage: hits, matches: all };
   }, [pages, needle]);
 
-  const position = matches.length > 0 ? (cursor % matches.length) : -1;
+  const position = matches.length > 0 ? cursor % matches.length : -1;
   const active = position >= 0 ? matches[position]! : null;
 
   function search(next: string): void {
@@ -69,7 +69,6 @@ export function usePageSearch(pages: readonly ManualDetailPage[]) {
     totalHits: matches.length,
     /** Posición (1-based) de la coincidencia activa para el contador "n / N". */
     activePosition: position >= 0 ? position + 1 : 0,
-    pagesWithHits: hitsByPage.size === 0 ? 0 : [...hitsByPage.values()].filter((n) => n > 0).length,
     active,
     step,
   };

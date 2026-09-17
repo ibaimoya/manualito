@@ -1,10 +1,6 @@
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
-import { ChevronDown, Loader2 } from 'lucide-react';
-import {
-  forwardRef,
-  type ComponentPropsWithoutRef,
-  type ComponentRef,
-} from 'react';
+import { CaretDownIcon, CircleNotchIcon } from '@phosphor-icons/react';
+import { forwardRef, type ComponentPropsWithoutRef, type ComponentRef } from 'react';
 import { cn } from '@/shared/lib/cn';
 
 export const Accordion = AccordionPrimitive.Root;
@@ -30,7 +26,10 @@ export const AccordionTrigger = forwardRef<
     /** En carga: spinner en vez de la flecha (combínalo con el item disabled). */
     loading?: boolean;
   }
->(function AccordionTrigger({ className, children, headingLevel = 3, loading = false, ...props }, ref) {
+>(function AccordionTrigger(
+  { className, children, headingLevel = 3, loading = false, ...props },
+  ref,
+) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <AccordionPrimitive.Header asChild>
@@ -39,25 +38,27 @@ export const AccordionTrigger = forwardRef<
           ref={ref}
           className={cn(
             'flex flex-1 items-center justify-between gap-[var(--m-space-3)] p-[var(--m-space-4)] text-left font-display text-base font-bold text-fg',
-            'transition-colors',
+            'transition-none',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-            loading ? 'cursor-default' : 'hover:bg-surface-2 [&[data-state=open]>svg]:rotate-180',
+            loading
+              ? 'cursor-default'
+              : 'hover:enabled:pointer-fine:bg-[color-mix(in_srgb,var(--m-surface)_50%,var(--m-surface-2))] [&[data-state=open]>svg]:rotate-180',
             className,
           )}
           {...props}
         >
           {children}
           {loading ? (
-            <Loader2
+            <CircleNotchIcon
               size={18}
-              strokeWidth={2}
               className="shrink-0 animate-spin text-fg-3"
               aria-hidden="true"
             />
           ) : (
-            <ChevronDown
+            <CaretDownIcon
+              data-icon-motion="down"
+              aria-hidden="true"
               size={20}
-              strokeWidth={2}
               className="shrink-0 text-fg-3 transition-transform duration-200"
             />
           )}

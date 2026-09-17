@@ -1,0 +1,26 @@
+{
+  "actions": {
+    "createAccount": "Crear cuenta",
+    "darkMode": "Usar modo oscuro",
+    "lightMode": "Usar modo claro",
+    "privacy": "Política de privacidad",
+    "signIn": "Iniciar sesión",
+    "website": "Manualito, ir a la web"
+  },
+  "book": {
+    "coverTitle": "Manualito.",
+    "inscription": [
+      "Invita a quien se ría junto a ti\nBusca sitio para alguien más en el club\nAcerca otra silla a la mesa\nInventa otra historia para ti",
+      "Mil partidas caben en un álbum\nOtro dado trae un giro\nY el mejor día para jugar es hoy\nAquí siempre cabe otra partida",
+      "A veces gana la estrategia\nRecuerda que vale improvisar\nOtra ronda y empezamos de nuevo\nZanja las dudas y juega otra vez"
+    ],
+    "pageTitle": "Antes de empezar"
+  },
+  "errors": {
+    "navigation": "No se ha podido abrir la página. Vuelve a intentarlo."
+  },
+  "welcome": {
+    "description": "Consulta las reglas y resuelve tus dudas de tus juegos de mesa.",
+    "title": "Que comience la partida."
+  }
+}

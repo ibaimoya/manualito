@@ -4,12 +4,10 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
-  useRef,
   useState,
-  useTransition,
 } from 'react';
-import { flushSync } from 'react-dom';
 import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
 import { storage } from '@/shared/lib/storage';
 
@@ -28,87 +26,56 @@ const ThemeContext = createContext<ThemeState | null>(null);
 const PERSIST_DEBOUNCE_MS = 200;
 
 type Persisted = { mode: ThemeMode; accent: AccentVariant };
-type BrowserRuntime = {
-  document?: Document;
-  window?: Window;
-};
 
-function getBrowserRuntime(): BrowserRuntime {
-  return {
-    document: globalThis.document,
-    window: globalThis.window,
-  };
+function getColorTransitions(root: HTMLElement) {
+  return root
+    .getAnimations()
+    .filter((animation) =>
+      (animation as Partial<CSSTransition>).transitionProperty?.startsWith('--m-'),
+    );
 }
 
-function loadInitial(): Persisted {
-  const { mode, accent } = storage.readSettings();
-  return { mode, accent };
-}
-
-function persistTheme(state: Persisted): void {
-  storage.writeSettings(state);
-}
-
-/**
- * Aplica los flags al "<html>" (clases) para que tokens.css reaccione.
- * "mode: 'auto'" consulta "prefers-color-scheme" cada vez que se llama.
- */
 function applyToHtml(state: Persisted): void {
-  const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
+  const { document: runtimeDocument, window: runtimeWindow } = globalThis;
   if (runtimeDocument === undefined || runtimeWindow === undefined) return;
   const root = runtimeDocument.documentElement;
   const prefersDark = runtimeWindow.matchMedia('(prefers-color-scheme: dark)').matches;
   const dark = state.mode === 'dark' || (state.mode === 'auto' && prefersDark);
+  const blue = state.accent === 'blue';
+  const sameTheme = root.classList.contains(dark ? 'theme-dark' : 'theme-light');
+  const hasTheme = root.classList.contains('theme-dark') || root.classList.contains('theme-light');
+  const sameAccent = root.classList.contains('accent-blue') === blue;
 
+  if (hasTheme && (!sameTheme || !sameAccent)) root.classList.add('color-transition');
   root.classList.toggle('theme-dark', dark);
   root.classList.toggle('theme-light', !dark);
-  root.classList.toggle('accent-blue', state.accent === 'blue');
-}
+  root.classList.toggle('accent-blue', blue);
 
-/**
- * Aplica el tema dentro de una View Transition (crossfade nativo, el spam se
- * cancela limpio). Sin soporte o con reduced-motion, aplica en seco.
- */
-function applyWithViewTransition(state: Persisted): void {
-  const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
-  if (runtimeDocument === undefined || runtimeWindow === undefined) return;
-  const reduced = runtimeWindow.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const docAny = runtimeDocument as Document & {
-    startViewTransition?: (cb: () => void) => unknown;
-  };
-  if (reduced || typeof docAny.startViewTransition !== 'function') {
-    applyToHtml(state);
-    return;
+  if (root.classList.contains('color-transition')) {
+    void Promise.allSettled(getColorTransitions(root).map((animation) => animation.finished)).then(
+      () => {
+        if (getColorTransitions(root).length === 0) root.classList.remove('color-transition');
+      },
+    );
   }
-  docAny.startViewTransition(() => flushSync(() => applyToHtml(state)));
 }
 
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [state, setState] = useState<Persisted>(() => loadInitial());
+  const [state, setState] = useState(storage.readSettings);
 
-  // useTransition: con spam de toggles React solo procesa el último click.
-  const [, startTransition] = useTransition();
-
-  // En el primer mount no hay estado "from": se aplica sin View Transition.
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    if (mountedRef.current) {
-      applyWithViewTransition(state);
-    } else {
-      applyToHtml(state);
-      mountedRef.current = true;
-    }
+  useLayoutEffect(() => {
+    applyToHtml(state);
   }, [state]);
 
   // Debounce: una ráfaga de clicks acaba en un solo setItem.
-  const persist = useDebouncedCallback(persistTheme, PERSIST_DEBOUNCE_MS);
+  const persist = useDebouncedCallback(storage.writeSettings, PERSIST_DEBOUNCE_MS);
   useEffect(() => {
     persist(state);
   }, [state, persist]);
 
   // Depende del state completo: un listener viejo revertiría el acento.
   useEffect(() => {
-    const runtimeWindow = getBrowserRuntime().window;
+    const runtimeWindow = globalThis.window;
     if (state.mode !== 'auto' || runtimeWindow === undefined) return;
     const media = runtimeWindow.matchMedia('(prefers-color-scheme: dark)');
     const onChange = () => applyToHtml(state);
@@ -116,19 +83,14 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     return () => media.removeEventListener('change', onChange);
   }, [state]);
 
-  // Guard de igualdad: repetir el valor actual no dispara render.
   const setMode = useCallback(
     (mode: ThemeMode) =>
-      startTransition(() => {
-        setState((s) => (s.mode === mode ? s : { ...s, mode }));
-      }),
+      setState((current) => (current.mode === mode ? current : { ...current, mode })),
     [],
   );
   const setAccent = useCallback(
     (accent: AccentVariant) =>
-      startTransition(() => {
-        setState((s) => (s.accent === accent ? s : { ...s, accent }));
-      }),
+      setState((current) => (current.accent === accent ? current : { ...current, accent })),
     [],
   );
 

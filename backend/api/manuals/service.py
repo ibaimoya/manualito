@@ -32,8 +32,10 @@ from api.exceptions import (
 from api.games import repository as games_repository
 from api.manuals.dto import (
     ManualPageForProcessing,
+    ManualSummary,
     PageEditResult,
     PreparedChunk,
+    ReconciliationPlan,
     StoredManualImage,
     StoredManualPdf,
     ValidatedManualImage,
@@ -51,6 +53,7 @@ from api.manuals.exceptions import (
 from api.manuals.locks import manual_lock
 from api.manuals.pdf import extract_pdf_page_text, pdf_text_is_usable, render_pdf_page
 from api.manuals.repository import (
+    INDEXED_MANUAL_STATUSES,
     asset_storage_prefix_is_referenced,
     attach_page_image_asset,
     begin_manual_reprocessing,
@@ -62,6 +65,8 @@ from api.manuals.repository import (
     get_manual_page_detail,
     get_page_for_edit,
     get_page_for_processing,
+    list_alive_manual_ids,
+    list_expected_chunk_ids,
     list_manual_chunks_for_ingest,
     list_manual_ids_pending_dispatch,
     list_page_chunk_ids,
@@ -76,6 +81,7 @@ from api.manuals.repository import (
     replace_page_result,
     resolve_manual_processed_status,
     soft_delete_user_manual,
+    update_user_manual,
 )
 from api.manuals.schemas import ManualCreatedResponse
 from api.manuals.validation import validate_manual_image, validate_manual_pdf
@@ -148,6 +154,7 @@ async def create_manual(
     language: str | None,
     images: list[UploadFile] | None,
     pdf: UploadFile | None,
+    anonymous: bool = True,
 ) -> ManualCreatedResponse:
     """Persiste un manual y adopta sus assets solo tras confirmar el commit."""
     batch: AssetWriteBatch | None = None
@@ -173,6 +180,7 @@ async def create_manual(
                 game_id=game_id,
                 title=_normalize_optional_text(title),
                 visibility=visibility,
+                anonymous=anonymous or visibility == "private",
                 language=_normalize_optional_text(language),
                 source_type=source_type,
                 page_count=page_count,
@@ -826,13 +834,33 @@ async def _edit_page_text_locked(
     )
     await session.commit()
 
-    # Postgres ya es la verdad; Chroma es índice derivado y se sincroniza después.
+    # Postgres ya es la verdad. Chroma es índice derivado y se sincroniza después.
     page_detail = await get_manual_page_detail(session, page_id=context.page_id)
     return PageEditResult(
         page_detail=page_detail,
         page_id=context.page_id,
         stale_chunk_ids=old_chunk_ids,
     )
+
+
+async def update_manual(
+    session: AsyncSession,
+    *,
+    auth: AuthenticatedSession,
+    manual_id: UUID,
+    title: str | None = None,
+    anonymous: bool | None = None,
+) -> ManualSummary:
+    """Guarda los detalles del manual sin volver a indexarlo."""
+    summary = await update_user_manual(
+        session,
+        owner_user_id=auth.user.id,
+        manual_id=manual_id,
+        title=title,
+        anonymous=anonymous,
+    )
+    await session.commit()
+    return summary
 
 
 async def delete_manual(
@@ -1074,7 +1102,7 @@ async def delete_chunks_from_rag(
             internal_detail="Error interno al borrar el manual del índice.",
         )
     except ApiError:
-        # Postgres es la verdad; un id huérfano en Chroma se descarta al rehidratar.
+        # Postgres es la verdad. Un id huérfano en Chroma se descarta al rehidratar.
         logger.warning(
             "No se pudo limpiar Chroma para manual '%s'.",
             safe_for_log(str(manual_id)),
@@ -1161,3 +1189,146 @@ async def reconcile_pending_asset_batches() -> tuple[int, int]:
             else:
                 deleted += 1
     return adopted, deleted
+
+
+def plan_rag_reconciliation(
+    *,
+    inventory: dict[str, list[str]],
+    expected: dict[str, set[str]],
+    alive: set[str],
+) -> ReconciliationPlan:
+    """Construye el plan de reparación del desfase del índice RAG.
+
+    Args:
+        inventory (dict[str, list[str]]): Chunks presentes en el índice por manual.
+        expected (dict[str, set[str]]): Chunks que Postgres espera por manual.
+        alive (set[str]): Identificadores de todos los manuales vivos.
+
+    Returns:
+        ReconciliationPlan: Huérfanos y manuales desincronizados en orden estable.
+    """
+    orphan_chunk_ids = {
+        manual_id: sorted(inventory[manual_id])
+        for manual_id in sorted(inventory)
+        if manual_id not in alive
+    }
+    stale_manual_ids = []
+    for manual_id, expected_chunk_ids in sorted(expected.items()):
+        indexed = set(inventory.get(manual_id, []))
+        if not expected_chunk_ids and indexed:
+            orphan_chunk_ids[manual_id] = sorted(indexed)
+        elif indexed != expected_chunk_ids:
+            stale_manual_ids.append(manual_id)
+    orphan_chunk_ids = dict(sorted(orphan_chunk_ids.items()))
+    return ReconciliationPlan(
+        orphan_chunk_ids=orphan_chunk_ids,
+        stale_manual_ids=stale_manual_ids,
+    )
+
+
+async def reindex_manual(manual_id: UUID) -> None:
+    """Reconstruye en RAG el índice de un manual persistido.
+
+    Args:
+        manual_id (UUID): Identificador del manual que debe reindexarse.
+
+    Returns:
+        None: La operación no devuelve ningún valor.
+    """
+    async with manual_lock(manual_id) as session:
+        if session is None:
+            logger.info(
+                "Manual '%s' ocupado por otro proceso, la reingesta espera.",
+                safe_for_log(str(manual_id)),
+            )
+            return
+        manual = await get_manual_for_processing(session, manual_id=manual_id)
+        if (
+            manual is None
+            or manual.deleted_at is not None
+            or manual.status not in INDEXED_MANUAL_STATUSES
+        ):
+            return
+        chunks = await list_manual_chunks_for_ingest(session, manual_id=manual_id)
+        if not chunks:
+            return
+        try:
+            async with _internal_http_client() as client:
+                chunk_ids, embedding_model, indexed_at = _parse_rag_ingest_response(
+                    await _index_manual_in_rag(
+                        client=client,
+                        manual=manual,
+                        chunks=chunks,
+                    )
+                )
+        except ApiError:
+            logger.warning(
+                "No se pudo reindexar el manual '%s' en RAG.",
+                safe_for_log(str(manual_id)),
+                exc_info=True,
+            )
+            return
+        await mark_manual_indexed(
+            session,
+            manual_id=manual_id,
+            chunk_ids=chunk_ids,
+            embedding_model=embedding_model,
+            indexed_at=indexed_at,
+        )
+        await session.commit()
+
+
+async def plan_index_repair() -> ReconciliationPlan:
+    """
+    Calcula las reparaciones necesarias para sincronizar Postgres y RAG.
+
+    Returns:
+        ReconciliationPlan: Huérfanos que borrar y manuales que reindexar.
+    """
+    try:
+        async with _internal_http_client() as client:
+            payload = await internal_client.get_json(
+                client=client,
+                service_name="RAG",
+                url=f"{config.RAG_URL}/inventory",
+                unavailable_detail="Servicio RAG no disponible.",
+                internal_detail="Error interno al consultar el inventario RAG.",
+            )
+    except ApiError:
+        logger.warning(
+            "No se pudo consultar el inventario RAG. "
+            "Se reintentará en la próxima pasada horaria."
+        )
+        return ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
+
+    manuals = payload.get("manuals") if isinstance(payload, dict) else None
+    if not isinstance(manuals, dict):
+        logger.warning("Inventario del índice RAG malformado. Se ignora esta pasada.")
+        return ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
+
+    async with get_sessionmaker()() as session:
+        expected_uuid_chunk_ids = await list_expected_chunk_ids(session)
+        alive_uuid_manual_ids = await list_alive_manual_ids(session)
+
+    expected = {
+        str(manual_id): {str(chunk_id) for chunk_id in chunk_ids}
+        for manual_id, chunk_ids in expected_uuid_chunk_ids.items()
+    }
+    alive = {str(manual_id) for manual_id in alive_uuid_manual_ids}
+    plan = plan_rag_reconciliation(
+        inventory=manuals,
+        expected=expected,
+        alive=alive,
+    )
+    orphan_manual_ids = sorted(plan.orphan_chunk_ids)
+    stale_manual_ids = sorted(plan.stale_manual_ids)
+    logger.info(
+        "Informe de sincronización del índice RAG: manuales_huérfanos=%d, "
+        "chunks_huérfanos=%d, desfasados=%d, ids_huérfanos=%s, ids_desfasados=%s",
+        len(orphan_manual_ids),
+        sum(len(ids) for ids in plan.orphan_chunk_ids.values()),
+        len(stale_manual_ids),
+        orphan_manual_ids,
+        stale_manual_ids,
+    )
+    return plan

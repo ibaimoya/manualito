@@ -1,6 +1,7 @@
 """Schemas Pydantic públicos de autenticación."""
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import EmailStr, Field
@@ -9,11 +10,14 @@ from api import config
 from api.schemas import StrictModel
 from database.models.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 
+type EmailLocale = Literal["es", "en"]
+
 
 class RegisterRequest(StrictModel):
     """Datos necesarios para crear un usuario normal."""
 
     email: EmailStr = Field(max_length=EMAIL_MAX_LENGTH)
+    locale: EmailLocale
     username: str = Field(min_length=1, max_length=USERNAME_MAX_LENGTH)
     password: str = Field(
         min_length=config.PASSWORD_MIN_LENGTH,
@@ -38,12 +42,14 @@ class ResendVerificationEmailRequest(StrictModel):
     """Email al que se reenvía verificación si la cuenta existe."""
 
     email: EmailStr = Field(max_length=EMAIL_MAX_LENGTH)
+    locale: EmailLocale
 
 
 class ForgotPasswordRequest(StrictModel):
     """Solicitud uniforme para iniciar reset de contraseña."""
 
     email: EmailStr = Field(max_length=EMAIL_MAX_LENGTH)
+    locale: EmailLocale
 
 
 class ResetPasswordRequest(StrictModel):

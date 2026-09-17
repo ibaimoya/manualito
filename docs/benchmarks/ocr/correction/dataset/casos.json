@@ -1,0 +1,883 @@
+{
+ "version": 1,
+ "casos": [
+  {
+   "id": "g3",
+   "texto_ocr": "Valencia. NIF B-96897251, Tel: (900) 180377. E-mail: consumidorahasbro.es.",
+   "confianza": 0.8,
+   "contexto_antes": [
+    "HOUNOAWOOO AVE ockley Park, Uxbridae, Middlese",
+    "Atención al Cliente: Hasbro Iberia, S.L., Avda. dels Gremis, Parcela 28, Sector 13, 46394 Ribarroja del Turia,"
+   ],
+   "contexto_despues": [
+    "www.hasbro.es",
+    "* Los jugadores compiten metiendo fichas en la"
+   ],
+   "esperado": "Valencia. NIF B-96897251. Tel: (900) 180377. E-mail: consumidor@hasbro.es.",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g7",
+   "texto_ocr": "Ampliación 5-6 jugadores..........ccceo..nicinninocsioraciiprrnecerreien coc ¿Sl > = Viaje por la",
+   "confianza": 0.523,
+   "contexto_antes": [
+    "..- Escenarios",
+    "Catan — El juego (juego básico) ..........cccoonmsmis CA 2 Península ibérica y"
+   ],
+   "contexto_despues": [
+    "Miniexpansión Entre amigos / CréditOS ......ooconoinoocnscecess SI India",
+    "Miniexpansión El conejo de PASCUA ......oconoamamarecccicncacacs"
+   ],
+   "esperado": "Ampliación 5-6 jugadores 7 Viaje por la",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g8",
+   "texto_ocr": "Miniexpansión Entre amigos / CréditOS ......ooconoinoocnscecess SI India",
+   "confianza": 0.7013,
+   "contexto_antes": [
+    "Catan — El juego (juego básico) ..........cccoonmsmis CA 2 Península ibérica y",
+    "Ampliación 5-6 jugadores..........ccceo..nicinninocsioraciiprrnecerreien coc ¿Sl > = Viaje por la"
+   ],
+   "contexto_despues": [
+    "Miniexpansión El conejo de PASCUA ......oconoamamarecccicncacacs",
+    "Miniexpansión Santa CÍOlUS ....ooonccicnanicnnonionincncnrorarnrrerccens"
+   ],
+   "esperado": "Miniexpansión Entre amigos / Créditos 8 India",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g9",
+   "texto_ocr": "Escenario Península ibérica ....................cocoormommmsmmmmmrssros:",
+   "confianza": 0.7125,
+   "contexto_antes": [
+    "Miniexpansión El conejo de PASCUA ......oconoamamarecccicncacacs",
+    "Miniexpansión Santa CÍOlUS ....ooonccicnanicnnonionincncnrorarnrrerccens"
+   ],
+   "contexto_despues": [
+    "Escenario Viaje por la India .............o.ooacooorscromsocroroc cl",
+    "Miniexpansión"
+   ],
+   "esperado": "Escenario Península ibérica 11",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g11",
+   "texto_ocr": "19 hexágonos",
+   "confianza": 0.92,
+   "contexto_antes": [
+    "produciría madera) y la montaña (que produciría minerales).",
+    "Componentes"
+   ],
+   "contexto_despues": [
+    "de terreno | h: 95 cartas de materias primas (19 de cada): 4 emir se costes de construcción — Piguras de juego",
+    "E > WS z Y . (en 4 colores)"
+   ],
+   "esperado": "19 hexágonos",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g14",
+   "texto_ocr": "Cerros (3) ' Arcilla =ladrillos = del cerro Ciudad Poblado Carretera",
+   "confianza": 0.7282,
+   "contexto_antes": [
+    "Pastos (4) b y > E Lana =oweja = del pasto 20 y pcia! Y de o",
+    "Sembrados (4) : ea LE Cereal = gavilla de trigo = del sembrado"
+   ],
+   "contexto_despues": [
+    "Montañas (3) Mineral = roca = de la montaña",
+    "Desierto (1) 4 cajitas para figuras"
+   ],
+   "esperado": "Cerros (3) Arcilla = ladrillos = del cerro Ciudad Poblado Carretera",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g15",
+   "texto_ocr": "la palabra clave (indicada con una Mecha (>) en el manual.",
+   "confianza": 0.9255,
+   "contexto_antes": [
+    "En este reglamento encontrarás toda la información que necesitas para",
+    "jugar, Si durante la partida tienes alguna duda sobre una regla, consulta"
+   ],
+   "contexto_despues": [
+    "Disposición inicial para principiantes",
+    "Te recomendamos que en las primeras partidas dispongas el tablero de"
+   ],
+   "esperado": "la palabra clave (indicada con una flecha (→) en el manual.",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g16",
+   "texto_ocr": "\"Disposición variable” (3).",
+   "confianza": 0.8367,
+   "contexto_antes": [
+    "Después de una o dos partidas, ya podrás disponer el tablero al azar.",
+    "Encontrarás toda la información en el apartado del manual!"
+   ],
+   "contexto_despues": [
+    "PREPARATIVOS",
+    "Disposición inicial para principiantes"
+   ],
+   "esperado": "\"Disposición variable\" (→).",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g19",
+   "texto_ocr": "bh) Comercio marítimo (comercio con la reserva) (>)",
+   "confianza": 0.8787,
+   "contexto_antes": [
+    "Importante: los otros jugadores sólo podrán comerciar con el jugador",
+    "que tiene el turno. Los otros jugadores no podrán comerciar entre ellos."
+   ],
+   "contexto_despues": [
+    "El jugador también puede intercambiar sin necesidad de hacerlo con",
+    "ningún otro jugador"
+   ],
+   "esperado": "b) Comercio marítimo (comercio con la reserva) (→)",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g20",
+   "texto_ocr": "Comercio marílimo en un puerto 3:1 Comercio marílimo 2:1 en",
+   "confianza": 0.911,
+   "contexto_antes": [
+    "un 0",
+    "A"
+   ],
+   "contexto_despues": [
+    "un puerto especial",
+    "3. Construcción"
+   ],
+   "esperado": "Comercio marítimo en un puerto 3:1 Comercio marítimo 2:1 en",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g23",
+   "texto_ocr": "deben rostarse antes de la",
+   "confianza": 0.544,
+   "contexto_antes": [
+    ". IM UY sus respectivas",
+    ". 2 tablas de costes * 4 piezas de marco * 2 cajitas para figuras"
+   ],
+   "contexto_despues": [
+    "Ns Da par",
+    "+ 2 sets de figuras de color marrón y verde. Cada set se compone de"
+   ],
+   "esperado": "deben montarse antes de la",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g25",
+   "texto_ocr": "Cuando los dos jugadores havan terminado, el jugador 1 entregará la",
+   "confianza": 0.9527,
+   "contexto_antes": [
+    "desarrollo) y jugar una carta de desarrollo (pero no antes de la tirada de",
+    "producción del jugador con la Piedra 1)"
+   ],
+   "contexto_despues": [
+    "Piedra 1 y los dados al jugador de su izquierda. Del mismo modo, el",
+    "jugador 2 entregará la Piedra 2 al jugador de su izquierda. El jugador que"
+   ],
+   "esperado": "Cuando los dos jugadores hayan terminado, el jugador 1 entregará la",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g26",
+   "texto_ocr": "e Construir",
+   "confianza": 0.84,
+   "contexto_antes": [
+    "e Realizar la tirada de producción (obligatorio) MES",
+    "e; Comerciar con los jugadores y con la reserva"
+   ],
+   "contexto_despues": [
+    "e Jugar 1 carta de desarrollo",
+    "Jugador con la Piedra 2"
+   ],
+   "esperado": "Construir",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g27",
+   "texto_ocr": "Phperstr $7, 701%4 atigar",
+   "confianza": 0.085,
+   "contexto_antes": [
+    "€ 3023 KOSMOS Verl Wiustraciones larga Dones y Michael Mero",
+    "Fraschh Kssmos Vertags GrebM he Co ML Dueño gráfico Machaela"
+   ],
+   "contexto_despues": [
+    "tados los derechos riervados FABRICADO LM ALTMAMIA A sa",
+    "y 1]"
+   ],
+   "esperado": "Pfizerstr. 5-7, 70184 Stuttgart",
+   "categoria": "align_muy_baja"
+  },
+  {
+   "id": "g28",
+   "texto_ocr": "Ihastraciones de los terrenos Michael Mente",
+   "confianza": 0.5517,
+   "contexto_antes": [
+    "CATAN - Juega básico, CATAN - Amplisción 56 jugadores 0 2014 202) CATAN CAR",
+    "Diurño del tablero perús Dorres Castro"
+   ],
+   "contexto_despues": [
+    "Musiraciones de las cudades Ancha lfustratios 6 Derga",
+    "Daeño priAica Michaela Mende"
+   ],
+   "esperado": "Ilustraciones de los terrenos: Michael Menzel",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g29",
+   "texto_ocr": "hatraciones de les terrenos Michael Menzel",
+   "confianza": 0.6617,
+   "contexto_antes": [
+    "lea Kiaes Teuber",
+    "O 1015, 2073 CATAN Grid"
+   ],
+   "contexto_despues": [
+    "Diveño del escenario Ron Magna",
+    "Dneño q:14co y resporaade eósonal Ros Magia"
+   ],
+   "esperado": "Ilustraciones de los terrenos: Michael Menzel",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g30",
+   "texto_ocr": "PREPARATIVOS",
+   "confianza": 0.96,
+   "contexto_antes": [
+    "que otro punto de victoria.Está claro que, aunque el altruismo existe, no",
+    "forma parte de esta expansión..."
+   ],
+   "contexto_despues": [
+    "* Se prepara el juego básico (y la ampliación para 5 y 6 jugadores, si",
+    "corresponde) de la forma habitual."
+   ],
+   "esperado": "PREPARATIVOS",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g34",
+   "texto_ocr": "\"PREPARATIVOS",
+   "confianza": 0.58,
+   "contexto_antes": [
+    "trasladarlo a otro hexágono. Al hacerlo te dará muchos regalos (e inchuso podrá",
+    "abuwventar al ladrón)."
+   ],
+   "contexto_despues": [
+    "4",
+    ","
+   ],
+   "esperado": "PREPARATIVOS",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g35",
+   "texto_ocr": "excepciones",
+   "confianza": 0.75,
+   "contexto_antes": [
+    "En este escenario se utilizan las mismas reglas que en el juego básico (incluidas",
+    "las de la ampliación para 5 y 6 jugadores, si hiciera falta), con las siguientes"
+   ],
+   "contexto_despues": [
+    "Producción de materias primas",
+    "Durame la partida, el hexágono que tiene las fichas 2 y 12 producirá recursos"
+   ],
+   "esperado": "excepciones:",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g36",
+   "texto_ocr": "+ a un hexágono de terreno, cada jugador que tenga 1 o más poblados/",
+   "confianza": 0.8214,
+   "contexto_antes": [
+    "Conseguir fichas de regalo",
+    "Si desplazas el conejo de Pascua..."
+   ],
+   "contexto_despues": [
+    "ciudades junto a ese terreno recibirá 1 ficha de regalo.",
+    "« ...al prado del conejo, cada jugador que tenga 1 o más poblados/ciudades"
+   ],
+   "esperado": "…a un hexágono de terreno, cada jugador que tenga 1 o más poblados/",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g38",
+   "texto_ocr": "2. Construcción de carreteras — Las carreteras sólo pueden",
+   "confianza": 0.9522,
+   "contexto_antes": [
+    "1. Construcción de poblados — Los poblados sólo pueden fundarse y",
+    "construirse en las casillas de localidad (3)"
+   ],
+   "contexto_despues": [
+    "construirse en los caminos señalados con un rectángulo. Si un jugador",
+    "construye una carretera junto a una casilla de localidad, sólo podrá"
+   ],
+   "esperado": "2. Construcción de carreteras — Las carreteras sólo pueden",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g39",
+   "texto_ocr": "ciudad desde el noreste",
+   "confianza": 0.96,
+   "contexto_antes": [
+    "ibérica. La monumental Puerta de Alcalá, diseñada por Francesco",
+    "Sabatini en 1778, sustituyó a una antigua puerta que daba entrada a la"
+   ],
+   "contexto_despues": [
+    "Coimbra (Universidad)",
+    "Situada en el interior de Portugal, como"
+   ],
+   "esperado": "ciudad desde el noreste.",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g40",
+   "texto_ocr": "| 0-00 colonia romana fue Eminium y después",
+   "confianza": 0.8163,
+   "contexto_antes": [
+    "Coimbra (Universidad)",
+    "Situada en el interior de Portugal, como"
+   ],
+   "contexto_despues": [
+    "' mn Conimbriga, siendo más tarde una relevante",
+    "ciudad andalusí, Fue la primera capital del"
+   ],
+   "esperado": "colonia romana fue Æminium y después",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g41",
+   "texto_ocr": "FA N = Escenario: Viaje por la India",
+   "confianza": 0.66,
+   "contexto_antes": [
+    "e"
+   ],
+   "contexto_despues": [
+    "$ y e »",
+    "1"
+   ],
+   "esperado": "CATAN – Escenario: Viaje por la India",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g42",
+   "texto_ocr": "* ] tablero del norte de la India",
+   "confianza": 0.8462,
+   "contexto_antes": [
+    "CATAN - Escenario: Viaje por la India",
+    "COMPONENTES NECESARIOS"
+   ],
+   "contexto_despues": [
+    "añ",
+    "\"19 fichas de riceshau"
+   ],
+   "esperado": "1 tablero del norte de la India",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g43",
+   "texto_ocr": "jugadores, si corresponde—, excepto los hexágonos de terreno, las",
+   "confianza": 0.89,
+   "contexto_antes": [
+    "> > > a AS",
+    "* Todos los componentes del juego básico —y de la ampliación para $5 y 6"
+   ],
+   "contexto_despues": [
+    "piezas de marco y las fichas numeradas,",
+    "INTRODUCCIÓN"
+   ],
+   "esperado": "jugadores, si corresponde—, excepto los hexágonos de terreno, las",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g44",
+   "texto_ocr": "Las fichas de rickshaw solo se consiguen con las carreteras que se",
+   "confianza": 0.8267,
+   "contexto_antes": [
+    "ficha de ricksbarr, Cada 2 fichas de ricksbar valen 1 punto de victoria.",
+    "Importante:"
+   ],
+   "contexto_despues": [
+    "construyen durante la partida. Las carreteras que se colocan durante la fase",
+    "de fundación no aportan ninguna ficha de rickshaw"
+   ],
+   "esperado": "Las fichas de rickshaw solo se consiguen con las carreteras que se",
+   "categoria": "align_media"
+  },
+  {
+   "id": "g45",
+   "texto_ocr": "- Kanpur y Ganglok).",
+   "confianza": 0.5625,
+   "contexto_antes": [
+    "Por motivos de jugabilidad, no se han podido incluir todas",
+    "las localidades importantes en el tablero (como por ejemplo"
+   ],
+   "contexto_despues": [
+    "Información sobre las localidades que aparecen en el",
+    "tablero"
+   ],
+   "esperado": "Kanpur y Gangtok).",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g46",
+   "texto_ocr": "aproximadamente, se encuentra en la orilla del río",
+   "confianza": 0.9512,
+   "contexto_antes": [
+    "Agra (Taj Mahal)",
+    "La ciudad de Agra, con 1,7 millones de habitantes"
+   ],
+   "contexto_despues": [
+    "Yamuna, en el estado de Uttar Pradesh. Gracias a",
+    "los espléndidos edificios de la época de los mogoles,"
+   ],
+   "esperado": "aproximadamente, se encuentra en la orilla del río",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g47",
+   "texto_ocr": "encuentra en una zona agrícola muy fértil situada",
+   "confianza": 0.9412,
+   "contexto_antes": [
+    "Fatehpur es una ciudad del estado de Uttar",
+    "i Pradesh con cerca de 152 000 habitantes. Se"
+   ],
+   "contexto_despues": [
+    "entre los ríos sagrados del Ganges y el Yamuna.",
+    "Guwahati (templo de Kamakhya)"
+   ],
+   "esperado": "encuentra en una zona agrícola muy fértil situada",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g48",
+   "texto_ocr": "II y el templo de Narsingh, el lugar sagrado más",
+   "confianza": 0.942,
+   "contexto_antes": [
+    "Pradesh con 1,1 millones de habitantes",
+    "aproximadamente. La región se pobló en el siglo"
+   ],
+   "contexto_despues": [
+    "famoso de Narsinghpur, está consagrado a Narasimha, una de las nueve",
+    "encarnaciones de la deidad hindú Visnú."
+   ],
+   "esperado": "II y el templo de Narsingh, el lugar sagrado más",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g49",
+   "texto_ocr": "Shillong (bazar de Bara)",
+   "confianza": 0.9475,
+   "contexto_antes": [
+    "belleza y el inmenso estanque que hay debajo invitan a bañarse y a disfrutar",
+    "de un picnic."
+   ],
+   "contexto_despues": [
+    "Shillong es, con sus 143 000 habitantes, la capital",
+    "del estado de Meghalaya. Las colinas ondulantes"
+   ],
+   "esperado": "Shillong (bazar de Bara)",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g50",
+   "texto_ocr": "Varanasi (gbats)",
+   "confianza": 0.635,
+   "contexto_antes": [
+    "una construcción muy destacada sino también un lugar muy popular entre los",
+    "residentes y los turistas para ir de picnic."
+   ],
+   "contexto_despues": [
+    "Varanasi, situado a orillas del Ganges, es una de",
+    "las ciudades que lleva más tiempo habitada y"
+   ],
+   "esperado": "Varanasi (ghats)",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "g52",
+   "texto_ocr": "El juego se juega con 106 fichas, incluyendo 2 comodines. Cada ficha (excepto los 2 comodines) tiene un número. Las fichas",
+   "confianza": 0.959,
+   "contexto_antes": [
+    "Rummikub\" EL MÉTODO SABRA",
+    "Rummikub XP, para 6 jugadores, véase más adelante."
+   ],
+   "contexto_despues": [
+    "están enumeradas del 1 al 13 en cuatro colores diferentes: negro, rojo, azul y amarillo. Rummikub se puede jugar con un",
+    "mínimo de 2 y un máximo de 4 jugadores. El objetivo es ser el primer jugador en deshacerse de todas las fichas."
+   ],
+   "esperado": "El juego se juega con 106 fichas, incluyendo 2 comodines. Cada ficha (excepto los 2 comodines) tiene un número. Las fichas",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g53",
+   "texto_ocr": "aparecer una vez en una serie.",
+   "confianza": 0.96,
+   "contexto_antes": [
+    "SERIE: una serie está compuesta al menos de 3 fichas con el mismo número, pero de diferentes colores. Por",
+    "ejemplo: un 13 amarillo, rojo y azul. Una serie está compuesta como máximo de 4 colores porque cada color solo puede"
+   ],
+   "contexto_despues": [
+    "Para empezar a jugar, un jugador debe colocar en la mesa uno o más conjuntos de fichas (de cualquier combinación) con",
+    "un valor total de al menos 30 puntos."
+   ],
+   "esperado": "aparecer una vez en una serie.",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g54",
+   "texto_ocr": "formar dos escaleras rojas de 4, 5, 6 y de 6, 7, 8. Véase fig. C.",
+   "confianza": 0.9519,
+   "contexto_antes": [
+    ". Si añade el 11 azul a",
+    "e Dividir: en la mesa hay una escalera roja de 4, 5, 6, 7 y 8. Tiene un 6"
+   ],
+   "contexto_despues": [
+    "Ejemplo:",
+    "Sobre la mesa hay las siguientes escaleras:"
+   ],
+   "esperado": "formar dos escaleras rojas de 4, 5, 6 y de 6, 7, 8. Véase fig. C.",
+   "categoria": "align_alta"
+  },
+  {
+   "id": "g55",
+   "texto_ocr": "eiding / Figure / Abblídung / Figura / Figura",
+   "confianza": 0.6989,
+   "contexto_antes": [
+    "o]",
+    "y “y"
+   ],
+   "contexto_despues": [
+    "1 d e",
+    ". á y"
+   ],
+   "esperado": "Afbeelding / Figure / Abbildung / Figura / Figura",
+   "categoria": "align_baja"
+  },
+  {
+   "id": "t1000",
+   "texto_ocr": "Cuando los dos jugadares hayan terminado, el jugador 1 entregará la",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Cuando los dos jugadores hayan terminado, el jugador 1 entregará la",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1001",
+   "texto_ocr": "El juego se juega con 106 fichas, incluyendo 2 comodines",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El juego se juega con 106 fichas, incluyendo 2 comodines",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1002",
+   "texto_ocr": "Las carreteras sólo pueden construirse en los caminas señalados",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Las carreteras sólo pueden construirse en los caminos señalados",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1003",
+   "texto_ocr": "Cada poblado vale 1 punto de victaria",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Cada poblado vale 1 punto de victoria",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1004",
+   "texto_ocr": "El jugadar naranja podría construir una nueva carretera",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El jugador naranja podría construir una nueva carretera",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1005",
+   "texto_ocr": "Los bosques praducen madera",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Los bosques producen madera",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1006",
+   "texto_ocr": "formar dos escaleros rojas de 4, 5, 6",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "formar dos escaleras rojas de 4, 5, 6",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1007",
+   "texto_ocr": "Cada ficha tiene un númera",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Cada ficha tiene un número",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1008",
+   "texto_ocr": "aparecer una vez en una serje",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "aparecer una vez en una serie",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1009",
+   "texto_ocr": "Se necesita arcilla y madora para construir",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Se necesita arcilla y madera para construir",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1010",
+   "texto_ocr": "El comodín puede sustituir cada númoro y cada color",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El comodín puede sustituir cada número y cada color",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1011",
+   "texto_ocr": "tira el dado y avanza esa cantidad de casilias",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "tira el dado y avanza esa cantidad de casillas",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1012",
+   "texto_ocr": "El primer jugador que consiga 10 puntos de victoria ganará la partída",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El primer jugador que consiga 10 puntos de victoria ganará la partida",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1013",
+   "texto_ocr": "Mezcla todas las cartos de desarrollo",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Mezcla todas las cartas de desarrollo",
+   "categoria": "typos"
+  },
+  {
+   "id": "t1014",
+   "texto_ocr": "cada jugador coloca dos pablados y dos carreteras",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "cada jugador coloca dos poblados y dos carreteras",
+   "categoria": "typos"
+  },
+  {
+   "id": "d2000",
+   "texto_ocr": "El numero del terreno en los dados obtendra 2 cartas",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El número del terreno en los dados obtendrá 2 cartas",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2001",
+   "texto_ocr": "La ampliacion permite jugar hasta 6 jugadores",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "La ampliación permite jugar hasta 6 jugadores",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2002",
+   "texto_ocr": "Cada hexagono produce una materia prima",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Cada hexágono produce una materia prima",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2003",
+   "texto_ocr": "El jugador mas joven empieza la partida",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El jugador más joven empieza la partida",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2004",
+   "texto_ocr": "Coloca el ladron en el desierto",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Coloca el ladrón en el desierto",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2005",
+   "texto_ocr": "Las fichas estan numeradas del 1 al 13",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Las fichas están numeradas del 1 al 13",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2006",
+   "texto_ocr": "construccion de carreteras y poblados",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "construcción de carreteras y poblados",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2007",
+   "texto_ocr": "El comodin puede sustituir cualquier ficha",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El comodín puede sustituir cualquier ficha",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2008",
+   "texto_ocr": "Ganara quien llegue a 10 puntos",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Ganará quien llegue a 10 puntos",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2009",
+   "texto_ocr": "La partida continua en el sentido del reloj",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "La partida continúa en el sentido del reloj",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "d2010",
+   "texto_ocr": "Cada ficha vale 1 punto de victoria",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Cada ficha vale 1 punto de victoria",
+   "categoria": "diacriticos"
+  },
+  {
+   "id": "s2000",
+   "texto_ocr": "Lana =oveja = del pasto",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Lana = oveja = del pasto",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2001",
+   "texto_ocr": "Arcilla =ladrillos = del cerro",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Arcilla = ladrillos = del cerro",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2002",
+   "texto_ocr": "cada jugador recibe unacarta de materia prima",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "cada jugador recibe una carta de materia prima",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2003",
+   "texto_ocr": "las cartas de de sarrollo se mezclan",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "las cartas de desarrollo se mezclan",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2004",
+   "texto_ocr": "elprimer jugador que consiga 10 puntos",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "el primer jugador que consiga 10 puntos",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2005",
+   "texto_ocr": "Se puedenconstruir carreteras en los caminos",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Se pueden construir carreteras en los caminos",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2006",
+   "texto_ocr": "la am pliacion para 5 y 6 jugadores",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "la ampliación para 5 y 6 jugadores",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2007",
+   "texto_ocr": "tira los dados y su ma el resultado",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "tira los dados y suma el resultado",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2008",
+   "texto_ocr": "El tablero se coloca enel centro de la mesa",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "El tablero se coloca en el centro de la mesa",
+   "categoria": "segmentacion"
+  },
+  {
+   "id": "s2009",
+   "texto_ocr": "Los poblados valen unpunto de victoria",
+   "confianza": null,
+   "contexto_antes": [],
+   "contexto_despues": [],
+   "esperado": "Los poblados valen un punto de victoria",
+   "categoria": "segmentacion"
+  }
+ ]
+}

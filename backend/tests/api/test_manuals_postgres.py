@@ -22,8 +22,8 @@ from api.auth.service import AuthenticatedSession
 from api.exceptions import InvalidImageError
 from api.manuals import service as manuals_service
 from api.manuals.repository import (
-    get_user_manual_detail,
-    get_user_manual_page_image_asset,
+    get_readable_manual_detail,
+    get_readable_manual_page_image_asset,
     list_user_manuals,
 )
 from api.manuals.service import create_manual, reconcile_pending_asset_batches
@@ -147,14 +147,14 @@ async def test_create_manual_commits_queryable_image_and_adopts_assets(
         )
 
     async with world.sessions() as session:
-        detail = await get_user_manual_detail(
+        detail = await get_readable_manual_detail(
             session,
-            owner_user_id=world.owner_user_id,
+            current_user_id=world.owner_user_id,
             manual_id=created.manual_id,
         )
-        image = await get_user_manual_page_image_asset(
+        image = await get_readable_manual_page_image_asset(
             session,
-            owner_user_id=world.owner_user_id,
+            current_user_id=world.owner_user_id,
             manual_id=created.manual_id,
             page_number=1,
         )
@@ -163,6 +163,7 @@ async def test_create_manual_commits_queryable_image_and_adopts_assets(
     assert detail.title == "Reglamento real"
     assert detail.language == "es"
     assert detail.page_count == 1
+    assert detail.is_own is True
     assert detail.pages[0].image_available is True
     assert image is not None
     stored_path = world.store.resolve_file(image.storage_key)
@@ -199,9 +200,9 @@ async def test_create_manual_tolera_fallo_al_adoptar(
         )
 
     async with world.sessions() as session:
-        detail = await get_user_manual_detail(
+        detail = await get_readable_manual_detail(
             session,
-            owner_user_id=world.owner_user_id,
+            current_user_id=world.owner_user_id,
             manual_id=created.manual_id,
         )
 
@@ -239,9 +240,9 @@ async def test_create_manual_tolera_fallo_al_autoseguir(
             images=[_image_upload(valid_jpeg_bytes)],
             pdf=None,
         )
-        detail = await get_user_manual_detail(
+        detail = await get_readable_manual_detail(
             session,
-            owner_user_id=world.owner_user_id,
+            current_user_id=world.owner_user_id,
             manual_id=created.manual_id,
         )
 
@@ -336,8 +337,7 @@ async def test_reconciliation_adopts_referenced_batch_and_deletes_orphan(
     orphan_path = world.store.resolve_file(orphan_key)
 
     old_timestamp = (
-        datetime.now(UTC)
-        - timedelta(seconds=config.ASSET_PENDING_BATCH_TTL_SECONDS + 60)
+        datetime.now(UTC) - timedelta(seconds=config.ASSET_PENDING_BATCH_TTL_SECONDS + 60)
     ).timestamp()
     os.utime(referenced_marker, (old_timestamp, old_timestamp))
     os.utime(orphan.path / ".pending", (old_timestamp, old_timestamp))

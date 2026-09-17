@@ -9,7 +9,8 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import type { FC } from 'react';
-import { Toaster } from 'sonner';
+import { AppToaster } from '@/app/AppToaster';
+import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
@@ -87,13 +88,15 @@ export function renderRoute({
 
   const result = render(
     <ThemeProvider>
-      <QueryClientProvider client={qc}>
-        <TooltipProvider>
-          <RouterProvider router={router} />
-        </TooltipProvider>
-        <Toaster />
-      </QueryClientProvider>
+      <LanguageProvider>
+        <QueryClientProvider client={qc}>
+          <TooltipProvider>
+            <RouterProvider router={router} />
+          </TooltipProvider>
+          <AppToaster />
+        </QueryClientProvider>
+      </LanguageProvider>
     </ThemeProvider>,
   );
-  return { qc, ...result };
+  return { qc, router, ...result };
 }

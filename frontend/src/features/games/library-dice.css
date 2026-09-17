@@ -1,0 +1,38 @@
+.library-die {
+  --die-paper: var(--m-surface);
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.library-die > svg {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.icon-feedback[data-state='checked'] .library-die {
+  --die-paper: var(--m-card);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .library-die {
+    scale: 1;
+    transition: scale var(--m-dur) var(--m-easing);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .icon-feedback:not(
+        :disabled,
+        [aria-disabled='true'],
+        [aria-busy='true'],
+        [data-state='open']
+      ):hover
+      .library-die {
+      scale: 1 1.15;
+    }
+  }
+}

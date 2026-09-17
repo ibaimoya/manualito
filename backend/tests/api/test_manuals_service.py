@@ -1,10 +1,11 @@
 import hashlib
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
-from uuid import uuid4
+from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID, uuid4
 
 import anyio
 import httpx
@@ -14,6 +15,7 @@ from fastapi import UploadFile
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.datastructures import Headers
 
+import api.exceptions as api_exceptions
 import api.manuals.retrieval.service as retrieval_service
 import api.manuals.service as manual_service
 from api.assets.storage import LocalAssetStore
@@ -22,10 +24,12 @@ from api.manuals.dto import (
     AuthorizedChunk,
     DeletedManualAssets,
     ManualPageForProcessing,
+    ReconciliationPlan,
     ValidatedManualImage,
 )
 from api.manuals.exceptions import (
     GeneratedAnswerTooLongError,
+    ManualContextNotFoundError,
     ManualNotFoundError,
     ManualTooLargeError,
     ManualUploadSelectionError,
@@ -46,10 +50,8 @@ _OCR_LINES = [{"text": "Regla uno. Regla dos.", "confidence": 0.9}]
 
 
 def test_retrieval_top_k_limits_keep_api_and_rag_in_sync():
-    """El sobre-fetch que pide API nunca supera el máximo aceptado por RAG."""
-    assert GAME_QUESTION_TOP_K_MAX * manual_service.config.RAG_RETRIEVAL_MULTIPLIER <= (
-        RAG_RETRIEVAL_TOP_K_MAX
-    )
+    """El top_k máximo que pide API nunca supera el aceptado por RAG."""
+    assert GAME_QUESTION_TOP_K_MAX <= RAG_RETRIEVAL_TOP_K_MAX
 
 
 @pytest.mark.anyio
@@ -984,6 +986,11 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         ]
     )
     monkeypatch.setattr(retrieval_service, "load_authorized_chunks", load_chunks_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Catan", [_MANUAL_ID])),
+    )
 
     session = _session()
 
@@ -992,8 +999,9 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
         current_user_id=_USER_ID,
         game_id=_GAME_ID,
         question="¿Cómo se gana?",
-        top_k=2,
+        top_k=3,
         client=object(),
+        language="en",
     )
 
     assert result == AnswerResponse(
@@ -1006,15 +1014,21 @@ async def test_answer_game_question_rehidrata_contexto_autorizado_y_deduplicado(
     rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
     llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
     assert rag_payload["game_id"] == str(_GAME_ID)
-    assert rag_payload["top_k"] == 8
+    assert rag_payload["manual_ids"] == [str(_MANUAL_ID)]
+    assert rag_payload["question"] == "Manual de Catan: ¿Cómo se gana?"
+    assert rag_payload["lexical_question"] == "¿Cómo se gana?"
+    assert rag_payload["top_k"] == 3
     assert load_chunks_mock.await_args.kwargs["chunk_ids"] == [
         _CHUNK_ID,
         _DUPLICATE_CHUNK_ID,
         _UNIQUE_CHUNK_ID,
     ]
-    assert session.rollbacks == 1
+    assert session.rollbacks == 2
     assert "manual_id" not in llm_payload
+    assert llm_payload["game_name"] == "Catan"
+    assert llm_payload["question"] == "¿Cómo se gana?"
     assert llm_payload["context_chunks"] == ["Texto A", "Texto B"]
+    assert llm_payload["language"] == "en"
 
 
 @pytest.mark.anyio
@@ -1044,6 +1058,11 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
             ]
         ),
     )
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Catan", [_MANUAL_ID])),
+    )
     session = _session()
 
     with pytest.raises(GeneratedAnswerTooLongError):
@@ -1058,12 +1077,98 @@ async def test_answer_game_question_rejects_overlong_llm_answer(monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_answer_game_question_prefija_la_reformulacion(monkeypatch) -> None:
+    """La búsqueda usa el juego y la pregunta reformulada, nunca la original."""
+    post_json_mock = AsyncMock(
+        side_effect=[
+            {"chunks": [{"id": str(_CHUNK_ID)}]},
+            {"answer": "Respuesta corta."},
+        ]
+    )
+    monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Rummikub", [_MANUAL_ID])),
+    )
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_authorized_chunks",
+        AsyncMock(
+            return_value=[
+                AuthorizedChunk(
+                    id=_CHUNK_ID,
+                    text="Texto A",
+                    content_hash="hash",
+                    manual_id=_MANUAL_ID,
+                    manual_title=None,
+                    source_page=1,
+                    is_own=True,
+                )
+            ]
+        ),
+    )
+    session = _session()
+
+    await retrieval_service.generate_game_answer(
+        session,
+        current_user_id=_USER_ID,
+        game_id=_GAME_ID,
+        question="¿Y con dos personas?",
+        top_k=2,
+        client=object(),
+        retrieval_question="¿Se puede jugar al Rummikub con dos personas?",
+    )
+
+    rag_payload = post_json_mock.await_args_list[0].kwargs["payload"]
+    llm_payload = post_json_mock.await_args_list[1].kwargs["payload"]
+    assert rag_payload["question"] == (
+        "Manual de Rummikub: ¿Se puede jugar al Rummikub con dos personas?"
+    )
+    assert rag_payload["lexical_question"] == (
+        "¿Se puede jugar al Rummikub con dos personas?"
+    )
+    assert llm_payload["question"] == "¿Y con dos personas?"
+
+
+@pytest.mark.anyio
+async def test_answer_game_question_corta_sin_llamar_a_rag_si_no_hay_manuales(monkeypatch):
+    """Sin manuales autorizados se corta en el acto, sin llamar siquiera a RAG."""
+    post_json_mock = AsyncMock()
+    monkeypatch.setattr(retrieval_service.internal_client, "post_json", post_json_mock)
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Monopoly", [])),
+    )
+    session = _session()
+
+    with pytest.raises(ManualContextNotFoundError):
+        await retrieval_service.generate_game_answer(
+            session,
+            current_user_id=_USER_ID,
+            game_id=_GAME_ID,
+            question="¿Cómo se gana?",
+            top_k=3,
+            client=object(),
+        )
+
+    post_json_mock.assert_not_awaited()
+    assert session.rollbacks == 1
+
+
+@pytest.mark.anyio
 async def test_answer_game_question_rechaza_ids_invalidos_de_rag(monkeypatch):
     """Un vector corrupto en Chroma no provoca un crash sin controlar."""
     monkeypatch.setattr(
         retrieval_service.internal_client,
         "post_json",
         AsyncMock(return_value={"chunks": [{"id": "no-es-uuid"}]}),
+    )
+    monkeypatch.setattr(
+        retrieval_service,
+        "load_game_retrieval_context",
+        AsyncMock(return_value=("Catan", [_MANUAL_ID])),
     )
     session = _session()
 
@@ -1309,3 +1414,482 @@ def _blank_pdf_bytes(tmp_path: Path) -> bytes:
     finally:
         document.close()
     return path.read_bytes()
+
+
+@pytest.mark.parametrize(
+    ("inventory", "expected", "alive", "plan_esperado"),
+    [
+        pytest.param(
+            {"manual-sin-deriva": ["chunk-beta", "chunk-alfa"]},
+            {"manual-sin-deriva": {"chunk-alfa", "chunk-beta"}},
+            {"manual-sin-deriva"},
+            ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[]),
+            id="sin_deriva",
+        ),
+        pytest.param(
+            {"manual-borrado": ["chunk-zeta", "chunk-gamma"]},
+            {},
+            set(),
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "manual-borrado": ["chunk-gamma", "chunk-zeta"],
+                },
+                stale_manual_ids=[],
+            ),
+            id="manual_borrado_huerfano",
+        ),
+        pytest.param(
+            {"manual-indexando": ["chunk-temporal"]},
+            {},
+            {"manual-indexando"},
+            ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[]),
+            id="manual_vivo_en_zona_gris",
+        ),
+        pytest.param(
+            {"manual-incompleto": ["chunk-presente"]},
+            {
+                "manual-incompleto": {
+                    "chunk-presente",
+                    "chunk-ausente",
+                }
+            },
+            {"manual-incompleto"},
+            ReconciliationPlan(
+                orphan_chunk_ids={},
+                stale_manual_ids=["manual-incompleto"],
+            ),
+            id="chunk_faltante",
+        ),
+        pytest.param(
+            {
+                "manual-con-sobrante": [
+                    "chunk-valido",
+                    "chunk-sobrante",
+                ]
+            },
+            {"manual-con-sobrante": {"chunk-valido"}},
+            {"manual-con-sobrante"},
+            ReconciliationPlan(
+                orphan_chunk_ids={},
+                stale_manual_ids=["manual-con-sobrante"],
+            ),
+            id="chunk_sobrante",
+        ),
+        pytest.param(
+            {},
+            {
+                "manual-zeta": {"chunk-zeta"},
+                "manual-alfa": {"chunk-alfa"},
+            },
+            {"manual-zeta", "manual-alfa"},
+            ReconciliationPlan(
+                orphan_chunk_ids={},
+                stale_manual_ids=["manual-alfa", "manual-zeta"],
+            ),
+            id="inventario_vacio_con_esperados",
+        ),
+        pytest.param(
+            {"manual-vaciado": ["chunk-viejo-b", "chunk-viejo-a"]},
+            {"manual-vaciado": set()},
+            {"manual-vaciado"},
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "manual-vaciado": ["chunk-viejo-a", "chunk-viejo-b"],
+                },
+                stale_manual_ids=[],
+            ),
+            id="esperado_sin_chunks_con_vectores",
+        ),
+        pytest.param(
+            {"identificador-invalido": ["chunk-invalido"]},
+            {},
+            set(),
+            ReconciliationPlan(
+                orphan_chunk_ids={
+                    "identificador-invalido": ["chunk-invalido"],
+                },
+                stale_manual_ids=[],
+            ),
+            id="identificador_malformado_huerfano",
+        ),
+    ],
+)
+def test_plan_rag_reconciliation_clasifica_la_deriva(
+    inventory: dict[str, list[str]],
+    expected: dict[str, set[str]],
+    alive: set[str],
+    plan_esperado: ReconciliationPlan,
+) -> None:
+    """El plan clasifica el desfase sin modificar manuales vivos de la zona gris."""
+    plan = manual_service.plan_rag_reconciliation(
+        inventory=inventory,
+        expected=expected,
+        alive=alive,
+    )
+
+    assert plan == plan_esperado
+
+
+def _patch_manual_lock(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    session: object,
+) -> None:
+    """Sustituye el lock por manual por un contexto que entrega la sesión dada.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch): Parcheador del test.
+        session (object): Sesión falsa que debe recibir la reingesta.
+    """
+
+    @asynccontextmanager
+    async def lock(_manual_id):
+        yield session
+
+    monkeypatch.setattr(manual_service, "manual_lock", lock)
+
+
+def _patch_reindex_http_client(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    client: object,
+) -> None:
+    """Sustituye el cliente HTTP interno por un contexto asíncrono."""
+    monkeypatch.setattr(
+        manual_service,
+        "_internal_http_client",
+        lambda: _AsyncContext(client),
+    )
+
+
+def _fail_if_reindex_opens_http() -> _AsyncContext:
+    """Falla si la reindexación intenta abrir el cliente HTTP."""
+    raise AssertionError("No debía abrirse el cliente HTTP")
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_reingesta_chunks_y_persiste_indice(monkeypatch) -> None:
+    """Un manual indexable conserva en Postgres el resultado devuelto por RAG."""
+    session = _session()
+    manual = SimpleNamespace(status="active", deleted_at=None)
+    chunk_id = uuid4()
+    chunks = [SimpleNamespace(id=chunk_id)]
+    client = object()
+    response = {
+        "chunk_ids": [str(chunk_id)],
+        "chunks_indexed": 1,
+        "embedding_model": "test-embedding",
+        "indexed_at": "2026-08-16T10:00:00+00:00",
+    }
+    _patch_manual_lock(monkeypatch, session=session)
+    _patch_reindex_http_client(monkeypatch, client=client)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=chunks)
+    index_mock = AsyncMock(return_value=response)
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    chunks_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    index_mock.assert_awaited_once_with(client=client, manual=manual, chunks=chunks)
+    mark_mock.assert_awaited_once()
+    assert mark_mock.await_args.args == (session,)
+    assert mark_mock.await_args.kwargs["manual_id"] == _MANUAL_ID
+    assert mark_mock.await_args.kwargs["chunk_ids"] == {chunk_id}
+    assert mark_mock.await_args.kwargs["embedding_model"] == "test-embedding"
+    assert (
+        mark_mock.await_args.kwargs["indexed_at"].isoformat()
+        == "2026-08-16T10:00:00+00:00"
+    )
+    assert session.commits == 1
+
+
+@pytest.mark.parametrize(
+    "manual",
+    [
+        pytest.param(None, id="inexistente"),
+        pytest.param(
+            SimpleNamespace(status="active", deleted_at=object()),
+            id="borrado",
+        ),
+        pytest.param(
+            SimpleNamespace(status="indexing", deleted_at=None),
+            id="zona-gris",
+        ),
+    ],
+)
+@pytest.mark.anyio
+async def test_reindex_manual_ignora_manuales_fuera_del_indice(
+    monkeypatch,
+    manual: SimpleNamespace | None,
+) -> None:
+    """Los manuales no indexables no consultan chunks ni abren la frontera HTTP."""
+    session = _session()
+    _patch_manual_lock(monkeypatch, session=session)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=[SimpleNamespace(id=uuid4())])
+    index_mock = AsyncMock()
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(
+        manual_service,
+        "_internal_http_client",
+        _fail_if_reindex_opens_http,
+    )
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    chunks_mock.assert_not_awaited()
+    index_mock.assert_not_awaited()
+    mark_mock.assert_not_awaited()
+    assert session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_sin_chunks_no_abre_la_frontera_http(monkeypatch) -> None:
+    """Un manual sin chunks termina sin llamar a RAG ni persistir cambios."""
+    session = _session()
+    manual = SimpleNamespace(status="active", deleted_at=None)
+    _patch_manual_lock(monkeypatch, session=session)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=[])
+    index_mock = AsyncMock()
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(
+        manual_service,
+        "_internal_http_client",
+        _fail_if_reindex_opens_http,
+    )
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    chunks_mock.assert_awaited_once_with(session, manual_id=_MANUAL_ID)
+    index_mock.assert_not_awaited()
+    mark_mock.assert_not_awaited()
+    assert session.commits == 0
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_registra_api_error_y_permite_reintento(
+    monkeypatch,
+    caplog,
+) -> None:
+    """Un fallo controlado de RAG se registra sin propagarse ni confirmar cambios."""
+    session = _session()
+    manual = SimpleNamespace(status="active", deleted_at=None)
+    chunks = [SimpleNamespace(id=uuid4())]
+    client = object()
+    _patch_manual_lock(monkeypatch, session=session)
+    _patch_reindex_http_client(monkeypatch, client=client)
+    get_mock = AsyncMock(return_value=manual)
+    chunks_mock = AsyncMock(return_value=chunks)
+    index_mock = AsyncMock(side_effect=InternalServiceError("detalle interno"))
+    mark_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+    monkeypatch.setattr(manual_service, "list_manual_chunks_for_ingest", chunks_mock)
+    monkeypatch.setattr(manual_service, "_index_manual_in_rag", index_mock)
+    monkeypatch.setattr(manual_service, "mark_manual_indexed", mark_mock)
+
+    with caplog.at_level("WARNING", logger=manual_service.__name__):
+        await manual_service.reindex_manual(_MANUAL_ID)
+
+    index_mock.assert_awaited_once_with(client=client, manual=manual, chunks=chunks)
+    mark_mock.assert_not_awaited()
+    assert session.commits == 0
+    assert str(_MANUAL_ID) in caplog.text
+    assert "No se pudo reindexar" in caplog.text
+
+
+_RECONCILIATION_MANUAL_A = UUID("11111111-1111-4111-8111-111111111111")
+_RECONCILIATION_MANUAL_B = UUID("22222222-2222-4222-8222-222222222222")
+_RECONCILIATION_ORPHAN = UUID("99999999-9999-4999-8999-999999999999")
+_RECONCILIATION_CHUNK_A = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+_RECONCILIATION_CHUNK_B = UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+_RECONCILIATION_ORPHAN_CHUNK = UUID("cccccccc-cccc-4ccc-8ccc-cccccccccccc")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    (
+        "inventory",
+        "expected_rows",
+        "alive_rows",
+        "expected_orphan_chunk_ids",
+        "expected_stale_manual_ids",
+    ),
+    [
+        (
+            {
+                str(_RECONCILIATION_ORPHAN): [str(_RECONCILIATION_ORPHAN_CHUNK)],
+                str(_RECONCILIATION_MANUAL_A): [str(_RECONCILIATION_CHUNK_B)],
+            },
+            {
+                _RECONCILIATION_MANUAL_A: {_RECONCILIATION_CHUNK_A},
+            },
+            {_RECONCILIATION_MANUAL_A},
+            {
+                str(_RECONCILIATION_ORPHAN): [str(_RECONCILIATION_ORPHAN_CHUNK)],
+            },
+            [str(_RECONCILIATION_MANUAL_A)],
+        ),
+        (
+            {
+                str(_RECONCILIATION_MANUAL_A): [str(_RECONCILIATION_CHUNK_A)],
+                str(_RECONCILIATION_MANUAL_B): [],
+            },
+            {
+                _RECONCILIATION_MANUAL_A: {_RECONCILIATION_CHUNK_A},
+                _RECONCILIATION_MANUAL_B: set(),
+            },
+            {
+                _RECONCILIATION_MANUAL_A,
+                _RECONCILIATION_MANUAL_B,
+            },
+            {},
+            [],
+        ),
+    ],
+    ids=["indice-desfasado", "indice-sincronizado"],
+)
+async def test_plan_index_repair_construye_y_registra_el_plan(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    inventory: dict[str, list[str]],
+    expected_rows: dict[UUID, set[UUID]],
+    alive_rows: set[UUID],
+    expected_orphan_chunk_ids: dict[str, list[str]],
+    expected_stale_manual_ids: list[str],
+) -> None:
+    """La planificación combina RAG y Postgres y registra su informe."""
+    http_client = MagicMock()
+    http_context = MagicMock()
+    http_context.__aenter__.return_value = http_client
+    http_context.__aexit__.return_value = False
+    http_client_factory = MagicMock(return_value=http_context)
+    get_json_mock = AsyncMock(return_value={"manuals": inventory})
+
+    session = MagicMock()
+    session_context = MagicMock()
+    session_context.__aenter__.return_value = session
+    session_context.__aexit__.return_value = False
+    session_factory = MagicMock(return_value=session_context)
+    expected_query = AsyncMock(return_value=expected_rows)
+    alive_query = AsyncMock(return_value=alive_rows)
+
+    monkeypatch.setattr(manual_service, "_internal_http_client", http_client_factory)
+    monkeypatch.setattr(manual_service.internal_client, "get_json", get_json_mock)
+    monkeypatch.setattr(manual_service, "get_sessionmaker", lambda: session_factory)
+    monkeypatch.setattr(manual_service, "list_expected_chunk_ids", expected_query)
+    monkeypatch.setattr(manual_service, "list_alive_manual_ids", alive_query)
+
+    with caplog.at_level("INFO", logger=manual_service.__name__):
+        plan = await manual_service.plan_index_repair()
+
+    assert plan.orphan_chunk_ids == expected_orphan_chunk_ids
+    assert plan.stale_manual_ids == expected_stale_manual_ids
+    assert f"huérfanos={len(expected_orphan_chunk_ids)}" in caplog.text
+    assert f"desfasados={len(expected_stale_manual_ids)}" in caplog.text
+    reported_ids = set(expected_orphan_chunk_ids) | set(expected_stale_manual_ids)
+    for manual_id in sorted(reported_ids):
+        assert manual_id in caplog.text
+
+    http_client_factory.assert_called_once_with()
+    get_json_mock.assert_awaited_once_with(
+        client=http_client,
+        service_name="RAG",
+        url=f"{manual_service.config.RAG_URL}/inventory",
+        unavailable_detail="Servicio RAG no disponible.",
+        internal_detail="Error interno al consultar el inventario RAG.",
+    )
+    session_factory.assert_called_once_with()
+    expected_query.assert_awaited_once_with(session)
+    alive_query.assert_awaited_once_with(session)
+
+
+@pytest.mark.anyio
+async def test_reindex_manual_respeta_el_lock_ocupado(monkeypatch) -> None:
+    """Si otro proceso tiene el manual, la reingesta se retira sin tocar nada."""
+
+    @asynccontextmanager
+    async def lock_ocupado(_manual_id):
+        yield None
+
+    monkeypatch.setattr(manual_service, "manual_lock", lock_ocupado)
+    get_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "get_manual_for_processing", get_mock)
+
+    await manual_service.reindex_manual(_MANUAL_ID)
+
+    get_mock.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_plan_index_repair_ignora_inventario_malformado(monkeypatch, caplog) -> None:
+    """Un inventario sin la forma esperada deja aviso y un plan vacío."""
+    client = object()
+    _patch_reindex_http_client(monkeypatch, client=client)
+    monkeypatch.setattr(
+        manual_service.internal_client,
+        "get_json",
+        AsyncMock(return_value={"otra_clave": []}),
+    )
+    consulta_mock = AsyncMock()
+    monkeypatch.setattr(manual_service, "list_expected_chunk_ids", consulta_mock)
+
+    with caplog.at_level("WARNING", logger=manual_service.__name__):
+        plan = await manual_service.plan_index_repair()
+
+    assert plan == ReconciliationPlan(orphan_chunk_ids={}, stale_manual_ids=[])
+    consulta_mock.assert_not_awaited()
+    assert "malformado" in caplog.text
+
+
+@pytest.mark.anyio
+async def test_plan_index_repair_devuelve_plan_vacio_si_rag_no_responde(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Un fallo transitorio de RAG aplaza la reparación sin consultar Postgres."""
+    http_client = MagicMock()
+    http_context = MagicMock()
+    http_context.__aenter__.return_value = http_client
+    http_context.__aexit__.return_value = False
+    http_client_factory = MagicMock(return_value=http_context)
+    get_json_mock = AsyncMock(
+        side_effect=api_exceptions.InternalServiceUnavailableError(
+            "Servicio RAG no disponible."
+        )
+    )
+    session_factory = MagicMock()
+    expected_query = AsyncMock()
+    alive_query = AsyncMock()
+
+    monkeypatch.setattr(manual_service, "_internal_http_client", http_client_factory)
+    monkeypatch.setattr(manual_service.internal_client, "get_json", get_json_mock)
+    monkeypatch.setattr(manual_service, "get_sessionmaker", lambda: session_factory)
+    monkeypatch.setattr(manual_service, "list_expected_chunk_ids", expected_query)
+    monkeypatch.setattr(manual_service, "list_alive_manual_ids", alive_query)
+
+    with caplog.at_level("WARNING", logger=manual_service.__name__):
+        plan = await manual_service.plan_index_repair()
+
+    assert plan.orphan_chunk_ids == {}
+    assert plan.stale_manual_ids == []
+    assert "No se pudo consultar el inventario RAG" in caplog.text
+    session_factory.assert_not_called()
+    expected_query.assert_not_awaited()
+    alive_query.assert_not_awaited()

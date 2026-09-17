@@ -13,8 +13,7 @@
 # .env files
 .env.local
 !config/*.env
-!secrets/*.txt
-secrets/tunnel_token.txt
+/secrets/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -479,5 +478,17 @@ frontend/src/routeTree.gen.ts
 frontend/src/shared/api/generated/
 frontend/dev-dist/
 
-# Temporalmente /docs queda excluido hasta que esté preparado
-/docs
+# Documentación interna generada o de trabajo
+/docs/architecture/
+/docs/benchmarks/ocr/preprocessing/dataset/raw/
+/docs/benchmarks/ocr/preprocessing/.tmp_preprocessed/
+/docs/benchmarks/rag/retrieval/.ranx-runtime/
+**/.ipynb_checkpoints/
+
+# Artefactos locales de desarrollo y revisión
+/.playwright-cli/
+/.tanstack/
+/.unlazy/
+/frontend/.playwright-cli/
+/frontend/.tanstack/
+/output/

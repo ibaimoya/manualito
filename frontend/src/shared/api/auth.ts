@@ -1,4 +1,5 @@
 import { JSON_HEADERS, TIMEOUT, request, requestVoid } from './http';
+import type { StoredLanguage } from '@/shared/lib/storage';
 
 /**
  * Cliente de autenticación. register/login dejan sesión iniciada (autologin) y
@@ -54,6 +55,12 @@ export interface RegisterInput {
   email: string;
   username: string;
   password: string;
+  locale: StoredLanguage;
+}
+
+export interface EmailRequest {
+  email: string;
+  locale: StoredLanguage;
 }
 
 export interface LoginInput {
@@ -65,7 +72,6 @@ export interface ResetPasswordInput {
   token: string;
   password: string;
 }
-
 
 export const authApi = {
   /** POST /api/auth/register — crea cuenta y deja sesión iniciada (autologin). */
@@ -119,22 +125,25 @@ export const authApi = {
     });
   },
 
-  /** POST /api/auth/email/resend — reenvía verificación (respuesta uniforme). */
-  async resendVerification(email: string, signal?: AbortSignal): Promise<AuthMessageResponse> {
+  /** Reenvía la verificación sin revelar si existe la cuenta. */
+  async resendVerification(
+    input: EmailRequest,
+    signal?: AbortSignal,
+  ): Promise<AuthMessageResponse> {
     return request<AuthMessageResponse>('/auth/email/resend', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(input),
       headers: JSON_HEADERS,
       timeoutMs: TIMEOUT.QUICK,
       signal,
     });
   },
 
-  /** POST /api/auth/password/forgot — inicia reset (respuesta uniforme). */
-  async forgotPassword(email: string, signal?: AbortSignal): Promise<AuthMessageResponse> {
+  /** Solicita recuperar la contraseña sin revelar si existe la cuenta. */
+  async forgotPassword(input: EmailRequest, signal?: AbortSignal): Promise<AuthMessageResponse> {
     return request<AuthMessageResponse>('/auth/password/forgot', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(input),
       headers: JSON_HEADERS,
       timeoutMs: TIMEOUT.QUICK,
       signal,

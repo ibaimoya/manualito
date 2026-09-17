@@ -3,6 +3,7 @@
 from typing import Any
 
 from api import config
+from api.schemas import ApiErrorResponse
 
 _MB = 1_000_000
 
@@ -17,7 +18,7 @@ def _format_megabytes(byte_count: int) -> str:
 
 def openapi_response(status_code: int | str, description: str) -> OpenApiResponses:
     """Construye un bloque de respuestas tipado para FastAPI."""
-    return {status_code: {"description": description}}
+    return {status_code: {"description": description, "model": ApiErrorResponse}}
 
 
 MANUAL_UPLOAD_TOO_LARGE_RESPONSE = openapi_response(

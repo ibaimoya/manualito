@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { authApi } from '@/shared/api/auth';
 
 const RESEND_COOLDOWN_SECONDS = 45;
@@ -28,9 +29,14 @@ export function resetResendCooldown(): void {
  * lanzarlo desde el banner también bloquea el botón del perfil, y viceversa.
  */
 export function useResendVerification(email: string) {
+  const { i18n } = useTranslation();
   const [cooldown, setCooldown] = useState(remainingSeconds);
   const resend = useMutation({
-    mutationFn: () => authApi.resendVerification(email),
+    mutationFn: () =>
+      authApi.resendVerification({
+        email,
+        locale: i18n.resolvedLanguage === 'en' ? 'en' : 'es',
+      }),
     onSuccess: startCooldown,
   });
 

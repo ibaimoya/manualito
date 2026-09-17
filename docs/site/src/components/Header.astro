@@ -1,0 +1,84 @@
+---
+import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
+import Search from '@astrojs/starlight/components/Search.astro';
+import SocialIcons from '@astrojs/starlight/components/SocialIcons.astro';
+
+import LogoManualito from '../assets/manualito.svg';
+import { tieneVersionMd } from '../datos/paginas-md';
+import CopiarPagina from './CopiarPagina.astro';
+import ProgresoLectura from './ProgresoLectura.astro';
+import ThemeSelect from './ThemeSelect.astro';
+
+const { entry, id, siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+const mostrarProgreso = id !== '';
+const mostrarCopiar = tieneVersionMd(entry);
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex">
+    <a href={siteTitleHref} class="site-title sl-flex">
+      <LogoManualito aria-hidden="true" focusable="false" />
+      <span translate="no">{siteTitle}</span>
+    </a>
+  </div>
+  <div class="sl-flex print:hidden">
+    <Search />
+  </div>
+  <div class="sl-flex print:hidden acciones-cabecera">
+    {mostrarCopiar && <CopiarPagina rutaMd={`/${id}.md`} />}
+    <div class="sl-hidden md:sl-flex right-group">
+      <div class="sl-flex social-icons">
+        <SocialIcons />
+      </div>
+      <ThemeSelect />
+      <LanguageSelect />
+    </div>
+  </div>
+</div>
+
+{mostrarProgreso && <ProgresoLectura />}
+
+<style>
+  .acciones-cabecera {
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Réplica parcial del Header oficial de Starlight 0.41.4, revisar al actualizar. */
+  @layer starlight.core {
+    .header {
+      display: flex;
+      gap: var(--sl-nav-gap);
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+
+    .title-wrapper {
+      overflow: clip;
+      padding: 0.25rem;
+      margin: -0.25rem;
+      min-width: 0;
+    }
+
+    .right-group,
+    .social-icons {
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .social-icons::after {
+      content: '';
+      height: 2rem;
+      border-inline-end: 1px solid var(--sl-color-gray-5);
+    }
+
+    /* El reparto de columnas lo fija custom.css, aquí solo queda el modo grid. */
+    @media (min-width: 50rem) {
+      .header {
+        display: grid;
+        align-content: center;
+      }
+    }
+  }
+</style>

@@ -22,6 +22,10 @@ class RagDeletionError(RagError):
     """El borrado de chunks derivados ha fallado de forma inesperada."""
 
 
+class RagInventoryError(RagError):
+    """La consulta del inventario del índice ha fallado de forma inesperada."""
+
+
 def context_not_found_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": "Contexto no encontrado."})
 
@@ -47,9 +51,17 @@ def rag_deletion_handler(_request: Request, _exc: Exception) -> JSONResponse:
     )
 
 
+def rag_inventory_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno al consultar el inventario del índice."},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Registra los handlers globales del servicio RAG."""
     app.add_exception_handler(ContextNotFoundError, context_not_found_handler)
     app.add_exception_handler(RagIndexingError, rag_indexing_handler)
     app.add_exception_handler(RagRetrievalError, rag_retrieval_handler)
     app.add_exception_handler(RagDeletionError, rag_deletion_handler)
+    app.add_exception_handler(RagInventoryError, rag_inventory_handler)

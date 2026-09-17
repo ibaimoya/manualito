@@ -33,11 +33,7 @@ export const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivEleme
 export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   function CardTitle({ className, children, ...props }, ref) {
     return (
-      <h3
-        ref={ref}
-        className={cn('font-display text-lg font-bold text-fg', className)}
-        {...props}
-      >
+      <h3 ref={ref} className={cn('font-display text-lg font-bold text-fg', className)} {...props}>
         {children}
       </h3>
     );
@@ -53,13 +49,7 @@ export const CardDescription = forwardRef<
 
 export const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   function CardContent({ className, ...props }, ref) {
-    return (
-      <div
-        ref={ref}
-        className={cn('p-[var(--m-space-4)] pt-0', className)}
-        {...props}
-      />
-    );
+    return <div ref={ref} className={cn('p-[var(--m-space-4)] pt-0', className)} {...props} />;
   },
 );
 

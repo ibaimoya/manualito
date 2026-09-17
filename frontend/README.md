@@ -58,7 +58,7 @@ paquetes no declarados explícitamente.
 | Estado servidor | TanStack Query                                    |
 | Estilos         | Tailwind CSS v4, tokens propios y fuentes locales |
 | Componentes     | Primitivos propios apoyados en Radix UI           |
-| Iconos          | Lucide React                                      |
+| Iconos          | Phosphor Icons (`@phosphor-icons/react`)          |
 | Notificaciones  | Sonner                                            |
 | PWA             | `vite-plugin-pwa` con caché offline               |
 | Tests           | Vitest, Testing Library, MSW y jest-axe           |
@@ -175,3 +175,6 @@ La suite de tests usa:
 ## Licencia
 
 Hereda la [licencia MIT del proyecto](../LICENSE).
+
+Los iconos y los glifos derivados de su geometría proceden de Phosphor Icons, con
+[licencia MIT](licenses/phosphor.txt).

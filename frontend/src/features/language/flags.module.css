@@ -1,0 +1,55 @@
+/* Banderas estilo juguete del selector de idioma */
+
+@property --flag-s {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.frame {
+  display: inline-block;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(31, 22, 17, 0.14);
+}
+:global(html.theme-dark) .frame {
+  box-shadow: inset 0 0 0 1px rgba(247, 236, 215, 0.18);
+}
+.frame svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Híbrida — USA debajo, UK recortada encima y una costura que barre */
+.mix {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  --flag-s: 0;
+}
+.mix svg {
+  position: absolute;
+  inset: 0;
+}
+
+/* La hipotenusa es la diagonal, s va de -1 (UK entera) a 1 (USA entera) */
+.top {
+  clip-path: polygon(
+    calc(200% + var(--flag-s) * 100%) -100%,
+    calc(-100% + var(--flag-s) * 100%) 200%,
+    calc(200% + var(--flag-s) * 100%) 200%
+  );
+}
+
+/* Trasladar en vertical mantiene la costura paralela a la diagonal */
+.seam {
+  position: absolute;
+  left: -50%;
+  top: 50%;
+  width: 200%;
+  height: 1px;
+  background: #fff8f0;
+  transform: translateY(calc(var(--flag-s) * var(--flag-h))) rotate(var(--flag-angle));
+}

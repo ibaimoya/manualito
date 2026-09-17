@@ -78,6 +78,23 @@ class AuthorizedChunk:
     manual_title: str | None
     source_page: int
     is_own: bool
+    author_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ManualSourceInfo:
+    """Título y nombre de usuario que se pueden mostrar en una fuente."""
+
+    title: str | None
+    author_name: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ReconciliationPlan:
+    """Plan determinista para reparar el desfase del índice RAG."""
+
+    orphan_chunk_ids: dict[str, list[str]]
+    stale_manual_ids: list[str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +119,7 @@ class ManualSummary:
     title: str | None
     status: str
     visibility: str
+    anonymous: bool
     source_type: str
     page_count: int
     language: str | None
@@ -129,8 +147,9 @@ class ManualPageDetail:
 
 @dataclass(frozen=True, slots=True)
 class ManualDetail(ManualSummary):
-    """Detalle completo de manual propio."""
+    """Páginas del manual y relación con el usuario que lo consulta."""
 
+    is_own: bool
     pages: list[ManualPageDetail]
 
 

@@ -1,0 +1,26 @@
+{
+  "actions": {
+    "createAccount": "Sign up",
+    "darkMode": "Use dark mode",
+    "lightMode": "Use light mode",
+    "privacy": "Privacy Policy",
+    "signIn": "Log in",
+    "website": "Manualito, visit the website"
+  },
+  "book": {
+    "coverTitle": "Manualito.",
+    "inscription": [
+      "In good company, you and I\nBring one more friend to the club\nA place for games and pizza\nInvent a new tale, you and I",
+      "Make room for a bigger team\nOne more turn before we go\nYou might just win today\nAnd laugh about the drama",
+      "Another round, another idea\nRoll again and see things clearer\nOpen the box and give it a go\nZero rush, just a little buzz"
+    ],
+    "pageTitle": "Before you begin"
+  },
+  "errors": {
+    "navigation": "We couldn’t open the page. Please try again."
+  },
+  "welcome": {
+    "description": "Look up the rules and get answers to your board game questions.",
+    "title": "Let the game begin."
+  }
+}

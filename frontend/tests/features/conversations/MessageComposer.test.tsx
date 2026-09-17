@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 
@@ -31,6 +31,19 @@ function ComposerHarness({
 }
 
 describe('MessageComposer', () => {
+  it('no envía al confirmar una composición IME y permite Enter después', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<ComposerHarness initialValue="日本語" onSubmit={onSubmit} />);
+    const input = screen.getByRole('textbox');
+    input.focus();
+
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.keyboard('{Enter}');
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
   it('permite escribir mientras el envio esta pendiente, pero bloquea el boton', async () => {
     const user = userEvent.setup();
     render(<ComposerHarness sendPending />);

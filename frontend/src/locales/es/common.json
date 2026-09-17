@@ -1,0 +1,22 @@
+{
+  "accessibility": {
+    "languageSelector": "Idioma de la interfaz"
+  },
+  "actions": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "clearSearch": "Limpiar búsqueda",
+    "close": "Cerrar",
+    "delete": "Borrar",
+    "retry": "Reintentar",
+    "save": "Guardar"
+  },
+  "attribution": {
+    "anonymous": "Anónimo",
+    "uploadedBy": "Subido por {{name}}"
+  },
+  "status": {
+    "justNow": "ahora mismo",
+    "loading": "Cargando…"
+  }
+}

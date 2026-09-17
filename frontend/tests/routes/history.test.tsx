@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { Route as HistoryRoute } from '@/routes/_app.history';
+import { myGamesKey } from '@/features/games/use-games';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
@@ -77,12 +78,49 @@ async function goToManuals(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('/history', () => {
-  it('Juegos vacío: estado vacío con CTA a Explorar', async () => {
+  it.each([
+    { tab: 'Juegos', endpoint: '/api/games/mine', body: { games: [libraryGame('g1', 'Catan')] } },
+    { tab: 'Manuales', endpoint: '/api/manuals', body: { manuals: [manual('m1', 'Catan')] } },
+  ])(
+    'recupera $tab sin sustituir el aviso por un estado vacío durante el reintento',
+    async ({ tab, endpoint, body }) => {
+      server.use(NO_GAMES, NO_MANUALS);
+      server.use(http.get(endpoint, () => new HttpResponse(null, { status: 500 })));
+      renderHistory();
+      if (tab === 'Manuales') await goToManuals(userEvent.setup());
+      const notice = await screen.findByRole('region', { name: 'No pudimos cargar tu biblioteca' });
+      const button = within(notice).getByRole('button', { name: 'Reintentar' });
+      const response = Promise.withResolvers<void>();
+      server.use(
+        http.get(endpoint, async () => {
+          await response.promise;
+          return HttpResponse.json(body);
+        }),
+      );
+
+      await userEvent.click(button);
+      await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+      expect(button).toBeDisabled();
+      expect(notice).toBeInTheDocument();
+      expect(screen.queryByText(/Aún no (sigues|has subido)/)).not.toBeInTheDocument();
+
+      response.resolve();
+      expect(await screen.findByRole('link', { name: /Abrir Catan/ })).toBeInTheDocument();
+      expect(notice).not.toBeInTheDocument();
+    },
+  );
+
+  it('conserva el estado vacío con CTA a Explorar si falla una actualización', async () => {
     server.use(NO_GAMES, NO_MANUALS);
-    renderHistory();
+    const { qc } = renderHistory();
     expect(await screen.findByText(/Aún no sigues ningún juego/)).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Explorar juegos/i });
     expect(link).toHaveAttribute('href', '/explore');
+    server.use(http.get('/api/games/mine', () => new HttpResponse(null, { status: 500 })));
+    await qc.invalidateQueries({ queryKey: myGamesKey });
+    await waitFor(() => expect(qc.getQueryState(myGamesKey)?.status).toBe('error'));
+    expect(link).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it('vista Juegos: lista los juegos y enlaza a su hub', async () => {
@@ -116,7 +154,7 @@ describe('/history', () => {
     const search = await screen.findByRole('combobox', { name: /Saltar a un juego/i });
     await user.type(search, 'wing');
     const results = await screen.findByLabelText('Tus juegos');
-    await user.click(within(results).getByRole('button', { name: /Wingspan/i }));
+    await user.click(within(results).getByRole('option', { name: /Wingspan/i }));
     expect(await screen.findByText('GameHubScreen')).toBeInTheDocument();
   });
 
@@ -150,7 +188,11 @@ describe('/history', () => {
     renderHistory();
     const user = userEvent.setup();
     await goToManuals(user);
-    expect(await screen.findByText('1 página duplicada')).toBeInTheDocument();
+    const indicator = await screen.findByRole('button', { name: /Una página es idéntica/ });
+    expect(indicator).toHaveTextContent('1');
+    await user.hover(indicator);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/Una página es idéntica/);
+    expect(screen.getByRole('link', { name: /Abrir Catan/ })).toHaveAttribute('href', '/manual/m1');
   });
 
   it('en Manuales, el filtro acota la lista por nombre', async () => {
@@ -169,9 +211,20 @@ describe('/history', () => {
     renderHistory();
     const user = userEvent.setup();
     await goToManuals(user);
-    await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
+    const trigger = await screen.findByRole('button', { name: /Borrar Catan/i });
+    await user.click(trigger);
     expect(await screen.findByText(/¿Borrar este manual de Catan\?/)).toBeInTheDocument();
+    const cancel = screen.getByRole('button', { name: /Cancelar/i });
+    expect(cancel).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: /^Borrar$/ })).toHaveFocus();
+    await user.tab();
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await user.click(trigger);
     await user.click(screen.getByRole('button', { name: /Cancelar/i }));
+    await waitFor(() => expect(trigger).toHaveFocus());
     expect(screen.getByText('Catan')).toBeInTheDocument();
   });
 
@@ -194,5 +247,30 @@ describe('/history', () => {
       expect(screen.queryByText('Catan')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
+  });
+
+  it('si falla el borrado, repone el manual y explica el fallo', async () => {
+    const response = Promise.withResolvers<void>();
+    server.use(
+      NO_GAMES,
+      withManuals('Catan', 'Wingspan'),
+      http.delete('/api/manuals/m1', async () => {
+        await response.promise;
+        return new HttpResponse(null, { status: 500 });
+      }),
+    );
+    renderHistory();
+    const user = userEvent.setup();
+    await goToManuals(user);
+    await user.click(await screen.findByRole('button', { name: /Borrar Catan/i }));
+    await user.click(screen.getByRole('button', { name: /^Borrar$/i }));
+    await waitFor(() => expect(screen.queryByText('Catan')).not.toBeInTheDocument());
+    expect(screen.queryByText('No hemos podido borrar el manual')).not.toBeInTheDocument();
+
+    response.resolve();
+    expect(await screen.findByRole('link', { name: /Abrir Catan/i })).toBeInTheDocument();
+    expect(await screen.findByText('No hemos podido borrar el manual')).toBeInTheDocument();
+    expect(screen.getByText('Inténtalo de nuevo en un momento.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Abrir Wingspan/i })).toBeInTheDocument();
   });
 });

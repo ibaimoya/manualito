@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 function Sample({ defaultOpen = false }: { defaultOpen?: boolean }) {
   return (
@@ -48,12 +53,18 @@ describe('Accordion', () => {
     trigger.focus();
     await user.keyboard('{Enter}');
     expect(screen.getByText('Contenido A')).toBeInTheDocument();
+    await user.keyboard(' ');
+    expect(screen.queryByText('Contenido A')).not.toBeInTheDocument();
   });
 
   it('pasa axe a11y abierto y cerrado', async () => {
-    const { container, rerender } = render(<Sample />);
+    const user = userEvent.setup();
+    const { container } = render(<Sample />);
     expect(await axe(container)).toHaveNoViolations();
-    rerender(<Sample defaultOpen />);
+    const trigger = screen.getByRole('button', { name: 'Sección A' });
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Contenido A')).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 });

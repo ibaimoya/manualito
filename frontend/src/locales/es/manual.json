@@ -1,0 +1,249 @@
+{
+  "buttons": {
+    "cancel": "Cancelar",
+    "continueEditing": "Seguir editando",
+    "deleteManual": "Eliminar manual",
+    "deleteManualDisabled": "Termina de editar la página para eliminar el manual.",
+    "readAgain": "Releer esta página",
+    "reprocess": "Reprocesar",
+    "save": "Guardar"
+  },
+  "card": {
+    "processing": "Procesando…"
+  },
+  "confidence": {
+    "labels": {
+      "high": "Alta",
+      "low": "Baja",
+      "medium": "Media"
+    },
+    "lineLabel": "Confianza OCR de esta línea: {{label}}, {{percent}} por ciento",
+    "noData": "Confianza OCR: sin dato",
+    "ranges": {
+      "high": "≥ 90 %",
+      "low": "< 75 %",
+      "medium": "75–89 %"
+    },
+    "shortNoData": "s/d",
+    "toggle": {
+      "disabledTitle": "Esta página no tiene datos de confianza OCR.",
+      "label": "Confianza por línea",
+      "title": "Muestra la confianza de cada línea"
+    }
+  },
+  "details": {
+    "confirm": {
+      "hide": {
+        "action": "Usar Anónimo",
+        "text": "Tu nombre dejará de aparecer junto a este manual y en las fuentes de las respuestas.",
+        "title": "¿Volver a aparecer como Anónimo?"
+      },
+      "show": {
+        "action": "Compartir con mi nombre",
+        "text": "Otros verán tu nombre junto a este manual y en las fuentes de las respuestas.",
+        "title": "¿Compartir con tu nombre?"
+      }
+    },
+    "errors": {
+      "empty": "Escribe un nombre para el manual.",
+      "network": "No hemos podido guardar los cambios. Inténtalo de nuevo.",
+      "tooLong": "Usa un máximo de {{max}} caracteres."
+    },
+    "field": "Nombre del manual",
+    "help": "El cambio también se verá en las fuentes de tus conversaciones.",
+    "rename": "Renombrar manual",
+    "save": "Guardar nombre",
+    "sharing": {
+      "anonymous": "Compartido como Anónimo",
+      "named": "Compartido con mi nombre",
+      "switchToAnonymous": "Compartido con mi nombre. Cambiar para volver a aparecer como Anónimo",
+      "switchToNamed": "Compartido como Anónimo. Cambiar para compartir con mi nombre"
+    },
+    "title": "Renombrar manual"
+  },
+  "dialogs": {
+    "delete": {
+      "description": "Confirma que quieres borrarlo.",
+      "header": "Eliminar manual",
+      "irreversible": "Esta acción no se puede deshacer.",
+      "shared": "Es <strong>compartido</strong>: dejará de estar disponible para otras personas en {{gameName}}.",
+      "warning_one": "Se borrará <strong>«{{title}}»</strong> de {{gameName}}: su {{count}} página y su texto extraído. La explicación del juego se regenerará con los manuales restantes.",
+      "warning_other": "Se borrará <strong>«{{title}}»</strong> de {{gameName}}: sus {{count}} páginas y su texto extraído. La explicación del juego se regenerará con los manuales restantes."
+    },
+    "reprocess": {
+      "description": "Volveremos a leer todas las páginas con OCR y a indexar el texto. La explicación del juego se regenerará.",
+      "header": "Reprocesar manual"
+    },
+    "save": {
+      "description": "Sustituirá lo leído en la página {{pageNumber}}: la IA responderá con tu versión y la página quedará como «Editada a mano».",
+      "header": "¿Guardar los cambios?"
+    }
+  },
+  "errors": {
+    "empty": {
+      "description": "Este manual aún no tiene páginas disponibles. Comprueba de nuevo su estado o vuelve a tu biblioteca.",
+      "title": "Todavía no hay páginas que mostrar"
+    },
+    "load": {
+      "description": "Ha ocurrido un error al cargarlo. Puedes volver a intentarlo desde aquí.",
+      "historyLink": "Ir a la biblioteca",
+      "title": "No hemos podido abrir este manual"
+    },
+    "missing": {
+      "description": "Puede que se haya borrado o que no tengas acceso. En tu biblioteca encontrarás los manuales disponibles.",
+      "title": "Este manual no está disponible"
+    }
+  },
+  "feedback": {
+    "delete": {
+      "error": "No hemos podido borrar el manual",
+      "errorDescription": "Inténtalo de nuevo en un momento.",
+      "success": "Manual borrado"
+    },
+    "details": {
+      "hidden": "Compartido como Anónimo",
+      "renamed": "Nombre guardado",
+      "shown": "Compartido con mi nombre"
+    },
+    "edit": {
+      "busy": "El manual se está procesando",
+      "busyHint": "Espera a que termine e inténtalo de nuevo.",
+      "failedDescription": "Inténtalo de nuevo en un momento.",
+      "failedTitle": "No hemos podido guardar el texto",
+      "pendingIndex": "Texto guardado, índice pendiente",
+      "pendingIndexDescription": "Tu texto ya está guardado. Reprocesa el manual para sincronizar la IA.",
+      "saved": "Texto guardado",
+      "savedDescription": "La IA usará tu versión a partir de ahora."
+    },
+    "reprocess": {
+      "busy": "El manual ya se está procesando",
+      "failedDescription": "Inténtalo de nuevo en un momento.",
+      "failedTitle": "No hemos podido reprocesar el manual",
+      "progress": "Reprocesando el manual…"
+    }
+  },
+  "image": {
+    "actualSize": "Tamaño real",
+    "alt": "Página {{pageNumber}} de {{title}}",
+    "controls": "Controles de la imagen",
+    "dialogDescription": "Página {{pageNumber}} de {{pageCount}} · {{title}}",
+    "dialogTitle": "Imagen de la página",
+    "errorDescription": "Vuelve a intentarlo para ver la página original.",
+    "errorTitle": "No se ha podido cargar la imagen",
+    "fit": "Zoom",
+    "fitPage": "Página completa",
+    "fitWidth": "Ajustar al ancho",
+    "keyboardHint": "Imagen original. Usa las flechas para moverte, + y - para acercar o alejar y 0 para ajustar la página.",
+    "loading": "Cargando imagen…",
+    "missingDescription": "Puedes seguir consultando el texto del manual.",
+    "missingTitle": "La imagen no está disponible",
+    "retry": "Volver a intentar",
+    "zoomIn": "Acercar imagen",
+    "zoomOut": "Alejar imagen",
+    "zoomValue": "Zoom de imagen"
+  },
+  "meta": {
+    "format": {
+      "pdf": "PDF",
+      "photos": "Fotos"
+    },
+    "pages_one": "{{count}} página",
+    "pages_other": "{{count}} páginas",
+    "uploaded": "Subido el {{date}}"
+  },
+  "navigation": {
+    "extractedText": "Texto extraído",
+    "library": "Biblioteca",
+    "manual": "Manual"
+  },
+  "page": {
+    "articleLabel": "Página {{pageNumber}} de {{pageCount}}",
+    "buttonLabel": "Página {{pageNumber}} · {{status}}{{hits}}",
+    "heading": "Páginas",
+    "label": "Página",
+    "legend": "Estados de las páginas",
+    "matches_one": ", {{count}} coincidencia",
+    "matches_other": ", {{count}} coincidencias",
+    "navLabel": "Páginas del manual",
+    "next": "Página siguiente",
+    "number": "Página {{pageNumber}}",
+    "previous": "Página anterior"
+  },
+  "search": {
+    "ariaLabel": "Buscar en el texto del manual",
+    "clear": "Limpiar búsqueda",
+    "next": "Coincidencia siguiente",
+    "placeholder": "Buscar en todo el manual…",
+    "previous": "Coincidencia anterior"
+  },
+  "status": {
+    "duplicate": {
+      "label": "Duplicada",
+      "short": "Duplicada",
+      "tip": "Esta página es idéntica a otra que ya habías subido. No se vuelve a leer porque no aporta nada nuevo, así que esta copia no cuenta para la explicación."
+    },
+    "edited": {
+      "label": "Editada a mano",
+      "short": "Editada",
+      "tip": "Corregiste el texto de esta página a mano."
+    },
+    "empty": {
+      "label": "Sin texto disponible",
+      "short": "Sin texto",
+      "tip": "Esta página no contiene texto disponible para consultar."
+    },
+    "failed": {
+      "label": "Error de lectura",
+      "short": "Error",
+      "tip": "No pudimos extraer texto de esta página. Reintenta o sube otra foto."
+    },
+    "low": {
+      "label": "Poco clara",
+      "short": "Poco clara",
+      "tip": "El OCR no está seguro de esta página. Puedes releerla o corregirla a mano."
+    },
+    "ok": {
+      "label": "Texto disponible",
+      "short": "Disponible",
+      "tip": "Texto disponible para consultar. Puedes contrastarlo con la página original."
+    },
+    "processing": {
+      "label": "Procesando",
+      "short": "Pendiente",
+      "tip": "Estamos leyendo esta página."
+    }
+  },
+  "text": {
+    "characterCount_one": "{{formattedCount}} carácter",
+    "characterCount_other": "{{formattedCount}} caracteres",
+    "correctionAdded": "Añadido por IA",
+    "correctionPreviously": "Antes: “{{original}}”",
+    "counter": "{{current}} / {{max}} caracteres",
+    "dirtyState": "Cambios sin guardar",
+    "editingHint": "Corrige el texto y guarda los cambios.",
+    "editLabel": "Texto de la página {{pageNumber}}",
+    "empty": "No hay texto legible en esta página.",
+    "emptyDraft": "Escribe algo de texto para guardar.",
+    "failedDescription": "La foto salió demasiado oscura o movida. Reintenta la lectura o sube de nuevo el manual con una versión más nítida.",
+    "failedTitle": "No pudimos leer esta página",
+    "savedState": "Sin cambios",
+    "tooLong": "Reduce el texto a {{max}} caracteres."
+  },
+  "workspace": {
+    "compare": "Comparar",
+    "confidence": "Confianza",
+    "discard": "Descartar cambios",
+    "discardDescription": "Hay texto sin guardar en esta página. Puedes seguir editándolo o descartarlo para continuar.",
+    "discardTitle": "¿Descartar los cambios?",
+    "edit": "Editar",
+    "editing": "Página {{pageNumber}} · Edición",
+    "expand": "Ampliar original",
+    "extractedText": "Texto extraído",
+    "original": "Original",
+    "reading": "Página {{pageNumber}} · Lectura",
+    "reread": "Volver a leer",
+    "shared": "Compartido · Solo lectura",
+    "text": "Texto",
+    "view": "Vista del manual"
+  }
+}

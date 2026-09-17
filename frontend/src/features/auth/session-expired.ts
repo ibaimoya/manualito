@@ -1,6 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { createElement } from 'react';
 import { toast } from 'sonner';
 import { router } from '@/app/AppRouter';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 import { ApiError } from '@/shared/api/http';
 import { dropSessionCaches } from './auth-queries';
 
@@ -21,9 +23,9 @@ export function handleSessionExpired(error: unknown, queryClient: QueryClient): 
   if (redirecting || router.state.location.pathname === '/login') return;
   redirecting = true;
 
-  toast.warning('Tu sesión ha caducado', {
+  toast.warning(createElement(LiveTrans, { ns: 'errors', i18nKey: 'session.expired.title' }), {
     id: 'session-expired',
-    description: 'Vuelve a entrar para continuar.',
+    description: createElement(LiveTrans, { ns: 'errors', i18nKey: 'session.expired.description' }),
   });
   const redirect = router.state.location.href;
   dropSessionCaches(queryClient)

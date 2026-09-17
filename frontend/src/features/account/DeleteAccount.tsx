@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { WarningIcon } from '@phosphor-icons/react';
+import { TrashIcon } from '@/shared/components/action-icons';
 import { useId, useState } from 'react';
+import { Trans, Translation, useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +13,8 @@ import { accountStatsQueryOptions } from '@/features/profile/use-account';
 import { accountApi, type AccountStats } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
 import { SectionHead } from '@/shared/components/SectionHead';
+import { LiveTrans } from '@/shared/components/LiveTrans';
+import { tourTarget } from '@/features/tutorial/targets';
 
 type DeleteAccountFormProps = Readonly<{
   username: string;
@@ -19,6 +23,7 @@ type DeleteAccountFormProps = Readonly<{
 }>;
 
 export function DeleteAccountButton({ username }: Readonly<{ username: string }>) {
+  const { t } = useTranslation('security');
   const [open, setOpen] = useState(false);
 
   return (
@@ -27,11 +32,11 @@ export function DeleteAccountButton({ username }: Readonly<{ username: string }>
         type="button"
         size="sm"
         variant="ghost"
-        className="text-error hover:bg-error-bg"
+        className="text-error hover:text-error"
         onClick={() => setOpen(true)}
       >
-        <Trash2 size={14} strokeWidth={2} />
-        Borrar cuenta
+        <TrashIcon size={16} />
+        {t('delete.button')}
       </Button>
       <DeleteAccountDialog open={open} onOpenChange={setOpen} username={username} />
     </>
@@ -39,12 +44,13 @@ export function DeleteAccountButton({ username }: Readonly<{ username: string }>
 }
 
 export function DeleteAccountSection({ username }: Readonly<{ username: string }>) {
+  const { t } = useTranslation('security');
   const stats = useQuery(accountStatsQueryOptions());
 
   return (
-    <section aria-label="Eliminar cuenta">
-      <SectionHead eyebrow="Zona de peligro" title="Eliminar cuenta" />
-      <DeleteAccountForm username={username} stats={stats.data} submitLabel="Eliminar mi cuenta" />
+    <section aria-label={t('delete.sectionTitle')} {...tourTarget('security-delete')}>
+      <SectionHead eyebrow={t('delete.dangerZone')} title={t('delete.sectionTitle')} />
+      <DeleteAccountForm username={username} stats={stats.data} submitLabel={t('delete.submit')} />
     </section>
   );
 }
@@ -58,47 +64,61 @@ function DeleteAccountDialog({
   onOpenChange: (open: boolean) => void;
   username: string;
 }>) {
+  const { t } = useTranslation('security');
   const stats = useQuery({ ...accountStatsQueryOptions(), enabled: open });
 
   return (
     <ResponsiveModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Borrar cuenta"
-      description="Se eliminarán tu cuenta y sus datos asociados."
+      title={t('delete.button')}
+      description={t('delete.description')}
       contentClassName="max-w-lg"
       bodyClassName="max-h-[70dvh] overflow-y-auto"
     >
       <DeleteAccountForm
         username={username}
         stats={stats.data}
-        submitLabel="Borrar cuenta definitivamente"
+        submitLabel={t('delete.submitPermanently')}
       />
     </ResponsiveModal>
   );
 }
 
 function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormProps) {
+  const { t } = useTranslation('security');
   const qc = useQueryClient();
   const router = useRouter();
   const confirmId = useId();
   const [confirmation, setConfirmation] = useState('');
   const matches = confirmation.trim().toLowerCase() === username.toLowerCase();
+  const summary = stats
+    ? t('delete.contentsWithStats', {
+        games: stats.games_count,
+        conversations: stats.conversations_count,
+        manuals: stats.manuals_count,
+      })
+    : t('delete.contentsWithoutStats');
 
   const remove = useMutation({
     mutationFn: () => accountApi.deleteAccount(confirmation.trim()),
     onSuccess: async () => {
-      toast.success('Cuenta borrada', {
+      toast.success(t('delete.success'), {
         id: 'account-delete',
-        description: 'Hemos cerrado tu sesión en este dispositivo.',
+        description: t('delete.successDescription'),
       });
       await dropSessionCaches(qc);
       await router.invalidate();
     },
     onError: (error) => {
-      toast.error('No hemos podido borrar la cuenta', {
+      toast.error(<LiveTrans ns="security" i18nKey="delete.errorTitle" />, {
         id: 'account-delete',
-        description: deleteAccountError(error),
+        description:
+          error instanceof ApiError ? (
+            <Translation ns="errors">{() => error.view.message}</Translation>
+          ) : (
+            <LiveTrans ns="security" i18nKey="delete.error" />
+          ),
       });
     },
   });
@@ -111,17 +131,20 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
   return (
     <form onSubmit={submit} noValidate className="rounded-2xl border border-error bg-error-bg p-5">
       <div className="flex gap-3">
-        <AlertTriangle size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
+        <WarningIcon size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
         <p className="text-sm leading-relaxed text-fg">
-          Se borrarán <strong>para siempre</strong> {accountContentsSummary(stats)}. Los manuales
-          que compartiste dejarán de estar disponibles para otros usuarios. No hay vuelta atrás ni
-          copia de seguridad.
+          <Trans
+            ns="security"
+            i18nKey="delete.warning"
+            values={{ summary }}
+            components={{ strong: <strong /> }}
+          />
         </p>
       </div>
 
       <div className="mt-4">
         <label htmlFor={confirmId} className="mb-1.5 block text-sm font-semibold text-fg">
-          Escribe tu usuario (@{username}) para confirmar
+          {t('delete.confirmUsername', { username })}
         </label>
         <Input
           id={confirmId}
@@ -137,20 +160,10 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
 
       <div className="mt-4">
         <Button type="submit" variant="destructive" disabled={!matches} loading={remove.isPending}>
-          <Trash2 size={16} strokeWidth={2} />
+          <TrashIcon size={16} />
           {submitLabel}
         </Button>
       </div>
     </form>
   );
-}
-
-function accountContentsSummary(stats: AccountStats | undefined): string {
-  if (!stats) return 'tu perfil, tus juegos, conversaciones y manuales';
-  return `tu perfil, tus ${stats.games_count} juegos, ${stats.conversations_count} conversaciones y ${stats.manuals_count} manuales`;
-}
-
-function deleteAccountError(error: unknown): string {
-  if (error instanceof ApiError) return error.view.message;
-  return 'Inténtalo de nuevo en un momento.';
 }

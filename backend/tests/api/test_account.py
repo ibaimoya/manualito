@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, create_autospec
 from uuid import uuid4
 
 import anyio
@@ -25,6 +25,7 @@ from api.auth.exceptions import DuplicateIdentityError, InvalidCredentialsError
 from api.auth.service import AuthEmailJob, AuthenticatedSession
 from api.main import app
 from api.rate_limit import limiter
+from api.worker.tasks.mail import send_email_task
 from database.models.auth import AuthSession
 from database.models.user import User
 from database.session import get_db_session
@@ -103,26 +104,28 @@ def test_update_profile_returns_public_user(
     update_mock = AsyncMock(
         return_value=ProfileUpdateResult(user=_user(username="marta_a"), email_job=None)
     )
-    email_mock = AsyncMock()
+    queue_mock = create_autospec(send_email_task.apply_async)
     monkeypatch.setattr("api.account.router.update_profile", update_mock)
-    monkeypatch.setattr("api.account.router.schedule_verification_email", email_mock)
+    monkeypatch.setattr(send_email_task, "apply_async", queue_mock)
 
-    response = client.patch("/api/me", json={"username": "marta_a"})
+    response = client.patch("/api/me", json={"username": "marta_a", "locale": "es"})
 
     assert response.status_code == 200
     assert response.json()["user"]["username"] == "marta_a"
     update_mock.assert_awaited_once()
     assert update_mock.await_args.kwargs["username"] == "marta_a"
     assert update_mock.await_args.kwargs["email"] is None
-    email_mock.assert_not_called()
+    queue_mock.assert_not_called()
 
 
+@pytest.mark.parametrize("locale", ["es", "en"])
 def test_update_profile_with_email_schedules_verification(
     client,
     monkeypatch,
     override_auth_and_db,
+    locale,
 ):
-    """Cambiar el email agenda el correo con el token recién emitido."""
+    """Genera el correo real e intercepta la cola externa para evitar el envío."""
     email_job = AuthEmailJob(email="nueva@example.com", username="Manualito", token="token-123")
     update_mock = AsyncMock(
         return_value=ProfileUpdateResult(
@@ -130,21 +133,36 @@ def test_update_profile_with_email_schedules_verification(
             email_job=email_job,
         )
     )
-    scheduled: list[dict] = []
-
-    def fake_schedule(**kwargs):
-        scheduled.append(kwargs)
+    queue_mock = create_autospec(send_email_task.apply_async)
 
     monkeypatch.setattr("api.account.router.update_profile", update_mock)
-    monkeypatch.setattr("api.account.router.schedule_verification_email", fake_schedule)
+    monkeypatch.setattr(send_email_task, "apply_async", queue_mock)
 
-    response = client.patch("/api/me", json={"email": "nueva@example.com"})
+    response = client.patch("/api/me", json={"email": "nueva@example.com", "locale": locale})
 
     assert response.status_code == 200
     assert response.json()["user"]["email_verified_at"] is None
-    assert scheduled == [
-        {"to_email": "nueva@example.com", "username": "Manualito", "token": "token-123"}
-    ]
+    queue_mock.assert_called_once()
+    recipient, subject, text_body, html_body = queue_mock.call_args.kwargs["args"]
+    assert recipient == "nueva@example.com"
+    assert subject == (
+        "Verifica tu email en Manualito" if locale == "es" else "Verify your email for Manualito"
+    )
+    assert f'lang="{locale}"' in html_body
+    for body in (text_body, html_body):
+        assert "Manualito" in body
+        assert "/verify-email?token=token-123" in body
+    assert "token-123" not in queue_mock.call_args.kwargs["argsrepr"]
+
+
+@pytest.mark.parametrize("locale", [None, "fr", "en-US"])
+def test_update_profile_requires_supported_locale(client, override_auth_and_db, locale):
+    payload = {"email": "nueva@example.com"}
+    if locale is not None:
+        payload["locale"] = locale
+    response = client.patch("/api/me", json=payload)
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["field"] == "locale"
 
 
 def test_update_profile_duplicate_identity_returns_409(
@@ -158,12 +176,10 @@ def test_update_profile_duplicate_identity_returns_409(
         AsyncMock(side_effect=DuplicateIdentityError),
     )
 
-    response = client.patch("/api/me", json={"username": "ocupado"})
+    response = client.patch("/api/me", json={"username": "ocupado", "locale": "es"})
 
     assert response.status_code == 409
-    assert any(
-        error["code"] == "identity_unavailable" for error in response.json()["errors"]
-    )
+    assert any(error["code"] == "identity_unavailable" for error in response.json()["errors"])
 
 
 def test_update_profile_rejects_unknown_avatar_values(
@@ -171,8 +187,8 @@ def test_update_profile_rejects_unknown_avatar_values(
     override_auth_and_db,
 ):
     """Colores y figuras fuera del catálogo cerrado devuelven 422."""
-    bad_color = client.patch("/api/me", json={"avatar_color": "magenta"})
-    bad_figure = client.patch("/api/me", json={"avatar_figure": "dragon"})
+    bad_color = client.patch("/api/me", json={"avatar_color": "magenta", "locale": "es"})
+    bad_figure = client.patch("/api/me", json={"avatar_figure": "dragon", "locale": "es"})
 
     assert bad_color.status_code == 422
     assert bad_figure.status_code == 422
@@ -216,9 +232,7 @@ def test_change_password_wrong_current_returns_401(
     )
 
     assert response.status_code == 401
-    assert any(
-        error["code"] == "invalid_credentials" for error in response.json()["errors"]
-    )
+    assert any(error["code"] == "invalid_credentials" for error in response.json()["errors"])
 
 
 def test_change_password_short_new_returns_public_code(
@@ -396,20 +410,19 @@ def test_update_profile_service_duplicate_flush_raises_409(monkeypatch):
         "record_security_event",
         lambda _session, **_kwargs: None,
     )
+    call = partial(
+        update_profile,
+        session,
+        auth=_service_auth(user),
+        username="otra",
+        email=None,
+        avatar_color=None,
+        avatar_figure=None,
+        ip_address=None,
+    )
 
     with pytest.raises(DuplicateIdentityError):
-        anyio.run(
-            partial(
-                update_profile,
-                session,
-                auth=_service_auth(user),
-                username="otra",
-                email=None,
-                avatar_color=None,
-                avatar_figure=None,
-                ip_address=None,
-            )
-        )
+        anyio.run(call)
 
     assert session.rollbacks == 1
     assert session.commits == 0
@@ -431,17 +444,16 @@ def test_change_password_service_rejects_wrong_current(monkeypatch):
         "record_security_event",
         lambda _session, **kwargs: events.append((kwargs["event_type"], kwargs["success"])),
     )
+    call = partial(
+        change_password,
+        session,
+        auth=_service_auth(user),
+        **_credential_payload(current="equivocada", new=_VALID_CREDENTIAL),
+        ip_address=None,
+    )
 
     with pytest.raises(InvalidCredentialsError):
-        anyio.run(
-            partial(
-                change_password,
-                session,
-                auth=_service_auth(user),
-                **_credential_payload(current="equivocada", new=_VALID_CREDENTIAL),
-                ip_address=None,
-            )
-        )
+        anyio.run(call)
 
     assert user.password_hash == original_hash
     assert events == [("password_change_failed", False)]

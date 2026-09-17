@@ -79,6 +79,7 @@ def test_preprocessed_image_path_cleans_temp_file_on_error(tmp_path):
     source_path = tmp_path / "source.jpg"
     _write_image(source_path, _sample_image(width=5, height=3))
     processed_path = ""
+    error = RuntimeError("fallo OCR")
 
     with (
         pytest.raises(RuntimeError, match="fallo OCR"),
@@ -86,7 +87,7 @@ def test_preprocessed_image_path_cleans_temp_file_on_error(tmp_path):
     ):
         processed_path = path
         assert os.path.exists(processed_path)
-        raise RuntimeError("fallo OCR")
+        raise error
 
     assert processed_path
     assert not os.path.exists(processed_path)

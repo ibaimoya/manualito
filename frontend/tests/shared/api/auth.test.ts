@@ -29,25 +29,34 @@ const AUTH = {
 };
 
 describe('authApi register/login', () => {
-  it('register envía email/username/password y devuelve la sesión', async () => {
-    let body: Record<string, unknown> | undefined;
-    server.use(
-      http.post('/api/auth/register', async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(AUTH, { status: 201 });
-      }),
-    );
+  it.each(['es', 'en'] as const)(
+    'register envía el idioma %s y devuelve la sesión',
+    async (locale) => {
+      let body: Record<string, unknown> | undefined;
+      server.use(
+        http.post('/api/auth/register', async ({ request }) => {
+          body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(AUTH, { status: 201 });
+        }),
+      );
 
-    const res = await authApi.register({
-      email: 'ana@example.com',
-      username: 'ana',
-      password: 'secret123',
-    });
+      const res = await authApi.register({
+        email: 'ana@example.com',
+        username: 'ana',
+        password: 'secret123',
+        locale,
+      });
 
-    expect(body).toEqual({ email: 'ana@example.com', username: 'ana', password: 'secret123' });
-    expect(res.user.username).toBe('ana');
-    expect(res.csrf_token).toBe('tok');
-  });
+      expect(body).toEqual({
+        email: 'ana@example.com',
+        username: 'ana',
+        password: 'secret123',
+        locale,
+      });
+      expect(res.user.username).toBe('ana');
+      expect(res.csrf_token).toBe('tok');
+    },
+  );
 
   it('login envía identifier/password', async () => {
     let body: Record<string, unknown> | undefined;
@@ -67,7 +76,7 @@ describe('authApi register/login', () => {
   it('register con 409 lanza ApiError', async () => {
     server.use(http.post('/api/auth/register', () => HttpResponse.json({}, { status: 409 })));
     await expect(
-      authApi.register({ email: 'a@b.com', username: 'a', password: 'secret123' }),
+      authApi.register({ email: 'a@b.com', username: 'a', password: 'secret123', locale: 'es' }),
     ).rejects.toMatchObject({ status: 409 });
   });
 });
@@ -121,7 +130,7 @@ describe('authApi flujos de email/contraseña', () => {
     expect(res.detail).toBe('ok');
   });
 
-  it('resendVerification y forgotPassword envían el email', async () => {
+  it.each(['es', 'en'] as const)('reenvío y recuperación envían el idioma %s', async (locale) => {
     const bodies: Record<string, unknown>[] = [];
     server.use(
       http.post('/api/auth/email/resend', async ({ request }) => {
@@ -134,10 +143,13 @@ describe('authApi flujos de email/contraseña', () => {
       }),
     );
 
-    await authApi.resendVerification('ana@example.com');
-    await authApi.forgotPassword('ana@example.com');
+    await authApi.resendVerification({ email: 'ana@example.com', locale });
+    await authApi.forgotPassword({ email: 'ana@example.com', locale });
 
-    expect(bodies).toEqual([{ email: 'ana@example.com' }, { email: 'ana@example.com' }]);
+    expect(bodies).toEqual([
+      { email: 'ana@example.com', locale },
+      { email: 'ana@example.com', locale },
+    ]);
   });
 
   it('resetPassword envía token y nueva contraseña', async () => {

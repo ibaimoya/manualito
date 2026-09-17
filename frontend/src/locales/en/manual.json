@@ -1,0 +1,249 @@
+{
+  "buttons": {
+    "cancel": "Cancel",
+    "continueEditing": "Keep editing",
+    "deleteManual": "Delete rulebook",
+    "deleteManualDisabled": "Finish editing the page before deleting the rulebook.",
+    "readAgain": "Read this page again",
+    "reprocess": "Reprocess",
+    "save": "Save"
+  },
+  "card": {
+    "processing": "Processing…"
+  },
+  "confidence": {
+    "labels": {
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "lineLabel": "Line-by-line OCR confidence: {{label}}, {{percent}} percent",
+    "noData": "OCR confidence: no data",
+    "ranges": {
+      "high": "≥ 90%",
+      "low": "< 75%",
+      "medium": "75–89%"
+    },
+    "shortNoData": "n/a",
+    "toggle": {
+      "disabledTitle": "This page has no OCR confidence data.",
+      "label": "Line-by-line confidence",
+      "title": "Show confidence for each line"
+    }
+  },
+  "details": {
+    "confirm": {
+      "hide": {
+        "action": "Use Anonymous",
+        "text": "Your name will no longer appear beside this manual or in answer sources.",
+        "title": "Switch back to Anonymous?"
+      },
+      "show": {
+        "action": "Share under my name",
+        "text": "Others will see your name beside this manual and in answer sources.",
+        "title": "Share under your name?"
+      }
+    },
+    "errors": {
+      "empty": "Enter a name for the manual.",
+      "network": "We couldn't save your changes. Try again.",
+      "tooLong": "Use {{max}} characters or fewer."
+    },
+    "field": "Manual name",
+    "help": "The new name will also appear in your conversation sources.",
+    "rename": "Rename manual",
+    "save": "Save name",
+    "sharing": {
+      "anonymous": "Shared anonymously",
+      "named": "Shared under my name",
+      "switchToAnonymous": "Shared under my name. Switch back to Anonymous",
+      "switchToNamed": "Shared anonymously. Switch to sharing under my name"
+    },
+    "title": "Rename manual"
+  },
+  "dialogs": {
+    "delete": {
+      "description": "Are you sure you want to delete it?",
+      "header": "Delete rulebook",
+      "irreversible": "This action can't be undone.",
+      "shared": "It's <strong>shared</strong>: other people won't be able to access it in {{gameName}}.",
+      "warning_one": "This will delete <strong>“{{title}}”</strong> from {{gameName}}: its {{count}} page and extracted text. The game's explanation will be regenerated from the remaining rulebooks.",
+      "warning_other": "This will delete <strong>“{{title}}”</strong> from {{gameName}}: its {{count}} pages and extracted text. The game's explanation will be regenerated from the remaining rulebooks."
+    },
+    "reprocess": {
+      "description": "We'll read every page again with OCR and re-index the text. The game's explanation will be regenerated.",
+      "header": "Reprocess rulebook"
+    },
+    "save": {
+      "description": "This will replace what was read on page {{pageNumber}}: the AI will answer with your version, and the page will be marked as “Edited by hand”.",
+      "header": "Save changes?"
+    }
+  },
+  "errors": {
+    "empty": {
+      "description": "This rulebook has no available pages yet. Check its status again or go back to your library.",
+      "title": "There are no pages to show yet"
+    },
+    "load": {
+      "description": "Something went wrong while loading it. You can try again here.",
+      "historyLink": "Go to library",
+      "title": "We couldn't open this rulebook"
+    },
+    "missing": {
+      "description": "It may have been deleted, or you may not have access. You can find your available rulebooks in your library.",
+      "title": "This rulebook isn’t available"
+    }
+  },
+  "feedback": {
+    "delete": {
+      "error": "We couldn't delete the rulebook",
+      "errorDescription": "Try again in a moment.",
+      "success": "Rulebook deleted"
+    },
+    "details": {
+      "hidden": "Shared anonymously",
+      "renamed": "Name saved",
+      "shown": "Shared under my name"
+    },
+    "edit": {
+      "busy": "The rulebook is still processing",
+      "busyHint": "Hang on until it finishes, then try again.",
+      "failedDescription": "Try again in a moment.",
+      "failedTitle": "We couldn't save the text",
+      "pendingIndex": "Text saved, indexing pending",
+      "pendingIndexDescription": "Your text is saved. Reprocess the rulebook to sync the AI.",
+      "saved": "Text saved",
+      "savedDescription": "The AI will use your version from now on."
+    },
+    "reprocess": {
+      "busy": "The rulebook is already processing",
+      "failedDescription": "Try again in a moment.",
+      "failedTitle": "We couldn't reprocess the rulebook",
+      "progress": "Reprocessing the rulebook…"
+    }
+  },
+  "image": {
+    "actualSize": "Actual size",
+    "alt": "Page {{pageNumber}} of {{title}}",
+    "controls": "Image controls",
+    "dialogDescription": "Page {{pageNumber}} of {{pageCount}} · {{title}}",
+    "dialogTitle": "Page image",
+    "errorDescription": "Try again to view the original page.",
+    "errorTitle": "The image could not be loaded",
+    "fit": "Zoom",
+    "fitPage": "Fit page",
+    "fitWidth": "Fit width",
+    "keyboardHint": "Original image. Use arrow keys to pan, + and - to zoom, and 0 to fit the page.",
+    "loading": "Loading image…",
+    "missingDescription": "You can still read the manual's text.",
+    "missingTitle": "The image isn't available",
+    "retry": "Try again",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomValue": "Image zoom"
+  },
+  "meta": {
+    "format": {
+      "pdf": "PDF",
+      "photos": "Photos"
+    },
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "uploaded": "Uploaded {{date}}"
+  },
+  "navigation": {
+    "extractedText": "Extracted text",
+    "library": "Library",
+    "manual": "Rulebook"
+  },
+  "page": {
+    "articleLabel": "Page {{pageNumber}} of {{pageCount}}",
+    "buttonLabel": "Page {{pageNumber}} · {{status}}{{hits}}",
+    "heading": "Pages",
+    "label": "Page",
+    "legend": "Page statuses",
+    "matches_one": ", {{count}} match",
+    "matches_other": ", {{count}} matches",
+    "navLabel": "Rulebook pages",
+    "next": "Next page",
+    "number": "Page {{pageNumber}}",
+    "previous": "Previous page"
+  },
+  "search": {
+    "ariaLabel": "Search the rulebook text",
+    "clear": "Clear search",
+    "next": "Next match",
+    "placeholder": "Search the whole rulebook…",
+    "previous": "Previous match"
+  },
+  "status": {
+    "duplicate": {
+      "label": "Duplicate",
+      "short": "Duplicate",
+      "tip": "This page is identical to another you already uploaded. It won't be read again because it doesn't add anything new, so this copy won't count toward the explanation."
+    },
+    "edited": {
+      "label": "Edited by hand",
+      "short": "Edited",
+      "tip": "You corrected this page by hand."
+    },
+    "empty": {
+      "label": "No text available",
+      "short": "No text",
+      "tip": "This page has no text available to consult."
+    },
+    "failed": {
+      "label": "Reading error",
+      "short": "Error",
+      "tip": "We couldn't extract text from this page. Try again or upload another photo."
+    },
+    "low": {
+      "label": "Needs review",
+      "short": "Review",
+      "tip": "The OCR isn't sure about this page. You can read it again or correct it by hand."
+    },
+    "ok": {
+      "label": "Text available",
+      "short": "Available",
+      "tip": "Text available to consult. You can compare it with the original page."
+    },
+    "processing": {
+      "label": "Processing",
+      "short": "Pending",
+      "tip": "We're reading this page."
+    }
+  },
+  "text": {
+    "characterCount_one": "{{formattedCount}} character",
+    "characterCount_other": "{{formattedCount}} characters",
+    "correctionAdded": "Added by AI",
+    "correctionPreviously": "Previously: “{{original}}”",
+    "counter": "{{current}} / {{max}} characters",
+    "dirtyState": "Unsaved changes",
+    "editingHint": "Correct the text, then save your changes.",
+    "editLabel": "Text for page {{pageNumber}}",
+    "empty": "There isn't any readable text on this page.",
+    "emptyDraft": "Enter some text to save.",
+    "failedDescription": "The photo was too dark or blurry. Try reading it again or upload the rulebook again with a sharper version.",
+    "failedTitle": "We couldn't read this page",
+    "savedState": "No changes",
+    "tooLong": "Keep the text within {{max}} characters."
+  },
+  "workspace": {
+    "compare": "Compare",
+    "confidence": "Confidence",
+    "discard": "Discard changes",
+    "discardDescription": "This page has unsaved text. Keep editing or discard it to continue.",
+    "discardTitle": "Discard your changes?",
+    "edit": "Edit",
+    "editing": "Page {{pageNumber}} · Editing",
+    "expand": "Expand original",
+    "extractedText": "Extracted text",
+    "original": "Original",
+    "reading": "Page {{pageNumber}} · Reading",
+    "reread": "Read again",
+    "shared": "Shared · Read only",
+    "text": "Text",
+    "view": "Rulebook view"
+  }
+}

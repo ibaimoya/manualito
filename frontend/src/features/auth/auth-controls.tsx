@@ -1,9 +1,19 @@
-import { type ReactNode, useState } from 'react';
-import { AlertTriangle, Check, Eye, EyeOff } from 'lucide-react';
+import { type ParseKeys } from 'i18next';
+import { type MouseEvent, type ReactNode, useCallback, useRef, useState } from 'react';
+import { EyeIcon, EyeSlashIcon } from '@phosphor-icons/react';
+import { AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { Input, type InputProps } from '@/components/ui/input';
+import i18n from '@/app/i18n';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import { PasswordMaskBurst } from './PasswordMaskBurst';
+import { FieldFeedback } from './FieldFeedback';
+import { FeedbackReveal } from './FeedbackReveal';
 
-/** Ayuda de cliente; la política real de contraseña la valida el backend. */
+type AuthKey = ParseKeys<'auth'>;
+
+/** Ayuda de cliente. La política real de contraseña la valida el backend. */
 export const MIN_PASSWORD = 12;
 
 function hasWhitespace(value: string): boolean {
@@ -24,29 +34,23 @@ export function isEmail(value: string): boolean {
   return domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
 }
 
-/** Error del email: en vivo si ya hay texto, y siempre tras intentar enviar. */
-export function emailFieldError(email: string, submitted: boolean): string | undefined {
-  if (isEmail(email)) return undefined;
-  return email.length > 0 || submitted ? 'Ese email no parece válido' : undefined;
+export function emailFieldError(email: string): string | undefined {
+  return !isEmail(email) ? i18n.t('validation.email.invalid', { ns: 'auth' }) : undefined;
 }
 
-/** Error de longitud de contraseña; solo tras intentar enviar. */
-export function passwordTooShortError(password: string, submitted: boolean): string | undefined {
-  return submitted && password.length < MIN_PASSWORD
-    ? `Mínimo ${MIN_PASSWORD} caracteres`
+export function passwordTooShortError(password: string): string | undefined {
+  return password.length < MIN_PASSWORD
+    ? i18n.t('validation.password.minimum', { ns: 'auth', count: MIN_PASSWORD })
     : undefined;
 }
 
-/** Error del campo "repite la contraseña": en vivo si no coincide, al enviar si falta. */
-function confirmPasswordError(
-  confirm: string,
-  password: string,
-  submitted: boolean,
-): string | undefined {
-  if (confirm.length > 0 && confirm !== password) return 'Las contraseñas no coinciden';
-  const matches = confirm.length > 0 && confirm === password;
-  if (submitted && !matches) return 'Repite la contraseña';
-  return undefined;
+function confirmPasswordError(confirm: string, password: string): string | undefined {
+  if (confirm.length > 0 && confirm !== password) {
+    return i18n.t('validation.confirmPassword.mismatch', { ns: 'auth' });
+  }
+  return confirm.length === 0
+    ? i18n.t('validation.confirmPassword.required', { ns: 'auth' })
+    : undefined;
 }
 
 /** "aria-invalid" solo cuando hay error (evita renderizar "aria-invalid="false""). */
@@ -54,13 +58,14 @@ export function ariaInvalid(hasError: boolean): true | undefined {
   return hasError || undefined;
 }
 
-/** Campo de formulario: label + control + error/éxito inline. */
+/** Campo de formulario. Label + control + error/éxito inline. */
 export function AuthField({
   label,
   htmlFor,
   hint,
   error,
   success,
+  onFocusLeave,
   children,
 }: Readonly<{
   label: string;
@@ -68,10 +73,16 @@ export function AuthField({
   hint?: string;
   error?: string;
   success?: string;
+  onFocusLeave?: () => void;
   children: ReactNode;
 }>) {
   return (
-    <div className="flex flex-col">
+    <div
+      className="flex min-w-0 flex-col"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) onFocusLeave?.();
+      }}
+    >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <label htmlFor={htmlFor} className="font-body text-sm font-semibold text-fg">
           {label}
@@ -79,58 +90,76 @@ export function AuthField({
         {hint ? <span className="text-xs font-normal text-fg-3">{hint}</span> : null}
       </div>
       {children}
-      {error ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-error">
-          <AlertTriangle size={13} strokeWidth={2.2} aria-hidden="true" />
-          {error}
-        </p>
-      ) : null}
-      {!error && success ? (
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
-          <Check size={13} strokeWidth={2.5} aria-hidden="true" />
-          {success}
-        </p>
-      ) : null}
+      <FieldFeedback id={`${htmlFor}-feedback`} error={error} success={success} />
     </div>
   );
 }
 
 /** Input de contraseña con botón mostrar/ocultar (target 44px). */
 export function PasswordInput({
-  invalid,
   className,
   ...props
-}: Readonly<Omit<InputProps, 'type' | 'preset'> & { invalid?: boolean }>) {
+}: Readonly<Omit<InputProps, 'type' | 'preset'>>) {
+  const { t } = useTranslation('auth');
   const [reveal, setReveal] = useState(false);
+  const [burst, setBurst] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const stopBurst = useCallback(() => setBurst(false), []);
+
+  function toggleVisibility(event: MouseEvent<HTMLButtonElement>) {
+    setBurst(
+      reveal && event.detail > 0 && !reducedMotion && Boolean(inputRef.current?.value.length),
+    );
+    setReveal(!reveal);
+  }
+
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onInputCapture={stopBurst}
+      onPointerDownCapture={stopBurst}
+      onScrollCapture={stopBurst}
+    >
       <Input
+        ref={inputRef}
         type={reveal ? 'text' : 'password'}
         autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        className={cn('pr-11', invalid && 'border-error focus-visible:ring-error/20', className)}
+        className={cn('pr-11', className)}
         {...props}
       />
+      {burst && (
+        <PasswordMaskBurst
+          inputRef={inputRef}
+          reducedMotion={reducedMotion}
+          onComplete={stopBurst}
+        />
+      )}
       <button
         type="button"
-        onClick={() => setReveal((value) => !value)}
-        aria-label={reveal ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-        className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-lg text-fg-3 hover:text-fg-2"
+        onClick={toggleVisibility}
+        aria-label={reveal ? t('aria.hidePassword') : t('aria.showPassword')}
+        aria-pressed={reveal}
+        data-active={reveal}
+        className="state-icon absolute right-0 top-1/2 size-11 -translate-y-1/2 rounded-full text-fg-3 hover:text-fg-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
-        {reveal ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        <EyeIcon size={18} aria-hidden="true" />
+        <EyeSlashIcon size={18} aria-hidden="true" />
       </button>
     </div>
   );
 }
 
-/** Par de campos para estrenar contraseña: nueva con medidor + confirmación. */
+/** Par de campos para estrenar contraseña. Nueva con medidor + confirmación. */
 export function NewPasswordFields({
   fieldId,
-  label = 'Contraseña',
+  label,
   password,
   confirm,
-  submitted,
+  validation,
+  onFieldBlur,
   onPasswordChange,
   onConfirmChange,
 }: Readonly<{
@@ -138,42 +167,55 @@ export function NewPasswordFields({
   label?: string;
   password: string;
   confirm: string;
-  submitted: boolean;
+  validation: { password: boolean; confirm: boolean };
+  onFieldBlur?: (field: 'password' | 'confirm') => void;
   onPasswordChange: (value: string) => void;
   onConfirmChange: (value: string) => void;
 }>) {
-  const passwordError = passwordTooShortError(password, submitted);
-  const confirmError = confirmPasswordError(confirm, password, submitted);
-  const passwordShort = submitted && password.length < MIN_PASSWORD;
+  const { t } = useTranslation('auth');
+  const passwordError = validation.password ? passwordTooShortError(password) : undefined;
+  const confirmError = validation.confirm ? confirmPasswordError(confirm, password) : undefined;
   return (
     <>
       <AuthField
-        label={label}
+        label={label ?? t('fields.password.default')}
         htmlFor={`${fieldId}-pw`}
-        hint={passwordError ? undefined : `Mínimo ${MIN_PASSWORD} caracteres`}
+        hint={passwordError ? undefined : t('validation.password.minimum', { count: MIN_PASSWORD })}
         error={passwordError}
+        onFocusLeave={() => onFieldBlur?.('password')}
       >
         <PasswordInput
           id={`${fieldId}-pw`}
           autoComplete="new-password"
-          placeholder="Crea una contraseña"
+          placeholder={t('placeholders.newPassword')}
           value={password}
-          invalid={passwordShort}
-          aria-invalid={ariaInvalid(passwordShort)}
+          aria-invalid={ariaInvalid(Boolean(passwordError))}
+          aria-describedby={passwordError ? `${fieldId}-pw-feedback` : undefined}
           onChange={(event) => onPasswordChange(event.target.value)}
           required
         />
-        {password ? <PasswordStrength score={passwordScore(password)} /> : null}
+        <AnimatePresence>
+          {password && !passwordError && (
+            <FeedbackReveal key="strength">
+              <PasswordStrength score={passwordScore(password)} />
+            </FeedbackReveal>
+          )}
+        </AnimatePresence>
       </AuthField>
 
-      <AuthField label="Repite la contraseña" htmlFor={`${fieldId}-pw2`} error={confirmError}>
+      <AuthField
+        label={t('fields.password.confirm')}
+        htmlFor={`${fieldId}-pw2`}
+        error={confirmError}
+        onFocusLeave={() => onFieldBlur?.('confirm')}
+      >
         <PasswordInput
           id={`${fieldId}-pw2`}
           autoComplete="new-password"
-          placeholder="Repite la contraseña"
+          placeholder={t('placeholders.repeatPassword')}
           value={confirm}
-          invalid={Boolean(confirmError)}
           aria-invalid={ariaInvalid(Boolean(confirmError))}
+          aria-describedby={confirmError ? `${fieldId}-pw2-feedback` : undefined}
           onChange={(event) => onConfirmChange(event.target.value)}
           required
         />
@@ -183,12 +225,20 @@ export function NewPasswordFields({
 }
 
 const STRENGTH = [
-  { label: '—', text: 'text-fg-3', bar: 'bg-surface-2' },
-  { label: 'Débil', text: 'text-error', bar: 'bg-error' },
-  { label: 'Mejorable', text: 'text-warning', bar: 'bg-warning' },
-  { label: 'Buena', text: 'text-[#6F9A1E]', bar: 'bg-[#6F9A1E]' },
-  { label: 'Fuerte', text: 'text-success', bar: 'bg-success' },
-] as const;
+  { label: 'validation.password.strength.empty', text: 'text-fg-3', bar: 'bg-surface-2' },
+  { label: 'validation.password.strength.weak', text: 'text-error', bar: 'bg-error' },
+  {
+    label: 'validation.password.strength.improvable',
+    text: 'text-warning',
+    bar: 'bg-warning',
+  },
+  {
+    label: 'validation.password.strength.good',
+    text: 'text-[#6F9A1E]',
+    bar: 'bg-[#6F9A1E]',
+  },
+  { label: 'validation.password.strength.strong', text: 'text-success', bar: 'bg-success' },
+] as const satisfies ReadonlyArray<{ label: AuthKey; text: string; bar: string }>;
 
 type StrengthScore = 0 | 1 | 2 | 3 | 4;
 
@@ -204,8 +254,9 @@ function passwordScore(value: string): StrengthScore {
   return Math.max(1, Math.min(score, 4)) as StrengthScore;
 }
 
-/** Medidor de fuerza: barras + adjetivo (contexto en sr-only para lectores). */
+/** Medidor de fuerza. Barras + adjetivo (contexto en sr-only para lectores). */
 function PasswordStrength({ score }: Readonly<{ score: StrengthScore }>) {
+  const { t } = useTranslation('auth');
   const meta = STRENGTH[score];
   return (
     <div className="mt-3">
@@ -218,8 +269,10 @@ function PasswordStrength({ score }: Readonly<{ score: StrengthScore }>) {
         ))}
       </div>
       <p className={cn('mt-1.5 text-xs font-bold', meta.text)}>
-        <span className="sr-only">Seguridad de la contraseña: </span>
-        {meta.label}
+        <span className="sr-only">
+          {t('validation.password.strength.screenReader', { label: t(meta.label) })}
+        </span>
+        {t(meta.label)}
       </p>
     </div>
   );

@@ -8,7 +8,6 @@ import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 import { handleSessionExpired } from '@/features/auth/session-expired';
 import { api } from '@/shared/api/client';
 import { ApiError } from '@/shared/api/http';
-import { mapApiError } from '@/shared/api/error-mapper';
 import { server } from '@tests/_helpers/server';
 
 const { fakeRouter } = vi.hoisted(() => ({
@@ -31,7 +30,7 @@ beforeEach(() => {
 /** ApiError 401 con la forma real del backend (`errors[0].code`). */
 function unauthorized(code: string): ApiError {
   const raw = { detail: 'x', errors: [{ field: null, code, message: 'x' }] };
-  return new ApiError(mapApiError({ status: 401, raw }), 401, raw);
+  return new ApiError(401, raw);
 }
 
 function expiredSessionResponse() {
@@ -57,7 +56,7 @@ describe('handleSessionExpired (unidad)', () => {
 
   it('un 401 sin código del backend no redirige', async () => {
     const raw = { detail: 'Credenciales inválidas.' };
-    handleSessionExpired(new ApiError(mapApiError({ status: 401, raw }), 401, raw), new QueryClient());
+    handleSessionExpired(new ApiError(401, raw), new QueryClient());
     await flush();
     expect(fakeRouter.navigate).not.toHaveBeenCalled();
   });

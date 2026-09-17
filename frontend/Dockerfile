@@ -11,16 +11,20 @@ FROM node:${NODE_VERSION:?NODE_VERSION_no_definida}${NODE_VARIANT:+-${NODE_VARIA
 
 WORKDIR /app
 
-COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+ENV PNPM_CONFIG_STORE_DIR=/pnpm/store
+
+COPY --link package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN --mount=type=cache,target=/root/.npm \
     PNPM_VERSION="$(node -p 'require("./package.json").packageManager.replace(/^pnpm@/, "")')" \
     && npm install --global "pnpm@${PNPM_VERSION}"
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prefer-offline --store-dir=/pnpm/store
+    pnpm install --frozen-lockfile --prefer-offline
 
 COPY --link . .
+
+ARG VITE_MAILPIT_URL=""
 
 RUN pnpm build
 

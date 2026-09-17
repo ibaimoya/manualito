@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 
@@ -71,6 +72,14 @@ class GamePoolManualSummary:
     created_at: datetime
     is_own: bool
     duplicate_page_count: int
+    author_name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GameExplanationPool:
+    source_fingerprint: str
+    manual_ids: tuple[UUID, ...]
+    owned_manual_ids: frozenset[UUID]
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,7 +88,7 @@ class GameExplanationSnapshot:
 
     sections: dict[str, object]
     source_fingerprint: str
-    status: str
+    status: Literal["ready", "generating", "failed"]
     error_code: str | None
     generated_at: datetime
     updated_at: datetime
@@ -87,10 +96,9 @@ class GameExplanationSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class GameExplanationJob:
-    """Trabajo opaco para generar la explicación de un juego."""
-
     user_id: UUID
     game_id: UUID
+    source_fingerprint: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,3 +107,4 @@ class GameExplanationOutcome:
 
     snapshot: GameExplanationSnapshot
     job: GameExplanationJob | None
+    owned_manual_ids: frozenset[UUID]

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -63,16 +63,16 @@ function renderIndex(opts: { user: AuthUser | null; seen: boolean }) {
 describe('/ (index)', () => {
   it('sin sesión y onboarding NO visto → /onboarding', async () => {
     renderIndex({ user: null, seen: false });
-    await waitFor(() => expect(screen.getByText('OnboardingScreen')).toBeInTheDocument());
+    expect(await screen.findByText('OnboardingScreen')).toBeInTheDocument();
   });
 
   it('sin sesión y onboarding visto → /login', async () => {
     renderIndex({ user: null, seen: true });
-    await waitFor(() => expect(screen.getByText('LoginScreen')).toBeInTheDocument());
+    expect(await screen.findByText('LoginScreen')).toBeInTheDocument();
   });
 
   it('con sesión → /home', async () => {
     renderIndex({ user: FAKE_USER, seen: true });
-    await waitFor(() => expect(screen.getByText('HomeScreen')).toBeInTheDocument());
+    expect(await screen.findByText('HomeScreen')).toBeInTheDocument();
   });
 });

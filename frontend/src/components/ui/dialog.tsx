@@ -1,6 +1,8 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
-import { forwardRef, type ComponentRef, type ReactNode } from 'react';
+import { XIcon } from '@phosphor-icons/react';
+import { forwardRef, useRef, type ComponentRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from './button';
 import { cn } from '@/shared/lib/cn';
 
 type DialogDataKind = 'dialog' | 'sheet';
@@ -13,7 +15,7 @@ type ModalFrameProps = Readonly<{
   contentClassName?: string;
   dataKind: DialogDataKind;
   handle?: ReactNode;
-  /** Radix enfoca el primer focusable (la X); permite redirigirlo a un campo. */
+  /** Permite dirigir el foco inicial a un campo en lugar del botón de cierre. */
   onOpenAutoFocus?: (event: Event) => void;
 }>;
 
@@ -47,6 +49,8 @@ export function ModalFrame({
   handle,
   onOpenAutoFocus,
 }: ModalFrameProps) {
+  const returnFocus = useRef<HTMLElement | null>(null);
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -56,7 +60,18 @@ export function ModalFrame({
         />
         <DialogPrimitive.Content
           {...dataAttributes(dataKind)}
-          onOpenAutoFocus={onOpenAutoFocus}
+          onOpenAutoFocus={(event) => {
+            // Estos modales se abren desde controles externos a Dialog.Trigger.
+            returnFocus.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            onOpenAutoFocus?.(event);
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (returnFocus.current?.isConnected) {
+              returnFocus.current.focus({ preventScroll: true });
+            }
+          }}
           className={cn(contentBaseClassName, 'focus:outline-none', contentClassName)}
         >
           {handle}
@@ -69,6 +84,7 @@ export function ModalFrame({
 
 export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>, ModalHeaderProps>(
   function ModalHeader({ title, description, onClose, className }, ref) {
+    const { t } = useTranslation();
     return (
       <header className={className}>
         <div className="flex-1">
@@ -85,14 +101,15 @@ export const ModalHeader = forwardRef<ComponentRef<typeof DialogPrimitive.Title>
           ) : null}
         </div>
         {onClose ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            aria-label="Cerrar"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-fg-2 transition-colors hover:bg-error/10 hover:text-error focus-visible:bg-error/10 focus-visible:text-error focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-error/15"
+            aria-label={t('actions.close')}
+            className="shrink-0"
           >
-            <X size={20} strokeWidth={2} />
-          </button>
+            <XIcon aria-hidden="true" size={20} />
+          </Button>
         ) : null}
       </header>
     );
@@ -104,12 +121,12 @@ export const ModalBody = ({ children, className }: ModalBodyProps) => (
 );
 
 /**
- * Dialog centrado para desktop ("md+"): fade + zoom-in, ancho fijo (max-w-md
+ * Dialog centrado para desktop ("md+"). Fade + zoom-in, ancho fijo (max-w-md
  * por defecto). La variante móvil anclada abajo vive en ResponsiveModal.
  */
 
 export const DIALOG_CONTENT_CLASS = cn(
-  'fixed left-1/2 top-1/2 z-50 w-[95vw] max-w-md',
+  'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md flex-col overflow-y-auto',
   '-translate-x-1/2 -translate-y-1/2',
   'rounded-2xl border border-border bg-card shadow-lg',
 );
@@ -126,7 +143,7 @@ export const Dialog = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /** Clases extra para el panel (anchura/altura); sobrescriben las default. */
+  /** Clases extra para el panel (anchura/altura). Sobrescriben las default. */
   contentClassName?: string;
   onOpenAutoFocus?: (event: Event) => void;
 }>) => (

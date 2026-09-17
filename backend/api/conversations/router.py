@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request, status
 
 from api import config
-from api.annotations import DbSession
+from api.annotations import AcceptLanguage, DbSession
 from api.auth.dependencies import CsrfProtection, CurrentAuth
 from api.conversations.dependencies import valid_conversation
 from api.conversations.schemas import (
@@ -104,6 +104,7 @@ async def create_game_conversation_handler(
     dependencies=[Depends(valid_conversation)],
 )
 async def list_conversation_messages_handler(
+    auth: CurrentAuth,
     conversation_id: UUID,
     session: DbSession,
     limit: MessageListLimit = CONVERSATION_MESSAGE_LIST_LIMIT_DEFAULT,
@@ -112,6 +113,7 @@ async def list_conversation_messages_handler(
     """Lista mensajes de una conversación propia."""
     messages = await list_messages(
         session,
+        current_user_id=auth.user.id,
         conversation_id=conversation_id,
         limit=limit,
         offset=offset,
@@ -136,6 +138,7 @@ async def send_conversation_message_handler(
     conversation_id: UUID,
     payload: SendMessageRequest,
     session: DbSession,
+    accept_language: AcceptLanguage,
     _csrf: CsrfProtection,
 ) -> SendMessageResponse:
     """Envía un mensaje y deja la respuesta en generación."""
@@ -145,6 +148,7 @@ async def send_conversation_message_handler(
         auth=auth,
         conversation_id=conversation_id,
         payload=payload,
+        accept_language=accept_language,
     )
     response = SendMessageResponse(
         conversation=ConversationResponse.model_validate(outcome.conversation),
@@ -157,6 +161,7 @@ async def send_conversation_message_handler(
         str(outcome.user_message.id),
         str(outcome.assistant_message.id),
         payload.top_k,
+        outcome.language,
     )
     if outcome.title_job is not None:
         refresh_conversation_title_task.delay(
@@ -164,6 +169,7 @@ async def send_conversation_message_handler(
             str(outcome.title_job.conversation_id),
             str(outcome.title_job.user_message_id),
             outcome.title_job.expected_title,
+            outcome.language,
         )
     return response
 

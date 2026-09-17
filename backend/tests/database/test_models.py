@@ -397,18 +397,18 @@ def test_game_follows_schema_tracks_last_explicit_choice():
     assert _index(follows, "ix_game_follows_user_id") is not None
 
 
-def test_game_explanations_schema_is_cached_per_user_and_game():
-    """game_explanations guarda una explicación por usuario y juego."""
+def test_game_explanations_schema_is_cached_per_game_and_manual_pool():
+    """game_explanations comparte cada conjunto de manuales del juego."""
     import_all_models()
     explanations = Base.metadata.tables["game_explanations"]
 
-    assert _single_fk(explanations.c.user_id).ondelete == "CASCADE"
+    assert "user_id" not in explanations.c
     assert _single_fk(explanations.c.game_id).ondelete == "RESTRICT"
     assert isinstance(explanations.c.sections.type, postgresql.JSONB)
     assert explanations.c.status.type.length == 16
     assert explanations.c.error_code.nullable is True
     assert explanations.c.source_fingerprint.type.length == SHA256_HEX_LENGTH
-    assert _index(explanations, "uq_game_explanations_user_game").unique is True
+    assert _index(explanations, "uq_game_explanations_game_pool").unique is True
     assert _index(explanations, "ix_game_explanations_game_id") is not None
     assert _check_names(explanations) == {
         "ck_game_explanations_error_code_only_when_failed",

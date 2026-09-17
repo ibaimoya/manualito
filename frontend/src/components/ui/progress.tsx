@@ -10,10 +10,7 @@ export const Progress = forwardRef<
   return (
     <ProgressPrimitive.Root
       ref={ref}
-      className={cn(
-        'relative h-2 w-full overflow-hidden rounded-full bg-surface-2',
-        className,
-      )}
+      className={cn('relative h-2 w-full overflow-hidden rounded-full bg-surface-2', className)}
       value={clamped}
       {...props}
     >

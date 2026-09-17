@@ -1,10 +1,11 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { CheckIcon } from '@phosphor-icons/react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PrivacyPolicyModal } from '@/features/legal/PrivacyPolicyModal';
 import { ApiError } from '@/shared/api/http';
-import { cn } from '@/shared/lib/cn';
 import {
   ariaInvalid,
   AuthField,
@@ -14,9 +15,12 @@ import {
   NewPasswordFields,
 } from './auth-controls';
 import { AuthAlert } from './auth-alert';
+import { FieldFeedback } from './FieldFeedback';
 import { useRegister } from './use-auth';
+import styles from './entry.module.css';
 
 export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: () => void }>) {
+  const { t } = useTranslation('auth');
   const register = useRegister();
   const fieldId = useId();
   const [email, setEmail] = useState('');
@@ -25,15 +29,27 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   const [confirm, setConfirm] = useState('');
   const [consent, setConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [reviewed, setReviewed] = useState({
+    email: false,
+    username: false,
+    password: false,
+    confirm: false,
+  });
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
-  const emailError = emailFieldError(email.trim(), submitted);
+  const reviewField = (field: keyof typeof reviewed) => {
+    setReviewed((previous) => (previous[field] ? previous : { ...previous, [field]: true }));
+  };
+  const emailError = submitted || reviewed.email ? emailFieldError(email.trim()) : undefined;
   const usernameError =
-    submitted && username.trim().length === 0 ? 'Escribe un nombre de usuario' : undefined;
+    (submitted || reviewed.username) && username.trim().length === 0
+      ? t('validation.username.required')
+      : undefined;
   const consentError = submitted && !consent;
 
   const submit = (event: SyntheticEvent) => {
     event.preventDefault();
+    if (register.isPending) return;
     setSubmitted(true);
     const invalidId = (
       [
@@ -56,108 +72,121 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col">
-      <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        Crea tu cuenta
-      </h1>
-      <p className="mt-1.5 text-sm text-fg-2">Gratis. Solo necesitas un email.</p>
+    <form onSubmit={submit} noValidate className={styles.form} data-kind="register">
+      <h1>{t('forms.register.heading')}</h1>
+      <p className={styles.formDescription}>{t('forms.register.description')}</p>
 
-      <RegisterErrorAlert error={register.error} />
+      <RegisterErrorAlert error={register.lastError} />
 
-      <div className="mt-5 flex flex-col gap-4">
-        <AuthField label="Email" htmlFor={`${fieldId}-email`} error={emailError}>
-          <Input
-            id={`${fieldId}-email`}
-            preset="email"
-            placeholder="tu@email.com"
-            value={email}
-            aria-invalid={ariaInvalid(Boolean(emailError))}
-            onChange={(event) => setEmail(event.target.value)}
-            required
+      <div className={styles.fields}>
+        <div className={styles.registrationGrid}>
+          <AuthField
+            label={t('fields.email')}
+            htmlFor={`${fieldId}-email`}
+            error={emailError}
+            onFocusLeave={() => reviewField('email')}
+          >
+            <Input
+              id={`${fieldId}-email`}
+              preset="email"
+              placeholder={t('placeholders.email')}
+              value={email}
+              aria-invalid={ariaInvalid(Boolean(emailError))}
+              aria-describedby={emailError ? `${fieldId}-email-feedback` : undefined}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </AuthField>
+
+          <AuthField
+            label={t('fields.username')}
+            htmlFor={`${fieldId}-name`}
+            error={usernameError}
+            onFocusLeave={() => reviewField('username')}
+          >
+            <Input
+              id={`${fieldId}-name`}
+              preset="username"
+              placeholder={t('placeholders.username')}
+              value={username}
+              aria-invalid={ariaInvalid(Boolean(usernameError))}
+              aria-describedby={usernameError ? `${fieldId}-name-feedback` : undefined}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+            />
+          </AuthField>
+
+          <NewPasswordFields
+            fieldId={fieldId}
+            password={password}
+            confirm={confirm}
+            validation={{
+              password: submitted || reviewed.password,
+              confirm: submitted || reviewed.confirm,
+            }}
+            onFieldBlur={reviewField}
+            onPasswordChange={setPassword}
+            onConfirmChange={setConfirm}
           />
-        </AuthField>
+        </div>
 
-        <AuthField label="Nombre de usuario" htmlFor={`${fieldId}-name`} error={usernameError}>
-          <Input
-            id={`${fieldId}-name`}
-            preset="username"
-            placeholder="Tu nombre"
-            value={username}
-            aria-invalid={ariaInvalid(Boolean(usernameError))}
-            onChange={(event) => setUsername(event.target.value)}
-            required
+        <div className={styles.registrationActions}>
+          <ConsentField
+            id={`${fieldId}-consent`}
+            checked={consent}
+            error={consentError}
+            onChange={setConsent}
+            onShowPrivacy={() => setPrivacyOpen(true)}
           />
-        </AuthField>
+          <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
 
-        <NewPasswordFields
-          fieldId={fieldId}
-          password={password}
-          confirm={confirm}
-          submitted={submitted}
-          onPasswordChange={setPassword}
-          onConfirmChange={setConfirm}
-        />
-
-        <ConsentField
-          id={`${fieldId}-consent`}
-          checked={consent}
-          error={consentError}
-          onChange={setConsent}
-          onShowPrivacy={() => setPrivacyOpen(true)}
-        />
-        <PrivacyPolicyModal open={privacyOpen} onOpenChange={setPrivacyOpen} />
-
-        <Button type="submit" size="lg" block loading={register.isPending}>
-          {register.isPending ? 'Creando cuenta…' : 'Crear cuenta'}
-        </Button>
+          <Button
+            type="submit"
+            size="lg"
+            block
+            loading={register.isPending}
+            className={styles.submit}
+          >
+            {register.isPending ? t('actions.createAccountLoading') : t('actions.createAccount')}
+          </Button>
+        </div>
       </div>
 
-      <p className="mt-5 border-t border-border pt-4 text-center text-sm text-fg-2">
-        ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className="font-bold text-accent hover:underline">
-          Inicia sesión
+      <p className={styles.switch}>
+        {t('forms.register.haveAccount')}{' '}
+        <Link to="/login" className={styles.textLink}>
+          {t('forms.register.signIn')}
         </Link>
       </p>
     </form>
   );
 }
 
-/**
- * Aviso de error del registro. En un 409 el backend no revela si el duplicado
- * es el email o el usuario (por privacidad), así que el mensaje cubre ambos. El
- * resto reutiliza el mensaje ya mapeado (p. ej. el detalle de un 422 de campo).
- */
 function RegisterErrorAlert({ error }: Readonly<{ error: unknown }>) {
-  if (error == null) return null;
+  const { t } = useTranslation('auth');
   const isConflict = error instanceof ApiError && error.status === 409;
   const mappedMessage = error instanceof ApiError ? error.view.message : null;
   return (
     <AuthAlert
-      title={isConflict ? 'Ese email o usuario ya está en uso' : 'No hemos podido crear la cuenta'}
+      open={error != null}
+      title={isConflict ? t('alerts.register.conflict.title') : t('alerts.register.failure.title')}
       className="mt-4"
     >
       {isConflict ? (
-        <>
-          Prueba a{' '}
-          <Link to="/login" className="font-semibold text-accent hover:underline">
-            iniciar sesión
-          </Link>{' '}
-          o usa otro email o nombre de usuario.
-        </>
+        <Trans
+          ns="auth"
+          i18nKey="alerts.register.conflict.body"
+          components={{
+            login: <Link to="/login" className={styles.textLink} />,
+          }}
+        />
       ) : (
-        (mappedMessage ?? 'Revisa los datos e inténtalo de nuevo en un momento.')
+        (mappedMessage ?? t('alerts.register.failure.body'))
       )}
     </AuthAlert>
   );
 }
 
-function consentBoxClass(error: boolean, checked: boolean): string {
-  if (error) return 'border-error bg-error-bg';
-  if (checked) return 'border-success bg-success-bg';
-  return 'border-primary-300 bg-primary-50';
-}
-
-/** Casilla de consentimiento con altura de error reservada (sin salto al aparecer). */
 function ConsentField({
   id,
   checked,
@@ -171,42 +200,31 @@ function ConsentField({
   onChange: (value: boolean) => void;
   onShowPrivacy: () => void;
 }>) {
+  const { t } = useTranslation('auth');
   return (
     <div>
-      <label
-        className={cn(
-          'flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition-colors',
-          consentBoxClass(error, checked),
-        )}
-      >
-        <input
-          id={id}
-          type="checkbox"
-          checked={checked}
-          aria-invalid={ariaInvalid(error)}
-          onChange={(event) => onChange(event.target.checked)}
-          className="size-5 shrink-0 accent-primary"
-        />
-        <span className="text-sm leading-relaxed text-fg">
-          He leído y acepto la{' '}
-          <button
-            type="button"
-            onClick={(event) => {
-              // preventDefault: el click dentro del <label> alternaría el checkbox.
-              event.preventDefault();
-              event.stopPropagation();
-              onShowPrivacy();
-            }}
-            className="font-semibold text-accent hover:underline"
-          >
-            Política de privacidad
+      <div className={styles.consent}>
+        <span className={styles.consentControl}>
+          <input
+            id={id}
+            type="checkbox"
+            checked={checked}
+            aria-labelledby={`${id}-label`}
+            aria-invalid={ariaInvalid(error)}
+            aria-describedby={error ? `${id}-feedback` : undefined}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+          <CheckIcon size={14} weight="bold" aria-hidden="true" />
+        </span>
+        <span id={`${id}-label`}>
+          <label htmlFor={id}>{t('consent.label')}</label>{' '}
+          <button type="button" onClick={onShowPrivacy} className={styles.textLink}>
+            {t('consent.privacy')}
           </button>
           {'.'}
         </span>
-      </label>
-      <p className="mt-1.5 min-h-[1.05rem] text-xs text-error" role="alert">
-        {error ? 'Debes aceptar la política de privacidad para continuar.' : ''}
-      </p>
+      </div>
+      <FieldFeedback id={`${id}-feedback`} error={error ? t('consent.required') : undefined} />
     </div>
   );
 }

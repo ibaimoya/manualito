@@ -1,5 +1,6 @@
 import { JSON_HEADERS, TIMEOUT, request, requestVoid } from './http';
 import type { AuthMessageResponse, AuthResponse, AvatarColor, AvatarFigure } from './auth';
+import type { StoredLanguage } from '@/shared/lib/storage';
 
 /**
  * Cliente de cuenta y perfil: identidad editable, contadores de actividad,
@@ -13,6 +14,7 @@ export interface AccountStats {
 }
 
 export interface UpdateProfileInput {
+  locale: StoredLanguage;
   username?: string;
   /** Cambiar el email invalida la verificación: el backend reenvía el enlace. */
   email?: string;
@@ -24,7 +26,6 @@ export interface ChangePasswordInput {
   current_password: string;
   new_password: string;
 }
-
 
 export const accountApi = {
   /** GET /api/me/stats — juegos, conversaciones y manuales del usuario. */

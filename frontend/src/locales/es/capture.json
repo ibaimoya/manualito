@@ -1,0 +1,138 @@
+{
+  "actions": {
+    "moveDown": "Bajar página {{page}}",
+    "moveUp": "Subir página {{page}}",
+    "process": "Procesar",
+    "processPages_one": "Procesar {{count}} página",
+    "processPages_other": "Procesar {{count}} páginas",
+    "processPdf": "Procesar 1 PDF",
+    "removePage": "Quitar página {{page}}",
+    "removePdf": "Quitar PDF"
+  },
+  "consent": {
+    "ariaLabel": "Compartir el manual con la comunidad",
+    "author": {
+      "description": "Otros verán que tú has subido este manual.",
+      "label": "Compartir con mi nombre"
+    },
+    "description": "Ayuda a otros a preguntar sin subir su manual.",
+    "label": "Compartir con la comunidad",
+    "options": {
+      "anonymous": "Anónimo",
+      "label": "Opciones de compartir",
+      "named": "Con mi nombre"
+    }
+  },
+  "drop": {
+    "busy": "Estamos subiendo tu manual",
+    "chooseGame": "Elige primero el juego",
+    "formats": "Un PDF o imágenes de sus páginas",
+    "release": "Suelta aquí tu manual"
+  },
+  "empty": {
+    "pages": "Puedes añadir un PDF o fotos de sus páginas."
+  },
+  "feedback": {
+    "chooseGame": {
+      "description": "Selecciona el juego antes de procesar.",
+      "title": "Elige un juego"
+    },
+    "unexpected": {
+      "description": "Vuelve a intentarlo en un momento.",
+      "title": "Error inesperado"
+    }
+  },
+  "game": {
+    "description": "Buscamos el juego en BoardGameGeek para asociar el manual a su biblioteca y mejorar las respuestas."
+  },
+  "name": {
+    "help": "Puedes dejar el nombre sugerido o escribir otro.",
+    "label": "Nombre del manual (opcional)",
+    "suggested": "Manual de {{gameName}}"
+  },
+  "pages": {
+    "counter_one": "{{count}} / {{max}} página",
+    "counter_other": "{{count}} / {{max}} páginas",
+    "label": "Página {{page}}",
+    "pdfReady": "PDF listo para procesar"
+  },
+  "processing": {
+    "backToLibrary": "Ir a mi biblioteca",
+    "connectionDescription": "No hemos podido conectar con el servidor para comprobar el progreso. Comprueba tu conexión y vuelve a intentarlo.",
+    "connectionTitle": "No podemos consultar el progreso",
+    "description": "Puede tardar más con PDFs o varias páginas. Puedes minimizar la app si quieres.",
+    "failureDescription": "No hemos podido leer este archivo. Prueba con fotos más claras o con otra copia del manual.",
+    "failureTitle": "No se ha podido procesar",
+    "info": "Tus archivos se usan para procesar e indexar este manual.",
+    "loadDescription": "No hemos podido comprobar el estado del manual. Vuelve a consultarlo para saber si ha terminado.",
+    "loadTitle": "No podemos consultar el manual",
+    "notFoundDescription": "Puede que se haya eliminado. En tu biblioteca puedes abrir otro manual o subirlo de nuevo.",
+    "notFoundTitle": "No hemos encontrado este manual",
+    "pageCount_one": "{{completed}}/{{count}} página",
+    "pageCount_other": "{{completed}}/{{count}} páginas",
+    "progressLabel": "Progreso: {{progress}} por ciento",
+    "title": "Leyendo tu manual…",
+    "unnamed": "Manual sin nombre",
+    "uploadAnother": "Subir otro manual"
+  },
+  "sources": {
+    "camera": {
+      "ariaLabel": "Hacer foto con la cámara",
+      "description": "Foto a foto",
+      "label": "Cámara"
+    },
+    "gallery": {
+      "ariaLabel": "Seleccionar imágenes de la galería",
+      "description": "Varias a la vez",
+      "label": "Galería"
+    },
+    "pdf": {
+      "ariaLabel": "Seleccionar PDF",
+      "description": "Un documento",
+      "label": "PDF"
+    }
+  },
+  "steps": {
+    "game": "Elige el juego",
+    "pages": "Añade las páginas"
+  },
+  "title": "Nuevo manual",
+  "validation": {
+    "addPages": {
+      "description": "Usa la cámara, la galería o sube un PDF.",
+      "title": "Añade páginas"
+    },
+    "imagesAlreadyAdded": {
+      "description": "Quítalas antes de añadir un PDF.",
+      "title": "Ya has añadido imágenes"
+    },
+    "imageTooLarge": {
+      "description": "Cada imagen puede ocupar {{max}} MB.",
+      "title": "Imagen demasiado grande"
+    },
+    "mixedFiles": {
+      "description": "Añade un PDF o imágenes de sus páginas, sin mezclarlos.",
+      "title": "Elige un solo formato"
+    },
+    "pdfAlreadyAdded": {
+      "description": "Quítalo antes de añadir otros archivos.",
+      "title": "Ya has añadido un PDF"
+    },
+    "pdfTooLarge": {
+      "description": "El PDF puede ocupar {{max}} MB.",
+      "title": "PDF demasiado grande"
+    },
+    "tooManyPages": {
+      "description": "Máximo {{max}} imágenes por manual.",
+      "title": "Demasiadas páginas"
+    },
+    "totalTooLarge": {
+      "description": "El total no puede superar {{max}} MB.",
+      "title": "Archivo demasiado grande"
+    },
+    "unsupportedImage": {
+      "description": "Usa JPG, PNG o WebP.",
+      "title": "Formato no soportado"
+    }
+  }
+}

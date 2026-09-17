@@ -1,12 +1,18 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ChevronRight, FileText, LogOut, Moon, Sun, SunMoon } from 'lucide-react';
+import { CaretRightIcon, MoonIcon, SunIcon, CircleHalfIcon } from '@phosphor-icons/react';
+import { LogOutIcon } from '@/shared/components/action-icons';
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTheme, type AccentVariant, type ThemeMode } from '@/app/theme';
 import { DeleteAccountButton } from '@/features/account/DeleteAccount';
 import { useAuth, useLogout } from '@/features/auth/use-auth';
+import { LanguageCards } from '@/features/language/LanguageCards';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
+import type { TourTarget } from '@/features/tutorial/types';
 import { Avatar } from '@/shared/components/Avatar';
 import { cn } from '@/shared/lib/cn';
 
@@ -16,50 +22,103 @@ export const Route = createFileRoute('/_app/settings')({
 
 function SettingsScreen() {
   const theme = useTheme();
+  const { t } = useTranslation('settings');
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-[var(--m-space-5)] px-[var(--m-space-5)] pb-10 pt-[var(--m-space-4)] md:max-w-3xl md:px-[var(--m-space-8)] md:pt-[var(--m-space-8)]">
-      <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">Ajustes</h1>
+    <div className="page-frame page-stack mx-auto max-w-4xl">
+      <header className="flex items-start justify-between gap-3">
+        <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+          {t('heading')}
+        </h1>
+        <HelpMenuButton className="-mr-2 md:hidden" />
       </header>
 
-      <AccountSection />
+      <div className="flex flex-col gap-6">
+        <AccountSection />
 
-      <Group title="Apariencia">
-        {/* Hint estático: un caption que cambia con la selección reflowea. */}
-        <Row label="Tema" hint="Claro, oscuro o el del sistema" stacked>
-          <SegmentedControl<ThemeMode>
-            value={theme.mode}
-            onChange={theme.setMode}
-            ariaLabel="Modo de color"
-            options={[
-              { value: 'light', label: 'Claro', icon: <Sun size={14} /> },
-              { value: 'dark', label: 'Oscuro', icon: <Moon size={14} /> },
-              { value: 'auto', label: 'Auto', icon: <SunMoon size={14} /> },
-            ]}
-          />
-        </Row>
-        <Row label="Color de acento" hint="Color del CTA principal">
-          <SegmentedControl<AccentVariant>
-            value={theme.accent}
-            onChange={theme.setAccent}
-            ariaLabel="Color de acento"
-            options={[
-              { value: 'amber', label: 'Ámbar' },
-              { value: 'blue', label: 'Azul' },
-            ]}
-          />
-        </Row>
-      </Group>
+        <Group title={t('appearance.group')}>
+          {/* Hint estático que no cambia al alternar el modo */}
+          <Row
+            label={t('appearance.theme')}
+            hint={t('appearance.themeHint')}
+            stacked
+            tour="settings-theme"
+          >
+            <SegmentedControl<ThemeMode>
+              value={theme.mode}
+              onChange={theme.setMode}
+              ariaLabel={t('appearance.themeModeAriaLabel')}
+              options={[
+                {
+                  value: 'light',
+                  label: t('appearance.themeModes.light'),
+                  icon: (
+                    <SunIcon
+                      aria-hidden="true"
+                      size={16}
+                      weight={theme.mode === 'light' ? 'duotone' : undefined}
+                    />
+                  ),
+                },
+                {
+                  value: 'dark',
+                  label: t('appearance.themeModes.dark'),
+                  icon: (
+                    <MoonIcon
+                      aria-hidden="true"
+                      size={16}
+                      weight={theme.mode === 'dark' ? 'duotone' : undefined}
+                    />
+                  ),
+                },
+                {
+                  value: 'auto',
+                  label: t('appearance.themeModes.auto'),
+                  icon: (
+                    <CircleHalfIcon
+                      aria-hidden="true"
+                      size={16}
+                      weight={theme.mode === 'auto' ? 'duotone' : undefined}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </Row>
+          <Row
+            label={t('appearance.accentColor')}
+            hint={t('appearance.accentColorHint')}
+            tour="settings-accent"
+          >
+            <SegmentedControl<AccentVariant>
+              value={theme.accent}
+              onChange={theme.setAccent}
+              ariaLabel={t('appearance.accentColorAriaLabel')}
+              options={[
+                { value: 'amber', label: t('appearance.accentColors.amber') },
+                { value: 'blue', label: t('appearance.accentColors.blue') },
+              ]}
+            />
+          </Row>
+          <Row
+            label={t('appearance.language')}
+            hint={t('appearance.languageHint')}
+            stacked
+            tour="settings-language"
+          >
+            <LanguageCards />
+          </Row>
+        </Group>
 
-      <PrivacyDataSection />
+        <PrivacyDataSection />
+      </div>
 
       <footer className="mt-2 flex justify-center">
         <Link
           to="/privacy"
-          className="text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
+          className="hit-area rounded-sm text-xs font-medium text-fg-3 underline-offset-4 transition-colors hover:text-fg hover:underline"
         >
-          Política de privacidad
+          {t('footer.privacyPolicy')}
         </Link>
       </footer>
     </div>
@@ -69,15 +128,17 @@ function SettingsScreen() {
 function AccountSection() {
   const { user } = useAuth();
   const logout = useLogout();
+  const { t } = useTranslation('settings');
 
   if (!user) return null;
   const displayName = user.username || user.email;
 
   return (
-    <Group title="Cuenta">
+    <Group title={t('account.group')}>
       <Link
         to="/profile"
-        className="flex items-center gap-3.5 p-4 transition-colors hover:bg-surface-2"
+        {...tourTarget('settings-account')}
+        className="icon-feedback flex items-center gap-3.5 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
       >
         <Avatar
           name={displayName}
@@ -87,22 +148,27 @@ function AccountSection() {
         />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-base font-bold text-fg">{displayName}</p>
-          <p className="truncate text-sm text-fg-3">Editar perfil, seguridad y verificación</p>
+          <p className="truncate text-sm text-fg-3">{t('account.description')}</p>
         </div>
-        <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-fg-3" aria-hidden="true" />
+        <CaretRightIcon
+          data-icon-motion="forward"
+          size={18}
+          className="shrink-0 text-fg-3"
+          aria-hidden="true"
+        />
       </Link>
 
-      <Row label="Cerrar sesión" hint="En este dispositivo">
+      <Row label={t('account.logout')} hint={t('account.logoutHint')}>
         <Button
           type="button"
           size="sm"
           variant="ghost"
-          className="text-error hover:bg-error-bg"
+          className="text-error hover:text-error"
           loading={logout.isPending}
           onClick={() => logout.mutate()}
         >
-          <LogOut size={14} strokeWidth={2} />
-          Salir
+          <LogOutIcon size={16} />
+          {t('account.logoutAction')}
         </Button>
       </Row>
     </Group>
@@ -111,22 +177,13 @@ function AccountSection() {
 
 function PrivacyDataSection() {
   const { user } = useAuth();
+  const { t } = useTranslation('settings');
 
   return (
-    <Group title="Privacidad y datos">
-      <Row
-        label="Archivos del manual"
-        hint="Se guardan en el servidor y se eliminan al borrar el manual o la cuenta."
-      >
-        <Badge role="status" ariaLabel="Archivos gestionados por el servidor">
-          <FileText size={12} aria-hidden="true" /> Servidor
-        </Badge>
-      </Row>
+    <Group title={t('privacy.group')} tour="settings-privacy">
+      <Row label={t('privacy.files')} hint={t('privacy.filesHint')} />
       {user ? (
-        <Row
-          label="Borrar cuenta"
-          hint="Elimina tu perfil, manuales, conversaciones y sesiones asociadas."
-        >
+        <Row label={t('privacy.deleteAccount')} hint={t('privacy.deleteAccountHint')}>
           <DeleteAccountButton username={user.username} />
         </Row>
       ) : null}
@@ -137,10 +194,11 @@ function PrivacyDataSection() {
 function Group({
   title,
   hint,
+  tour,
   children,
-}: Readonly<{ title: string; hint?: string; children: ReactNode }>) {
+}: Readonly<{ title: string; hint?: string; tour?: TourTarget; children: ReactNode }>) {
   return (
-    <section aria-label={title}>
+    <section aria-label={title} {...(tour ? tourTarget(tour) : {})}>
       <div className="mb-2.5 px-1">
         <h2 className="font-display text-lg font-bold tracking-tight text-fg">{title}</h2>
         {hint ? <p className="mt-0.5 text-xs text-fg-3">{hint}</p> : null}
@@ -154,16 +212,19 @@ function Row({
   label,
   hint,
   stacked,
+  tour,
   children,
 }: Readonly<{
   label: string;
   hint?: string;
-  /** Control ancho: en móvil baja bajo el label (el hint cabe en una línea). */
+  /** Control ancho en móvil bajo el label */
   stacked?: boolean;
-  children: ReactNode;
+  tour?: TourTarget;
+  children?: ReactNode;
 }>) {
   return (
     <div
+      {...(tour ? tourTarget(tour) : {})}
       className={cn(
         'gap-[var(--m-space-3)] p-[var(--m-space-4)]',
         stacked ? 'flex flex-col items-end md:flex-row md:items-center' : 'flex items-center',
@@ -175,25 +236,5 @@ function Row({
       </div>
       {children}
     </div>
-  );
-}
-
-function Badge({
-  children,
-  role,
-  ariaLabel,
-}: Readonly<{
-  children: ReactNode;
-  role?: string;
-  ariaLabel?: string;
-}>) {
-  return (
-    <span
-      role={role}
-      aria-label={ariaLabel}
-      className="inline-flex items-center gap-1.5 rounded-full bg-success-bg px-2.5 py-1 text-xs font-semibold text-success"
-    >
-      {children}
-    </span>
   );
 }

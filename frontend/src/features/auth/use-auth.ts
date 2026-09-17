@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { authApi, type AuthResponse, type LoginInput, type RegisterInput } from '@/shared/api/auth';
 import { AUTH_ME_KEY, dropSessionCaches, meQueryOptions } from './auth-queries';
 
@@ -16,12 +18,17 @@ export function useAuth() {
  */
 function useEnterSession<TInput>(mutationFn: (input: TInput) => Promise<AuthResponse>) {
   const queryClient = useQueryClient();
-  return useMutation({
+  // El último error sigue visible mientras se comprueba un nuevo intento.
+  const [lastError, setLastError] = useState<Error | null>(null);
+  const mutation = useMutation({
     mutationFn,
+    onError: setLastError,
     onSuccess: (data) => {
+      setLastError(null);
       queryClient.setQueryData(AUTH_ME_KEY, data);
     },
   });
+  return { ...mutation, lastError };
 }
 
 export function useLogin() {
@@ -30,7 +37,10 @@ export function useLogin() {
 
 /** El registro deja sesión iniciada en backend (autologin), igual que login. */
 export function useRegister() {
-  return useEnterSession((input: RegisterInput) => authApi.register(input));
+  const { i18n } = useTranslation();
+  return useEnterSession((input: Omit<RegisterInput, 'locale'>) =>
+    authApi.register({ ...input, locale: i18n.resolvedLanguage === 'en' ? 'en' : 'es' }),
+  );
 }
 
 export function useLogout() {

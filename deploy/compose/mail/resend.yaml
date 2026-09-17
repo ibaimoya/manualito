@@ -1,0 +1,37 @@
+x-resend-environment: &resend-environment
+  FRONTEND_PUBLIC_URL: https://app.manualito.dev
+  SMTP_HOST: smtp.resend.com
+  SMTP_PORT: "465"
+  SMTP_USERNAME: resend
+  SMTP_PASSWORD_FILE: /run/secrets/resend_api_key
+  SMTP_USE_TLS: "true"
+  SMTP_STARTTLS: "false"
+  SMTP_FROM_EMAIL: Manualito <accounts@manualito.dev>
+  SMTP_REPLY_TO: support@manualito.dev
+
+services:
+  api:
+    environment: *resend-environment
+    secrets:
+      - resend_api_key
+    depends_on:
+      mailpit: !reset null
+
+  celery-worker-mail:
+    environment: *resend-environment
+    secrets:
+      - resend_api_key
+    depends_on:
+      mailpit: !reset null
+
+  frontend:
+    build:
+      args:
+        VITE_MAILPIT_URL: ""
+
+  mailpit:
+    scale: 0
+
+secrets:
+  resend_api_key:
+    file: ./secrets/resend_api_key.txt

@@ -1,0 +1,55 @@
+:root:active-view-transition-type(entry) {
+  view-transition-name: none;
+}
+:root:active-view-transition-type(entry)::view-transition,
+:root:active-view-transition-type(entry)::view-transition-group(*),
+:root:active-view-transition-type(entry)::view-transition-image-pair(*),
+:root:active-view-transition-type(entry)::view-transition-old(*),
+:root:active-view-transition-type(entry)::view-transition-new(*) {
+  pointer-events: none;
+}
+:root:active-view-transition-type(entry)::view-transition-group(entry-content) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+:root:active-view-transition-type(entry)::view-transition-image-pair(entry-content) {
+  overflow: clip;
+}
+:root:active-view-transition-type(entry)::view-transition-old(entry-content),
+:root:active-view-transition-type(entry)::view-transition-new(entry-content) {
+  height: 100%;
+  object-fit: none;
+  object-position: top left;
+}
+:root:active-view-transition-type(entry)::view-transition-old(entry-content) {
+  animation: entry-out 80ms ease-out both;
+}
+:root:active-view-transition-type(entry)::view-transition-new(entry-content) {
+  animation: entry-in 220ms cubic-bezier(0.23, 1, 0.32, 1) 35ms both;
+}
+@keyframes entry-out {
+  to {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+@keyframes entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:active-view-transition-type(entry)::view-transition-group(*),
+  :root:active-view-transition-type(entry)::view-transition-old(*),
+  :root:active-view-transition-type(entry)::view-transition-new(*) {
+    animation-duration: 0s;
+    animation-delay: 0s;
+  }
+}

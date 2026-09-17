@@ -2,21 +2,24 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
-  Check,
-  Dice5,
-  FileText,
-  Info,
-  Loader2,
-  Plus,
-  RotateCw,
-  Search,
-  WifiOff,
-  X,
-} from 'lucide-react';
+  CheckIcon,
+  DiceFiveIcon,
+  FileTextIcon,
+  InfoIcon,
+  CircleNotchIcon,
+  PlusIcon,
+  ArrowClockwiseIcon,
+  MagnifyingGlassIcon,
+  WifiSlashIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { api, type GameSearchItem } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { highlightMatch } from '@/shared/components/highlightMatch';
 import { toastApiError } from '@/shared/lib/toastApiError';
+import { LiveTrans } from '@/shared/components/LiveTrans';
+import { HelpIndicator } from '@/components/ui/help-indicator';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 250;
@@ -24,17 +27,13 @@ const DEBOUNCE_MS = 250;
 type Props = Readonly<{
   onSelect: (game: GameSearchItem) => void;
   focusOnMount?: boolean;
-  /** En la subida (true) ofrece crear el juego ausente de BGG; al explorar (false), no. */
+  /** Permite añadir juegos durante la subida. */
   allowCreate?: boolean;
 }>;
 
 type Status = 'idle' | 'typing' | 'loading' | 'results' | 'empty' | 'error';
 
-/**
- * Typeahead de juegos contra el catálogo (BoardGameGeek vía el gateway).
- * Combobox accesible (WAI-ARIA): flechas para navegar, Enter para elegir,
- * Esc para limpiar. Muestra la atribución BGG que exige su ToU.
- */
+/** Busca juegos en BGG y permite añadir uno al subir un manual. */
 export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Props) {
   const { t } = useTranslation('explore');
   const [query, setQuery] = useState('');
@@ -58,19 +57,19 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
     retry: false,
   });
 
-  // Fallback: si el juego no está en BGG, se crea en la BD y se elige al vuelo.
   const createMutation = useMutation({
     mutationFn: (name: string) => api.createGame(name),
-    onSuccess: onSelect,
     onError: (error) =>
       toastApiError(error, 'create-game', {
-        title: t('typeahead.error.createTitle'),
+        title: <LiveTrans ns="explore" i18nKey="typeahead.error.createTitle" />,
         id: 'create-game-error',
-        description: t('typeahead.error.createDescription'),
+        description: <LiveTrans ns="explore" i18nKey="typeahead.error.createDescription" />,
       }),
   });
+  // Evita que una respuesta atrasada cambie la selección.
+  const createTokenRef = useRef(0);
 
-  const games = data?.games ?? [];
+  const fetchedGames = data?.games ?? [];
   const settling = term.length >= MIN_CHARS && term !== debounced;
   const status = resolveStatus({
     term,
@@ -78,34 +77,71 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
     isError,
     isFetching,
     settling,
-    count: games.length,
+    count: fetchedGames.length,
   });
   const open =
     status === 'loading' || status === 'results' || status === 'empty' || status === 'error';
 
-  // Índice activo saneado: si los resultados encogen, no apunta fuera de rango.
-  const activeIndex = games.length > 0 ? Math.min(highlight, games.length - 1) : 0;
+  // La caché anterior no debe permitir elegir resultados que ya no se ven.
+  const games = status === 'results' ? fetchedGames : [];
+  const showCreateOption = allowCreate && (status === 'results' || status === 'empty');
+  const optionsCount = games.length + (showCreateOption ? 1 : 0);
+  const activeIndex = optionsCount > 0 ? Math.min(highlight, optionsCount - 1) : 0;
 
-  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
-    handleSearchKeyDown({
-      event,
-      canReset: query.length > 0,
-      status,
-      games,
-      activeIndex,
-      onReset: reset,
-      onHighlight: setHighlight,
-      onSelect,
+  function pickGame(game: GameSearchItem): void {
+    createTokenRef.current += 1;
+    onSelect(game);
+  }
+
+  function handleCreate(): void {
+    if (createMutation.isPending) return;
+    const name = debounced;
+    const token = (createTokenRef.current += 1);
+    createMutation.mutate(name, {
+      onSuccess: (game) => {
+        if (createTokenRef.current !== token) return;
+        pickGame(game);
+      },
     });
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === 'Escape' && query.length > 0) {
+      event.preventDefault();
+      reset();
+      return;
+    }
+    if (optionsCount === 0) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const next = Math.max(
+        0,
+        Math.min(optionsCount - 1, activeIndex + (event.key === 'ArrowDown' ? 1 : -1)),
+      );
+      setHighlight(next);
+      document
+        .getElementById(`${listId}-opt-${next}`)
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (showCreateOption && activeIndex === games.length) {
+        handleCreate();
+        return;
+      }
+      const game = games[activeIndex];
+      if (game) pickGame(game);
+    }
+  }
+
   function reset(): void {
+    createTokenRef.current += 1;
     setQuery('');
     setDebounced('');
     inputRef.current?.focus();
   }
 
-  const activeId = status === 'results' ? `${listId}-opt-${activeIndex}` : undefined;
+  const activeId = optionsCount > 0 ? `${listId}-opt-${activeIndex}` : undefined;
 
   return (
     <div className="relative">
@@ -117,13 +153,18 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
             : 'rounded-2xl border-border-strong focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20',
         )}
       >
-        <Search size={20} className="shrink-0 text-fg-3" aria-hidden="true" />
+        <MagnifyingGlassIcon
+          data-icon-motion="search"
+          size={20}
+          className="shrink-0 text-fg-3"
+          aria-hidden="true"
+        />
         <input
           ref={inputRef}
           type="text"
           role="combobox"
-          aria-expanded={open}
-          aria-controls={listId}
+          aria-expanded={optionsCount > 0}
+          aria-controls={optionsCount > 0 ? listId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={activeId}
           autoComplete="off"
@@ -134,13 +175,14 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
           autoFocus={focusOnMount}
           value={query}
           onChange={(event) => {
+            createTokenRef.current += 1;
             setQuery(event.target.value);
             setHighlight(0);
           }}
           onKeyDown={handleKeyDown}
           placeholder={t('typeahead.placeholder')}
           aria-label={t('typeahead.inputAriaLabel')}
-          // El foco lo pinta el contenedor: el outline global aquí queda descuadrado.
+          // El foco lo pinta el contenedor. El outline global aquí queda descuadrado.
           className="min-w-0 flex-1 bg-transparent text-base text-fg outline-none placeholder:text-fg-3 focus-visible:outline-none"
         />
         {status === 'loading' ? (
@@ -154,9 +196,9 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
             type="button"
             onClick={reset}
             aria-label={t('typeahead.clearSearch')}
-            className="grid size-7 shrink-0 place-items-center rounded-lg text-fg-3 hover:bg-surface hover:text-fg-2"
+            className="icon-feedback grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg-2"
           >
-            <X size={16} aria-hidden="true" />
+            <XIcon size={16} className="search-clear-icon" aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -170,14 +212,15 @@ export function GameTypeahead({ onSelect, focusOnMount, allowCreate = true }: Pr
           listId={listId}
           query={debounced}
           activeIndex={activeIndex}
-          onPick={onSelect}
+          optionsCount={optionsCount}
+          onPick={pickGame}
           onHover={setHighlight}
           onRetry={() => {
             refetch().catch(() => undefined);
           }}
           allowCreate={allowCreate}
           creating={createMutation.isPending}
-          onCreate={() => createMutation.mutate(debounced)}
+          onCreate={handleCreate}
         />
       ) : null}
     </div>
@@ -190,19 +233,20 @@ function SearchHint({ status }: Readonly<{ status: Status }>) {
   if (status !== 'idle' && status !== 'typing') return null;
   return (
     <p className="mt-2 flex items-center gap-1.5 pl-1 text-xs text-fg-3">
-      <Info size={13} aria-hidden="true" />
+      <InfoIcon size={13} aria-hidden="true" />
       {status === 'idle' ? t('typeahead.searchHint.idle') : t('typeahead.searchHint.typing')}
     </p>
   );
 }
 
-/** Desplegable anclado al input: skeleton, resultados, vacío o error. */
+/** Desplegable anclado al input. Skeleton, resultados, vacío o error. */
 function ResultsDropdown({
   status,
   games,
   listId,
   query,
   activeIndex,
+  optionsCount,
   onPick,
   onHover,
   onRetry,
@@ -215,6 +259,7 @@ function ResultsDropdown({
   listId: string;
   query: string;
   activeIndex: number;
+  optionsCount: number;
   onPick: (game: GameSearchItem) => void;
   onHover: (index: number) => void;
   onRetry: () => void;
@@ -223,102 +268,114 @@ function ResultsDropdown({
   onCreate: () => void;
 }>) {
   const { t } = useTranslation('explore');
+  const showCreateOption = allowCreate && (status === 'results' || status === 'empty');
   return (
     <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-primary bg-card shadow-lg">
+      {/* Solo se desplazan las coincidencias. La opción de añadir queda visible. */}
       <ul
         id={listId}
+        role={optionsCount > 0 ? 'listbox' : undefined}
         aria-label={t('typeahead.resultsAriaLabel')}
-        className="max-h-64 overflow-y-auto"
+        className="flex max-h-64 flex-col"
       >
-        {status === 'loading' ? <ResultSkeleton /> : null}
-
-        {status === 'results'
-          ? games.map((game, index) => (
-              <ResultRow
-                key={game.id}
-                id={`${listId}-opt-${index}`}
-                game={game}
-                query={query}
-                active={index === activeIndex}
-                onPick={() => onPick(game)}
-                onHover={() => onHover(index)}
-              />
-            ))
-          : null}
-
-        {status === 'empty' ? (
-          <EmptyResult
-            query={query}
-            allowCreate={allowCreate}
+        <li role="presentation" className="min-h-0 flex-1 overflow-y-auto">
+          <ul role="presentation">
+            {status === 'loading' ? <ResultSkeleton /> : null}
+            {status === 'results'
+              ? games.map((game, index) => (
+                  <ResultRow
+                    key={game.id}
+                    id={`${listId}-opt-${index}`}
+                    game={game}
+                    query={query}
+                    active={index === activeIndex}
+                    onPick={() => onPick(game)}
+                    onHover={() => onHover(index)}
+                  />
+                ))
+              : null}
+            {status === 'empty' && !allowCreate ? <EmptyResult /> : null}
+            {status === 'error' ? <ErrorResult onRetry={onRetry} /> : null}
+          </ul>
+        </li>
+        {showCreateOption ? (
+          <CreateGameRow
+            id={`${listId}-opt-${games.length}`}
+            name={query}
+            active={activeIndex === games.length}
             creating={creating}
-            onCreate={onCreate}
+            onPick={onCreate}
+            onHover={() => onHover(games.length)}
           />
         ) : null}
-        {status === 'error' ? <ErrorResult onRetry={onRetry} /> : null}
       </ul>
       <BggAttribution />
     </div>
   );
 }
 
-/**
- * Sin coincidencias. En la subida se ofrece crear el juego a mano y elegirlo
- * al vuelo; al explorar solo se sugiere reformular la búsqueda.
- */
-function EmptyResult({
-  query,
-  allowCreate,
-  creating,
-  onCreate,
-}: Readonly<{ query: string; allowCreate: boolean; creating: boolean; onCreate: () => void }>) {
+function EmptyResult() {
   const { t } = useTranslation('explore');
-  // Acorta el nombre largo para que el botón no desborde; el truncate cubre el resto.
-  const label = query.length > 32 ? `${query.slice(0, 32).trimEnd()}…` : query;
   return (
     <li className="px-4 py-5 text-center">
       <span className="mx-auto mb-2.5 grid size-11 place-items-center rounded-full bg-surface text-fg-3">
-        <Search size={20} aria-hidden="true" />
+        <MagnifyingGlassIcon data-icon-motion="search" size={20} aria-hidden="true" />
       </span>
-      {allowCreate ? (
-        <>
-          <p className="text-sm font-semibold text-fg">{t('typeahead.empty.create.title')}</p>
-          <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
-            {t('typeahead.empty.create.description')}
-          </p>
-          <button
-            type="button"
-            // mousedown (no click): crea antes de que el input pierda el foco.
-            onMouseDown={(event) => {
-              event.preventDefault();
-              onCreate();
-            }}
-            disabled={creating}
-            aria-busy={creating}
-            className="mx-auto mt-3 inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg bg-primary pl-2.5 pr-3 text-sm font-semibold text-fg-inv transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {creating ? (
-              <Loader2
-                size={15}
-                strokeWidth={2.25}
-                className="shrink-0 animate-spin"
-                aria-hidden="true"
-              />
-            ) : (
-              <Plus size={15} strokeWidth={2.25} className="shrink-0" aria-hidden="true" />
-            )}
-            <span className="min-w-0 truncate">
-              {t('typeahead.empty.create.button', { game: label })}
-            </span>
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="text-sm font-semibold text-fg">{t('typeahead.empty.search.title')}</p>
-          <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
-            {t('typeahead.empty.search.description')}
-          </p>
-        </>
-      )}
+      <p className="text-sm font-semibold text-fg">{t('typeahead.empty.search.title')}</p>
+      <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-fg-3">
+        {t('typeahead.empty.search.description')}
+      </p>
+    </li>
+  );
+}
+
+function CreateGameRow({
+  id,
+  name,
+  active,
+  creating,
+  onPick,
+  onHover,
+}: Readonly<{
+  id: string;
+  name: string;
+  active: boolean;
+  creating: boolean;
+  onPick: () => void;
+  onHover: () => void;
+}>) {
+  const { t } = useTranslation('explore');
+  const label = t('typeahead.create.add', { game: name });
+  return (
+    <li role="none" className="shrink-0">
+      <button
+        id={id}
+        type="button"
+        role="option"
+        aria-selected={active}
+        aria-busy={creating}
+        disabled={creating}
+        tabIndex={-1}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onPick}
+        onMouseMove={onHover}
+        title={label}
+        className={cn(
+          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-60',
+          active ? 'border-l-primary bg-surface' : 'border-l-transparent',
+        )}
+      >
+        <span className="grid size-9 shrink-0 place-items-center text-fg-3">
+          {creating ? (
+            <CircleNotchIcon size={16} className="animate-spin" aria-hidden="true" />
+          ) : (
+            <PlusIcon data-icon-motion="plus" size={18} aria-hidden="true" />
+          )}
+        </span>
+        <span className="min-w-0 flex-1 text-[15px] font-semibold text-fg line-clamp-2 break-words">
+          {label}
+        </span>
+      </button>
     </li>
   );
 }
@@ -327,7 +384,7 @@ function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const { t } = useTranslation('explore');
   return (
     <li className="flex items-start gap-3 px-4 py-4">
-      <WifiOff size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
+      <WifiSlashIcon size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
       <div className="flex-1">
         <p className="text-sm font-semibold text-fg">{t('typeahead.error.title')}</p>
         <p className="mt-0.5 text-xs text-fg-3">{t('typeahead.error.description')}</p>
@@ -336,53 +393,12 @@ function ErrorResult({ onRetry }: Readonly<{ onRetry: () => void }>) {
           onClick={onRetry}
           className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg hover:bg-surface"
         >
-          <RotateCw size={14} aria-hidden="true" /> {t('typeahead.error.retry')}
+          <ArrowClockwiseIcon data-icon-motion="rotate" size={16} aria-hidden="true" />{' '}
+          {t('typeahead.error.retry')}
         </button>
       </div>
     </li>
   );
-}
-
-function handleSearchKeyDown({
-  event,
-  canReset,
-  status,
-  games,
-  activeIndex,
-  onReset,
-  onHighlight,
-  onSelect,
-}: {
-  event: KeyboardEvent<HTMLInputElement>;
-  canReset: boolean;
-  status: Status;
-  games: GameSearchItem[];
-  activeIndex: number;
-  onReset: () => void;
-  onHighlight: (index: number) => void;
-  onSelect: (game: GameSearchItem) => void;
-}): void {
-  if (event.key === 'Escape' && canReset) {
-    event.preventDefault();
-    onReset();
-    return;
-  }
-  if (status !== 'results') return;
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    onHighlight(Math.min(games.length - 1, activeIndex + 1));
-    return;
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    onHighlight(Math.max(0, activeIndex - 1));
-    return;
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    const game = games[activeIndex];
-    if (game) onSelect(game);
-  }
 }
 
 function resolveStatus({
@@ -424,41 +440,47 @@ function ResultRow({
   onHover: () => void;
 }>) {
   const { t } = useTranslation('explore');
+  const sharedManuals = t('typeahead.sharedManuals', { count: game.manuals_count });
+  const option = (
+    <button
+      id={id}
+      type="button"
+      role="option"
+      aria-selected={active}
+      tabIndex={-1}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onPick}
+      onMouseMove={onHover}
+      className={cn(
+        'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left',
+        active ? 'border-l-primary bg-surface' : 'border-l-transparent',
+      )}
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-primary-700">
+        <DiceFiveIcon size={18} aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
+        {highlightMatch(game.name, query, MIN_CHARS)}
+      </span>
+      {game.manuals_count > 0 ? (
+        <HelpIndicator
+          passive
+          icon={FileTextIcon}
+          label={sharedManuals}
+          className="min-h-6 shrink-0 text-xs font-normal text-fg-2 tabular-nums"
+          iconClassName="size-3.5"
+        >
+          {game.manuals_count}
+        </HelpIndicator>
+      ) : null}
+      <span className="mono shrink-0 text-xs text-fg-3">
+        {game.year_published ?? t('typeahead.yearNotAvailable')}
+      </span>
+    </button>
+  );
   return (
-    <li>
-      <button
-        id={id}
-        type="button"
-        // mousedown (no click): elige antes de que el input pierda foco.
-        onMouseDown={(event) => {
-          event.preventDefault();
-          onPick();
-        }}
-        onMouseMove={onHover}
-        className={cn(
-          'flex min-h-12 w-full items-center gap-3 border-l-[3px] px-3.5 py-2.5 text-left transition-colors',
-          active ? 'border-l-primary bg-surface' : 'border-l-transparent hover:bg-surface',
-        )}
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-primary-700">
-          <Dice5 size={18} aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-fg">
-          {highlightMatch(game.name, query, MIN_CHARS)}
-        </span>
-        {game.manuals_count > 0 ? (
-          <span
-            className="mono inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-100 px-1.5 py-0.5 text-[10px] font-bold text-primary-700"
-            title={t('typeahead.sharedManuals', { count: game.manuals_count })}
-          >
-            <FileText size={10} strokeWidth={2.5} aria-hidden="true" />
-            {game.manuals_count}
-          </span>
-        ) : null}
-        <span className="mono shrink-0 text-xs text-fg-3">
-          {game.year_published ?? t('typeahead.yearNotAvailable')}
-        </span>
-      </button>
+    <li role="none">
+      {game.manuals_count > 0 ? <Tooltip content={sharedManuals}>{option}</Tooltip> : option}
     </li>
   );
 }
@@ -503,15 +525,12 @@ export function SelectedGameChip({
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border-strong bg-bg p-3.5 shadow-xs">
       <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-fg-inv">
-        <Dice5 size={22} strokeWidth={2} aria-hidden="true" />
+        <DiceFiveIcon size={22} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-display text-base font-bold text-fg">{game.name}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 text-xs font-bold text-success">
-            <Check size={13} strokeWidth={2.5} aria-hidden="true" />{' '}
-            {t('typeahead.selected.chosen')}
-          </span>
+          <HelpIndicator icon={CheckIcon} tone="success" label={t('typeahead.selected.help')} />
         </div>
         <p className="mono mt-0.5 text-[11.5px] text-fg-3">
           {game.year_published ?? t('typeahead.yearNotAvailable')}
@@ -520,7 +539,7 @@ export function SelectedGameChip({
       <button
         type="button"
         onClick={onChange}
-        className="h-9 shrink-0 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg-2 hover:bg-surface hover:text-fg"
+        className="h-9 shrink-0 rounded-lg border border-border-strong px-3 text-sm font-semibold text-fg-2 hover:bg-surface hover:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
       >
         {t('typeahead.selected.change')}
       </button>

@@ -32,6 +32,7 @@ from api.exceptions import (
 from api.games import repository as games_repository
 from api.manuals.dto import (
     ManualPageForProcessing,
+    ManualSummary,
     PageEditResult,
     PreparedChunk,
     ReconciliationPlan,
@@ -80,6 +81,7 @@ from api.manuals.repository import (
     replace_page_result,
     resolve_manual_processed_status,
     soft_delete_user_manual,
+    update_user_manual,
 )
 from api.manuals.schemas import ManualCreatedResponse
 from api.manuals.validation import validate_manual_image, validate_manual_pdf
@@ -152,6 +154,7 @@ async def create_manual(
     language: str | None,
     images: list[UploadFile] | None,
     pdf: UploadFile | None,
+    anonymous: bool = True,
 ) -> ManualCreatedResponse:
     """Persiste un manual y adopta sus assets solo tras confirmar el commit."""
     batch: AssetWriteBatch | None = None
@@ -177,6 +180,7 @@ async def create_manual(
                 game_id=game_id,
                 title=_normalize_optional_text(title),
                 visibility=visibility,
+                anonymous=anonymous or visibility == "private",
                 language=_normalize_optional_text(language),
                 source_type=source_type,
                 page_count=page_count,
@@ -837,6 +841,26 @@ async def _edit_page_text_locked(
         page_id=context.page_id,
         stale_chunk_ids=old_chunk_ids,
     )
+
+
+async def update_manual(
+    session: AsyncSession,
+    *,
+    auth: AuthenticatedSession,
+    manual_id: UUID,
+    title: str | None = None,
+    anonymous: bool | None = None,
+) -> ManualSummary:
+    """Guarda los detalles del manual sin volver a indexarlo."""
+    summary = await update_user_manual(
+        session,
+        owner_user_id=auth.user.id,
+        manual_id=manual_id,
+        title=title,
+        anonymous=anonymous,
+    )
+    await session.commit()
+    return summary
 
 
 async def delete_manual(

@@ -1,16 +1,26 @@
 {
   "composer": {
     "aria": {
+      "carousel": "carrusel",
+      "next": "Pregunta siguiente",
+      "pause": "Pausar preguntas",
+      "previous": "Pregunta anterior",
+      "resume": "Reanudar preguntas",
       "suggestedQuestions": "Preguntas sugeridas"
     },
     "placeholder": "Pregunta sobre {{gameName}}…"
   },
   "error": {
-    "backToHistory": "Ir al historial",
-    "notFoundDescription": "Puede que se haya retirado del catálogo. Vuelve al historial para ver tus juegos.",
+    "backToHistory": "Ir a mi biblioteca",
+    "connectionDescription": "No hemos podido conectar con el servidor. Comprueba tu conexión y vuelve a intentarlo.",
+    "connectionTitle": "No podemos cargar este juego",
+    "loadDescription": "No hemos podido abrir la ficha. Vuelve a intentarlo o elige otro juego de tu biblioteca.",
+    "loadTitle": "El juego no ha cargado",
+    "notFoundDescription": "Puede que se haya retirado del catálogo. En tu biblioteca puedes elegir otro juego.",
     "notFoundTitle": "No hemos encontrado este juego"
   },
   "explanation": {
+    "aiGenerated": "Generado con IA",
     "aria": {
       "game": "Explicación del juego",
       "preparing": "Preparando la explicación"
@@ -36,6 +46,7 @@
       "follow": "Seguir este juego",
       "unfollow": "Dejar de seguir este juego"
     },
+    "error": "No se ha guardado el cambio. Inténtalo de nuevo.",
     "follow": "Seguir",
     "following": "Siguiendo"
   },
@@ -46,8 +57,6 @@
     "pages_other": "{{count}} páginas"
   },
   "header": {
-    "aiBadge": "Generado con IA",
-    "aiTooltip": "Generado por IA: puede equivocarse. Si algo no cuadra, contrástalo con el manual original.",
     "boardGame": "Juego de mesa",
     "boardGameWithYear": "Juego de mesa · {{year}}"
   },
@@ -60,6 +69,7 @@
     "pages_other": "{{count}} páginas",
     "pdf": "Manual en PDF",
     "photos": "Manual en fotos",
+    "readShared": "Abrir {{label}}",
     "shared": "Compartido por la comunidad",
     "sourceLabel": "De dónde sale la explicación",
     "viewExtracted": "Ver texto extraído de {{label}}"
@@ -69,10 +79,20 @@
     "library": "Biblioteca"
   },
   "questions": {
+    "blocked": "¿Y si no puedo jugar?",
+    "duration": "¿Cuánto dura una partida?",
     "ends": "¿Cuándo acaba la partida?",
+    "example": "¿Me das un ejemplo?",
     "firstPlayer": "¿Quién empieza?",
-    "passTurn": "¿Se puede pasar el turno?",
-    "tie": "¿Y si empatamos?"
+    "materials": "¿Qué necesito para jugar?",
+    "passTurn": "¿Puedo pasar turno?",
+    "players": "¿Cuántos podemos jugar?",
+    "preparation": "¿Cómo se prepara?",
+    "scoring": "¿Cómo se cuentan los puntos?",
+    "teams": "¿Podemos jugar en equipo?",
+    "tie": "¿Y si empatamos?",
+    "turn": "¿Qué hago en mi turno?",
+    "victory": "¿Cómo se gana?"
   },
   "rating": {
     "actions": {

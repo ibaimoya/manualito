@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eraser } from 'lucide-react';
+import { EraserIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { RATE_LABELS, RatingStars } from '@/features/games/RatingStars';
 import { gameDetailKey, myGamesKey } from '@/features/games/use-games';
 import { gamesApi, type GameDetail, type GameRating } from '@/shared/api/games';
 import { cn } from '@/shared/lib/cn';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 
 const NOTE_MAX = 120;
 
@@ -100,9 +101,9 @@ function RateGameForm({
       });
     },
     onError: () =>
-      toast.error(t('rating.toast.saveError'), {
+      toast.error(<LiveTrans ns="game" i18nKey="rating.toast.saveError" />, {
         id: 'rate-game',
-        description: t('rating.toast.retry'),
+        description: <LiveTrans ns="game" i18nKey="rating.toast.retry" />,
       }),
   });
 
@@ -114,9 +115,9 @@ function RateGameForm({
       toast.success(t('rating.toast.removed'), { id: 'rate-game' });
     },
     onError: () =>
-      toast.error(t('rating.toast.removeError'), {
+      toast.error(<LiveTrans ns="game" i18nKey="rating.toast.removeError" />, {
         id: 'rate-game',
-        description: t('rating.toast.retry'),
+        description: <LiveTrans ns="game" i18nKey="rating.toast.retry" />,
       }),
   });
 
@@ -134,30 +135,38 @@ function RateGameForm({
       className="flex flex-col items-center text-center"
     >
       <GameCover name={gameName} size={64} processing={gameIds.has(gameId)} />
-      <div className="mt-4 flex items-center gap-1">
+      <div className="mt-4 grid grid-cols-[auto_auto_auto] items-center justify-items-center gap-x-1 max-[380px]:grid-cols-1">
         {/* Hueco simétrico a la goma: las estrellas quedan centradas. */}
-        <span aria-hidden="true" className="size-9 shrink-0" />
-        <RatingStars value={score} size={34} onSelect={setScore} />
+        <span
+          aria-hidden="true"
+          className="size-9 shrink-0 max-[380px]:hidden pointer-coarse:size-11"
+        />
+        <RatingStars
+          value={score}
+          size={34}
+          onSelect={setScore}
+          className="col-start-2 row-start-1 max-[380px]:col-start-1"
+        />
         <Tooltip content={t('rating.actions.remove')}>
           <button
             type="button"
             aria-label={t('rating.actions.remove')}
             onClick={() => setScore(0)}
             className={cn(
-              'grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:bg-error-bg hover:text-error',
+              'icon-feedback col-start-3 row-start-1 grid size-9 shrink-0 place-items-center rounded-xl text-fg-3 transition-colors hover:text-error max-[380px]:col-start-1 max-[380px]:row-start-3 pointer-coarse:size-11',
               score === 0 && 'invisible',
             )}
           >
-            <Eraser size={18} strokeWidth={2} />
+            <EraserIcon aria-hidden="true" size={18} />
           </button>
         </Tooltip>
+        <p
+          aria-live="polite"
+          className="col-span-full row-start-2 mt-1 min-h-6 font-display text-sm font-bold text-primary-700"
+        >
+          {ratingLabel ? t(ratingLabel) : t('rating.prompt')}
+        </p>
       </div>
-      <p
-        aria-live="polite"
-        className="mt-1 min-h-6 font-display text-sm font-bold text-primary-700"
-      >
-        {ratingLabel ? t(ratingLabel) : t('rating.prompt')}
-      </p>
 
       <div className="mt-3 w-full max-w-sm text-left">
         {/* px-3: casi alineada con el texto interior del Input, sin meterse. */}

@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,6 +12,7 @@ class AuthFieldError:
     field: str | None
     code: str
     message: str
+    params: dict[str, int] = dataclass_field(default_factory=dict)
 
 
 class AuthError(Exception):
@@ -30,15 +32,19 @@ class AuthFormValidationError(AuthError):
 class UsernameValidationError(AuthFormValidationError):
     """El username no cumple las reglas públicas de registro."""
 
-    def __init__(self, code: str, message: str):
-        super().__init__(AuthFieldError(field="username", code=code, message=message))
+    def __init__(self, code: str, message: str, *, params: dict[str, int] | None = None):
+        super().__init__(
+            AuthFieldError(field="username", code=code, message=message, params=params or {})
+        )
 
 
 class PasswordValidationError(AuthFormValidationError):
     """La contraseña no cumple la política de registro."""
 
-    def __init__(self, code: str, message: str):
-        super().__init__(AuthFieldError(field="password", code=code, message=message))
+    def __init__(self, code: str, message: str, *, params: dict[str, int] | None = None):
+        super().__init__(
+            AuthFieldError(field="password", code=code, message=message, params=params or {})
+        )
 
 
 class InvalidCredentialsError(AuthError):

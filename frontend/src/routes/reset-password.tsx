@@ -1,13 +1,16 @@
 import { type SyntheticEvent, useId, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/shared/api/auth';
 import { AuthShell } from '@/features/auth/auth-shell';
 import { AuthStatus } from '@/features/auth/auth-status';
+import { AuthAlert } from '@/features/auth/auth-alert';
 import { MIN_PASSWORD, NewPasswordFields } from '@/features/auth/auth-controls';
+import { mapApiError } from '@/shared/api/error-mapper';
+import styles from '@/features/auth/entry.module.css';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 
 /** Ruta neutral (con o sin sesión): se llega desde el enlace del email. */
 export const Route = createFileRoute('/reset-password')({
@@ -25,16 +28,11 @@ function ResetPasswordScreen() {
 function InvalidLink() {
   const { t } = useTranslation('auth');
   return (
-    <AuthStatus
-      tone="warning"
-      icon={ShieldAlert}
-      title={t('status.reset.invalid.title')}
-      body={t('status.reset.invalid.body')}
-    >
-      <Button asChild size="lg" block>
+    <AuthStatus title={t('status.reset.invalid.title')} body={t('status.reset.invalid.body')}>
+      <Button asChild className={recoveryStyles.primary}>
         <Link to="/forgot">{t('actions.requestAnotherLink')}</Link>
       </Button>
-      <Button asChild size="lg" block variant="ghost">
+      <Button asChild variant="secondary" className={recoveryStyles.secondary}>
         <Link to="/login">{t('actions.backToLogin')}</Link>
       </Button>
     </AuthStatus>
@@ -48,34 +46,33 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
   const [confirm, setConfirm] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const reset = useMutation({ mutationFn: () => authApi.resetPassword({ token, password }) });
+  const resetError = reset.isError ? mapApiError(reset.error) : null;
 
   if (reset.isSuccess) {
     return (
       <AuthStatus
-        tone="success"
-        icon={CheckCircle2}
+        key="success"
         title={t('status.reset.success.title')}
         body={t('status.reset.success.body')}
       >
-        <Button asChild size="lg" block>
+        <Button asChild className={recoveryStyles.primary}>
           <Link to="/login">{t('actions.signInToManualito')}</Link>
         </Button>
       </AuthStatus>
     );
   }
 
-  if (reset.isError) {
+  if (resetError?.code === 'password_reset_token_invalid') {
     return (
       <AuthStatus
-        tone="warning"
-        icon={ShieldAlert}
+        key="expired"
         title={t('status.reset.expired.title')}
         body={t('status.reset.expired.body')}
       >
-        <Button asChild size="lg" block>
+        <Button asChild className={recoveryStyles.primary}>
           <Link to="/forgot">{t('actions.requestAnotherLink')}</Link>
         </Button>
-        <Button asChild size="lg" block variant="ghost">
+        <Button asChild variant="secondary" className={recoveryStyles.secondary}>
           <Link to="/login">{t('actions.backToLogin')}</Link>
         </Button>
       </AuthStatus>
@@ -100,24 +97,23 @@ function ResetForm({ token }: Readonly<{ token: string }>) {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col">
-      <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-        {t('forms.reset.heading')}
-      </h1>
-      <p className="mt-1.5 text-sm text-fg-2">{t('forms.reset.description')}</p>
+    <form onSubmit={submit} noValidate className={styles.form}>
+      <h1>{t('forms.reset.heading')}</h1>
+      <p className={styles.formDescription}>{t('forms.reset.description')}</p>
 
-      <div className="mt-5 flex flex-col gap-4">
+      <div className={styles.fields}>
+        {resetError ? <AuthAlert title={resetError.title}>{resetError.message}</AuthAlert> : null}
         <NewPasswordFields
           fieldId={fieldId}
           label={t('fields.password.new')}
           password={password}
           confirm={confirm}
-          submitted={submitted}
+          validation={{ password: submitted, confirm: submitted }}
           onPasswordChange={setPassword}
           onConfirmChange={setConfirm}
         />
 
-        <Button type="submit" size="lg" block loading={reset.isPending}>
+        <Button type="submit" block loading={reset.isPending} className={styles.submit}>
           {reset.isPending ? t('actions.savePasswordLoading') : t('actions.savePassword')}
         </Button>
       </div>

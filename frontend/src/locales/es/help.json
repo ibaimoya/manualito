@@ -5,7 +5,7 @@
       "question": "¿En qué idiomas funciona?"
     },
     "photos": {
-      "answer": "Son <strong>privadas por defecto</strong>: solo se usan para extraer el texto. Compartir un manual con la comunidad de su juego es opcional y reversible. Más detalle en la <link>política de privacidad</link>.",
+      "answer": "Son <strong>privadas por defecto</strong>: solo se usan para extraer el texto. Compartir un manual con la comunidad de su juego es opcional y reversible. Más detalle en la <privacyLink>política de privacidad</privacyLink>.",
       "question": "¿Qué pasa con mis fotos?"
     },
     "reliable": {

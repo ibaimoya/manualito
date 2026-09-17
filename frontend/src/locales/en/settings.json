@@ -34,8 +34,6 @@
     "deleteAccount": "Delete account",
     "deleteAccountHint": "Delete your profile, manuals, conversations, and associated sessions.",
     "files": "Manual files",
-    "filesBadge": "Server",
-    "filesBadgeAriaLabel": "Files managed by the server",
     "filesHint": "They're stored on the server and deleted when you delete the manual or your account.",
     "group": "Privacy & data"
   }

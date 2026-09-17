@@ -1,16 +1,26 @@
 {
   "composer": {
     "aria": {
+      "carousel": "carousel",
+      "next": "Next question",
+      "pause": "Pause questions",
+      "previous": "Previous question",
+      "resume": "Resume questions",
       "suggestedQuestions": "Suggested questions"
     },
     "placeholder": "Ask about {{gameName}}…"
   },
   "error": {
-    "backToHistory": "Go to history",
-    "notFoundDescription": "It may have been removed from the catalog. Go back to your history to see your games.",
+    "backToHistory": "Go to my library",
+    "connectionDescription": "We couldn't reach the server. Check your connection and try again.",
+    "connectionTitle": "We can't load this game",
+    "loadDescription": "We couldn't open this game. Try again or choose another game from your library.",
+    "loadTitle": "The game didn't load",
+    "notFoundDescription": "It may have been removed from the catalog. You can choose another game from your library.",
     "notFoundTitle": "We couldn't find this game"
   },
   "explanation": {
+    "aiGenerated": "AI-generated",
     "aria": {
       "game": "Game explanation",
       "preparing": "Getting the explanation ready"
@@ -36,6 +46,7 @@
       "follow": "Follow this game",
       "unfollow": "Unfollow this game"
     },
+    "error": "Your change couldn't be saved. Please try again.",
     "follow": "Follow",
     "following": "Following"
   },
@@ -46,8 +57,6 @@
     "pages_other": "{{count}} pages"
   },
   "header": {
-    "aiBadge": "AI-generated",
-    "aiTooltip": "AI-generated: it can be wrong. If something doesn't look right, check it against the original rulebook.",
     "boardGame": "Board game",
     "boardGameWithYear": "Board game · {{year}}"
   },
@@ -60,6 +69,7 @@
     "pages_other": "{{count}} pages",
     "pdf": "PDF rulebook",
     "photos": "Photo rulebook",
+    "readShared": "Open {{label}}",
     "shared": "Shared by the community",
     "sourceLabel": "Where the explanation comes from",
     "viewExtracted": "View extracted text from {{label}}"
@@ -69,10 +79,20 @@
     "library": "Library"
   },
   "questions": {
+    "blocked": "What if I can't make a move?",
+    "duration": "How long is a game?",
     "ends": "When does the game end?",
+    "example": "Can you give me an example?",
     "firstPlayer": "Who goes first?",
-    "passTurn": "Can you pass your turn?",
-    "tie": "What if we tie?"
+    "materials": "What do I need to play?",
+    "passTurn": "Can I skip my turn?",
+    "players": "How many can play?",
+    "preparation": "How do we set up?",
+    "scoring": "How do we count points?",
+    "teams": "Can we play in teams?",
+    "tie": "What if we tie?",
+    "turn": "What do I do on my turn?",
+    "victory": "How do I win?"
   },
   "rating": {
     "actions": {

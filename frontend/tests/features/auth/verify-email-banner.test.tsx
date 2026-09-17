@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import i18n from '@/app/i18n';
@@ -16,6 +16,7 @@ import type { AuthUser } from '@/shared/api/auth';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.unstubAllEnvs();
   server.resetHandlers();
   resetResendCooldown();
   try {
@@ -116,11 +117,20 @@ describe('VerifyEmailBanner', () => {
   });
 
   it('enlaza a la bandeja de Mailpit en pestaña nueva', () => {
+    vi.stubEnv('VITE_MAILPIT_URL', 'http://localhost:9025');
     renderBanner(BASE);
     const link = screen.getByRole('link', { name: 'Abrir mi correo' });
-    expect(link).toHaveAttribute('href', 'http://localhost:8025');
+    expect(link).toHaveAttribute('href', 'http://localhost:9025');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it.each([undefined, '', '   '])('oculta el enlace sin bandeja configurada (%s)', (url) => {
+    vi.stubEnv('VITE_MAILPIT_URL', url);
+    renderBanner(BASE);
+    expect(screen.queryByRole('link', { name: 'Abrir mi correo' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reenviar' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Descartar aviso' })).toBeEnabled();
   });
 
   it('se puede descartar', async () => {

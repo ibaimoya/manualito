@@ -1,0 +1,313 @@
+{
+  "actions": {
+    "close": "Close tutorial",
+    "done": "Finish",
+    "next": "Next",
+    "previous": "Previous"
+  },
+  "help": {
+    "explain": "Explain this screen",
+    "explainUnavailable": "Not available on this screen",
+    "faq": "FAQs",
+    "trigger": "Help"
+  },
+  "progress": "{{current}} of {{total}}",
+  "tours": {
+    "chat": {
+      "steps": {
+        "composer": {
+          "description": "Ask a question about the rules. Enter sends it and Shift + Enter adds a new line.",
+          "title": "Write your question"
+        },
+        "messages": {
+          "description": "Read the answers to your questions here. You can also copy them to use outside the app.",
+          "title": "Answers"
+        },
+        "new": {
+          "description": "Start another chat about this game. The previous one stays in Conversations.",
+          "title": "New conversation"
+        },
+        "sources": {
+          "description": "Open a source to read the manual page that supports the answer.",
+          "title": "Sources"
+        },
+        "suggestions": {
+          "description": "Try one of these questions to get started, or write your own.",
+          "title": "Questions to get started"
+        }
+      }
+    },
+    "conversations": {
+      "steps": {
+        "filter": {
+          "description": "Find a conversation by its title.",
+          "title": "Filter"
+        },
+        "header": {
+          "description": "Pick up your conversations about this game here.",
+          "title": "Your conversations"
+        },
+        "list": {
+          "description": "Open a conversation to pick up where you left off. The indicator marks unread answers.",
+          "title": "List"
+        },
+        "menu": {
+          "description": "This menu lets you open, rename or delete a conversation.",
+          "title": "Options"
+        },
+        "new": {
+          "description": "Start a conversation about another question on this game.",
+          "title": "New conversation"
+        }
+      }
+    },
+    "explore": {
+      "steps": {
+        "hints": {
+          "description": "You can use shared manuals without uploading your own copy.",
+          "title": "What you can do"
+        },
+        "search": {
+          "description": "Search for a game by name and choose a result to open its page.",
+          "title": "Search"
+        },
+        "suggestions": {
+          "description": "These games already have shared manuals. Open one to read its rules.",
+          "title": "Suggestions"
+        }
+      }
+    },
+    "game": {
+      "steps": {
+        "composer": {
+          "description": "Ask about a rule to start a conversation about the game.",
+          "title": "Ask"
+        },
+        "conversations": {
+          "description": "Return to a saved conversation or start another about this game.",
+          "title": "Conversations"
+        },
+        "explanation": {
+          "description": "Learn how to set up, play and win. The explanation is generated from the available manuals.",
+          "title": "Explanation"
+        },
+        "follow": {
+          "description": "Follow this game to keep it handy in your library.",
+          "title": "Follow the game"
+        },
+        "manuals": {
+          "description": "Find the game manuals here. Read an available manual or add your own.",
+          "title": "Manuals"
+        },
+        "rating": {
+          "description": "Choose a star to give your rating. You can add a comment before saving it.",
+          "title": "Rate the game"
+        }
+      }
+    },
+    "library": {
+      "steps": {
+        "empty": {
+          "description": "Follow a game from Explore or add a manual to start your library.",
+          "title": "Empty library"
+        },
+        "gameCard": {
+          "description": "Open a game to find its rules, manuals and conversations.",
+          "title": "Your games"
+        },
+        "games": {
+          "description": "The games you follow are saved in this tab so you can return to them.",
+          "title": "Games"
+        },
+        "gameSearch": {
+          "description": "Search for one of your games and choose it to open its page.",
+          "title": "Find a game"
+        },
+        "manualCard": {
+          "description": "Check whether the manual is ready and who can access it. Use the card to open or delete it.",
+          "title": "Your manuals"
+        },
+        "manuals": {
+          "description": "Here are the manuals you have uploaded. Check their status and open those that are ready.",
+          "title": "Manuals"
+        },
+        "search": {
+          "description": "Type a name to filter the results in this tab.",
+          "title": "Search"
+        }
+      }
+    },
+    "processing": {
+      "steps": {
+        "actions": {
+          "description": "Use the available options to try again, add another file or return to the library.",
+          "title": "If something fails"
+        },
+        "info": {
+          "description": "The pages are saved so you can read them later in the viewer.",
+          "title": "Your files"
+        },
+        "progress": {
+          "description": "Check how much is left to process. The game page opens when it is ready.",
+          "title": "Progress"
+        },
+        "status": {
+          "description": "Manualito is reading the pages. You can wait here or come back later for the result.",
+          "title": "Reading the manual"
+        }
+      }
+    },
+    "profile": {
+      "steps": {
+        "actions": {
+          "description": "Edit your details, open account settings or log out here.",
+          "title": "Actions"
+        },
+        "activity": {
+          "description": "See how many games you follow and how many manuals and conversations you have.",
+          "title": "Your activity"
+        },
+        "identity": {
+          "description": "Check your name, email and verification status.",
+          "title": "Your profile"
+        }
+      }
+    },
+    "security": {
+      "steps": {
+        "delete": {
+          "description": "You can permanently delete your account and its data. You will need to confirm before anything is deleted.",
+          "title": "Delete account"
+        },
+        "lastAccess": {
+          "description": "Check the most recent login. Change your password if you do not recognise it.",
+          "title": "Last sign-in"
+        },
+        "password": {
+          "description": "Enter your current password and choose a new one. Saving it logs you out on other devices.",
+          "title": "Change password"
+        }
+      }
+    },
+    "settings": {
+      "steps": {
+        "accent": {
+          "description": "Choose the colour of the main buttons and highlighted controls.",
+          "title": "Accent color"
+        },
+        "account": {
+          "description": "Open your profile and account security options.",
+          "title": "Account"
+        },
+        "language": {
+          "description": "Switch between Spanish and English.",
+          "title": "Language"
+        },
+        "privacy": {
+          "description": "Learn how your files are stored and where to delete your account.",
+          "title": "Privacy and data"
+        },
+        "theme": {
+          "description": "Use light mode, dark mode or your device setting.",
+          "title": "Theme"
+        }
+      }
+    },
+    "upload": {
+      "steps": {
+        "game": {
+          "description": "Choose the game this manual belongs to. You can add it if it is missing from the catalogue.",
+          "title": "Pick the game"
+        },
+        "name": {
+          "description": "Give it a name you will recognise, or keep the suggested one.",
+          "title": "Manual name"
+        },
+        "pages": {
+          "description": "Review the pages before continuing. Use the arrows to change their order.",
+          "title": "Page order"
+        },
+        "share": {
+          "description": "Share the manual so other people can use it, or keep it private.",
+          "title": "Share"
+        },
+        "shareOptions": {
+          "description": "When sharing a manual, you can show your name or remain anonymous.",
+          "title": "With your name"
+        },
+        "sources": {
+          "description": "Photograph the pages, choose images from your device or add a PDF.",
+          "title": "Files"
+        },
+        "submit": {
+          "description": "Start processing once you have checked the files and their settings.",
+          "title": "Process"
+        }
+      }
+    },
+    "viewer": {
+      "steps": {
+        "compare": {
+          "description": "Check the text alongside the original page. Both views show the same page of the manual.",
+          "title": "Compare"
+        },
+        "edit": {
+          "description": "Correct errors in the recognised text. Future questions will use the text you save.",
+          "title": "Edit the text"
+        },
+        "manage": {
+          "description": "Find the manual management options available to you here.",
+          "title": "Manage"
+        },
+        "original": {
+          "description": "See the page as it was uploaded. Zoom in to read the details.",
+          "title": "Original"
+        },
+        "pages": {
+          "description": "Choose a page to open it. The indicators show whether it was read successfully.",
+          "title": "Pages"
+        },
+        "search": {
+          "description": "Search for a word or rule and move between matches.",
+          "title": "Search the text"
+        },
+        "text": {
+          "description": "Read the text extracted from the manual. You can select it, copy it and check the recognition confidence.",
+          "title": "Text"
+        }
+      }
+    },
+    "welcome": {
+      "steps": {
+        "activity": {
+          "description": "Pick up the games and manuals you have been looking at.",
+          "title": "Home"
+        },
+        "explore": {
+          "description": "Search for a game to read its explanation and the available manuals.",
+          "title": "Explore"
+        },
+        "help": {
+          "description": "Choose Explain this screen to learn about the page you have open. On Home, you can replay this tutorial.",
+          "title": "Help"
+        },
+        "library": {
+          "description": "Find the games you follow and the manuals you have added.",
+          "title": "Library"
+        },
+        "newManual": {
+          "description": "Upload a manual from a PDF or photos of its pages.",
+          "title": "Add a manual"
+        },
+        "suggestions": {
+          "description": "Discover games with shared rulebooks. Open one to read its rules or use the crossed arrows to see other suggestions.",
+          "title": "Suggestions"
+        }
+      }
+    }
+  },
+  "unavailable": {
+    "description": "Some of the content it explains is missing. Open the tour again from Help when it becomes available.",
+    "title": "This tour is unavailable"
+  }
+}

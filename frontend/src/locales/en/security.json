@@ -15,7 +15,7 @@
     "successDescription": "We've signed you out on this device.",
     "warning": "We'll permanently delete <strong>{{summary}}</strong>. Any manuals you've shared will no longer be available to other users. There's no way to undo this, and no backup will be kept."
   },
-  "heading": "Account & security",
+  "heading": "Account",
   "lastAccess": {
     "description": "Your account's most recent sign-in. If you don't recognize it, change your password.",
     "eyebrow": "Activity",

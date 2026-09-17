@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ParseKeys } from 'i18next';
-import { Info } from 'lucide-react';
+import { InfoIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 import { AUTH_ME_KEY } from '@/features/auth/auth-queries';
 import { AuthAlert } from '@/features/auth/auth-alert';
@@ -116,59 +117,66 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
       }}
       className="flex flex-col gap-4"
     >
-      <fieldset>
+      <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-semibold text-fg">{t('edit.avatar')}</legend>
-        <div className="flex items-start gap-4 rounded-2xl border border-border bg-surface p-3.5">
+        <div className="flex flex-wrap items-start gap-4 max-md:justify-center rounded-2xl border border-border bg-surface p-3.5">
           <Avatar name={username || user.username} size={64} color={color} figure={figure} />
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-            <fieldset aria-label={t('edit.avatarColor')} className="flex gap-2">
+          <div className="flex min-w-0 flex-1 basis-48 flex-col gap-2.5">
+            <fieldset
+              aria-label={t('edit.avatarColor')}
+              className="flex flex-wrap gap-2 max-md:justify-center"
+            >
               {COLORS.map((option) => {
                 const label = t(option.key);
                 return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={color === option.value}
-                    aria-label={label}
-                    onClick={() => setColor(option.value)}
-                    className={cn(
-                      'size-8 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] transition-transform',
-                      option.className,
-                      color === option.value
-                        ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
-                        : 'hover:scale-110',
-                    )}
-                  />
+                  <Tooltip key={option.value} content={label}>
+                    <button
+                      type="button"
+                      aria-pressed={color === option.value}
+                      aria-label={label}
+                      onClick={() => setColor(option.value)}
+                      className={cn(
+                        'transition-control size-8 shrink-0 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,.25)] duration-200 motion-reduce:transition-none',
+                        option.className,
+                        color === option.value
+                          ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                          : 'motion-safe:hover:scale-110',
+                      )}
+                    />
+                  </Tooltip>
                 );
               })}
             </fieldset>
-            <fieldset aria-label={t('edit.avatarFigure')} className="flex flex-wrap gap-1.5">
+            <fieldset
+              aria-label={t('edit.avatarFigure')}
+              className="flex flex-wrap gap-1.5 max-md:grid max-md:grid-cols-4 max-md:justify-items-center"
+            >
               {FIGURES.map((option) => {
                 const selected = figure === option.value;
                 const label = t(option.key);
                 return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={label}
-                    title={label}
-                    onClick={() => setFigure(option.value)}
-                    className={cn(
-                      'grid size-9 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 transition-colors',
-                      selected
-                        ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
-                        : 'hover:bg-surface-2',
-                    )}
-                  >
-                    {option.value === 'initials' ? (
-                      <span className="font-display text-xs font-extrabold">
-                        {(username || user.username).trim().charAt(0).toUpperCase()}
-                      </span>
-                    ) : (
-                      <AvatarGlyph figure={option.value} size={30} />
-                    )}
-                  </button>
+                  <Tooltip key={option.value} content={label} side="bottom">
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={label}
+                      onClick={() => setFigure(option.value)}
+                      className={cn(
+                        'transition-control grid size-9 shrink-0 place-items-center rounded-full border border-border-strong bg-bg text-fg-2 duration-200 motion-reduce:transition-none',
+                        selected
+                          ? 'ring-2 ring-fg ring-offset-2 ring-offset-bg'
+                          : 'hover:bg-surface-2',
+                      )}
+                    >
+                      {option.value === 'initials' ? (
+                        <span className="font-display text-xs font-extrabold">
+                          {(username || user.username).trim().charAt(0).toUpperCase()}
+                        </span>
+                      ) : (
+                        <AvatarGlyph figure={option.value} size={30} />
+                      )}
+                    </button>
+                  </Tooltip>
                 );
               })}
             </fieldset>
@@ -201,12 +209,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
         />
         {emailChanged ? (
           <p className="mt-2 flex items-start gap-2 rounded-xl bg-accent-100 px-3 py-2.5 text-xs leading-relaxed text-fg">
-            <Info
-              size={14}
-              strokeWidth={2}
-              aria-hidden="true"
-              className="mt-0.5 shrink-0 text-accent"
-            />
+            <InfoIcon size={14} aria-hidden="true" className="mt-0.5 shrink-0 text-accent" />
             {t('edit.emailChangeNotice')}
           </p>
         ) : null}
@@ -218,7 +221,7 @@ function EditProfileForm({ user, onClose }: Readonly<{ user: AuthUser; onClose: 
         </AuthAlert>
       ) : null}
 
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onClose} disabled={save.isPending}>
           {t('edit.cancel')}
         </Button>

@@ -6,8 +6,8 @@
   "aria": {
     "copyAnswer": "Copy answer",
     "newConversation": "New conversation",
-    "page": "Page {{page}} ({{reason}})",
-    "pageLink": "Open page {{page}} in the rulebook"
+    "page": "Page {{page}} of {{title}} ({{reason}})",
+    "pageLink": "Open page {{page}} of {{title}}"
   },
   "composer": {
     "aria": {
@@ -43,10 +43,12 @@
     "title": "This conversation is read-only"
   },
   "sources": {
-    "communityManual": "community rulebook",
     "heading": "Sources",
-    "page": "p. {{page}}",
-    "unavailable": "no longer available"
+    "own": "You uploaded this manual",
+    "page": "Page {{page}}",
+    "tapAgain": "Tap again to open",
+    "unavailable": "no longer available",
+    "unnamed": "Unnamed manual"
   },
   "status": {
     "generating": "Generating answer",

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheckIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { PrivacySections } from '@/features/legal/PrivacySections';
 
@@ -17,26 +17,28 @@ function PrivacyScreen() {
   const { t } = useTranslation('legal');
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-5 pb-14 pt-6 md:px-8 md:pt-10">
-      <header className="text-center">
-        <span
-          aria-hidden="true"
-          className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-100 text-primary-700 shadow-xs"
-        >
-          <ShieldCheck size={26} strokeWidth={2} />
-        </span>
-        <p className="mono mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-700">
-          {t('page.eyebrow')}
-        </p>
-        <h1 className="mt-1.5 font-display text-3xl font-extrabold tracking-tight md:text-4xl">
-          {t('page.title')}
-        </h1>
-        <p className="mx-auto mt-3 max-w-[46ch] text-[15px] leading-relaxed text-fg-2">
-          {t('page.description')}
-        </p>
-      </header>
+    <div className="page-frame page-stack mx-auto max-w-4xl">
+      <div>
+        <header className="text-center">
+          <span
+            aria-hidden="true"
+            className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-100 text-primary-700 shadow-xs"
+          >
+            <ShieldCheckIcon size={26} />
+          </span>
+          <p className="mono mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary-700">
+            {t('page.eyebrow')}
+          </p>
+          <h1 className="mt-1.5 font-display text-3xl font-extrabold tracking-tight md:text-4xl">
+            {t('page.title')}
+          </h1>
+          <p className="mx-auto mt-3 max-w-[46ch] text-[15px] leading-relaxed text-fg-2">
+            {t('page.description')}
+          </p>
+        </header>
 
-      <PrivacySections className="mt-9" />
+        <PrivacySections className="mt-8" />
+      </div>
     </div>
   );
 }

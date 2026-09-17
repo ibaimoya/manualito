@@ -1,14 +1,19 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Plus, Settings as SettingsIcon } from 'lucide-react';
-import { Trans, useTranslation } from 'react-i18next';
+import { ArrowRightIcon, PlusIcon, GearSixIcon } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 import { Meeple, Monogram } from '@/shared/components/Brand';
 import { Avatar } from '@/shared/components/Avatar';
+import { RecoveryNotice } from '@/shared/components/recovery/RecoveryNotice';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Button } from '@/components/ui/button';
 import { ManualCard } from '@/features/manual/ManualCard';
 import { manualsQueryOptions } from '@/features/manual/use-manuals';
-import { RecommendedSection } from '@/features/recommend/RecommendedSection';
+import { DiscoverGames } from '@/features/games/DiscoverGames';
+import { HomeGreeting } from '@/features/home/HomeGreeting';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
 import { useAuth } from '@/features/auth/use-auth';
 import { formatRelative } from '@/shared/lib/relativeDate';
 import { type ManualSummary } from '@/shared/api/client';
@@ -20,26 +25,33 @@ export const Route = createFileRoute('/_app/home')({
 function HomeScreen() {
   const { user } = useAuth();
   const { t } = useTranslation('home');
+  const manuals = useQuery(manualsQueryOptions());
+  const recentManuals = manuals.data?.slice(0, 6) ?? [];
+  const recentUnavailable = manuals.data === undefined && manuals.errorUpdateCount > 0;
+  const loadingManuals = manuals.isPending && !recentUnavailable;
   const firstName = user?.username?.split(/\s+/)[0];
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pb-10 pt-4 md:max-w-5xl md:px-8 md:pt-10">
-      {/* Header de móvil — oculto en md+ porque la Sidebar ya muestra Brand. */}
+    <div className="page-frame page-stack">
+      {/* En escritorio la marca ya aparece en el menú lateral. */}
       <header className="flex items-center justify-between md:hidden">
         <div className="flex items-center gap-3">
           <Monogram size={36} radius={10} />
           <span className="font-display text-xl font-bold tracking-tight">Manualito</span>
         </div>
-        <Link
-          to="/settings"
-          className="grid size-11 place-items-center rounded-xl text-fg-2 hover:bg-surface"
-          aria-label={t('account.ariaLabel')}
-        >
-          {user ? (
-            <Avatar name={user.username || user.email} size={36} />
-          ) : (
-            <SettingsIcon size={20} strokeWidth={1.75} />
-          )}
-        </Link>
+        <div className="flex items-center gap-1">
+          <HelpMenuButton />
+          <Link
+            to="/settings"
+            className="grid size-11 place-items-center rounded-xl text-fg-2"
+            aria-label={t('account.ariaLabel')}
+          >
+            {user ? (
+              <Avatar name={user.username || user.email} size={36} />
+            ) : (
+              <GearSixIcon data-icon-motion="rotate" aria-hidden="true" size={20} />
+            )}
+          </Link>
+        </div>
       </header>
 
       <section
@@ -47,15 +59,7 @@ function HomeScreen() {
         className="md:flex md:items-start md:justify-between md:gap-8"
       >
         <div className="md:max-w-xl">
-          <h1
-            id="home-hello"
-            className="break-words font-display text-3xl font-bold leading-tight tracking-tight text-fg md:text-4xl"
-          >
-            {firstName ? t('greeting.named', { firstName }) : t('greeting.anonymous')}{' '}
-            <span aria-hidden="true">👋</span>
-            <br />
-            {t('greeting.question')}
-          </h1>
+          <HomeGreeting firstName={firstName} />
           <p className="mt-2 text-base leading-relaxed text-fg-2 md:text-lg">
             {t('greeting.description')}
           </p>
@@ -64,17 +68,37 @@ function HomeScreen() {
 
       <HeroCta />
 
-      <RecentSection />
+      {/* El objetivo permanece montado durante la carga y cuando no hay manuales. */}
+      <div {...tourTarget('home-activity')}>
+        <SkeletonSwap pending={loadingManuals} skeleton={<RecentSkeleton />}>
+          {recentUnavailable ? (
+            <RecoveryNotice
+              title={t('error.title')}
+              description={t('error.manuals')}
+              onRetry={() => void manuals.refetch()}
+              retrying={manuals.isFetching}
+            />
+          ) : (
+            <ManualActivity manuals={recentManuals} />
+          )}
+        </SkeletonSwap>
+      </div>
 
-      <RecommendedSection />
+      {!loadingManuals && (
+        <DiscoverGames excludedGameIds={recentManuals.map((manual) => manual.game_id)} />
+      )}
     </div>
   );
+}
+
+function ManualActivity({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
+  return manuals.length > 0 ? <RecentManuals manuals={manuals} /> : <EmptyRecents />;
 }
 
 function HeroCta() {
   const { t } = useTranslation('home');
 
-  // @container: el HeroCta se adapta a su contenedor, no al viewport.
+  // @container. El HeroCta se adapta a su contenedor, no al viewport.
   return (
     <Card
       className="@container relative overflow-hidden border-0 p-5 text-fg-inv shadow-md"
@@ -94,24 +118,20 @@ function HeroCta() {
           variant="secondary"
           className="bg-bg text-primary-700 @md:w-auto @md:shrink-0 @md:px-6"
         >
-          <Link to="/capture/source">
-            <Plus size={18} strokeWidth={2} />
+          <Link to="/capture/source" {...tourTarget('nav-new-manual')}>
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={18} />
             {t('hero.newManual')}
-            <ArrowRight size={16} strokeWidth={2} className="ml-auto @md:ml-2" />
+            <ArrowRightIcon
+              data-icon-motion="forward"
+              aria-hidden="true"
+              size={16}
+              className="ml-auto @md:ml-2"
+            />
           </Link>
         </Button>
       </div>
     </Card>
   );
-}
-
-/** Sección de recientes: resuelve la query y elige estado (carga/error/vacío/lista). */
-function RecentSection() {
-  const { data: manuals, isPending, isError } = useQuery(manualsQueryOptions());
-  if (isPending) return <RecentSkeleton />;
-  if (isError) return <RecentError />;
-  if (!manuals || manuals.length === 0) return <EmptyRecents />;
-  return <RecentManuals manuals={manuals} />;
 }
 
 function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
@@ -120,29 +140,29 @@ function RecentManuals({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
   return (
     <section aria-labelledby="home-recent">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 id="home-recent" className="font-display text-base font-bold text-fg md:text-lg">
+        <h2 id="home-recent" className="font-display text-xl font-bold tracking-tight text-fg">
           {t('recent.heading')}
         </h2>
         <Link
           to="/history"
           aria-label={t('recent.viewAllAriaLabel')}
-          className="group/all inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-accent transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+          className="hit-area group/all inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-accent transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
         >
           <span className="underline-offset-4 group-hover/all:underline">
             {t('recent.viewAll')}
           </span>
-          <ArrowRight
+          <ArrowRightIcon
+            data-icon-motion="forward"
             size={15}
-            strokeWidth={2.25}
             aria-hidden="true"
             className="transition-[translate] duration-150 ease-[var(--ease-mn)] group-hover/all:translate-x-0.5"
           />
         </Link>
       </div>
-      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
-        {manuals.slice(0, 6).map((m) => (
+      <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
+        {manuals.map((m) => (
           <li key={m.id}>
-            <ManualCard manual={m} meta={formatRelative(m.created_at)} />
+            <ManualCard manual={m} meta={formatRelative(m.created_at)} className="p-4" />
           </li>
         ))}
       </ul>
@@ -154,26 +174,17 @@ function RecentSkeleton() {
   return (
     <section aria-hidden="true">
       <div className="mb-3 h-5 w-24 animate-pulse rounded bg-surface-2" />
-      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-2.5 @xl/app:grid-cols-2 @xl/app:gap-3 @4xl/app:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <li key={i} className="h-[72px] animate-pulse rounded-2xl bg-surface-2" />
+          <li key={i} className="h-[82px] animate-pulse rounded-2xl bg-surface-2" />
         ))}
       </ul>
     </section>
   );
 }
 
-function RecentError() {
-  const { t } = useTranslation('home');
-
-  return (
-    <section className="rounded-2xl border border-border bg-surface/60 p-6 text-center">
-      <p className="text-sm text-fg-2">{t('error.manuals')}</p>
-    </section>
-  );
-}
-
 function EmptyRecents() {
+  const { t } = useTranslation('home');
   return (
     <section className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border-strong bg-surface/60 px-6 py-8 text-center">
       <div
@@ -182,9 +193,13 @@ function EmptyRecents() {
       >
         <Meeple size={28} color="currentColor" />
       </div>
-      <p className="max-w-xs text-sm text-fg-2">
-        <Trans ns="home" i18nKey="empty.description" components={{ b: <strong /> }} />
-      </p>
+      <p className="max-w-sm text-sm leading-relaxed text-fg-2">{t('empty.description')}</p>
+      <Button asChild variant="ghost" size="sm">
+        <Link to="/explore">
+          {t('empty.explore')}
+          <ArrowRightIcon aria-hidden="true" size={16} />
+        </Link>
+      </Button>
     </section>
   );
 }

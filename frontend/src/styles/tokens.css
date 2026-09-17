@@ -1,38 +1,184 @@
-/* ============================================================
-   Manualito · Design Tokens
-   Mapped to Tailwind v4 @theme so generated utilities can read them
-   (bg-primary, text-primary-700, etc.).  Source of truth lives here.
-   ============================================================ */
+/* Valores de diseño compartidos por CSS y las utilidades de Tailwind. */
+
+@property --m-primary-50 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fdebd8;
+}
+
+@property --m-primary-100 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fbd5b0;
+}
+
+@property --m-primary-300 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f0a45d;
+}
+
+@property --m-primary-500 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #e07a1f;
+}
+
+@property --m-primary-600 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #c46514;
+}
+
+@property --m-primary-700 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a8431f;
+}
+
+@property --m-accent-100 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #d6e4ed;
+}
+
+@property --m-accent-500 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2c6e91;
+}
+
+@property --m-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fff8f0;
+}
+
+@property --m-card {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fff8f0;
+}
+
+@property --m-surface {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f5e9d7;
+}
+
+@property --m-surface-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ebddc4;
+}
+
+@property --m-border {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(31, 22, 17, 0.1);
+}
+
+@property --m-border-strong {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(31, 22, 17, 0.18);
+}
+
+@property --m-text {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1f1611;
+}
+
+@property --m-text-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #5c4a3e;
+}
+
+@property --m-text-3 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #8a7565;
+}
+
+@property --m-text-inv {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fff8f0;
+}
+
+@property --m-accent-300 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #6fa4c3;
+}
+
+@property --m-success {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #3f8f3f;
+}
+
+@property --m-success-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #e4f0e0;
+}
+
+@property --m-error {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #c2362b;
+}
+
+@property --m-error-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f7dedb;
+}
+
+@property --m-warning {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #b8860b;
+}
+
+@property --m-warning-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f6e9c8;
+}
 
 :root {
-  /* — Color: Brand —————————————————————————————— */
+  /* Marca */
   --m-primary-50: #fdebd8;
   --m-primary-100: #fbd5b0;
   --m-primary-300: #f0a45d;
-  --m-primary-500: #e07a1f; /* CTA principal */
+  --m-primary-500: #e07a1f;
   --m-primary-600: #c46514;
-  --m-primary-700: #a8431f; /* terracota — secundario */
+  --m-primary-700: #a8431f;
   --m-primary-900: #5c2a12;
 
-  --m-accent-500: #2c6e91; /* azul meeple */
+  --m-accent-500: #2c6e91;
   --m-accent-300: #6fa4c3;
   --m-accent-100: #d6e4ed;
 
-  /* — Color: Surfaces (light) ————————————————————— */
-  --m-bg: #fff8f0; /* crema, evita blanco puro */
-  --m-card: var(--m-bg); /* la clara no separa tarjeta de fondo (bordes+sombra) */
+  /* Superficies */
+  --m-bg: #fff8f0;
+  --m-card: var(--m-bg);
   --m-surface: #f5e9d7;
-  --m-surface-2: #ebddc4; /* divisores / cards anidados */
+  --m-surface-2: #ebddc4;
   --m-border: rgba(31, 22, 17, 0.1);
   --m-border-strong: rgba(31, 22, 17, 0.18);
 
-  /* — Color: Text (light) ———————————————————————— */
-  --m-text: #1f1611; /* 13.2:1 sobre crema · AAA */
-  --m-text-2: #5c4a3e; /* 7.4:1 · AAA */
-  --m-text-3: #8a7565; /* 4.6:1 · AA — captions */
+  /* Texto */
+  --m-text: #1f1611;
+  --m-text-2: #5c4a3e;
+  --m-text-3: #8a7565;
   --m-text-inv: #fff8f0;
 
-  /* — Color: Status ————————————————————————————— */
+  /* Estados */
   --m-success: #3f8f3f;
   --m-success-bg: #e4f0e0;
   --m-error: #c2362b;
@@ -42,13 +188,13 @@
   --m-info: var(--m-accent-500);
   --m-info-bg: var(--m-accent-100);
 
-  /* — Type —————————————————————————————————————— */
+  /* Tipografía */
   --m-font-display:
     'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --m-font-body: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --m-font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Type scale (mobile-first; 1rem = 16px) */
+  /* Escala tipográfica */
   --m-text-xs: 12px;
   --m-lh-xs: 16px;
   --m-text-sm: 14px;
@@ -68,14 +214,14 @@
   --m-text-display: 44px;
   --m-lh-display: 48px;
 
-  /* — Radius —————————————————————————————————————— */
+  /* Radios */
   --m-r-sm: 8px;
-  --m-r-md: 12px; /* rounded-xl */
-  --m-r-lg: 20px; /* rounded-2xl */
-  --m-r-xl: 28px; /* sheets / dialogs */
+  --m-r-md: 12px;
+  --m-r-lg: 20px;
+  --m-r-xl: 28px;
   --m-r-full: 9999px;
 
-  /* — Spacing ———————————————————— */
+  /* Espaciado */
   --m-space-1: 4px;
   --m-space-2: 8px;
   --m-space-3: 12px;
@@ -86,7 +232,7 @@
   --m-space-10: 40px;
   --m-space-12: 48px;
 
-  /* — Shadow (cálidas — no neumórficas) ————— */
+  /* Sombras */
   --m-shadow-xs: 0 1px 2px rgba(53, 28, 12, 0.06);
   --m-shadow-sm: 0 2px 6px rgba(53, 28, 12, 0.08), 0 1px 2px rgba(53, 28, 12, 0.05);
   --m-shadow-md: 0 8px 24px -8px rgba(53, 28, 12, 0.16), 0 2px 6px rgba(53, 28, 12, 0.06);
@@ -95,41 +241,39 @@
   --m-shadow-ring-accent: 0 0 0 4px rgba(44, 110, 145, 0.22);
   --m-shadow-ring-error: 0 0 0 4px rgba(194, 54, 43, 0.18);
 
-  /* — Motion —————————————————————————————————————— */
+  /* Movimiento */
   --m-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
   --m-dur-fast: 120ms;
   --m-dur: 200ms;
   --m-dur-slow: 320ms;
 
-  /* — Touch —————————————————————————————————————— */
+  /* Área táctil */
   --m-hit: 44px;
 
-  /* — Color scheme hint para componentes nativos —————————————— */
   color-scheme: light;
 }
 
-/* Dark mode "Brasa" (cálido, 4 niveles: bg < card < surface < surface-2) */
 html.theme-dark {
-  --m-bg: #15100b; /* página — brasa apagada */
-  --m-card: #231b11; /* tarjetas, filas, menús */
-  --m-surface: #2e2415; /* cabeceras de acordeón, chips */
-  --m-surface-2: #3e301c; /* anidados / skeleton */
+  --m-bg: #15100b;
+  --m-card: #231b11;
+  --m-surface: #2e2415;
+  --m-surface-2: #3e301c;
   --m-border: rgba(247, 236, 215, 0.13);
   --m-border-strong: rgba(247, 236, 215, 0.3);
 
-  --m-text: #f7eddc; /* 14.6:1 sobre card */
-  --m-text-2: #d3c2a8; /* 9.6:1 */
-  --m-text-3: #a28f75; /* 4.9:1 */
+  --m-text: #f7eddc;
+  --m-text-2: #d3c2a8;
+  --m-text-3: #a28f75;
   --m-text-inv: #1c130a;
 
-  --m-primary-500: #f6953b; /* CTA — 6.3:1 sobre card */
+  --m-primary-500: #f6953b;
   --m-primary-600: #da7b22;
   --m-primary-300: #ffb46a;
-  --m-primary-700: #ffc084; /* texto sobre primary-100 + eyebrows */
-  --m-primary-100: #4a2d10; /* tiles/chips ámbar */
+  --m-primary-700: #ffc084;
+  --m-primary-100: #4a2d10;
   --m-primary-50: #392310;
 
-  --m-accent-500: #7cc0e8; /* azul petróleo iluminado */
+  --m-accent-500: #7cc0e8;
   --m-accent-300: #a5d4ee;
   --m-accent-100: #173542;
 
@@ -151,7 +295,6 @@ html.theme-dark {
   color-scheme: dark;
 }
 
-/* Accent swap — usa azul-meeple como primario */
 html.accent-blue {
   --m-primary-500: #2c6e91;
   --m-primary-600: #235873;
@@ -173,4 +316,18 @@ html.theme-dark.accent-blue {
   --m-accent-500: #f6953b;
   --m-accent-100: #4a2d10;
   --m-shadow-ring-primary: 0 0 0 4px rgba(124, 192, 232, 0.26);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root.color-transition {
+    --m-color-transition-duration: 0s;
+    transition-property:
+      --m-primary-50, --m-primary-100, --m-primary-300, --m-primary-500, --m-primary-600,
+      --m-primary-700, --m-accent-100, --m-accent-300, --m-accent-500, --m-bg, --m-card,
+      --m-surface, --m-surface-2, --m-border, --m-border-strong, --m-text, --m-text-2, --m-text-3,
+      --m-text-inv, --m-success, --m-success-bg, --m-error, --m-error-bg, --m-warning,
+      --m-warning-bg;
+    transition-duration: var(--m-dur-slow);
+    transition-timing-function: ease;
+  }
 }

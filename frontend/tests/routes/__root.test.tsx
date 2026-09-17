@@ -1,17 +1,20 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
   createRoute,
   createRouter,
   RouterProvider,
+  type AnyRoute,
 } from '@tanstack/react-router';
 import { server } from '@tests/_helpers/server';
+import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
 import { Route as RootRoute } from '@/routes/__root';
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   vi.restoreAllMocks();
   server.resetHandlers();
@@ -19,12 +22,8 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-/**
- * Monta el RootRoute real (resuelve sesión en beforeLoad vía /api/me, mockeado)
- * con sub-rutas controladas. El shell autenticado vive en `_app`; aquí solo
- * verificamos lo global: render del Outlet, 404 y errorComponent.
- */
-function mountRoot(initialPath: string, leaves: any[]) {
+/** La sesión usa la frontera HTTP de MSW. El router y los providers son reales. */
+function mountRoot(initialPath: string, leaves: AnyRoute[]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -36,9 +35,11 @@ function mountRoot(initialPath: string, leaves: any[]) {
   });
   return render(
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      <LanguageProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </LanguageProvider>
     </ThemeProvider>,
   );
 }
@@ -55,14 +56,22 @@ describe('__root', () => {
     expect(await screen.findByTestId('page-home')).toBeInTheDocument();
   });
 
-  it('URL desconocida renderiza el NotFoundComponent con "Volver al inicio"', async () => {
+  it('ofrece una salida al inicio cuando la página no existe', async () => {
     mountRoot('/no-existe-12345', [homePage]);
-    expect(await screen.findByText(/Esta página se ha perdido/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Volver al inicio/i })).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', {
+      name: 'Esta página no está en el manual',
+    });
+    expect(screen.getByRole('main')).toContainElement(heading);
+    expect(within(screen.getByRole('main')).getByRole('link', { name: /inicio/i })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
-  it('errorComponent se monta cuando una ruta lanza ("Algo ha fallado")', async () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('presenta la recuperación cuando falla el render de una ruta', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const crashRoute = createRoute({
       getParentRoute: () => RootRoute,
       path: '/crash',
@@ -71,9 +80,35 @@ describe('__root', () => {
       },
     });
     mountRoot('/crash', [crashRoute]);
-    await waitFor(() => {
-      expect(screen.getByText(/Algo ha fallado/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No hemos podido abrir esta página' }),
+    ).toBeInTheDocument();
+  });
+
+  it('recupera una página cuyo loader falló al reintentar', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const retry = Promise.withResolvers<void>();
+    let firstLoad = true;
+    const recoveryRoute = createRoute({
+      getParentRoute: () => RootRoute,
+      path: '/recovery',
+      loader: () => {
+        if (firstLoad) {
+          firstLoad = false;
+          throw new Error('No se pudo cargar la página');
+        }
+        return retry.promise;
+      },
+      component: () => <h1>Página recuperada</h1>,
     });
-    spy.mockRestore();
+    mountRoot('/recovery', [recoveryRoute]);
+    const button = await screen.findByRole('button', { name: 'Reintentar' });
+    await user.click(button);
+    expect(screen.queryByRole('heading', { name: 'Página recuperada' })).not.toBeInTheDocument();
+
+    await act(async () => retry.resolve());
+    expect(await screen.findByRole('heading', { name: 'Página recuperada' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 });

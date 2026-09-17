@@ -6,8 +6,8 @@
   "aria": {
     "copyAnswer": "Copiar respuesta",
     "newConversation": "Nueva conversación",
-    "page": "Página {{page}} ({{reason}})",
-    "pageLink": "Abrir página {{page}} del manual"
+    "page": "Página {{page}} de {{title}} ({{reason}})",
+    "pageLink": "Abrir página {{page}} de {{title}}"
   },
   "composer": {
     "aria": {
@@ -43,10 +43,12 @@
     "title": "Esta conversación es de solo lectura"
   },
   "sources": {
-    "communityManual": "manual de la comunidad",
-    "heading": "Fuentes consultadas",
-    "page": "Pág. {{page}}",
-    "unavailable": "ya no disponible"
+    "heading": "Fuentes",
+    "own": "Lo has subido tú",
+    "page": "Página {{page}}",
+    "tapAgain": "Toca de nuevo para abrir",
+    "unavailable": "ya no disponible",
+    "unnamed": "Manual sin nombre"
   },
   "status": {
     "generating": "Generando respuesta",

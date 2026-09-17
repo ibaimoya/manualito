@@ -1,529 +1,350 @@
-from collections.abc import Iterator
-from contextlib import asynccontextmanager
+"""PostgreSQL real. Solo se sustituyen la cola Celery y los servicios HTTP RAG/LLM."""
+
+import asyncio
+import json
+import os
+import selectors
 from datetime import UTC, datetime, timedelta
-from functools import partial
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
-import anyio
+import httpx
 import pytest
-from sqlalchemy.dialects import postgresql
+from sqlalchemy import delete, select, update
+from sqlalchemy.engine import make_url
 
-import api.games.explanations as explanations_module
-from api.auth.dependencies import get_current_auth
-from api.auth.service import AuthenticatedSession
-from api.exceptions import InternalServiceUnavailableError
-from api.games.dto import (
-    GameExplanationJob,
-    GameExplanationOutcome,
-    GameExplanationSnapshot,
-)
-from api.games.explanations import EXPLANATION_QUESTIONS, get_game_explanation
-from api.games.repository import get_pool_fingerprint, upsert_game_explanation
+from api import config
+from api.auth.tokens import hash_token
+from api.games import explanations, repository
+from api.games.dto import GameExplanationJob
 from api.main import app
-from api.manuals.exceptions import ManualContextNotFoundError
-from api.manuals.schemas import AnswerResponse, AnswerSource
 from api.rate_limit import limiter
+from common.crypto import sha256_hex
 from database.models.auth import AuthSession
+from database.models.explanation import GameExplanation
+from database.models.game import Game
+from database.models.manual import Manual, ManualChunk
 from database.models.user import User
-from database.session import get_db_session
-
-_FAKE_SESSION = object()
-_USER_ID = uuid4()
-_GAME_ID = UUID("018fd000-0000-7000-8000-000000000061")
-_MANUAL_ID = UUID("018fd000-0000-7000-8000-000000000062")
-_NOW = datetime(2026, 6, 10, 10, 0, tzinfo=UTC)
-_FAKE_HASH = "hash-value"
-_FINGERPRINT = "a" * 64
-_SECTIONS: dict[str, object] = {
-    "summary": {"answer": "Construyes una isla.", "sources": []},
-    "setup": {"answer": "Coloca los hexágonos.", "sources": []},
-    "turns": {"answer": "Tira, comercia y construye.", "sources": []},
-    "victory": {"answer": "Llega a 10 puntos.", "sources": []},
-}
-
-
-@pytest.fixture(autouse=True)
-def reset_rate_limiter():
-    """Cada test empieza con el limitador en estado limpio."""
-    limiter.reset()
-    yield
-    limiter.reset()
+from database.session import dispose_engine, get_sessionmaker
 
 
 @pytest.fixture
-def override_auth_and_db():
-    """Inyecta auth y sesión de BD falsas para el endpoint de explicación."""
-
-    def _fake_db_session() -> Iterator[object]:
-        yield _FAKE_SESSION
-
-    app.dependency_overrides[get_db_session] = _fake_db_session
-    app.dependency_overrides[get_current_auth] = lambda: _auth_session()
-    try:
-        yield
-    finally:
-        app.dependency_overrides.pop(get_db_session, None)
-        app.dependency_overrides.pop(get_current_auth, None)
+def anyio_backend():
+    if os.name == "nt":
+        return "asyncio", {
+            "loop_factory": lambda: asyncio.SelectorEventLoop(selectors.SelectSelector())
+        }
+    return "asyncio"
 
 
-def test_explanation_endpoint_returns_payload_and_enqueues_job(
-    client,
-    monkeypatch,
-    override_auth_and_db,
-):
-    """El endpoint devuelve el estado y encola si el servicio lo pide."""
-    explanation_mock = AsyncMock(
-        return_value=GameExplanationOutcome(
-            snapshot=_partial_explanation(status="generating"),
-            job=GameExplanationJob(user_id=_USER_ID, game_id=_GAME_ID),
+@pytest.fixture
+async def world(monkeypatch):
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        pytest.skip("Requiere PostgreSQL en manualito_test.")
+    assert make_url(url).database == "manualito_test"
+    limiter.reset()
+    users = [
+        User(
+            id=uuid4(),
+            email=f"{uuid4().hex}@example.test",
+            username=name,
+            username_key=f"{name}_{uuid4().hex}",
+            password_hash="unused",
         )
+        for name in ("cache_a", "cache_b")
+    ]
+    game = Game(id=uuid4(), name="Juego de prueba", name_key=uuid4().hex)
+    tokens = {user.id: uuid4().hex for user in users}
+    state = SimpleNamespace(
+        a=users[0], b=users[1], game=game, jobs=[], llm=[], on_generate=None, fail_llm=False
     )
-    delay_mock = MagicMock()
-    monkeypatch.setattr("api.games.router.get_game_explanation", explanation_mock)
+    async with get_sessionmaker()() as session:
+        session.add_all(users)
+        session.add(game)
+        await session.flush()
+        session.add_all(
+            [
+                AuthSession(
+                    user_id=user.id,
+                    token_hash=hash_token(tokens[user.id]),
+                    expires_at=datetime.now(UTC) + timedelta(hours=1),
+                )
+                for user in users
+            ]
+        )
+        await session.commit()
+
+    async def add_manual(visibility="shared"):
+        async with get_sessionmaker()() as session:
+            manual = Manual(
+                id=uuid4(),
+                owner_user_id=state.a.id,
+                game_id=game.id,
+                visibility=visibility,
+                status="active",
+                chunks_indexed=1,
+                indexed_at=datetime.now(UTC),
+            )
+            session.add(manual)
+            await session.flush()
+            content = "Reglas publicas" if visibility == "shared" else "REGLA PRIVADA"
+            session.add(
+                ManualChunk(
+                    id=uuid4(),
+                    manual_id=manual.id,
+                    chunk_index=0,
+                    text=content,
+                    source_page=1,
+                    content_hash=sha256_hex(content),
+                )
+            )
+            await session.commit()
+            return manual
+
+    state.add_manual = add_manual
+    state.manual = await add_manual()
+    real_client = httpx.AsyncClient
+
+    async def external_http(request):
+        payload = json.loads(request.content)
+        if request.url.path == "/retrieve":
+            async with get_sessionmaker()() as session:
+                chunks = await session.scalars(
+                    select(ManualChunk.id).where(
+                        ManualChunk.manual_id.in_([UUID(value) for value in payload["manual_ids"]])
+                    )
+                )
+                return httpx.Response(
+                    200, json={"chunks": [{"id": str(value)} for value in chunks]}
+                )
+        assert request.url.path == "/generate"
+        state.llm.append(payload)
+        if state.on_generate is not None:
+            await state.on_generate()
+        if state.fail_llm:
+            return httpx.Response(503, json={"detail": "LLM unavailable"})
+        return httpx.Response(200, json={"answer": " / ".join(payload["context_chunks"])})
+
+    def http_client(*args, **kwargs):
+        kwargs.setdefault("transport", httpx.MockTransport(external_http))
+        return real_client(*args, **kwargs)
+
+    monkeypatch.setattr(explanations.httpx, "AsyncClient", http_client)
     monkeypatch.setattr(
         "api.games.router.generate_game_explanation_task.delay",
-        delay_mock,
+        lambda user, game, fingerprint: state.jobs.append(
+            GameExplanationJob(UUID(user), UUID(game), fingerprint)
+        ),
     )
 
-    response = client.get(f"/api/games/{_GAME_ID}/explanation")
+    async def open_game(user):
+        async with real_client(
+            transport=httpx.ASGITransport(app=app),
+            base_url="https://testserver",
+            cookies={config.AUTH_SESSION_COOKIE_NAME: tokens[user.id]},
+        ) as client:
+            return await client.get(f"/api/games/{game.id}/explanation")
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "generating"
-    explanation_mock.assert_awaited_once()
-    delay_mock.assert_called_once_with(str(_USER_ID), str(_GAME_ID))
+    state.open = open_game
+    try:
+        yield state
+    finally:
+        async with get_sessionmaker()() as session:
+            await session.execute(delete(GameExplanation).where(GameExplanation.game_id == game.id))
+            await session.execute(delete(Manual).where(Manual.game_id == game.id))
+            await session.execute(delete(Game).where(Game.id == game.id))
+            await session.execute(delete(User).where(User.id.in_(tokens)))
+            await session.commit()
+        await dispose_engine()
+        limiter.reset()
 
 
-def test_explanation_endpoint_without_manuals_returns_stable_404(
-    client,
-    monkeypatch,
-    override_auth_and_db,
-):
-    """Sin manuales visibles la explicación responde el 404 de contexto."""
-    monkeypatch.setattr(
-        "api.games.router.get_game_explanation",
-        AsyncMock(side_effect=ManualContextNotFoundError),
+async def run_job(job):
+    return await explanations.generate_game_explanation(
+        job.user_id, job.game_id, job.source_fingerprint
     )
 
-    response = client.get(f"/api/games/{_GAME_ID}/explanation")
 
+@pytest.mark.anyio
+async def test_same_manuals_share_generation_and_cache(world):
+    first = await world.open(world.a)
+    second = await world.open(world.b)
+    assert first.status_code == second.status_code == 200
+    assert first.json()["status"] == second.json()["status"] == "generating"
+    assert len(world.jobs) == 1
+    assert await run_job(world.jobs[0]) is True
+    assert len(world.llm) == 4
+    first = (await world.open(world.a)).json()
+    second = (await world.open(world.b)).json()
+    assert first["status"] == second["status"] == "ready"
+    assert first["generated_at"] == second["generated_at"]
+    assert first["sections"]["summary"]["sources"][0]["is_own"] is True
+    assert second["sections"]["summary"]["sources"][0]["is_own"] is False
+    assert len(world.jobs) == 1
+
+
+@pytest.mark.anyio
+async def test_private_manuals_have_separate_cache_and_never_reach_other_users(world):
+    private = await world.add_manual("private")
+    await world.open(world.a)
+    await world.open(world.b)
+    assert len(world.jobs) == 2
+    assert world.jobs[0].source_fingerprint != world.jobs[1].source_fingerprint
+    for job in world.jobs:
+        await run_job(job)
+    owner = (await world.open(world.a)).json()
+    other = (await world.open(world.b)).json()
+    assert "REGLA PRIVADA" in owner["sections"]["summary"]["answer"]
+    assert "REGLA PRIVADA" not in other["sections"]["summary"]["answer"]
+    assert len(world.llm) == 8
+    async with get_sessionmaker()() as session:
+        await session.execute(delete(Manual).where(Manual.id == private.id))
+        await session.commit()
+    owner_without_private = (await world.open(world.a)).json()
+    assert owner_without_private["generated_at"] == other["generated_at"]
+    assert len(world.jobs) == 2
+
+
+@pytest.mark.anyio
+async def test_simultaneous_requests_enqueue_only_one_job(world):
+    responses = await asyncio.gather(*(world.open(user) for user in [world.a, world.b] * 4))
+    assert all(response.status_code == 200 for response in responses)
+    assert len(world.jobs) == 1
+    async with get_sessionmaker()() as session:
+        rows = (
+            await session.scalars(
+                select(GameExplanation).where(GameExplanation.game_id == world.game.id)
+            )
+        ).all()
+        assert len(rows) == 1
+
+
+@pytest.mark.anyio
+async def test_duplicate_workers_do_not_regenerate_sections(world):
+    await world.open(world.a)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    async def hold_llm():
+        entered.set()
+        await release.wait()
+
+    world.on_generate = hold_llm
+    first = asyncio.create_task(run_job(world.jobs[0]))
+    try:
+        await asyncio.wait_for(entered.wait(), timeout=5)
+        assert await run_job(world.jobs[0]) is False
+    finally:
+        release.set()
+        await first
+    assert await run_job(world.jobs[0]) is True
+    assert len(world.llm) == 4
+
+
+@pytest.mark.anyio
+async def test_reindexing_changes_cache_without_overwriting_old_version(world):
+    await world.open(world.a)
+    await run_job(world.jobs[0])
+    async with get_sessionmaker()() as session:
+        await session.execute(
+            update(Manual)
+            .where(Manual.id == world.manual.id)
+            .values(indexed_at=datetime.now(UTC) + timedelta(seconds=1))
+        )
+        await session.commit()
+    assert (await world.open(world.b)).json()["status"] == "generating"
+    assert len(world.jobs) == 2
+    assert world.jobs[0].source_fingerprint != world.jobs[1].source_fingerprint
+    async with get_sessionmaker()() as session:
+        old = await repository.get_game_explanation(
+            session, game_id=world.game.id, source_fingerprint=world.jobs[0].source_fingerprint
+        )
+        assert old.status == "ready"
+
+
+@pytest.mark.anyio
+async def test_without_visible_manuals_does_not_return_someone_elses_cache(world):
+    async with get_sessionmaker()() as session:
+        await session.execute(
+            update(Manual).where(Manual.id == world.manual.id).values(visibility="private")
+        )
+        await session.commit()
+    await world.open(world.a)
+    await run_job(world.jobs[0])
+    response = await world.open(world.b)
     assert response.status_code == 404
-    assert any(error["code"] == "manual_context_not_found" for error in response.json()["errors"])
+    assert len(world.jobs) == 1
 
 
-def test_explanation_cache_hit_skips_job(monkeypatch):
-    """Con la huella intacta se sirve la caché lista del juego."""
-    session = _read_session()
-    cached = _cached_explanation(status="ready")
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=cached)
-
-    outcome = anyio.run(
-        partial(
-            get_game_explanation,
-            session,
-            auth=_auth(),
-            game_id=_GAME_ID,
+@pytest.mark.anyio
+async def test_stale_partial_generation_resumes_only_missing_sections(world):
+    await world.open(world.a)
+    job = world.jobs[0]
+    async with get_sessionmaker()() as session:
+        await session.execute(
+            update(GameExplanation)
+            .where(GameExplanation.game_id == world.game.id)
+            .values(
+                sections={"summary": {"answer": "Resumen existente", "sources": []}},
+                updated_at=datetime.now(UTC)
+                - explanations.GENERATION_STALE_AFTER
+                - timedelta(seconds=1),
+            )
         )
+        await session.commit()
+    response = (await world.open(world.b)).json()
+    assert response["sections"]["summary"]["answer"] == "Resumen existente"
+    assert len(world.jobs) == 2
+    await run_job(world.jobs[1])
+    assert len(world.llm) == 3
+    assert all(
+        item["question"] != explanations.EXPLANATION_QUESTIONS["summary"] for item in world.llm
     )
-
-    response = explanations_module.build_game_explanation_response(outcome.snapshot)
-
-    assert response.status == "ready"
-    assert response.generated_at == _NOW
-    assert outcome.job is None
+    await explanations.fail_game_explanation(job.game_id, job.source_fingerprint, "late_failure")
+    assert (await world.open(world.a)).json()["status"] == "ready"
 
 
-def test_explanation_missing_cache_marks_generating_and_returns_job(monkeypatch):
-    """Sin caché se persiste generating y se devuelve trabajo Celery."""
-    session = _read_session()
-    mark_mock = AsyncMock(return_value=_partial_explanation(status="generating"))
-    _patch_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=None)
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "mark_game_explanation_generating",
-        mark_mock,
-    )
-
-    outcome = anyio.run(
-        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
-    )
-
-    assert outcome.snapshot.status == "generating"
-    assert outcome.job == GameExplanationJob(
-        user_id=_USER_ID,
-        game_id=_GAME_ID,
-    )
-    mark_mock.assert_awaited_once()
-    assert mark_mock.await_args.kwargs["user_id"] == _USER_ID
-    assert mark_mock.await_args.kwargs["sections"] == {}
+@pytest.mark.anyio
+async def test_access_change_before_worker_discards_obsolete_job(world):
+    await world.open(world.a)
+    await world.add_manual("private")
+    await run_job(world.jobs[0])
+    assert world.llm == []
+    assert (await world.open(world.b)).json()["status"] == "generating"
+    assert len(world.jobs) == 2
+    await run_job(world.jobs[1])
+    assert len(world.llm) == 4
+    assert all("REGLA PRIVADA" not in item["context_chunks"] for item in world.llm)
 
 
-def test_fresh_generating_cache_does_not_requeue(monkeypatch):
-    """El polling reutiliza un generating reciente sin crear otra task."""
-    session = _read_session()
-    mark_mock = AsyncMock()
-    _patch_repo(
-        monkeypatch,
-        fingerprint=_FINGERPRINT,
-        cached=_partial_explanation(status="generating", updated_at=datetime.now(UTC)),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "mark_game_explanation_generating",
-        mark_mock,
-    )
-
-    outcome = anyio.run(
-        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
-    )
-
-    assert outcome.snapshot.status == "generating"
-    assert outcome.job is None
-    mark_mock.assert_not_awaited()
-
-
-def test_stale_generating_cache_requeues(monkeypatch):
-    """Un generating antiguo se trata como atascado y crea otra task."""
-    session = _read_session()
-    mark_mock = AsyncMock(return_value=_partial_explanation(status="generating"))
-    _patch_repo(
-        monkeypatch,
-        fingerprint=_FINGERPRINT,
-        cached=_partial_explanation(
-            status="generating",
-            updated_at=datetime.now(UTC)
-            - explanations_module.GENERATION_STALE_AFTER
-            - timedelta(seconds=1),
-        ),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "mark_game_explanation_generating",
-        mark_mock,
-    )
-
-    outcome = anyio.run(
-        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
-    )
-
-    assert outcome.snapshot.status == "generating"
-    assert outcome.job == GameExplanationJob(user_id=_USER_ID, game_id=_GAME_ID)
-    mark_mock.assert_awaited_once()
-
-
-def test_failed_cache_returns_failed_without_requeue(monkeypatch):
-    """Un fallo persistido se expone y no crea más trabajos automáticamente."""
-    session = _read_session()
-    _patch_repo(
-        monkeypatch,
-        fingerprint=_FINGERPRINT,
-        cached=_partial_explanation(status="failed", error_code="generation_failed"),
-    )
-
-    outcome = anyio.run(
-        partial(get_game_explanation, session, auth=_auth(), game_id=_GAME_ID)
-    )
-
-    response = explanations_module.build_game_explanation_response(outcome.snapshot)
-
-    assert response.status == "failed"
-    assert response.error_code == "generation_failed"
-    assert outcome.job is None
-
-
-def test_worker_generates_all_sections_under_lock(monkeypatch):
-    """El worker completa todos los apartados pendientes en una sola tarea."""
-    lock_session = object()
-    generate_mock = AsyncMock(
-        side_effect=[
-            AnswerResponse(
-                answer="Construyes una isla.",
-                sources=[
-                    AnswerSource(
-                        manual_id=_MANUAL_ID,
-                        manual_title="Base",
-                        page=2,
-                        is_own=True,
-                    )
-                ],
-            ),
-            AnswerResponse(answer="Coloca los hexágonos.", sources=[]),
-            AnswerResponse(answer="Tira, comercia y construye.", sources=[]),
-            AnswerResponse(answer="Llega a 10 puntos.", sources=[]),
-        ]
-    )
-    generating_mock = AsyncMock(return_value=_partial_explanation(status="generating"))
-    upsert_mock = AsyncMock(return_value=_cached_explanation(status="ready"))
-    _patch_worker_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=None)
-    monkeypatch.setattr(
-        explanations_module,
-        "advisory_session_lock",
-        _fake_lock_factory(lock_session),
-    )
-    monkeypatch.setattr(explanations_module, "generate_game_answer", generate_mock)
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "mark_game_explanation_generating",
-        generating_mock,
-    )
-    monkeypatch.setattr(explanations_module.repository, "upsert_game_explanation", upsert_mock)
-
-    completed = anyio.run(
-        partial(explanations_module.generate_game_explanation, _USER_ID, _GAME_ID)
-    )
-
-    assert completed is True
-    assert generate_mock.await_count == 4
-    assert [
-        call.kwargs["question"] for call in generate_mock.await_args_list
-    ] == list(EXPLANATION_QUESTIONS.values())
-    assert {call.kwargs["language"] for call in generate_mock.await_args_list} == {"es"}
-    assert generating_mock.await_args.kwargs["user_id"] == _USER_ID
-    assert upsert_mock.await_args.kwargs["user_id"] == _USER_ID
-    assert upsert_mock.await_args.kwargs["sections"]["summary"]["sources"][0]["page"] == 2
-
-
-def test_worker_returns_false_when_lock_is_busy(monkeypatch):
-    """Si otro worker tiene el lock, Celery reintentará más tarde."""
-    monkeypatch.setattr(explanations_module, "advisory_session_lock", _fake_lock_factory(None))
-
-    completed = anyio.run(
-        partial(explanations_module.generate_game_explanation, _USER_ID, _GAME_ID)
-    )
-
-    assert completed is False
-
-
-def test_worker_marks_failed_on_internal_service_error(monkeypatch):
-    """Un error esperado de LLM deja estado failed estable."""
-    fail_mock = AsyncMock()
-    _patch_worker_repo(monkeypatch, fingerprint=_FINGERPRINT, cached=None)
-    monkeypatch.setattr(explanations_module, "advisory_session_lock", _fake_lock_factory(object()))
-    monkeypatch.setattr(
-        explanations_module,
-        "generate_game_answer",
-        AsyncMock(side_effect=InternalServiceUnavailableError("LLM no disponible.")),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "mark_game_explanation_failed",
-        fail_mock,
-    )
-
-    completed = anyio.run(
-        partial(explanations_module.generate_game_explanation, _USER_ID, _GAME_ID)
-    )
-
-    assert completed is True
-    fail_mock.assert_awaited_once()
-    assert fail_mock.await_args.kwargs["user_id"] == _USER_ID
-    assert fail_mock.await_args.kwargs["error_code"] == "generation_failed"
-
-
-def test_get_pool_fingerprint_hashes_visible_manuals_in_stable_order():
-    """La huella combina id e indexado de los manuales visibles ordenados."""
-    indexed_at = datetime(2026, 6, 9, 18, 0, tzinfo=UTC)
-
-    class FakeSession:
-        async def execute(self, statement):
-            await anyio.lowlevel.checkpoint()
-            self.statement = statement
-            return [
-                SimpleNamespace(id=_MANUAL_ID, indexed_at=indexed_at),
-                SimpleNamespace(id=_GAME_ID, indexed_at=None),
-            ]
-
-    session = FakeSession()
-
-    fingerprint = anyio.run(
-        partial(
-            get_pool_fingerprint,
-            session,
-            game_id=_GAME_ID,
-            current_user_id=_USER_ID,
+@pytest.mark.anyio
+async def test_access_change_during_generation_does_not_cache_mixed_sources(world):
+    await world.open(world.a)
+    world.on_generate = lambda: world.add_manual("private")
+    await run_job(world.jobs[0])
+    assert len(world.llm) == 1
+    async with get_sessionmaker()() as session:
+        cached = await repository.get_game_explanation(
+            session, game_id=world.game.id, source_fingerprint=world.jobs[0].source_fingerprint
         )
-    )
-
-    assert fingerprint is not None
-    assert len(fingerprint) == 64
-    compiled = _compile(session.statement)
-    assert "manuals.visibility = " in compiled
-    assert "manuals.deleted_at IS NULL" in compiled
-    assert "ORDER BY manuals.id ASC" in compiled
-
-
-def test_upsert_game_explanation_marks_ready_atomically():
-    """El upsert por juego reemplaza secciones, huella y estado de una vez."""
-    row = {
-        "sections": _SECTIONS,
-        "source_fingerprint": _FINGERPRINT,
-        "status": "ready",
-        "error_code": None,
-        "generated_at": _NOW,
-        "updated_at": _NOW,
-    }
-
-    class FakeMappings:
-        def one(self):
-            return row
-
-    class FakeResult:
-        def mappings(self):
-            return FakeMappings()
-
-    class FakeSession:
-        def __init__(self):
-            self.commits = 0
-
-        async def execute(self, statement):
-            await anyio.lowlevel.checkpoint()
-            self.statement = statement
-            return FakeResult()
-
-        async def commit(self):
-            await anyio.lowlevel.checkpoint()
-            self.commits += 1
-
-    session = FakeSession()
-
-    stored = anyio.run(
-        partial(
-            upsert_game_explanation,
-            session,
-            user_id=_USER_ID,
-            game_id=_GAME_ID,
-            sections=_SECTIONS,
-            source_fingerprint=_FINGERPRINT,
-        )
-    )
-
-    assert stored == GameExplanationSnapshot(**row)
-    assert session.commits == 1
-    compiled = _compile(session.statement)
-    assert "INSERT INTO game_explanations" in compiled
-    assert "ON CONFLICT (user_id, game_id) DO UPDATE" in compiled
-    assert "status" in compiled
-    assert "RETURNING" in compiled
-
-
-def _patch_repo(monkeypatch, *, fingerprint: str | None, cached) -> None:
-    """Fija juego, huella y caché para el servicio HTTP."""
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_game_for_detail",
-        AsyncMock(return_value=SimpleNamespace(id=_GAME_ID)),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_pool_fingerprint",
-        AsyncMock(return_value=fingerprint),
-    )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_game_explanation",
-        AsyncMock(return_value=cached),
+        assert cached is None
+    world.on_generate = None
+    await world.open(world.b)
+    await run_job(world.jobs[1])
+    assert (
+        "REGLA PRIVADA" not in (await world.open(world.b)).json()["sections"]["summary"]["answer"]
     )
 
 
-def _patch_worker_repo(monkeypatch, *, fingerprint: str | None, cached) -> None:
-    """Fija huella y caché para el worker."""
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_pool_fingerprint",
-        AsyncMock(return_value=fingerprint),
+@pytest.mark.anyio
+async def test_failure_is_shared_without_a_new_job_per_poll(world):
+    await world.open(world.a)
+    job = world.jobs[0]
+    await explanations.fail_game_explanation(
+        job.game_id, job.source_fingerprint, "generation_failed"
     )
-    monkeypatch.setattr(
-        explanations_module.repository,
-        "get_game_explanation",
-        AsyncMock(return_value=cached),
-    )
-
-
-def _fake_lock_factory(lock_session):
-    """Sustituye el advisory lock por una sesión falsa."""
-
-    @asynccontextmanager
-    async def fake_lock(_key):
-        yield lock_session
-
-    return fake_lock
-
-
-def _auth() -> AuthenticatedSession:
-    """Construye una sesión autenticada mínima para el servicio."""
-    return SimpleNamespace(user=SimpleNamespace(id=_USER_ID))
-
-
-def _auth_session() -> AuthenticatedSession:
-    """Construye una sesión autenticada para overrides de FastAPI."""
-    return AuthenticatedSession(
-        user=User(
-            id=_USER_ID,
-            email="manualito@example.com",
-            username="Manualito",
-            username_key="manualito",
-            password_hash=_FAKE_HASH,
-            role="user",
-            status="active",
-            created_at=_NOW,
-            last_login_at=None,
-            password_changed_at=_NOW,
-        ),
-        auth_session=AuthSession(
-            user_id=_USER_ID,
-            token_hash="a" * 64,
-            csrf_token_hash="b" * 64,
-            expires_at=_NOW + timedelta(days=7),
-        ),
-        session_token="session-manualito",
-        csrf_token="csrf-manualito",
-    )
-
-
-def _read_session() -> SimpleNamespace:
-    """Construye una sesión de lectura con rollback observable."""
-    session = SimpleNamespace(rollbacks=0)
-
-    async def rollback():
-        await anyio.lowlevel.checkpoint()
-        session.rollbacks += 1
-
-    session.rollback = rollback
-    return session
-
-
-def _cached_explanation(*, status: str) -> GameExplanationSnapshot:
-    """Construye la explicación cacheada completa que devuelve el repositorio."""
-    return GameExplanationSnapshot(
-        sections=_SECTIONS,
-        source_fingerprint=_FINGERPRINT,
-        status=status,
-        error_code=None,
-        generated_at=_NOW,
-        updated_at=_NOW,
-    )
-
-
-def _partial_explanation(
-    *,
-    status: str,
-    error_code: str | None = None,
-    fingerprint: str = _FINGERPRINT,
-    updated_at: datetime = _NOW,
-) -> GameExplanationSnapshot:
-    """Construye una caché parcial de explicación."""
-    return GameExplanationSnapshot(
-        sections={"summary": _SECTIONS["summary"]} if status != "generating" else {},
-        source_fingerprint=fingerprint,
-        status=status,
-        error_code=error_code,
-        generated_at=_NOW,
-        updated_at=updated_at,
-    )
-
-
-def _compile(statement) -> str:
-    """Compila SQLAlchemy con dialecto Postgres para inspección estable."""
-    return str(statement.compile(dialect=postgresql.dialect()))
+    response = (await world.open(world.b)).json()
+    assert response["status"] == "failed"
+    assert response["error_code"] == "generation_failed"
+    assert len(world.jobs) == 1

@@ -1,7 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { createElement } from 'react';
 import { toast } from 'sonner';
 import { router } from '@/app/AppRouter';
-import i18n from '@/app/i18n';
+import { LiveTrans } from '@/shared/components/LiveTrans';
 import { ApiError } from '@/shared/api/http';
 import { dropSessionCaches } from './auth-queries';
 
@@ -22,9 +23,9 @@ export function handleSessionExpired(error: unknown, queryClient: QueryClient): 
   if (redirecting || router.state.location.pathname === '/login') return;
   redirecting = true;
 
-  toast.warning(i18n.t('session.expired.title', { ns: 'errors' }), {
+  toast.warning(createElement(LiveTrans, { ns: 'errors', i18nKey: 'session.expired.title' }), {
     id: 'session-expired',
-    description: i18n.t('session.expired.description', { ns: 'errors' }),
+    description: createElement(LiveTrans, { ns: 'errors', i18nKey: 'session.expired.description' }),
   });
   const redirect = router.state.location.href;
   dropSessionCaches(queryClient)

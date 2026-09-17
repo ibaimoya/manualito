@@ -1,4 +1,16 @@
 {
+  "discovery": {
+    "empty": {
+      "description": "No games have shared rulebooks yet. Upload one and help others get playing.",
+      "title": "The next game starts here",
+      "upload": "Upload a rulebook"
+    },
+    "error": "We couldn't load the games. Please try again.",
+    "heading": "Suggestions",
+    "loading": "Finding community games",
+    "openGame": "View {{name}}",
+    "shuffle": "Show other suggestions"
+  },
   "header": {
     "description": "Find a game someone has already explained and ask away without uploading your rulebook. The number beside each result shows how many rulebooks the community has shared.",
     "eyebrow": "From the community",
@@ -21,12 +33,10 @@
   "typeahead": {
     "attribution": "Powered by <strong>BoardGameGeek</strong>",
     "clearSearch": "Clear search",
+    "create": {
+      "add": "Add “{{game}}” to Manualito"
+    },
     "empty": {
-      "create": {
-        "button": "Create “{{game}}”",
-        "description": "Add it yourself and you can upload its rulebook too.",
-        "title": "It's not on BoardGameGeek"
-      },
       "search": {
         "description": "Try another name or check the spelling.",
         "title": "We couldn't find that game"
@@ -48,7 +58,7 @@
     },
     "selected": {
       "change": "Change",
-      "chosen": "Selected"
+      "help": "Game selected for this rulebook"
     },
     "sharedManuals_one": "{{count}} shared rulebook",
     "sharedManuals_other": "{{count}} shared rulebooks",

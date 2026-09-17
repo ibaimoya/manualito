@@ -1,0 +1,76 @@
+.control,
+.control:hover {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  background: transparent;
+}
+
+/* La superficie se mueve sin desplazar el texto ni la zona pulsable. */
+.control::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid var(--action-border, transparent);
+  border-radius: inherit;
+  background: var(--action-bg);
+  box-shadow:
+    0 2px 3px rgb(31 22 17 / 0.08),
+    inset 0 1px 0 rgb(255 255 255 / 0.1);
+  pointer-events: none;
+  transition:
+    background-color var(--m-color-transition-duration, 160ms) ease-out,
+    border-color var(--m-color-transition-duration, 160ms) ease-out,
+    box-shadow var(--m-color-transition-duration, 160ms) ease-out,
+    transform var(--action-duration, 180ms) cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--m-primary-700);
+  outline-offset: 4px;
+}
+
+.primary {
+  composes: control;
+  --action-bg: var(--m-primary-700);
+  --action-hover-bg: color-mix(in srgb, var(--m-primary-700) 90%, var(--m-text));
+  color: var(--m-bg);
+}
+
+.secondary {
+  composes: control;
+  --action-bg: var(--m-bg);
+  --action-hover-bg: var(--m-surface);
+  --action-border: var(--m-border-strong);
+  color: var(--m-text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .control:not(:disabled, [aria-disabled='true'], [aria-busy='true']):hover::before {
+    background: var(--action-hover-bg);
+    box-shadow:
+      0 4px 8px rgb(31 22 17 / 0.14),
+      inset 0 1px 0 rgb(255 255 255 / 0.16);
+  }
+}
+
+.control:not(:disabled, [aria-disabled='true'], [aria-busy='true']):active::before {
+  background: var(--action-hover-bg);
+  box-shadow:
+    0 1px 2px rgb(31 22 17 / 0.06),
+    inset 0 2px 3px rgb(31 22 17 / 0.14);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) and (pointer: fine) {
+    .control:not(:disabled, [aria-disabled='true'], [aria-busy='true']):hover::before {
+      transform: translateY(-1px);
+    }
+  }
+
+  .control:not(:disabled, [aria-disabled='true'], [aria-busy='true']):active::before {
+    --action-duration: 80ms;
+    transform: translateY(1px) scale(0.98);
+  }
+}

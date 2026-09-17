@@ -19,13 +19,14 @@ const SAMPLE_USER = {
 
 const SAMPLE_AUTH = { user: SAMPLE_USER, csrf_token: 'csrf-test-token' };
 
-const SAMPLE_MANUAL_SUMMARY = {
+export const SAMPLE_MANUAL_SUMMARY = {
   id: 'test-manual-001',
   game_id: 'test-game-001',
   game_name: 'Catan',
   title: 'Catan',
   status: 'active',
   visibility: 'private',
+  anonymous: true,
   source_type: 'pdf',
   page_count: 8,
   duplicate_page_count: 0,
@@ -62,6 +63,7 @@ export const SAMPLE_GAME_DETAIL = {
       duplicate_page_count: 0,
       created_at: '2026-05-26T10:00:00.000Z',
       is_own: true,
+      author_name: null,
     },
     {
       id: 'test-manual-002',
@@ -71,6 +73,7 @@ export const SAMPLE_GAME_DETAIL = {
       duplicate_page_count: 0,
       created_at: '2026-04-02T10:00:00.000Z',
       is_own: false,
+      author_name: 'ana',
     },
   ],
   conversations_count: 1,
@@ -79,7 +82,15 @@ export const SAMPLE_GAME_DETAIL = {
 
 const SAMPLE_EXPLANATION_SECTION = {
   answer: 'Respuesta de la sección.',
-  sources: [{ manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 1, is_own: true }],
+  sources: [
+    {
+      manual_id: 'test-manual-001',
+      manual_title: 'Reglas base',
+      page: 1,
+      is_own: true,
+      author_name: null,
+    },
+  ],
 };
 
 const SAMPLE_EXPLANATION = {
@@ -202,6 +213,23 @@ export const handlers = [
     });
   }),
 
+  http.get('/api/games/discover', () =>
+    HttpResponse.json({
+      games: [
+        { id: 'rec-1', name: 'Carcassonne', bgg_id: 822, year_published: 2000, manuals_count: 2 },
+        {
+          id: 'rec-2',
+          name: 'Ticket to Ride',
+          bgg_id: 9209,
+          year_published: 2004,
+          manuals_count: 1,
+        },
+        { id: 'rec-3', name: 'Azul', bgg_id: 230802, year_published: 2017, manuals_count: 1 },
+      ],
+      attribution: 'Powered by BoardGameGeek.',
+    }),
+  ),
+  http.get('/api/games/mine', () => HttpResponse.json({ games: [] })),
   http.get('/api/games/:gameId', () => HttpResponse.json(SAMPLE_GAME_DETAIL)),
 
   http.get('/api/games/:gameId/explanation', () => HttpResponse.json(SAMPLE_EXPLANATION)),
@@ -220,35 +248,6 @@ export const handlers = [
 
   http.post('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 204 })),
   http.delete('/api/games/:gameId/follow', () => new HttpResponse(null, { status: 204 })),
-
-  http.get('/api/recommendations', () =>
-    HttpResponse.json({
-      recommendations: [
-        {
-          id: 'rec-1',
-          name: 'Carcassonne',
-          bgg_id: 822,
-          year_published: 2000,
-          reason: 'Porque tienes Catan',
-        },
-        {
-          id: 'rec-2',
-          name: 'Ticket to Ride',
-          bgg_id: 9209,
-          year_published: 2004,
-          reason: 'Familiar y de rutas',
-        },
-        {
-          id: 'rec-3',
-          name: 'Azul',
-          bgg_id: 230802,
-          year_published: 2017,
-          reason: 'Estrategia ligera muy valorada',
-        },
-      ],
-      attribution: 'Game data provided by BoardGameGeek.',
-    }),
-  ),
 
   /* -------- Manuales -------- */
   http.post('/api/manuals', async () => {
@@ -286,9 +285,15 @@ export const handlers = [
     HttpResponse.json({
       ...SAMPLE_MANUAL_SUMMARY,
       id: params.manualId,
+      is_own: true,
       pages: [],
     }),
   ),
+
+  http.patch('/api/manuals/:manualId', async ({ request, params }) => {
+    const body = (await request.json()) as { title?: string; anonymous?: boolean };
+    return HttpResponse.json({ ...SAMPLE_MANUAL_SUMMARY, id: params.manualId, ...body });
+  }),
 
   http.delete('/api/manuals/:manualId', () => new HttpResponse(null, { status: 204 })),
 
@@ -380,12 +385,14 @@ export const handlers = [
 ];
 
 /** Detalle de manual con páginas OCR reales (una OK y una de baja confianza). */
-export function manualDetailWithPages() {
+export function manualDetailWithPages(overrides: Record<string, unknown> = {}) {
   return http.get('/api/manuals/:manualId', ({ params }) =>
     HttpResponse.json({
       ...SAMPLE_MANUAL_SUMMARY,
       id: params.manualId,
+      is_own: true,
       pages: SAMPLE_MANUAL_PAGES,
+      ...overrides,
     }),
   );
 }
@@ -409,7 +416,20 @@ export function unauthenticatedMe() {
 
 export function failLogin(status = 401) {
   return http.post('/api/auth/login', () =>
-    HttpResponse.json({ detail: 'Credenciales inválidas.' }, { status }),
+    HttpResponse.json(
+      {
+        detail: 'Credenciales inválidas.',
+        errors: [
+          {
+            field: null,
+            code: 'invalid_credentials',
+            message: 'Credenciales inválidas.',
+            params: {},
+          },
+        ],
+      },
+      { status },
+    ),
   );
 }
 
@@ -444,8 +464,9 @@ export function failRegisterValidation() {
         errors: [
           {
             field: 'username',
-            code: 'username_invalid',
-            message: 'El nombre de usuario solo puede contener letras, números, puntos y guiones.',
+            code: 'username_invalid_character',
+            message: "El nombre de usuario contiene un carácter no permitido: '!'.",
+            params: {},
           },
         ],
       },

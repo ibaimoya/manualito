@@ -1,0 +1,158 @@
+.control {
+  touch-action: manipulation;
+}
+
+.glyph {
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Desplazamientos en unidades del viewBox 256 de Phosphor. */
+.glyph [data-motion-part] {
+  transform-origin: 128px 128px;
+}
+
+.ratio {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--m-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.ratio [data-motion-part] {
+  display: inline-block;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .control [data-motion-part] {
+    transition: transform 180ms var(--m-easing);
+  }
+
+  .control:not(:disabled, [aria-disabled='true']):focus-visible {
+    [data-motion-part='zoom-in'] {
+      transform: scale(1.2);
+    }
+    [data-motion-part='zoom-out'] {
+      transform: scaleX(0.74);
+    }
+    [data-motion-part='corner-nw'] {
+      transform: translate(10.67px, 10.67px);
+    }
+    [data-motion-part='corner-ne'] {
+      transform: translate(-10.67px, 10.67px);
+    }
+    [data-motion-part='corner-se'] {
+      transform: translate(-10.67px, -10.67px);
+    }
+    [data-motion-part='corner-sw'] {
+      transform: translate(10.67px, -10.67px);
+    }
+    [data-motion-part='width-line'] {
+      transform: scaleX(1.167);
+    }
+    [data-motion-part='width-left'] {
+      transform: translateX(-16px);
+    }
+    [data-motion-part='width-right'] {
+      transform: translateX(16px);
+    }
+    [data-motion-part='expand-ne'] {
+      transform: translate(16px, -16px);
+    }
+    [data-motion-part='expand-sw'] {
+      transform: translate(-16px, 16px);
+    }
+    [data-motion-part='ratio-digit'] {
+      transform: scale(1.12);
+    }
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .control:not(:disabled, [aria-disabled='true']):hover {
+    [data-motion-part='zoom-in'] {
+      transform: scale(1.2);
+    }
+    [data-motion-part='zoom-out'] {
+      transform: scaleX(0.74);
+    }
+    [data-motion-part='corner-nw'] {
+      transform: translate(10.67px, 10.67px);
+    }
+    [data-motion-part='corner-ne'] {
+      transform: translate(-10.67px, 10.67px);
+    }
+    [data-motion-part='corner-se'] {
+      transform: translate(-10.67px, -10.67px);
+    }
+    [data-motion-part='corner-sw'] {
+      transform: translate(10.67px, -10.67px);
+    }
+    [data-motion-part='width-line'] {
+      transform: scaleX(1.167);
+    }
+    [data-motion-part='width-left'] {
+      transform: translateX(-16px);
+    }
+    [data-motion-part='width-right'] {
+      transform: translateX(16px);
+    }
+    [data-motion-part='expand-ne'] {
+      transform: translate(16px, -16px);
+    }
+    [data-motion-part='expand-sw'] {
+      transform: translate(-16px, 16px);
+    }
+    [data-motion-part='ratio-digit'] {
+      transform: scale(1.12);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .control:not(:disabled, [aria-disabled='true']):active {
+    [data-motion-part] {
+      transition-duration: 120ms;
+    }
+    [data-motion-part='zoom-in'] {
+      transform: scale(0.96);
+    }
+    [data-motion-part='zoom-out'] {
+      transform: scaleX(0.6);
+    }
+    [data-motion-part='corner-nw'] {
+      transform: translate(18.67px, 18.67px);
+    }
+    [data-motion-part='corner-ne'] {
+      transform: translate(-18.67px, 18.67px);
+    }
+    [data-motion-part='corner-se'] {
+      transform: translate(-18.67px, -18.67px);
+    }
+    [data-motion-part='corner-sw'] {
+      transform: translate(18.67px, -18.67px);
+    }
+    [data-motion-part='width-line'] {
+      transform: scaleX(1.25);
+    }
+    [data-motion-part='width-left'] {
+      transform: translateX(-24px);
+    }
+    [data-motion-part='width-right'] {
+      transform: translateX(24px);
+    }
+    [data-motion-part='expand-ne'] {
+      transform: translate(24px, -24px);
+    }
+    [data-motion-part='expand-sw'] {
+      transform: translate(-24px, 24px);
+    }
+    [data-motion-part='ratio-digit'] {
+      transform: scale(0.96);
+    }
+  }
+}

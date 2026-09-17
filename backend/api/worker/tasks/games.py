@@ -32,6 +32,7 @@ def generate_game_explanation_task(
     self: _RetryableTask,
     user_id: str,
     game_id: str,
+    source_fingerprint: str,
     lock_retry_count: int = 0,
     external_retry_count: int = 0,
 ) -> None:
@@ -43,13 +44,14 @@ def generate_game_explanation_task(
             explanations.generate_game_explanation,
             parsed_user_id,
             parsed_game_id,
+            source_fingerprint,
         )
     except (ConnectionError, TimeoutError) as exc:
         if external_retry_count >= EXTERNAL_ERROR_MAX_RETRIES:
             anyio.run(
                 explanations.fail_game_explanation,
-                parsed_user_id,
                 parsed_game_id,
+                source_fingerprint,
                 "generation_failed",
             )
             return
@@ -59,6 +61,7 @@ def generate_game_explanation_task(
             args=(
                 user_id,
                 game_id,
+                source_fingerprint,
                 lock_retry_count,
                 external_retry_count + 1,
             ),
@@ -66,8 +69,8 @@ def generate_game_explanation_task(
     except SoftTimeLimitExceeded:
         anyio.run(
             explanations.fail_game_explanation,
-            parsed_user_id,
             parsed_game_id,
+            source_fingerprint,
             "generation_failed",
         )
         return
@@ -76,8 +79,8 @@ def generate_game_explanation_task(
         if lock_retry_count >= LOCK_BUSY_MAX_RETRIES:
             anyio.run(
                 explanations.fail_game_explanation,
-                parsed_user_id,
                 parsed_game_id,
+                source_fingerprint,
                 "generation_failed",
             )
             return
@@ -86,6 +89,7 @@ def generate_game_explanation_task(
             args=(
                 user_id,
                 game_id,
+                source_fingerprint,
                 lock_retry_count + 1,
                 external_retry_count,
             ),

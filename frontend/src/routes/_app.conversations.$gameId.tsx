@@ -1,12 +1,25 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, MoreVertical, Pencil, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
+import {
+  BookOpenIcon,
+  DotsThreeVerticalIcon,
+  PencilSimpleIcon,
+  PlusIcon,
+  ArrowsClockwiseIcon,
+  MagnifyingGlassIcon,
+  SparkleIcon,
+} from '@phosphor-icons/react';
+import { motion } from 'motion/react';
+import { TrashIcon } from '@/shared/components/action-icons';
 import { Trans, useTranslation } from 'react-i18next';
 import { useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { LiveTrans } from '@/shared/components/LiveTrans';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
 import { ScreenTopBar } from '@/app/Topbar';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -27,9 +40,12 @@ import {
   conversationsQueryOptions,
   useConversationsRead,
 } from '@/features/conversations/use-conversations';
+import { tourTarget } from '@/features/tutorial/targets';
 import { conversationsApi, type ConversationSummary } from '@/shared/api/conversations';
 import { formatRelative, formatShortDate } from '@/shared/lib/relativeDate';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+import '@/features/conversations/conversation-list.css';
 
 export const Route = createFileRoute('/_app/conversations/$gameId')({
   component: ConversationsScreen,
@@ -40,8 +56,10 @@ const TITLE_MAX = 80;
 function ConversationsScreen() {
   const { gameId } = Route.useParams();
   const { t } = useTranslation('conversations');
+  const { t: shellT } = useTranslation('shell');
   const game = useQuery(gameDetailQueryOptions(gameId));
   const conversations = useQuery(conversationsQueryOptions(gameId));
+  const unavailable = conversations.data === undefined && conversations.errorUpdateCount > 0;
   const [filter, setFilter] = useState('');
 
   const gameName = game.data?.name ?? t('fallback.gameName');
@@ -74,28 +92,31 @@ function ConversationsScreen() {
           { label: gameName, link: linkOptions({ to: '/game/$gameId', params: { gameId } }) },
         ]}
         actions={
-          counter === null ? null : <span className="mono text-[11px] text-fg-3">{counter}</span>
+          counter === null ? null : (
+            <span className="hidden text-xs font-normal text-fg-2 tabular-nums md:inline">
+              {counter}
+            </span>
+          )
         }
       />
 
-      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pb-28 pt-5 md:px-6">
-        <header className="mb-4 flex items-center gap-3.5">
-          <GameCover name={gameName} size={44} radius={12} processing={gameIds.has(gameId)} />
-          <div className="min-w-0 flex-1">
-            <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
-              {t('header.subtitle', { gameName })}
-            </p>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg">
-              {t('page.title')}
-            </h1>
+      <div className="page-frame relative flex flex-1 flex-col py-6 lg:py-8">
+        <header
+          className="mb-6 flex items-center gap-4 @3xl/app:mb-8"
+          {...tourTarget('conversations-header')}
+        >
+          <GameCover name={gameName} size={56} radius={14} processing={gameIds.has(gameId)} />
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="page-eyebrow break-words">{t('header.subtitle', { gameName })}</p>
+            <h1 className="page-title">{t('page.title')}</h1>
           </div>
         </header>
 
         {all.length > 0 ? (
-          <div className="relative mb-4">
-            <Search
+          <div className="relative mb-4" {...tourTarget('conversations-filter')}>
+            <MagnifyingGlassIcon
+              data-icon-motion="search"
               size={16}
-              strokeWidth={2}
               aria-hidden="true"
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-3"
             />
@@ -110,49 +131,79 @@ function ConversationsScreen() {
           </div>
         ) : null}
 
-        {conversations.isPending ? <ListSkeleton /> : null}
-        {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-        {conversations.isError && conversations.data === undefined ? (
-          <Card className="bg-surface p-5 text-sm text-fg-2">{t('error.load')}</Card>
+        {counter ? (
+          <p className="mb-3 text-right text-xs text-fg-2 tabular-nums md:hidden">{counter}</p>
         ) : null}
 
-        {conversations.isSuccess && all.length === 0 ? (
-          <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
-        ) : null}
+        <SkeletonSwap pending={conversations.isPending && !unavailable} skeleton={<ListSkeleton />}>
+          {unavailable ? (
+            <RecoveryContent
+              headingLevel={2}
+              title={t('error.title')}
+              description={t('error.load')}
+              retrying={conversations.isFetching}
+            >
+              <div className={recoveryStyles.actions}>
+                <Button
+                  className={recoveryStyles.primary}
+                  loading={conversations.isFetching}
+                  onClick={() => void conversations.refetch()}
+                >
+                  <ArrowsClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
+                  {shellT('recovery.retry')}
+                </Button>
+              </div>
+            </RecoveryContent>
+          ) : null}
 
-        {conversations.isSuccess && all.length > 0 && visible.length === 0 ? (
-          <NoResults filter={filter} onClear={() => setFilter('')} />
-        ) : null}
+          {conversations.data !== undefined && all.length === 0 ? (
+            <EmptyState gameName={gameName} gameId={gameId} canAsk={canAsk} />
+          ) : null}
 
-        <ul className="flex flex-col gap-2.5" aria-label={t('page.listLabel')}>
-          {visible.map((conversation) => (
-            <ConversationCard
-              key={conversation.id}
-              conversation={conversation}
-              gameId={gameId}
-              unread={isUnread(conversation)}
-            />
-          ))}
-        </ul>
+          {all.length > 0 && visible.length === 0 ? (
+            <NoResults filter={filter} onClear={() => setFilter('')} />
+          ) : null}
+
+          {visible.length > 0 && (
+            <ul
+              className="conversation-list"
+              aria-label={t('page.listLabel')}
+              {...tourTarget('conversations-list')}
+            >
+              {visible.map((conversation) => (
+                <ConversationRow
+                  key={conversation.id}
+                  conversation={conversation}
+                  gameId={gameId}
+                  unread={isUnread(conversation)}
+                />
+              ))}
+            </ul>
+          )}
+        </SkeletonSwap>
 
         {!canAsk || all.length === 0 ? null : (
-          <Link
-            to="/chat/$gameId"
-            params={{ gameId }}
-            search={{}}
-            className="fixed bottom-6 right-5 z-10 inline-flex items-center gap-2 rounded-full bg-primary px-5 font-body text-[15px] font-bold text-fg-inv shadow-lg transition-transform hover:scale-[1.03] md:right-10"
-            style={{ height: 52 }}
+          <Button
+            asChild
+            className="sticky bottom-6 z-10 mt-6 h-13 self-end rounded-full text-[15px] font-bold shadow-lg motion-safe:active:scale-[0.96]"
           >
-            <Plus size={18} strokeWidth={2.2} aria-hidden="true" />
-            {t('actions.newConversation')}
-          </Link>
+            <Link
+              to="/chat/$gameId"
+              params={{ gameId }}
+              search={{}}
+              {...tourTarget('conversations-new')}
+            >
+              <PlusIcon data-icon-motion="plus" size={18} aria-hidden="true" />
+              {t('actions.newConversation')}
+            </Link>
+          </Button>
         )}
       </div>
     </div>
   );
 }
 
-function ConversationCard({
+function ConversationRow({
   conversation,
   gameId,
   unread,
@@ -168,6 +219,9 @@ function ConversationCard({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const title = conversation.title ?? t('fallback.conversationTitle');
   const pending = conversation.has_pending_reply;
+  const hoverMotion = useMediaQuery(
+    '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+  );
 
   function openChat(): void {
     navigate({
@@ -184,40 +238,36 @@ function ConversationCard({
       toast.success(t('toast.deleteSuccess'), { id: 'conversation-delete' });
     },
     onError: () =>
-      toast.error(t('toast.deleteError'), {
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.deleteError" />, {
         id: 'conversation-delete',
-        description: t('toast.retry'),
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
       }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
 
   return (
-    <li className={cn('group', remove.isPending && 'pointer-events-none opacity-50')}>
-      <Card
-        style={pending ? { borderColor: 'transparent' } : undefined}
-        className={cn(
-          'relative flex items-start gap-3 p-3.5',
-          'transition-[translate,box-shadow,border-color] duration-150 ease-[var(--ease-mn)]',
-          !pending && 'hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm',
-          'active:translate-y-0 active:shadow-xs',
-        )}
-      >
+    <motion.li
+      initial={false}
+      animate="rest"
+      whileHover={hoverMotion ? 'chat' : 'rest'}
+      className={cn('conversation-row', remove.isPending && 'pointer-events-none opacity-50')}
+    >
+      <div className="relative flex items-start gap-3 rounded-[inherit] p-3.5">
         <ConversationActivityIcon
           hasPendingReply={pending}
           unread={unread}
           size="md"
           tone="accent"
-          className="relative z-[1] transition-[scale] duration-150 ease-[var(--ease-mn)] group-hover:scale-105"
+          className="relative z-[1]"
         />
-        {/* Botón principal: su ::after se estira sobre toda la card, así que se
-            abre pulsando cualquier punto (no solo el texto); el ⋮ va por encima. */}
+        {/* El área principal cubre la fila. El menú conserva su propio control. */}
         <button
           type="button"
           onClick={openChat}
           className={cn(
-            'relative z-[1] min-w-0 flex-1 cursor-pointer text-left',
-            "after:absolute after:inset-0 after:rounded-2xl after:content-['']",
-            'focus-visible:outline-none focus-visible:after:shadow-[var(--m-shadow-ring-primary)]',
+            'min-w-0 flex-1 cursor-pointer text-left',
+            "after:absolute after:inset-0 after:z-[1] after:content-['']",
+            'focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-primary',
           )}
         >
           <span className="flex items-baseline gap-2.5">
@@ -247,28 +297,29 @@ function ConversationCard({
             <button
               type="button"
               aria-label={t('aria.optionsFor', { title })}
-              className="relative z-10 grid size-9 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface hover:text-fg data-[state=open]:bg-surface"
+              {...tourTarget('conversations-row-menu')}
+              className="icon-feedback relative z-10 grid size-11 shrink-0 place-items-center rounded-lg text-fg-3 transition-colors hover:text-fg data-[state=open]:text-fg"
             >
-              <MoreVertical size={17} strokeWidth={2} />
+              <DotsThreeVerticalIcon aria-hidden="true" size={17} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={openChat}>
-              <BookOpen size={16} strokeWidth={2} aria-hidden="true" />
+              <BookOpenIcon size={16} aria-hidden="true" />
               {t('actions.open')}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
-              <Pencil size={16} strokeWidth={2} aria-hidden="true" />
+              <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
               {t('actions.rename')}
             </DropdownMenuItem>
             <DropdownMenuItem danger onSelect={() => setDeleteOpen(true)}>
-              <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+              <TrashIcon size={16} aria-hidden="true" />
               {t('actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         {pending ? <span className="proc-border" aria-hidden="true" /> : null}
-      </Card>
+      </div>
 
       <RenameDialog
         open={renameOpen}
@@ -304,13 +355,13 @@ function ConversationCard({
               loading={remove.isPending}
               onClick={() => remove.mutate()}
             >
-              <Trash2 size={16} strokeWidth={2} />
+              <TrashIcon size={16} />
               {t('actions.deleteConversation')}
             </Button>
           </div>
         </DialogBody>
       </Dialog>
-    </li>
+    </motion.li>
   );
 }
 
@@ -355,7 +406,7 @@ function RenameDialog({
 }
 
 /**
- * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar:
+ * El borrador vive aquí, dentro del contenido que Radix desmonta al cerrar.
  * cada apertura arranca con el título actual, sin borradores abandonados.
  */
 function RenameForm({
@@ -381,9 +432,9 @@ function RenameForm({
       toast.success(t('toast.renameSuccess'), { id: 'conversation-rename' });
     },
     onError: () =>
-      toast.error(t('toast.renameError'), {
+      toast.error(<LiveTrans ns="conversations" i18nKey="toast.renameError" />, {
         id: 'conversation-rename',
-        description: t('toast.retry'),
+        description: <LiveTrans ns="conversations" i18nKey="toast.retry" />,
       }),
     onSettled: () => qc.invalidateQueries({ queryKey: conversationsKey(gameId) }),
   });
@@ -411,7 +462,7 @@ function RenameForm({
         onChange={(event) => setTitle(event.target.value)}
       />
       <p className="mt-2.5 flex items-start gap-2 text-xs leading-relaxed text-fg-3">
-        <Sparkles size={13} strokeWidth={2} aria-hidden="true" className="mt-0.5 shrink-0" />
+        <SparkleIcon size={13} aria-hidden="true" className="mt-0.5 shrink-0" />
         {t('renameDialog.aiHint')}
       </p>
       <div className="mt-4 flex justify-end gap-2">
@@ -442,7 +493,7 @@ function EmptyState({
       {canAsk ? (
         <Button asChild className="mt-4">
           <Link to="/chat/$gameId" params={{ gameId }} search={{}}>
-            <Plus size={16} strokeWidth={2} />
+            <PlusIcon data-icon-motion="plus" aria-hidden="true" size={16} />
             {t('actions.newConversation')}
           </Link>
         </Button>
@@ -457,7 +508,7 @@ function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () =
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
       <span className="grid size-12 place-items-center rounded-2xl bg-surface text-fg-3">
-        <Search size={22} strokeWidth={2} aria-hidden="true" />
+        <MagnifyingGlassIcon data-icon-motion="search" size={22} aria-hidden="true" />
       </span>
       <p className="font-display text-base font-bold text-fg">
         {t('noResults.title', { filter: filter.trim() })}
@@ -472,9 +523,9 @@ function NoResults({ filter, onClear }: Readonly<{ filter: string; onClear: () =
 
 function ListSkeleton() {
   return (
-    <div aria-hidden="true" className="space-y-2.5">
+    <div aria-hidden="true" className="conversation-list">
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-[76px] animate-pulse rounded-2xl bg-surface-2" />
+        <div key={i} className="h-[72px] animate-pulse bg-surface-2" />
       ))}
     </div>
   );

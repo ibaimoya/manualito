@@ -32,10 +32,9 @@
   },
   "error": {
     "description": {
-      "games": "There was a connection problem. Your games are safe.",
-      "manuals": "There was a connection problem. Your rulebooks are safe."
+      "games": "Try again to see the games you follow.",
+      "manuals": "Try again to see the rulebooks you've uploaded."
     },
-    "retry": "Try again",
     "title": "We couldn't load your library"
   },
   "gameCard": {
@@ -57,8 +56,7 @@
     "inputAriaLabel": "Jump to a game",
     "listLabel": "Your games",
     "noResults": "No games match “{{query}}”.",
-    "placeholder": "Search your games…",
-    "shortcut": "jump"
+    "placeholder": "Search your games…"
   },
   "manualCard": {
     "chunks": "{{count}} chunks",
@@ -75,7 +73,9 @@
     },
     "visibility": {
       "private": "Private",
-      "shared": "Shared"
+      "privateHelp": "Private rulebook",
+      "shared": "Shared",
+      "sharedHelp": "Shared with the community"
     }
   },
   "manualSearch": {
@@ -90,6 +90,13 @@
     "hidden": "Hidden",
     "indexing": "Processing…",
     "pendingReview": "Needs review"
+  },
+  "statusHelp": {
+    "active": "Rulebook ready to consult",
+    "failed": "This rulebook could not be processed",
+    "hidden": "This rulebook is hidden",
+    "indexing": "Processing the rulebook. The text will be available when it finishes.",
+    "pendingReview": "Some pages need their extracted text reviewed"
   },
   "tabs": {
     "ariaLabel": "Switch between games and rulebooks",

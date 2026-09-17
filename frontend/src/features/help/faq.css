@@ -1,0 +1,51 @@
+/* Orígenes en unidades del viewBox 256 de Phosphor. */
+.faq-trigger [data-faq-part] {
+  transform-origin: 128px 128px;
+}
+
+.faq-trigger [data-faq-part='star'] {
+  --faq-active-transform: rotate(12deg) scale(0.86);
+  transform-origin: 112px 144px;
+}
+
+.faq-trigger [data-faq-part='spark'] {
+  --faq-active-transform: rotate(90deg) scale(1.35);
+  transform-origin: 176px 40px;
+}
+
+.faq-trigger [data-faq-part='dot'] {
+  --faq-active-transform: scale(0.7);
+  transform-origin: 232px 88px;
+}
+
+.faq-trigger [data-faq-part='shackle'] {
+  --faq-active-transform: scaleY(0.8);
+  transform-origin: 128px 80px;
+}
+
+.faq-trigger [data-faq-part='keyhole'] {
+  --faq-active-transform: rotate(90deg);
+  transform-origin: 128px 140px;
+}
+
+/* Ambas mitades se estrechan por igual para conservar el centro y el grosor del globo. */
+.faq-trigger [data-faq-part^='meridian'] {
+  --faq-active-transform: scaleX(0.6);
+  stroke-width: 1.25px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .faq-trigger [data-faq-part] {
+    transition: transform var(--m-dur) var(--m-easing);
+  }
+
+  .faq-trigger[data-state='open'] [data-faq-part] {
+    transform: var(--faq-active-transform);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .faq-trigger:hover [data-faq-part] {
+      transform: var(--faq-active-transform);
+    }
+  }
+}

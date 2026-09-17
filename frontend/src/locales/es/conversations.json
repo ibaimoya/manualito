@@ -34,7 +34,8 @@
     "title": "Aún no has preguntado nada"
   },
   "error": {
-    "load": "No hemos podido cargar tus conversaciones. Inténtalo de nuevo en un momento."
+    "load": "Vuelve a intentarlo para retomar una conversación.",
+    "title": "Tus conversaciones no se han cargado"
   },
   "fallback": {
     "conversationTitle": "Conversación sin título",

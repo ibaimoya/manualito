@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
 
@@ -77,7 +77,7 @@ export function MessageComposer({
         enterKeyHint="send"
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
+          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
             submit();
           }
@@ -95,24 +95,19 @@ export function MessageComposer({
         aria-label={t('actions.sendQuestion')}
         aria-busy={sendPending || undefined}
         className={cn(
-          'grid size-10 shrink-0 place-items-center rounded-full bg-primary text-fg-inv transition-[background-color,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+          'composer-send grid size-[46px] shrink-0 place-items-center rounded-full bg-fg text-bg transition-control duration-150 enabled:hover:bg-primary-700 motion-safe:enabled:active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-card',
           {
             'cursor-wait': sendPending,
-            'hover:bg-primary-600': canSend && !sendPending,
-            'cursor-not-allowed opacity-50': !canSend && !sendPending,
+            'cursor-not-allowed opacity-40': !canSend && !sendPending,
           },
         )}
       >
-        {sendPending ? (
-          <Loader2
-            size={18}
-            strokeWidth={2}
-            className="animate-[mn-spin_0.9s_linear_infinite]"
-            aria-hidden="true"
-          />
-        ) : (
-          <ArrowUp size={18} strokeWidth={2.25} aria-hidden="true" />
-        )}
+        <span className="state-icon" data-active={sendPending} aria-hidden="true">
+          <ArrowUpIcon data-icon-motion="up" size={22} />
+          <span className="grid size-[22px] place-items-center">
+            <span className="composer-send-orbit" />
+          </span>
+        </span>
       </button>
     </form>
   );

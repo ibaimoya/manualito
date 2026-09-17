@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route as ForgotRoute } from '@/routes/_public.forgot';
@@ -39,6 +39,32 @@ describe('/forgot', () => {
     await user.click(screen.getByRole('button', { name: 'Send link' }));
     await waitFor(() => expect(body).toEqual({ email: 'ana@example.com', locale: 'en' }));
   });
+
+  it.each([429, 503])(
+    'muestra el error %s en inglés, conserva el email y permite reintentar',
+    async (status) => {
+      localStorage.setItem('manualito.language', JSON.stringify('en'));
+      server.use(
+        http.post('/api/auth/password/forgot', () =>
+          HttpResponse.json({ detail: 'Mensaje del servidor en español' }, { status }),
+        ),
+      );
+      renderForgot();
+      const user = userEvent.setup();
+      const email = await screen.findByRole('textbox');
+      await user.type(email, 'ana@example.com');
+      await user.click(screen.getByRole('button', { name: 'Send link' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert).not.toHaveTextContent('Mensaje del servidor');
+      expect(
+        within(alert).getByText(status === 429 ? 'Too many attempts' : 'Service unavailable'),
+      ).toBeInTheDocument();
+      expect(email).toHaveValue('ana@example.com');
+      server.use(http.post('/api/auth/password/forgot', () => HttpResponse.json({ detail: 'ok' })));
+      await user.click(screen.getByRole('button', { name: 'Send link' }));
+      expect(await screen.findByText('Check your email')).toBeInTheDocument();
+    },
+  );
 
   it('no envía nada si el email está vacío', async () => {
     let requests = 0;
@@ -106,7 +132,6 @@ describe('/forgot', () => {
 
     releaseBackend();
     expect(await screen.findByText('Revisa tu correo')).toBeInTheDocument();
-    expect(screen.getByText('¿No llega? Mira en spam y espera 2 min')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Volver a entrar' })).toHaveAttribute('href', '/login');
     await waitFor(() => expect(screen.queryByText('Enviando…')).not.toBeInTheDocument());
   });

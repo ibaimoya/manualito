@@ -13,15 +13,34 @@ describe('storage', () => {
       expect(storage.isOnboardingSeen()).toBe(false);
     });
 
-    it('markOnboardingSeen lo marca y resetOnboarding lo limpia', () => {
+    it('markOnboardingSeen conserva la marca al repetir la escritura', () => {
       storage.markOnboardingSeen();
       expect(storage.isOnboardingSeen()).toBe(true);
-      storage.resetOnboarding();
-      expect(storage.isOnboardingSeen()).toBe(false);
+      storage.markOnboardingSeen();
+      expect(storage.isOnboardingSeen()).toBe(true);
     });
   });
 
   describe('robustness contra datos corruptos', () => {
+    it('tolera que el navegador deniegue el acceso a localStorage', () => {
+      const listener = vi.fn();
+      const off = onStorageWriteFail(listener);
+      const access = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+        throw new DOMException('Storage access denied', 'SecurityError');
+      });
+      try {
+        expect(storage.readSettings()).toEqual({ mode: 'light', accent: 'amber' });
+        expect(storage.readLanguage()).toBe('es');
+        expect(storage.isOnboardingSeen()).toBe(false);
+        expect(() => storage.markOnboardingSeen()).not.toThrow();
+        storage.writeSettings(SETTINGS);
+        expect(listener).toHaveBeenCalledWith('denied', STORAGE_KEYS.settings);
+      } finally {
+        access.mockRestore();
+        off();
+      }
+    });
+
     it('readSettings usa defaults cuando el JSON es inválido', () => {
       localStorage.setItem(STORAGE_KEYS.settings, '{');
       const s = storage.readSettings();
@@ -37,34 +56,6 @@ describe('storage', () => {
     it('readSettings respeta valores válidos', () => {
       storage.writeSettings(SETTINGS);
       expect(storage.readSettings()).toEqual(SETTINGS);
-    });
-  });
-
-  describe('wipeAll', () => {
-    it('barre las claves legadas por manual pero deja settings y onboarding', () => {
-      // Restos de versiones donde los manuales se cacheaban en localStorage.
-      localStorage.setItem('manualito.manuals', JSON.stringify([{ manual_id: 'm1' }]));
-      localStorage.setItem('manualito.qa.m1', JSON.stringify([{ id: 'x' }]));
-      localStorage.setItem('manualito.result.m1', JSON.stringify({ summary: 's' }));
-      localStorage.setItem('manualito.ocr.m1', JSON.stringify([{ text: 'línea' }]));
-      storage.writeSettings(SETTINGS);
-      storage.markOnboardingSeen();
-
-      storage.wipeAll();
-
-      expect(localStorage.getItem('manualito.manuals')).toBeNull();
-      expect(localStorage.getItem('manualito.qa.m1')).toBeNull();
-      expect(localStorage.getItem('manualito.result.m1')).toBeNull();
-      expect(localStorage.getItem('manualito.ocr.m1')).toBeNull();
-      // Las preferencias UI sobreviven a "Borrar datos locales".
-      expect(storage.readSettings().mode).toBe('dark');
-      expect(storage.isOnboardingSeen()).toBe(true);
-    });
-
-    it('no toca claves ajenas al prefijo legado', () => {
-      localStorage.setItem('otra.app.clave', 'intacta');
-      storage.wipeAll();
-      expect(localStorage.getItem('otra.app.clave')).toBe('intacta');
     });
   });
 

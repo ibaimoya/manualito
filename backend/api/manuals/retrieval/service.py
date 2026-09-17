@@ -1,6 +1,6 @@
 """Orquestación de recuperación RAG y respuesta LLM por juego."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from uuid import UUID
 
 import httpx
@@ -29,6 +29,7 @@ async def generate_game_answer(
     chat_history: Sequence[Mapping[str, str]] = (),
     retrieval_question: str | None = None,
     language: Language = "es",
+    allowed_manual_ids: Collection[UUID] | None = None,
 ) -> AnswerResponse:
     """Genera una respuesta RAG usando los manuales autorizados del juego.
 
@@ -57,6 +58,10 @@ async def generate_game_answer(
         current_user_id=current_user_id,
     )
     await session.rollback()
+    if allowed_manual_ids is not None:
+        if not set(allowed_manual_ids).issubset(manual_ids):
+            raise ManualContextNotFoundError
+        manual_ids = list(allowed_manual_ids)
     if not manual_ids:
         raise ManualContextNotFoundError
     search_question = f"Manual de {game_name}: {retrieval_question or question}"
@@ -82,6 +87,9 @@ async def generate_game_answer(
             current_user_id=current_user_id,
             chunk_ids=chunk_ids,
         )
+        authorized_chunks = [chunk for chunk in authorized_chunks if chunk.manual_id in manual_ids]
+        if not authorized_chunks:
+            raise ManualContextNotFoundError
         context = deduplicate_chunks(authorized_chunks)[:top_k]
         context_chunks = [chunk.text for chunk in context]
         sources = _answer_sources(context)
@@ -136,6 +144,7 @@ def _answer_sources(chunks: Sequence[AuthorizedChunk]) -> list[AnswerSource]:
                 manual_title=chunk.manual_title,
                 page=chunk.source_page,
                 is_own=chunk.is_own,
+                author_name=chunk.author_name,
             )
         )
     return sources

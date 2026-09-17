@@ -1,4 +1,16 @@
 {
+  "discovery": {
+    "empty": {
+      "description": "Todavía no hay juegos con manuales compartidos. Sube uno y ayuda a que otros puedan jugar.",
+      "title": "Aquí empieza la próxima partida",
+      "upload": "Subir un manual"
+    },
+    "error": "No hemos podido cargar los juegos. Inténtalo de nuevo.",
+    "heading": "Sugerencias",
+    "loading": "Buscando juegos de la comunidad",
+    "openGame": "Ver {{name}}",
+    "shuffle": "Ver otras sugerencias"
+  },
   "header": {
     "description": "Busca un juego que alguien ya haya explicado y pregúntale sin subir su manual. El número junto a cada resultado son los manuales que la comunidad ha compartido.",
     "eyebrow": "De la comunidad",
@@ -21,12 +33,10 @@
   "typeahead": {
     "attribution": "Powered by <strong>BoardGameGeek</strong>",
     "clearSearch": "Limpiar búsqueda",
+    "create": {
+      "add": "Añadir «{{game}}» a Manualito"
+    },
     "empty": {
-      "create": {
-        "button": "Crear «{{game}}»",
-        "description": "Añádelo tú y podrás subir su manual igualmente.",
-        "title": "No está en BoardGameGeek"
-      },
       "search": {
         "description": "Prueba con otro nombre o revisa la ortografía.",
         "title": "No encontramos ese juego"
@@ -48,7 +58,7 @@
     },
     "selected": {
       "change": "Cambiar",
-      "chosen": "Elegido"
+      "help": "Juego elegido para este manual"
     },
     "sharedManuals_one": "{{count}} manual compartido",
     "sharedManuals_other": "{{count}} manuales compartidos",

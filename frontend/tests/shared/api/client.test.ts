@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
-import { ApiError, api, apiErrorNotification, isAbortApiError } from '@/shared/api/client';
+import { ApiError, api, isAbortApiError } from '@/shared/api/client';
+import { request } from '@/shared/api/http';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -11,39 +12,12 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe('api error helpers', () => {
-  const apiError = new ApiError(
-    {
-      title: 'Foto demasiado grande',
-      message: 'La foto pesa más de 30 MB.',
-      retryable: true,
-      severity: 'warning',
-      code: 'http.413',
-    },
-    413,
-    null,
-  );
-
   it('detectan cancelaciones directas y envueltas en ApiError', () => {
     const abortError = new DOMException('Aborted', 'AbortError');
 
     expect(isAbortApiError(abortError)).toBe(true);
-    expect(isAbortApiError(new ApiError(apiError.view, undefined, abortError))).toBe(true);
+    expect(isAbortApiError(new ApiError(undefined, abortError))).toBe(true);
     expect(isAbortApiError(new Error('network'))).toBe(false);
-  });
-
-  it('construyen notificaciones estables para ApiError y fallback', () => {
-    const fallback = {
-      title: 'Error inesperado',
-      id: 'mutation-error-unknown',
-      description: 'Vuelve a intentarlo en un momento.',
-    };
-
-    expect(apiErrorNotification(apiError, 'mutation-error', fallback)).toEqual({
-      title: 'Foto demasiado grande',
-      id: 'mutation-error-http.413',
-      description: 'La foto pesa más de 30 MB.',
-    });
-    expect(apiErrorNotification(new Error('boom'), 'mutation-error', fallback)).toBe(fallback);
   });
 });
 
@@ -91,6 +65,7 @@ describe('api createManual', () => {
     expect(body).toContain('g-1');
     expect(body).toContain('images');
     expect(body.match(/name="images"/g)).toHaveLength(2);
+    expect(body).toMatch(/name="anonymous"\r?\n\r?\ntrue/);
     expect(result).toMatchObject({
       manual_id: 'm-1',
       status: 'indexing',
@@ -237,6 +212,22 @@ describe('api getManualProcessing', () => {
 });
 
 describe('api response handling', () => {
+  it('respeta una señal cancelada antes de iniciar la petición', async () => {
+    let requests = 0;
+    server.use(
+      http.get('/api/cancelled', () => {
+        requests += 1;
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const controller = new AbortController();
+    controller.abort(new DOMException('Aborted', 'AbortError'));
+    await expect(request('/cancelled', { signal: controller.signal })).rejects.toSatisfy(
+      isAbortApiError,
+    );
+    expect(requests).toBe(0);
+  });
+
   it('cuando la respuesta es text/plain, devuelve texto', async () => {
     server.use(
       http.post('/api/manuals', () =>
@@ -262,6 +253,29 @@ describe('api response handling', () => {
         images: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })],
       }),
     ).rejects.toMatchObject({ status: 500 });
+  });
+});
+
+describe('api.updateManual', () => {
+  it('envía los campos modificados y recibe el resumen actualizado', async () => {
+    let received: unknown = null;
+    let contentType: string | null = null;
+    server.use(
+      http.patch('/api/manuals/:manualId', async ({ request, params }) => {
+        received = await request.json();
+        contentType = request.headers.get('content-type');
+        return HttpResponse.json({
+          id: params.manualId,
+          title: 'Reglas base',
+          anonymous: false,
+          visibility: 'shared',
+        });
+      }),
+    );
+    const result = await api.updateManual('m 1', { title: 'Reglas base', anonymous: false });
+    expect(received).toEqual({ title: 'Reglas base', anonymous: false });
+    expect(contentType).toContain('application/json');
+    expect(result).toMatchObject({ id: 'm 1', title: 'Reglas base', anonymous: false });
   });
 });
 

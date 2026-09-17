@@ -3,16 +3,19 @@
     "ariaLabel": "Your account"
   },
   "empty": {
-    "description": "You haven't looked up a rulebook yet. Tap <b>New manual</b> to get started."
+    "description": "Find a game you would like to learn and look up its rules.",
+    "explore": "Explore games"
   },
   "error": {
-    "manuals": "We couldn't load your rulebooks. Try again in a moment."
+    "manuals": "Try again to see your recent rulebooks.",
+    "title": "Your rulebooks haven't loaded"
   },
   "greeting": {
     "anonymous": "Hi",
     "description": "Snap a photo of the rulebook and I'll walk you through it, no need to read the whole thing.",
-    "named": "Hi, {{firstName}}",
-    "question": "What game are we learning?"
+    "named": "Hi, <player>{{firstName}}</player>",
+    "question": "What game are we learning?",
+    "wave": "Say hello"
   },
   "hero": {
     "description": "Upload pages from the camera, your gallery, or a PDF, and I'll explain everything as we go.",
@@ -23,11 +26,5 @@
     "heading": "Recent",
     "viewAll": "View all",
     "viewAllAriaLabel": "View all your games"
-  },
-  "recommendations": {
-    "attribution": "Powered by <b>BoardGameGeek</b>",
-    "description": "Games you might want to learn next, based on your library.",
-    "heading": "For you",
-    "learn": "Learn {{game}}"
   }
 }

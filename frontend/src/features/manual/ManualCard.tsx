@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router';
-import { ChevronRight } from 'lucide-react';
+import { CaretRightIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { type ManualSummary } from '@/shared/api/client';
 import { cn } from '@/shared/lib/cn';
 import { gameColor } from '@/shared/lib/gameColor';
@@ -29,12 +28,12 @@ export function ManualCard({ manual, meta, className }: Props) {
       to={indexing ? '/processing/$manualId' : '/game/$gameId'}
       params={indexing ? { manualId: manual.id } : { gameId: manual.game_id }}
       search={indexing ? { name } : undefined}
-      className="@container block"
+      className="game-preview @container block"
     >
-      <Card className={cn('p-3 transition-shadow hover:shadow-sm', className)}>
+      <Card className={cn('p-3 transition-none hover:border-border-strong', className)}>
         <div className="flex items-center gap-3">
           <div
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+            className="game-preview-token grid h-12 w-12 shrink-0 place-items-center rounded-xl"
             style={{ background: gameColor(name), color: '#FFF8F0' }}
             aria-hidden="true"
           >
@@ -44,14 +43,24 @@ export function ManualCard({ manual, meta, className }: Props) {
             <div className="truncate font-semibold text-fg">{name}</div>
             {meta ? <div className="truncate text-xs text-fg-3">{meta}</div> : null}
           </div>
-          <Badge
-            tone={indexing ? 'primary' : 'neutral'}
-            icon={indexing ? <Spinner size={10} /> : undefined}
-            className="hidden @sm:inline-flex"
-          >
-            {indexing ? t('card.processing') : t('card.ready')}
-          </Badge>
-          <ChevronRight size={18} className="text-fg-3" aria-hidden="true" />
+          {indexing && (
+            <HelpIndicator
+              icon={CircleNotchIcon}
+              label={t('card.processing')}
+              tone="info"
+              passive
+              iconClassName="animate-spin"
+              className="hidden @sm:inline-flex"
+            >
+              {t('card.processing')}
+            </HelpIndicator>
+          )}
+          <CaretRightIcon
+            data-icon-motion="forward"
+            size={18}
+            className="text-fg-3"
+            aria-hidden="true"
+          />
         </div>
       </Card>
     </Link>

@@ -229,9 +229,7 @@ def test_chat_task_retries_when_lock_is_temporarily_busy(monkeypatch):
         )
 
     fail_mock.assert_not_awaited()
-    assert retry_mock.call_args.kwargs["countdown"] == (
-        conversation_tasks.LOCK_BUSY_RETRY_SECONDS
-    )
+    assert retry_mock.call_args.kwargs["countdown"] == (conversation_tasks.LOCK_BUSY_RETRY_SECONDS)
     assert retry_mock.call_args.kwargs["args"] == (
         str(_USER_ID),
         str(_CONVERSATION_ID),
@@ -283,11 +281,12 @@ def test_game_task_marks_explanation_failed_when_lock_wait_expires(monkeypatch):
     game_tasks.generate_game_explanation_task.run(
         str(_USER_ID),
         str(_GAME_ID),
+        "a" * 64,
         game_tasks.LOCK_BUSY_MAX_RETRIES,
         0,
     )
 
-    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    fail_mock.assert_awaited_once_with(_GAME_ID, "a" * 64, "generation_failed")
 
 
 def test_game_task_completes_without_retry_when_generation_finishes(monkeypatch):
@@ -299,9 +298,9 @@ def test_game_task_completes_without_retry_when_generation_finishes(monkeypatch)
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
 
-    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID))
+    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), "a" * 64)
 
-    generate_mock.assert_awaited_once_with(_USER_ID, _GAME_ID)
+    generate_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "a" * 64)
     fail_mock.assert_not_awaited()
     retry_mock.assert_not_called()
 
@@ -321,12 +320,12 @@ def test_game_task_retries_external_errors_with_separate_counter(monkeypatch):
     game_id = str(_GAME_ID)
 
     with pytest.raises(Retry):
-        game_tasks.generate_game_explanation_task.run(user_id, game_id, 7, 1)
+        game_tasks.generate_game_explanation_task.run(user_id, game_id, "a" * 64, 7, 1)
 
     fail_mock.assert_not_awaited()
     retry_mock.assert_called_once()
     assert retry_mock.call_args.kwargs["countdown"] == 10
-    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), 7, 2)
+    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), "a" * 64, 7, 2)
 
 
 def test_game_task_fails_explanation_when_external_retries_are_exhausted(monkeypatch):
@@ -344,11 +343,12 @@ def test_game_task_fails_explanation_when_external_retries_are_exhausted(monkeyp
     game_tasks.generate_game_explanation_task.run(
         str(_USER_ID),
         str(_GAME_ID),
+        "a" * 64,
         3,
         game_tasks.EXTERNAL_ERROR_MAX_RETRIES,
     )
 
-    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    fail_mock.assert_awaited_once_with(_GAME_ID, "a" * 64, "generation_failed")
     retry_mock.assert_not_called()
 
 
@@ -364,9 +364,9 @@ def test_game_task_marks_explanation_failed_on_soft_timeout(monkeypatch):
     monkeypatch.setattr(game_tasks.explanations, "fail_game_explanation", fail_mock)
     monkeypatch.setattr(game_tasks.generate_game_explanation_task, "retry", retry_mock)
 
-    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID))
+    game_tasks.generate_game_explanation_task.run(str(_USER_ID), str(_GAME_ID), "a" * 64)
 
-    fail_mock.assert_awaited_once_with(_USER_ID, _GAME_ID, "generation_failed")
+    fail_mock.assert_awaited_once_with(_GAME_ID, "a" * 64, "generation_failed")
     retry_mock.assert_not_called()
 
 
@@ -385,12 +385,12 @@ def test_game_task_retries_when_gpu_lock_is_temporarily_busy(monkeypatch):
     game_id = str(_GAME_ID)
 
     with pytest.raises(Retry):
-        game_tasks.generate_game_explanation_task.run(user_id, game_id, 4, 1)
+        game_tasks.generate_game_explanation_task.run(user_id, game_id, "a" * 64, 4, 1)
 
     fail_mock.assert_not_awaited()
     retry_mock.assert_called_once()
     assert retry_mock.call_args.kwargs["countdown"] == game_tasks.LOCK_BUSY_RETRY_SECONDS
-    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), 5, 1)
+    assert retry_mock.call_args.kwargs["args"] == (str(_USER_ID), str(_GAME_ID), "a" * 64, 5, 1)
 
 
 def test_enqueue_email_redacts_arguments_in_celery_events(monkeypatch):
@@ -571,9 +571,7 @@ def test_all_worker_tasks_have_explicit_declared_routes():
     """Toda task propia debe apuntar a una cola existente."""
     routes = celery_app.conf.task_routes
     queues = {queue.name for queue in celery_app.conf.task_queues}
-    task_names = {
-        name for name in celery_app.tasks if name.startswith("api.worker.tasks.")
-    }
+    task_names = {name for name in celery_app.tasks if name.startswith("api.worker.tasks.")}
 
     assert task_names
     for task_name in task_names:

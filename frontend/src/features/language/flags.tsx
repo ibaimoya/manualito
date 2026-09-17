@@ -1,6 +1,7 @@
 import { type CSSProperties } from 'react';
 import { cn } from '@/shared/lib/cn';
 import styles from './flags.module.css';
+import { spainStripes } from './useFlagWave';
 
 /* El inglés lleva la híbrida USA+UK, un idioma sin país único */
 
@@ -14,8 +15,7 @@ type FlagProps = Readonly<{
 const SPAIN_SVG = (
   <svg viewBox="0 0 24 18" preserveAspectRatio="none">
     <rect width="24" height="18" fill="#FFC400" />
-    <rect width="24" height="4.5" fill="#CE2939" />
-    <rect y="13.5" width="24" height="4.5" fill="#CE2939" />
+    <path data-flag-wave="" d={spainStripes(0)} fill="#CE2939" />
   </svg>
 );
 

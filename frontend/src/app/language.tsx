@@ -4,14 +4,16 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useTransition,
 } from 'react';
 import { flushSync } from 'react-dom';
 import i18n from '@/app/i18n';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { storage, type StoredLanguage } from '@/shared/lib/storage';
+import './language.css';
 
 export type Language = StoredLanguage;
 
@@ -28,23 +30,10 @@ type LanguageState = {
 
 const LanguageContext = createContext<LanguageState | null>(null);
 
-type BrowserRuntime = {
-  document?: Document;
-  window?: Window;
-};
-
-function getBrowserRuntime(): BrowserRuntime {
-  return {
-    document: globalThis.document,
-    window: globalThis.window,
-  };
-}
-
 function applyToHtml(language: Language): void {
-  const runtimeDocument = getBrowserRuntime().document;
+  const runtimeDocument = globalThis.document;
   if (runtimeDocument === undefined) return;
   runtimeDocument.documentElement.lang = language;
-  // Dentro del flushSync de la View Transition, el crossfade captura el texto nuevo
   if (i18n.language !== language) void i18n.changeLanguage(language);
   runtimeDocument.title = i18n.t('shell:meta.title');
   runtimeDocument
@@ -52,59 +41,61 @@ function applyToHtml(language: Language): void {
     ?.setAttribute('content', i18n.t('shell:meta.description'));
 }
 
-/* Sin soporte, con reduced-motion o en pestaña oculta aplica en seco */
-function applyWithViewTransition(language: Language): void {
-  const { document: runtimeDocument, window: runtimeWindow } = getBrowserRuntime();
-  if (runtimeDocument === undefined || runtimeWindow === undefined) return;
-  const reduced = runtimeWindow.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const docAny = runtimeDocument as Document & {
-    startViewTransition?: (cb: () => void) => {
-      finished?: Promise<unknown>;
-      ready?: Promise<unknown>;
-      updateCallbackDone?: Promise<unknown>;
-    };
-  };
-  if (
-    reduced ||
-    runtimeDocument.visibilityState === 'hidden' ||
-    typeof docAny.startViewTransition !== 'function'
-  ) {
-    applyToHtml(language);
-    return;
-  }
-  const transition = docAny.startViewTransition(() => flushSync(() => applyToHtml(language)));
-  // Saltarse la transición (otra en curso, pestaña oculta) es normal, no un error
-  void transition.updateCallbackDone?.catch(() => undefined);
-  void transition.ready?.catch(() => undefined);
-  void transition.finished?.catch(() => undefined);
-}
-
 export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [language, setLanguageState] = useState<Language>(() => storage.readLanguage());
+  const requestedLanguage = useRef(language);
+  const transitionRef = useRef<ViewTransition | null>(null);
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
-  // useTransition, con spam de cambios React solo procesa el último
-  const [, startTransition] = useTransition();
+  const stopTransition = useCallback(() => {
+    transitionRef.current?.skipTransition();
+    transitionRef.current = null;
+    delete globalThis.document?.documentElement.dataset.languageSnapshot;
+  }, []);
 
-  // Transicionar solo cuando el idioma cambia de verdad (el primer mount y el
-  // doble efecto de StrictMode aplican en seco)
-  const lastAppliedRef = useRef<Language | null>(null);
-  useEffect(() => {
-    if (lastAppliedRef.current === null || lastAppliedRef.current === language) {
-      applyToHtml(language);
-    } else {
-      applyWithViewTransition(language);
-    }
-    lastAppliedRef.current = language;
-    storage.writeLanguage(language);
-  }, [language]);
+  useLayoutEffect(() => {
+    if (reducedMotion) stopTransition();
+    applyToHtml(requestedLanguage.current);
+    storage.writeLanguage(requestedLanguage.current);
+  }, [reducedMotion, stopTransition]);
 
-  // Guard de igualdad, repetir el idioma actual no dispara render
+  useEffect(() => stopTransition, [stopTransition]);
+
   const setLanguage = useCallback(
-    (next: Language) =>
-      startTransition(() => {
-        setLanguageState((current) => (current === next ? current : next));
-      }),
-    [],
+    (next: Language) => {
+      if (next === requestedLanguage.current) return;
+      requestedLanguage.current = next;
+      setLanguageState(next);
+      storage.writeLanguage(next);
+
+      const runtimeDocument = globalThis.document;
+      stopTransition();
+      if (reducedMotion || runtimeDocument?.visibilityState !== 'visible') {
+        applyToHtml(next);
+        return;
+      }
+
+      const transition = runtimeDocument.startViewTransition({
+        types: ['language'],
+        update: () => {
+          // Solo se desvanece la captura anterior. El contenido nuevo sigue siendo interactivo.
+          if (transitionRef.current === transition) {
+            runtimeDocument.documentElement.dataset.languageSnapshot = '';
+          }
+          flushSync(() => applyToHtml(requestedLanguage.current));
+        },
+      });
+      transitionRef.current = transition;
+      // Otra selección puede sustituir la captura antes de que empiece a animarse.
+      void transition.ready.catch(() => undefined);
+      void transition.finished.then(() => {
+        if (transitionRef.current === transition) {
+          transitionRef.current = null;
+          delete runtimeDocument.documentElement.dataset.languageSnapshot;
+        }
+      });
+    },
+    [reducedMotion, stopTransition],
   );
 
   const value: LanguageState = useMemo(() => ({ language, setLanguage }), [language, setLanguage]);

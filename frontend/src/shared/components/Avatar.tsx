@@ -1,23 +1,27 @@
 import { type CSSProperties } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
-  BookOpen,
-  Crown,
-  Dices,
-  Flag,
-  Ghost,
-  Hourglass,
-  Lightbulb,
-  Puzzle,
-  Rocket,
-  Shield,
-  Sparkles,
-  Swords,
-  Trophy,
-  Zap,
-} from 'lucide-react';
+  BookOpenIcon,
+  CrownIcon,
+  DiceFiveIcon,
+  FlagIcon,
+  GhostIcon,
+  HourglassIcon,
+  LightbulbIcon,
+  PuzzlePieceIcon,
+  RocketIcon,
+  ShieldIcon,
+  SparkleIcon,
+  SwordIcon,
+  TrophyIcon,
+  LightningIcon,
+} from '@phosphor-icons/react';
 import type { AvatarColor, AvatarFigure } from '@/shared/api/auth';
 import { Meeple } from '@/shared/components/Brand';
 import { cn } from '@/shared/lib/cn';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
+
+const hiddenGlyph = { opacity: 0, transform: 'scale(0.92)', filter: 'blur(2px)' };
 
 /** Inicial a partir de un nombre o email (una sola letra). */
 function avatarInitials(name: string): string {
@@ -42,22 +46,22 @@ export function AvatarGlyph({
   // currentColor: crema dentro del avatar y tinta del botón en el selector.
   if (figure === 'meeple') return <Meeple size={Math.round(size * 0.52)} color="currentColor" />;
   const Icon = {
-    dice: Dices,
-    crown: Crown,
-    flag: Flag,
-    sparkle: Sparkles,
-    book: BookOpen,
-    bulb: Lightbulb,
-    zap: Zap,
-    hourglass: Hourglass,
-    trophy: Trophy,
-    puzzle: Puzzle,
-    swords: Swords,
-    ghost: Ghost,
-    shield: Shield,
-    rocket: Rocket,
+    dice: DiceFiveIcon,
+    crown: CrownIcon,
+    flag: FlagIcon,
+    sparkle: SparkleIcon,
+    book: BookOpenIcon,
+    bulb: LightbulbIcon,
+    zap: LightningIcon,
+    hourglass: HourglassIcon,
+    trophy: TrophyIcon,
+    puzzle: PuzzlePieceIcon,
+    swords: SwordIcon,
+    ghost: GhostIcon,
+    shield: ShieldIcon,
+    rocket: RocketIcon,
   }[figure];
-  return <Icon size={iconSize} strokeWidth={1.75} aria-hidden="true" />;
+  return <Icon size={iconSize} aria-hidden="true" />;
 }
 
 /**
@@ -84,6 +88,7 @@ export function Avatar({
   ring?: boolean;
   className?: string;
 }>) {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const style: CSSProperties = {
     width: size,
     height: size,
@@ -96,20 +101,38 @@ export function Avatar({
   if (ring) style.boxShadow = '0 0 0 3px var(--m-bg), 0 0 0 5px var(--m-primary-300)';
   const toneClass = tone === 'accent' ? 'bg-accent' : 'bg-primary';
   const colorClass = color ? COLOR_CLASS[color] : toneClass;
+  const glyph =
+    figure && figure !== 'initials' ? (
+      <AvatarGlyph figure={figure} size={size} />
+    ) : (
+      avatarInitials(name)
+    );
   return (
     <span
       aria-hidden="true"
       className={cn(
         'inline-grid shrink-0 place-items-center rounded-full font-display font-bold',
+        'transition-colors duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
         colorClass,
         className,
       )}
       style={style}
     >
-      {figure && figure !== 'initials' ? (
-        <AvatarGlyph figure={figure} size={size} />
+      {reducedMotion ? (
+        glyph
       ) : (
-        avatarInitials(name)
+        <AnimatePresence initial={false}>
+          <motion.span
+            key={figure ?? 'initials'}
+            className="col-start-1 row-start-1 grid place-items-center"
+            initial={hiddenGlyph}
+            animate={{ opacity: 1, transform: 'scale(1)', filter: 'blur(0px)' }}
+            exit={hiddenGlyph}
+            transition={{ duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            {glyph}
+          </motion.span>
+        </AnimatePresence>
       )}
     </span>
   );

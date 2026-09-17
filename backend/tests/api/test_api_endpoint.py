@@ -36,6 +36,15 @@ def test_openapi_does_not_publish_legacy_ocr_routes(client):
     assert all(not path.startswith("/api/ocr") for path in response.json()["paths"])
 
 
+def test_openapi_exposes_numeric_error_parameters(client):
+    """El contrato publicado incluye los límites localizables sin datos del usuario."""
+    response = client.get("/openapi.json")
+
+    params = response.json()["components"]["schemas"]["ApiFieldError"]["properties"]["params"]
+    assert params["type"] == "object"
+    assert params["additionalProperties"] == {"type": "integer"}
+
+
 def test_health(client):
     """El endpoint de health devuelve 200 y el cuerpo {"status": "ok"}."""
     response = client.get("/health")
@@ -57,6 +66,7 @@ def test_legacy_public_ocr_routes_return_standard_not_found(client, path):
                 "field": None,
                 "code": "not_found",
                 "message": "Recurso no encontrado.",
+                "params": {},
             }
         ],
     }

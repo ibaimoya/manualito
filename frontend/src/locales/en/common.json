@@ -11,6 +11,10 @@
     "retry": "Try again",
     "save": "Save"
   },
+  "attribution": {
+    "anonymous": "Anonymous",
+    "uploadedBy": "Uploaded by {{name}}"
+  },
   "status": {
     "justNow": "just now",
     "loading": "Loading…"

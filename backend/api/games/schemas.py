@@ -18,7 +18,7 @@ BGG_ATTRIBUTION = "Powered by BoardGameGeek."
 
 
 class GameSearchItem(StrictModel):
-    """Juego seleccionable en el typeahead."""
+    """Juego del catálogo con su número de manuales compartidos."""
 
     id: UUID
     name: str = Field(max_length=GAME_NAME_MAX_LENGTH)
@@ -28,7 +28,7 @@ class GameSearchItem(StrictModel):
 
 
 class GameSearchResponse(StrictModel):
-    """Respuesta del typeahead local de juegos."""
+    """Selección de juegos del catálogo local."""
 
     games: list[GameSearchItem]
     attribution: str = BGG_ATTRIBUTION
@@ -74,6 +74,7 @@ class GamePoolManualItem(StrictModel):
     duplicate_page_count: int = Field(default=0, ge=0)
     created_at: datetime
     is_own: bool
+    author_name: str | None = None
 
 
 class ExplanationSection(StrictModel):

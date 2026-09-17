@@ -1,33 +1,28 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { createMemoryHistory } from '@tanstack/react-router';
 import { App } from '@/app/App';
+import { router } from '@/app/AppRouter';
+import { server } from '@tests/_helpers/server';
+import { unauthenticatedMe } from '@tests/_helpers/mswHandlers';
 
-/**
- * App es la composición de `<Providers>` y `<AppRouter>`.  Mockeamos
- * `AppRouter` para no levantar el router real (que necesita el routeTree
- * generado y rutas reales) — solo verificamos que App lo monta DENTRO
- * de Providers, manteniendo el orden correcto del árbol.
- */
-vi.mock('@/app/AppRouter', () => ({
-  AppRouter: () => <div data-testid="app-router-mock">router-here</div>,
-}));
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe('App', () => {
-  it('monta el AppRouter envuelto en Providers (children visible)', () => {
-    const { getByTestId } = render(<App />);
-    expect(getByTestId('app-router-mock').textContent).toBe('router-here');
-  });
+  it('resuelve la sesión y monta el login con router y proveedores reales', async () => {
+    server.use(unauthenticatedMe());
+    router.update({
+      ...router.options,
+      history: createMemoryHistory({ initialEntries: ['/login'] }),
+    });
+    localStorage.setItem('manualito.settings', JSON.stringify({ mode: 'dark', accent: 'amber' }));
 
-  it('mantiene el árbol Providers > AppRouter (orden correcto)', () => {
-    // El test anterior verifica que AppRouter aparece DENTRO del árbol;
-    // este verifica el orden: si Providers no envolviese AppRouter, el
-    // mockeo no recibiría context y fallaría.  Llegar hasta aquí sin
-    // throw implica orden correcto.
-    const { getByTestId } = render(<App />);
-    expect(getByTestId('app-router-mock')).toBeInTheDocument();
+    render(<App />);
+
+    expect(await screen.findByLabelText('Email o usuario')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    expect(document.documentElement).toHaveClass('theme-dark');
   });
 });

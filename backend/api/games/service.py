@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import unicodedata
+from collections.abc import Sequence
 from uuid import UUID
 from weakref import WeakValueDictionary
 
@@ -31,6 +32,16 @@ logger = logging.getLogger(__name__)
 
 _bgg_cache_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 _bgg_cache_locks_guard = asyncio.Lock()
+
+
+async def discover_games(
+    session: AsyncSession, *, limit: int, excluded_game_ids: Sequence[UUID]
+) -> GameSearchResponse:
+    """Selecciona juegos consultables de la comunidad sin acudir a BGG."""
+    games = await repository.discover_games(
+        session, limit=limit, excluded_game_ids=excluded_game_ids
+    )
+    return GameSearchResponse(games=[GameSearchItem.model_validate(game) for game in games])
 
 
 async def search_game_catalog(

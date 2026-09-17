@@ -104,6 +104,7 @@ async def create_game_conversation_handler(
     dependencies=[Depends(valid_conversation)],
 )
 async def list_conversation_messages_handler(
+    auth: CurrentAuth,
     conversation_id: UUID,
     session: DbSession,
     limit: MessageListLimit = CONVERSATION_MESSAGE_LIST_LIMIT_DEFAULT,
@@ -112,6 +113,7 @@ async def list_conversation_messages_handler(
     """Lista mensajes de una conversación propia."""
     messages = await list_messages(
         session,
+        current_user_id=auth.user.id,
         conversation_id=conversation_id,
         limit=limit,
         offset=offset,

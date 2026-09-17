@@ -1,5 +1,4 @@
-"""Explicación cacheada de un juego, generada por Celery."""
-
+from collections.abc import Collection
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -13,17 +12,18 @@ from api.games import repository
 from api.games.dto import (
     GameExplanationJob,
     GameExplanationOutcome,
+    GameExplanationPool,
     GameExplanationSnapshot,
 )
 from api.games.schemas import ExplanationSection, GameExplanationResponse
 from api.locks import advisory_session_lock
 from api.manuals.exceptions import ManualContextNotFoundError
 from api.manuals.retrieval.service import generate_game_answer
+from api.manuals.sources import refresh_sources, resolve_source_info, source_snapshot
 from database.session import get_sessionmaker
 
 EXPLANATION_TOP_K = 5
 GENERATION_STALE_AFTER = timedelta(seconds=config.CELERY_GPU_HARD_TIME_LIMIT + 30)
-# El resumen se genera antes que los acordeones para ofrecer contenido cuanto antes.
 EXPLANATION_QUESTIONS = {
     "summary": "Resume en dos frases de qué va este juego.",
     "setup": "Explica la preparación inicial del juego paso a paso.",
@@ -33,217 +33,166 @@ EXPLANATION_QUESTIONS = {
 
 
 async def get_game_explanation(
-    session: AsyncSession,
-    *,
-    auth: AuthenticatedSession,
-    game_id: UUID,
+    session: AsyncSession, *, auth: AuthenticatedSession, game_id: UUID
 ) -> GameExplanationOutcome:
-    """Devuelve el estado de explicación y encola generación si falta."""
     user_id = auth.user.id
     await repository.get_game_for_detail(session, game_id=game_id)
-    fingerprint = await repository.get_pool_fingerprint(
-        session,
-        game_id=game_id,
-        current_user_id=user_id,
-    )
-    if fingerprint is None:
+    pool = await repository.get_explanation_pool(session, game_id=game_id, current_user_id=user_id)
+    if pool is None:
         raise ManualContextNotFoundError
+    await repository.lock_game_explanation(
+        session, game_id=game_id, source_fingerprint=pool.source_fingerprint
+    )
+    cached = await repository.get_game_explanation(
+        session, game_id=game_id, source_fingerprint=pool.source_fingerprint
+    )
+    if cached is not None and _use_cached_explanation(cached):
+        await session.commit()
+        return GameExplanationOutcome(cached, None, pool.owned_manual_ids)
 
-    cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
-    if cached is not None and _use_cached_explanation(cached, fingerprint):
-        return GameExplanationOutcome(snapshot=cached, job=None)
-
-    sections = _sections_for(cached, fingerprint)
-    snapshot = await repository.mark_game_explanation_generating(
+    snapshot = await repository.save_game_explanation(
         session,
-        user_id=user_id,
         game_id=game_id,
-        sections=sections,
-        source_fingerprint=fingerprint,
+        source_fingerprint=pool.source_fingerprint,
+        sections=dict(cached.sections) if cached else {},
+        status="generating",
     )
-    return GameExplanationOutcome(
-        snapshot=snapshot,
-        job=GameExplanationJob(user_id=user_id, game_id=game_id),
-    )
+    job = GameExplanationJob(user_id, game_id, pool.source_fingerprint)
+    return GameExplanationOutcome(snapshot, job, pool.owned_manual_ids)
 
 
-async def generate_game_explanation(user_id: UUID, game_id: UUID) -> bool:
-    """Genera todos los apartados pendientes bajo lock por juego."""
-    async with advisory_session_lock(f"game-explanation:{user_id}:{game_id}") as session:
+async def generate_game_explanation(user_id: UUID, game_id: UUID, source_fingerprint: str) -> bool:
+    job = GameExplanationJob(user_id, game_id, source_fingerprint)
+    async with advisory_session_lock(f"game-explanation:{game_id}:{source_fingerprint}") as session:
         if session is None:
             return False
-
-        fingerprint = await repository.get_pool_fingerprint(
-            session,
-            game_id=game_id,
-            current_user_id=user_id,
+        cached = await repository.get_game_explanation(
+            session, game_id=game_id, source_fingerprint=source_fingerprint
         )
-        if fingerprint is None:
+        if cached is None or cached.status != "generating":
             return True
-
-        cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
-        if cached is not None and _is_ready(cached, fingerprint):
-            return True
-
-        sections = _sections_for(cached, fingerprint)
+        pool = await repository.get_explanation_pool(
+            session, game_id=game_id, current_user_id=user_id
+        )
         try:
-            async with httpx.AsyncClient(timeout=config.INTERNAL_JSON_TIMEOUT) as client:
-                for key in EXPLANATION_QUESTIONS:
-                    if key in sections:
-                        continue
-                    answer = await generate_game_answer(
-                        session,
-                        current_user_id=user_id,
-                        game_id=game_id,
-                        question=EXPLANATION_QUESTIONS[key],
-                        top_k=EXPLANATION_TOP_K,
-                        client=client,
-                        # El idioma por petición se incorporará en una fase futura.
-                        language="es",
-                    )
-                    sections[key] = {
-                        "answer": answer.answer,
-                        "sources": [
-                            source.model_dump(mode="json") for source in answer.sources
-                        ],
-                    }
-                    if key != "victory":
-                        await repository.mark_game_explanation_generating(
-                            session,
-                            user_id=user_id,
-                            game_id=game_id,
-                            sections=sections,
-                            source_fingerprint=fingerprint,
-                        )
-            await repository.upsert_game_explanation(
-                session,
-                user_id=user_id,
-                game_id=game_id,
-                sections=sections,
-                source_fingerprint=fingerprint,
+            if pool is None or pool.source_fingerprint != source_fingerprint:
+                raise ManualContextNotFoundError
+            await _generate_sections(session, job, pool, dict(cached.sections))
+        except ManualContextNotFoundError:
+            await repository.discard_pending_explanation(
+                session, game_id=game_id, source_fingerprint=source_fingerprint
             )
-            return True
-        except (ManualContextNotFoundError, InternalServiceError, InternalServiceUnavailableError):
+        except (InternalServiceError, InternalServiceUnavailableError):
             await repository.mark_game_explanation_failed(
                 session,
-                user_id=user_id,
                 game_id=game_id,
-                sections=sections,
-                source_fingerprint=fingerprint,
+                source_fingerprint=source_fingerprint,
                 error_code="generation_failed",
             )
-            return True
+        return True
 
 
-async def fail_game_explanation(user_id: UUID, game_id: UUID, error_code: str) -> None:
-    """Marca una explicación como fallida cuando el task agota reintentos."""
-    sessionmaker = get_sessionmaker()
-    async with sessionmaker() as session:
-        fingerprint = await repository.get_pool_fingerprint(
-            session,
-            game_id=game_id,
-            current_user_id=user_id,
-        )
-        if fingerprint is None:
-            return
-        cached = await repository.get_game_explanation(session, user_id=user_id, game_id=game_id)
-        sections = _sections_for(cached, fingerprint)
+async def _generate_sections(
+    session: AsyncSession,
+    job: GameExplanationJob,
+    pool: GameExplanationPool,
+    sections: dict[str, object],
+) -> None:
+    async with httpx.AsyncClient(timeout=config.INTERNAL_JSON_TIMEOUT) as client:
+        for key, question in EXPLANATION_QUESTIONS.items():
+            if key in sections:
+                continue
+            await _require_unchanged_pool(session, job)
+            answer = await generate_game_answer(
+                session,
+                current_user_id=job.user_id,
+                game_id=job.game_id,
+                question=question,
+                top_k=EXPLANATION_TOP_K,
+                client=client,
+                language="es",
+                allowed_manual_ids=pool.manual_ids,
+            )
+            await _require_unchanged_pool(session, job)
+            sections[key] = {
+                "answer": answer.answer,
+                "sources": [
+                    source_snapshot(source, exclude={"is_own"}) for source in answer.sources
+                ],
+            }
+            if not _has_all_sections(sections):
+                await repository.save_game_explanation(
+                    session,
+                    game_id=job.game_id,
+                    source_fingerprint=job.source_fingerprint,
+                    sections=sections,
+                    status="generating",
+                )
+    await repository.save_game_explanation(
+        session,
+        game_id=job.game_id,
+        source_fingerprint=job.source_fingerprint,
+        sections=sections,
+        status="ready",
+    )
+
+
+async def _require_unchanged_pool(session: AsyncSession, job: GameExplanationJob) -> None:
+    pool = await repository.get_explanation_pool(
+        session, game_id=job.game_id, current_user_id=job.user_id
+    )
+    await session.rollback()
+    if pool is None or pool.source_fingerprint != job.source_fingerprint:
+        raise ManualContextNotFoundError
+
+
+async def fail_game_explanation(game_id: UUID, source_fingerprint: str, error_code: str) -> None:
+    async with get_sessionmaker()() as session:
         await repository.mark_game_explanation_failed(
             session,
-            user_id=user_id,
             game_id=game_id,
-            sections=sections,
-            source_fingerprint=fingerprint,
+            source_fingerprint=source_fingerprint,
             error_code=error_code,
         )
 
 
-def build_game_explanation_response(
-    snapshot: GameExplanationSnapshot,
-) -> GameExplanationResponse:
-    """Construye la respuesta pública desde el snapshot interno."""
-    if snapshot.status == "ready":
-        return _ready_response(snapshot)
-    if snapshot.status == "failed":
-        return _failed_response(snapshot)
-    return _generating_response(snapshot)
+def _has_all_sections(sections: dict[str, object]) -> bool:
+    return all(key in sections for key in EXPLANATION_QUESTIONS)
 
 
-def _is_ready(explanation: GameExplanationSnapshot, fingerprint: str) -> bool:
-    """True si la caché vale para esta huella y tiene los cuatro apartados."""
-    return (
-        explanation.source_fingerprint == fingerprint
-        and explanation.status == "ready"
-        and _has_all_sections(explanation)
-    )
-
-
-def _use_cached_explanation(
-    explanation: GameExplanationSnapshot,
-    fingerprint: str,
-) -> bool:
-    """True si el endpoint puede reutilizar el snapshot sin reencolar."""
-    if explanation.source_fingerprint != fingerprint:
-        return False
+def _use_cached_explanation(explanation: GameExplanationSnapshot) -> bool:
     if explanation.status == "ready":
-        return _has_all_sections(explanation)
-    if explanation.status == "failed":
-        return True
+        return _has_all_sections(explanation.sections)
     if explanation.status == "generating":
         return datetime.now(UTC) - explanation.updated_at < GENERATION_STALE_AFTER
-    return False
+    return explanation.status == "failed"
 
 
-def _has_all_sections(explanation: GameExplanationSnapshot) -> bool:
-    """True si están los cuatro apartados esperados."""
-    return all(key in explanation.sections for key in EXPLANATION_QUESTIONS)
-
-
-def _sections_for(
-    explanation: GameExplanationSnapshot | None,
-    fingerprint: str,
-) -> dict[str, object]:
-    """Devuelve apartados de la huella y vacía el resultado si no coincide."""
-    if explanation is not None and explanation.source_fingerprint == fingerprint:
-        return dict(explanation.sections)
-    return {}
-
-
-def _ready_response(explanation: GameExplanationSnapshot) -> GameExplanationResponse:
-    """Convierte la fila cacheada completa en el contrato público."""
-    return GameExplanationResponse(
-        status="ready",
-        sections=_response_sections(explanation.sections),
-        generated_at=explanation.generated_at,
-    )
-
-
-def _generating_response(explanation: GameExplanationSnapshot) -> GameExplanationResponse:
-    """Devuelve el estado intermedio mientras el worker completa apartados."""
-    return GameExplanationResponse(
-        status="generating",
-        sections=_response_sections(explanation.sections),
-        generated_at=None,
-    )
-
-
-def _failed_response(explanation: GameExplanationSnapshot) -> GameExplanationResponse:
-    """Devuelve el último fallo conocido de generación."""
-    return GameExplanationResponse(
-        status="failed",
-        sections=_response_sections(explanation.sections),
-        generated_at=None,
-        error_code=explanation.error_code or "generation_failed",
-    )
-
-
-def _response_sections(
-    sections: dict[str, object],
-) -> dict[str, ExplanationSection] | None:
-    """Valida las secciones JSONB para la API."""
-    if not sections:
-        return None
-    return {
-        key: ExplanationSection.model_validate(section)
-        for key, section in sections.items()
+async def build_game_explanation_response(
+    session: AsyncSession,
+    *,
+    current_user_id: UUID,
+    snapshot: GameExplanationSnapshot,
+    owned_manual_ids: Collection[UUID],
+) -> GameExplanationResponse:
+    """Añade a las fuentes guardadas el título y la atribución actuales."""
+    parsed = {
+        key: ExplanationSection.model_validate(value) for key, value in snapshot.sections.items()
     }
+    info = await resolve_source_info(
+        session,
+        current_user_id=current_user_id,
+        sources=(source for section in parsed.values() for source in section.sources),
+    )
+    sections = {}
+    for key, section in parsed.items():
+        sources = refresh_sources(section.sources, info)
+        for source in sources:
+            source.is_own = source.manual_id in owned_manual_ids
+        sections[key] = section.model_copy(update={"sources": sources})
+    return GameExplanationResponse(
+        status=snapshot.status,
+        sections=sections or None,
+        generated_at=snapshot.generated_at if snapshot.status == "ready" else None,
+        error_code=snapshot.error_code,
+    )

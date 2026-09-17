@@ -1,4 +1,3 @@
-import { mapApiError } from './error-mapper';
 import { ApiError, JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } from './http';
 
 /**
@@ -7,8 +6,7 @@ import { ApiError, JSON_HEADERS, TIMEOUT, queryString, request, requestVoid } fr
  * "@/shared/api/client".
  */
 
-export { ApiError, apiErrorNotification, isAbortApiError } from './http';
-export type { ApiErrorNotification } from './http';
+export { ApiError, isAbortApiError } from './http';
 
 /* ============================================================
    Tipos del contrato (manuales / juegos)
@@ -17,14 +15,24 @@ export type { ApiErrorNotification } from './http';
 export interface OcrLine {
   text: string;
   confidence: number | null;
+  /** Anotaciones opcionales del texto final. Los offsets del servidor son codepoints. */
+  corrections?: OcrLineCorrection[];
+}
+
+export interface OcrLineCorrection {
+  start: number;
+  end: number;
+  original: string;
+  source: 'regla-guion' | 'consenso-llm';
 }
 
 export interface AnswerSource {
   manual_id: string;
   manual_title: string | null;
   page: number;
-  /** Si el manual citado es del usuario: solo entonces se puede abrir el visor. */
   is_own: boolean;
+  /** Nombre de usuario autorizado por el propietario. Si está oculto, es null. */
+  author_name: string | null;
 }
 
 export type ManualStatus = 'indexing' | 'active' | 'pending_review' | 'hidden' | 'failed';
@@ -50,6 +58,8 @@ export interface ManualSummary {
   title: string | null;
   status: ManualStatus;
   visibility: ManualVisibility;
+  /** Oculta el nombre de quien subió el manual. */
+  anonymous: boolean;
   source_type: 'images' | 'pdf';
   page_count: number;
   /** Páginas idénticas a otras ya subidas: copiadas, no reprocesadas ni contadas. */
@@ -77,22 +87,6 @@ export interface GameSearchResponse {
   attribution: string;
 }
 
-/** Juego sugerido por el recomendador content-based. */
-export interface RecommendedGame {
-  id: string;
-  name: string;
-  bgg_id: number | null;
-  year_published: number | null;
-  /** Motivo legible de la recomendación (p. ej. "Porque tienes Catan"). */
-  reason: string;
-}
-
-export interface RecommendationsResponse {
-  recommendations: RecommendedGame[];
-  /** Atribución exigida por el ToU de la API de BoardGameGeek. */
-  attribution: string;
-}
-
 export interface ManualDetailPage {
   page_number: number;
   ocr_status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -106,8 +100,9 @@ export interface ManualDetailPage {
   ocr_lines: OcrLine[];
 }
 
-/** Detalle de manual = resumen + páginas OCR. */
 export interface ManualDetailResponse extends ManualSummary {
+  /** Propiedad comprobada por el servidor. */
+  is_own: boolean;
   pages: ManualDetailPage[];
 }
 
@@ -132,6 +127,7 @@ export type CreateManualInput =
       title: string;
       images: File[];
       visibility?: ManualVisibility;
+      anonymous?: boolean;
       language?: string;
       gameId: string;
     }
@@ -139,9 +135,16 @@ export type CreateManualInput =
       title: string;
       pdf: File;
       visibility?: ManualVisibility;
+      anonymous?: boolean;
       language?: string;
       gameId: string;
     };
+
+/** Campos que el propietario puede cambiar. */
+export interface UpdateManualInput {
+  title?: string;
+  anonymous?: boolean;
+}
 
 /* ============================================================
    Endpoints
@@ -152,7 +155,7 @@ export const api = {
   async health(): Promise<{ status: string }> {
     const res = await fetch('/health', { credentials: 'same-origin' });
     if (!res.ok) {
-      throw new ApiError(mapApiError({ status: res.status }), res.status, null);
+      throw new ApiError(res.status, null);
     }
     return (await res.json()) as { status: string };
   },
@@ -165,6 +168,7 @@ export const api = {
     const fd = new FormData();
     fd.append('title', input.title);
     fd.append('visibility', input.visibility ?? 'private');
+    fd.append('anonymous', String(input.anonymous ?? true));
     if (input.language) fd.append('language', input.language);
     fd.append('game_id', input.gameId);
     if ('pdf' in input) {
@@ -204,7 +208,7 @@ export const api = {
     });
   },
 
-  /** URL autenticada de la imagen de una página de manual propio. */
+  /** La imagen requiere permiso de lectura del manual. */
   manualPageImageUrl(manualId: string, pageNumber: number): string {
     return `/api/manuals/${encodeURIComponent(manualId)}/pages/${pageNumber}/image`;
   },
@@ -222,6 +226,21 @@ export const api = {
         signal,
       },
     );
+  },
+
+  /** Cambia el nombre o el anonimato de un manual propio. */
+  async updateManual(
+    manualId: string,
+    input: UpdateManualInput,
+    signal?: AbortSignal,
+  ): Promise<ManualSummary> {
+    return request<ManualSummary>(`/manuals/${encodeURIComponent(manualId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+      headers: JSON_HEADERS,
+      timeoutMs: TIMEOUT.QUICK,
+      signal,
+    });
   },
 
   /** DELETE /api/manuals/{id} — borra un manual propio (204). */
@@ -296,16 +315,14 @@ export const api = {
     });
   },
 
-  /**
-   * GET /api/recommendations — juegos sugeridos para el usuario (content-based
-   * sobre los metadatos de su biblioteca).
-   */
-  async getRecommendations(
-    params?: { limit?: number },
+  /** Selección aleatoria de juegos con manuales compartidos consultables. */
+  async discoverGames(
+    excludedGameIds: readonly string[],
     signal?: AbortSignal,
-  ): Promise<RecommendationsResponse> {
-    const query = queryString({ limit: params?.limit });
-    return request<RecommendationsResponse>(`/recommendations${query}`, {
+  ): Promise<GameSearchResponse> {
+    const query = new URLSearchParams(excludedGameIds.map((id) => ['exclude_game_ids', id]));
+    const path = query.size ? `/games/discover?${query}` : '/games/discover';
+    return request<GameSearchResponse>(path, {
       method: 'GET',
       timeoutMs: TIMEOUT.QUICK,
       signal,

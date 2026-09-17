@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useMutation } from '@tanstack/react-query';
-import { History, Lock } from 'lucide-react';
+import { ClockCounterClockwiseIcon, LockSimpleIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -15,6 +15,8 @@ import {
   PasswordInput,
 } from '@/features/auth/auth-controls';
 import { useAuth } from '@/features/auth/use-auth';
+import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
+import { tourTarget } from '@/features/tutorial/targets';
 import { accountApi } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
 import { SectionHead } from '@/shared/components/SectionHead';
@@ -43,15 +45,18 @@ function SecurityScreen() {
   const { user } = useAuth();
   if (!user) return null;
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-7 px-5 pb-10 pt-5 md:px-8 md:pt-8">
-      <header>
+    <div className="page-frame page-stack mx-auto max-w-4xl">
+      <header className="flex items-start justify-between gap-3">
         <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
           {t('heading')}
         </h1>
+        <HelpMenuButton className="-mr-2 md:hidden" />
       </header>
-      <LastAccessSection lastLoginAt={user.last_login_at} />
-      <ChangePasswordSection />
-      <DeleteAccountSection username={user.username} />
+      <div className="flex flex-col gap-6">
+        <LastAccessSection lastLoginAt={user.last_login_at} />
+        <ChangePasswordSection />
+        <DeleteAccountSection username={user.username} />
+      </div>
     </div>
   );
 }
@@ -60,14 +65,14 @@ function LastAccessSection({ lastLoginAt }: Readonly<{ lastLoginAt: string | nul
   const { t } = useTranslation('security');
   if (lastLoginAt === null) return null;
   return (
-    <section aria-label={t('lastAccess.title')}>
+    <section aria-label={t('lastAccess.title')} {...tourTarget('security-last-access')}>
       <SectionHead eyebrow={t('lastAccess.eyebrow')} title={t('lastAccess.title')} />
       <Card className="flex items-center gap-3.5 p-5">
         <span
           aria-hidden="true"
           className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-100 text-primary-700"
         >
-          <History size={17} strokeWidth={2} />
+          <ClockCounterClockwiseIcon size={17} />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-fg">{formatLastAccessDate(lastLoginAt)}</p>
@@ -116,7 +121,7 @@ function ChangePasswordSection() {
   }
 
   return (
-    <section aria-label={t('password.title')}>
+    <section aria-label={t('password.title')} {...tourTarget('security-password')}>
       <SectionHead eyebrow={t('password.eyebrow')} title={t('password.title')} />
       <Card className="p-5">
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
@@ -130,7 +135,8 @@ function ChangePasswordSection() {
               autoComplete="current-password"
               placeholder={t('password.currentPlaceholder')}
               value={current}
-              invalid={wrongCurrent}
+              aria-invalid={Boolean(currentError) || undefined}
+              aria-describedby={currentError ? `${fieldId}-current-feedback` : undefined}
               onChange={(event) => setCurrent(event.target.value)}
               required
             />
@@ -141,7 +147,7 @@ function ChangePasswordSection() {
             label={t('password.new')}
             password={password}
             confirm={confirm}
-            submitted={submitted}
+            validation={{ password: submitted, confirm: submitted }}
             onPasswordChange={setPassword}
             onConfirmChange={setConfirm}
           />
@@ -152,7 +158,7 @@ function ChangePasswordSection() {
 
           <div>
             <Button type="submit" loading={change.isPending}>
-              <Lock size={16} strokeWidth={2} />
+              <LockSimpleIcon aria-hidden="true" size={16} />
               {t('password.button')}
             </Button>
           </div>

@@ -81,8 +81,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={cn(
         'flex h-11 w-full rounded-xl border border-border-strong bg-bg px-3.5 py-2',
         'font-body text-base text-fg placeholder:text-fg-3',
-        'transition-shadow duration-150 ease-[var(--ease-mn)]',
+        'transition-control duration-200 ease-[var(--ease-mn)] motion-reduce:transition-none',
         'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:border-primary',
+        'aria-invalid:border-error aria-invalid:bg-error-bg/20 aria-invalid:placeholder:text-fg-2 aria-invalid:focus-visible:border-error aria-invalid:focus-visible:ring-error/20',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'file:border-0 file:bg-transparent file:font-medium file:text-fg-2',
         className,

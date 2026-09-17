@@ -1,25 +1,38 @@
 import { createFileRoute, Link, linkOptions, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import type { ParseKeys } from 'i18next';
-import { ChevronRight, FileText, Plus, RotateCw, ScanText, Sparkles } from 'lucide-react';
+import {
+  CaretRightIcon,
+  FileTextIcon,
+  ArrowClockwiseIcon,
+  UsersThreeIcon,
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ScreenTopBar } from '@/app/Topbar';
-import { Badge } from '@/components/ui/badge';
+import { HelpIndicator } from '@/components/ui/help-indicator';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SkeletonSwap } from '@/components/ui/skeleton-swap';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ConversationsSection } from '@/features/conversations/ConversationsSection';
 import { MessageComposer } from '@/features/conversations/MessageComposer';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 import { FollowButton } from '@/features/games/FollowButton';
-import { GameCover } from '@/features/games/GameCover';
+import { GAME_HERO_COVER_CLASS, GameHeroCover } from '@/features/games/GameHeroCover';
 import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
+import { ManualThumbnail } from '@/features/manual/ManualThumbnail';
 import { useProcessingManuals } from '@/features/manual/use-manuals';
 import { RatingStars } from '@/features/games/RatingStars';
 import { RateGameDialog } from '@/features/games/RateGameDialog';
+import { SuggestedQuestions } from '@/features/games/SuggestedQuestions';
+import { tourTarget } from '@/features/tutorial/targets';
 import { gameDetailQueryOptions, gameExplanationQueryOptions } from '@/features/games/use-games';
 import { ApiError } from '@/shared/api/client';
+import { mapApiError } from '@/shared/api/error-mapper';
+import { RecoveryContent } from '@/shared/components/recovery/RecoveryContent';
+import recoveryStyles from '@/shared/components/recovery/recovery.module.css';
+import { AddManualIcon, ExtractedTextIcon } from '@/shared/components/action-icons';
+import { UploadedBy } from '@/shared/components/UploadedBy';
 import {
   type ExplanationSectionKey,
   type GameDetail,
@@ -33,15 +46,6 @@ export const Route = createFileRoute('/_app/game/$gameId')({
   component: GameHubScreen,
 });
 
-type GameKey = ParseKeys<'game'>;
-
-const SUGGESTED_QUESTIONS: readonly GameKey[] = [
-  'questions.firstPlayer',
-  'questions.passTurn',
-  'questions.tie',
-  'questions.ends',
-];
-
 function GameHubScreen() {
   const { t } = useTranslation('game');
   const { gameId } = Route.useParams();
@@ -53,10 +57,21 @@ function GameHubScreen() {
         crumb={detail.data?.name ?? t('navigation.game')}
         trail={[{ label: t('navigation.library'), link: linkOptions({ to: '/history' }) }]}
       />
-      {detail.isPending ? <HubSkeleton /> : null}
-      {/* Un refetch fallido deja isError con data en cache: mejor lo cacheado. */}
-      {detail.isError && detail.data === undefined ? <HubError /> : null}
-      {detail.data ? <GameHubLoaded game={detail.data} /> : null}
+      <SkeletonSwap
+        pending={detail.isPending && !detail.isFetched}
+        skeleton={<HubSkeleton />}
+        className="grow"
+      >
+        {/* Un refetch fallido deja isError con data en cache. Mejor lo cacheado. */}
+        {detail.isFetched && detail.data === undefined ? (
+          <HubError
+            error={detail.error}
+            retrying={detail.isFetching}
+            onRetry={() => detail.refetch()}
+          />
+        ) : null}
+        {detail.data ? <GameHubLoaded key={detail.data.id} game={detail.data} /> : null}
+      </SkeletonSwap>
     </div>
   );
 }
@@ -64,7 +79,7 @@ function GameHubScreen() {
 function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   const [rateOpen, setRateOpen] = useState(false);
-  // Estrella pulsada en la cabecera: se precarga en el diálogo, no se guarda.
+  // Estrella pulsada en la cabecera. Se precarga en el diálogo, no se guarda.
   const [presetScore, setPresetScore] = useState<number | null>(null);
   const canAsk = game.manuals.length > 0;
   const totalPages = game.manuals.reduce((sum, manual) => sum + manual.page_count, 0);
@@ -77,16 +92,18 @@ function GameHubLoaded({ game }: Readonly<{ game: GameDetail }>) {
   return (
     <>
       <div className="flex-1">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-5 md:px-6 md:py-8">
+        <div className="page-frame page-stack">
           <GameHeader game={game} onRate={openRating} />
-          <ExplanationSection gameId={game.id} hasManuals={canAsk} />
+          <div {...tourTarget('game-explanation')}>
+            <ExplanationSection gameId={game.id} hasManuals={canAsk} />
+          </div>
           {canAsk || game.conversations_count > 0 ? (
             <ConversationsSection gameId={game.id} canAsk={canAsk} showViewAll />
           ) : null}
           <ManualsSection game={game} />
           {game.manuals.length > 0 ? (
             <p className="flex items-center gap-2 text-xs text-fg-3">
-              <FileText size={14} strokeWidth={2} aria-hidden="true" />
+              <FileTextIcon size={14} aria-hidden="true" />
               {t('footer.explanation', { count: game.manuals.length })} ·{' '}
               <span className="mono">{t('footer.pages', { count: totalPages })}</span>
             </p>
@@ -115,34 +132,28 @@ function GameHeader({
   const { t } = useTranslation('game');
   const { gameIds } = useProcessingManuals();
   return (
-    <header className="flex items-center gap-5 md:gap-6">
-      <GameCover name={game.name} size={120} processing={gameIds.has(game.id)} />
-      <div className="min-w-0 flex-1">
+    <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 @2xl/app:gap-x-6 @2xl/app:gap-y-2">
+      <GameHeroCover name={game.name} processing={gameIds.has(game.id)} />
+      <div className="min-w-0 @2xl/app:self-end">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
           {game.year_published === null
             ? t('header.boardGame')
             : t('header.boardGameWithYear', { year: game.year_published })}
         </p>
-        <h1 className="mt-1 font-display text-3xl font-extrabold leading-tight tracking-tight text-fg md:text-4xl">
+        <h1 className="mt-1 min-w-0 break-words font-display text-2xl font-extrabold leading-tight tracking-tight text-fg @2xl/app:text-4xl">
           {game.name}
         </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <Tooltip content={t('header.aiTooltip')}>
-            <Badge tone="neutral" tabIndex={0} className="cursor-help">
-              <Sparkles size={12} strokeWidth={2} aria-hidden="true" />
-              {t('header.aiBadge')}
-            </Badge>
-          </Tooltip>
-        </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+      </div>
+      <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 @2xl/app:col-span-1 @2xl/app:self-start">
+        <div {...tourTarget('game-rating')}>
           <RatingStars
             value={game.my_rating?.score ?? 0}
             size={26}
             align="start"
             onSelect={onRate}
           />
-          <FollowButton gameId={game.id} following={game.is_following} />
         </div>
+        <FollowButton gameId={game.id} following={game.is_following} />
       </div>
     </header>
   );
@@ -167,7 +178,7 @@ function ExplanationSection({
         </p>
         <Button asChild className="mt-4">
           <Link to="/capture/source" search={{ gameId }}>
-            <Plus size={16} strokeWidth={2} />
+            <AddManualIcon size={18} />
             {t('manuals.add')}
           </Link>
         </Button>
@@ -175,7 +186,7 @@ function ExplanationSection({
     );
   }
 
-  // Un sondeo fallido con datos en cache: mejor seguir mostrando lo que haya.
+  // Un sondeo fallido con datos en cache. Mejor seguir mostrando lo que haya.
   if (explanation.isError && explanation.data === undefined) {
     const notFound = explanation.error instanceof ApiError && explanation.error.status === 404;
     return (
@@ -191,15 +202,15 @@ function ExplanationSection({
             explanation.refetch().catch(() => undefined);
           }}
         >
-          <RotateCw size={14} strokeWidth={2} />
+          <ArrowClockwiseIcon data-icon-motion="rotate" aria-hidden="true" size={16} />
           {t('explanation.retry')}
         </Button>
       </Card>
     );
   }
 
-  // Sin datos aún o generando: el resumen llega primero y el resto se rellena;
-  // los huecos pendientes se pintan con spinner. Listo: las 4 secciones están.
+  // Sin datos aún o generando. El resumen llega primero y el resto se rellena.
+  // los huecos pendientes se pintan con spinner. Listo. Las 4 secciones están.
   const data = explanation.data;
   const sections = data?.sections ?? {};
   if (data?.status === 'failed' && Object.keys(sections).length === 0) {
@@ -214,7 +225,7 @@ function ExplanationSection({
             explanation.refetch().catch(() => undefined);
           }}
         >
-          <RotateCw size={14} strokeWidth={2} />
+          <ArrowClockwiseIcon data-icon-motion="rotate" aria-hidden="true" size={16} />
           {t('explanation.retry')}
         </Button>
       </Card>
@@ -241,9 +252,9 @@ function ExplanationSection({
 function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   return (
-    <section aria-labelledby="game-manuals">
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
+    <section aria-labelledby="game-manuals" {...tourTarget('game-manuals')}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
           <span className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-700">
             {t('manuals.sourceLabel')}
           </span>
@@ -251,9 +262,13 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
             {t('manuals.heading')}
           </h2>
         </div>
-        <Button asChild variant="ghost">
+        <Button
+          asChild
+          variant="ghost"
+          className="shrink-0 px-0 not-disabled:not-aria-disabled:hover:bg-transparent not-disabled:not-aria-disabled:hover:text-fg not-disabled:not-aria-disabled:active:bg-transparent"
+        >
           <Link to="/capture/source" search={{ gameId: game.id }}>
-            <Plus size={15} strokeWidth={2} />
+            <AddManualIcon size={18} />
             {t('manuals.add')}
           </Link>
         </Button>
@@ -273,42 +288,13 @@ function ManualsSection({ game }: Readonly<{ game: GameDetail }>) {
   );
 }
 
-/**
- * Hoja de papel en miniatura: lomo del color del juego, esquina doblada y,
- * si el manual tiene varias páginas, una segunda hoja asomando detrás.
- */
-function ManualThumb({ color, stacked }: Readonly<{ color: string; stacked: boolean }>) {
-  return (
-    <span aria-hidden="true" className="relative h-[58px] w-[46px] shrink-0">
-      {stacked ? (
-        <span className="absolute inset-0 translate-x-[3px] translate-y-[2px] rotate-3 rounded-md border border-border bg-surface-2" />
-      ) : null}
-      <span className="relative block size-full overflow-hidden rounded-md border border-border bg-gradient-to-b from-bg to-surface shadow-sm transition-transform group-hover:-rotate-2">
-        <span className="absolute inset-y-0 left-0 w-[4px]" style={{ backgroundColor: color }} />
-        <span
-          className="absolute right-0 top-0 size-3.5 bg-surface-2 shadow-[-1px_1px_2px_rgba(53,28,12,0.12)]"
-          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }}
-        />
-        <span className="absolute inset-x-2 top-3.5 flex flex-col gap-[4px] pl-[3px]">
-          {[88, 64, 78, 50, 70].map((width) => (
-            <span
-              key={width}
-              className="h-[2.5px] rounded-full bg-fg/15"
-              style={{ width: `${width}%` }}
-            />
-          ))}
-        </span>
-      </span>
-    </span>
-  );
-}
-
 function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
   const { t } = useTranslation('game');
+  const { t: libraryT } = useTranslation('library');
   const label = manual.title ?? t(manual.source_type === 'pdf' ? 'manuals.pdf' : 'manuals.photos');
   const body = (
     <>
-      <ManualThumb color={gameColor(label)} stacked={manual.page_count > 1} />
+      <ManualThumbnail color={gameColor(label)} stacked={manual.page_count > 1} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-display text-[15px] font-bold leading-tight text-fg">{label}</p>
         <p className="mono mt-1 text-[11px] text-fg-3">
@@ -316,49 +302,65 @@ function ManualCard({ manual }: Readonly<{ manual: GamePoolManual }>) {
         </p>
         {manual.duplicate_page_count > 0 ? (
           <div className="mt-1.5">
-            <DuplicatePagesBadge count={manual.duplicate_page_count} />
+            <DuplicatePagesBadge count={manual.duplicate_page_count} passive />
           </div>
         ) : null}
         {manual.is_own ? (
           <span className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent">
-            <ScanText size={13} strokeWidth={2} aria-hidden="true" />
+            <ExtractedTextIcon size={13} />
             {t('manuals.extracted')}
           </span>
         ) : (
-          <p className="mt-1.5 text-xs text-fg-3">{t('manuals.shared')}</p>
+          <>
+            <HelpIndicator
+              icon={UsersThreeIcon}
+              label={t('manuals.shared')}
+              className="mt-0.5"
+              passive
+            />
+            <UploadedBy authorName={manual.author_name} />
+          </>
         )}
       </div>
     </>
   );
 
-  // El manual propio se abre clicando la tarjeta entera, no un mini-enlace.
-  if (manual.is_own) {
-    return (
-      <Card className="transition-all hover:-translate-y-px hover:border-border-strong hover:shadow-sm">
-        <Link
-          to="/manual/$manualId"
-          params={{ manualId: manual.id }}
-          aria-label={t('manuals.viewExtracted', { label })}
-          className="group flex items-center gap-3.5 p-3.5"
+  const link = (
+    <Link
+      to="/manual/$manualId"
+      params={{ manualId: manual.id }}
+      aria-label={t(manual.is_own ? 'manuals.viewExtracted' : 'manuals.readShared', { label })}
+      className="manual-open icon-feedback flex items-center gap-3.5 rounded-2xl p-3.5"
+    >
+      {body}
+      <CaretRightIcon
+        data-icon-motion="forward"
+        size={18}
+        className="shrink-0 text-fg-3"
+        aria-hidden="true"
+      />
+    </Link>
+  );
+  return (
+    <Card className="manual-interaction transition-none hover:border-border-strong">
+      {manual.duplicate_page_count > 0 ? (
+        <Tooltip
+          content={libraryT('duplicatePages.detail', { count: manual.duplicate_page_count })}
         >
-          {body}
-          <ChevronRight
-            size={18}
-            strokeWidth={2}
-            className="shrink-0 text-fg-3 transition-transform group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </Link>
-      </Card>
-    );
-  }
-  return <Card className="flex items-center gap-3.5 p-3.5 opacity-90">{body}</Card>;
+          {link}
+        </Tooltip>
+      ) : (
+        link
+      )}
+    </Card>
+  );
 }
 
 function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
   const { t } = useTranslation('game');
   const navigate = useNavigate();
   const [question, setQuestion] = useState('');
+  const [writing, setWriting] = useState(false);
   const canAsk = game.manuals.length > 0;
 
   function ask(q: string): void {
@@ -375,35 +377,26 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
 
   return (
     <div
-      className="sticky bottom-0 z-10 border-t border-border bg-bg/95 px-4 pt-2.5 backdrop-blur md:px-6"
+      className="sticky bottom-0 z-10 border-t border-border bg-bg/95 pt-2.5 backdrop-blur"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
+      {...tourTarget('game-composer')}
     >
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="page-frame">
+        <SuggestedQuestions onSelect={ask} suspended={writing || question.length > 0} />
         <div
-          className="flex flex-wrap justify-center gap-2 pb-2"
-          aria-label={t('composer.aria.suggestedQuestions')}
+          onFocus={() => setWriting(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setWriting(false);
+          }}
         >
-          {SUGGESTED_QUESTIONS.map((questionKey) => {
-            const question = t(questionKey);
-            return (
-              <button
-                key={questionKey}
-                type="button"
-                onClick={() => ask(question)}
-                className="h-8 shrink-0 whitespace-nowrap rounded-full border border-border bg-surface px-3 text-xs font-semibold text-fg hover:bg-surface-2"
-              >
-                {question}
-              </button>
-            );
-          })}
+          <MessageComposer
+            value={question}
+            onChange={setQuestion}
+            onSubmit={() => ask(question)}
+            placeholder={t('composer.placeholder', { gameName: game.name })}
+            maxLength={QUESTION_MAX}
+          />
         </div>
-        <MessageComposer
-          value={question}
-          onChange={setQuestion}
-          onSubmit={() => ask(question)}
-          placeholder={t('composer.placeholder', { gameName: game.name })}
-          maxLength={QUESTION_MAX}
-        />
       </div>
     </div>
   );
@@ -412,7 +405,7 @@ function HubComposer({ game }: Readonly<{ game: GameDetail }>) {
 function ExplanationSkeleton() {
   return (
     <div aria-hidden="true" className="space-y-3">
-      <div className="h-24 animate-pulse rounded-2xl bg-surface-2" />
+      <div className="h-[116px] animate-pulse rounded-2xl bg-surface-2 [@media(pointer:coarse)]:h-32" />
       {[0, 1, 2].map((i) => (
         <div key={i} className="h-14 animate-pulse rounded-2xl bg-surface-2" />
       ))}
@@ -422,13 +415,20 @@ function ExplanationSkeleton() {
 
 function HubSkeleton() {
   return (
-    <div aria-hidden="true" className="mx-auto w-full max-w-4xl space-y-6 px-4 py-5 md:px-6">
-      <div className="flex gap-5">
-        <div className="size-24 animate-pulse rounded-3xl bg-surface-2" />
-        <div className="flex-1 space-y-3 pt-1">
+    <div aria-hidden="true" className="page-frame page-stack">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-3 @2xl/app:gap-x-6 @2xl/app:gap-y-2">
+        <div
+          className={`shrink-0 animate-pulse rounded-3xl bg-surface-2 @2xl/app:row-span-2 ${GAME_HERO_COVER_CLASS}`}
+        />
+        <div className="min-w-0 space-y-2 @2xl/app:self-end">
           <div className="h-3 w-28 animate-pulse rounded bg-surface-2" />
-          <div className="h-8 w-1/2 animate-pulse rounded-xl bg-surface-2" />
-          <div className="h-5 w-2/3 animate-pulse rounded-full bg-surface-2" />
+          <div className="h-[30px] w-3/4 animate-pulse rounded-xl bg-surface-2 @2xl/app:h-[45px]" />
+        </div>
+        <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 @2xl/app:col-span-1 @2xl/app:self-start">
+          <div className="-ml-[7px] h-11 w-[200px] shrink-0 animate-pulse rounded-xl bg-surface-2" />
+          <div className="w-36 shrink-0">
+            <div className="size-11 animate-pulse rounded-full bg-surface-2" />
+          </div>
         </div>
       </div>
       <ExplanationSkeleton />
@@ -436,15 +436,53 @@ function HubSkeleton() {
   );
 }
 
-function HubError() {
+function HubError({
+  error,
+  retrying,
+  onRetry,
+}: Readonly<{
+  error: Error | null;
+  retrying: boolean;
+  onRetry: () => Promise<unknown>;
+}>) {
   const { t } = useTranslation('game');
+  const { t: commonT } = useTranslation();
+  // La consulta limpia su error al reintentar, conservamos el mensaje mientras espera.
+  const [failure, setFailure] = useState(error);
+  if (error && error !== failure) setFailure(error);
+  const notFound = failure instanceof ApiError && failure.status === 404;
+  const offline = mapApiError(failure).code === 'network';
+  let kind: 'not-found' | 'offline' | 'error' = offline ? 'offline' : 'error';
+  if (notFound) kind = 'not-found';
+  const copy = ({ 'not-found': 'notFound', offline: 'connection', error: 'load' } as const)[kind];
   return (
-    <div className="mx-auto max-w-md px-4 py-16 text-center">
-      <h1 className="font-display text-xl font-bold text-fg">{t('error.notFoundTitle')}</h1>
-      <p className="mt-2 text-sm leading-relaxed text-fg-2">{t('error.notFoundDescription')}</p>
-      <Button asChild className="mt-5">
-        <Link to="/history">{t('error.backToHistory')}</Link>
-      </Button>
+    <div className="grid min-h-[60dvh] items-center px-6 py-8">
+      <RecoveryContent
+        kind={kind}
+        retrying={retrying}
+        title={t(`error.${copy}Title`)}
+        description={t(`error.${copy}Description`)}
+      >
+        <div className={recoveryStyles.actions}>
+          {!notFound && (
+            <Button
+              className={recoveryStyles.primary}
+              loading={retrying}
+              onClick={() => void onRetry()}
+            >
+              <ArrowClockwiseIcon data-icon-motion="rotate" size={20} aria-hidden="true" />
+              {commonT('actions.retry')}
+            </Button>
+          )}
+          <Button
+            asChild
+            variant={notFound ? 'primary' : 'secondary'}
+            className={notFound ? recoveryStyles.primary : recoveryStyles.secondary}
+          >
+            <Link to="/history">{t('error.backToHistory')}</Link>
+          </Button>
+        </div>
+      </RecoveryContent>
     </div>
   );
 }

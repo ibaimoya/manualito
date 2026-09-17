@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Float,
@@ -69,6 +70,11 @@ class Manual(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         String(16),
         nullable=False,
         server_default=text("'private'"),
+    )
+    anonymous: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("true"),
     )
     chunks_indexed: Mapped[int] = mapped_column(
         Integer,

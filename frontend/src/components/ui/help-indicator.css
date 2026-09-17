@@ -1,0 +1,106 @@
+@layer components {
+  .help-indicator {
+    --help-hover-color: var(--m-text);
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    min-width: 32px;
+    min-height: 32px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--m-text-3);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    vertical-align: middle;
+    cursor: help;
+    transition: color 120ms ease-out;
+  }
+
+  .theme-dark .help-indicator {
+    --help-hover-color: #fff;
+  }
+  .help-indicator[data-tone='success'] {
+    color: var(--m-success);
+  }
+  .help-indicator[data-tone='warning'] {
+    color: var(--m-warning);
+  }
+  .help-indicator[data-tone='danger'] {
+    color: var(--m-error);
+  }
+  .help-indicator[data-tone='info'] {
+    color: var(--m-info);
+  }
+
+  .help-indicator:focus-visible,
+  .help-indicator[data-state='instant-open'],
+  .help-indicator[data-state='delayed-open'] {
+    color: var(--help-hover-color);
+  }
+
+  .help-indicator:focus-visible {
+    outline: 2px solid var(--m-text);
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .help-indicator:hover {
+      color: var(--help-hover-color);
+    }
+  }
+
+  .help-indicator-glyph {
+    position: relative;
+    display: grid;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    place-items: center;
+  }
+
+  .help-indicator-layer {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .help-indicator-glyph svg {
+    display: block;
+  }
+  /* Compensan el peso de la base del triángulo y del cuerpo del candado. */
+  .help-indicator-glyph [data-icon='warning'],
+  .help-indicator-glyph [data-icon='lock-simple'] {
+    translate: 0 -0.5px;
+  }
+
+  .help-indicator-glyph [data-icon='check'] {
+    translate: 0 0.5px;
+  }
+
+  .help-indicator-passive {
+    min-width: 20px;
+    min-height: 20px;
+    cursor: inherit;
+  }
+
+  @media (pointer: coarse) {
+    button.help-indicator {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .help-indicator {
+      transition: none;
+    }
+  }
+}

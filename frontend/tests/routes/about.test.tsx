@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { Route as AboutRoute } from '@/routes/_app.about';
+import { storage } from '@/shared/lib/storage';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
 
@@ -15,7 +16,11 @@ function renderAbout() {
     path: '/about',
     initialEntry: '/about',
     component: routeComponent(AboutRoute),
-    stubs: { '/home': 'Home stub', '/capture/source': 'Captura stub' },
+    stubs: {
+      '/home': 'Home stub',
+      '/capture/source': 'Captura stub',
+      '/privacy': 'Privacy destination',
+    },
   });
 }
 
@@ -44,6 +49,23 @@ describe('/about', () => {
     expect(await screen.findByText('Manualito es un TFG')).toBeInTheDocument();
     expect(document.querySelector('a[href^="mailto:"]')).not.toBeNull();
   });
+
+  it.each([
+    ['es', '¿Qué pasa con mis fotos?', 'política de privacidad'],
+    ['en', 'What happens to my photos?', 'Privacy Policy'],
+  ] as const)(
+    'el enlace de privacidad tiene nombre y funciona en %s',
+    async (language, question, label) => {
+      storage.writeLanguage(language);
+      renderAbout();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: question }));
+      const link = screen.getByRole('link', { name: label });
+      expect(link).toHaveAttribute('href', '/privacy');
+      await user.click(link);
+      expect(await screen.findByText('Privacy destination')).toBeInTheDocument();
+    },
+  );
 
   it('no tiene violaciones de accesibilidad', async () => {
     const { container } = renderAbout();

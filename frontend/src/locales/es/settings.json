@@ -34,8 +34,6 @@
     "deleteAccount": "Borrar cuenta",
     "deleteAccountHint": "Elimina tu perfil, manuales, conversaciones y sesiones asociadas.",
     "files": "Archivos del manual",
-    "filesBadge": "Servidor",
-    "filesBadgeAriaLabel": "Archivos gestionados por el servidor",
     "filesHint": "Se guardan en el servidor y se eliminan al borrar el manual o la cuenta.",
     "group": "Privacidad y datos"
   }

@@ -34,7 +34,8 @@
     "title": "You haven't asked anything yet"
   },
   "error": {
-    "load": "We couldn't load your conversations. Try again in a moment."
+    "load": "Try again to pick up a conversation where you left off.",
+    "title": "Your conversations haven't loaded"
   },
   "fallback": {
     "conversationTitle": "Untitled conversation",

@@ -2,14 +2,15 @@
   "actions": {
     "edit": "Editar perfil",
     "logout": "Cerrar sesión",
-    "security": "Cuenta y seguridad"
+    "security": "Cuenta"
   },
   "activity": {
     "conversations": "Conversaciones",
     "games": "Juegos",
     "manuals": "Manuales",
     "section": "Tu actividad",
-    "title": "En números"
+    "title": "En números",
+    "unavailable": "No disponible"
   },
   "avatar": {
     "colors": {

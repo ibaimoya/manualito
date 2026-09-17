@@ -14,26 +14,15 @@ export function useDebouncedCallback<TArgs extends unknown[]>(
     latestRef.current = fn;
   }, [fn]);
 
-  const timerRef = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof globalThis.setTimeout>>(undefined);
 
-  useEffect(
-    () => () => {
-      if (timerRef.current !== null) {
-        globalThis.clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    },
-    [],
-  );
+  useEffect(() => () => globalThis.clearTimeout(timerRef.current), []);
 
   return useCallback(
     (...args: TArgs) => {
-      if (timerRef.current !== null) {
-        globalThis.clearTimeout(timerRef.current);
-      }
+      globalThis.clearTimeout(timerRef.current);
       timerRef.current = globalThis.setTimeout(() => {
         latestRef.current(...args);
-        timerRef.current = null;
       }, delayMs);
     },
     [delayMs],

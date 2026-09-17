@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -17,12 +18,17 @@ export function useAuth() {
  */
 function useEnterSession<TInput>(mutationFn: (input: TInput) => Promise<AuthResponse>) {
   const queryClient = useQueryClient();
-  return useMutation({
+  // El último error sigue visible mientras se comprueba un nuevo intento.
+  const [lastError, setLastError] = useState<Error | null>(null);
+  const mutation = useMutation({
     mutationFn,
+    onError: setLastError,
     onSuccess: (data) => {
+      setLastError(null);
       queryClient.setQueryData(AUTH_ME_KEY, data);
     },
   });
+  return { ...mutation, lastError };
 }
 
 export function useLogin() {

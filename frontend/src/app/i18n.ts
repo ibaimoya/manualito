@@ -41,6 +41,7 @@ export const NAMESPACES = [
   'security',
   'settings',
   'shell',
+  'tutorial',
 ] as const;
 
 void i18n.use(initReactI18next).init({

@@ -1,0 +1,17 @@
+:root:active-view-transition-type(language)::view-transition,
+:root:active-view-transition-type(language)::view-transition-group(*),
+:root:active-view-transition-type(language)::view-transition-image-pair(*),
+:root:active-view-transition-type(language)::view-transition-old(*),
+:root:active-view-transition-type(language)::view-transition-new(*) {
+  pointer-events: none;
+}
+
+:root:active-view-transition-type(language)::view-transition-group(*),
+:root:active-view-transition-type(language)::view-transition-old(*),
+:root:active-view-transition-type(language)::view-transition-new(*) {
+  animation-duration: 240ms;
+  animation-timing-function: ease-in-out;
+}
+:root[data-language-snapshot] {
+  view-transition-name: none;
+}

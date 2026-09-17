@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { WarningIcon } from '@phosphor-icons/react';
+import { TrashIcon } from '@/shared/components/action-icons';
 import { useId, useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import { Trans, Translation, useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,8 @@ import { accountStatsQueryOptions } from '@/features/profile/use-account';
 import { accountApi, type AccountStats } from '@/shared/api/account';
 import { ApiError } from '@/shared/api/http';
 import { SectionHead } from '@/shared/components/SectionHead';
+import { LiveTrans } from '@/shared/components/LiveTrans';
+import { tourTarget } from '@/features/tutorial/targets';
 
 type DeleteAccountFormProps = Readonly<{
   username: string;
@@ -29,10 +32,10 @@ export function DeleteAccountButton({ username }: Readonly<{ username: string }>
         type="button"
         size="sm"
         variant="ghost"
-        className="text-error hover:bg-error-bg"
+        className="text-error hover:text-error"
         onClick={() => setOpen(true)}
       >
-        <Trash2 size={14} strokeWidth={2} />
+        <TrashIcon size={16} />
         {t('delete.button')}
       </Button>
       <DeleteAccountDialog open={open} onOpenChange={setOpen} username={username} />
@@ -45,7 +48,7 @@ export function DeleteAccountSection({ username }: Readonly<{ username: string }
   const stats = useQuery(accountStatsQueryOptions());
 
   return (
-    <section aria-label={t('delete.sectionTitle')}>
+    <section aria-label={t('delete.sectionTitle')} {...tourTarget('security-delete')}>
       <SectionHead eyebrow={t('delete.dangerZone')} title={t('delete.sectionTitle')} />
       <DeleteAccountForm username={username} stats={stats.data} submitLabel={t('delete.submit')} />
     </section>
@@ -108,9 +111,14 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
       await router.invalidate();
     },
     onError: (error) => {
-      toast.error(t('delete.errorTitle'), {
+      toast.error(<LiveTrans ns="security" i18nKey="delete.errorTitle" />, {
         id: 'account-delete',
-        description: deleteAccountError(error, t('delete.error')),
+        description:
+          error instanceof ApiError ? (
+            <Translation ns="errors">{() => error.view.message}</Translation>
+          ) : (
+            <LiveTrans ns="security" i18nKey="delete.error" />
+          ),
       });
     },
   });
@@ -123,7 +131,7 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
   return (
     <form onSubmit={submit} noValidate className="rounded-2xl border border-error bg-error-bg p-5">
       <div className="flex gap-3">
-        <AlertTriangle size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
+        <WarningIcon size={20} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
         <p className="text-sm leading-relaxed text-fg">
           <Trans
             ns="security"
@@ -152,15 +160,10 @@ function DeleteAccountForm({ username, stats, submitLabel }: DeleteAccountFormPr
 
       <div className="mt-4">
         <Button type="submit" variant="destructive" disabled={!matches} loading={remove.isPending}>
-          <Trash2 size={16} strokeWidth={2} />
+          <TrashIcon size={16} />
           {submitLabel}
         </Button>
       </div>
     </form>
   );
-}
-
-function deleteAccountError(error: unknown, fallbackMessage: string): string {
-  if (error instanceof ApiError) return error.view.message;
-  return fallbackMessage;
 }

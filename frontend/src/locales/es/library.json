@@ -32,10 +32,9 @@
   },
   "error": {
     "description": {
-      "games": "Hubo un problema de conexión. Tus juegos están a salvo.",
-      "manuals": "Hubo un problema de conexión. Tus manuales están a salvo."
+      "games": "Vuelve a intentarlo para ver los juegos que sigues.",
+      "manuals": "Vuelve a intentarlo para ver los manuales que has subido."
     },
-    "retry": "Reintentar",
     "title": "No pudimos cargar tu biblioteca"
   },
   "gameCard": {
@@ -57,8 +56,7 @@
     "inputAriaLabel": "Saltar a un juego",
     "listLabel": "Tus juegos",
     "noResults": "Ningún juego coincide con «{{query}}».",
-    "placeholder": "Buscar entre tus juegos…",
-    "shortcut": "saltar"
+    "placeholder": "Buscar entre tus juegos…"
   },
   "manualCard": {
     "chunks": "{{count}} fragmentos",
@@ -75,7 +73,9 @@
     },
     "visibility": {
       "private": "Privado",
-      "shared": "Compartido"
+      "privateHelp": "Manual privado",
+      "shared": "Compartido",
+      "sharedHelp": "Compartido con la comunidad"
     }
   },
   "manualSearch": {
@@ -90,6 +90,13 @@
     "hidden": "Oculto",
     "indexing": "Procesando…",
     "pendingReview": "Revisar"
+  },
+  "statusHelp": {
+    "active": "Manual listo para consultar",
+    "failed": "No se ha podido procesar este manual",
+    "hidden": "Este manual está oculto",
+    "indexing": "Procesando el manual. El texto estará disponible al terminar.",
+    "pendingReview": "Hay páginas cuya extracción necesita revisión"
   },
   "tabs": {
     "ariaLabel": "Cambiar entre juegos y manuales",

@@ -484,3 +484,11 @@ frontend/dev-dist/
 /docs/benchmarks/ocr/preprocessing/.tmp_preprocessed/
 /docs/benchmarks/rag/retrieval/.ranx-runtime/
 **/.ipynb_checkpoints/
+
+# Artefactos locales de desarrollo y revisión
+/.playwright-cli/
+/.tanstack/
+/.unlazy/
+/frontend/.playwright-cli/
+/frontend/.tanstack/
+/output/

@@ -572,6 +572,7 @@ services:
     build:
       context: ./frontend
       args:
+        VITE_MAILPIT_URL: ${VITE_MAILPIT_URL:-http://localhost:8025}
         NODE_VERSION: ${NODE_VERSION:?NODE_VERSION no definida}
         NODE_VARIANT: ${NODE_VARIANT:-}
         CADDY_VERSION: ${CADDY_VERSION:?CADDY_VERSION no definida}

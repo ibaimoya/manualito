@@ -1,9 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@tests/_helpers/server';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { Route as HomeRoute } from '@/routes/_app.home';
+import { DISCOVER_GAMES_KEY, discoverGamesQueryOptions } from '@/features/games/use-discover-games';
+import { manualsQueryOptions } from '@/features/manual/use-manuals';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
@@ -39,6 +42,42 @@ function renderHome() {
 }
 
 describe('/home', () => {
+  it('conserva el aviso mientras reintenta y muestra los manuales al recuperarse', async () => {
+    server.use(http.get('/api/manuals', () => new HttpResponse(null, { status: 500 })));
+    renderHome();
+    const notice = await screen.findByRole('region', { name: 'Tus manuales no se han cargado' });
+    const button = within(notice).getByRole('button', { name: 'Reintentar' });
+    const response = Promise.withResolvers<void>();
+    server.use(
+      http.get('/api/manuals', async () => {
+        await response.promise;
+        return HttpResponse.json({ manuals: [manual()] });
+      }),
+    );
+
+    await userEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+    expect(button).toBeDisabled();
+    expect(notice).toBeInTheDocument();
+    expect(screen.queryByText(/Encuentra un juego/)).not.toBeInTheDocument();
+
+    response.resolve();
+    expect(await screen.findByText('Catan')).toBeInTheDocument();
+    expect(notice).not.toBeInTheDocument();
+  });
+
+  it('mantiene los recientes cacheados si falla una actualización', async () => {
+    server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [manual()] })));
+    const { qc } = renderHome();
+    await screen.findByRole('region', { name: 'Recientes' });
+    server.use(http.get('/api/manuals', () => new HttpResponse(null, { status: 500 })));
+    await qc.invalidateQueries({ queryKey: ['manuals', 'list'] });
+    await waitFor(() => expect(qc.getQueryState(['manuals', 'list'])?.status).toBe('error'));
+    expect(
+      within(screen.getByRole('region', { name: 'Recientes' })).getByText('Catan'),
+    ).toBeInTheDocument();
+  });
+
   it('saludo + CTA "Nuevo manual" presente', async () => {
     renderHome();
     expect(await screen.findByText(/¿Qué juego vamos a aprender\?/)).toBeInTheDocument();
@@ -51,18 +90,106 @@ describe('/home', () => {
     expect(link).toHaveAttribute('href', '/capture/source');
   });
 
-  it('sin manuales muestra el empty state', async () => {
+  it('mantiene el estado vacío conocido si falla una actualización', async () => {
     server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [] })));
-    renderHome();
-    const para = await screen.findByText(/Aún no has consultado/, { selector: 'p' });
-    expect(para.textContent).toMatch(/Pulsa\s+Nuevo manual\s+para empezar/);
+    const { qc } = renderHome();
+    const para = await screen.findByText(/Encuentra un juego/, { selector: 'p' });
+    expect(screen.getByRole('link', { name: 'Explorar juegos' })).toHaveAttribute(
+      'href',
+      '/explore',
+    );
+    expect(await screen.findByRole('link', { name: 'Ver Carcassonne' })).toHaveAttribute(
+      'href',
+      '/game/rec-1',
+    );
+    server.use(http.get('/api/manuals', () => new HttpResponse(null, { status: 500 })));
+    const { queryKey } = manualsQueryOptions();
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(para).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  });
+
+  it('oculta el descubrimiento cuando no hay juegos compartidos', async () => {
+    server.use(
+      http.get('/api/games/discover', () => HttpResponse.json({ games: [], attribution: '' })),
+    );
+    const { qc } = renderHome();
+    await waitFor(() =>
+      expect(qc.getQueriesData({ queryKey: DISCOVER_GAMES_KEY }).map(([, data]) => data)).toEqual([
+        [],
+      ]),
+    );
+    expect(screen.queryByRole('heading', { name: 'Sugerencias' })).not.toBeInTheDocument();
   });
 
   it('muestra los manuales recientes desde el backend', async () => {
     server.use(http.get('/api/manuals', () => HttpResponse.json({ manuals: [manual()] })));
     renderHome();
     expect(await screen.findByText('Catan')).toBeInTheDocument();
-    expect(screen.queryByText(/Pulsa Nuevo manual para empezar/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Encuentra un juego/)).not.toBeInTheDocument();
+  });
+
+  it('excluye solo los juegos de los seis recientes, también al mezclar', async () => {
+    const requests: string[][] = [];
+    const manuals = Array.from({ length: 7 }, (_, index) =>
+      manual({
+        id: `m${index}`,
+        game_id: `g${index}`,
+        game_name: `Juego ${index}`,
+        title: `Juego ${index}`,
+      }),
+    );
+    const games = [
+      { id: 'g6', name: 'Juego 6', manuals_count: 1 },
+      { id: 'new', name: 'Nuevo', manuals_count: 1 },
+    ];
+    server.use(
+      http.get('/api/manuals', () => HttpResponse.json({ manuals })),
+      http.get('/api/games/discover', ({ request }) => {
+        requests.push(new URL(request.url).searchParams.getAll('exclude_game_ids'));
+        return HttpResponse.json({ games });
+      }),
+    );
+    const { qc } = renderHome();
+    qc.setQueryData(discoverGamesQueryOptions().queryKey, [
+      { id: 'g0', name: 'Juego 0', manuals_count: 1, bgg_id: null, year_published: null },
+    ]);
+    const suggestions = await screen.findByRole('region', { name: 'Sugerencias' });
+    expect(
+      await within(suggestions).findByRole('link', { name: 'Ver Juego 6' }),
+    ).toBeInTheDocument();
+    expect(within(suggestions).queryByText('Juego 0')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Recientes' })).queryByText('Juego 6'),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      within(suggestions).getByRole('button', { name: 'Ver otras sugerencias' }),
+    );
+    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(requests).toEqual([
+      ['g0', 'g1', 'g2', 'g3', 'g4', 'g5'],
+      ['g0', 'g1', 'g2', 'g3', 'g4', 'g5'],
+    ]);
+    expect(qc.getQueryData(discoverGamesQueryOptions().queryKey)).toEqual([
+      { id: 'g0', name: 'Juego 0', manuals_count: 1, bgg_id: null, year_published: null },
+    ]);
+  });
+
+  it('oculta sugerencias si todos los candidatos están en recientes', async () => {
+    server.use(
+      http.get('/api/manuals', () => HttpResponse.json({ manuals: [manual()] })),
+      http.get('/api/games/discover', ({ request }) => {
+        expect(new URL(request.url).searchParams.getAll('exclude_game_ids')).toEqual(['g1']);
+        return HttpResponse.json({ games: [] });
+      }),
+    );
+    const { qc } = renderHome();
+    await waitFor(() =>
+      expect(qc.getQueryData(discoverGamesQueryOptions(['g1']).queryKey)).toEqual([]),
+    );
+    expect(screen.getByText('Catan')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sugerencias' })).not.toBeInTheDocument();
   });
 
   it('con recientes, "Ver todo" enlaza a /history', async () => {

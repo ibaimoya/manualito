@@ -28,10 +28,10 @@ describe('conversationsApi list/create', () => {
   });
 
   it('crea una conversación vacía (201) sin cuerpo', async () => {
-    let contentLength: string | null = null;
+    let body: string | undefined;
     server.use(
-      http.post('/api/games/:gameId/conversations', ({ request }) => {
-        contentLength = request.headers.get('content-length');
+      http.post('/api/games/:gameId/conversations', async ({ request }) => {
+        body = await request.text();
         return HttpResponse.json(
           {
             id: 'conv-1',
@@ -49,8 +49,7 @@ describe('conversationsApi list/create', () => {
     const conv = await conversationsApi.create('g-1');
 
     expect(conv.id).toBe('conv-1');
-    // POST sin body: no debe enviar carga útil.
-    expect(contentLength === null || contentLength === '0').toBe(true);
+    expect(body).toBe('');
   });
 });
 

@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { Route as ConversationsRoute } from '@/routes/_app.conversations.$gameId';
+import { conversationsKey } from '@/features/conversations/use-conversations';
+import type { ConversationSummary } from '@/shared/api/conversations';
 import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
 import { server } from '@tests/_helpers/server';
 
@@ -29,14 +31,51 @@ function renderConversations() {
 }
 
 describe('/conversations/$gameId', () => {
-  it('lista las conversaciones con contador y FAB de nueva', async () => {
+  it('mantiene el aviso durante el reintento y muestra el resultado recuperado', async () => {
+    server.use(
+      http.get('/api/games/:gameId/conversations', () => new HttpResponse(null, { status: 500 })),
+    );
     renderConversations();
+    const notice = await screen.findByRole('region', {
+      name: 'Tus conversaciones no se han cargado',
+    });
+    const button = within(notice).getByRole('button', { name: 'Reintentar' });
+    const response = Promise.withResolvers<void>();
+    server.use(
+      http.get('/api/games/:gameId/conversations', async () => {
+        await response.promise;
+        return HttpResponse.json({ conversations: [] });
+      }),
+    );
+
+    await userEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('aria-busy', 'true'));
+    expect(button).toBeDisabled();
+    expect(notice).toBeInTheDocument();
+    expect(screen.queryByText('Aún no has preguntado nada')).not.toBeInTheDocument();
+
+    response.resolve();
+    expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();
+    expect(notice).not.toBeInTheDocument();
+  });
+
+  it('lista las conversaciones con contador y FAB de nueva', async () => {
+    const { qc } = renderConversations();
     expect(await screen.findByText('Dudas de preparación')).toBeInTheDocument();
-    expect(screen.getByText('1 guardada')).toBeInTheDocument();
+    // jsdom conserva las cabeceras de escritorio y móvil sin aplicar sus breakpoints.
+    expect(screen.getAllByText('1 guardada').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Nueva conversación/ })).toHaveAttribute(
       'href',
       '/chat/test-game-001',
     );
+    server.use(
+      http.get('/api/games/:gameId/conversations', () => new HttpResponse(null, { status: 500 })),
+    );
+    const queryKey = conversationsKey('test-game-001');
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(screen.getByText('Dudas de preparación')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it('una conversación generando muestra «Manualito está respondiendo» en su fila', async () => {
@@ -94,7 +133,7 @@ describe('/conversations/$gameId', () => {
     await screen.findByText('Dudas de preparación');
     const search = screen.getByRole('searchbox', { name: 'Filtrar conversaciones por título' });
     await user.type(search, 'preparación');
-    expect(await screen.findByText('1 de 1')).toBeInTheDocument();
+    expect((await screen.findAllByText('1 de 1')).length).toBeGreaterThan(0);
     await user.clear(search);
     await user.type(search, 'no existe');
     await waitFor(() => {
@@ -103,10 +142,25 @@ describe('/conversations/$gameId', () => {
   });
 
   it('renombrar desde el kebab: el diálogo precarga el título y guarda', async () => {
-    renderConversations();
+    const { qc } = renderConversations();
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole('button', { name: 'Opciones de «Dudas de preparación»' }),
+    );
+    let conversation = qc.getQueryData<ConversationSummary[]>(
+      conversationsKey('test-game-001'),
+    )![0]!;
+    let sentTitle: string | undefined;
+    server.use(
+      http.patch('/api/conversations/:conversationId', async ({ request }) => {
+        const body = (await request.json()) as { title: string };
+        sentTitle = body.title;
+        conversation = { ...conversation, title: body.title };
+        return HttpResponse.json(conversation);
+      }),
+      http.get('/api/games/:gameId/conversations', () =>
+        HttpResponse.json({ conversations: [conversation] }),
+      ),
     );
     await user.click(await screen.findByRole('menuitem', { name: 'Renombrar' }));
     const dialog = await screen.findByRole('dialog', { name: 'Renombrar conversación' });
@@ -117,6 +171,11 @@ describe('/conversations/$gameId', () => {
     await user.type(input, 'Preparación inicial');
     await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
     expect(await screen.findByText('Conversación renombrada')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Opciones de «Preparación inicial»' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Dudas de preparación')).not.toBeInTheDocument();
+    expect(sentTitle).toBe('Preparación inicial');
   });
 
   it('un borrador abandonado no sobrevive al cerrar y reabrir el diálogo', async () => {
@@ -142,24 +201,48 @@ describe('/conversations/$gameId', () => {
   });
 
   it('borrar desde el kebab pasa por confirmación destructiva', async () => {
-    renderConversations();
+    const { qc } = renderConversations();
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole('button', { name: 'Opciones de «Dudas de preparación»' }),
+    );
+    const conversation = qc.getQueryData<ConversationSummary[]>(
+      conversationsKey('test-game-001'),
+    )![0]!;
+    let deletedId: string | undefined;
+    server.use(
+      http.delete('/api/conversations/:conversationId', ({ params }) => {
+        deletedId = String(params.conversationId);
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.get('/api/games/:gameId/conversations', () =>
+        HttpResponse.json({ conversations: deletedId === conversation.id ? [] : [conversation] }),
+      ),
     );
     await user.click(await screen.findByRole('menuitem', { name: 'Borrar' }));
     const dialog = await screen.findByRole('dialog', { name: 'Borrar conversación' });
     expect(dialog).toHaveTextContent('Esta acción no se puede deshacer.');
     await user.click(within(dialog).getByRole('button', { name: 'Borrar conversación' }));
     expect(await screen.findByText('Conversación borrada')).toBeInTheDocument();
+    expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();
+    expect(screen.queryByText('Dudas de preparación')).not.toBeInTheDocument();
+    expect(deletedId).toBe(conversation.id);
   });
 
-  it('sin conversaciones muestra el estado vacío con CTA', async () => {
+  it('conserva el estado vacío conocido si falla una actualización', async () => {
     server.use(
       http.get('/api/games/:gameId/conversations', () => HttpResponse.json({ conversations: [] })),
     );
-    renderConversations();
+    const { qc } = renderConversations();
     expect(await screen.findByText('Aún no has preguntado nada')).toBeInTheDocument();
+    server.use(
+      http.get('/api/games/:gameId/conversations', () => new HttpResponse(null, { status: 500 })),
+    );
+    const queryKey = conversationsKey('test-game-001');
+    await qc.invalidateQueries({ queryKey });
+    await waitFor(() => expect(qc.getQueryState(queryKey)?.status).toBe('error'));
+    expect(screen.getByText('Aún no has preguntado nada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
   });
 
   it('no tiene violaciones de accesibilidad', async () => {

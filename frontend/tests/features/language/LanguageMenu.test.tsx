@@ -74,7 +74,25 @@ describe('LanguageMenu', () => {
     await user.click(trigger());
     await screen.findByRole('menu');
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(trigger()).toHaveFocus();
+  });
+
+  it('reabrir durante la salida conserva la navegación con teclado', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(trigger());
+    await screen.findByRole('menu');
+    await user.click(trigger());
+    await user.click(trigger());
+
+    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('menu')).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() =>
+      expect(screen.getByRole('menuitemradio', { name: /Español/ })).toHaveFocus(),
+    );
   });
 
   it('abierto no tiene violaciones de accesibilidad', async () => {

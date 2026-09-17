@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import type { FC } from 'react';
-import { Toaster } from 'sonner';
+import { AppToaster } from '@/app/AppToaster';
 import { LanguageProvider } from '@/app/language';
 import { ThemeProvider } from '@/app/theme';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -93,10 +93,10 @@ export function renderRoute({
           <TooltipProvider>
             <RouterProvider router={router} />
           </TooltipProvider>
-          <Toaster />
+          <AppToaster />
         </QueryClientProvider>
       </LanguageProvider>
     </ThemeProvider>,
   );
-  return { qc, ...result };
+  return { qc, router, ...result };
 }

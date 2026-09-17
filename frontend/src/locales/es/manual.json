@@ -1,23 +1,17 @@
 {
   "buttons": {
-    "actions": "Acciones",
     "cancel": "Cancelar",
     "continueEditing": "Seguir editando",
     "deleteManual": "Eliminar manual",
-    "editText": "Editar texto",
+    "deleteManualDisabled": "Termina de editar la página para eliminar el manual.",
     "readAgain": "Releer esta página",
     "reprocess": "Reprocesar",
-    "reprocessAll": "Reprocesar todo",
-    "save": "Guardar",
-    "saveChanges": "Guardar cambios",
-    "viewImage": "Ver imagen"
+    "save": "Guardar"
   },
   "card": {
-    "processing": "Procesando…",
-    "ready": "Listo"
+    "processing": "Procesando…"
   },
   "confidence": {
-    "heading": "Confianza OCR",
     "labels": {
       "high": "Alta",
       "low": "Baja",
@@ -31,12 +25,41 @@
       "medium": "75–89 %"
     },
     "shortNoData": "s/d",
-    "title": "Confianza OCR: {{label}}",
     "toggle": {
-      "disabledTitle": "Esta página no tiene confianza OCR (texto editado a mano)",
+      "disabledTitle": "Esta página no tiene datos de confianza OCR.",
       "label": "Confianza por línea",
-      "title": "Colorea cada línea según la confianza del OCR"
+      "title": "Muestra la confianza de cada línea"
     }
+  },
+  "details": {
+    "confirm": {
+      "hide": {
+        "action": "Usar Anónimo",
+        "text": "Tu nombre dejará de aparecer junto a este manual y en las fuentes de las respuestas.",
+        "title": "¿Volver a aparecer como Anónimo?"
+      },
+      "show": {
+        "action": "Compartir con mi nombre",
+        "text": "Otros verán tu nombre junto a este manual y en las fuentes de las respuestas.",
+        "title": "¿Compartir con tu nombre?"
+      }
+    },
+    "errors": {
+      "empty": "Escribe un nombre para el manual.",
+      "network": "No hemos podido guardar los cambios. Inténtalo de nuevo.",
+      "tooLong": "Usa un máximo de {{max}} caracteres."
+    },
+    "field": "Nombre del manual",
+    "help": "El cambio también se verá en las fuentes de tus conversaciones.",
+    "rename": "Renombrar manual",
+    "save": "Guardar nombre",
+    "sharing": {
+      "anonymous": "Compartido como Anónimo",
+      "named": "Compartido con mi nombre",
+      "switchToAnonymous": "Compartido con mi nombre. Cambiar para volver a aparecer como Anónimo",
+      "switchToNamed": "Compartido como Anónimo. Cambiar para compartir con mi nombre"
+    },
+    "title": "Renombrar manual"
   },
   "dialogs": {
     "delete": {
@@ -57,10 +80,18 @@
     }
   },
   "errors": {
+    "empty": {
+      "description": "Este manual aún no tiene páginas disponibles. Comprueba de nuevo su estado o vuelve a tu biblioteca.",
+      "title": "Todavía no hay páginas que mostrar"
+    },
     "load": {
-      "description": "Puede que se haya borrado o que aún se esté procesando. Vuelve al historial e inténtalo desde allí.",
-      "historyLink": "Ir al historial",
+      "description": "Ha ocurrido un error al cargarlo. Puedes volver a intentarlo desde aquí.",
+      "historyLink": "Ir a la biblioteca",
       "title": "No hemos podido abrir este manual"
+    },
+    "missing": {
+      "description": "Puede que se haya borrado o que no tengas acceso. En tu biblioteca encontrarás los manuales disponibles.",
+      "title": "Este manual no está disponible"
     }
   },
   "feedback": {
@@ -68,6 +99,11 @@
       "error": "No hemos podido borrar el manual",
       "errorDescription": "Inténtalo de nuevo en un momento.",
       "success": "Manual borrado"
+    },
+    "details": {
+      "hidden": "Compartido como Anónimo",
+      "renamed": "Nombre guardado",
+      "shown": "Compartido con mi nombre"
     },
     "edit": {
       "busy": "El manual se está procesando",
@@ -87,24 +123,26 @@
     }
   },
   "image": {
+    "actualSize": "Tamaño real",
     "alt": "Página {{pageNumber}} de {{title}}",
+    "controls": "Controles de la imagen",
     "dialogDescription": "Página {{pageNumber}} de {{pageCount}} · {{title}}",
     "dialogTitle": "Imagen de la página",
-    "expand": "Ampliar imagen del manual",
+    "errorDescription": "Vuelve a intentarlo para ver la página original.",
+    "errorTitle": "No se ha podido cargar la imagen",
     "fit": "Zoom",
-    "missingDescription": "Esta página puede seguir procesándose o no tener un render guardado todavía.",
-    "missingTitle": "La imagen todavía no está disponible",
-    "resetViewport": "Restablecer zoom de la imagen",
-    "resetZoom": "Restablecer zoom",
+    "fitPage": "Página completa",
+    "fitWidth": "Ajustar al ancho",
+    "keyboardHint": "Imagen original. Usa las flechas para moverte, + y - para acercar o alejar y 0 para ajustar la página.",
+    "loading": "Cargando imagen…",
+    "missingDescription": "Puedes seguir consultando el texto del manual.",
+    "missingTitle": "La imagen no está disponible",
+    "retry": "Volver a intentar",
     "zoomIn": "Acercar imagen",
     "zoomOut": "Alejar imagen",
     "zoomValue": "Zoom de imagen"
   },
   "meta": {
-    "duplicateLabel_one": "{{count}} duplicada",
-    "duplicateLabel_other": "{{count}} duplicadas",
-    "duplicates_one": "{{count}} página duplicada que no se procesa.",
-    "duplicates_other": "{{count}} páginas duplicadas que no se procesan.",
     "format": {
       "pdf": "PDF",
       "photos": "Fotos"
@@ -122,20 +160,18 @@
     "articleLabel": "Página {{pageNumber}} de {{pageCount}}",
     "buttonLabel": "Página {{pageNumber}} · {{status}}{{hits}}",
     "heading": "Páginas",
+    "label": "Página",
+    "legend": "Estados de las páginas",
     "matches_one": ", {{count}} coincidencia",
     "matches_other": ", {{count}} coincidencias",
     "navLabel": "Páginas del manual",
     "next": "Página siguiente",
     "number": "Página {{pageNumber}}",
-    "previous": "Página anterior",
-    "progress_one": "{{completed}} de {{count}} página",
-    "progress_other": "{{completed}} de {{count}} páginas"
+    "previous": "Página anterior"
   },
   "search": {
     "ariaLabel": "Buscar en el texto del manual",
     "clear": "Limpiar búsqueda",
-    "matches_one": "{{count}} coincidencia",
-    "matches_other": "{{count}} coincidencias",
     "next": "Coincidencia siguiente",
     "placeholder": "Buscar en todo el manual…",
     "previous": "Coincidencia anterior"
@@ -151,6 +187,11 @@
       "short": "Editada",
       "tip": "Corregiste el texto de esta página a mano."
     },
+    "empty": {
+      "label": "Sin texto disponible",
+      "short": "Sin texto",
+      "tip": "Esta página no contiene texto disponible para consultar."
+    },
     "failed": {
       "label": "Error de lectura",
       "short": "Error",
@@ -162,27 +203,47 @@
       "tip": "El OCR no está seguro de esta página. Puedes releerla o corregirla a mano."
     },
     "ok": {
-      "label": "Escaneado correctamente",
-      "short": "OK",
-      "tip": "El OCR reconoció el texto de esta página con buena calidad."
+      "label": "Texto disponible",
+      "short": "Disponible",
+      "tip": "Texto disponible para consultar. Puedes contrastarlo con la página original."
     },
     "processing": {
       "label": "Procesando",
       "short": "Pendiente",
-      "tip": "Esta página sigue en la cola de lectura."
-    },
-    "readingLabel": "Estado de lectura: {{status}}"
+      "tip": "Estamos leyendo esta página."
+    }
   },
   "text": {
-    "duplicateDescription": "Es idéntica a otra página que ya habías subido. Como no aporta nada nuevo, no se vuelve a leer ni cuenta para la explicación.",
-    "duplicateTitle": "Página duplicada",
-    "editCounter": "Al guardar, esta página pasará a «Editada a mano» · {{current}} / {{max}}",
-    "edited": "Corregiste esta página a mano · el texto ya no procede del OCR.",
+    "characterCount_one": "{{formattedCount}} carácter",
+    "characterCount_other": "{{formattedCount}} caracteres",
+    "correctionAdded": "Añadido por IA",
+    "correctionPreviously": "Antes: “{{original}}”",
+    "counter": "{{current}} / {{max}} caracteres",
+    "dirtyState": "Cambios sin guardar",
+    "editingHint": "Corrige el texto y guarda los cambios.",
     "editLabel": "Texto de la página {{pageNumber}}",
-    "empty": "No hay texto legible en esta página. Escríbelo a mano con «Editar texto» o reléela.",
+    "empty": "No hay texto legible en esta página.",
+    "emptyDraft": "Escribe algo de texto para guardar.",
     "failedDescription": "La foto salió demasiado oscura o movida. Reintenta la lectura o sube de nuevo el manual con una versión más nítida.",
     "failedTitle": "No pudimos leer esta página",
-    "lowDescription": "La foto salió algo borrosa: puede haber palabras mal leídas. Reléela o corrígela a mano.",
-    "lowTitle": "El OCR no está seguro de esta página."
+    "savedState": "Sin cambios",
+    "tooLong": "Reduce el texto a {{max}} caracteres."
+  },
+  "workspace": {
+    "compare": "Comparar",
+    "confidence": "Confianza",
+    "discard": "Descartar cambios",
+    "discardDescription": "Hay texto sin guardar en esta página. Puedes seguir editándolo o descartarlo para continuar.",
+    "discardTitle": "¿Descartar los cambios?",
+    "edit": "Editar",
+    "editing": "Página {{pageNumber}} · Edición",
+    "expand": "Ampliar original",
+    "extractedText": "Texto extraído",
+    "original": "Original",
+    "reading": "Página {{pageNumber}} · Lectura",
+    "reread": "Volver a leer",
+    "shared": "Compartido · Solo lectura",
+    "text": "Texto",
+    "view": "Vista del manual"
   }
 }

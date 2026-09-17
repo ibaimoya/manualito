@@ -119,6 +119,7 @@ def test_create_manual_orquesta_servicio_persistente(
     assert kwargs["game_id"] == _GAME_ID
     assert kwargs["title"] == "Manual base"
     assert kwargs["visibility"] == "shared"
+    assert kwargs["anonymous"] is True
     assert kwargs["language"] == "es"
     assert kwargs["images"][0].filename == "manual.jpg"
     assert kwargs["pdf"] is None
@@ -146,6 +147,7 @@ def test_list_manuals_devuelve_manuales_propios(
                 "title": "Manual base",
                 "status": "active",
                 "visibility": "private",
+                "anonymous": True,
                 "source_type": "images",
                 "page_count": 1,
                 "duplicate_page_count": 0,
@@ -199,6 +201,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
         title=summary.title,
         status=summary.status,
         visibility=summary.visibility,
+        anonymous=summary.anonymous,
         source_type=summary.source_type,
         page_count=summary.page_count,
         language=summary.language,
@@ -206,6 +209,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
         created_at=summary.created_at,
         indexed_at=summary.indexed_at,
         duplicate_page_count=summary.duplicate_page_count,
+        is_own=True,
         pages=[
             ManualPageDetail(
                 page_number=1,
@@ -222,7 +226,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
         ],
     )
     get_mock = AsyncMock(return_value=detail)
-    monkeypatch.setattr("api.manuals.router.get_user_manual_detail", get_mock)
+    monkeypatch.setattr("api.manuals.router.get_readable_manual_detail", get_mock)
 
     response = client.get(f"/api/manuals/{_MANUAL_ID}")
 
@@ -231,6 +235,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
     assert body["id"] == str(_MANUAL_ID)
     assert body["source_type"] == "images"
     assert body["page_count"] == 1
+    assert body["is_own"] is True
     assert body["pages"] == [
         {
             "page_number": 1,
@@ -250,7 +255,7 @@ def test_get_manual_devuelve_detalle_con_paginas(
     ]
     get_mock.assert_awaited_once_with(
         _FAKE_SESSION,
-        owner_user_id=_USER_ID,
+        current_user_id=_USER_ID,
         manual_id=_MANUAL_ID,
     )
 
@@ -336,7 +341,7 @@ def test_get_manual_page_image_devuelve_fichero_privado(
             height=1200,
         )
     )
-    monkeypatch.setattr("api.manuals.router.get_user_manual_page_image_asset", get_mock)
+    monkeypatch.setattr("api.manuals.router.get_readable_manual_page_image_asset", get_mock)
 
     response = client.get(f"/api/manuals/{_MANUAL_ID}/pages/1/image")
 
@@ -347,7 +352,7 @@ def test_get_manual_page_image_devuelve_fichero_privado(
     assert response.headers["content-disposition"].startswith("inline;")
     get_mock.assert_awaited_once_with(
         _FAKE_SESSION,
-        owner_user_id=_USER_ID,
+        current_user_id=_USER_ID,
         manual_id=_MANUAL_ID,
         page_number=1,
     )
@@ -360,7 +365,7 @@ def test_get_manual_page_image_sin_asset_devuelve_404(
 ):
     """Una página sin imagen disponible usa el mismo 404 que un manual inexistente."""
     monkeypatch.setattr(
-        "api.manuals.router.get_user_manual_page_image_asset",
+        "api.manuals.router.get_readable_manual_page_image_asset",
         AsyncMock(return_value=None),
     )
 
@@ -429,7 +434,7 @@ def test_get_manual_ajeno_o_borrado_devuelve_404(
 ):
     """El endpoint no revela si el manual existe para otro usuario."""
     monkeypatch.setattr(
-        "api.manuals.router.get_user_manual_detail",
+        "api.manuals.router.get_readable_manual_detail",
         AsyncMock(side_effect=ManualNotFoundError),
     )
 
@@ -582,6 +587,7 @@ def _manual_summary() -> ManualSummary:
         title="Manual base",
         status="active",
         visibility="private",
+        anonymous=True,
         source_type="images",
         page_count=1,
         duplicate_page_count=0,

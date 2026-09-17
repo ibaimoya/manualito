@@ -1,17 +1,16 @@
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { routeTree } from '../routeTree.gen';
+import { entryViewTransition } from '@/features/auth/entry-transition';
 
-/**
- * Router de la app — file-based routing.
- *
- * El "queryClient" se inyecta en "RouterProvider" (no en module-scope) para que
- * el "beforeLoad" raíz pueda resolver la sesión con la misma cache que la UI.
- */
+/** RouterProvider inyecta queryClient para compartir la caché de sesión con las rutas. */
 export const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,
+  defaultViewTransition: globalThis.CSS?.supports('selector(:active-view-transition-type(entry))')
+    ? entryViewTransition
+    : false,
   scrollRestoration: true,
   context: { queryClient: undefined! },
 });

@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse, delay } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { PENDING_ASSISTANT_POLL_INTERVAL_MS, Route as ChatRoute } from '@/routes/_app.chat.$gameId';
 import { server } from '@tests/_helpers/server';
 import { failSendMessage, SAMPLE_GAME_DETAIL } from '@tests/_helpers/mswHandlers';
-import { renderRoute, routeComponent } from '@tests/_helpers/renderRoute';
+import { renderRoute, routeComponent, TEST_USER } from '@tests/_helpers/renderRoute';
+import type { AuthUser } from '@/shared/api/auth';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
@@ -30,7 +31,7 @@ function gameWithoutManuals() {
   );
 }
 
-function renderChat(gameId: string, search?: { q?: string; c?: string }) {
+function renderChat(gameId: string, search?: { q?: string; c?: string }, user?: AuthUser | null) {
   const params = new URLSearchParams();
   if (search?.q) params.set('q', search.q);
   if (search?.c) params.set('c', search.c);
@@ -48,6 +49,7 @@ function renderChat(gameId: string, search?: { q?: string; c?: string }) {
       '/history': 'HistoryScreen',
       '/manual/$manualId': 'ManualScreen',
     },
+    user,
   });
 }
 
@@ -74,6 +76,112 @@ describe('/chat/$gameId · search schema', () => {
 });
 
 describe('/chat/$gameId', () => {
+  it('mantiene la pregunta enviada mientras carga el primer historial', async () => {
+    // Solo se retienen respuestas HTTP para comprobar el intervalo entre crear y responder.
+    const history = Promise.withResolvers<void>();
+    const send = Promise.withResolvers<void>();
+    let historyStarted = false;
+    server.use(
+      http.get('/api/conversations/:conversationId/messages', async () => {
+        historyStarted = true;
+        await history.promise;
+        return HttpResponse.json({ messages: [] });
+      }),
+      http.post('/api/conversations/:conversationId/messages', async () => {
+        await send.promise;
+        return new HttpResponse(null, { status: 503 });
+      }),
+    );
+    const { unmount } = renderChat('test-game-001');
+    try {
+      const user = userEvent.setup();
+      const input = await screen.findByLabelText(/Escribe tu pregunta/i);
+      await waitFor(() => expect(input).toBeEnabled());
+      await user.type(input, 'Pregunta durante la primera carga');
+      await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
+      await waitFor(() => expect(historyStarted).toBe(true));
+      expect(screen.getByText('Pregunta durante la primera carga')).toBeInTheDocument();
+      await act(async () => history.resolve());
+      expect(screen.getByText('Pregunta durante la primera carga')).toBeInTheDocument();
+    } finally {
+      unmount();
+      history.resolve();
+      send.resolve();
+    }
+  });
+
+  it('detiene el scroll animado al activar movimiento reducido sin cambiar la posición de lectura', async () => {
+    // La preferencia y el desplazamiento son fronteras del navegador ausentes en jsdom.
+    const originalMatchMedia = window.matchMedia;
+    const media = Object.assign(new EventTarget(), {
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+    });
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) =>
+      query === media.media ? (media as unknown as MediaQueryList) : originalMatchMedia(query),
+    );
+    const scroll = vi.spyOn(Element.prototype, 'scrollTo');
+    renderChat('test-game-001', { c: 'conv-001' });
+    await screen.findByText('¿Cómo se reparten las cartas?');
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' }));
+    const viewport = scroll.mock.instances.at(-1) as HTMLElement;
+    viewport.scrollTop = 75;
+    scroll.mockClear();
+
+    act(() => {
+      media.matches = true;
+      media.dispatchEvent(new Event('change'));
+    });
+    expect(scroll).toHaveBeenCalledWith({ top: 75, behavior: 'instant' });
+    expect(viewport.scrollTop).toBe(75);
+    expect(scroll).not.toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+
+  it('cambia de conversación y de juego sin conservar el historial ni el borrador anterior', async () => {
+    server.use(
+      http.get('/api/conversations/:conversationId/messages', ({ params }) =>
+        HttpResponse.json({
+          messages: [
+            {
+              id: `${params.conversationId}-user`,
+              role: 'user',
+              status: 'completed',
+              content: `historial:${params.conversationId}`,
+              created_at: '2026-05-26T10:00:00Z',
+              sources: [],
+            },
+          ],
+        }),
+      ),
+    );
+    const { router } = renderChat('test-game-001', { c: 'conv-a' });
+    await screen.findByText('historial:conv-a');
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('textbox'), 'borrador de A');
+    await act(() =>
+      router.navigate({
+        to: '/chat/$gameId',
+        params: { gameId: 'test-game-001' },
+        search: { c: 'conv-b' },
+      }),
+    );
+    expect(await screen.findByText('historial:conv-b')).toBeInTheDocument();
+    expect(screen.queryByText('historial:conv-a')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('');
+
+    await user.type(screen.getByRole('textbox'), 'borrador de B');
+    await act(() =>
+      router.navigate({
+        to: '/chat/$gameId',
+        params: { gameId: 'game-two' },
+        search: { c: 'conv-c' },
+      }),
+    );
+    expect(await screen.findByText('historial:conv-c')).toBeInTheDocument();
+    expect(screen.queryByText('historial:conv-b')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
   it('el breadcrumb lleva el juego como tramo navegable y «Chat» como página', async () => {
     renderChat('test-game-001');
     // El detalle del juego (MSW) resuelve el nombre del trail.
@@ -160,7 +268,7 @@ describe('/chat/$gameId', () => {
       }),
     );
 
-    renderChat('test-game-001');
+    const { router } = renderChat('test-game-001');
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
     await waitFor(() => expect(input).toBeEnabled());
@@ -169,6 +277,7 @@ describe('/chat/$gameId', () => {
 
     // Mensaje del usuario aparece inmediato (optimistic UI).
     expect(await screen.findByText('¿Y empate?')).toBeInTheDocument();
+    await user.type(input, 'siguiente pregunta');
 
     // El backend (MSW) responde el turno completo.
     releaseBackend();
@@ -182,6 +291,9 @@ describe('/chat/$gameId', () => {
     );
     // La pregunta sigue visible como turno confirmado (no se duplica).
     expect(screen.getAllByText('¿Y empate?')).toHaveLength(1);
+    expect(router.state.location.search).toEqual({ c: 'conv-001' });
+    expect(screen.getByRole('textbox')).toBe(input);
+    expect(input).toHaveValue('siguiente pregunta');
   });
 
   it(
@@ -275,6 +387,16 @@ describe('/chat/$gameId', () => {
       expect(sends).toBe(1);
       await waitFor(
         () => {
+          const partial = screen.getByText(
+            (text) =>
+              text.startsWith('Respuesta') && 'Respuesta generada por polling.'.startsWith(text),
+          );
+          expect(partial.textContent).not.toBe('Respuesta generada por polling.');
+        },
+        { timeout: PENDING_ASSISTANT_POLL_ASSERT_TIMEOUT_MS },
+      );
+      await waitFor(
+        () => {
           expect(messageReads).toBeGreaterThanOrEqual(PENDING_ASSISTANT_POLL_EXPECTED_READS);
           expect(screen.getByText('Respuesta generada por polling.')).toBeInTheDocument();
         },
@@ -299,9 +421,15 @@ describe('/chat/$gameId', () => {
   });
 
   it('si la URL trae ?q=foo, dispara la pregunta automáticamente al montar', async () => {
-    renderChat('test-game-001', { q: '¿Cuántos jugadores hay?' });
+    server.use(
+      http.get('/api/conversations/:conversationId/messages', () =>
+        HttpResponse.json({ messages: [] }),
+      ),
+    );
+    const { router } = renderChat('test-game-001', { q: '¿Cuántos jugadores hay?' });
     // El mensaje del usuario aparece inmediato.
     expect(await screen.findByText('¿Cuántos jugadores hay?')).toBeInTheDocument();
+    const composer = screen.getByRole('textbox');
     // Y la respuesta llega tras crear conversación + enviar turno.
     await waitFor(
       () => {
@@ -311,6 +439,9 @@ describe('/chat/$gameId', () => {
       },
       { timeout: 3000 },
     );
+    await waitFor(() => expect(router.state.location.search).toEqual({ c: 'conv-001' }));
+    expect(screen.getByRole('textbox')).toBe(composer);
+    expect(screen.getAllByText('¿Cuántos jugadores hay?')).toHaveLength(1);
   });
 
   it('si el LLM falla con 504: toast de error y la pregunta vuelve al composer', async () => {
@@ -379,7 +510,7 @@ describe('/chat/$gameId', () => {
     expect(creates).toBe(1);
   });
 
-  it('cita páginas: la propia viva enlaza; la borrada y la de comunidad no', async () => {
+  it('distingue las fuentes y abre las páginas de los manuales que siguen disponibles', async () => {
     vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
@@ -409,38 +540,156 @@ describe('/chat/$gameId', () => {
             created_at: '2026-05-26T10:06:05.000Z',
             // test-manual-001 sigue en el pool (propio); m-borrado ya no; el otro es de comunidad.
             sources: [
-              { manual_id: 'test-manual-001', manual_title: 'Reglas base', page: 4, is_own: true },
-              { manual_id: 'm-borrado', manual_title: 'Viejo', page: 7, is_own: true },
-              { manual_id: 'test-manual-002', manual_title: 'Comunidad', page: 9, is_own: false },
+              {
+                manual_id: 'test-manual-001',
+                manual_title: 'Reglas base',
+                page: 4,
+                is_own: true,
+                author_name: 'marta',
+              },
+              {
+                manual_id: 'm-borrado',
+                manual_title: null,
+                page: 7,
+                is_own: true,
+                author_name: null,
+              },
+              {
+                manual_id: 'test-manual-002',
+                manual_title: 'Comunidad',
+                page: 4,
+                is_own: false,
+                author_name: null,
+              },
+              {
+                manual_id: 'test-manual-003',
+                manual_title: 'Mismo nombre',
+                page: 2,
+                is_own: false,
+                author_name: 'marta',
+              },
+              {
+                manual_id: 'test-manual-001',
+                manual_title: 'Reglas base',
+                page: 4,
+                is_own: true,
+                author_name: 'marta',
+              },
             ],
           },
         }),
       ),
     );
-    renderChat('test-game-001');
+    renderChat('test-game-001', undefined, {
+      ...TEST_USER,
+      avatar_color: 'warning',
+      avatar_figure: 'crown',
+    });
     const user = userEvent.setup();
     const input = await screen.findByLabelText(/Escribe tu pregunta/i);
     await waitFor(() => expect(input).toBeEnabled());
     await user.type(input, 'madera');
     await user.click(screen.getByRole('button', { name: /Enviar pregunta/i }));
 
-    // La página propia y viva (4) enlaza al visor del manual.
-    const own = await screen.findByRole('link', { name: 'Abrir página 4 del manual' });
+    const own = await screen.findByRole('link', { name: 'Abrir página 4 de Reglas base' });
     expect(own.getAttribute('href')).toContain('/manual/test-manual-001');
     expect(own.getAttribute('href')).toContain('page=4');
-    // La fuente propia ya borrada (7) se cita pero NO enlaza.
-    expect(screen.getByText('Pág. 7')).toBeInTheDocument();
+    expect(own).toHaveAccessibleDescription('Lo has subido tú');
+    expect(own.querySelector('svg')).toBeInTheDocument();
+    expect(own.querySelector('span[aria-hidden="true"]')).toHaveStyle({
+      width: '24px',
+      height: '24px',
+    });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    await user.hover(own);
+    const ownTip = await screen.findByRole('tooltip');
+    expect(ownTip).toHaveTextContent('Reglas base');
+    expect(ownTip).toHaveTextContent('Página 4');
+    expect(ownTip).toHaveTextContent('Lo has subido tú');
+    expect(ownTip).not.toHaveTextContent('Toca de nuevo');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    await user.unhover(own);
+    const list = screen.getByRole('list', { name: 'Fuentes' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.getAllByRole('link', { name: 'Abrir página 4 de Reglas base' })).toHaveLength(1);
     expect(screen.queryByRole('link', { name: /página 7/i })).toBeNull();
-    // La de la comunidad (9) tampoco es un enlace.
-    expect(screen.getByText('Pág. 9')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /página 9/i })).toBeNull();
+    const community = screen.getByRole('link', { name: 'Abrir página 4 de Comunidad' });
+    expect(community.getAttribute('href')).toContain('/manual/test-manual-002');
+    expect(community.getAttribute('href')).toContain('page=4');
+    expect(community).toHaveAccessibleDescription('Subido por Anónimo');
+    await user.hover(community);
+    const communityTip = await screen.findByRole('tooltip');
+    expect(communityTip).toHaveTextContent('Comunidad');
+    expect(communityTip).toHaveTextContent('Página 4');
+    expect(communityTip).not.toHaveTextContent('ya no disponible');
+    expect(communityTip).toHaveTextContent('Subido por Anónimo');
+    fireEvent.pointerLeave(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Lo has subido tú');
+    fireEvent.pointerLeave(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Subido por Anónimo');
+    fireEvent.pointerLeave(community, { pointerType: 'mouse', clientX: 120, clientY: 160 });
+    fireEvent.pointerMove(document.body, { pointerType: 'mouse', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(own, { pointerType: 'mouse', clientX: 116, clientY: 160 });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Lo has subido tú');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    const removed = screen.getByRole('button', {
+      name: 'Página 7 de Manual sin nombre (ya no disponible)',
+    });
+    expect(removed).toHaveAccessibleDescription('Lo has subido tú');
+    expect(removed.querySelector('svg')).toBeInTheDocument();
+    await user.hover(removed);
+    const removedTip = await screen.findByRole('tooltip');
+    expect(removedTip).toHaveTextContent('Lo has subido tú');
+    expect(removedTip).toHaveTextContent('ya no disponible');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    const sameName = screen.getByRole('button', {
+      name: 'Página 2 de Mismo nombre (ya no disponible)',
+    });
+    expect(sameName).toHaveAccessibleDescription('Subido por marta');
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.unhover(community);
+    act(() => own.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Lo has subido tú');
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(own).toHaveFocus();
+    // Se comprueba el gesto táctil sin cambiar las capacidades del dispositivo.
+    await user.pointer({ keys: '[TouchA]', target: own });
+    const preview = await screen.findByRole('tooltip');
+    expect(preview).toHaveTextContent('Lo has subido tú');
+    expect(preview).toHaveTextContent('Toca de nuevo para abrir');
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.pointer({ keys: '[TouchA]', target: sameName });
+    await waitFor(() => expect(screen.getAllByRole('tooltip')).toHaveLength(1));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('ya no disponible');
+    expect(screen.getByRole('tooltip')).not.toHaveTextContent('Toca de nuevo');
+    await user.pointer({ keys: '[TouchA]', target: sameName });
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.pointer({ keys: '[TouchA]', target: own });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Toca de nuevo para abrir');
+    expect(screen.queryByText('ManualScreen')).not.toBeInTheDocument();
+    await user.pointer({ keys: '[TouchA]', target: own });
+    expect(await screen.findByText('ManualScreen')).toBeInTheDocument();
   });
 
   it('typing indicator mientras la mutation está en vuelo', async () => {
-    // Forzamos un delay alto para ver el indicator.
+    let releaseBackend!: () => void;
+    const backendReady = new Promise<void>((resolve) => {
+      releaseBackend = resolve;
+    });
     server.use(
       http.post('/api/conversations/:conversationId/messages', async () => {
-        await delay(500);
+        await backendReady;
         return HttpResponse.json({
           conversation: CONVERSATION,
           user_message: {
@@ -471,6 +720,8 @@ describe('/chat/$gameId', () => {
     expect(
       await screen.findByRole('status', { name: /Escribiendo respuesta/i }),
     ).toBeInTheDocument();
+    releaseBackend();
+    expect(await screen.findByText('tardío')).toBeInTheDocument();
   });
 
   it('copiar respuesta: escribe el contenido (Markdown) en el portapapeles', async () => {

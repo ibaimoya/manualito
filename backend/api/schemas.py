@@ -17,6 +17,7 @@ class ApiFieldError(StrictModel):
     field: str | None
     code: str
     message: str
+    params: dict[str, int] = Field(default_factory=dict)
 
 
 class ApiErrorResponse(StrictModel):

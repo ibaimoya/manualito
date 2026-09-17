@@ -24,9 +24,13 @@ services:
     depends_on:
       mailpit: !reset null
 
+  frontend:
+    build:
+      args:
+        VITE_MAILPIT_URL: ""
+
   mailpit:
-    profiles:
-      - local-mail
+    scale: 0
 
 secrets:
   resend_api_key:

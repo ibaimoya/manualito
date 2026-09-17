@@ -1,8 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import i18n from '@/app/i18n';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -14,11 +13,13 @@ import {
 import { server } from '@tests/_helpers/server';
 import { failRegister, failRegisterValidation } from '@tests/_helpers/mswHandlers';
 import { ThemeProvider } from '@/app/theme';
+import i18n from '@/app/i18n';
 import { RegisterForm } from '@/features/auth/register-form';
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  server.events.removeAllListeners('request:start');
   localStorage.clear();
 });
 afterAll(() => server.close());
@@ -72,8 +73,65 @@ describe('RegisterForm', () => {
     await fillValid(user);
     await user.click(screen.getByRole('checkbox'));
     await act(() => i18n.changeLanguage('en'));
-    await user.click(screen.getByRole('button', { name: 'Create account' }));
+    await user.click(screen.getByRole('button', { name: 'Sign up' }));
     await waitFor(() => expect(body).toMatchObject({ email: 'marta@gmail.com', locale: 'en' }));
+  });
+
+  it('conserva el error al reintentar, evita envíos simultáneos y lo retira al registrarse', async () => {
+    server.use(failRegister());
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    await fillValid(user);
+    await user.click(screen.getByRole('checkbox'));
+    const submit = screen.getByRole('button', { name: 'Crear cuenta' });
+    await user.click(submit);
+    const alert = await screen.findByRole('alert');
+    const reveal = alert.parentElement!.parentElement!;
+    await waitFor(() => expect(reveal).toHaveStyle({ opacity: '1' }));
+    const firstMessage = alert.textContent;
+
+    // Controlamos la respuesta HTTP para observar un reintento todavía pendiente.
+    const response = Promise.withResolvers<void>();
+    let requests = 0;
+    server.use(
+      http.post('/api/auth/register', async () => {
+        requests++;
+        await response.promise;
+        return HttpResponse.json({ detail: 'forced error' }, { status: 500 });
+      }),
+    );
+    try {
+      await user.click(submit);
+      await waitFor(() => expect(requests).toBe(1));
+      expect(submit).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('alert')).toBe(alert);
+      expect(reveal).not.toHaveAttribute('inert');
+      expect(reveal).toHaveStyle({ opacity: '1' });
+      for (let i = 0; i < 20; i++) fireEvent.submit(submit.closest('form')!);
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+      expect(requests).toBe(1);
+    } finally {
+      response.resolve();
+    }
+    await waitFor(() => expect(submit).toBeEnabled());
+    expect(screen.getAllByRole('alert')).toEqual([alert]);
+    expect(alert.textContent).not.toBe(firstMessage);
+    server.resetHandlers();
+    await user.click(submit);
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  it('asocia el consentimiento completo al checkbox y permite activarlo desde su texto', async () => {
+    const user = userEvent.setup();
+    mountRegister();
+    const checkbox = await screen.findByRole('checkbox', {
+      name: /^He leído y acepto la Política de privacidad\s*\.$/,
+    });
+
+    await user.click(screen.getByText('He leído y acepto la', { exact: true }));
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toHaveFocus();
   });
 
   it('avisa si falta el consentimiento y registra al aceptarlo', async () => {
@@ -101,12 +159,12 @@ describe('RegisterForm', () => {
 
     // El backend no distingue email de usuario en un 409 → el mensaje cubre ambos.
     expect(await screen.findByText(/email o usuario ya está en uso/i)).toBeInTheDocument();
-    // Regresión: no debe afirmar que es el email (el conflicto pudo ser el usuario).
+    // Regresión. No debe afirmar que es el email (el conflicto pudo ser el usuario).
     expect(screen.queryByText(/Ese email ya está registrado/i)).not.toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
-  it('ante un 422 de validación muestra el mensaje de campo del backend', async () => {
+  it('traduce un error de campo 422 y lo mantiene en el idioma seleccionado', async () => {
     server.use(failRegisterValidation());
     const user = userEvent.setup();
     const { onAuthenticated } = mountRegister();
@@ -115,8 +173,13 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(
-      await screen.findByText(/solo puede contener letras, números, puntos y guiones/i),
+      await screen.findByText('El nombre de usuario contiene un carácter no permitido.'),
     ).toBeInTheDocument();
+    await act(() => i18n.changeLanguage('en'));
+    expect(
+      screen.getByText('The username contains a character that is not allowed.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/El nombre de usuario contiene/)).not.toBeInTheDocument();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
@@ -131,6 +194,7 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText(/no coinciden/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Repite la contraseña')).toHaveFocus();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
@@ -146,10 +210,64 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     expect(await screen.findByText('Ese email no parece válido')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toHaveFocus();
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
+  it('valida al salir del campo y retira los errores al corregirlos', async () => {
+    const user = userEvent.setup();
+    const { onAuthenticated } = mountRegister();
+    const email = await screen.findByLabelText('Email');
+    const password = screen.getByLabelText('Contraseña');
+    const confirm = screen.getByLabelText('Repite la contraseña');
+
+    await user.type(email, 'marta@');
+    expect(email).not.toHaveAttribute('aria-invalid');
+    expect(screen.queryByText('Ese email no parece válido')).not.toBeInTheDocument();
+    await user.type(password, 'a');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(password).not.toHaveAttribute('aria-invalid');
+    await user.click(screen.getAllByRole('button', { name: 'Mostrar contraseña' })[0]!);
+    expect(password).not.toHaveAttribute('aria-invalid');
+    await user.type(confirm, 'ab');
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(confirm).not.toHaveAttribute('aria-invalid');
+    expect(screen.queryByText('Las contraseñas no coinciden')).not.toBeInTheDocument();
+    await user.tab();
+    expect(confirm).not.toHaveAttribute('aria-invalid');
+    await user.tab();
+    expect(confirm).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute('aria-invalid');
+
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
+    expect(email).toHaveFocus();
+    for (const field of [email, password, confirm]) {
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+    }
+    expect(onAuthenticated).not.toHaveBeenCalled();
+
+    await user.type(email, 'example.com');
+    await user.clear(password);
+    await user.type(password, 'claveSegura99');
+    await user.clear(confirm);
+    await user.type(confirm, 'claveSegura99');
+    for (const field of [email, password, confirm]) {
+      expect(field).not.toHaveAttribute('aria-invalid');
+    }
+    await waitFor(() => {
+      expect(screen.queryByText('Ese email no parece válido')).not.toBeInTheDocument();
+      expect(screen.queryByText('Las contraseñas no coinciden')).not.toBeInTheDocument();
+    });
+    expect(confirm).toHaveFocus();
+  });
+
   it('acepta email con espacios alrededor (se recorta) y registra', async () => {
+    const submissions: Promise<unknown>[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).pathname === '/api/auth/register') {
+        submissions.push(request.clone().json());
+      }
+    });
     const user = userEvent.setup();
     const { onAuthenticated } = mountRegister();
     await user.type(await screen.findByLabelText('Email'), '  marta@gmail.com  ');
@@ -160,6 +278,9 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
     await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+    expect(await Promise.all(submissions)).toEqual([
+      expect.objectContaining({ email: 'marta@gmail.com' }),
+    ]);
   });
 
   it('acepta una contraseña de exactamente 12 caracteres (límite inferior)', async () => {
@@ -185,7 +306,8 @@ describe('RegisterForm', () => {
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }));
 
-    expect(await screen.findByText('Mínimo 12 caracteres')).toBeInTheDocument();
+    expect(screen.getByLabelText('Contraseña')).toHaveFocus();
+    expect(screen.getByLabelText('Contraseña')).toHaveAttribute('aria-invalid', 'true');
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 });

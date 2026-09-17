@@ -1,5 +1,6 @@
 """Consultas y escrituras SQL de manuales."""
 
+from collections.abc import Collection
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -18,6 +19,7 @@ from api.manuals.dto import (
     ManualPageImageAsset,
     ManualProcessingPage,
     ManualProcessingStatus,
+    ManualSourceInfo,
     ManualSummary,
     PreparedChunk,
     ReusablePageResult,
@@ -33,6 +35,7 @@ from api.manuals.exceptions import (
 from database.models.asset import Asset
 from database.models.game import Game
 from database.models.manual import Manual, ManualChunk, ManualPage
+from database.models.user import User
 
 REPROCESSABLE_MANUAL_STATUSES = ("active", "pending_review", "failed")
 INDEXED_MANUAL_STATUSES = ("active", "pending_review", "hidden")
@@ -93,6 +96,7 @@ async def create_manual_with_pending_pages(
     game_id: UUID,
     title: str | None,
     visibility: str,
+    anonymous: bool,
     language: str | None,
     source_type: str,
     page_count: int,
@@ -111,6 +115,7 @@ async def create_manual_with_pending_pages(
         status="indexing",
         language=language,
         visibility=visibility,
+        anonymous=anonymous,
         chunks_indexed=0,
     )
     session.add(manual)
@@ -196,10 +201,7 @@ async def find_reusable_page_result(
             ManualPage.source_reused_from_page_id.is_(None),
             ManualPage.ocr_status == "completed",
             ManualPage.text_quality.in_(("ok", "empty")),
-            or_(
-                Manual.owner_user_id == owner_user_id,
-                ((Manual.visibility == "shared") & (Manual.status == "active")),
-            ),
+            _readable_manual_filter(owner_user_id),
         )
         .order_by(ManualPage.updated_at.desc())
         .limit(1)
@@ -239,29 +241,109 @@ async def list_user_manuals(
     return [ManualSummary(**row) for row in result.mappings()]
 
 
-async def get_user_manual_detail(
+async def get_user_manual_summary(
     session: AsyncSession,
     *,
     owner_user_id: UUID,
     manual_id: UUID,
-) -> ManualDetail:
-    """Carga detalle de manual con ownership embebido en la query."""
+) -> ManualSummary:
+    """Lee el resumen solo si el manual pertenece al usuario."""
     result = await session.execute(
         _manual_summary_query(owner_user_id).where(Manual.id == manual_id)
     )
-    summary_row = result.mappings().one_or_none()
-    if summary_row is None:
+    row = result.mappings().one_or_none()
+    if row is None:
         raise ManualNotFoundError
+    return ManualSummary(**row)
 
+
+async def get_readable_manual_detail(
+    session: AsyncSession,
+    *,
+    current_user_id: UUID,
+    manual_id: UUID,
+) -> ManualDetail:
+    """Devuelve las páginas tras comprobar el acceso al manual."""
+    result = await session.execute(
+        _manual_summary_select()
+        .add_columns((Manual.owner_user_id == current_user_id).label("is_own"))
+        .where(
+            Manual.id == manual_id,
+            Manual.deleted_at.is_(None),
+            _readable_manual_filter(current_user_id),
+        )
+    )
+    row = result.mappings().one_or_none()
+    if row is None:
+        raise ManualNotFoundError
     pages_result = await session.execute(
         _manual_page_detail_query()
         .where(ManualPage.manual_id == manual_id)
         .order_by(ManualPage.page_number.asc())
     )
     return ManualDetail(
-        **summary_row,
-        pages=[ManualPageDetail(**row) for row in pages_result.mappings()],
+        **row,
+        pages=[ManualPageDetail(**page) for page in pages_result.mappings()],
     )
+
+
+async def update_user_manual(
+    session: AsyncSession,
+    *,
+    owner_user_id: UUID,
+    manual_id: UUID,
+    title: str | None = None,
+    anonymous: bool | None = None,
+) -> ManualSummary:
+    """Comprueba el propietario al guardar y mantiene anónimos los manuales privados."""
+    values: dict[str, Any] = {}
+    if title is not None:
+        values["title"] = title
+    if anonymous is not None:
+        values["anonymous"] = case((Manual.visibility == "private", True), else_=anonymous)
+    if not values:
+        raise ValueError("Falta indicar qué cambiar en el manual.")
+
+    result = await session.execute(
+        update(Manual)
+        .where(
+            Manual.id == manual_id,
+            Manual.owner_user_id == owner_user_id,
+            Manual.deleted_at.is_(None),
+        )
+        .values(**values)
+        .returning(Manual.id)
+    )
+    if result.scalar_one_or_none() is None:
+        raise ManualNotFoundError
+    return await get_user_manual_summary(
+        session,
+        owner_user_id=owner_user_id,
+        manual_id=manual_id,
+    )
+
+
+async def load_manual_source_info(
+    session: AsyncSession,
+    *,
+    current_user_id: UUID,
+    manual_ids: Collection[UUID],
+) -> dict[UUID, ManualSourceInfo]:
+    """Consulta los datos actuales de los manuales que el usuario puede consultar."""
+    if not manual_ids:
+        return {}
+    result = await session.execute(
+        select(Manual.id, Manual.title, manual_author_name())
+        .join(User, User.id == Manual.owner_user_id)
+        .where(
+            Manual.id.in_(manual_ids),
+            Manual.deleted_at.is_(None),
+            _retrievable_manual_filter(current_user_id),
+        )
+    )
+    return {
+        row.id: ManualSourceInfo(title=row.title, author_name=row.author_name) for row in result
+    }
 
 
 async def get_user_manual_processing_status(
@@ -298,14 +380,14 @@ async def get_user_manual_processing_status(
     )
 
 
-async def get_user_manual_page_image_asset(
+async def get_readable_manual_page_image_asset(
     session: AsyncSession,
     *,
-    owner_user_id: UUID,
+    current_user_id: UUID,
     manual_id: UUID,
     page_number: int,
 ) -> ManualPageImageAsset | None:
-    """Carga la imagen de una página propia sin exponer storage interno."""
+    """Localiza la imagen si el usuario puede consultar el manual."""
     result = await session.execute(
         select(
             Asset.storage_key,
@@ -319,8 +401,8 @@ async def get_user_manual_page_image_asset(
         .join(Manual, Manual.id == ManualPage.manual_id)
         .where(
             Manual.id == manual_id,
-            Manual.owner_user_id == owner_user_id,
             Manual.deleted_at.is_(None),
+            _readable_manual_filter(current_user_id),
             ManualPage.page_number == page_number,
             Asset.kind == "manual_page_image",
             Asset.deleted_at.is_(None),
@@ -865,17 +947,21 @@ async def load_game_retrieval_context(
             de sus manuales, o valores vacíos si no hay manuales autorizados.
     """
     rows = (
-        await session.execute(
-            select(Game.name, Manual.id)
-            .join(Manual, Manual.game_id == Game.id)
-            .where(
-                Manual.game_id == game_id,
-                Manual.deleted_at.is_(None),
-                _retrievable_manual_filter(current_user_id),
+        (
+            await session.execute(
+                select(Game.name, Manual.id)
+                .join(Manual, Manual.game_id == Game.id)
+                .where(
+                    Manual.game_id == game_id,
+                    Manual.deleted_at.is_(None),
+                    _retrievable_manual_filter(current_user_id),
+                )
+                .order_by(Manual.id)
             )
-            .order_by(Manual.id)
         )
-    ).tuples().all()
+        .tuples()
+        .all()
+    )
     if not rows:
         return "", []
     return rows[0][0], [manual_id for _, manual_id in rows]
@@ -902,6 +988,7 @@ async def load_authorized_chunks(
             manual_title=row.manual_title,
             source_page=row.source_page,
             is_own=bool(row.is_own),
+            author_name=row.author_name,
         )
         for row in result
     }
@@ -909,6 +996,14 @@ async def load_authorized_chunks(
     if not ordered:
         raise ManualContextNotFoundError
     return ordered
+
+
+def _readable_manual_filter(current_user_id: UUID) -> ColumnElement[bool]:
+    """Permite leer manuales propios o compartidos activos. No comprueba el borrado."""
+    return or_(
+        Manual.owner_user_id == current_user_id,
+        ((Manual.visibility == "shared") & (Manual.status == "active")),
+    )
 
 
 def _retrievable_manual_filter(current_user_id: UUID) -> ColumnElement[bool]:
@@ -932,6 +1027,22 @@ def _retrievable_manual_filter(current_user_id: UUID) -> ColumnElement[bool]:
     )
 
 
+def manual_author_name() -> ColumnElement[str | None]:
+    """Obtiene el nombre autorizado. La consulta debe unir antes al propietario con User."""
+    return case(
+        (
+            and_(
+                Manual.anonymous.is_(False),
+                Manual.visibility == "shared",
+                User.status == "active",
+                User.deleted_at.is_(None),
+            ),
+            User.username,
+        ),
+        else_=None,
+    ).label("author_name")
+
+
 def _authorized_chunks_query(
     game_id: UUID,
     current_user_id: UUID,
@@ -947,8 +1058,10 @@ def _authorized_chunks_query(
             Manual.title.label("manual_title"),
             ManualChunk.source_page,
             (Manual.owner_user_id == current_user_id).label("is_own"),
+            manual_author_name(),
         )
         .join(Manual, Manual.id == ManualChunk.manual_id)
+        .join(User, User.id == Manual.owner_user_id)
         .where(
             ManualChunk.id.in_(chunk_ids),
             Manual.game_id == game_id,
@@ -958,32 +1071,37 @@ def _authorized_chunks_query(
     )
 
 
+def _manual_summary_select() -> Select[Any]:
+    """Campos del resumen. Cada consulta añade sus filtros de acceso."""
+    return select(
+        Manual.id,
+        Manual.game_id,
+        Game.name.label("game_name"),
+        Manual.title,
+        Manual.status,
+        Manual.visibility,
+        Manual.anonymous,
+        Manual.source_type,
+        Manual.page_count,
+        Manual.language,
+        Manual.chunks_indexed,
+        Manual.created_at,
+        Manual.indexed_at,
+        select(func.count())
+        .select_from(ManualPage)
+        .where(
+            ManualPage.manual_id == Manual.id,
+            ManualPage.source_reused_from_page_id.is_not(None),
+        )
+        .scalar_subquery()
+        .label("duplicate_page_count"),
+    ).join(Game, Game.id == Manual.game_id)
+
+
 def _manual_summary_query(owner_user_id: UUID) -> Select[Any]:
     """Construye el listado base de manuales propios."""
     return (
-        select(
-            Manual.id,
-            Manual.game_id,
-            Game.name.label("game_name"),
-            Manual.title,
-            Manual.status,
-            Manual.visibility,
-            Manual.source_type,
-            Manual.page_count,
-            Manual.language,
-            Manual.chunks_indexed,
-            Manual.created_at,
-            Manual.indexed_at,
-            select(func.count())
-            .select_from(ManualPage)
-            .where(
-                ManualPage.manual_id == Manual.id,
-                ManualPage.source_reused_from_page_id.is_not(None),
-            )
-            .scalar_subquery()
-            .label("duplicate_page_count"),
-        )
-        .join(Game, Game.id == Manual.game_id)
+        _manual_summary_select()
         .where(
             Manual.owner_user_id == owner_user_id,
             Manual.deleted_at.is_(None),
@@ -1031,9 +1149,7 @@ async def list_alive_manual_ids(session: AsyncSession) -> set[UUID]:
     Returns:
         set[UUID]: Identificadores de manuales sin borrado lógico.
     """
-    result = await session.scalars(
-        select(Manual.id).where(Manual.deleted_at.is_(None))
-    )
+    result = await session.scalars(select(Manual.id).where(Manual.deleted_at.is_(None)))
     return set(result)
 
 

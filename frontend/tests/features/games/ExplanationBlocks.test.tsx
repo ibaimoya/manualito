@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { ExplanationBlocks } from '@/features/games/ExplanationBlocks';
 
 const CONTENT = {
@@ -16,6 +17,7 @@ describe('ExplanationBlocks', () => {
         summary="Catan va de construir y comerciar."
         content={{ ...CONTENT, setup: 'Monta el tablero y reparte piezas.' }}
       />,
+      { wrapper: TooltipProvider },
     );
 
     expect(screen.getByText('Catan va de construir y comerciar.')).toBeInTheDocument();
@@ -24,7 +26,9 @@ describe('ExplanationBlocks', () => {
   });
 
   it('muestra completo al cerrar y reabrir un apartado que llegó después', async () => {
-    const { rerender } = render(<ExplanationBlocks summary={null} content={CONTENT} />);
+    const { rerender } = render(<ExplanationBlocks summary={null} content={CONTENT} />, {
+      wrapper: TooltipProvider,
+    });
 
     rerender(
       <ExplanationBlocks

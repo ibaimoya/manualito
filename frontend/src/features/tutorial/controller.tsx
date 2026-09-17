@@ -517,7 +517,9 @@ class TutorialController {
         if (previous) queueMicrotask(() => restoreTarget(previous));
       },
       onHighlighted: (element, _step, options) => {
-        if (element === undefined || options.index === undefined) return;
+        // El fotograma anterior puede terminar mientras React prepara otra vista.
+        if (this.pendingIndex !== null || element === undefined || options.index === undefined)
+          return;
         this.highlighted = { index: options.index, element };
         queueMicrotask(() => this.checkHighlightedTarget());
       },

@@ -42,13 +42,20 @@ const WELCOME_TITLES = ['Inicio', 'Biblioteca', 'Explorar', 'Añade un manual', 
 
 function Fixture({ ids }: Readonly<{ ids: readonly TourTarget[] }>) {
   const [view, setView] = useState<TutorialView>('compare');
-  useTutorialViews('viewer', view, setView, { compare: ['viewer-compare'] });
+  useTutorialViews('viewer', view, setView, { text: ids, compare: ['viewer-compare'] });
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <button type="button">origen</button>
+        <button type="button" data-view={view}>
+          origen
+        </button>
         {ids.map((id) => (
-          <button key={id} type="button" {...tourTarget(id)}>
+          <button
+            key={id}
+            type="button"
+            hidden={id === 'viewer-edit' && view === 'original'}
+            {...tourTarget(id)}
+          >
             {id}
           </button>
         ))}
@@ -72,7 +79,7 @@ const findUnavailable = () => screen.findByText(i18n.t('unavailable.title', { ns
 
 describe('tutorial controller', () => {
   afterEach(() => {
-    tutorial.reset();
+    act(() => tutorial.reset());
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -137,10 +144,8 @@ describe('tutorial controller', () => {
     tutorial.start('welcome');
     await screen.findByRole('dialog', { name: 'Inicio' });
 
-    await act(async () => {
-      fireEvent.keyUp(window, { key: 'ArrowRight' });
-      fireEvent.keyUp(window, { key: 'ArrowRight' });
-    });
+    fireEvent.keyUp(window, { key: 'ArrowRight' });
+    fireEvent.keyUp(window, { key: 'ArrowRight' });
 
     const dialog = await screen.findByRole('dialog', { name: 'Explorar' });
     expect(within(dialog).getByText('3 de 5')).toBeInTheDocument();
@@ -160,6 +165,31 @@ describe('tutorial controller', () => {
     await screen.findByRole('dialog', { name: 'Inicio' });
     await user.click(screen.getByRole('button', { name: 'Cerrar tutorial' }));
     await waitFor(noDialog);
+  });
+
+  it('conserva el siguiente paso si el anterior termina de animarse al cambiar de vista', async () => {
+    // Controlamos los fotogramas y el reloj para reproducir una transición con carga.
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'Date'] });
+    renderFixture([...VIEWER_TARGETS, 'viewer-edit']);
+    tutorial.start('viewer');
+    await screen.findByRole('dialog', { name: 'Páginas' });
+
+    for (const title of ['Buscar en el texto', 'Texto', 'Editar el texto']) {
+      fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+      await act(() => vi.advanceTimersByTimeAsync(128));
+      expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
+    }
+
+    const frame = window.requestAnimationFrame;
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) =>
+      frame(() => frame(callback)),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }));
+    vi.setSystemTime(Date.now() + 300);
+    await act(() => vi.advanceTimersByTimeAsync(256));
+
+    const dialog = screen.getByRole('dialog', { name: 'Original' });
+    expect(within(dialog).getByText('5 de 7')).toBeInTheDocument();
   });
 
   it('devuelve los atributos ARIA del objetivo al soltarlo y al terminar', async () => {

@@ -77,12 +77,12 @@ export function RecoverySymbol({
   retrying,
 }: Readonly<{ kind: RecoveryKind; retrying: boolean }>) {
   const scope = useRecoveryGesture(kind, retrying);
-  const Symbol = symbols[kind];
+  const StatusSymbol = symbols[kind];
 
   return (
     <div ref={scope} className={styles.symbol} data-retrying={retrying} aria-hidden="true">
       <div className={styles.icon}>
-        <Symbol />
+        <StatusSymbol />
       </div>
       <div className={styles.retry}>
         <ArrowsClockwiseIcon size={112} weight="regular" className="motion-safe:animate-spin" />

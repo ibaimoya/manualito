@@ -61,17 +61,17 @@ export const DropdownMenuContent = forwardRef<
           onFocusCapture?.(event);
           if (event.defaultPrevented) return;
           const item = event.target.closest<HTMLElement>('[role="menuitem"]');
-          if (!item || !event.currentTarget.contains(item) || item.hasAttribute('data-disabled')) {
+          if (!item || !event.currentTarget.contains(item) || item.dataset.disabled !== undefined) {
             hideHighlight();
             return;
           }
-          // El foco nativo de Radix decide la opción; solo medimos su fondo.
+          // El foco nativo de Radix decide la opción. Solo medimos su fondo.
           setHighlight({
             x: item.offsetLeft,
             y: item.offsetTop,
             width: item.offsetWidth,
             height: item.offsetHeight,
-            danger: item.hasAttribute('data-danger'),
+            danger: item.dataset.danger !== undefined,
             visible: true,
           });
         }}

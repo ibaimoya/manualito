@@ -1,4 +1,11 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react';
 import { ImagesIcon, CircleNotchIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,7 +35,7 @@ const MAX_SCALE = 4;
 const ZOOM_FACTOR = 1.2;
 const ZOOM_DURATION = 180;
 
-/** El marco conserva su tamaño; solo la imagen participa en los gestos de zoom. */
+/** El marco conserva su tamaño. Solo la imagen participa en los gestos de zoom. */
 export function SourceImageViewer(props: SourceImageViewerProps) {
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
@@ -110,12 +117,29 @@ function SourceImageSession({ imageUrl, title, page }: SourceImageViewerProps) {
     void viewer.setTransform(positionX, positionY, currentScale, 0);
   }, [reducedMotion]);
 
+  const canvasProps = {
+    'data-image-canvas': '',
+    role: 'region',
+    'aria-label': t('image.keyboardHint'),
+    tabIndex: ready ? 0 : -1,
+    onDoubleClick: (event: MouseEvent<HTMLDivElement>) =>
+      zoomTo((controls.current?.state.scale ?? scale) * 1.5, event),
+    onKeyDownCapture: (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (['+', '=', '-', '_'].includes(event.key)) setFitMode('custom');
+      if (event.key === '0') {
+        event.preventDefault();
+        event.stopPropagation();
+        fitImage('page');
+      }
+    },
+  };
+
   return (
     <>
-      <div
-        role="group"
+      <fieldset
         aria-label={t('image.controls')}
-        className="flex h-14 shrink-0 items-center justify-center gap-0.5 border-b border-border bg-bg px-2"
+        className="m-0 flex h-14 min-w-0 shrink-0 items-center justify-center gap-0.5 border-0 border-b border-border bg-bg px-2 py-0"
       >
         <ZoomControl
           kind="zoom-out"
@@ -157,7 +181,7 @@ function SourceImageSession({ imageUrl, title, page }: SourceImageViewerProps) {
           disabled={!ready}
           onClick={() => zoomTo(1)}
         />
-      </div>
+      </fieldset>
 
       <div
         ref={viewport}
@@ -201,23 +225,7 @@ function SourceImageSession({ imageUrl, title, page }: SourceImageViewerProps) {
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 ready && (dragging ? 'cursor-grabbing' : 'cursor-grab'),
               )}
-              wrapperProps={{
-                ...{ 'data-image-canvas': '' },
-                role: 'region',
-                'aria-label': t('image.keyboardHint'),
-                tabIndex: ready ? 0 : -1,
-                onDoubleClick: (event) =>
-                  zoomTo((controls.current?.state.scale ?? scale) * 1.5, event),
-                onKeyDownCapture: (event) => {
-                  if (event.ctrlKey || event.metaKey || event.altKey) return;
-                  if (['+', '=', '-', '_'].includes(event.key)) setFitMode('custom');
-                  if (event.key === '0') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    fitImage('page');
-                  }
-                },
-              }}
+              wrapperProps={canvasProps}
             >
               <img
                 key={attempt}
@@ -269,14 +277,13 @@ function ImageFeedback({
   return (
     <div className="absolute inset-0 grid place-items-center bg-surface p-6 text-center">
       {available && state === 'loading' ? (
-        <div
-          role="status"
+        <output
           aria-label={t('image.loading')}
           className="flex items-center gap-2 text-sm text-fg-2"
         >
           <CircleNotchIcon size={18} className="motion-safe:animate-spin" aria-hidden="true" />
           {t('image.loading')}
-        </div>
+        </output>
       ) : (
         <div className="max-w-xs">
           <ImagesIcon size={30} className="mx-auto mb-4 text-muted" aria-hidden="true" />

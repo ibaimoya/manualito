@@ -143,7 +143,8 @@ function ProcessingError({
   if (error && error !== failure) setFailure(error);
   const notFound = !processingFailed && failure instanceof ApiError && failure.status === 404;
   const offline = !processingFailed && mapApiError(failure).code === 'network';
-  const kind = notFound ? 'not-found' : offline ? 'offline' : 'error';
+  let kind: 'not-found' | 'offline' | 'error' = offline ? 'offline' : 'error';
+  if (notFound) kind = 'not-found';
   const copy = processingFailed
     ? 'failure'
     : ({ 'not-found': 'notFound', offline: 'connection', error: 'load' } as const)[kind];

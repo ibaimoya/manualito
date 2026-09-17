@@ -74,7 +74,8 @@ export function CorrectionText({
     boundaries.add(match.end);
   }
   const points = [...boundaries].sort((a, b) => a - b);
-  const groups: Array<{ correction: OcrLineCorrection | null; nodes: ReactNode[] }> = [];
+  const groups: Array<{ start: number; correction: OcrLineCorrection | null; nodes: ReactNode[] }> =
+    [];
   for (let i = 0; i < points.length - 1; i += 1) {
     const start = points[i]!;
     const end = points[i + 1]!;
@@ -101,13 +102,13 @@ export function CorrectionText({
     }
     const previous = groups.at(-1);
     if (previous?.correction === correction) previous.nodes.push(node);
-    else groups.push({ correction, nodes: [node] });
+    else groups.push({ start, correction, nodes: [node] });
   }
-  return groups.map((group, index) => {
-    if (!group.correction) return <span key={`plain-${index}`}>{group.nodes}</span>;
+  return groups.map((group) => {
+    if (!group.correction) return <span key={group.start}>{group.nodes}</span>;
     const label = correctionLabel(group.correction);
     return (
-      <Tooltip key={`correction-${index}`} content={label} touch>
+      <Tooltip key={group.start} content={label} touch>
         <span
           // El foco permite consultar la corrección sin impedir seleccionar el texto.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex

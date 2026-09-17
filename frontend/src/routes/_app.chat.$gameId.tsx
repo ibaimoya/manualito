@@ -1057,9 +1057,7 @@ function CopyAnswer({ text }: Readonly<{ text: string }>) {
         <CopyIcon size={14} />
         <CheckIcon size={14} className="text-success" />
       </span>
-      <span role="status" className="sr-only">
-        {copied ? t('feedback.copy.success') : ''}
-      </span>
+      <output className="sr-only">{copied ? t('feedback.copy.success') : ''}</output>
     </button>
   );
 }

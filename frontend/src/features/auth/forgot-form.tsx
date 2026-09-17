@@ -25,7 +25,7 @@ export function ForgotForm() {
       }),
   });
   const trimmedEmail = email.trim();
-  const emailError = emailFieldError(trimmedEmail, submitted);
+  const emailError = submitted ? emailFieldError(trimmedEmail) : undefined;
   const requestError = forgot.isError ? mapApiError(forgot.error) : null;
 
   if (forgot.isSuccess) {

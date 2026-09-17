@@ -271,9 +271,6 @@ function ManualDetailLoaded({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const pages = manual.pages;
-  const duplicateCount = manual.is_own
-    ? pages.filter((item) => item.dedup_status === 'reused').length
-    : 0;
   const [activePage, setActivePage] = useState(() => resolveInitialPage(pages, initialPage));
   const [editingPage, setEditingPage] = useState<number | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
@@ -438,7 +435,6 @@ function ManualDetailLoaded({
   );
 
   const title = manual.title ?? manual.game_name;
-  const sourceIsPdf = manual.source_type === 'pdf';
   const activeMatch =
     search.active !== null && search.active.pageNumber === page.page_number
       ? search.active.indexInPage
@@ -457,70 +453,15 @@ function ManualDetailLoaded({
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col" data-testid="manual-workspace">
-        <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3 @3xl/app:gap-5 @3xl/app:px-6">
-          <div className="min-w-36 flex-1">
-            <h1
-              className="hidden truncate font-display text-xl font-extrabold tracking-tight text-fg md:block @3xl/app:text-2xl"
-              title={title}
-            >
-              {title}
-            </h1>
-            <ManualMetaRow
-              createdAt={manual.created_at}
-              sourceIsPdf={sourceIsPdf}
-              pageCount={pages.length}
-              duplicateCount={duplicateCount}
-              sharing={
-                manual.is_own && manual.visibility === 'shared' ? (
-                  <SharingStateButton
-                    anonymous={manual.anonymous}
-                    onClick={() => setAuthorOpen(true)}
-                  />
-                ) : null
-              }
-            />
-          </div>
-          {manual.is_own ? (
-            <div className="flex shrink-0 items-center gap-1" {...tourTarget('viewer-manage')}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-[6px] px-2 font-medium hover:bg-fg/[0.04] pointer-coarse:h-11"
-                disabled={busy || editing}
-                onClick={() => setReprocessOpen(true)}
-              >
-                <ArrowClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
-                {t('workspace.reread')}
-              </Button>
-              <Tooltip content={t('details.rename')}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t('details.rename')}
-                  onClick={() => setRenameOpen(true)}
-                  className="text-fg-3 hover:text-fg"
-                >
-                  <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
-                </Button>
-              </Tooltip>
-              <Tooltip
-                content={editing ? t('buttons.deleteManualDisabled') : t('buttons.deleteManual')}
-                touch={editing}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t('buttons.deleteManual')}
-                  aria-disabled={editing}
-                  onClick={editing ? undefined : () => setDeleteOpen(true)}
-                  className="text-fg-3 aria-[disabled=false]:hover:text-error aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-                >
-                  <TrashIcon size={17} aria-hidden="true" />
-                </Button>
-              </Tooltip>
-            </div>
-          ) : null}
-        </header>
+        <ManualHeader
+          manual={manual}
+          busy={busy}
+          editing={editing}
+          onReprocess={() => setReprocessOpen(true)}
+          onRename={() => setRenameOpen(true)}
+          onDelete={() => setDeleteOpen(true)}
+          onAuthor={() => setAuthorOpen(true)}
+        />
         <div className="flex min-h-0 flex-1 flex-col @4xl/app:grid @4xl/app:grid-cols-[208px_minmax(0,1fr)]">
           <aside className="min-h-0 min-w-0 shrink-0 border-b border-border px-3 py-2 @4xl/app:flex @4xl/app:flex-col @4xl/app:border-b-0 @4xl/app:border-r @4xl/app:py-4">
             <PageThumbRail
@@ -603,14 +544,14 @@ function ManualDetailLoaded({
                   <h2 className="mr-auto truncate text-sm font-semibold">
                     {t('workspace.extractedText')}
                   </h2>
-                  {manual.is_own ? (
+                  {manual.is_own && (
                     <ConfidenceToggle
                       checked={showConfidence}
                       disabled={!hasConfidence || editing || isFailed || isProcessingPage}
                       onToggle={() => setShowConfidence((value) => !value)}
                     />
-                  ) : null}
-                  {canEdit ? (
+                  )}
+                  {canEdit && (
                     <Button
                       ref={editButtonRef}
                       variant="ghost"
@@ -627,7 +568,7 @@ function ManualDetailLoaded({
                       <PencilSimpleIcon data-icon-motion="tilt" size={16} aria-hidden="true" />
                       {t('workspace.edit')}
                     </Button>
-                  ) : null}
+                  )}
                 </div>
                 <PageTextCard
                   key={page.page_number}
@@ -712,6 +653,94 @@ function ManualDetailLoaded({
         </>
       ) : null}
     </>
+  );
+}
+
+function ManualHeader({
+  manual,
+  busy,
+  editing,
+  onReprocess,
+  onRename,
+  onDelete,
+  onAuthor,
+}: Readonly<{
+  manual: ManualDetailResponse;
+  busy: boolean;
+  editing: boolean;
+  onReprocess: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+  onAuthor: () => void;
+}>) {
+  const { t } = useTranslation('manual');
+  const title = manual.title ?? manual.game_name;
+  const sourceIsPdf = manual.source_type === 'pdf';
+  const duplicateCount = manual.is_own
+    ? manual.pages.filter((page) => page.dedup_status === 'reused').length
+    : 0;
+  return (
+    <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3 @3xl/app:gap-5 @3xl/app:px-6">
+      <div className="min-w-36 flex-1">
+        <h1
+          className="hidden truncate font-display text-xl font-extrabold tracking-tight text-fg md:block @3xl/app:text-2xl"
+          title={title}
+        >
+          {title}
+        </h1>
+        <ManualMetaRow
+          createdAt={manual.created_at}
+          sourceIsPdf={sourceIsPdf}
+          pageCount={manual.pages.length}
+          duplicateCount={duplicateCount}
+          sharing={
+            manual.is_own && manual.visibility === 'shared' ? (
+              <SharingStateButton anonymous={manual.anonymous} onClick={onAuthor} />
+            ) : null
+          }
+        />
+      </div>
+      {manual.is_own ? (
+        <div className="flex shrink-0 items-center gap-1" {...tourTarget('viewer-manage')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-[6px] px-2 font-medium hover:bg-fg/[0.04] pointer-coarse:h-11"
+            disabled={busy || editing}
+            onClick={onReprocess}
+          >
+            <ArrowClockwiseIcon data-icon-motion="rotate" size={18} aria-hidden="true" />
+            {t('workspace.reread')}
+          </Button>
+          <Tooltip content={t('details.rename')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('details.rename')}
+              onClick={onRename}
+              className="text-fg-3 hover:text-fg"
+            >
+              <PencilSimpleIcon data-icon-motion="tilt" size={18} aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Tooltip
+            content={editing ? t('buttons.deleteManualDisabled') : t('buttons.deleteManual')}
+            touch={editing}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('buttons.deleteManual')}
+              aria-disabled={editing}
+              onClick={editing ? undefined : onDelete}
+              className="text-fg-3 aria-[disabled=false]:hover:text-error aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+            >
+              <TrashIcon size={17} aria-hidden="true" />
+            </Button>
+          </Tooltip>
+        </div>
+      ) : null}
+    </header>
   );
 }
 

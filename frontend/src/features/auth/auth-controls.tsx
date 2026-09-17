@@ -34,25 +34,17 @@ export function isEmail(value: string): boolean {
   return domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
 }
 
-/** El formulario decide cuándo mostrar el aviso. */
-export function emailFieldError(email: string, showError: boolean): string | undefined {
-  return showError && !isEmail(email)
-    ? i18n.t('validation.email.invalid', { ns: 'auth' })
-    : undefined;
+export function emailFieldError(email: string): string | undefined {
+  return !isEmail(email) ? i18n.t('validation.email.invalid', { ns: 'auth' }) : undefined;
 }
 
-export function passwordTooShortError(password: string, showError: boolean): string | undefined {
-  return showError && password.length < MIN_PASSWORD
+export function passwordTooShortError(password: string): string | undefined {
+  return password.length < MIN_PASSWORD
     ? i18n.t('validation.password.minimum', { ns: 'auth', count: MIN_PASSWORD })
     : undefined;
 }
 
-function confirmPasswordError(
-  confirm: string,
-  password: string,
-  showError: boolean,
-): string | undefined {
-  if (!showError) return undefined;
+function confirmPasswordError(confirm: string, password: string): string | undefined {
   if (confirm.length > 0 && confirm !== password) {
     return i18n.t('validation.confirmPassword.mismatch', { ns: 'auth' });
   }
@@ -181,8 +173,8 @@ export function NewPasswordFields({
   onConfirmChange: (value: string) => void;
 }>) {
   const { t } = useTranslation('auth');
-  const passwordError = passwordTooShortError(password, validation.password);
-  const confirmError = confirmPasswordError(confirm, password, validation.confirm);
+  const passwordError = validation.password ? passwordTooShortError(password) : undefined;
+  const confirmError = validation.confirm ? confirmPasswordError(confirm, password) : undefined;
   return (
     <>
       <AuthField

@@ -14,7 +14,8 @@ export function ManualRecovery({
   const { t: commonT } = useTranslation();
   const missing = query.error instanceof ApiError && query.error.status === 404;
   const empty = query.data !== undefined;
-  const state = missing ? 'missing' : empty ? 'empty' : 'load';
+  let state: 'missing' | 'empty' | 'load' = empty ? 'empty' : 'load';
+  if (missing) state = 'missing';
 
   return (
     <div className="grid min-h-full items-center overflow-y-auto px-6 py-8">

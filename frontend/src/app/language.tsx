@@ -50,7 +50,7 @@ export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>
   const stopTransition = useCallback(() => {
     transitionRef.current?.skipTransition();
     transitionRef.current = null;
-    globalThis.document?.documentElement.removeAttribute('data-language-snapshot');
+    delete globalThis.document?.documentElement.dataset.languageSnapshot;
   }, []);
 
   useLayoutEffect(() => {
@@ -80,7 +80,7 @@ export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>
         update: () => {
           // Solo se desvanece la captura anterior. El contenido nuevo sigue siendo interactivo.
           if (transitionRef.current === transition) {
-            runtimeDocument.documentElement.setAttribute('data-language-snapshot', '');
+            runtimeDocument.documentElement.dataset.languageSnapshot = '';
           }
           flushSync(() => applyToHtml(requestedLanguage.current));
         },
@@ -91,7 +91,7 @@ export function LanguageProvider({ children }: Readonly<{ children: ReactNode }>
       void transition.finished.then(() => {
         if (transitionRef.current === transition) {
           transitionRef.current = null;
-          runtimeDocument.documentElement.removeAttribute('data-language-snapshot');
+          delete runtimeDocument.documentElement.dataset.languageSnapshot;
         }
       });
     },

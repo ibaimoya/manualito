@@ -224,16 +224,7 @@ export function Sidebar({ pathname, user, collapsed = false, onToggle }: Props) 
   );
 }
 
-function NavList({
-  pathname,
-  collapsed,
-  indicatorId,
-  helpOpen,
-  setHelpOpen,
-  highlighted,
-  onOpenFaq,
-  onNavigate,
-}: Readonly<{
+type NavListProps = Readonly<{
   pathname: string;
   collapsed: boolean;
   indicatorId: string;
@@ -242,122 +233,188 @@ function NavList({
   highlighted: string;
   onOpenFaq: () => void;
   onNavigate: () => void;
-}>) {
+}>;
+
+function NavList(props: NavListProps) {
+  return (
+    <ul className="flex flex-1 flex-col gap-1 pb-3">
+      {NAV_ITEMS.map((item) => (
+        <NavigationItem key={item.label} item={item} {...props} />
+      ))}
+    </ul>
+  );
+}
+
+function NavigationItem({
+  item,
+  pathname,
+  collapsed,
+  indicatorId,
+  helpOpen,
+  setHelpOpen,
+  highlighted,
+  onOpenFaq,
+  onNavigate,
+}: NavListProps & Readonly<{ item: NavItem }>) {
   const { t } = useTranslation('shell');
-  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const canAnimate = useMediaQuery(
     '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
   );
 
+  const label = t(item.label);
+  const active = item.kind === 'link' && pathname === item.to;
+  const selected =
+    item.kind === 'help'
+      ? ['help', 'faq', '/about'].includes(highlighted)
+      : highlighted === item.to;
+  const itemClass = cn(
+    'navigation-link relative flex min-h-11 items-center rounded-xl text-sm font-semibold',
+    collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
+    selected ? 'text-primary-700' : 'text-fg-2 hover:text-fg',
+  );
+  const indicator = selected && <NavigationIndicator id={indicatorId} />;
+  const currentPage = active ? 'page' : undefined;
+  const content = (
+    <>
+      <motion.span
+        aria-hidden="true"
+        className="navigation-icon grid h-6 w-6 shrink-0 place-items-center"
+        variants={{
+          static: { transform: 'rotate(0deg) scale(1)', transition: { duration: 0 } },
+          rest: {
+            transform: 'rotate(0deg) scale(1)',
+            transition: { duration: 0.12 },
+          },
+          hover: item.hover ?? {
+            transform: [
+              null,
+              'rotate(-12deg) scale(1)',
+              'rotate(8deg) scale(1)',
+              'rotate(-4deg) scale(1)',
+              'rotate(0deg) scale(1)',
+            ],
+            transition: { duration: 0.32, ease: 'easeInOut' },
+          },
+        }}
+      >
+        <item.icon size={20} weight={active ? 'duotone' : undefined} aria-hidden="true" />
+      </motion.span>
+      <span className={cn(collapsed && 'sr-only')}>{label}</span>
+    </>
+  );
+  let control;
+  if (item.kind === 'link') {
+    control = (
+      <MaybeTip show={collapsed} label={label}>
+        <Link
+          to={item.to}
+          onClick={onNavigate}
+          aria-current={currentPage}
+          {...(item.tour ? tourTarget(item.tour) : {})}
+          className={itemClass}
+        >
+          {indicator}
+          {content}
+        </Link>
+      </MaybeTip>
+    );
+  } else {
+    control = (
+      <HelpNavigation
+        collapsed={collapsed}
+        label={label}
+        className={itemClass}
+        indicator={indicator}
+        open={helpOpen}
+        onOpenChange={setHelpOpen}
+        highlighted={highlighted}
+        onOpenFaq={onOpenFaq}
+      >
+        {content}
+      </HelpNavigation>
+    );
+  }
   return (
-    <ul className="flex flex-1 flex-col gap-1 pb-3">
-      {NAV_ITEMS.map((item) => {
-        const label = t(item.label);
-        const active = item.kind === 'link' && pathname === item.to;
-        const selected =
-          item.kind === 'help'
-            ? ['help', 'faq', '/about'].includes(highlighted)
-            : highlighted === item.to;
-        const itemClass = cn(
-          'navigation-link relative flex min-h-11 items-center rounded-xl text-sm font-semibold',
-          collapsed ? 'justify-center px-0' : 'gap-3 px-3 py-2.5',
-          selected ? 'text-primary-700' : 'text-fg-2 hover:text-fg',
-        );
-        const indicator = selected ? (
-          <motion.span
-            key={reducedMotion ? 'static' : 'animated'}
-            layoutId={reducedMotion ? undefined : indicatorId}
-            initial={false}
-            aria-hidden="true"
-            data-navigation-indicator=""
-            className="pointer-events-none absolute inset-0 -z-10 bg-primary-100"
-            style={{ borderRadius: 12 }}
-            transition={NAVIGATION_SPRING}
-          />
-        ) : null;
-        const content = (
-          <>
-            <motion.span
-              aria-hidden="true"
-              className="navigation-icon grid h-6 w-6 shrink-0 place-items-center"
-              variants={{
-                static: { transform: 'rotate(0deg) scale(1)', transition: { duration: 0 } },
-                rest: {
-                  transform: 'rotate(0deg) scale(1)',
-                  transition: { duration: 0.12 },
-                },
-                hover: item.hover ?? {
-                  transform: [
-                    null,
-                    'rotate(-12deg) scale(1)',
-                    'rotate(8deg) scale(1)',
-                    'rotate(-4deg) scale(1)',
-                    'rotate(0deg) scale(1)',
-                  ],
-                  transition: { duration: 0.32, ease: 'easeInOut' },
-                },
-              }}
-            >
-              <item.icon size={20} weight={active ? 'duotone' : undefined} aria-hidden="true" />
-            </motion.span>
-            <span className={cn(collapsed && 'sr-only')}>{label}</span>
-          </>
-        );
-        return (
-          <motion.li
-            key={item.kind === 'link' ? item.to : item.kind}
-            className={item.kind === 'help' ? 'mt-auto' : undefined}
-            initial={false}
-            animate={canAnimate ? 'rest' : 'static'}
-            whileHover={canAnimate ? 'hover' : undefined}
-          >
-            {item.kind === 'help' && !collapsed ? (
-              <HelpDisclosure
-                className={itemClass}
-                open={helpOpen}
-                onOpenChange={setHelpOpen}
-                indicator={indicator}
-                highlighted={helpOpen && highlighted === 'faq' ? 'faq' : 'help'}
-                onOpenFaq={onOpenFaq}
-              >
-                {content}
-              </HelpDisclosure>
-            ) : item.kind === 'help' ? (
-              <HelpMenu side="top" align="start">
-                <MaybeTip show={collapsed} label={label}>
-                  <HelpMenuTrigger asChild>
-                    <button
-                      type="button"
-                      {...tourTarget('nav-help')}
-                      className={cn(
-                        itemClass,
-                        'w-full text-left data-[state=open]:bg-primary-100 data-[state=open]:text-primary-700',
-                      )}
-                    >
-                      {indicator}
-                      {content}
-                    </button>
-                  </HelpMenuTrigger>
-                </MaybeTip>
-              </HelpMenu>
-            ) : (
-              <MaybeTip show={collapsed} label={label}>
-                <Link
-                  to={item.to}
-                  onClick={onNavigate}
-                  aria-current={active ? 'page' : undefined}
-                  {...(item.tour ? tourTarget(item.tour) : {})}
-                  className={itemClass}
-                >
-                  {indicator}
-                  {content}
-                </Link>
-              </MaybeTip>
+    <motion.li
+      className={item.kind === 'help' ? 'mt-auto' : undefined}
+      initial={false}
+      animate={canAnimate ? 'rest' : 'static'}
+      whileHover={canAnimate ? 'hover' : undefined}
+    >
+      {control}
+    </motion.li>
+  );
+}
+
+function NavigationIndicator({ id }: Readonly<{ id: string }>) {
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  return (
+    <motion.span
+      key={reducedMotion ? 'static' : 'animated'}
+      layoutId={reducedMotion ? undefined : id}
+      initial={false}
+      aria-hidden="true"
+      data-navigation-indicator=""
+      className="pointer-events-none absolute inset-0 -z-10 bg-primary-100"
+      style={{ borderRadius: 12 }}
+      transition={NAVIGATION_SPRING}
+    />
+  );
+}
+
+function HelpNavigation({
+  collapsed,
+  label,
+  className,
+  indicator,
+  open,
+  onOpenChange,
+  highlighted,
+  onOpenFaq,
+  children,
+}: Readonly<{
+  collapsed: boolean;
+  label: string;
+  className: string;
+  indicator: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  highlighted: string;
+  onOpenFaq: () => void;
+  children: ReactNode;
+}>) {
+  if (!collapsed) {
+    return (
+      <HelpDisclosure
+        className={className}
+        open={open}
+        onOpenChange={onOpenChange}
+        indicator={indicator}
+        highlighted={open && highlighted === 'faq' ? 'faq' : 'help'}
+        onOpenFaq={onOpenFaq}
+      >
+        {children}
+      </HelpDisclosure>
+    );
+  }
+  return (
+    <HelpMenu side="top" align="start">
+      <Tooltip content={label} side="right">
+        <HelpMenuTrigger asChild>
+          <button
+            type="button"
+            {...tourTarget('nav-help')}
+            className={cn(
+              className,
+              'w-full text-left data-[state=open]:bg-primary-100 data-[state=open]:text-primary-700',
             )}
-          </motion.li>
-        );
-      })}
-    </ul>
+          >
+            {indicator}
+            {children}
+          </button>
+        </HelpMenuTrigger>
+      </Tooltip>
+    </HelpMenu>
   );
 }
 

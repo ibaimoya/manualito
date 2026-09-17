@@ -124,6 +124,7 @@
   text-align: left;
 }
 .retryNotice {
+  display: block;
   margin-top: 16px;
   color: var(--m-text-2);
   font-size: 14px;

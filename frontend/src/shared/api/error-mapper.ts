@@ -45,11 +45,8 @@ function translateView(key: CopyKey, params: ErrorParams = {}) {
 
 export function mapHttpStatus(status: number, code = `http.${status}`): ApiErrorView {
   const statusKey = String(status);
-  const key = Object.hasOwn(messages.http, statusKey)
-    ? (statusKey as HttpKey)
-    : status >= 400 && status < 500
-      ? 'client'
-      : 'server';
+  let key: HttpKey = status >= 400 && status < 500 ? 'client' : 'server';
+  if (Object.hasOwn(messages.http, statusKey)) key = statusKey as HttpKey;
 
   return {
     ...translateView(`http.${key}`),

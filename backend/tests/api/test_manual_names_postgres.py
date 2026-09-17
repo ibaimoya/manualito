@@ -222,7 +222,8 @@ async def test_propietario_cambia_solo_nombre_o_solo_anonimato(world: NamesWorld
     assert (attributed.title, attributed.anonymous) == ("Título nuevo", False)
     assert (row.title, row.anonymous, row.status) == ("Título nuevo", False, "active")
     assert row.indexed_at == manual.indexed_at
-    assert pool_before is not None and pool_after is not None
+    assert pool_before is not None
+    assert pool_after is not None
     assert pool_after.source_fingerprint == pool_before.source_fingerprint
 
 
@@ -246,20 +247,18 @@ async def test_manual_privado_sigue_anonimo_aunque_se_pida_lo_contrario(world: N
 @pytest.mark.anyio
 async def test_ajeno_y_borrado_no_se_pueden_editar(world: NamesWorld):
     manual = await _seed_manual(world, title="Del propietario", visibility="shared")
+    reader = _auth(world.reader)
+    owner = _auth(world.owner)
 
     async with world.sessions() as session:
         with pytest.raises(ManualNotFoundError):
-            await update_manual(
-                session, auth=_auth(world.reader), manual_id=manual.id, title="Robado"
-            )
+            await update_manual(session, auth=reader, manual_id=manual.id, title="Robado")
 
     async with world.sessions() as session:
         await delete_manual(session, auth=_auth(world.owner), manual_id=manual.id)
     async with world.sessions() as session:
         with pytest.raises(ManualNotFoundError):
-            await update_manual(
-                session, auth=_auth(world.owner), manual_id=manual.id, anonymous=False
-            )
+            await update_manual(session, auth=owner, manual_id=manual.id, anonymous=False)
 
     async with world.sessions() as session:
         title = await session.scalar(select(Manual.title).where(Manual.id == manual.id))
@@ -575,7 +574,8 @@ async def test_explicacion_cacheada_muestra_titulo_y_autor_vigentes(world: Names
             session, game_id=world.game.id, current_user_id=world.reader.id
         )
 
-    assert for_reader.sections is not None and for_owner.sections is not None
+    assert for_reader.sections is not None
+    assert for_owner.sections is not None
     reader_source = for_reader.sections["summary"].sources[0]
     owner_source = for_owner.sections["summary"].sources[0]
     assert (reader_source.manual_title, reader_source.author_name, reader_source.is_own) == (
@@ -625,7 +625,8 @@ async def test_la_explicacion_generada_no_persiste_el_username(world: NamesWorld
         snapshot = await get_game_explanation(
             session, game_id=world.game.id, source_fingerprint=pool.source_fingerprint
         )
-    assert snapshot is not None and snapshot.status == "ready"
+    assert snapshot is not None
+    assert snapshot.status == "ready"
     for section in snapshot.sections.values():
         assert isinstance(section, dict)
         assert section["sources"] == [

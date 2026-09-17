@@ -40,7 +40,7 @@ export function RegisterForm({ onAuthenticated }: Readonly<{ onAuthenticated: ()
   const reviewField = (field: keyof typeof reviewed) => {
     setReviewed((previous) => (previous[field] ? previous : { ...previous, [field]: true }));
   };
-  const emailError = emailFieldError(email.trim(), submitted || reviewed.email);
+  const emailError = submitted || reviewed.email ? emailFieldError(email.trim()) : undefined;
   const usernameError =
     (submitted || reviewed.username) && username.trim().length === 0
       ? t('validation.username.required')
@@ -221,7 +221,7 @@ function ConsentField({
           <button type="button" onClick={onShowPrivacy} className={styles.textLink}>
             {t('consent.privacy')}
           </button>
-          .
+          {'.'}
         </span>
       </div>
       <FieldFeedback id={`${id}-feedback`} error={error ? t('consent.required') : undefined} />

@@ -452,7 +452,8 @@ function HubError({
   if (error && error !== failure) setFailure(error);
   const notFound = failure instanceof ApiError && failure.status === 404;
   const offline = mapApiError(failure).code === 'network';
-  const kind = notFound ? 'not-found' : offline ? 'offline' : 'error';
+  let kind: 'not-found' | 'offline' | 'error' = offline ? 'offline' : 'error';
+  if (notFound) kind = 'not-found';
   const copy = ({ 'not-found': 'notFound', offline: 'connection', error: 'load' } as const)[kind];
   return (
     <div className="grid min-h-[60dvh] items-center px-6 py-8">

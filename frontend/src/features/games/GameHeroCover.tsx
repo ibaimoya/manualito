@@ -8,7 +8,10 @@ const MAX_TILT = 7;
 export const GAME_HERO_COVER_CLASS =
   'size-[var(--hero-cover-size)] [--hero-cover-size:104px] @2xl/app:[--hero-cover-size:136px]';
 
-export function GameHeroCover({ name, processing }: { name: string; processing: boolean }) {
+export function GameHeroCover({
+  name,
+  processing,
+}: Readonly<{ name: string; processing: boolean }>) {
   const canTilt = useMediaQuery(
     '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
   );

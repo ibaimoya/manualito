@@ -72,9 +72,7 @@ export function RecoveryPage({
             </Button>
           </div>
           {retryFailed && (
-            <p role="status" className={styles.retryNotice}>
-              {t('recovery.retryFailed')}
-            </p>
+            <output className={styles.retryNotice}>{t('recovery.retryFailed')}</output>
           )}
           {import.meta.env.DEV && message && (
             <details className={styles.details}>

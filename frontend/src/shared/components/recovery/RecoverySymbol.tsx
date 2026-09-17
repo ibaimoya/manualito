@@ -70,22 +70,19 @@ function SearchSymbol() {
   );
 }
 
+const symbols = { offline: SignalSymbol, 'not-found': SearchSymbol, error: AlertSymbol };
+
 export function RecoverySymbol({
   kind,
   retrying,
 }: Readonly<{ kind: RecoveryKind; retrying: boolean }>) {
   const scope = useRecoveryGesture(kind, retrying);
+  const Symbol = symbols[kind];
 
   return (
     <div ref={scope} className={styles.symbol} data-retrying={retrying} aria-hidden="true">
       <div className={styles.icon}>
-        {kind === 'offline' ? (
-          <SignalSymbol />
-        ) : kind === 'not-found' ? (
-          <SearchSymbol />
-        ) : (
-          <AlertSymbol />
-        )}
+        <Symbol />
       </div>
       <div className={styles.retry}>
         <ArrowsClockwiseIcon size={112} weight="regular" className="motion-safe:animate-spin" />

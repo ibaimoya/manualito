@@ -321,7 +321,8 @@ export const api = {
     signal?: AbortSignal,
   ): Promise<GameSearchResponse> {
     const query = new URLSearchParams(excludedGameIds.map((id) => ['exclude_game_ids', id]));
-    return request<GameSearchResponse>(`/games/discover${query.size ? `?${query}` : ''}`, {
+    const path = query.size ? `/games/discover?${query}` : '/games/discover';
+    return request<GameSearchResponse>(path, {
       method: 'GET',
       timeoutMs: TIMEOUT.QUICK,
       signal,

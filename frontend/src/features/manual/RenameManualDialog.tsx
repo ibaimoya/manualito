@@ -62,8 +62,9 @@ function RenameManualForm({
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (saving) return;
-    const problem =
-      trimmed.length === 0 ? 'empty' : trimmed.length > MANUAL_TITLE_MAX ? 'tooLong' : null;
+    let problem: FieldError | null = null;
+    if (trimmed.length === 0) problem = 'empty';
+    else if (trimmed.length > MANUAL_TITLE_MAX) problem = 'tooLong';
     if (problem !== null) {
       setError(problem);
       inputRef.current?.focus();

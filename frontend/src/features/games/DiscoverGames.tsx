@@ -63,15 +63,14 @@ export function DiscoverGames({
       <SkeletonSwap
         pending={isPending}
         skeleton={
-          <div
-            role="status"
+          <output
             aria-label={t('discovery.loading')}
             className="grid gap-3 @2xl/app:grid-cols-2 @4xl/app:grid-cols-3"
           >
             {[0, 1, 2].map((index) => (
-              <div key={index} className="h-[90px] animate-pulse rounded-2xl bg-surface" />
+              <span key={index} className="block h-[90px] animate-pulse rounded-2xl bg-surface" />
             ))}
-          </div>
+          </output>
         }
       >
         {games.length > 0 && (

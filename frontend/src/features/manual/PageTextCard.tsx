@@ -141,11 +141,8 @@ function EditBox({
   const empty = draft.trim().length === 0;
   const valid = !empty && !tooLong;
   const canSave = dirty && valid && !locked;
-  const message = tooLong
-    ? t('text.tooLong', { max: formatCount(PAGE_TEXT_MAX) })
-    : empty
-      ? t('text.emptyDraft')
-      : t('text.editingHint');
+  let message = empty ? t('text.emptyDraft') : t('text.editingHint');
+  if (tooLong) message = t('text.tooLong', { max: formatCount(PAGE_TEXT_MAX) });
 
   useLayoutEffect(() => {
     const textarea = draftRef.current;
@@ -362,12 +359,16 @@ export function PageTextCard({
           {unavailable ? (
             <EmptyPageContent status={status} />
           ) : (
-            page.ocr_lines.map((line, index) => {
+            page.ocr_lines.map((line) => {
               const lineOffset = offset;
               const tone = line.confidence == null ? null : confidenceTone(line.confidence).tone;
               offset += line.text.length + 1;
               return (
-                <div key={index} data-text-offset={lineOffset} className="relative min-h-[1lh]">
+                <div
+                  key={lineOffset}
+                  data-text-offset={lineOffset}
+                  className="relative min-h-[1lh]"
+                >
                   <p className="min-h-[1lh]">
                     {/* La tinta sigue cada tramo sin añadir espacio ni cambiar sus saltos. */}
                     <span

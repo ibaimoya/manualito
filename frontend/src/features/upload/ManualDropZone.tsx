@@ -21,7 +21,9 @@ export function ManualDropZone({
   const content = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number>();
   const reduceMotion = useReducedMotion();
-  const title = busy ? t('drop.busy') : disabled ? t('drop.chooseGame') : t('drop.release');
+  let title = t('drop.release');
+  if (disabled) title = t('drop.chooseGame');
+  if (busy) title = t('drop.busy');
 
   useLayoutEffect(() => {
     const element = content.current;

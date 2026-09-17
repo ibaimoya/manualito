@@ -6,6 +6,7 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 import { createElement, useMemo } from 'react';
+import type { ParseKeys } from 'i18next';
 import { toast } from 'sonner';
 import {
   api,
@@ -173,12 +174,10 @@ export function useUpdateManualDetails(manualId: string) {
         old?.map((manual) => (manual.id === summary.id ? { ...manual, ...summary } : manual)),
       );
       patchCachedSources(qc, summary);
-      const i18nKey =
-        input.anonymous === undefined
-          ? 'feedback.details.renamed'
-          : input.anonymous
-            ? 'feedback.details.hidden'
-            : 'feedback.details.shown';
+      let i18nKey: ParseKeys<'manual'> = input.anonymous
+        ? 'feedback.details.hidden'
+        : 'feedback.details.shown';
+      if (input.anonymous === undefined) i18nKey = 'feedback.details.renamed';
       toast.success(createElement(LiveTrans, { ns: 'manual', i18nKey }), {
         id: 'manual-details',
       });

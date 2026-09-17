@@ -42,6 +42,7 @@ import { DuplicatePagesBadge } from '@/features/manual/DuplicatePagesBadge';
 import { ManualThumbnail } from '@/features/manual/ManualThumbnail';
 import { HelpMenuButton } from '@/features/tutorial/HelpMenu';
 import { tourTarget } from '@/features/tutorial/targets';
+import type { TourTarget } from '@/features/tutorial/types';
 import { useTutorialViews } from '@/features/tutorial/views';
 import { Spinner } from '@/components/ui/spinner';
 import { type ManualStatus, type ManualSummary } from '@/shared/api/client';
@@ -85,18 +86,16 @@ function HistoryScreen() {
 
   const gameItems = games.data?.games ?? [];
   const manualItems = manuals.data ?? [];
+  const manualTargets: TourTarget[] =
+    manualItems.length > 0 ? ['library-search'] : ['library-empty'];
+  if (filterManuals(manualItems, manualQuery).length > 0) manualTargets.push('library-manual-card');
   useTutorialViews(
     'library',
     view,
     setView,
     {
       games: gameItems.length > 0 ? ['library-search', 'library-game-card'] : ['library-empty'],
-      manuals:
-        manualItems.length === 0
-          ? ['library-empty']
-          : filterManuals(manualItems, manualQuery).length > 0
-            ? ['library-search', 'library-manual-card']
-            : ['library-search'],
+      manuals: manualTargets,
     },
     !games.isPending && !manuals.isPending,
   );

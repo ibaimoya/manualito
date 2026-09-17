@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SourceImageViewer } from '@/features/manual/SourceImageViewer';
 import type { ManualDetailPage } from '@/shared/api/client';
@@ -18,7 +18,72 @@ const page: ManualDetailPage = {
   ocr_lines: [{ text: 'Reparte las cartas.', confidence: 0.98 }],
 };
 
+afterEach(() => vi.restoreAllMocks());
+
+function openMeasuredImage() {
+  // jsdom no calcula tamaños. El visor y sus controles de zoom se ejecutan sin sustituirlos.
+  const matchMedia = window.matchMedia.bind(window);
+  vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+    ...matchMedia(query),
+    matches: query === '(prefers-reduced-motion: reduce)',
+  }));
+  render(<SourceImageViewer imageUrl="/page-1.png" title="Cartas" page={page} />, {
+    wrapper: TooltipProvider,
+  });
+  const canvas = screen.getByRole('region');
+  const image = screen.getByRole('img', { name: 'Página 1 de Cartas' });
+  Object.defineProperties(canvas, {
+    clientWidth: { configurable: true, value: 800 },
+    clientHeight: { configurable: true, value: 600 },
+  });
+  Object.defineProperties(image.parentElement!, {
+    offsetWidth: { configurable: true, value: 800 },
+    offsetHeight: { configurable: true, value: 1200 },
+  });
+  fireEvent.load(image);
+  return { canvas, zoom: screen.getByRole('status', { name: 'Zoom de imagen' }) };
+}
+
 describe('imagen original del manual', () => {
+  it('ajusta la página, el ancho y el tamaño original con el visor real', async () => {
+    const user = userEvent.setup();
+    const { zoom } = openMeasuredImage();
+    await waitFor(() => expect(zoom).toHaveTextContent('50%'));
+    await user.click(screen.getByRole('button', { name: 'Ajustar al ancho' }));
+    expect(zoom).toHaveTextContent('100%');
+    expect(screen.getByRole('button', { name: 'Ajustar al ancho' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await user.click(screen.getByRole('button', { name: 'Acercar imagen' }));
+    expect(zoom).toHaveTextContent('120%');
+    expect(screen.getByRole('button', { name: 'Ajustar al ancho' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await user.click(screen.getByRole('button', { name: 'Alejar imagen' }));
+    expect(zoom).toHaveTextContent('100%');
+    await user.click(screen.getByRole('button', { name: 'Página completa' }));
+    expect(zoom).toHaveTextContent('50%');
+    await user.click(screen.getByRole('button', { name: 'Tamaño real' }));
+    expect(zoom).toHaveTextContent('100%');
+  });
+
+  it('amplía con doble clic y recupera el encuadre con el teclado', async () => {
+    const { canvas, zoom } = openMeasuredImage();
+    await waitFor(() => expect(zoom).toHaveTextContent('50%'));
+    fireEvent.doubleClick(canvas, { clientX: 200, clientY: 150 });
+    expect(zoom).toHaveTextContent('75%');
+    fireEvent.keyDown(canvas, { key: '0', ctrlKey: true });
+    expect(zoom).toHaveTextContent('75%');
+    fireEvent.keyDown(canvas, { key: '0' });
+    expect(zoom).toHaveTextContent('50%');
+    expect(screen.getByRole('button', { name: 'Página completa' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   it('mantiene los controles deshabilitados hasta que la imagen está disponible', () => {
     const { container } = render(
       <SourceImageViewer imageUrl="/page-1.png" title="Cartas" page={page} />,

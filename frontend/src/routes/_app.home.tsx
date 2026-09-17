@@ -78,10 +78,8 @@ function HomeScreen() {
               onRetry={() => void manuals.refetch()}
               retrying={manuals.isFetching}
             />
-          ) : recentManuals.length > 0 ? (
-            <RecentManuals manuals={recentManuals} />
           ) : (
-            <EmptyRecents />
+            <ManualActivity manuals={recentManuals} />
           )}
         </SkeletonSwap>
       </div>
@@ -91,6 +89,10 @@ function HomeScreen() {
       )}
     </div>
   );
+}
+
+function ManualActivity({ manuals }: Readonly<{ manuals: ManualSummary[] }>) {
+  return manuals.length > 0 ? <RecentManuals manuals={manuals} /> : <EmptyRecents />;
 }
 
 function HeroCta() {

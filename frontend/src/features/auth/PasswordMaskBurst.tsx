@@ -19,8 +19,8 @@ function measureMask(input: HTMLInputElement): MaskGeometry | null {
   const spacing = metrics.width;
   const baseline =
     input.offsetHeight / 2 + (metrics.fontBoundingBoxAscent - metrics.fontBoundingBoxDescent) / 2;
-  const left = parseFloat(style.paddingLeft) + input.clientLeft;
-  const right = parseFloat(style.paddingRight) + input.clientLeft;
+  const left = Number.parseFloat(style.paddingLeft) + input.clientLeft;
+  const right = Number.parseFloat(style.paddingRight) + input.clientLeft;
   const width = input.offsetWidth - left - right;
   const first = Math.floor(input.scrollLeft / spacing);
   const count = Math.min(input.value.length - first, Math.ceil(width / spacing) + 1);
@@ -71,7 +71,7 @@ export function PasswordMaskBurst({
         strokeLinecap="round"
       >
         {positions.map((x, index) => (
-          <g key={index} transform={`translate(${x} ${center})`}>
+          <g key={x} transform={`translate(${x} ${center})`}>
             <motion.circle
               r={radius}
               fill="currentColor"

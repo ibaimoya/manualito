@@ -5,8 +5,6 @@ import { useAuth } from './use-auth';
 import { useResendVerification } from './use-resend-verification';
 
 const DISMISS_KEY = 'manualito.verifyBanner.dismissed';
-// Mailpit captura cualquier correo saliente; su UI vive en el 8025 (compose.yaml).
-const MAILPIT_URL = import.meta.env.VITE_MAILPIT_URL || 'http://localhost:8025';
 
 function readDismissed(): boolean {
   try {
@@ -16,15 +14,12 @@ function readDismissed(): boolean {
   }
 }
 
-/**
- * Aviso soft (no bloqueante) para verificar el email. Se autogestiona: no
- * renderiza si hay verificación, no hay sesión o se descartó esta sesión.
- */
 export function VerifyEmailBanner() {
   const { t } = useTranslation('shell');
   const { user } = useAuth();
   const [dismissed, setDismissed] = useState(readDismissed);
   const { cooldown, resend } = useResendVerification(user?.email ?? '');
+  const mailpitUrl = import.meta.env.VITE_MAILPIT_URL?.trim();
 
   if (!user) return null;
   if (user.email_verified_at !== null || dismissed) return null;
@@ -34,7 +29,7 @@ export function VerifyEmailBanner() {
     try {
       globalThis.sessionStorage?.setItem(DISMISS_KEY, '1');
     } catch {
-      /* almacenamiento no disponible: se descarta solo en memoria */
+      // Sin almacenamiento, el aviso queda descartado durante esta visita.
     }
   };
   return (
@@ -48,18 +43,17 @@ export function VerifyEmailBanner() {
         <p className="min-w-0 flex-1 text-fg">{t('banner.message')}</p>
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-3">
-        <a
-          href={MAILPIT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent hover:underline"
-        >
-          {t('banner.openMail')}
-          <ArrowSquareOutIcon size={13} aria-hidden="true" />
-        </a>
-        <span aria-hidden="true" className="text-fg-3">
-          ·
-        </span>
+        {mailpitUrl && (
+          <a
+            href={mailpitUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-accent hover:underline"
+          >
+            {t('banner.openMail')}
+            <ArrowSquareOutIcon size={13} aria-hidden="true" />
+          </a>
+        )}
         {cooldown > 0 ? (
           <span className="text-xs font-semibold text-fg-3">
             {t('banner.resent', { seconds: cooldown })}

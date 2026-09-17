@@ -37,7 +37,14 @@ configuración. El modo `--use-recommended` selecciona Mailpit.
 El Compose base utiliza Mailpit. El archivo adicional
 [`compose/mail/resend.yaml`](compose/mail/resend.yaml) configura Resend para
 la API y `celery-worker-mail`, establece `https://app.manualito.dev` como URL
-pública y deja Mailpit en el perfil opcional `local-mail`.
+pública y mantiene Mailpit con cero contenedores. Al cambiar desde Mailpit,
+Compose detiene y retira su contenedor durante el siguiente arranque.
+
+El frontend muestra «Abrir mi correo» solo si `VITE_MAILPIT_URL` tiene una
+dirección. Compose pasa esa variable a la compilación y la deja vacía con
+Resend. Después de cambiar el proveedor, hay que ejecutar `setup` para
+reconstruir el frontend y después `start`. Con `pnpm dev`, la variable se
+puede dejar vacía en el entorno para ocultar también el enlace.
 
 Al seleccionar Resend, los scripts incluyen ese archivo al construir el
 comando de Compose. La presencia del túnel de Cloudflare no modifica el

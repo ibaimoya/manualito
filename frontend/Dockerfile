@@ -24,6 +24,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 COPY --link . .
 
+ARG VITE_MAILPIT_URL=""
+
 RUN pnpm build
 
 # Stage: runtime.

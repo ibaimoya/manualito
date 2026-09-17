@@ -6,13 +6,7 @@ import { dirname, resolve } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-/**
- * Vitest config — separado de vite.config.ts porque Vite 8 ya no permite
- * `test` inline en defineConfig.
- *
- * Solo carga el plugin de React (no Tailwind, no Router, no PWA).
- * Más rápido en startup y evita generar artefactos al correr tests.
- */
+// Los tests no necesitan generar rutas, estilos ni el service worker.
 export default defineConfig({
   plugins: [react()],
   // Resolver la variante de navegador de NumberFlow en jsdom, sin sustituir el componente.
@@ -29,6 +23,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Los recorridos completos y axe necesitan más margen con cobertura en runners compartidos.
+    testTimeout: process.env.CI ? 15_000 : 5_000,
     setupFiles: ['./tests/_helpers/setup.ts'],
     // Glob explícito porque los tests ya no viven dentro de src/.
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],

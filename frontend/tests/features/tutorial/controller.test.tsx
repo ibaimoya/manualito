@@ -1,6 +1,6 @@
 // Driver es real. Estos objetivos mínimos prueban su ciclo de vida. La geometría se comprueba en el navegador.
 import '@tests/features/tutorial/jsdom-visibility';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { useTutorialViews } from '@/features/tutorial/views';
 import type { TutorialView } from '@/features/tutorial/types';
@@ -130,6 +130,20 @@ describe('tutorial controller', () => {
     expect(document.querySelector('.driver-active-element')).toBeNull();
     expect(origin).toHaveFocus();
     expect(tutorial.activeTour()).toBeNull();
+  });
+
+  it('conserva dos avances recibidos antes de colocar el siguiente paso', async () => {
+    renderFixture();
+    tutorial.start('welcome');
+    await screen.findByRole('dialog', { name: 'Inicio' });
+
+    await act(async () => {
+      fireEvent.keyUp(window, { key: 'ArrowRight' });
+      fireEvent.keyUp(window, { key: 'ArrowRight' });
+    });
+
+    const dialog = await screen.findByRole('dialog', { name: 'Explorar' });
+    expect(within(dialog).getByText('3 de 5')).toBeInTheDocument();
   });
 
   it('Escape cierra sin confirmación y la X también', async () => {

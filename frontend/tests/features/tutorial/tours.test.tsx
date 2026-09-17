@@ -195,7 +195,8 @@ describe('recorridos por pantalla', () => {
     }
     expect(otherTab).toBeChecked();
     await user.click(screen.getByRole('button', { name: 'Anterior' }));
-    await waitFor(() => expect(initialTab).toBeChecked());
+    await screen.findByRole('dialog', { name: steps.at(-2) });
+    expect(initialTab).toBeChecked();
     await user.click(await screen.findByRole('button', { name: 'Siguiente' }));
     await screen.findByRole('dialog', { name: other });
     expect(otherTab).toBeChecked();

@@ -199,6 +199,7 @@ class TutorialController {
   private aria: AriaSnapshot | null = null;
   private starting: TourId | null = null;
   private navigation = 0;
+  private pendingIndex: number | null = null;
   private restoreView: (() => void) | null = null;
   private cancelWait: (() => void) | null = null;
   private returnFocus: HTMLElement | null = null;
@@ -271,6 +272,7 @@ class TutorialController {
     this.generation += 1;
     this.starting = null;
     this.navigation += 1;
+    this.pendingIndex = null;
     this.origin = null;
     this.highlighted = null;
     this.popover = null;
@@ -420,7 +422,7 @@ class TutorialController {
   private advance(direction: number): void {
     const active = this.active;
     if (!active) return;
-    const index = (active.driver.getActiveIndex() ?? 0) + direction;
+    const index = (this.pendingIndex ?? active.driver.getActiveIndex() ?? 0) + direction;
     if (index < 0) return;
     if (index >= active.plan.length) {
       this.end(true);
@@ -447,6 +449,7 @@ class TutorialController {
       await this.moveTo(active, index + direction, navigation, direction);
       return;
     }
+    this.pendingIndex = index;
     const ready = await this.prepareStep(active.id, step);
     if (active !== this.active || navigation !== this.navigation) return;
     if (!ready) {
@@ -456,6 +459,7 @@ class TutorialController {
     const target = findTourTarget(step.target);
     if (target) positionTarget(target, false);
     active.driver.moveTo(index);
+    this.pendingIndex = null;
   }
 
   private buildConfig(spec: TourSpec, plan: readonly TourStepSpec[]): Config {

@@ -1,0 +1,1466 @@
+---
+title: Especificación de Requisitos
+description: La especificación de requisitos define el comportamiento y las condiciones de calidad de Manualito.
+sidebar:
+  order: 2
+---
+
+import Figura from '../../../components/Figura.astro';
+import umlGeneral from '../../../assets/anexos/especificacion-de-requisitos/uml-general.svg';
+import umlGlobal from '../../../assets/anexos/especificacion-de-requisitos/uml-global.svg';
+
+## Introducción
+
+La especificación de requisitos permite definir qué debe hacer un sistema y las condiciones que debe cumplir. Además de delimitar el alcance del proyecto, sirve como referencia para comprobar que las funcionalidades previstas se han implementado.
+
+En este proyecto, la especificación se organiza a partir de los **objetivos generales**, el **catálogo de requisitos**, los **casos de uso** y la **trazabilidad** entre estos elementos.
+
+La especificación toma como referencia la norma **ISO/IEC/IEEE 29148:2018** [[80](https://www.iso.org/standard/72089.html)], que define los procesos y contenidos asociados a la ingeniería de requisitos. Los requisitos de calidad se organizan a partir del modelo de calidad de producto propuesto por **ISO/IEC 25010:2023** [[81](https://www.iso.org/standard/78176.html)]. Para hacer verificables estos requisitos, se utiliza el marco definido por **ISO/IEC 25030:2019** [[82](https://www.iso.org/standard/72116.html)]. Las tres normas en conjunto se han aplicado de forma adaptada al alcance académico y técnico del proyecto.
+
+Como apoyo a la redacción, también se ha utilizado la lista de comprobación publicada por la NASA, que recoge criterios prácticos para que cada requisito sea claro, sencillo y verificable [[83](https://www.nasa.gov/reference/appendix-c-how-to-write-a-good-requirement/)].
+
+## Objetivos generales
+
+El proyecto persigue los siguientes objetivos generales:
+
+<ul><li>**OG-01**: Desarrollar una aplicación web que facilite el aprendizaje y la consulta de las reglas de juegos de mesa.</li><li>**OG-02**: Procesar manuales en distintos formatos para extraer su contenido y poder utilizarlo dentro de la aplicación.</li><li>**OG-03**: Generar explicaciones y responder preguntas sobre un juego a partir de la información contenida en sus manuales.</li><li>**OG-04**: Almacenar de forma organizada la información de los juegos, los manuales y las conversaciones de cada usuario.</li><li>**OG-05**: Garantizar la seguridad de la aplicación y proteger la información de los usuarios.</li></ul>
+
+El recomendador de juegos queda fuera del alcance del proyecto para ajustar el desarrollo al tiempo disponible.
+
+## Catálogo de requisitos
+
+Los requisitos funcionales describen **operaciones**, **resultados** y **cambios de estado**, por otro lado, los no funcionales establecen **condiciones de calidad**.
+
+Cada requisito está relacionado con los objetivos que ayuda a cumplir y con otros requisitos cuando el funcionamiento de uno afecta al otro. Estas relaciones permiten mantener una **trazabilidad** de los requisitos del proyecto [[83](https://www.nasa.gov/reference/appendix-c-how-to-write-a-good-requirement/)].
+
+### Requisitos funcionales
+
+A partir de los objetivos generales, se han extraído una serie de **requisitos funcionales** específicos que establecen cuál debe ser el comportamiento del sistema.
+
+Para estructurarlos, se han definido cinco requisitos principales, de los que parte el resto:
+
+<div class="tabla-documento" role="region" aria-label="RF-1. Gestión de cuentas." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1">
+<caption>Tabla B.1. <strong>RF-1</strong>. Gestión de cuentas.</caption>
+<tr><th scope="row">RF-1</th><td>Gestión de cuentas</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisitos hijos</th><td>RF-1.1, RF-1.2, RF-1.3,
+RF-1.4, RF-1.5, RF-1.6,
+RF-1.7, RF-1.8 y RF-1.9</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir gestionar el ciclo de vida completo de una cuenta.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2, RF-3 y RF-4</td></tr>
+<tr><th scope="row">Verificación</th><td>Completar el ciclo de una cuenta, desde su registro hasta su eliminación, y
+comprobar durante el proceso las operaciones de acceso, verificación,
+recuperación, edición y consulta de información asociada.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-2. Gestión de juegos." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2">
+<caption>Tabla B.2. <strong>RF-2</strong>. Gestión de juegos.</caption>
+<tr><th scope="row">RF-2</th><td>Gestión de juegos</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01 y OG-04</td></tr>
+<tr><th scope="row">Requisitos hijos</th><td>RF-2.1, RF-2.2, RF-2.3,
+RF-2.4, RF-2.5 y RF-2.6</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir localizar y registrar juegos de mesa, consultar su información
+y organizar la actividad del usuario asociada a ellos.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-3 y RF-4</td></tr>
+<tr><th scope="row">Verificación</th><td>Buscar y registrar un juego, seguirlo y dejar de seguirlo, consultar su ficha y
+la biblioteca, y crear, actualizar y retirar una valoración.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3. Procesamiento de manuales." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3">
+<caption>Tabla B.3. <strong>RF-3</strong>. Procesamiento de manuales.</caption>
+<tr><th scope="row">RF-3</th><td>Procesamiento de manuales</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02 y OG-04</td></tr>
+<tr><th scope="row">Requisitos hijos</th><td>RF-3.1, RF-3.2, RF-3.3,
+RF-3.4, RF-3.5, RF-3.6,
+RF-3.7, RF-3.8, RF-3.9 y
+RF-3.10</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir añadir, procesar, consultar y gestionar manuales
+asociados a juegos de mesa.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2 y RF-4</td></tr>
+<tr><th scope="row">Verificación</th><td>Subir manuales de juegos de mesa y comprobar que las subidas inválidas o duplicadas se
+rechazan. Después, procesarlos, consultar su estado y contenido, corregir y
+reprocesar sus páginas y eliminarlos.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4. Consulta de reglas." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4">
+<caption>Tabla B.4. <strong>RF-4</strong>. Consulta de reglas.</caption>
+<tr><th scope="row">RF-4</th><td>Consulta de reglas</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03 y OG-04</td></tr>
+<tr><th scope="row">Requisitos hijos</th><td>RF-4.1, RF-4.2, RF-4.3,
+RF-4.4, RF-4.5, RF-4.6,
+RF-4.7 y RF-4.8</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir obtener explicaciones y mantener conversaciones
+sobre las reglas de un juego de mesa utilizando el contenido de los manuales
+disponibles.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2 y RF-3</td></tr>
+<tr><th scope="row">Verificación</th><td>Generar la explicación de un juego y mantener una conversación sobre sus
+reglas con un modelo <em>Large Language Model</em> (LLM).</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-5. Gestión de preferencias." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-5">
+<caption>Tabla B.5. <strong>RF-5</strong>. Gestión de preferencias.</caption>
+<tr><th scope="row">RF-5</th><td>Gestión de preferencias</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Requisitos hijos</th><td>RF-5.1 y RF-5.2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir adaptar el idioma y la apariencia de la interfaz a las
+preferencias del usuario.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Baja</td></tr>
+<tr><th scope="row">Relacionado con</th><td>Sin relación directa</td></tr>
+<tr><th scope="row">Verificación</th><td>Cambiar el idioma y la apariencia de la interfaz, recargar la aplicación
+y comprobar que se conservan las preferencias seleccionadas.</td></tr>
+</table>
+</div>
+
+#### RF-1. Gestión de cuentas
+
+La gestión de una cuenta cubre todo su ciclo, desde el registro hasta la eliminación, e incluye el acceso, la verificación, la recuperación y la edición de sus datos entre otros detalles.
+
+<div class="tabla-documento" role="region" aria-label="RF-1.1. Registrar una cuenta nueva." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-1">
+<caption>Tabla B.6. <strong>RF-1.1</strong>. Registrar una cuenta nueva.</caption>
+<tr><th scope="row">RF-1.1</th><td>Registrar una cuenta nueva</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir crear una cuenta mediante un nombre de usuario, un
+correo electrónico y una contraseña. Tras completar el registro, la sesión debe
+quedar iniciada.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.2 y RF-1.4</td></tr>
+<tr><th scope="row">Verificación</th><td>Completar un registro con datos válidos y comprobar que se crea la cuenta y se
+inicia la sesión.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.2. Iniciar sesión." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-2">
+<caption>Tabla B.7. <strong>RF-1.2</strong>. Iniciar sesión.</caption>
+<tr><th scope="row">RF-1.2</th><td>Iniciar sesión</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir iniciar sesión utilizando el correo
+electrónico, o bien, el nombre de usuario junto con la contraseña.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.1, RF-1.3, RF-1.5,
+RF-1.6, RF-1.7 y RF-1.8</td></tr>
+<tr><th scope="row">Verificación</th><td>Acceder a una misma cuenta mediante ambos identificadores y rechazar unas
+credenciales que no sean válidas.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.3. Cerrar sesión." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-3">
+<caption>Tabla B.8. <strong>RF-1.3</strong>. Cerrar sesión.</caption>
+<tr><th scope="row">RF-1.3</th><td>Cerrar sesión</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir cerrar la sesión y, una vez cerrada, no debe
+poder utilizarse de nuevo sin autenticarse.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.2</td></tr>
+<tr><th scope="row">Verificación</th><td>Cerrar una sesión activa y comprobar que no puede volver a utilizarse para
+acceder a una ruta protegida.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.4. Verificar el correo electrónico." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-4">
+<caption>Tabla B.9. <strong>RF-1.4</strong>. Verificar el correo electrónico.</caption>
+<tr><th scope="row">RF-1.4</th><td>Verificar el correo electrónico</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir verificar el correo mediante un enlace de un solo uso
+y solicitar un nuevo enlace cuando sea necesario. La falta de verificación no
+debe impedir el acceso al resto de la aplicación.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.1 y RF-1.6</td></tr>
+<tr><th scope="row">Verificación</th><td>Verificar una cuenta, rechazar la reutilización del enlace y comprobar que una
+cuenta pendiente de verificación puede seguir utilizando la aplicación.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.5. Restablecer la contraseña." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-5">
+<caption>Tabla B.10. <strong>RF-1.5</strong>. Restablecer la contraseña.</caption>
+<tr><th scope="row">RF-1.5</th><td>Restablecer la contraseña</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir restablecer la contraseña mediante un enlace de un
+solo uso enviado por correo electrónico. Al completar el proceso, debe revocar
+las sesiones que continuasen activas.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.2 y RF-1.6</td></tr>
+<tr><th scope="row">Verificación</th><td>Restablecer la contraseña, comprobar que el enlace no puede reutilizarse y que
+las sesiones anteriores dejan de ser válidas.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.6. Editar el perfil." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-6">
+<caption>Tabla B.11. <strong>RF-1.6</strong>. Editar el perfil.</caption>
+<tr><th scope="row">RF-1.6</th><td>Editar el perfil</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir actualizar de forma independiente el nombre de
+usuario, el correo electrónico y la imagen de perfil. Un cambio de correo debe
+dejar pendiente su verificación y generar un nuevo enlace.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.2, RF-1.4 y RF-1.5</td></tr>
+<tr><th scope="row">Verificación</th><td>Modificar por separado cada dato del perfil y comprobar el estado de
+verificación después de cambiar el correo electrónico.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.7. Cambiar la contraseña." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-7">
+<caption>Tabla B.12. <strong>RF-1.7</strong>. Cambiar la contraseña.</caption>
+<tr><th scope="row">RF-1.7</th><td>Cambiar la contraseña</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir cambiar la contraseña después de comprobar la actual
+y validar la nueva. La sesión utilizada para realizar el cambio debe ser la única
+que sigue activa tras el cambio.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.2</td></tr>
+<tr><th scope="row">Verificación</th><td>Cambiar la contraseña desde una sesión con otras sesiones abiertas y comprobar
+que solo permanece activa la cuenta desde la que se ha hecho el cambio.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.8. Eliminar una cuenta." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-8">
+<caption>Tabla B.13. <strong>RF-1.8</strong>. Eliminar una cuenta.</caption>
+<tr><th scope="row">RF-1.8</th><td>Eliminar una cuenta</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir eliminar una cuenta tras realizar una confirmación
+explícita. Una vez eliminada, se deben revocar sus sesiones y hacer inaccesibles
+la cuenta, los manuales, las conversaciones y las valoraciones asociadas.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.2, RF-2.6, RF-3.9 y
+RF-4.2</td></tr>
+<tr><th scope="row">Verificación</th><td>Eliminar una cuenta con información asociada y comprobar que deja de ser
+accesible, que sus sesiones se cierran y que se hace la limpieza de sus
+recursos.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-1.9. Consultar las estadísticas de actividad." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-1-9">
+<caption>Tabla B.14. <strong>RF-1.9</strong>. Consultar las estadísticas de actividad.</caption>
+<tr><th scope="row">RF-1.9</th><td>Consultar las estadísticas de actividad</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-1</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe mostrar al usuario el número de juegos en los que ha tenido
+actividad, los manuales que ha subido y las conversaciones que ha creado.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.6, RF-3.1, RF-3.9 y
+RF-4.2</td></tr>
+<tr><th scope="row">Verificación</th><td>Generar actividad de todo tipo y comprobar que los valores mostrados
+coinciden con la información almacenada.</td></tr>
+</table>
+</div>
+
+#### RF-2. Gestión de juegos
+
+Los juegos pueden buscarse en el catálogo o añadirse manualmente. Una vez registrados, pueden seguirse, valorarse y consultarse desde la biblioteca personal.
+
+<div class="tabla-documento" role="region" aria-label="RF-2.1. Buscar juegos." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2-1">
+<caption>Tabla B.15. <strong>RF-2.1</strong>. Buscar juegos.</caption>
+<tr><th scope="row">RF-2.1</th><td>Buscar juegos</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir buscar juegos por nombre.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.2 y RF-3.1</td></tr>
+<tr><th scope="row">Verificación</th><td>Buscar primero un juego que ya haya tenido actividad y otro que no para
+comprobar que ambos se muestran.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-2.2. Añadir un juego manualmente." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2-2">
+<caption>Tabla B.16. <strong>RF-2.2</strong>. Añadir un juego manualmente.</caption>
+<tr><th scope="row">RF-2.2</th><td>Añadir un juego manualmente</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir añadir mediante su nombre un juego que no aparezca
+entre los resultados de búsqueda.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.1 y RF-3.1</td></tr>
+<tr><th scope="row">Verificación</th><td>Buscar un juego que no esté disponible, añadirlo manualmente y comprobar que
+puede seleccionarse para subir un manual.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-2.3. Permitir seguir juegos." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2-3">
+<caption>Tabla B.17. <strong>RF-2.3</strong>. Permitir seguir juegos.</caption>
+<tr><th scope="row">RF-2.3</th><td>Permitir seguir juegos</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe registrar los juegos seguidos de un usuario
+<p><strong>RF-2.3.1. Seguir o dejar de seguir un juego</strong>: El usuario debe poder seguir y
+dejar de seguir un juego.</p>
+<p><strong>RF-2.3.2. Seguir juegos automáticamente</strong>: La primera actividad sobre un
+juego debe seguirlo automáticamente cuando no exista una decisión explícita
+anterior.</p></td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.4, RF-2.5, RF-2.6,
+RF-3.1 y RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Seguir y dejar de seguir un juego de forma explícita. Después, generar una
+primera actividad con y sin una decisión anterior y comprobar el resultado.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-2.4. Consultar la biblioteca personal." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2-4">
+<caption>Tabla B.18. <strong>RF-2.4</strong>. Consultar la biblioteca personal.</caption>
+<tr><th scope="row">RF-2.4</th><td>Consultar la biblioteca personal</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe recoger la actividad del usuario relacionada con juegos y
+manuales.
+<p><strong>RF-2.4.1. Juegos seguidos</strong>: Debe listar los juegos a los que
+sigue el usuario.</p>
+<p><strong>RF-2.4.2. Manuales propios</strong>: Debe listar los manuales del usuario subidos por el usuario y permitir filtrarlos dentro de la biblioteca.</p></td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.3, RF-3.1 y RF-3.9</td></tr>
+<tr><th scope="row">Verificación</th><td>Seguir varios juegos y subir varios manuales. Después, comprobar el orden de
+los juegos y el filtrado de los manuales.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-2.5. Consultar el perfil de un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2-5">
+<caption>Tabla B.19. <strong>RF-2.5</strong>. Consultar el perfil de un juego.</caption>
+<tr><th scope="row">RF-2.5</th><td>Consultar el perfil de un juego</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe mostrar los datos del juego, los manuales accesibles, la
+valoración propia y el número de conversaciones del usuario, e indicar si sigue el juego.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.3, RF-2.6, RF-3.1,
+RF-3.4, RF-3.9 y RF-4.2</td></tr>
+<tr><th scope="row">Verificación</th><td>Consultar un juego con información de cada tipo y comprobar que la ficha
+solo incluye los manuales accesibles para la cuenta autenticada.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-2.6. Valorar un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-2-6">
+<caption>Tabla B.20. <strong>RF-2.6</strong>. Valorar un juego.</caption>
+<tr><th scope="row">RF-2.6</th><td>Valorar un juego</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-2</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir registrar y actualizar una puntuación de entre
+uno y cinco a un juego, acompañarla de una nota opcional y permitir
+borrar valoraciones previas.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.8, RF-1.9, RF-2.3 y
+RF-2.5</td></tr>
+<tr><th scope="row">Verificación</th><td>Crear, modificar y borrar una valoración.</td></tr>
+</table>
+</div>
+
+#### RF-3. Procesamiento de manuales
+
+Los manuales se validan al subirlos y se procesan antes de poder ser consultados. También pueden corregirse manualmente errores, reprocesarse y eliminarse.
+
+<div class="tabla-documento" role="region" aria-label="RF-3.1. Subir un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-1">
+<caption>Tabla B.21. <strong>RF-3.1</strong>. Subir un manual.</caption>
+<tr><th scope="row">RF-3.1</th><td>Subir un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir subir un manual asociado a un juego mediante
+imágenes o un documento en formato PDF, y elegir si será
+privado o compartido con la comunidad. Si se comparte, debe permitir elegir
+si se muestra el nombre del usuario, de acuerdo con RF-3.10.
+Antes de enviar varias imágenes, el usuario debe poder revisarlas, ordenarlas y retirar las que no sean útiles.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.9, RF-2.1, RF-2.2,
+RF-2.3, RF-2.4, RF-2.5,
+RF-3.2, RF-3.3, RF-3.4,
+RF-3.6.1, RF-3.8, RF-3.9 y
+RF-3.10</td></tr>
+<tr><th scope="row">Verificación</th><td>Subir un manual de cada tipo y comprobar que se
+conserva el orden de las páginas, la visibilidad y la opción elegida para
+mostrar el nombre.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.2. Validar la subida de un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-2">
+<caption>Tabla B.22. <strong>RF-3.2</strong>. Validar la subida de un manual.</caption>
+<tr><th scope="row">RF-3.2</th><td>Validar la subida de un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe comprobar en el servidor que los formatos admitidos, el tamaño de
+cada archivo y del conjunto de la petición, y el número máximo de páginas
+están dentro de los valores esperados.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.1 y RF-3.4</td></tr>
+<tr><th scope="row">Verificación</th><td>Subir manuales con valores correctos y otros que superen cada límite,
+comprobando que estos últimas se rechazan antes de iniciar el procesamiento.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.3. Detectar manuales duplicados." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-3">
+<caption>Tabla B.23. <strong>RF-3.3</strong>. Detectar manuales duplicados.</caption>
+<tr><th scope="row">RF-3.3</th><td>Detectar manuales duplicados</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02 y OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe rechazar un manual que ya está activo y lo ha subido
+el mismo usuario.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.1 y RF-3.9</td></tr>
+<tr><th scope="row">Verificación</th><td>Subir un manual dos veces como el mismo usuario y juego y comprobar que  el segundo se rechaza.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.4. Procesar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-4">
+<caption>Tabla B.24. <strong>RF-3.4</strong>. Procesar un manual.</caption>
+<tr><th scope="row">RF-3.4</th><td>Procesar un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe procesar y extraer el contenido de cada manual en segundo
+plano para dejarlo preparado para las consultas al LLM.
+<p><strong>RF-3.4.1. Preprocesar las imágenes</strong>: Cuando sea necesario reconocer
+texto mediante <em>Optical Character Recognition</em> (OCR), debe aplicar a las imágenes las técnicas de preprocesado adecuadas según el motor utilizado.</p>
+<p><strong>RF-3.4.2. Extraer el texto</strong>: Debe utilizar el texto del documento
+cuando sea aprovechable. En caso contrario, debe extraerlo de las imágenes
+preprocesadas mediante OCR.</p>
+<p><strong>RF-3.4.3. Posprocesar el texto</strong>: Tras la extracción de texto,
+debe aplicar las distintas técnicas de postprocesado para mejorar el
+material.</p>
+<p><strong>RF-3.4.4. Indexar el contenido</strong>: Debe dividir el texto resultante en
+fragmentos e indexarlos en una base de datos vectorial [[84](https://learn.microsoft.com/en-us/azure/cosmos-db/vector-database)]
+para recuperarlos durante las consultas.</p>
+<p><strong>RF-3.4.5. Reutilizar páginas ya procesadas</strong>: Debe reutilizar el resultado de una
+página idéntica ya procesada, sin repetir su extracción ni su posprocesado.</p></td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.5, RF-3.1, RF-3.2,
+RF-3.5, RF-3.6, RF-3.7,
+RF-3.8, RF-3.9, RF-4.1 y
+RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Procesar un documento con texto, una imagen que requiera reconocimiento y una
+página repetida. Después, comprobar el texto obtenido y su indexación.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.5. Consultar el estado del procesamiento." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-5">
+<caption>Tabla B.25. <strong>RF-3.5</strong>. Consultar el estado del procesamiento.</caption>
+<tr><th scope="row">RF-3.5</th><td>Consultar el estado del procesamiento</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir al usuario propietario consultar el estado guardado del
+manual y de cada una de sus páginas.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.4</td></tr>
+<tr><th scope="row">Verificación</th><td>Iniciar un procesamiento y comprobar sus diferentes transiciones de estado
+tanto para el manual como para sus páginas.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.6. Consultar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-6">
+<caption>Tabla B.26. <strong>RF-3.6</strong>. Consultar un manual.</caption>
+<tr><th scope="row">RF-3.6</th><td>Consultar un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02 y OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir consultar por páginas el contenido de un manual
+propio o compartido que esté activo. En los manuales ajenos, la consulta
+debe limitarse a la lectura.
+<p><strong>RF-3.6.1. Navegar por las páginas</strong>: Debe mostrar el texto extraído
+o editado y, cuando esté disponible, la imagen subida o generada de cada página.</p>
+<p><strong>RF-3.6.2. Buscar en el manual</strong>: Debe buscar texto dentro del manual y
+permitir desplazarse entre las coincidencias.</p>
+<p><strong>RF-3.6.3. Permitir obtener información sobre el procesamiento</strong>: Debe mostrar al propietario la información
+disponible sobre el origen y la confianza del texto, así como la reutilización
+de páginas.</p></td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.1, RF-3.4, RF-3.7,
+RF-3.9 y RF-4.6</td></tr>
+<tr><th scope="row">Verificación</th><td>Consultar un manual con varias páginas, buscar un fragmento de texto presente y comprobar
+la navegación, el texto, la imagen disponible y la información técnica de cada
+página.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.7. Corregir el texto de una página manualmente." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-7">
+<caption>Tabla B.27. <strong>RF-3.7</strong>. Corregir el texto de una página manualmente.</caption>
+<tr><th scope="row">RF-3.7</th><td>Corregir el texto de una página manualmente</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir corregir el texto de una página cuando el manual sea
+propio, privado y no se esté procesando. Tras guardar el cambio, debe encolar
+la actualización del contenido indexado.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.4.4, RF-3.6.1, RF-4.1 y
+RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Editar una página que cumpla las condiciones y comprobar que se reindexa correctamente.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.8. Reprocesar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-8">
+<caption>Tabla B.28. <strong>RF-3.8</strong>. Reprocesar un manual.</caption>
+<tr><th scope="row">RF-3.8</th><td>Reprocesar un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir repetir el procesamiento a partir de las fuentes que
+ya se encuentran almacenadas.
+<p><strong>RF-3.8.1. Reprocesar el manual completo</strong>: Debe volver a procesar
+todas sus páginas.</p>
+<p><strong>RF-3.8.2. Reprocesar una página</strong>: Debe procesar únicamente la página seleccionada.</p></td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.1, RF-3.4, RF-3.9,
+RF-4.1 y RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Reprocesar primero una página y después el manual completo, comprobando las
+páginas afectadas subirlas de nuevo.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.9. Eliminar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-9">
+<caption>Tabla B.29. <strong>RF-3.9</strong>. Eliminar un manual.</caption>
+<tr><th scope="row">RF-3.9</th><td>Eliminar un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir aplicar un borrado lógico a un manual propio y retirar
+sus páginas del acceso del usuario. Después debe encolar la limpieza de los
+ficheros y del contenido indexado asociado.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.8, RF-1.9, RF-2.4,
+RF-2.5, RF-3.1, RF-3.3,
+RF-3.4.4, RF-3.6, RF-3.8,
+RF-4.1, RF-4.3, RF-4.6 y
+RF-4.8</td></tr>
+<tr><th scope="row">Verificación</th><td>Eliminar un manual procesado y comprobar que deja de ser accesible y que se
+solicita la limpieza de sus recursos derivados.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-3.10. Mostrar u ocultar el nombre al compartir un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-3-10">
+<caption>Tabla B.30. <strong>RF-3.10</strong>. Mostrar u ocultar el nombre al compartir un manual.</caption>
+<tr><th scope="row">RF-3.10</th><td>Mostrar u ocultar el nombre al compartir un manual</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-3</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir al propietario elegir si su nombre aparece junto
+a un manual compartido y en las fuentes de las respuestas que lo utilizan.
+La opción por defecto debe ocultarlo y debe poder cambiarse después de la
+subida, también para las fuentes de respuestas anteriores. Esta elección
+no debe modificar la visibilidad del manual ni sus permisos.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.1, RF-3.6 y RF-4.6</td></tr>
+<tr><th scope="row">Verificación</th><td>Subir un manual compartido sin mostrar el nombre y comprobar su presentación
+desde otra cuenta. Activar y desactivar la opción, verificando el cambio
+en el manual y en una respuesta anterior. Rechazar el cambio desde una
+cuenta ajena y mantener oculto el nombre en los manuales privados.</td></tr>
+</table>
+</div>
+
+#### RF-4. Consulta de reglas
+
+Las explicaciones y respuestas del modelo LLM se generan a partir de los manuales disponibles. Las conversaciones conservan el historial y las fuentes utilizadas.
+
+<div class="tabla-documento" role="region" aria-label="RF-4.1. Consultar la explicación de un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-1">
+<caption>Tabla B.31. <strong>RF-4.1</strong>. Consultar la explicación de un juego.</caption>
+<tr><th scope="row">RF-4.1</th><td>Consultar la explicación de un juego</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe generar en segundo plano una explicación general a partir de
+los manuales accesibles y conservarla mientras sus fuentes no cambien.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.4.4, RF-3.7, RF-3.8 y
+RF-3.9</td></tr>
+<tr><th scope="row">Verificación</th><td>Solicitar una explicación inexistente, comprobar su generación y reutilizarla
+en una consulta posterior. Después, modificar las fuentes y comprobar que se
+genera una nueva versión.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.2. Gestionar conversaciones." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-2">
+<caption>Tabla B.32. <strong>RF-4.2</strong>. Gestionar conversaciones.</caption>
+<tr><th scope="row">RF-4.2</th><td>Gestionar conversaciones</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03 y OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir crear conversaciones persistentes con el modelo
+LLM asociadas a cada juego.
+<p><strong>RF-4.2.1. Crear y listar</strong>: Debe permitir crear una conversación y
+listar las conversaciones propias del juego.</p>
+<p><strong>RF-4.2.2. Consultar el historial</strong>: Debe conservar y mostrar los
+mensajes de una conversación.</p>
+<p><strong>RF-4.2.3. Renombrar</strong>: Debe permitir modificar el título de una
+conversación propia.</p>
+<p><strong>RF-4.2.4. Eliminar</strong>: Debe permitir eliminar una conversación
+propia.</p></td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1.8, RF-1.9, RF-2.5,
+RF-4.3, RF-4.4, RF-4.7 y
+RF-4.8</td></tr>
+<tr><th scope="row">Verificación</th><td>Crear una conversación, mandar mensajes, consultar su historial,
+renombrarla y eliminarla.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.3. Generar una respuesta." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-3">
+<caption>Tabla B.33. <strong>RF-4.3</strong>. Generar una respuesta.</caption>
+<tr><th scope="row">RF-4.3</th><td>Generar una respuesta</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe generar en segundo plano las respuestas a los mensajes de una
+conversación y mostrar si se encuentran pendientes, completadas o fallidas.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-2.3, RF-3.4.4, RF-3.7,
+RF-3.8, RF-3.9, RF-4.2,
+RF-4.4, RF-4.5, RF-4.6,
+RF-4.7 y RF-4.8</td></tr>
+<tr><th scope="row">Verificación</th><td>Enviar una pregunta y comprobar que termina con una respuesta o con un error
+explícito, sin permanecer indefinidamente en estado pendiente.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.4. Nombrar una conversación." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-4">
+<caption>Tabla B.34. <strong>RF-4.4</strong>. Nombrar una conversación.</caption>
+<tr><th scope="row">RF-4.4</th><td>Nombrar una conversación</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe asignar automáticamente un título a partir del primer mensaje
+de una conversación.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-4.2.3 y RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Crear una conversación, enviar su primer mensaje y comprobar que el título
+inicial se sustituye por uno generado a partir de dicho mensaje.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.5. Seleccionar el idioma de la respuesta." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-5">
+<caption>Tabla B.35. <strong>RF-4.5</strong>. Seleccionar el idioma de la respuesta.</caption>
+<tr><th scope="row">RF-4.5</th><td>Seleccionar el idioma de la respuesta</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe responder a los mensajes de una conversación en español o en
+inglés según el idioma detectado en el turno.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Enviar preguntas equivalentes en ambos idiomas y comprobar el idioma de las
+respuestas generadas.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.6. Consultar las fuentes de una respuesta." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-6">
+<caption>Tabla B.36. <strong>RF-4.6</strong>. Consultar las fuentes de una respuesta.</caption>
+<tr><th scope="row">RF-4.6</th><td>Consultar las fuentes de una respuesta</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe indicar las páginas y el manual en el que se han basado
+las respuestas dadas a una pregunta. Cuando el manual continúe disponible
+y el usuario tenga permiso para leerlo, debe permitir abrir directamente
+la página citada. El nombre de quien lo subió debe mostrarse según la
+elección recogida en RF-3.10.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.6.1, RF-3.9, RF-3.10 y RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Generar una respuesta con fuentes procedentes de varias páginas y manuales, y
+comprobar que cada referencia se muestra una sola vez y abre la página correcta
+cuando se dispone de acceso.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.7. Reutilizar contexto de una conversación." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-7">
+<caption>Tabla B.37. <strong>RF-4.7</strong>. Reutilizar contexto de una conversación.</caption>
+<tr><th scope="row">RF-4.7</th><td>Reutilizar contexto de una conversación</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe proveer del contexto de la conversación al LLM tras
+recibir un nuevo mensaje.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-4.2.2 y RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Realizar una pregunta en una conversación previamente iniciada que omita parte del contexto y comprobar
+que se interpreta utilizando los mensajes anteriores.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-4.8. Conservar conversaciones sin fuentes disponibles." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-4-8">
+<caption>Tabla B.38. <strong>RF-4.8</strong>. Conservar conversaciones sin fuentes disponibles.</caption>
+<tr><th scope="row">RF-4.8</th><td>Conservar conversaciones sin fuentes disponibles</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-03 y OG-04</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-4</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe mantener accesible el historial de una conversación aunque las fuentes que se hayan usado se retiren. En ese caso, no
+debe admitir nuevos mensajes.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.9, RF-4.2.2 y RF-4.3</td></tr>
+<tr><th scope="row">Verificación</th><td>Eliminar los manuales vinculados a una conversación existente y comprobar que
+su historial continúa visible en modo de solo lectura.</td></tr>
+</table>
+</div>
+
+#### RF-5. Gestión de preferencias
+
+Las preferencias de *Manualito* permiten elegir entre español e inglés y cambiar la apariencia de la interfaz.
+
+<div class="tabla-documento" role="region" aria-label="RF-5.1. Seleccionar el idioma de la interfaz." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-5-1">
+<caption>Tabla B.39. <strong>RF-5.1</strong>. Seleccionar el idioma de la interfaz.</caption>
+<tr><th scope="row">RF-5.1</th><td>Seleccionar el idioma de la interfaz</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-5</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe ofrecer la interfaz en español e inglés y permitir cambiar el
+idioma desde todas las partes de la aplicación. La selección debe
+conservarse en el dispositivo.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>Sin relación directa</td></tr>
+<tr><th scope="row">Verificación</th><td>Cambiar el idioma antes y después de iniciar sesión, recargar la aplicación y
+comprobar que la interfaz mantiene la selección.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RF-5.2. Configurar la apariencia." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rf-5-2">
+<caption>Tabla B.40. <strong>RF-5.2</strong>. Configurar la apariencia.</caption>
+<tr><th scope="row">RF-5.2</th><td>Configurar la apariencia</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Requisito padre</th><td>RF-5</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema debe permitir elegir entre un tema claro, oscuro o automático y
+permitir personalizar la apariencia de la aplicación. La configuración debe conservarse en el
+dispositivo.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>Sin relación directa</td></tr>
+<tr><th scope="row">Verificación</th><td>Cambiar el tema y el acento, recargar la aplicación y comprobar que ambos
+valores se mantienen.</td></tr>
+</table>
+</div>
+
+### Requisitos no funcionales
+
+Se recogen diez **requisitos no funcionales** generales. Para cada uno se indica su alcance y las funciones relacionadas. Pese a no tener un campo «Verificación», ya que en la mayoría de ellos no hay una metodología objetiva para comprobar que están implementados de una forma correcta, todos ellos deben ser tenidos en cuenta durante la fase de *Quality Assurance* (QA).
+
+<div class="tabla-documento" role="region" aria-label="RNF-1. Usabilidad y accesibilidad." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-1">
+<caption>Tabla B.41. <strong>RNF-1</strong>. Usabilidad y accesibilidad.</caption>
+<tr><th scope="row">RNF-1</th><td>Usabilidad y accesibilidad</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Alcance</th><td>Interfaz de usuario</td></tr>
+<tr><th scope="row">Descripción</th><td>La interfaz debe adaptarse a móvil y escritorio y cumplir el nivel AA de las
+<em>Web Content Accessibility Guidelines</em> (WCAG) 2.2 [[85](https://www.w3.org/TR/2024/REC-WCAG22-20241212/)], incluyendo el uso con teclado, el foco visible
+y la identificación de controles.
+Los mensajes de error deben explicar el problema y cómo continuar.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3, RF-4 y
+RF-5</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-2. Compatibilidad e internacionalización." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-2">
+<caption>Tabla B.42. <strong>RNF-2</strong>. Compatibilidad e internacionalización.</caption>
+<tr><th scope="row">RNF-2</th><td>Compatibilidad e internacionalización</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Alcance</th><td>Interfaz web</td></tr>
+<tr><th scope="row">Descripción</th><td>Las funciones deben conservar su comportamiento en los navegadores
+admitidos. Los textos y mensajes de la interfaz deben estar disponibles de forma
+coherente en español e inglés.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3, RF-4 y
+RF-5</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-3. Rendimiento y consumo de recursos." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-3">
+<caption>Tabla B.43. <strong>RNF-3</strong>. Rendimiento y consumo de recursos.</caption>
+<tr><th scope="row">RNF-3</th><td>Rendimiento y consumo de recursos</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01, OG-02 y OG-03</td></tr>
+<tr><th scope="row">Alcance</th><td>Toda la aplicación</td></tr>
+<tr><th scope="row">Descripción</th><td>Los tiempos de respuesta y el consumo de recursos deben mantenerse dentro
+de los límites definidos para la carga prevista. Las operaciones más costosas
+no deben bloquear el uso de otras funciones.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3,
+RF-4 y RF-5</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-4. Fiabilidad y recuperación." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-4">
+<caption>Tabla B.44. <strong>RNF-4</strong>. Fiabilidad y recuperación.</caption>
+<tr><th scope="row">RNF-4</th><td>Fiabilidad y recuperación</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02, OG-03 y OG-04</td></tr>
+<tr><th scope="row">Alcance</th><td>Datos persistentes y tareas</td></tr>
+<tr><th scope="row">Descripción</th><td>Los fallos de una tarea deben quedar registrados sin interrumpir trabajos
+independientes ni detener toda la aplicación. Las tareas deben ser idempotentes,
+de modo que puedan reintentarse sin generar duplicados ni aplicar varias
+veces los mismos cambios.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3 y RF-4</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-5. Seguridad." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-5">
+<caption>Tabla B.45. <strong>RNF-5</strong>. Seguridad.</caption>
+<tr><th scope="row">RNF-5</th><td>Seguridad</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-05</td></tr>
+<tr><th scope="row">Alcance</th><td>Toda la aplicación</td></tr>
+<tr><th scope="row">Descripción</th><td>La aplicación debe proteger las cuentas y los datos frente a accesos y
+modificaciones sin permiso. Los datos deben estar protegidos tanto al
+guardarlos como al enviarlos. Esto incluye la protección de las sesiones de
+usuario [[12](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)] y la prevención de ataques de
+<em>Cross-Site Request Forgery</em> (CSRF) en las peticiones que modifican datos [[13](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)].</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3 y RF-4</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-6. Privacidad y tratamiento de datos." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-6">
+<caption>Tabla B.46. <strong>RNF-6</strong>. Privacidad y tratamiento de datos.</caption>
+<tr><th scope="row">RNF-6</th><td>Privacidad y tratamiento de datos</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-04 y OG-05</td></tr>
+<tr><th scope="row">Alcance</th><td>Cuentas, manuales y conversaciones</td></tr>
+<tr><th scope="row">Descripción</th><td>El uso de los datos personales debe limitarse al mínimo necesario para el
+uso del sistema.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-3 y RF-4</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-7. Calidad del procesamiento y las respuestas." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-7">
+<caption>Tabla B.47. <strong>RNF-7</strong>. Calidad del procesamiento y las respuestas.</caption>
+<tr><th scope="row">RNF-7</th><td>Calidad del procesamiento y las respuestas</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-02 y OG-03</td></tr>
+<tr><th scope="row">Alcance</th><td>Texto y respuestas generados</td></tr>
+<tr><th scope="row">Descripción</th><td>El texto extraído y corregido debe conservar las reglas del manual.
+Por otro lado, se deben aplicar las medidas necesarias para evitar,
+en la medida de lo posible, las alucinaciones del modelo LLM [[86](https://openai.com/index/why-language-models-hallucinate/)].</td></tr>
+<tr><th scope="row">Prioridad</th><td>Alta</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-3.4, RF-4.1, RF-4.3,
+RF-4.5 y RF-4.6</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-8. Mantenibilidad y pruebas." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-8">
+<caption>Tabla B.48. <strong>RNF-8</strong>. Mantenibilidad y pruebas.</caption>
+<tr><th scope="row">RNF-8</th><td>Mantenibilidad y pruebas</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Alcance</th><td>Código y proceso de integración</td></tr>
+<tr><th scope="row">Descripción</th><td>El código debe separar responsabilidades y disponer de pruebas de los
+comportamientos principales y sus errores. Las comprobaciones del código y las
+dependencias deben formar parte de la integración. La configuración y el
+mantenimiento deben estar documentados.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3, RF-4 y
+RF-5</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-9. Portabilidad y reproducibilidad." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-9">
+<caption>Tabla B.49. <strong>RNF-9</strong>. Portabilidad y reproducibilidad.</caption>
+<tr><th scope="row">RNF-9</th><td>Portabilidad y reproducibilidad</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01</td></tr>
+<tr><th scope="row">Alcance</th><td>Despliegue y ejecución de la aplicación</td></tr>
+<tr><th scope="row">Descripción</th><td>La aplicación debe poder desplegarse y ejecutarse en los entornos admitidos
+mediante un procedimiento documentado.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Baja</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3, RF-4 y
+RF-5</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="RNF-10. Observabilidad." tabindex="0">
+<table class="tabla-ficha" id="tabla-req-rnf-10">
+<caption>Tabla B.50. <strong>RNF-10</strong>. Observabilidad.</caption>
+<tr><th scope="row">RNF-10</th><td>Observabilidad</td></tr>
+<tr><th scope="row">Objetivo general</th><td>OG-01, OG-02 y OG-03</td></tr>
+<tr><th scope="row">Alcance</th><td>Supervisión y diagnóstico</td></tr>
+<tr><th scope="row">Descripción</th><td>La aplicación debe proporcionar información sobre el estado de sus servicios
+y la ejecución de las tareas para facilitar la detección y el diagnóstico de
+fallos. Los registros de error deben indicar cuándo se produjo el fallo, en qué
+componente y durante qué operación o tarea.</td></tr>
+<tr><th scope="row">Prioridad</th><td>Media</td></tr>
+<tr><th scope="row">Relacionado con</th><td>RF-1, RF-2, RF-3,
+RF-4, RNF-5 y RNF-6</td></tr>
+</table>
+</div>
+
+## Casos de uso
+
+Los casos de uso describen las situaciones en las que un usuario interactúa con *Manualito* y la respuesta que debe ofrecer el sistema. Cada uno concreta el objetivo de la interacción, sus condiciones y el resultado esperado, y muestra la relación con los requisitos que desarrolla.
+
+### Actores y representación
+
+En la aplicación intervienen tres actores: <ul><li><strong>Usuario</strong>. Utiliza las funciones de la aplicación. La necesidad de tener una cuenta o una sesión iniciada se indica en cada caso.</li><li><strong>Servicio de correo</strong>. Envía los enlaces para verificar la cuenta y restablecer la contraseña.</li><li><strong>Catálogo externo de juegos</strong>. Proporciona información para completar las búsquedas de juegos.</li></ul>
+
+La figura cu:general recoge los casos agrupados por función. El diagrama general de la figura cu:global muestra las relaciones entre ellos con el **lenguaje unificado de modelado** (UML, del inglés *Unified Modeling Language*) [[87](https://www.omg.org/spec/UML/2.5.1/PDF)].
+
+Las conexiones con los actores se dibujan con líneas continuas. Sus flechas indican el sentido de la solicitud: del usuario al caso de uso, o del caso al servicio externo. Esta convención facilita la lectura del diagrama.
+
+1
+
+1
+
+<Figura id="fig-casos-de-uso-uml-general" src={umlGeneral} alt="Resumen de los casos de uso de Manualito.">
+  Figura B.1: Resumen de los casos de uso de *Manualito*.
+</Figura>
+
+<Figura id="fig-casos-de-uso-uml-global" src={umlGlobal} alt="Diagrama general de casos de uso de Manualito.">
+  Figura B.2: Diagrama general de casos de uso de *Manualito*.
+</Figura>
+
+### Descripción de los casos de uso
+
+Cada uno de los casos de uso indica el autor, los actores, el objetivo, el inicio del caso, las precondiciones, las acciones y el resultado esperado. Las alternativas describen las decisiones y los errores que modifican la secuencia principal.
+
+Esta organización permite comprobar el comportamiento y seguir su relación con los requisitos, de acuerdo con la adaptación de ISO/IEC/IEEE 29148:2018 utilizada en el proyecto [[80](https://www.iso.org/standard/72089.html)].
+
+#### Cuenta y acceso
+
+<div class="tabla-documento" role="region" aria-label="CU-S1. Gestionar la cuenta." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-S1">
+<caption>Tabla B.51. <strong>CU-S1</strong>. Gestionar la cuenta.</caption>
+<tr><th scope="row">CU-S1</th><td>Gestionar la cuenta</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.3, RF-1.4, RF-1.6, RF-1.7, RF-1.8, RF-1.9, RF-5.1, RF-5.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario consulta los datos y las opciones de su cuenta y decide si necesita realizar alguna operación.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre el perfil, la sección de seguridad o los ajustes de su cuenta.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra la información y las operaciones disponibles en la sección elegida.</li><li>El usuario consulta los datos y decide si quiere realizar alguna de las operaciones disponibles.</li><li>Si realiza una operación, el sistema muestra su resultado. El usuario puede continuar la gestión o terminarla.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario ha consultado la información de su cuenta y los cambios aceptados quedan aplicados. Si cierra sesión o elimina la cuenta, la gestión termina mostrando el acceso público.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede consultar la información y salir sin modificarla.</li><li>Si cancela una operación o el sistema la rechaza, puede continuar la gestión sin dar por aplicado el cambio.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-01. Registrar una cuenta." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-01">
+<caption>Tabla B.52. <strong>CU-01</strong>. Registrar una cuenta.</caption>
+<tr><th scope="row">CU-01</th><td>Registrar una cuenta</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.1</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario crea una cuenta para acceder a las funciones de <em>Manualito</em> que requieren identificación.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario selecciona la opción de crear una cuenta.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario no ha iniciado sesión y dispone de un correo electrónico al que puede acceder.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario introduce su nombre de usuario, correo electrónico y contraseña, y confirma esta última.</li><li>Acepta la política de privacidad y solicita crear la cuenta.</li><li>El sistema valida los datos, crea la cuenta e inicia la sesión.</li><li>Mediante CU-31, el sistema encarga el envío del enlace de verificación. El registro termina y el usuario puede acceder a la aplicación.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La cuenta queda creada y la sesión iniciada, con la verificación pendiente. El usuario puede verificarla después mediante CU-04.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si los datos no son válidos, el nombre o el correo ya están registrados, o falta la aceptación de la política, no se completa el registro.</li><li>Si falla la entrega del correo, la cuenta sigue pendiente de verificación. El usuario puede solicitar otro envío mediante CU-31.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-02. Iniciar sesión." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-02">
+<caption>Tabla B.53. <strong>CU-02</strong>. Iniciar sesión.</caption>
+<tr><th scope="row">CU-02</th><td>Iniciar sesión</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario accede a su cuenta mediante sus credenciales.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre el formulario de acceso a su cuenta.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario tiene una cuenta activa y no ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario introduce su correo electrónico o nombre de usuario y su contraseña.</li><li>Solicita iniciar sesión y el sistema comprueba las credenciales.</li><li>Si son válidas, el sistema inicia la sesión y permite acceder a las funciones de la cuenta.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario queda identificado y puede utilizar las funciones que requieren una sesión iniciada.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si las credenciales no son válidas, el sistema rechaza el acceso y el usuario puede corregirlas o abandonar el intento.</li><li>La falta de verificación de la cuenta no impide iniciar sesión.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-03. Cerrar sesión." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-03">
+<caption>Tabla B.54. <strong>CU-03</strong>. Cerrar sesión.</caption>
+<tr><th scope="row">CU-03</th><td>Cerrar sesión</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.3</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario cierra la sesión que está utilizando.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita cerrar la sesión desde el perfil o los ajustes.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema revoca la sesión.</li><li>El sistema muestra el acceso público.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La sesión cerrada deja de permitir el acceso a las funciones protegidas. Para volver a utilizarlas, el usuario debe iniciar sesión.</td></tr>
+<tr><th scope="row">Alternativas</th><td>Si la sesión ya ha caducado, el usuario permanece en el acceso público.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-04. Verificar la cuenta." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-04">
+<caption>Tabla B.55. <strong>CU-04</strong>. Verificar la cuenta.</caption>
+<tr><th scope="row">CU-04</th><td>Verificar la cuenta</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.4</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario confirma que tiene acceso al correo electrónico asociado a su cuenta.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre el enlace de verificación recibido por correo.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>La cuenta está activa y el usuario ha recibido un enlace de verificación. No necesita haber iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema comprueba que el enlace permite verificar la cuenta.</li><li>Marca la cuenta como verificada e invalida el enlace utilizado.</li><li>El sistema muestra el resultado de la verificación.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La cuenta queda verificada y el enlace no permite una nueva verificación.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El sistema rechaza los enlaces que no reconoce. Si la cuenta sigue pendiente de verificación, también rechaza los enlaces caducados o utilizados.</li><li>Si la cuenta ya está verificada y el sistema reconoce el enlace, conserva ese estado.</li><li>Si necesita otro enlace, el usuario puede solicitarlo mediante CU-31.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-05. Restablecer la contraseña." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-05">
+<caption>Tabla B.56. <strong>CU-05</strong>. Restablecer la contraseña.</caption>
+<tr><th scope="row">CU-05</th><td>Restablecer la contraseña</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.5</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario, Servicio de correo.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario recupera el acceso a su cuenta cuando no recuerda la contraseña.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario selecciona la opción de restablecer una contraseña olvidada.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>La cuenta está activa y el usuario tiene acceso a su correo electrónico.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario solicita restablecer la contraseña e indica el correo electrónico de su cuenta.</li><li>El sistema genera un enlace de un solo uso y encarga su envío al servicio de correo.</li><li>El usuario abre el enlace recibido e introduce y confirma una nueva contraseña.</li><li>El sistema valida el enlace y la contraseña, guarda el cambio, invalida el enlace y revoca las sesiones anteriores.</li><li>El sistema confirma el cambio y permite volver al formulario de acceso.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La contraseña queda actualizada y el correo queda verificado si todavía no lo estaba. El enlace utilizado y las sesiones anteriores dejan de ser válidos.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>La respuesta a la solicitud no revela si el correo electrónico está registrado.</li><li>Si el enlace no es válido, ha caducado o ya se ha utilizado, el sistema rechaza el restablecimiento.</li><li>Si la nueva contraseña no cumple las condiciones o su confirmación no coincide, el usuario debe corregirla antes de continuar.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-06. Editar el perfil." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-06">
+<caption>Tabla B.57. <strong>CU-06</strong>. Editar el perfil.</caption>
+<tr><th scope="row">CU-06</th><td>Editar el perfil</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.6</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario actualiza los datos con los que se identifica en su cuenta.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre la edición del perfil desde su cuenta.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario modifica el nombre de usuario, el correo electrónico o la imagen de perfil.</li><li>Solicita guardar los cambios y el sistema comprueba los datos modificados.</li><li>El sistema guarda los cambios aceptados y muestra el perfil actualizado.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El perfil muestra los cambios guardados. Si se ha modificado el correo electrónico, la cuenta queda pendiente de verificarlo.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede cancelar la edición sin guardar los cambios.</li><li>Si algún dato no es válido o el nombre o el correo ya están registrados, el sistema rechaza el cambio y permite corregirlo.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-07. Cambiar la contraseña." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-07">
+<caption>Tabla B.58. <strong>CU-07</strong>. Cambiar la contraseña.</caption>
+<tr><th scope="row">CU-07</th><td>Cambiar la contraseña</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.7</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario sustituye la contraseña de su cuenta y conserva la sesión desde la que realiza el cambio.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario accede a la sección de seguridad para cambiar la contraseña.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y conoce su contraseña actual.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario introduce la contraseña actual y la nueva, que debe confirmar.</li><li>Solicita el cambio y el sistema comprueba la contraseña actual y valida la nueva.</li><li>El sistema guarda la nueva contraseña, revoca las demás sesiones y confirma el cambio.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La contraseña queda actualizada y solo permanece activa la sesión desde la que se ha realizado el cambio.</td></tr>
+<tr><th scope="row">Alternativas</th><td>Si la contraseña actual es incorrecta, la nueva no cumple las condiciones o su confirmación no coincide, el sistema impide el cambio.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-08. Eliminar la cuenta." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-08">
+<caption>Tabla B.59. <strong>CU-08</strong>. Eliminar la cuenta.</caption>
+<tr><th scope="row">CU-08</th><td>Eliminar la cuenta</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.8</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario elimina su cuenta y retira el acceso a la información asociada a ella.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita eliminar su cuenta desde los ajustes o la sección de seguridad.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión en la cuenta que desea eliminar.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario revisa la información que dejará de estar disponible e introduce su nombre de usuario para confirmar el borrado.</li><li>El sistema comprueba la confirmación, revoca las sesiones y hace inaccesibles la cuenta y sus recursos.</li><li>El sistema inicia la limpieza de los recursos asociados y muestra el acceso público.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La cuenta, los manuales, las conversaciones y las valoraciones asociadas dejan de ser accesibles, y sus sesiones dejan de ser válidas.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede cancelar antes de confirmar el borrado y continuar utilizando la cuenta.</li><li>Si el nombre introducido no coincide con el de la cuenta, el sistema impide la eliminación.</li><li>Si la solicitud falla, el sistema informa del error sin confirmar que la cuenta se haya eliminado.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-09. Consultar la actividad personal." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-09">
+<caption>Tabla B.60. <strong>CU-09</strong>. Consultar la actividad personal.</caption>
+<tr><th scope="row">CU-09</th><td>Consultar la actividad personal</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.9</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario consulta un resumen de la actividad que ha realizado con su cuenta.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre su perfil para consultar la actividad personal.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema obtiene los recuentos de actividad de la cuenta.</li><li>El sistema muestra, junto a los datos del perfil, el número de juegos con actividad, manuales subidos y conversaciones creadas.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario ha consultado los recuentos de su actividad personal.</td></tr>
+<tr><th scope="row">Alternativas</th><td>Si no hay actividad de alguno de estos tipos, su recuento es cero.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-31. Enviar el enlace de verificación." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-31">
+<caption>Tabla B.61. <strong>CU-31</strong>. Enviar el enlace de verificación.</caption>
+<tr><th scope="row">CU-31</th><td>Enviar el enlace de verificación</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-1.4</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario, Servicio de correo.</td></tr>
+<tr><th scope="row">Descripción</th><td>El sistema proporciona un enlace para que el usuario pueda verificar su cuenta.</td></tr>
+<tr><th scope="row">Inicio</th><td>Se crea una cuenta, se cambia su correo o el usuario solicita otro enlace de verificación.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>La cuenta está activa y su correo está pendiente de verificación.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema obtiene el correo de destino y comprueba que procede emitir un enlace.</li><li>Genera un enlace de verificación vigente e invalida los anteriores cuando los haya.</li><li>Encarga el envío al servicio de correo y continúa la operación que lo solicitó o responde a la petición de reenvío.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>Se emite un enlace y se encarga su envío. La cuenta sigue pendiente de verificación hasta que el usuario utilice un enlace válido en CU-04.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>La respuesta a una solicitud pública no revela si existe una cuenta con ese correo.</li><li>Si la cuenta ya está verificada, no está activa o no ha transcurrido la espera entre solicitudes, no se emite otro enlace.</li><li>Si falla la entrega, la cuenta conserva la verificación pendiente.</li></ul></td></tr>
+</table>
+</div>
+
+#### Juegos y biblioteca
+
+<div class="tabla-documento" role="region" aria-label="CU-10. Buscar juegos." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-10">
+<caption>Tabla B.62. <strong>CU-10</strong>. Buscar juegos.</caption>
+<tr><th scope="row">CU-10</th><td>Buscar juegos</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-2.1</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario, Catálogo externo de juegos.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite localizar un juego por su nombre para conocerlo o asociarle un manual.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre la búsqueda durante la exploración o al añadir un manual.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario introduce el nombre del juego que busca.</li><li>El sistema busca coincidencias y muestra los resultados.</li><li>El usuario puede seleccionar un resultado para consultar el juego durante la exploración o para continuar añadiendo un manual.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El sistema muestra los resultados de la búsqueda o indica que no hay coincidencias. Si selecciona un juego durante una subida, ese juego queda elegido para asociarle el manual.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si no hay coincidencias, el sistema lo indica y el usuario puede cambiar la búsqueda o terminarla.</li><li>Durante la subida de un manual, una búsqueda sin coincidencias también permite añadir el juego manualmente.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-11. Añadir un juego manualmente." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-11">
+<caption>Tabla B.63. <strong>CU-11</strong>. Añadir un juego manualmente.</caption>
+<tr><th scope="row">CU-11</th><td>Añadir un juego manualmente</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-2.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite registrar un juego que no aparece en la búsqueda para poder asociarle el manual que se está añadiendo.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario elige añadir el juego tras una búsqueda sin coincidencias.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y la búsqueda de CU-10 no ha devuelto coincidencias durante CU-16.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario confirma el nombre del juego que quiere añadir.</li><li>El sistema valida el nombre, registra el juego y lo selecciona para continuar la subida.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El juego queda registrado y seleccionado para asociarle el manual.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si el nombre no es válido, el usuario debe corregirlo antes de añadir el juego.</li><li>El usuario puede cancelar la creación y volver a buscar un juego existente.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-12. Seguir o dejar de seguir un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-12">
+<caption>Tabla B.64. <strong>CU-12</strong>. Seguir o dejar de seguir un juego.</caption>
+<tr><th scope="row">CU-12</th><td>Seguir o dejar de seguir un juego</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-2.3, RF-2.3.1</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite decidir si un juego debe aparecer entre los juegos seguidos de la biblioteca personal.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario decide seguir el juego que está consultando o dejar de seguirlo.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el juego existe.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>Durante la consulta del perfil, el usuario elige seguir el juego o dejar de seguirlo.</li><li>El sistema guarda la decisión, actualiza la biblioteca personal e indica si el usuario sigue el juego.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La decisión queda guardada y el perfil indica si el usuario sigue el juego.</td></tr>
+<tr><th scope="row">Alternativas</th><td>Si el usuario decide dejar de seguir el juego, una actividad posterior no vuelve a seguirlo automáticamente.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-13. Consultar la biblioteca personal." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-13">
+<caption>Tabla B.65. <strong>CU-13</strong>. Consultar la biblioteca personal.</caption>
+<tr><th scope="row">CU-13</th><td>Consultar la biblioteca personal</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-2.4, RF-2.4.1, RF-2.4.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite localizar los juegos seguidos y los manuales propios y consultar la información de cada uno.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario accede a la biblioteca personal.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario elige consultar los juegos o los manuales.</li><li>El sistema muestra los juegos seguidos o los manuales propios.</li><li>El usuario puede filtrar los manuales y el sistema muestra las coincidencias.</li><li>El usuario puede seleccionar una entrada para consultar los detalles del juego, el contenido del manual o su estado de procesamiento.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La biblioteca muestra los juegos seguidos o los manuales propios según la selección y los filtros aplicados. Si el usuario elimina un manual, la lista deja de mostrarlo.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si la lista está vacía o el filtro no devuelve resultados, el sistema lo indica.</li><li>El usuario puede eliminar un manual propio durante la consulta. Tras confirmar la eliminación, la biblioteca muestra los manuales restantes o indica que no hay ninguno.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-14. Consultar el perfil de un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-14">
+<caption>Tabla B.66. <strong>CU-14</strong>. Consultar el perfil de un juego.</caption>
+<tr><th scope="row">CU-14</th><td>Consultar el perfil de un juego</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-2.5</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite conocer un juego, revisar la actividad personal asociada y ampliar la consulta mediante sus manuales y conversaciones.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario selecciona un juego para consultar su perfil.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el juego existe.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra los datos del juego, los manuales accesibles, la valoración propia y el número de conversaciones del usuario, e indica si sigue el juego.</li><li>El usuario consulta esta información y puede profundizar en las reglas, los manuales o las conversaciones antes de terminar.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El perfil refleja la información accesible y los cambios realizados durante la consulta.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Sin manuales utilizables no se generan explicaciones ni respuestas nuevas, pero el perfil sigue siendo consultable.</li><li>Los manuales compartidos pueden aportar contenido para consultas y abrirse en el visor en modo de solo lectura.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-15. Gestionar la valoración de un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-15">
+<caption>Tabla B.67. <strong>CU-15</strong>. Gestionar la valoración de un juego.</caption>
+<tr><th scope="row">CU-15</th><td>Gestionar la valoración de un juego</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-2.6, RF-2.3.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite conservar una valoración personal del juego mediante una puntuación y una nota opcional.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre la opción de valoración del perfil del juego.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el juego existe.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>Desde el perfil del juego, el usuario selecciona una puntuación de uno a cinco y puede añadir una nota.</li><li>El usuario solicita guardar la valoración y el sistema la registra o actualiza.</li><li>El perfil muestra la valoración guardada.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La valoración queda creada, modificada o eliminada y el perfil refleja el resultado.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si ya existe una valoración, el usuario puede modificarla o confirmar su eliminación.</li><li>El usuario puede cancelar sin guardar los cambios.</li><li>Si la valoración es la primera actividad sobre el juego, el sistema lo sigue automáticamente cuando no existe una decisión explícita anterior.</li></ul></td></tr>
+</table>
+</div>
+
+#### Manuales
+
+<div class="tabla-documento" role="region" aria-label="CU-16. Añadir un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-16">
+<caption>Tabla B.68. <strong>CU-16</strong>. Añadir un manual.</caption>
+<tr><th scope="row">CU-16</th><td>Añadir un manual</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.1, RF-3.2, RF-3.3, RF-3.10, RF-2.3.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite asociar un manual a un juego y preparar su contenido para utilizarlo en las consultas.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita añadir un manual, desde el perfil de un juego o desde la opción de subida.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y dispone del manual en un documento PDF o en imágenes.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario acepta el juego preseleccionado o selecciona uno.</li><li>El usuario añade el documento o las imágenes y elige si el manual será privado o compartido. Si añade varias imágenes, puede revisarlas, ordenarlas y retirar las que no sean útiles.</li><li>Si comparte el manual, elige si quiere mostrar su nombre. Por defecto aparece como «Anónimo».</li><li>El usuario confirma la subida. El sistema valida los formatos, los tamaños y el número de páginas, y comprueba si el manual está duplicado.</li><li>El sistema guarda la fuente aceptada y ejecuta CU-30 en segundo plano.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El manual aceptado queda asociado al juego con la visibilidad y la opción de mostrar el nombre elegidas, y el juego empieza a seguirse automáticamente cuando corresponde. Su contenido queda preparado para consultas si el procesamiento obtiene un resultado utilizable. En caso contrario, se registra el fallo o la ausencia de texto útil.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede cancelar antes de enviar el manual.</li><li>El sistema rechaza los archivos que incumplen los límites y los manuales duplicados antes de procesarlos.</li><li>El usuario puede seguir utilizando la aplicación mientras se procesa el manual.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-17. Consultar el estado de un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-17">
+<caption>Tabla B.69. <strong>CU-17</strong>. Consultar el estado de un manual.</caption>
+<tr><th scope="row">CU-17</th><td>Consultar el estado de un manual</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.5</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite conocer el avance del procesamiento de un manual y el resultado de cada página.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario elige consultar el estado de uno de sus manuales.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el manual le pertenece. No es necesario que su procesamiento haya terminado.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra el estado guardado del manual y de sus páginas.</li><li>El usuario revisa qué páginas siguen pendientes o en procesamiento y cuáles se han completado o han fallado.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario conoce el estado guardado del manual y de sus páginas.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede abandonar la consulta y revisar el estado más tarde.</li><li>Los fallos y la ausencia de texto útil se muestran como estados distintos del contenido preparado para consultas.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-18. Consultar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-18">
+<caption>Tabla B.70. <strong>CU-18</strong>. Consultar un manual.</caption>
+<tr><th scope="row">CU-18</th><td>Consultar un manual</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.6, RF-3.6.1, RF-3.6.2, RF-3.6.3, RF-3.10</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite leer un manual propio o compartido y contrastar el texto de cada página con su imagen. La información de procesamiento solo se muestra al propietario.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario selecciona un manual disponible o una referencia a una de sus páginas.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión. El manual no está eliminado y le pertenece o está compartido.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema abre el manual en la página indicada. Si no se ha indicado ninguna o esa página no existe, abre la primera página disponible.</li><li>El sistema muestra el texto extraído o corregido y la imagen disponible. Si el manual es propio, también muestra los datos de origen, confianza y reutilización de la página.</li><li>El usuario puede navegar entre las páginas o buscar texto y desplazarse entre las coincidencias.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario consulta las páginas elegidas. Si el manual pertenece a otra cuenta, no puede editarlo, reprocesarlo, eliminarlo ni cambiar sus opciones.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si la búsqueda no devuelve coincidencias o falta información de procesamiento, el sistema lo indica.</li><li>Si el manual está compartido, el propietario puede cambiar la opción de mostrar su nombre y confirmar la elección. El sistema la guarda y la aplica al manual y a las fuentes de las respuestas.</li><li>Si cancela la confirmación o falla el guardado, se conserva la opción anterior.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-19. Corregir el texto de una página." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-19">
+<caption>Tabla B.71. <strong>CU-19</strong>. Corregir el texto de una página.</caption>
+<tr><th scope="row">CU-19</th><td>Corregir el texto de una página</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.7</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite corregir errores o completar el texto de una página para utilizar la versión revisada en las consultas.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita editar el texto de la página que está consultando.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión, la página existe y el manual es propio, privado y no se está procesando.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario modifica el texto de la página que está consultando y confirma el cambio.</li><li>El sistema guarda la corrección y solicita actualizar el contenido indexado de esa página.</li><li>El visor muestra el texto corregido para continuar la lectura.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El texto corregido queda guardado y se solicita su actualización para las consultas. El texto de las demás páginas se conserva.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede cancelar sin guardar o añadir texto a una página que todavía no lo tenga.</li><li>El sistema rechaza la edición de un manual ajeno, compartido o que se esté procesando.</li><li>Si falla la solicitud de actualización del contenido indexado después de guardar, el texto corregido se conserva y el sistema informa del error.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-20. Reprocesar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-20">
+<caption>Tabla B.72. <strong>CU-20</strong>. Reprocesar un manual.</caption>
+<tr><th scope="row">CU-20</th><td>Reprocesar un manual</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.8, RF-3.8.1, RF-3.8.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite obtener de nuevo el contenido de un manual completo o de una página a partir de las fuentes guardadas.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita repetir el procesamiento desde el visor del manual.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión, el manual le pertenece, conserva sus fuentes y su estado permite repetir el procesamiento.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario elige reprocesar el manual completo o una página y confirma la operación.</li><li>El sistema ejecuta CU-30 en segundo plano sobre las páginas seleccionadas.</li><li>El sistema guarda el nuevo resultado o el fallo y actualiza el estado del manual y de las páginas afectadas.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El nuevo resultado o el fallo queda registrado. Si se reprocesa una sola página, se conserva el resto del manual.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede cancelar antes de confirmar la operación.</li><li>Si el estado del manual impide reprocesarlo, el sistema rechaza la solicitud.</li><li>El reprocesamiento puede sustituir las correcciones manuales y puede terminar con un error. No requiere que el procesamiento anterior haya fallado.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-21. Eliminar un manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-21">
+<caption>Tabla B.73. <strong>CU-21</strong>. Eliminar un manual.</caption>
+<tr><th scope="row">CU-21</th><td>Eliminar un manual</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.9</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite retirar un manual propio y su contenido del acceso del usuario.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita eliminar un manual desde la biblioteca o desde su visor.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión. El manual le pertenece y no está eliminado. No es necesario que su procesamiento haya terminado.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario confirma la eliminación del manual.</li><li>El sistema retira el acceso al manual y sus páginas y solicita la limpieza de sus archivos y del contenido indexado.</li><li>Si la eliminación se inició en la biblioteca, el sistema actualiza la lista. Si se inició en el visor, termina la consulta del manual y muestra la biblioteca.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El manual y sus páginas dejan de ser accesibles y se solicita la limpieza de sus recursos. El historial de conversaciones se conserva.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>El usuario puede cancelar sin eliminar el manual.</li><li>Si se elimina la última fuente utilizable de un juego, las conversaciones existentes se conservan y quedan en modo de solo lectura.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-30. Procesar el contenido del manual." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-30">
+<caption>Tabla B.74. <strong>CU-30</strong>. Procesar el contenido del manual.</caption>
+<tr><th scope="row">CU-30</th><td>Procesar el contenido del manual</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-3.4, RF-3.4.1, RF-3.4.2, RF-3.4.3, RF-3.4.4, RF-3.4.5</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Prepara el texto del manual para que pueda recuperarse al generar explicaciones y responder preguntas sobre el juego.</td></tr>
+<tr><th scope="row">Inicio</th><td>El sistema inicia el procesamiento previsto en CU-16 o en CU-20.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>Las fuentes están guardadas y las páginas que deben procesarse están identificadas.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema utiliza el texto del documento cuando es aprovechable. En caso contrario, preprocesa las imágenes y extrae su texto mediante <em>Optical Character Recognition</em> (OCR).</li><li>El sistema aplica el posprocesado y guarda el texto resultante.</li><li>El sistema divide el texto en fragmentos y los indexa para recuperarlos durante las consultas.</li><li>El sistema actualiza el estado del manual y de sus páginas según el resultado del procesamiento.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El contenido utilizable queda preparado para las consultas. Cuando el procesamiento falla o no obtiene texto útil, el estado del manual y de sus páginas refleja esa situación.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si encuentra una página idéntica ya procesada, el sistema reutiliza su resultado sin repetir la extracción ni el posprocesado.</li><li>Si falla una etapa o no se obtiene texto útil, el sistema registra el estado correspondiente.</li></ul></td></tr>
+</table>
+</div>
+
+#### Consulta de reglas
+
+<div class="tabla-documento" role="region" aria-label="CU-22. Consultar la explicación de un juego." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-22">
+<caption>Tabla B.75. <strong>CU-22</strong>. Consultar la explicación de un juego.</caption>
+<tr><th scope="row">CU-22</th><td>Consultar la explicación de un juego</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-4.1</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite conocer la preparación, el desarrollo y las condiciones de victoria de un juego a partir de sus manuales.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre el perfil de un juego con manuales utilizables.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el juego dispone de manuales que puede utilizar para las consultas.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema solicita automáticamente la explicación del juego.</li><li>El sistema recupera la explicación conservada si sus fuentes no han cambiado. Si no dispone de una explicación vigente, la genera en segundo plano.</li><li>El usuario consulta los apartados de la explicación a medida que están disponibles.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La explicación generada puede leerse desde el perfil del juego y se conserva para consultas posteriores mientras no cambien sus fuentes.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si no hay manuales utilizables, se informa de que faltan fuentes y no se genera la explicación.</li><li>Si la generación falla antes de obtener contenido, el sistema informa del error. Si ya hay apartados disponibles, conserva su contenido. El resto del perfil sigue disponible.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-23. Consultar una duda sobre las reglas." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-23">
+<caption>Tabla B.76. <strong>CU-23</strong>. Consultar una duda sobre las reglas.</caption>
+<tr><th scope="row">CU-23</th><td>Consultar una duda sobre las reglas</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-4.2.1, RF-4.3, RF-4.4, RF-4.5, RF-4.6, RF-4.7, RF-4.8, RF-2.3.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite aclarar una duda sobre las reglas de un juego y contrastar la respuesta con los manuales utilizados.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario envía una pregunta sobre las reglas del juego.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el juego dispone de fuentes utilizables. Si continúa una conversación, esta pertenece a su cuenta.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema utiliza la conversación seleccionada o crea una nueva asociada al juego.</li><li>El sistema guarda la pregunta y muestra la respuesta como pendiente. Si es el primer mensaje, asigna un título a la conversación a partir de su contenido.</li><li>El sistema genera la respuesta en segundo plano a partir de los manuales utilizables. Si hay mensajes anteriores, los tiene en cuenta para interpretar la pregunta.</li><li>El sistema muestra la respuesta en español o inglés según el idioma detectado en el turno, junto con las referencias utilizadas.</li><li>El usuario lee la respuesta y puede contrastarla consultando una página citada mediante CU-29.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La pregunta y la respuesta generada quedan guardadas en la conversación. Si la generación falla, se conserva ese estado. Si esta es la primera actividad con el juego y el usuario no ha elegido antes seguirlo o dejar de seguirlo, el juego empieza a seguirse automáticamente.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si no hay información suficiente para responder, el sistema lo indica.</li><li>Si no quedan fuentes utilizables, no se admiten nuevos mensajes y el historial existente sigue disponible.</li><li>Si falla el envío, el sistema muestra el error y recupera la pregunta para permitir otro intento.</li><li>Si falla la generación, la pregunta queda guardada y la respuesta aparece como fallida.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-24. Consultar las conversaciones y su historial." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-24">
+<caption>Tabla B.77. <strong>CU-24</strong>. Consultar las conversaciones y su historial.</caption>
+<tr><th scope="row">CU-24</th><td>Consultar las conversaciones y su historial</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-4.2.1, RF-4.2.2, RF-4.6, RF-4.8</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite recuperar las conversaciones propias de un juego para revisar sus mensajes y continuar las consultas anteriores.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario accede a las conversaciones del juego.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y el juego existe en la aplicación.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra la lista de conversaciones propias del juego.</li><li>El usuario puede filtrar las conversaciones por su título para localizar la que desea consultar.</li><li>Si abre una conversación, el sistema muestra sus mensajes, el estado de las respuestas y las referencias utilizadas. El usuario puede leer los mensajes y consultar sus referencias.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario consulta sus conversaciones y los mensajes que desea revisar. Las operaciones opcionales pueden actualizar la lista o añadir una pregunta y su respuesta. Los mensajes anteriores se conservan, salvo que se elimine la conversación.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si no hay conversaciones o el filtro no encuentra coincidencias, el sistema lo indica.</li><li>Si se han retirado las fuentes utilizables, el historial se conserva y puede leerse, pero no se admiten nuevos mensajes.</li><li>Si falla la carga de la lista o del historial, el sistema informa del error.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-25. Renombrar una conversación." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-25">
+<caption>Tabla B.78. <strong>CU-25</strong>. Renombrar una conversación.</caption>
+<tr><th scope="row">CU-25</th><td>Renombrar una conversación</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-4.2.3</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite identificar una conversación propia mediante un título elegido por el usuario.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario elige la opción de renombrar una conversación.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y la conversación pertenece a su cuenta.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra el título actual para que pueda modificarse.</li><li>El usuario introduce el nuevo título y confirma el cambio.</li><li>El sistema valida el título, lo guarda y actualiza la lista de conversaciones.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>Tras guardar el cambio, la conversación aparece con el nuevo título y conserva sus mensajes.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si el usuario cancela, se conserva el título anterior.</li><li>Si el título está vacío o supera la longitud admitida, el sistema no permite guardarlo.</li><li>Si no puede guardarse el cambio, el sistema informa del error.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-26. Eliminar una conversación." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-26">
+<caption>Tabla B.79. <strong>CU-26</strong>. Eliminar una conversación.</caption>
+<tr><th scope="row">CU-26</th><td>Eliminar una conversación</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-4.2.4</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite retirar una conversación propia y sus mensajes cuando el usuario ya no desea conservarlos.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario solicita eliminar una de sus conversaciones.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y la conversación pertenece a su cuenta.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema pide confirmación antes de eliminar la conversación.</li><li>El usuario confirma la eliminación.</li><li>El sistema elimina la conversación y actualiza la lista.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>Tras completar la eliminación, la conversación y sus mensajes dejan de ser accesibles. Las demás conversaciones se conservan.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si el usuario cancela, se conservan la conversación y sus mensajes.</li><li>Si la eliminación falla, el sistema informa del error y permite volver a intentarlo.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-29. Consultar una página citada." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-29">
+<caption>Tabla B.80. <strong>CU-29</strong>. Consultar una página citada.</caption>
+<tr><th scope="row">CU-29</th><td>Consultar una página citada</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-4.6, RF-3.6.1, RF-3.10</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>Permite comprobar una respuesta mediante la consulta de la página que se cita como fuente.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario selecciona una referencia de una respuesta.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y está leyendo una respuesta mediante CU-23 o CU-24. La respuesta contiene una referencia a un manual propio disponible o a uno compartido que está activo.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema abre el manual en la página indicada. Si es propio, permite su consulta mediante CU-18; si es compartido y pertenece a otra cuenta, abre el visor en modo de solo lectura.</li><li>El usuario consulta el texto y la imagen disponibles de la página para contrastar la respuesta.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El visor muestra la página citada, con el texto y la imagen disponibles. Si esa página ya no existe, muestra la primera página del manual.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Las referencias a manuales retirados o sin permiso de lectura se muestran como información, pero no permiten abrir su contenido.</li><li>Si la página indicada ya no existe en el manual, el visor abre la primera página disponible.</li><li>Si el manual deja de estar disponible antes de abrirlo, el sistema informa de que no puede consultarse.</li></ul></td></tr>
+</table>
+</div>
+
+#### Preferencias
+
+<div class="tabla-documento" role="region" aria-label="CU-27. Seleccionar el idioma de la interfaz." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-27">
+<caption>Tabla B.81. <strong>CU-27</strong>. Seleccionar el idioma de la interfaz.</caption>
+<tr><th scope="row">CU-27</th><td>Seleccionar el idioma de la interfaz</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-5.1</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario adapta los textos de la interfaz al idioma en el que desea utilizar la aplicación.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario decide cambiar el idioma de la interfaz.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario puede acceder a la aplicación, con o sin una sesión iniciada.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario selecciona español o inglés mediante el control de idioma.</li><li>El sistema cambia los textos de la interfaz y guarda la selección en el dispositivo.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La interfaz utiliza el idioma elegido y conserva la selección al recargar la aplicación.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Durante la presentación inicial, el usuario permanece en el mismo paso después de cambiar el idioma.</li><li>El idioma de las respuestas se determina a partir de la pregunta, según RF-4.5.</li></ul></td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-28. Configurar la apariencia." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-28">
+<caption>Tabla B.82. <strong>CU-28</strong>. Configurar la apariencia.</caption>
+<tr><th scope="row">CU-28</th><td>Configurar la apariencia</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RF-5.2</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario adapta el tema y el acento de color de la interfaz a sus preferencias.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre los ajustes para cambiar la apariencia.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>El usuario ha iniciado sesión y puede acceder a los ajustes de apariencia.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El usuario elige un tema claro, oscuro o automático, y puede cambiar el acento de color.</li><li>El sistema aplica la configuración y la guarda en el dispositivo.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>La interfaz muestra la apariencia elegida y conserva la configuración al recargar la aplicación.</td></tr>
+<tr><th scope="row">Alternativas</th><td>Si el usuario elige el tema automático, la interfaz sigue la preferencia del dispositivo.</td></tr>
+</table>
+</div>
+
+#### Casos complementarios
+
+<div class="tabla-documento" role="region" aria-label="CU-A1. Consultar la ayuda y la presentación inicial." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-A1">
+<caption>Tabla B.83. <strong>CU-A1</strong>. Consultar la ayuda y la presentación inicial.</caption>
+<tr><th scope="row">CU-A1</th><td>Consultar la ayuda y la presentación inicial</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RNF-1.</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario consulta explicaciones sobre el funcionamiento y el uso de <em>Manualito</em>.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario accede a la presentación inicial o abre la sección de ayuda.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>La presentación inicial es pública y se muestra si no se ha completado en el dispositivo. Para consultar la ayuda, el usuario debe haber iniciado sesión.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra las explicaciones disponibles en la presentación o en la ayuda.</li><li>Si está en la presentación, el usuario recorre los pasos hasta la elección final de acceso o registro.</li><li>Si está en la ayuda, consulta las explicaciones de uso y puede abrir las respuestas a las preguntas frecuentes.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario ha consultado información sobre el uso de la aplicación.</td></tr>
+<tr><th scope="row">Alternativas</th><td>El usuario puede abandonar la presentación antes de completar sus pasos.</td></tr>
+</table>
+</div>
+
+<div class="tabla-documento" role="region" aria-label="CU-A2. Consultar la política de privacidad." tabindex="0">
+<table class="tabla-ficha" id="tabla-cu-CU-A2">
+<caption>Tabla B.84. <strong>CU-A2</strong>. Consultar la política de privacidad.</caption>
+<tr><th scope="row">CU-A2</th><td>Consultar la política de privacidad</td></tr>
+<tr><th scope="row">Requisitos asociados</th><td>RNF-6.</td></tr>
+<tr><th scope="row">Actores</th><td>Usuario.</td></tr>
+<tr><th scope="row">Descripción</th><td>El usuario consulta la información publicada sobre el tratamiento de sus datos.</td></tr>
+<tr><th scope="row">Inicio</th><td>El usuario abre la política desde el registro, la presentación, los ajustes o su enlace directo.</td></tr>
+<tr><th scope="row">Precondiciones</th><td>No se requiere una sesión iniciada.</td></tr>
+<tr><th scope="row">Acciones</th><td><ol><li>El sistema muestra la información publicada sobre el tratamiento de los datos.</li><li>El usuario consulta el contenido de la política.</li></ol></td></tr>
+<tr><th scope="row">Postcondiciones</th><td>El usuario ha consultado la política de privacidad.</td></tr>
+<tr><th scope="row">Alternativas</th><td><ul><li>Si la abre desde el registro o la presentación, puede cerrar la consulta y continuar en el punto en el que se encontraba.</li><li>La consulta de la política no sustituye la aceptación que se solicita durante el registro.</li></ul></td></tr>
+</table>
+</div>

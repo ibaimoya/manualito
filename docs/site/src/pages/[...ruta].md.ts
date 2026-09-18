@@ -17,6 +17,10 @@ const PATRON_FIGURA = /<Figura\b([\s\S]*?)>([\s\S]*?)<\/Figura>/g;
 const imagenes = import.meta.glob<{ default: ImageMetadata }>(
   '/src/assets/**/*.{avif,gif,jpeg,jpg,png,webp}',
 );
+const svg = import.meta.glob<string>('/src/assets/**/*.svg', {
+  query: '?url',
+  import: 'default',
+});
 
 async function convertirMdx(markdown: string, origen: URL): Promise<string> {
   const recursos = new Map<string, string>();
@@ -32,6 +36,12 @@ async function convertirMdx(markdown: string, origen: URL): Promise<string> {
     [...recursos].map(async ([nombre, ruta]) => {
       const rutaRelativa = ruta.split('/assets/')[1];
       if (!rutaRelativa) return;
+      const cargarSvg = svg[`/src/assets/${rutaRelativa}`];
+      if (cargarSvg) {
+        const rutaSvg = await cargarSvg();
+        recursos.set(nombre, new URL(rutaSvg, origen).href);
+        return;
+      }
       const cargarImagen = imagenes[`/src/assets/${rutaRelativa}`];
       if (!cargarImagen) throw new Error(`No se ha encontrado la imagen ${ruta}`);
       const imagen = await cargarImagen();

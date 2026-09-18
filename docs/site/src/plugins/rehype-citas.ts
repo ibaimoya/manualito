@@ -35,12 +35,17 @@ function recorrer(nodo: Nodo, ruta: string, seccion: Seccion): void {
   }
 }
 
-/* Una cita es un enlace externo con solo dígitos rodeado por corchetes literales. */
+/* Las referencias sin URL enlazan a su entrada en la bibliografía. */
 function esCita(hermanos: Nodo[], indice: number): boolean {
   const nodo = hermanos[indice];
   if (nodo?.type !== 'element' || nodo.tagName !== 'a') return false;
   const href = String(nodo.properties?.href ?? '');
-  if (!href.startsWith('http')) return false;
+  if (
+    !href.startsWith('http') &&
+    !/^\/(?:memoria|anexos)\/bibliografia\/#ref-\d+$/.test(href)
+  ) {
+    return false;
+  }
   const unico = nodo.children?.length === 1 ? nodo.children[0] : null;
   if (unico?.type !== 'text' || !/^\d+$/.test(unico.value ?? '')) return false;
   const previo = hermanos[indice - 1];

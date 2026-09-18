@@ -3,6 +3,8 @@ allowBuilds:
   sharp: true
   workerd: true
 engineStrict: true
+overrides:
+  katex: 0.18.7
 minimumReleaseAgeExclude:
   - astro@7.2.0
   - miniflare@5.20260801.0-alpha

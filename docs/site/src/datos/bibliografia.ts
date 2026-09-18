@@ -1,6 +1,9 @@
 import fuenteAnexos from './bibliografia-anexos.bib?raw';
+import fuenteMemoria from './bibliografia-memoria.bib?raw';
 
-/* Copia de bibliografiaAnexos.bib del TFG, mantener ambas en paralelo. */
+/* Copias de bibliografia.bib y bibliografiaAnexos.bib del TFG, mantener cada par en paralelo. */
+
+export type Seccion = 'memoria' | 'anexos';
 
 export interface Referencia {
   numero: number;
@@ -97,4 +100,10 @@ export function textoPlano(referencia: Referencia): string {
     .join(' ');
 }
 
+export const BIBLIOGRAFIA_MEMORIA: Referencia[] = parsearBib(fuenteMemoria);
 export const BIBLIOGRAFIA_ANEXOS: Referencia[] = parsearBib(fuenteAnexos);
+
+export const BIBLIOGRAFIAS: Record<Seccion, Referencia[]> = {
+  memoria: BIBLIOGRAFIA_MEMORIA,
+  anexos: BIBLIOGRAFIA_ANEXOS,
+};

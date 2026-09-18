@@ -1,7 +1,14 @@
 ---
-import { BIBLIOGRAFIA_ANEXOS, puntuar } from '../datos/bibliografia';
+import { BIBLIOGRAFIAS, puntuar, type Seccion } from '../datos/bibliografia';
 
-/* Lista numerada de referencias de los anexos, generada desde el bib. */
+/* Lista numerada de referencias de una sección, generada desde su bib. */
+
+interface Props {
+  seccion: Seccion;
+}
+
+const { seccion } = Astro.props;
+const referencias = BIBLIOGRAFIAS[seccion];
 
 function dominio(url: string): string {
   return new URL(url).hostname.replace(/^www\./, '');
@@ -10,7 +17,7 @@ function dominio(url: string): string {
 
 <ol class="bibliografia not-content">
   {
-    BIBLIOGRAFIA_ANEXOS.map((referencia) => (
+    referencias.map((referencia) => (
       <li id={`ref-${referencia.numero}`}>
         <span class="bibliografia__marca">[{referencia.numero}]</span>
         <div class="bibliografia__cuerpo">

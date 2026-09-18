@@ -1,6 +1,8 @@
-import { BIBLIOGRAFIA_ANEXOS, textoPlano } from '../datos/bibliografia';
+import { BIBLIOGRAFIAS, textoPlano, type Seccion } from '../datos/bibliografia';
 
 /* Anota las citas [n] con su referencia completa y avisa en build si derivan del bib. */
+
+const SECCIONES: Seccion[] = ['memoria', 'anexos'];
 
 interface Nodo {
   type: string;
@@ -17,18 +19,19 @@ interface Archivo {
 export default function rehypeCitas() {
   return (arbol: Nodo, archivo: Archivo) => {
     const ruta = (archivo.path ?? '').replaceAll('\\', '/');
-    if (!ruta.includes('/anexos/')) return;
-    recorrer(arbol, ruta);
+    const seccion = SECCIONES.find((s) => ruta.includes(`/${s}/`));
+    if (!seccion) return;
+    recorrer(arbol, ruta, seccion);
   };
 }
 
-function recorrer(nodo: Nodo, ruta: string): void {
+function recorrer(nodo: Nodo, ruta: string, seccion: Seccion): void {
   if (!nodo.children) return;
   for (let i = 0; i < nodo.children.length; i++) {
     const hijo = nodo.children[i];
     if (!hijo) continue;
-    if (esCita(nodo.children, i)) anotar(nodo.children, i, ruta);
-    recorrer(hijo, ruta);
+    if (esCita(nodo.children, i)) anotar(nodo.children, i, ruta, seccion);
+    recorrer(hijo, ruta, seccion);
   }
 }
 
@@ -50,13 +53,13 @@ function esCita(hermanos: Nodo[], indice: number): boolean {
   );
 }
 
-function anotar(hermanos: Nodo[], indice: number, ruta: string): void {
+function anotar(hermanos: Nodo[], indice: number, ruta: string, seccion: Seccion): void {
   const enlace = hermanos[indice];
   const previo = hermanos[indice - 1];
   const siguiente = hermanos[indice + 1];
   if (!enlace || !previo || !siguiente) return;
   const numero = Number(enlace.children?.[0]?.value ?? '0');
-  const referencia = BIBLIOGRAFIA_ANEXOS[numero - 1];
+  const referencia = BIBLIOGRAFIAS[seccion][numero - 1];
   if (!referencia) {
     console.warn(`[rehype-citas] la cita [${numero}] no existe en la bibliografía (${ruta})`);
     return;
@@ -75,7 +78,7 @@ function anotar(hermanos: Nodo[], indice: number, ruta: string): void {
     ...enlace.properties,
     className: ['cita'],
     dataExpansion: textoPlano(referencia),
-    dataDestino: `/anexos/bibliografia/#ref-${referencia.numero}`,
+    dataDestino: `/${seccion}/bibliografia/#ref-${referencia.numero}`,
     title: textoPlano(referencia),
   };
 }

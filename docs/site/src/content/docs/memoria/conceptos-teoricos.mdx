@@ -1,0 +1,197 @@
+---
+title: Conceptos teóricos
+description: Fundamentos de extracción de texto, modelos de lenguaje y recuperación de información.
+sidebar:
+  order: 3
+---
+
+import Figura from '../../../components/Figura.astro';
+import originalDetalle from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/original-detalle.png';
+import comparacionPreprocesado from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/comparacion-preprocesado.png';
+import ordenColumnas from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/orden-columnas.png';
+import posprocesadoTabla from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/posprocesado-tabla.png';
+import procesoRag from '../../../assets/memoria/conceptos-teoricos/proceso-rag.svg';
+import solapamiento from '../../../assets/memoria/conceptos-teoricos/solapamiento.svg';
+import fusionRrf from '../../../assets/memoria/conceptos-teoricos/fusion-rrf.svg';
+
+Una pregunta sobre una regla durante una partida de un juego de mesa normalmente depende de una regla algo general, sin embargo, en ocasiones puede depender a su vez de una excepción que aparece varias páginas después. Por tanto, para responder correctamente a dicha pregunta a partir del reglamento, primero hay que obtener su texto y localizar los pasajes que permiten resolver la pregunta. Sobre esta información se puede crear una explicación, conservando la relación con las páginas de origen.
+
+Este proceso se trata del núcleo técnico de este proyecto y, se realiza utilizando los conceptos que se detallan a continuación, desde el reconocimiento del texto hasta la búsqueda y la generación de respuestas mediante un *Large Language Model* (LLM).
+
+## Extracción y reconocimiento de texto
+
+Aunque dos páginas de un archivo PDF tengan el mismo aspecto, su contenido puede estar almacenado de forma distinta. Un documento creado digitalmente suele conservar los caracteres, por lo que es posible extraerlos directamente, mientras que una página escaneada puede contener únicamente una imagen. Además, la disposición visual del documento no siempre se traslada al texto extraído, especialmente cuando hay columnas, tablas o elementos superpuestos [[9](https://pypdf.readthedocs.io/en/stable/user/extract-text.html)].
+
+Cuando el texto solo está disponible como imagen, se recurre al reconocimiento óptico de caracteres, OCR. Esta técnica permite localizar las zonas que contienen escritura y reconocer los caracteres que aparecen en ellas, de modo que el texto pueda buscarse y procesarse. El resultado depende tanto del reconocimiento como de la calidad de la imagen de entrada [[10](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html)].
+
+Los ejemplos de esta sección utilizan una fotografía del manual de Monopoly de Jose Antonio Ortigueira Amor [[11](https://retroordenadoresorty.blogspot.com/2022/07/monopoly-borras-ref-6366-m-licencia.html)], publicada bajo la licencia [Creative Commons Reconocimiento 4.0](https://creativecommons.org/licenses/by/4.0/). En la figura [3.1](#fig:ocr-original) se han añadido una ampliación y marcas para señalar las dificultades del documento, donde aparecen dos páginas juntas y los pliegues del papel atraviesan algunas líneas. La iluminación tampoco es uniforme, por lo que no todas las letras se distinguen igual del fondo. Estas dificultades ayudan a entender por qué obtener el texto no consiste únicamente en identificar caracteres aislados.
+
+ <Figura id="fig:ocr-original" src={originalDetalle} alt="Fotografía de un manual con dificultades para el reconocimiento"> Figura 3.1. Fotografía de un manual con dificultades para el reconocimiento </Figura>
+
+### Preprocesado de la imagen
+
+Antes del reconocimiento se puede ajustar la escala, reducir el ruido, corregir la inclinación o separar el texto del fondo mediante una imagen en blanco y negro. Estas operaciones buscan que los caracteres sean más fáciles de distinguir, aunque su utilidad depende del documento. En una fotografía como la anterior, las diferencias de iluminación pueden hacer que un mismo ajuste aclare una zona y oculte parte del texto en otra. Por ello, no todos los documentos necesitan el mismo tratamiento ni aplicar más ajustes implica obtener un mejor resultado [[10](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html)].
+
+La figura [3.2](#fig:ocr-preprocesado) muestra un fragmento de esa fotografía después de aplicar los preprocesados utilizados en Manualito. Para Tesseract se amplía la imagen por un factor de 2,5 y se convierte a escala de grises, mientras que para PaddleOCR se trabaja también en escala de grises y se ajusta el contraste por zonas. Este último tratamiento permite adaptar el contraste a las diferencias de iluminación dentro de una misma imagen [[12](https://docs.opencv.org/4.x/d5/daf/tutorial_py_histogram_equalization.html)].
+
+Los tratamientos se han aplicado a la fotografía completa antes de recortar el fragmento. Los tres recuadros tienen el mismo tamaño y están centrados en el mismo punto de la fotografía. El de Tesseract muestra una zona menor, con el texto ampliado por un factor de 2,5, mientras que el original y el de PaddleOCR conservan el mismo encuadre. La figura permite observar los cambios en la imagen, pero no demuestra por sí sola una mejora en el reconocimiento del texto.
+
+ <Figura id="fig:ocr-preprocesado" src={comparacionPreprocesado} alt="Preprocesado de la imagen para Tesseract y PaddleOCR"> Figura 3.2. Preprocesado de la imagen para Tesseract y PaddleOCR </Figura>
+
+### Reconocimiento y orden de lectura
+
+Localizar el texto y reconocerlo son tareas distintas. La primera determina qué zonas de la imagen contienen escritura, mientras que la segunda obtiene los caracteres que aparecen en ellas. Las zonas pueden representarse mediante recuadros, conocidos como *bounding boxes*, que sitúan bloques, líneas o palabras dentro de la página [[13](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html)].
+
+Reconocer correctamente las palabras no es suficiente. También hay que conservar el orden de lectura, que resulta más fácil de seguir en un párrafo continuo que en una página con varias columnas o imágenes intercaladas. Si se toma una línea de cada columna de forma alterna, pueden mezclarse fragmentos que pertenecen a explicaciones distintas. Esta dificultad no se limita al OCR, también puede aparecer al extraer los caracteres de un PDF creado digitalmente [[9](https://pypdf.readthedocs.io/en/stable/user/extract-text.html)] [[10](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html)].
+
+La figura [3.3](#fig:ocr-reconocimiento) ilustra este problema con dos recortes de la fotografía del manual de Monopoly. Las transcripciones se han abreviado y distribuido manualmente para el ejemplo, por lo que no representan la salida de un motor de OCR. Si se lee cada bloque por separado, se conserva el sentido de ambos textos, mientras que al unir una línea de la izquierda con otra de la derecha se mezclan la explicación de las hipotecas y la descripción del juego. Aunque las palabras son las mismas, el resultado deja de tener sentido. En este manual, además, la presentación del juego está a la derecha y los apartados posteriores a la izquierda.
+
+ <Figura id="fig:ocr-reconocimiento" src={ordenColumnas} alt="Lectura por bloques y por filas"> Figura 3.3. Lectura por bloques y por filas </Figura>
+
+### Posprocesado del texto
+
+Una vez reconocido el texto, se puede revisar su formato para corregir espacios duplicados, saltos de línea o palabras partidas entre dos líneas. Esta limpieza no debe confundirse con modificar el contenido. En un reglamento, cambiar una cifra o eliminar una negación puede alterar por completo una regla, de modo que cualquier corrección debe conservar su significado y permitir contrastar el resultado con la página original.
+
+La figura [3.4](#fig:ocr-posprocesado) muestra ejemplos obtenidos en una ejecución local al procesar la fotografía de Monopoly con Tesseract 5.4.0 y aplicar las reglas de Manualito. Los fragmentos conservan los saltos de línea reconocidos y permiten ver cómo las palabras partidas por un guion se unen cuando la palabra resultante pertenece al vocabulario utilizado, mientras que algunas líneas breves con baja confianza se filtran porque pueden ser ruido. En esta prueba se han aplicado únicamente la limpieza y las reglas, sin corrección mediante un modelo de lenguaje.
+
+ <Figura id="fig:ocr-posprocesado" src={posprocesadoTabla} alt="Ejemplos de posprocesado del texto de Monopoly"> Figura 3.4. Ejemplos de posprocesado del texto de Monopoly </Figura>
+
+Además del texto, un motor de OCR puede proporcionar una puntuación de confianza asociada al reconocimiento [[13](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html)]. Este valor no indica que las reglas se hayan interpretado bien, ya que una transcripción legible también puede contener errores que cambien su significado. En esta misma prueba, una línea con confianza superior a 0,90 contiene «10 Y» en lugar de «10 %». Las reglas aplicadas no corrigen ese error, por lo que sigue siendo necesario poder revisar el texto junto a la imagen original.
+
+## Modelos de lenguaje
+
+Los grandes modelos de lenguaje, LLM, son redes neuronales entrenadas con grandes cantidades de texto para aprender relaciones entre sus elementos. En los modelos generativos autorregresivos, la respuesta se construye añadiendo una unidad de texto tras otra, según las probabilidades que el modelo asigna a las posibles continuaciones del texto anterior. Este uso del modelo ya entrenado se denomina *inferencia* y permite realizar distintas tareas a partir de instrucciones y ejemplos [[14](https://arxiv.org/abs/2005.14165)].
+
+Al analizar este funcionamiento, Bender et al. introducen la metáfora de los «loros estocásticos» para advertir de que generar texto fluido a partir de patrones estadísticos no implica, por sí solo, comprender su significado [[15](https://s10251.pcdn.co/pdf/2021-bender-parrots.pdf)].
+
+### *Tokens*, instrucciones y contexto
+
+Antes de procesar el texto, el proceso de *tokenización* lo divide en unidades llamadas *tokens*, que se representan mediante identificadores numéricos. Un *token* puede corresponder a una palabra, parte de ella o incluso a signos de puntuación. La división depende de un componente llamado *tokenizador*, por lo que dos modelos pueden representar la misma frase con un número diferente de *tokens* [[16](https://huggingface.co/docs/transformers/tokenizer_summary)].
+
+El texto que se proporciona al modelo para indicarle qué debe generar recibe el nombre de *prompt*. Puede contener las instrucciones de la tarea, la pregunta, ejemplos y el contenido necesario para responder [[14](https://arxiv.org/abs/2005.14165)]. Por ejemplo, si se pregunta cómo se mueve una torre en ajedrez, el *prompt* puede incluir la regla de movimiento y pedir al modelo que la utilice para explicarlo. También se puede indicar que la respuesta sea breve o que incluya un ejemplo, según la explicación que se quiera obtener.
+
+La *ventana de contexto* establece cuántos *tokens* puede manejar el modelo en una ejecución [[17](https://docs.ollama.com/context-length)]. Por ello, al preparar una consulta hay que distribuir ese espacio entre las instrucciones, el historial, el contenido de referencia y la respuesta que se espera generar. Un historial cada vez más largo deja menos espacio para los pasajes del manual, de modo que es necesario seleccionar la información que se envía al modelo.
+
+Durante la generación, también se puede ajustar el cómo se elige el siguiente *token*. Por ejemplo, la *temperatura* modifica la distribución de probabilidades utilizada en el muestreo. Un valor más pequeño concentra la elección en las opciones más probables, pero no garantiza que la respuesta sea correcta [[18](https://huggingface.co/docs/transformers/main_classes/text_generation)].
+
+### Cuantización
+
+Los parámetros aprendidos por un modelo se almacenan como valores numéricos y ocupan memoria. La *cuantización* permite representarlos con menos bits, por ejemplo, pasando de una representación de 16 bits a otra de 8 o de 4 bits. De este modo, se logra reducir el espacio necesario para almacenarlos, a cambio de introducir una aproximación que puede afectar a la calidad del modelo [[19](https://huggingface.co/docs/transformers/quantization/overview)].
+
+Esta reducción resulta útil cuando se dispone de recursos limitados, pero el ahorro en los parámetros no representa todo el consumo durante la ejecución, que también incluye estructuras que conservan información de los *tokens* ya procesados [[20](https://huggingface.co/docs/transformers/kv_cache)]. Cuantizar cambia la representación de esos valores, mientras que ajustar la temperatura modifica la selección del siguiente *token*. Estas operaciones son algo distinto al *ajuste fino* o *fine- tuning*, que consiste en continuar el entrenamiento con el objetivo de adaptar el modelo a una tarea [[21](https://huggingface.co/docs/transformers/training)].
+
+### Alucinaciones
+
+Las alucinaciones son respuestas que presentan información falsa o sin fundamento como si fuera cierta. Kalai et al. analizan por qué pueden aparecer incluso cuando los datos de entrenamiento no contienen errores, así como el papel de las evaluaciones que favorecen responder antes que reconocer la incertidumbre [[3](https://arxiv.org/abs/2509.04664)].
+
+Al explicar el movimiento del alfil, el modelo podría afirmar que puede saltar otras piezas, aunque las reglas no lo permiten [[22](https://handbook.fide.com/chapter/e012023)]. Para reducir este tipo de errores, la generación puede apoyarse en pasajes recuperados del documento y en instrucciones que limiten la respuesta a esa información. Este es el punto de partida de la generación aumentada por recuperación [[2](https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html)].
+
+## Generación aumentada por recuperación
+
+La generación aumentada por recuperación, RAG, combina la búsqueda de información externa con un modelo generativo. Ante una pregunta, se seleccionan documentos o pasajes relevantes y se incorporan a la entrada del modelo para que pueda basar su respuesta en ellos. De esta manera, la información disponible se ve enriquecida y no se limita a la que quedó recogida en sus parámetros durante el entrenamiento [[2](https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html)].
+
+La figura [3.5](#fig:teoria-rag) ilustra este proceso con dos páginas creadas para el ejemplo a partir de una síntesis de las reglas de ajedrez [[22](https://handbook.fide.com/chapter/e012023)]. Ante la pregunta sobre el avance del peón, se recuperan los pasajes que explican su primer movimiento y las condiciones para realizarlo. El modelo recibe esos pasajes junto con la pregunta para preparar la respuesta, que conserva la referencia a la página consultada.
+
+ <Figura id="fig:teoria-rag" src={procesoRag} alt="Consulta en un sistema RAG"> Figura 3.5. Consulta en un sistema RAG </Figura>
+
+### Fragmentación y procedencia del contenido
+
+Un manual completo puede ser demasiado extenso para recuperarlo y enviarlo al modelo en cada consulta. La *fragmentación*, o *chunking*, lo divide en unidades menores que pueden seleccionarse por separado. Estas unidades son pasajes de texto y no deben confundirse con los *tokens* con los que trabaja el modelo [[23](https://learn.microsoft.com/en-us/azure/search/vector-search-how-to-chunk-documents)].
+
+Si un *chunk* es demasiado pequeño, puede separar una regla de la explicación necesaria para entenderla, mientras que uno demasiado grande puede incluir contenido ajeno a la pregunta. Para reducir la pérdida de información en los extremos de cada *chunk*, se puede mantener un pequeño *solapamiento*, que repite parte del final de un fragmento al principio del siguiente. También se pueden aprovechar los párrafos y las frases para evitar cortes arbitrarios [[23](https://learn.microsoft.com/en-us/azure/search/vector-search-how-to-chunk-documents)].
+
+La figura [3.6](#fig:teoria-fragmentos) retoma la síntesis de las reglas de ajedrez [[22](https://handbook.fide.com/chapter/e012023)] y repite la frase sobre el primer movimiento en ambos fragmentos, de modo que el segundo conserva la regla a la que se refiere «Para hacerlo». Así se entiende que las dos casillas deben estar libres para realizar ese avance. Aun así, el solapamiento no asegura que todas las referencias de un reglamento queden dentro del mismo fragmento.
+
+ <Figura id="fig:teoria-fragmentos" src={solapamiento} alt="Solapamiento entre chunks"> Figura 3.6. Solapamiento entre *chunks* </Figura>
+
+Cada *chunk* puede conservar además datos sobre su procedencia, como el documento y la página. Estos *metadatos* permiten asociar el resultado de una búsqueda con su fuente y restringir la consulta al juego correspondiente, de modo que quien lee una explicación pueda acudir a la página de origen para comprobarla.
+
+### Reformulación de preguntas
+
+Durante una conversación, algunas preguntas solo se entienden a partir de lo que se ha hablado anteriormente. Por ejemplo, después de preguntar cómo se mueve un peón, «¿Y para capturar?» no indica de qué pieza se está hablando. Buscar únicamente esta última pregunta puede llevar a recuperar las reglas de captura de otra pieza y dar lugar a una respuesta que no resuelva la duda.
+
+La *reformulación* utiliza el historial para convertir una pregunta dependiente del contexto en otra que se pueda entender por sí sola, conservando su significado [[24](https://aclanthology.org/D19-1605/)]. En el ejemplo anterior, podría producir «¿Cómo captura un peón?». Esta versión sirve para buscar, mientras que la pregunta original y la conversación pueden seguir formando parte de la entrada con la que se genera la respuesta. Por tanto, reformular resuelve referencias de la conversación, pero no amplía la ventana de contexto del modelo.
+
+Además del límite de la ventana de contexto, hay que tener en cuenta cómo aprovecha el modelo la información recibida. Anthropic señala que, al aumentar la cantidad de texto, puede disminuir la precisión con la que el modelo localiza y utiliza los datos relevantes [[25](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)]. Por ello, conviene seleccionar los mensajes y fragmentos que ayuden a responder la pregunta, evitando acumular contenido innecesario.
+
+## Recuperación léxica
+
+Si una pregunta incluye el nombre de una pieza, como «caballo», buscar esa palabra en el manual puede ayudar a localizar la información necesaria. La recuperación léxica aprovecha estas coincidencias entre los términos de la consulta y los del texto, que pueden normalizarse antes de compararlos.
+
+Esta normalización previa puede convertir el texto a minúsculas, eliminar palabras muy frecuentes o reducir palabras relacionadas a una raíz común mediante *stemming* [[26](https://www.cs.otago.ac.nz/homepages/andrew/papers/2014-2.pdf)]. De esta forma, ciertas variaciones de las palabras dejan de impedir la coincidencia. Los términos obtenidos se guardan en un *índice invertido*, que asocia cada término con los fragmentos donde aparece y permite encontrarlos sin recorrer todos los textos [[27](https://nlp.stanford.edu/IR-book/information-retrieval-book.html)]. Estas unidades de búsqueda pueden diferir de los *tokens* del modelo generativo.
+
+### Ponderación de términos y BM25
+
+Una coincidencia aislada nunca debe ser suficiente por si sola para ordenar los resultados. BM25 combina la frecuencia de un término dentro de un documento, lo común que es entre todos los textos sobre los que se realiza la búsqueda y la longitud del documento. De este modo, repetir una palabra aporta información hasta cierto punto, mientras que una palabra presente en casi todos los textos discrimina menos que otra poco frecuente [[26](https://www.cs.otago.ac.nz/homepages/andrew/papers/2014-2.pdf)].
+
+Para una consulta $q$ y un fragmento $d$, una formulación habitual es:
+
+<div class="ecuacion-ancla" id="eq:teoria-bm25"></div>
+
+$$
+
+\operatorname{BM25}(q,d) = \sum_{t\in q}\operatorname{idf}(t)\, \frac{f(t,d)(k_1+1)} {f(t,d)+k_1\left(1-b+b\frac{|d|}{\overline{\ell}}\right)}. \tag{3.1}
+
+$$
+
+En esta expresión, $f(t,d)$ cuenta las apariciones del término $t$ en el fragmento, $|d|$ es su longitud en términos y $\overline{\ell}$ es la longitud media de los fragmentos del conjunto de la búsqueda. El parámetro $k_1$ regula cuánto influye la repetición de un término antes de que su aportación se sature, mientras que $b$ controla la corrección por longitud. Esta corrección evita favorecer un fragmento solo por contener más texto [[28](https://www.staff.city.ac.uk/~sbrp622/papers/foundations_bm25_review.pdf)].
+
+La función $\operatorname{idf}$ representa la frecuencia inversa de documento. Una variante que mantiene pesos positivos, utilizada también en Lucene, es [[29](https://lucene.apache.org/core/9_9_1/core/org/apache/lucene/search/similarities/BM25Similarity.html)]:
+
+<div class="ecuacion-ancla" id="eq:teoria-idf"></div>
+
+$$
+
+\operatorname{idf}(t)= \ln\left(1+\frac{N-n_t+0{,}5}{n_t+0{,}5}\right), \tag{3.2}
+
+$$
+
+donde $N$ es el número de fragmentos y $n_t$ indica cuántos contienen el término. En una colección ilustrativa sobre ajedrez, «enroque» recibiría más peso que «pieza» si apareciera en menos fragmentos. El resultado sigue siendo una puntuación para ordenar candidatos, por lo que encontrar la misma palabra no confirma que el pasaje resuelva la pregunta.
+
+## Recuperación semántica
+
+Una persona puede preguntar «¿Cómo gano una partida de ajedrez?» y encontrar la respuesta en los pasajes sobre el «jaque mate», que es una forma de ganar la partida [[22](https://handbook.fide.com/chapter/e012023)]. Una búsqueda léxica puede no localizar esos pasajes si emplean términos distintos a los de la pregunta. La recuperación semántica busca relacionar ambos textos por su significado, incluso cuando no comparten exactamente las mismas palabras.
+
+### Representaciones vectoriales y similitud
+
+Un *embedding* es una representación del texto mediante un vector, es decir, una secuencia de valores numéricos. Un modelo entrenado para comparar significados puede producir representaciones próximas para expresiones relacionadas. Esto permite transformar tanto los fragmentos como la consulta en vectores y compararlos en un mismo espacio [[30](https://aclanthology.org/D19-1410/)].
+
+Una medida habitual es la *similitud coseno*, que compara la dirección de dos vectores no nulos. Para dos representaciones $\mathbf{u}$ y $\mathbf{v}$ de $n$ dimensiones, se calcula como:
+
+<div class="ecuacion-ancla" id="eq:teoria-coseno"></div>
+
+$$
+
+\operatorname{sim}_{\cos}(\mathbf{u},\mathbf{v}) = \frac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\,\|\mathbf{v}\|} = \frac{\sum_{i=1}^{n}u_i v_i} {\sqrt{\sum_{i=1}^{n}u_i^2}\sqrt{\sum_{i=1}^{n}v_i^2}}. \tag{3.3}
+
+$$
+
+El numerador es el producto escalar y el denominador normaliza el resultado según la longitud de ambos vectores. El valor se encuentra entre $-1$ y $1$, y vale $1$ cuando ambos apuntan en la misma dirección. En la búsqueda semántica se utiliza para ordenar los fragmentos según su cercanía a la consulta [[30](https://aclanthology.org/D19-1410/)]. Esa puntuación no es una probabilidad de que el fragmento contenga la regla correcta, ya que dos pasajes pueden tratar el mismo tema y establecer condiciones diferentes.
+
+### Bases de datos vectoriales e indexación
+
+Una base de datos vectorial almacena estas representaciones y permite recuperar las más cercanas a una consulta. Los vectores pueden asociarse a los textos y a sus metadatos, de modo que el resultado conserve información legible junto a su fuente. El *índice vectorial* es la estructura que organiza los vectores para facilitar la búsqueda, por lo que constituye una parte de esa base de datos [[31](https://docs.trychroma.com/docs/collections/add-data)].
+
+Buscar los $k$ vecinos más próximos consiste en obtener los $k$ vectores más cercanos según una medida elegida. La búsqueda exacta compara la consulta con todos los candidatos, mientras que la búsqueda aproximada utiliza un índice para reducir el trabajo a cambio de poder omitir alguno de los vecinos que devolvería el recorrido completo [[32](https://arxiv.org/abs/1603.09320v4)].
+
+Una estructura utilizada para ello es *Hierarchical Navigable Small World* (HNSW), que organiza los vectores como nodos de un grafo con varias capas. Las capas superiores contienen menos nodos y permiten aproximarse a la zona de interés con pocos saltos, mientras que las inferiores refinan la búsqueda entre vecinos más próximos. Este recorrido evita comparar el vector de la consulta con el de cada *chunk* almacenado. [[32](https://arxiv.org/abs/1603.09320v4)].
+
+## Recuperación híbrida
+
+La recuperación híbrida combina resultados léxicos y semánticos para aprovechar sus aportaciones. Ante una pregunta sobre si el rey puede moverse a una casilla amenazada, la búsqueda léxica puede localizar el término «rey», mientras que la semántica puede relacionar «casilla amenazada» con «casilla atacada». Sin embargo, las puntuaciones de ambos métodos tienen escalas y significados distintos, por lo que sumarlas directamente puede dar un peso desproporcionado a una de las búsquedas.
+
+La fusión por rango recíproco, RRF, resuelve esta combinación utilizando las posiciones de los resultados en cada lista. Para un fragmento $d$, su puntuación se obtiene mediante [[33](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)]:
+
+<div class="ecuacion-ancla" id="eq:teoria-rrf"></div>
+
+$$
+
+\operatorname{RRF}(d)= \sum_{r\in\mathcal{R}_d}\frac{1}{c+\operatorname{pos}_r(d)}, \tag{3.4}
+
+$$
+
+donde $\mathcal{R}_d$ reúne las listas en las que aparece el fragmento y $\operatorname{pos}_r(d)$ es su posición, empezando en $1$. La constante positiva $c$ suaviza la diferencia entre las primeras posiciones. Un fragmento recibe una aportación por cada lista en la que aparece, de modo que se favorecen los resultados bien situados en varias búsquedas [[33](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)], como se muestra en la figura [3.7](#fig:teoria-rrf).
+
+ <Figura id="fig:teoria-rrf" src={fusionRrf} alt="Ejemplo de fusión de dos listas mediante RRF"> Figura 3.7. Ejemplo de fusión de dos listas mediante RRF </Figura>
+
+La figura [3.7](#fig:teoria-rrf) muestra un cálculo ilustrativo con $c=60$, utilizando los pasajes del manual del ajedrez. Aunque $A$ encabeza la búsqueda léxica, $B$, sobre el primer movimiento del peón, termina primero al ocupar la segunda posición en esa lista y la primera en la semántica. Las clasificaciones son inventadas para explicar el cálculo y no representan una evaluación del proyecto.

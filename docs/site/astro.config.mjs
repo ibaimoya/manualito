@@ -39,7 +39,7 @@ export default defineConfig({
         'Documentación para usar Manualito y entender cómo procesa los manuales de juegos de mesa.',
       favicon: '/favicon.svg',
       logo: {
-        src: './src/assets/manualito.svg',
+        src: './src/assets/logos/manualito.svg',
         alt: '',
       },
       locales: {

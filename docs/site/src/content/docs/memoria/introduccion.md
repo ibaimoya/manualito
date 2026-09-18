@@ -1,52 +1,35 @@
 ---
 title: Introducción
-description: Página provisional para probar la estructura, la navegación y el desplazamiento de la documentación.
+description: Contexto, propósito y materiales del proyecto Manualito.
 sidebar:
   order: 1
 ---
 
-> Este contenido es provisional. Su única finalidad es permitir comprobar la navegación y el desplazamiento de la página.
+En ocasiones, ya sea en familia, con amigos o en solitario, tenemos ganas de probar un juego de mesa nuevo. Sin embargo, nos echamos atrás al ver la cantidad de reglas e instrucciones que hay que leer y entender antes de empezar a jugar.
 
-## Contexto
+Además, haber leído el manual no significa que hayamos comprendido todas las reglas. Durante una partida pueden aparecer dudas sobre una acción, una excepción o una situación que no habíamos previsto. Para resolverlas, hay que volver al reglamento y buscar la explicación que corresponde a ese caso en concreto.
 
-Manualito digitaliza manuales de juegos de mesa: extrae el texto con OCR, lo indexa para RAG y un LLM local redacta la explicación. La aplicación se instala como PWA y apoya la parte de IA en la GPU. Cuando el OCR termina, las páginas quedan guardadas.
+Para ayudar en estas situaciones, se ha desarrollado *Manualito*, una aplicación web que permite obtener de forma ágil una explicación general de un juego de mesa y plantear dudas sobre sus reglas a un asistente de inteligencia artificial que se encarga de consultar los manuales para resolverlas.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere, justo vitae aliquet tincidunt, neque augue faucibus erat, vel tincidunt libero mauris sed neque. Donec vitae purus non enim convallis aliquet. Suspendisse potenti. Cras at dui eget nibh porttitor feugiat. Vivamus ullamcorper, lacus vitae pellentesque commodo, justo arcu consequat nisi, sed vulputate arcu velit sed mauris.
+En su estudio sobre el uso de herramientas digitales en juegos de mesa, Rogerson y sus colaboradores destacan la importancia de integrarlas en la experiencia de juego sin que se conviertan en una distracción [[1](https://cdn.svc.asmodee.net/gil/uploads/2022/01/Rogerson-al-More-Than-a-Gimmick-2021.pdf)]. En esta línea, *Manualito* se plantea como una herramienta de apoyo a la que acudir cuando surge una duda sobre las reglas durante la partida.
 
-Praesent non erat vitae sapien tristique faucibus. Curabitur interdum, augue at cursus interdum, urna sapien faucibus tellus, sit amet feugiat orci justo ut nibh. Nulla facilisi. Aliquam erat volutpat. Mauris feugiat metus vel mi sollicitudin, ac interdum risus consequat. Sed quis lacus vel neque placerat malesuada eget id sem.
+Para utilizar la aplicación, el usuario puede añadir los manuales en archivos PDF o imágenes y asociarlos al juego correspondiente. A partir de ellos se extrae el texto, utilizando reconocimiento óptico de caracteres, denominado OCR, cuando es necesario. El texto obtenido se puede revisar junto a las páginas originales y corregir si contiene errores. Los manuales y las conversaciones se guardan para poder volver a consultarlos en otra partida.
 
-Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Duis suscipit, erat sed varius tempor, nisl justo luctus metus, quis malesuada risus turpis et enim. Integer dignissim sem vel nisi tincidunt, vel vestibulum nulla consequat.
+Las respuestas se generan con un modelo de lenguaje al que se proporciona información de los manuales. Para encontrar los pasajes relacionados con una pregunta se utiliza generación aumentada por recuperación, conocida como RAG por *Retrieval-Augmented Generation* [[2](https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html)]. La búsqueda se limita a los manuales del juego a los que el usuario tiene acceso. Los fragmentos encontrados se envían al modelo como contexto y la respuesta se muestra junto a referencias a las páginas recuperadas, para que el usuario pueda consultar su contenido.
 
-## Motivación
+Toda esta estructura busca reducir el riesgo de alucinaciones, es decir, de que el asistente invente reglas o detalles al responder [[3](https://arxiv.org/abs/2509.04664)]. Para ello, el modelo recibe información de los manuales relacionada con la pregunta del usuario. La posibilidad de corregir el texto extraído y consultar las páginas originales permite, además, detectar errores y comprobar las explicaciones en su contexto.
 
-El punto de partida fue comprobar si un LLM podía explicar reglas de juegos sin inventarlas.
+Aunque *Manualito* se centra en explicar juegos de mesa, el mismo enfoque podría adaptarse a otros ámbitos en los que sea necesario consultar manuales o seguir procedimientos. Un ejemplo sería la consulta de protocolos de actuación ante un incidente de ciberseguridad, donde puede ser necesario combinar instrucciones de análisis, recuperación de sistemas y protección de datos. Los juegos de mesa sirven así como caso de estudio, mientras que su aplicación en otros contextos requeriría adaptar el sistema y evaluar sus respuestas.
 
-Fusce eget ligula sed velit vulputate dignissim. Morbi vitae feugiat odio. Aenean nec neque vitae risus fermentum vulputate. Etiam id augue a mauris blandit malesuada. Proin vitae purus non erat tempus interdum. Quisque luctus risus eu tortor vulputate, eget feugiat ligula faucibus. Nam malesuada mi non nisl porta, vitae hendrerit metus luctus.
+## Materiales del proyecto
 
-Donec sed risus vitae lacus elementum volutpat. Nam consequat justo sit amet quam pulvinar, quis ultrices turpis hendrerit. Phasellus feugiat turpis vitae nunc fermentum, non suscipit tortor interdum. Sed faucibus luctus velit, a cursus arcu elementum id. Maecenas sit amet leo in justo dictum volutpat. Curabitur et arcu sit amet mi tincidunt malesuada.
+<div id="intro:materiales"></div>
 
-Ut congue mauris sed lorem posuere, at feugiat eros pulvinar. Nunc vitae metus eget erat pretium faucibus. Nulla malesuada, ex at vestibulum volutpat, massa purus hendrerit sem, quis congue lorem est eget sapien. In hac habitasse platea dictumst. Duis commodo enim sed urna bibendum, sed tempor felis gravida.
+La aplicación, el código fuente, la documentación y los materiales de evaluación del proyecto se encuentran en los siguientes recursos:
 
-## Alcance
-
-Aliquam finibus risus nec purus posuere, quis feugiat odio tempor. Sed imperdiet nulla id metus posuere, at congue lectus dictum. Integer auctor risus non tellus vehicula, sit amet placerat sapien placerat. Vivamus tincidunt lectus quis risus mattis, sit amet venenatis odio pellentesque. Donec tristique mauris vitae nisi interdum, et egestas lorem volutpat.
-
-Morbi a felis vitae purus placerat interdum. Suspendisse at dui a nisl sollicitudin pretium. Cras vel nibh sit amet lacus laoreet hendrerit. Etiam mattis, mauris sed tempor finibus, enim lectus gravida nisl, eget condimentum nibh enim id velit. Proin sollicitudin lectus at tellus commodo, non ultrices arcu tempus.
-
-Nam dictum mauris ut ex porta, sit amet pulvinar tellus faucibus. Vestibulum placerat nibh vel mauris faucibus consequat. Nulla ut ex non velit malesuada vehicula. Pellentesque cursus mauris vel lorem hendrerit, vitae consectetur mauris convallis. Aenean luctus ante non diam egestas, sit amet bibendum arcu vestibulum.
-
-## Objetivos
-
-Curabitur at mi ut erat tempor faucibus. Donec pretium felis ac turpis pulvinar, vitae pulvinar dolor viverra. Phasellus auctor urna quis nibh molestie, id consectetur tortor luctus. Vivamus posuere leo vitae odio commodo, vel tincidunt sapien ullamcorper. Sed sed lorem sit amet sem varius malesuada.
-
-Pellentesque id dolor vel arcu interdum egestas. In consectetur nisl vitae metus aliquet, et convallis enim tristique. Proin non arcu in ligula blandit efficitur. Nulla facilisi. Mauris aliquam est eu odio sodales, vel accumsan ante tincidunt. Etiam vestibulum tortor ut urna volutpat, quis condimentum nisi elementum.
-
-Sed vitae leo sit amet massa imperdiet rhoncus. Integer quis nisi eget purus facilisis volutpat. Aenean malesuada purus vitae libero fringilla, non luctus ipsum facilisis. Donec ac odio ut sem aliquet tristique. Nunc ullamcorper neque in ante consectetur, et posuere justo luctus. Cras sodales magna et nulla aliquet feugiat.
-
-## Organización
-
-Praesent bibendum sem vel augue elementum, eu cursus felis sollicitudin. Vestibulum tincidunt nisi eu mi facilisis, vitae feugiat lacus egestas. Donec sollicitudin turpis non est cursus, sed sodales nibh pretium. Morbi vulputate ligula eget sem interdum, nec tincidunt mauris volutpat. Integer elementum risus ac eros elementum, vitae aliquam turpis vulputate.
-
-Quisque quis erat sit amet lectus aliquet tempus. Suspendisse rhoncus nisl non sem dignissim, sit amet pretium ante aliquet. Duis laoreet quam eget ligula aliquam, non consectetur lorem vulputate. Nunc consequat ligula ac nunc volutpat, a interdum orci pharetra. Aenean sagittis enim id lectus egestas, at venenatis elit pharetra.
-
-Maecenas tempor turpis quis tellus ullamcorper, sed consequat enim placerat. Etiam euismod nisl vel purus sollicitudin, ut imperdiet elit posuere. Nulla sed enim eu erat faucibus euismod. Donec vel nulla non sem facilisis finibus. Integer malesuada libero et nisl varius, sit amet commodo nunc fermentum.
+- **Sitio web del proyecto.** Presenta *Manualito* y sirve como punto de entrada en <https://manualito.dev/>.
+- **Aplicación web.** La versión desplegada puede consultarse en <https://app.manualito.dev/>.
+- **Repositorio de GitHub.** Incluye la aplicación y los archivos necesarios para preparar y ejecutar el entorno en <https://github.com/ibaimoya/manualito> [[4](https://github.com/ibaimoya/manualito)].
+- **Repositorio de GitLab.** Conserva la copia de desarrollo del proyecto. Puede consultarse en [gitlab.com/HP-SCDS/Observatorio/2025-2026/manualito/ubu-manualito](https://gitlab.com/HP-SCDS/Observatorio/2025-2026/manualito/ubu-manualito) [[5](https://gitlab.com/HP-SCDS/Observatorio/2025-2026/manualito/ubu-manualito)].
+- **Documentación web.** Reúne las guías de uso y la documentación técnica del proyecto. Puede consultarse en <https://docs.manualito.dev/> [[6](https://docs.manualito.dev/)].
+- **Benchmarks.** Los *notebooks* y resultados de las pruebas se pueden consultar en el directorio [`docs/benchmarks`](https://github.com/ibaimoya/manualito/tree/master/docs/benchmarks) del repositorio de GitHub [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)].

@@ -77,6 +77,7 @@ export default defineConfig({
         Header: './src/components/Header.astro',
         MarkdownContent: './src/components/MarkdownContent.astro',
         PageFrame: './src/components/PageFrame.astro',
+        Sidebar: './src/components/MenuCapitulos.astro',
         ThemeSelect: './src/components/ThemeSelect.astro',
       },
       routeMiddleware: './src/routeData.ts',

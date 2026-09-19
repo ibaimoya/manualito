@@ -111,16 +111,6 @@
   backdrop-filter: blur(8px);
 }
 
-:root[data-theme='light'] #starlight__sidebar a[aria-current='page'] {
-  background-color: var(--m-primary-50);
-  color: var(--m-primary-700);
-}
-
-:root[data-theme='light'] #starlight__sidebar a:not([aria-current='page']):is(:hover, :focus-visible) {
-  background-color: var(--m-surface-2);
-  color: var(--m-text);
-}
-
 :root[data-theme='light']
   .sl-markdown-content
   a:not(.sl-link-button):not(:where(.not-content *)) {
@@ -249,52 +239,9 @@
     transition: transform 240ms var(--m-ease-salida);
   }
 
-  #starlight__sidebar details > ul > li {
-    opacity: 0;
-    translate: 0 -0.25rem;
-  }
-
-  /* La transición vive en el estado abierto, así el cierre recoge todo de golpe. */
-  #starlight__sidebar details[open] > ul > li {
-    opacity: 1;
-    translate: 0 0;
-    transition:
-      opacity 160ms var(--m-ease-salida),
-      translate 160ms var(--m-ease-salida);
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(2) {
-    transition-delay: 60ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(3) {
-    transition-delay: 120ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(4) {
-    transition-delay: 180ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(5) {
-    transition-delay: 240ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(6) {
-    transition-delay: 300ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(7) {
-    transition-delay: 360ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(n + 8) {
-    transition-delay: 420ms;
-  }
-
   /* Hasta que la página pinta estable nada transiciona, evita el estirón en plena carga. */
   :root:not([data-transiciones-listas]) #starlight__sidebar details::details-content,
-  :root:not([data-transiciones-listas]) #starlight__sidebar summary .caret,
-  :root:not([data-transiciones-listas]) #starlight__sidebar details > ul > li {
+  :root:not([data-transiciones-listas]) #starlight__sidebar summary .caret {
     transition: none;
   }
 }

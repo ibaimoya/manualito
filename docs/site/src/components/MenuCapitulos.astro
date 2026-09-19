@@ -1,0 +1,14 @@
+---
+import Sidebar from '@astrojs/starlight/components/Sidebar.astro';
+import '../styles/menu-capitulos.css';
+---
+
+<div class="menu-capitulos">
+  <Sidebar />
+</div>
+
+<script>
+  import { iniciarMenuCapitulos } from '../scripts/menu-capitulos';
+
+  iniciarMenuCapitulos();
+</script>

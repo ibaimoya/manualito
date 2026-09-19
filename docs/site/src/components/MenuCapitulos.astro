@@ -3,12 +3,26 @@ import Sidebar from '@astrojs/starlight/components/Sidebar.astro';
 import '../styles/menu-capitulos.css';
 ---
 
-<div class="menu-capitulos">
+<manualito-menu-capitulos class="menu-capitulos">
   <Sidebar />
-</div>
+</manualito-menu-capitulos>
 
 <script>
   import { iniciarMenuCapitulos } from '../scripts/menu-capitulos';
 
-  iniciarMenuCapitulos();
+  class MenuCapitulos extends HTMLElement {
+    private limpiar?: () => void;
+
+    connectedCallback() {
+      this.limpiar = iniciarMenuCapitulos(this);
+    }
+
+    disconnectedCallback() {
+      this.limpiar?.();
+    }
+  }
+
+  if (!customElements.get('manualito-menu-capitulos')) {
+    customElements.define('manualito-menu-capitulos', MenuCapitulos);
+  }
 </script>

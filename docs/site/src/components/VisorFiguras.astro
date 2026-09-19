@@ -1,23 +1,27 @@
 <script>
   import PhotoSwipeLightbox from 'photoswipe/lightbox';
   import 'photoswipe/style.css';
+  import { alCambiarPagina } from '../scripts/ciclo-pagina';
 
-  const visor = new PhotoSwipeLightbox({
-    gallery: '.figura-ampliable',
-    pswpModule: () => import('photoswipe'),
-    closeTitle: 'Cerrar imagen',
-    zoomTitle: 'Ampliar o reducir',
-    errorMsg: 'No se ha podido cargar la imagen.',
-    padding: { top: 60, bottom: 24, left: 24, right: 24 },
-    secondaryZoomLevel: 1,
-    bgOpacity: 0.96,
-    mainClass: 'visor-figuras',
-  });
+  alCambiarPagina(() => {
+    const visor = new PhotoSwipeLightbox({
+      gallery: '.figura-ampliable',
+      pswpModule: () => import('photoswipe'),
+      closeTitle: 'Cerrar imagen',
+      zoomTitle: 'Ampliar o reducir',
+      errorMsg: 'No se ha podido cargar la imagen.',
+      padding: { top: 60, bottom: 24, left: 24, right: 24 },
+      secondaryZoomLevel: 1,
+      bgOpacity: 0.96,
+      mainClass: 'visor-figuras',
+    });
 
-  visor.on('afterInit', () => {
-    visor.pswp?.element?.setAttribute('aria-label', 'Imagen ampliada');
+    visor.on('afterInit', () => {
+      visor.pswp?.element?.setAttribute('aria-label', 'Imagen ampliada');
+    });
+    visor.init();
+    return () => visor.destroy();
   });
-  visor.init();
 </script>
 
 <style is:global>

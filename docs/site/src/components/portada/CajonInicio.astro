@@ -622,14 +622,18 @@ const rutas = [
 </style>
 
 <script>
-  const raiz = document.querySelector<HTMLElement>('[data-cj]');
-  const panel = raiz?.querySelector<HTMLElement>('[data-cj-panel]');
-  const velo = raiz?.querySelector<HTMLElement>('[data-cj-velo]');
-  const tirador = raiz?.querySelector<HTMLButtonElement>('[data-cj-tirador]');
-  const cuerpo = raiz?.querySelector<HTMLElement>('[data-cj-cuerpo]');
-  const etiqueta = raiz?.querySelector<HTMLElement>('[data-cj-etiqueta]');
+  import { alCambiarPagina } from '../../scripts/ciclo-pagina';
 
-  if (raiz && panel && velo && tirador && cuerpo && etiqueta) {
+  alCambiarPagina(() => {
+    const raiz = document.querySelector<HTMLElement>('[data-cj]');
+    const panel = raiz?.querySelector<HTMLElement>('[data-cj-panel]');
+    const velo = raiz?.querySelector<HTMLElement>('[data-cj-velo]');
+    const tirador = raiz?.querySelector<HTMLButtonElement>('[data-cj-tirador]');
+    const cuerpo = raiz?.querySelector<HTMLElement>('[data-cj-cuerpo]');
+    const etiqueta = raiz?.querySelector<HTMLElement>('[data-cj-etiqueta]');
+    if (!raiz || !panel || !velo || !tirador || !cuerpo || !etiqueta) return;
+    const abortador = new AbortController();
+    const { signal } = abortador;
     const variante = raiz.dataset.variante ?? 'simple';
     const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
     const lienzo = document.querySelector<HTMLElement>('.pd-lienzo');
@@ -654,6 +658,8 @@ const rutas = [
     let tiempoRueda = 0;
     let entradaPendienteRueda = false;
     let finRueda: number | null = null;
+    let cuadroFoco = 0;
+    let cuadroSoltar = 0;
     let agarreActivo: HTMLElement | null = null;
     let focoAnterior: HTMLElement | null = null;
     let notificarApertura = (_estado: boolean) => {};
@@ -692,6 +698,7 @@ const rutas = [
     };
 
     const actualizarModal = (estado: boolean) => {
+      window.cancelAnimationFrame(cuadroFoco);
       if (estado) {
         const activo = document.activeElement;
         focoAnterior = activo instanceof HTMLElement && !raiz.contains(activo) ? activo : tirador;
@@ -701,7 +708,7 @@ const rutas = [
         panel.setAttribute('aria-modal', 'true');
         document.documentElement.setAttribute('data-cj-abierto', '');
         etiqueta.textContent = 'Cerrar por dónde empezar';
-        window.requestAnimationFrame(() => {
+        cuadroFoco = window.requestAnimationFrame(() => {
           if (abierto) tirador.focus({ preventScroll: true });
         });
         return;
@@ -715,7 +722,7 @@ const rutas = [
       cambiarFondoInerte(false);
       const destino = focoAnterior?.isConnected ? focoAnterior : tirador;
       focoAnterior = null;
-      window.requestAnimationFrame(() => {
+      cuadroFoco = window.requestAnimationFrame(() => {
         if (!abierto) destino.focus({ preventScroll: true });
       });
     };
@@ -848,20 +855,20 @@ const rutas = [
       const velocidad = Math.abs(dy) / Math.max(performance.now() - inicioTiempo, 1);
       const p = 1 - Math.max(0, Math.min(r, y)) / r;
       const destino = soltarEn(p, velocidad, dy < 0);
-      window.requestAnimationFrame(() => aplicar(destino));
+      cuadroSoltar = window.requestAnimationFrame(() => aplicar(destino));
     };
 
     for (const agarre of [tirador, ...raiz.querySelectorAll<HTMLElement>('[data-cj-agarre]')]) {
-      agarre.addEventListener('pointerdown', (ev) => empezar(ev, agarre));
-      agarre.addEventListener('pointermove', mover);
-      agarre.addEventListener('pointerup', soltar);
-      agarre.addEventListener('pointercancel', soltar);
-      agarre.addEventListener('lostpointercapture', soltar);
+      agarre.addEventListener('pointerdown', (ev) => empezar(ev, agarre), { signal });
+      agarre.addEventListener('pointermove', mover, { signal });
+      agarre.addEventListener('pointerup', soltar, { signal });
+      agarre.addEventListener('pointercancel', soltar, { signal });
+      agarre.addEventListener('lostpointercapture', soltar, { signal });
     }
 
     tirador.addEventListener('click', () => {
       if (gesto === 'ninguno') aplicar(abierto ? 0 : 1);
-    });
+    }, { signal });
 
     const cerrarGestoRueda = () => {
       const r = recorrido();
@@ -941,10 +948,10 @@ const rutas = [
         if (finRueda) window.clearTimeout(finRueda);
         finRueda = window.setTimeout(cerrarGestoRueda, ESPERA_RUEDA);
       },
-      { passive: false },
+      { passive: false, signal },
     );
 
-    velo.addEventListener('click', cerrar);
+    velo.addEventListener('click', cerrar, { signal });
 
     document.addEventListener('keydown', (ev) => {
       if (!abierto) return;
@@ -966,12 +973,12 @@ const rutas = [
         ev.preventDefault();
         primero.focus();
       }
-    });
+    }, { signal });
 
     window.addEventListener('resize', () => {
       rCache = 0;
       if (gesto === 'ninguno') aplicar(abierto ? 1 : 0);
-    });
+    }, { signal });
 
     const visor = raiz.querySelector<HTMLElement>('[data-pr-visor]');
     const pistaRutas = raiz.querySelector<HTMLElement>('[data-pr-pista]');
@@ -1315,7 +1322,24 @@ const rutas = [
       desmontarCarrusel = crearCarrusel();
     };
 
-    menosMovimiento.addEventListener('change', actualizarMovimiento);
+    menosMovimiento.addEventListener('change', actualizarMovimiento, { signal });
     actualizarMovimiento();
-  }
+
+    return () => {
+      abortador.abort();
+      desmontarCarrusel();
+      detenerSuavizadoRueda();
+      if (finRueda !== null) window.clearTimeout(finRueda);
+      window.cancelAnimationFrame(cuadroFoco);
+      window.cancelAnimationFrame(cuadroSoltar);
+      cambiarFondoInerte(false);
+      document.documentElement.removeAttribute('data-cj-abierto');
+      if (lienzo) {
+        for (const propiedad of ['transition', 'transform-origin', 'scale', 'translate']) {
+          lienzo.style.removeProperty(propiedad);
+        }
+      }
+      raiz.remove();
+    };
+  });
 </script>

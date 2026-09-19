@@ -232,7 +232,7 @@
   #starlight__sidebar details[open]::details-content {
     height: auto;
     opacity: 1;
-    transition-duration: 300ms, 260ms, 300ms;
+    transition-duration: 220ms, 180ms, 220ms;
   }
 
   #starlight__sidebar summary .caret {

@@ -1,7 +1,15 @@
 ---
 import manropeLatin from '@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url';
 import StarlightHead from '@astrojs/starlight/components/Head.astro';
+import NavegacionStarlight from 'astro-vtbot/components/starlight/Base.astro';
+import '../styles/navegacion.css';
 ---
 
-<StarlightHead />
+<NavegacionStarlight retainCurrentPageMarker viewTransitionsFallback="swap">
+  <StarlightHead />
+</NavegacionStarlight>
 <link rel="preload" href={manropeLatin} as="font" type="font/woff2" crossorigin="anonymous" />
+
+<script>
+  import '../scripts/navegacion';
+</script>

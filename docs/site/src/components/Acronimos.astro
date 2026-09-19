@@ -18,6 +18,9 @@
 </div>
 
 <script>
+  import { navigate } from 'astro:transitions/client';
+  import { alCambiarPagina } from '../scripts/ciclo-pagina';
+
   const RETRASO_APARICION = 400;
   const VENTANA_INSTANTANEA = 500;
   const RETRASO_SALIDA = 80;
@@ -38,12 +41,13 @@
     debajo: boolean;
   }
 
-  const popover = document.querySelector<HTMLElement>('.acronimo-popover');
-  const referencias = Array.from(
-    document.querySelectorAll<HTMLElement>('abbr.acronimo, a.cita'),
-  );
+  alCambiarPagina(() => {
+    const popover = document.querySelector<HTMLElement>('.acronimo-popover');
+    const referencias = document.querySelectorAll<HTMLElement>('abbr.acronimo, a.cita');
+    if (!popover || referencias.length === 0) return;
 
-  if (popover && referencias.length > 0) {
+    const controlador = new AbortController();
+    const { signal } = controlador;
     const texto = popover.querySelector<HTMLElement>('.acronimo-popover__texto');
     // title sirve de respaldo sin JavaScript y se retira para evitar dos avisos.
     for (const referencia of referencias) {
@@ -68,6 +72,7 @@
     let zona: Punto[] | null = null;
     let ultimoPunto: Punto = { x: 0, y: 0 };
     let focoDesdePuntero = false;
+    let fotogramaFoco = 0;
 
     /* offsetWidth ignora el scale de entrada, getBoundingClientRect mediría la caja encogida. */
     const medir = (): Medidas => {
@@ -251,7 +256,7 @@
         { x: x + MARGEN_ORIGEN, y: y + holgura },
       ];
       ultimoPunto = { x, y };
-      document.addEventListener('pointermove', handleZonaMove);
+      document.addEventListener('pointermove', handleZonaMove, { signal });
     };
 
     document.addEventListener('pointerover', (ev) => {
@@ -264,7 +269,7 @@
         return;
       }
       if (ev.target instanceof Node && popover.contains(ev.target)) clearTimeout(timerSalida);
-    });
+    }, { signal });
 
     document.addEventListener('pointerout', (ev) => {
       const dentro =
@@ -281,7 +286,7 @@
         return;
       }
       timerSalida = window.setTimeout(ocultar, RETRASO_SALIDA);
-    });
+    }, { signal });
 
     document.addEventListener('click', (ev) => {
       const abbr = buscarAbbr(ev.target);
@@ -295,35 +300,36 @@
       }
       if (ev.target instanceof Node && popover.contains(ev.target)) {
         // La tarjeta de una cita lleva a su entrada de la bibliografía.
-        if (destinoActual) location.assign(destinoActual);
+        if (destinoActual) void navigate(destinoActual);
         return;
       }
       ocultar();
-    });
+    }, { signal });
 
     document.addEventListener(
       'pointerdown',
       () => {
         focoDesdePuntero = true;
-        requestAnimationFrame(() => {
+        cancelAnimationFrame(fotogramaFoco);
+        fotogramaFoco = requestAnimationFrame(() => {
           focoDesdePuntero = false;
         });
       },
-      true,
+      { capture: true, signal },
     );
 
     document.addEventListener('focusin', (ev) => {
       const abbr = buscarAbbr(ev.target);
       if (abbr && !focoDesdePuntero) mostrar(abbr, true);
-    });
+    }, { signal });
 
     document.addEventListener('focusout', (ev) => {
       if (buscarAbbr(ev.target)) ocultar();
-    });
+    }, { signal });
 
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape') ocultar();
-    });
+    }, { signal });
 
     // Guarda barata para el hot path, durante el scroll normal no hay nada que cerrar.
     const cerrarSiActivo = (): void => {
@@ -331,9 +337,18 @@
       ocultar();
     };
 
-    document.addEventListener('scroll', cerrarSiActivo, { passive: true, capture: true });
-    window.addEventListener('resize', cerrarSiActivo);
-  }
+    document.addEventListener('scroll', cerrarSiActivo, { passive: true, capture: true, signal });
+    window.addEventListener('resize', cerrarSiActivo, { signal });
+
+    return () => {
+      controlador.abort();
+      cancelAnimationFrame(fotogramaFoco);
+      for (const timer of [timerMostrar, timerSalida, timerOcultar, timerMorph, timerQuieto]) {
+        clearTimeout(timer);
+      }
+      popover.remove();
+    };
+  });
 </script>
 
 <style is:global>

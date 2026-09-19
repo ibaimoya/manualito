@@ -1,0 +1,38 @@
+:root {
+  view-transition-name: none;
+}
+
+.main-frame {
+  view-transition-name: documento;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(documento) {
+  animation: none;
+}
+
+::view-transition-old(documento) {
+  animation: documento-sale 100ms ease-out both;
+}
+
+::view-transition-new(documento) {
+  animation: documento-entra 180ms var(--m-ease-salida) both;
+}
+
+@keyframes documento-sale {
+  to { opacity: 0; }
+}
+
+@keyframes documento-entra {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(documento),
+  ::view-transition-new(documento) {
+    animation: none;
+  }
+}

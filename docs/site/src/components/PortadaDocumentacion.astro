@@ -9,20 +9,20 @@ interface Props {
 const { variante = 'simple' } = Astro.props;
 ---
 
-<div class="pr" data-pr-motion>
+<div class="pr">
   <div class="pr-fondo" data-pr-motion aria-hidden="true">
     <span class="pr-fondo__campo"></span><span class="pr-fondo__extra"></span>
   </div>
 
   <header class="pr-cabecera">
     <div class="pr-cabecera__principal">
-    <p class="pr-cabecera__titulo pd-punto anim">Documentación</p>
+    <p class="pr-cabecera__titulo pd-punto">Documentación</p>
 
-    <p class="pr-cabecera__alcance anim">
+    <p class="pr-cabecera__alcance">
       Guías y recursos de Manualito. Descubre cómo usar la aplicación y cómo funciona por debajo.
     </p>
 
-    <button class="pr-buscar anim" type="button" data-pr-buscar>
+    <button class="pr-buscar" type="button" data-pr-buscar>
       <svg class="pr-buscar__icono" viewBox="0 0 20 20" aria-hidden="true">
         <circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle>
         <path
@@ -36,7 +36,7 @@ const { variante = 'simple' } = Astro.props;
     </button>
     </div>
 
-    <a class="pr-volver anim" href="https://manualito.dev/" aria-label="Volver a Manualito">
+    <a class="pr-volver" href="https://manualito.dev/" aria-label="Volver a Manualito">
       <svg class="pr-volver__borde" aria-hidden="true"><rect x="0.75" y="0.75" width="100%" height="100%" rx="12" pathLength="1" style="width: calc(100% - 1.5px); height: calc(100% - 1.5px)"></rect></svg>
       <span class="pr-volver__texto" aria-hidden="true">Volver a Manualito</span>
       <span class="pr-volver__mono" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 4c2.8 0 5 2.2 5 5 0 1.6-.7 3-1.9 4 .1.1 5.4 3 5.4 8.5V25c0 1.7-1.3 3-3 3h-3c-.6 0-1-.4-1-1l-.5-4c0-.3-.2-.5-.5-.5h-1c-.3 0-.5.2-.5.5L14.5 27c0 .6-.4 1-1 1h-3c-1.7 0-3-1.3-3-3v-3.5c0-5.5 5.3-8.4 5.4-8.5C11.7 12 11 10.6 11 9c0-2.8 2.2-5 5-5z" fill="currentColor"></path></svg></span>
@@ -45,7 +45,7 @@ const { variante = 'simple' } = Astro.props;
 
   <div class="pr-corpus">
     <section class="pr-parte" aria-labelledby="pr-memoria">
-      <div class="pr-parte__encabezado anim">
+      <div class="pr-parte__encabezado">
         <h2 class="pr-parte__titulo" id="pr-memoria">Memoria</h2>
         <p class="pr-parte__alcance">Siete capítulos, del planteamiento a las conclusiones.</p>
       </div>
@@ -54,7 +54,7 @@ const { variante = 'simple' } = Astro.props;
         {
           memoria.map((entrada) => {
             return (
-              <li class="anim">
+              <li>
                 <a class="pr-entrada" href={entrada.enlace}>
                   <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
                   <span class="pr-entrada__titulo">
@@ -70,7 +70,7 @@ const { variante = 'simple' } = Astro.props;
     </section>
 
     <section class="pr-parte" aria-labelledby="pr-anexos">
-      <div class="pr-parte__encabezado anim">
+      <div class="pr-parte__encabezado">
         <h2 class="pr-parte__titulo" id="pr-anexos">Anexos</h2>
         <p class="pr-parte__alcance">Seis documentos de apoyo, incluidos los dos manuales.</p>
       </div>
@@ -79,7 +79,7 @@ const { variante = 'simple' } = Astro.props;
         {
           anexos.map((entrada) => {
             return (
-              <li class="anim">
+              <li>
                 <a class="pr-entrada" href={entrada.enlace}>
                   <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
                   <span class="pr-entrada__titulo">
@@ -99,34 +99,45 @@ const { variante = 'simple' } = Astro.props;
 </div>
 
 <script>
-  const fondo = document.querySelector<HTMLElement>('.pr-fondo');
-  if (fondo) document.body.appendChild(fondo);
+  import { alCambiarPagina } from '../scripts/ciclo-pagina';
 
-  document.querySelectorAll<HTMLButtonElement>('[data-pr-buscar]').forEach((disparador) => {
-    disparador.addEventListener('click', (evento) => {
-      evento.stopPropagation();
-      document.querySelector<HTMLButtonElement>('button[data-open-modal]')?.click();
+  alCambiarPagina(() => {
+    const portada = document.querySelector<HTMLElement>('.pr');
+    if (!portada) return;
+    const abortador = new AbortController();
+    const fondo = portada.querySelector<HTMLElement>('.pr-fondo');
+    if (fondo) document.body.appendChild(fondo);
+    let temporizador: number | undefined;
+
+    portada.querySelectorAll<HTMLButtonElement>('[data-pr-buscar]').forEach((disparador) => {
+      disparador.addEventListener('click', (evento) => {
+        evento.stopPropagation();
+        document.querySelector<HTMLButtonElement>('button[data-open-modal]')?.click();
+      }, { signal: abortador.signal });
     });
-  });
 
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.querySelectorAll<HTMLElement>('[data-pr-motion]').forEach((raiz) => {
-      raiz.dataset.prMotion = 'play';
-    });
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (fondo) fondo.dataset.prMotion = 'play';
 
-    const volver = document.querySelector<HTMLElement>('.pr-volver');
-    if (volver) {
-      window.setTimeout(() => {
-        volver.classList.add('pr-volver--abierto');
-        window.setTimeout(() => {
-          volver.classList.add('pr-volver--cerrando');
-          volver.classList.remove('pr-volver--abierto');
-          window.setTimeout(() => volver.classList.remove('pr-volver--cerrando'), 600);
-        }, 2600);
-      }, 950);
+      const volver = portada.querySelector<HTMLElement>('.pr-volver');
+      if (volver) {
+        temporizador = window.setTimeout(() => {
+          volver.classList.add('pr-volver--abierto');
+          temporizador = window.setTimeout(() => {
+            volver.classList.add('pr-volver--cerrando');
+            volver.classList.remove('pr-volver--abierto');
+            temporizador = window.setTimeout(() => volver.classList.remove('pr-volver--cerrando'), 600);
+          }, 2600);
+        }, 950);
+      }
     }
 
-  }
+    return () => {
+      abortador.abort();
+      window.clearTimeout(temporizador);
+      fondo?.remove();
+    };
+  });
 </script>
 
 <style>
@@ -267,33 +278,6 @@ const { variante = 'simple' } = Astro.props;
     }
   }
 
-  @keyframes pd-alzar {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-
-  .pr[data-pr-motion='play'] .anim {
-    animation: pd-alzar 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    animation-delay: var(--d, 0ms);
-  }
-
-  .pr-cabecera__alcance { --d: 60ms; }
-  .pr-buscar { --d: 120ms; }
-  .pr-parte__encabezado { --d: 200ms; }
-  .pr-entradas li { --d: 260ms; }
-  .pr-entradas li:nth-child(2) { --d: 315ms; }
-  .pr-entradas li:nth-child(3) { --d: 370ms; }
-  .pr-entradas li:nth-child(4) { --d: 425ms; }
-  .pr-entradas li:nth-child(5) { --d: 480ms; }
-  .pr-entradas li:nth-child(6) { --d: 535ms; }
-  .pr-entradas li:nth-child(7) { --d: 590ms; }
-
   .pr-cabecera__titulo {
     margin: 0;
     font-family: var(--m-font-display);
@@ -343,7 +327,6 @@ const { variante = 'simple' } = Astro.props;
     font-weight: 600;
     text-decoration: none;
     pointer-events: none;
-    --d: 120ms;
   }
 
   .pr-volver__borde {
@@ -625,12 +608,6 @@ const { variante = 'simple' } = Astro.props;
       animation: none !important;
       transform: none;
       will-change: auto;
-    }
-
-    .pr .anim {
-      animation: none !important;
-      opacity: 1;
-      transform: none;
     }
 
     .pr-buscar,

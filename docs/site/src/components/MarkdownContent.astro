@@ -13,20 +13,22 @@ const documentoAcademico = id.startsWith('memoria/') || id.startsWith('anexos/')
 <VisorFiguras />
 
 <script>
-  const zonas = document.querySelectorAll<HTMLElement>('.tabla-documento, .katex-display');
-  const observador = new ResizeObserver(() => {
+  import { alCambiarPagina } from '../scripts/ciclo-pagina';
+
+  alCambiarPagina(() => {
+    const zonas = document.querySelectorAll<HTMLElement>('.tabla-documento, .katex-display');
+    const observador = new ResizeObserver(() => {
+      for (const zona of zonas) {
+        zona.tabIndex = zona.scrollWidth > zona.clientWidth + 1 ? 0 : -1;
+      }
+    });
+
     for (const zona of zonas) {
-      zona.tabIndex = zona.scrollWidth > zona.clientWidth + 1 ? 0 : -1;
+      observador.observe(zona);
+      const contenido = zona.querySelector('table, .katex');
+      if (contenido) observador.observe(contenido);
     }
-  });
 
-  for (const zona of zonas) {
-    observador.observe(zona);
-    const contenido = zona.querySelector('table, .katex');
-    if (contenido) observador.observe(contenido);
-  }
-
-  addEventListener('pagehide', (evento) => {
-    if (!evento.persisted) observador.disconnect();
+    return () => observador.disconnect();
   });
 </script>

@@ -21,6 +21,8 @@ const enlacesBibliografia = new Set(
 export default defineConfig({
   site: 'https://docs.manualito.dev',
   trailingSlash: 'always',
+  // Los módulos externos se ejecutan una sola vez al volver a montar el lateral.
+  vite: { build: { assetsInlineLimit: 0 } },
   markdown: {
     processor: unified({
       remarkPlugins: [remarkMath],
@@ -70,6 +72,7 @@ export default defineConfig({
         './src/styles/custom.css',
         './src/styles/tablas.css',
         './src/styles/laterales-redimensionables.css',
+        './src/styles/buscador.css',
       ],
       components: {
         Footer: './src/components/Footer.astro',

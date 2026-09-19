@@ -1,10 +1,13 @@
 import { animate } from 'motion';
 
 // Adaptación para Starlight de https://www.rareui.com/components/hooksidebar.
-export function iniciarMenuCapitulos() {
+export function iniciarMenuCapitulos(contenedor: HTMLElement) {
+  const eventos = new AbortController();
+  const { signal } = eventos;
   const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
-  const grupos = document.querySelectorAll<HTMLDetailsElement>('.menu-capitulos details');
+  const grupos = contenedor.querySelectorAll<HTMLDetailsElement>('details');
   const actualizaciones: (() => void)[] = [];
+  const selecciones: ((ruta: string, animar: boolean) => void)[] = [];
   const observador = new ResizeObserver(() => {
     for (const actualizar of actualizaciones) actualizar();
   });
@@ -39,29 +42,31 @@ export function iniciarMenuCapitulos() {
       actualizar(true);
     }
 
-    lista.addEventListener('pointerover', señalar);
-    lista.addEventListener('focusin', señalar);
+    lista.addEventListener('pointerover', señalar, { signal });
+    lista.addEventListener('focusin', señalar, { signal });
     lista.addEventListener('pointerleave', () => {
       señalado = lista.querySelector('a:focus-visible');
       actualizar();
-    });
+    }, { signal });
     lista.addEventListener('focusout', () => {
       señalado = lista.querySelector('a:hover');
       actualizar();
-    });
-    lista.addEventListener('click', (evento) => {
-      const otraVentana = evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.altKey;
-      if (evento.button !== 0 || otraVentana) return;
-      const destino = evento.target;
-      if (!(destino instanceof Element)) return;
-      const enlace = destino.closest('a');
-      if (!enlace) return;
-      activo = enlace;
-      actualizar(true);
-    });
+    }, { signal });
     grupo.addEventListener('toggle', () => {
       señalado = null;
       actualizar();
+    }, { signal });
+    selecciones.push((ruta, animar) => {
+      activo = null;
+      for (const enlace of lista.querySelectorAll('a')) {
+        if (enlace.pathname === ruta) {
+          enlace.setAttribute('aria-current', 'page');
+          activo = enlace;
+        } else enlace.removeAttribute('aria-current');
+      }
+      if (activo) grupo.open = true;
+      señalado = null;
+      actualizar(animar);
     });
     actualizaciones.push(actualizar);
     observador.observe(lista);
@@ -85,10 +90,27 @@ export function iniciarMenuCapitulos() {
     );
   }
 
+  function seleccionar(ruta: string, animar = true) {
+    for (const seleccionarGrupo of selecciones) seleccionarGrupo(ruta, animar);
+  }
+
+  seleccionar(location.pathname, false);
+  document.addEventListener('astro:before-swap', (evento) => {
+    seleccionar(evento.to.pathname);
+  }, { signal });
+  document.addEventListener('astro:page-load', () => {
+    seleccionar(location.pathname);
+  }, { signal });
   menosMovimiento.addEventListener('change', () => {
     for (const actualizar of actualizaciones) actualizar();
-  });
-  addEventListener('pagehide', (evento) => {
-    if (!evento.persisted) observador.disconnect();
-  });
+  }, { signal });
+
+  return () => {
+    eventos.abort();
+    observador.disconnect();
+    for (const riel of contenedor.querySelectorAll('.riel-menu')) {
+      for (const animacion of riel.getAnimations()) animacion.cancel();
+      riel.remove();
+    }
+  };
 }

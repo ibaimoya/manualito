@@ -175,6 +175,37 @@
   border-radius: var(--m-r-lg);
 }
 
+.pagination-links a:active svg {
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pagination-links a {
+    --arrow-step: 4px;
+  }
+
+  .pagination-links a[rel='prev'] {
+    --arrow-step: -4px;
+  }
+
+  .pagination-links svg {
+    transition:
+      translate 160ms var(--m-ease-salida),
+      opacity 120ms var(--m-ease-salida);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pagination-links a:hover svg {
+      translate: var(--arrow-step) 0;
+    }
+  }
+
+  .pagination-links a:active svg {
+    translate: calc(var(--arrow-step) * 1.5) 0;
+    transition-duration: 80ms;
+  }
+}
+
 :where(h1, h2, h3, h4, h5, h6) {
   font-family: var(--m-font-display);
   letter-spacing: -0.02em;

@@ -45,7 +45,10 @@ async function convertirMdx(markdown: string, origen: URL): Promise<string> {
       const cargarImagen = imagenes[`/src/assets/${rutaRelativa}`];
       if (!cargarImagen) throw new Error(`No se ha encontrado la imagen ${ruta}`);
       const imagen = await cargarImagen();
-      const optimizada = await getImage({ src: imagen.default });
+      const optimizada = await getImage({
+        src: imagen.default,
+        format: imagen.default.format === 'png' ? 'png' : undefined,
+      });
       recursos.set(nombre, new URL(optimizada.src, origen).href);
     }),
   );

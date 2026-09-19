@@ -53,16 +53,15 @@ const { variante = 'simple' } = Astro.props;
       <ul class="pr-entradas" role="list">
         {
           memoria.map((entrada) => {
-            const Elemento = entrada.enlace ? 'a' : 'span';
             return (
               <li class="anim">
-                <Elemento class="pr-entrada" {...(entrada.enlace ? { href: entrada.enlace } : {})}>
+                <a class="pr-entrada" href={entrada.enlace}>
                   <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
                   <span class="pr-entrada__titulo">
                     <span class="pd-sr">{entrada.etiqueta}, </span>
                     {entrada.titulo}
                   </span>
-                </Elemento>
+                </a>
               </li>
             );
           })
@@ -79,16 +78,15 @@ const { variante = 'simple' } = Astro.props;
       <ul class="pr-entradas" role="list">
         {
           anexos.map((entrada) => {
-            const Elemento = entrada.enlace ? 'a' : 'span';
             return (
               <li class="anim">
-                <Elemento class="pr-entrada" {...(entrada.enlace ? { href: entrada.enlace } : {})}>
+                <a class="pr-entrada" href={entrada.enlace}>
                   <span class="pr-entrada__indice" aria-hidden="true">{entrada.indice}</span>
                   <span class="pr-entrada__titulo">
                     <span class="pd-sr">{entrada.etiqueta}, </span>
                     {entrada.titulo}
                   </span>
-                </Elemento>
+                </a>
               </li>
             );
           })

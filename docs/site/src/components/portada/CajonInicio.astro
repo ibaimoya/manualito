@@ -11,16 +11,23 @@ const { variante = 'simple' } = Astro.props;
 const rutas = [
   {
     titulo: 'Quiero usar la aplicación',
-    detalle: 'El manual de usuario cubre la instalación y el uso habitual.',
+    detalle: 'Añade un manual, consulta las reglas y retoma tus conversaciones.',
+    enlace: '/anexos/documentacion-de-usuario/',
   },
   {
     titulo: 'Quiero entender cómo funciona',
-    detalle: 'El apartado de diseño detalla la arquitectura de la aplicación.',
+    detalle: 'Consulta cómo se organizan los servicios, los datos y la interfaz.',
+    enlace: '/anexos/especificacion-de-diseno/',
   },
   {
     titulo: 'Quiero conocer la metodología de trabajo',
-    detalle: 'El plan de proyecto describe cuál ha sido el flujo de trabajo del proyecto.',
+    detalle: 'Recorre la planificación, los sprints y el estudio de viabilidad.',
     enlace: RUTA_PLAN_PROYECTO,
+  },
+  {
+    titulo: 'Quiero ejecutar el proyecto',
+    detalle: 'Prepara el entorno y consulta las instrucciones de instalación y pruebas.',
+    enlace: '/anexos/documentacion-tecnica-de-programacion/',
   },
 ];
 ---
@@ -99,16 +106,15 @@ const rutas = [
             <div class="pr-arranque__rutas" data-pr-pista>
               {
                 rutas.map((r, indice) => {
-                  const Elemento = r.enlace ? 'a' : 'article';
                   return (
-                    <Elemento
+                    <a
                       class="pr-ruta"
                       data-pr-indice={indice}
-                      {...(r.enlace ? { href: r.enlace } : {})}
+                      href={r.enlace}
                     >
                       <span class="pr-ruta__titulo">{r.titulo}</span>
                       <span class="pr-ruta__detalle">{r.detalle}</span>
-                    </Elemento>
+                    </a>
                   );
                 })
               }

@@ -1,0 +1,46 @@
+name: Landing
+
+on:
+  push:
+    branches: ["master", "staging", "development"]
+    paths:
+      - ".github/workflows/landing.yml"
+      - "landing/**"
+  pull_request:
+    branches: ["master", "staging", "development"]
+    paths:
+      - ".github/workflows/landing.yml"
+      - "landing/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  landing-verify:
+    name: Landing - Verificación
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Leer versión de Node
+        id: versions
+        run: echo "node_version=$(cat landing/.node-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Preparar pnpm, Node y dependencias
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          working-directory: landing
+          runtime: node@${{ steps.versions.outputs.node_version }}
+          cache: true
+          require-lockfile: true
+
+      - name: Verificar landing
+        working-directory: landing
+        run: pnpm verify

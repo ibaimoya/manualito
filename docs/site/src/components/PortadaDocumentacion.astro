@@ -106,7 +106,8 @@ const { variante = 'simple' } = Astro.props;
     if (!portada) return;
     const abortador = new AbortController();
     const fondo = portada.querySelector<HTMLElement>('.pr-fondo');
-    if (fondo) document.body.appendChild(fondo);
+    // El fondo precede al contexto de apilamiento de la transición.
+    if (fondo) document.body.prepend(fondo);
     let temporizador: number | undefined;
 
     portada.querySelectorAll<HTMLButtonElement>('[data-pr-buscar]').forEach((disparador) => {

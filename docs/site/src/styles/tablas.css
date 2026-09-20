@@ -5,7 +5,6 @@
   overscroll-behavior-inline: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--sl-color-gray-3) transparent;
-  border-block-end: 1px solid var(--sl-color-hairline-light);
 }
 
 .documento-academico .tabla-documento:focus-visible {
@@ -17,18 +16,21 @@
   display: table;
   inline-size: 100%;
   margin: 0;
-  border-collapse: collapse;
-  font-size: 0.875rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: var(--m-r-md);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1.65;
   text-align: start;
 }
 
 .documento-academico .tabla-documento caption {
   padding-block: 0 0.875rem;
-  color: var(--sl-color-white);
-  font-family: var(--m-font-display);
-  font-size: 0.9375rem;
-  font-weight: 600;
+  color: var(--sl-color-gray-2);
+  font-size: 0.8125rem;
+  font-weight: 400;
   line-height: 1.5;
   text-align: start;
   text-wrap: pretty;
@@ -42,14 +44,6 @@
   overflow-wrap: break-word;
 }
 
-.documento-academico .tabla-documento :is(th, td):first-child {
-  padding-inline-start: 1rem;
-}
-
-.documento-academico .tabla-documento :is(th, td):last-child {
-  padding-inline-end: 1rem;
-}
-
 .documento-academico .tabla-documento th {
   color: var(--sl-color-white);
   font-weight: 600;
@@ -57,7 +51,27 @@
 
 .documento-academico .tabla-documento thead {
   background: var(--sl-color-bg-sidebar);
-  border-block-start: 1px solid var(--sl-color-hairline-light);
+  line-height: 1.4;
+}
+
+.documento-academico .tabla-documento table:not(.tabla-ficha) tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--sl-color-bg-sidebar) 40%, var(--sl-color-bg));
+}
+
+.documento-academico .tabla-documento tr:first-child > :first-child {
+  border-start-start-radius: var(--m-r-md);
+}
+
+.documento-academico .tabla-documento tr:first-child > :last-child {
+  border-start-end-radius: var(--m-r-md);
+}
+
+.documento-academico .tabla-documento tbody tr:last-child > :first-child {
+  border-end-start-radius: var(--m-r-md);
+}
+
+.documento-academico .tabla-documento tbody tr:last-child > :last-child {
+  border-end-end-radius: var(--m-r-md);
 }
 
 .documento-academico .tabla-documento tbody tr:last-child > * {
@@ -83,13 +97,31 @@
 }
 
 .documento-academico .tabla-ficha th[scope='row'] {
-  inline-size: 25%;
+  inline-size: 24%;
   min-inline-size: 8.5rem;
   color: var(--sl-color-gray-2);
+  font-size: 0.875rem;
+  font-weight: 450;
 }
 
 .documento-academico .tabla-ficha td {
   min-inline-size: 18rem;
+}
+
+.documento-academico .tabla-ficha tr:first-child > * {
+  background: var(--sl-color-bg-sidebar);
+  color: var(--sl-color-white);
+  padding-block: 1.25rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.documento-academico .tabla-ficha tr:first-child > th {
+  color: var(--sl-color-text-accent);
+  font-family: var(--sl-font-mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  vertical-align: middle;
 }
 
 @media (max-width: 30rem) {
@@ -97,22 +129,14 @@
     padding: 0.75rem;
   }
 
-  .documento-academico .tabla-documento :is(th, td):first-child {
-    padding-inline-start: 0.75rem;
-  }
-
-  .documento-academico .tabla-documento :is(th, td):last-child {
-    padding-inline-end: 0.75rem;
-  }
-
   .documento-academico .tabla-ficha {
     table-layout: fixed;
   }
 
   .documento-academico .tabla-ficha th[scope='row'] {
-    inline-size: 30%;
+    inline-size: 36%;
     min-inline-size: 0;
-    hyphens: auto;
+    font-size: 0.8125rem;
   }
 
   .documento-academico .tabla-ficha td {
@@ -121,7 +145,7 @@
   }
 
   .documento-academico .tabla-ficha thead th:first-child {
-    inline-size: 30%;
+    inline-size: 36%;
   }
 }
 

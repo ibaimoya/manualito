@@ -1,5 +1,6 @@
 ---
 import '@astrojs/starlight/style/markdown.css';
+import VisorFiguras from './VisorFiguras.astro';
 
 const { id } = Astro.locals.starlightRoute;
 const documentoAcademico = id.startsWith('memoria/') || id.startsWith('anexos/');
@@ -8,3 +9,26 @@ const documentoAcademico = id.startsWith('memoria/') || id.startsWith('anexos/')
 <div class:list={['sl-markdown-content', { 'documento-academico': documentoAcademico }]}>
   <slot />
 </div>
+
+<VisorFiguras />
+
+<script>
+  import { alCambiarPagina } from '../scripts/ciclo-pagina';
+
+  alCambiarPagina(() => {
+    const zonas = document.querySelectorAll<HTMLElement>('.tabla-documento, .katex-display');
+    const observador = new ResizeObserver(() => {
+      for (const zona of zonas) {
+        zona.tabIndex = zona.scrollWidth > zona.clientWidth + 1 ? 0 : -1;
+      }
+    });
+
+    for (const zona of zonas) {
+      observador.observe(zona);
+      const contenido = zona.querySelector('table, .katex');
+      if (contenido) observador.observe(contenido);
+    }
+
+    return () => observador.disconnect();
+  });
+</script>

@@ -7,10 +7,69 @@ y las versiones siguen [SemVer 2.0.0](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+Próxima versión: `1.0.1`.
+
 ### Added
 
-- Añadida la corrección automática del texto OCR de los manuales, que elimina
-  el ruido del escaneo y arregla las erratas de lectura usando el LLM.
+- Incorporado el contenido completo de la memoria y los anexos, con sus
+  figuras, capturas, acrónimos y bibliografía.
+- Añadidos los PDF descargables y las fuentes LaTeX del trabajo.
+- Añadida la ampliación de figuras y la consulta de los benchmarks mediante
+  gráficos y datos descargables.
+
+### Changed
+
+- Renovados el índice, el menú de capítulos y la presentación del buscador
+  de la documentación.
+- Mejoradas las transiciones, las tablas, las fórmulas y la adaptación móvil.
+
+### Fixed
+
+- Corregida la visualización de acentos y caracteres especiales en Markdown.
+- Corregida la vuelta al índice desde las páginas de documentación.
+- Mejorada la legibilidad de las figuras en el tema oscuro.
+
+---
+
+## [1.0.0] - 2026-09-17
+
+Primera versión estable de Manualito.
+
+### Added
+
+- Corrección automática del texto OCR con reglas y apoyo del LLM, con las
+  correcciones identificadas en el visor.
+- Recuperación híbrida de información y sincronización periódica del índice
+  de manuales.
+- Lectura de manuales compartidos sin permisos de edición y carga de archivos
+  mediante arrastre.
+- Tutorial inicial y recorridos contextuales desde Ayuda.
+- Interfaz y respuestas en español e inglés.
+- Envío de correos de cuenta con Resend y plantillas en ambos idiomas.
+- Web de presentación con acceso a la aplicación, documentación pública y
+  benchmarks de OCR, recuperación y modelos de lenguaje.
+
+### Changed
+
+- Rediseñados el visor, la bienvenida, las pantallas de acceso y los estados
+  de error.
+- Mejoradas la navegación, la adaptación móvil, las transiciones y las
+  notificaciones.
+- Simplificado el arranque local con generación de secretos y selección del
+  servicio de correo.
+
+### Fixed
+
+- Corregidos los tiempos de espera y la gestión de errores del chat, la
+  atribución de fuentes y el filtrado de manuales autorizados.
+- Corregidos la navegación de los tutoriales, las validaciones del registro y
+  los desbordamientos de la interfaz.
+- Desactivados Mailpit y su acceso desde la interfaz cuando se utiliza Resend.
+
+### Removed
+
+- Retirados el gestor de certificados locales y el laboratorio obsoleto del
+  visor.
 
 ---
 

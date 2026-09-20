@@ -1,0 +1,883 @@
+\section{Introducción}
+
+La especificación de requisitos permite definir qué debe hacer un sistema y las
+condiciones que debe cumplir. Además de delimitar el alcance del proyecto, sirve
+como referencia para comprobar que las funcionalidades previstas se han
+implementado.
+
+En este proyecto, la especificación se organiza a partir de los
+\textbf{objetivos generales}, el \textbf{catálogo de requisitos}, los
+\textbf{casos de uso} y la \textbf{trazabilidad} entre estos elementos.
+
+La especificación toma como referencia la norma
+\textbf{\acs{ISO}/\acs{IEC}/\acs{IEEE}
+29148:2018}~\cite{iso_29148_2018}, que define los procesos y contenidos asociados
+a la ingeniería de requisitos. Los requisitos de calidad se organizan a partir
+del modelo de calidad de producto propuesto por \textbf{\acs{ISO}/\acs{IEC}
+25010:2023}~\cite{iso_25010_2023}. Para hacer verificables estos requisitos, se
+utiliza el marco definido por \textbf{\acs{ISO}/\acs{IEC}
+25030:2019}~\cite{iso_25030_2019}. Las tres normas en conjunto se han aplicado
+de forma adaptada al alcance académico y técnico del proyecto.
+
+Como apoyo a la redacción, también se ha utilizado la lista de comprobación
+publicada por la NASA, que recoge criterios prácticos para que cada requisito
+sea claro, sencillo y verificable~\cite{nasa_good_requirement}.
+
+\newcommand{\idObjetivo}[1]{%
+    \hypertarget{obj:#1}{#1}%
+}
+
+\newcommand{\refObjetivo}[1]{%
+    \hyperlink{obj:#1}{#1}%
+}
+
+\section{Objetivos generales}
+
+El proyecto persigue los siguientes objetivos generales:
+
+\begin{itemize}
+    \item \textbf{\idObjetivo{OG-01}}: Desarrollar una aplicación web que facilite el
+    aprendizaje y la consulta de las reglas de juegos de mesa.
+
+    \item \textbf{\idObjetivo{OG-02}}: Procesar manuales en distintos formatos para extraer
+    su contenido y poder utilizarlo dentro de la aplicación.
+
+    \item \textbf{\idObjetivo{OG-03}}: Generar explicaciones y responder preguntas sobre un
+    juego a partir de la información contenida en sus manuales.
+
+    \item \textbf{\idObjetivo{OG-04}}: Almacenar de forma organizada la información de los
+    juegos, los manuales y las conversaciones de cada usuario.
+
+    \item \textbf{\idObjetivo{OG-05}}: Garantizar la seguridad de la
+    aplicación y proteger la información de los usuarios.
+\end{itemize}
+
+El recomendador de juegos queda fuera del alcance del proyecto para ajustar
+el desarrollo al tiempo disponible.
+
+\section{Catálogo de requisitos}
+
+\newcommand{\idRequisito}[1]{%
+    \hypertarget{req:#1}{#1}%
+}
+
+\newcommand{\refRequisito}[1]{%
+    \hyperlink{req:#1}{#1}%
+}
+
+\newcommand{\subrequisito}[3]{%
+    \par\smallskip
+    \textbf{\idRequisito{#1}. #2}: #3%
+}
+
+\newcommand{\fichaRequisito}[9]{%
+    \begin{table}[H]
+    \centering
+    \begin{tblr}{
+        width=\linewidth,
+        colspec={Q[l,wd=0.26\linewidth] X[l]},
+        rows={valign=t},
+        row{1}={bg=gray!18,font=\bfseries},
+        column{1}={font=\bfseries},
+        hline{1}={0.8pt},
+        hline{2}={0.5pt},
+        hline{Z}={0.8pt},
+        leftsep=4pt,
+        rightsep=4pt,
+        rowsep=2pt
+    }
+        \idRequisito{#1} & #2 \\
+        Objetivo general & #3 \\
+        #4 & #5 \\
+        Descripción & #6 \\
+        Prioridad & #7 \\
+        Relacionado con & #8 \\
+        #9%
+    \end{tblr}
+    \caption{\textbf{#1}. #2.}
+    \label{tab:req:#1}
+    \end{table}
+}
+
+\newcommand{\requisitoFuncional}[8]{%
+    \fichaRequisito{#1}{#2}{#3}{Requisito padre}{\refRequisito{#4}}%
+    {#5}{#6}{#7}{Verificación & #8 \\}%
+}
+
+\newcommand{\requisitoPadre}[8]{%
+    \fichaRequisito{#1}{#2}{#3}{Requisitos hijos}{#4}{#5}{#6}{#7}%
+    {Verificación & #8 \\}%
+}
+
+
+
+Los requisitos funcionales describen \textbf{operaciones}, \textbf{resultados} y \textbf{cambios de
+estado}, por otro lado, los no funcionales establecen \textbf{condiciones de calidad}.
+
+Cada requisito está relacionado con los objetivos que ayuda a cumplir y con
+otros requisitos cuando el funcionamiento de uno afecta al otro. Estas
+relaciones permiten mantener una \textbf{trazabilidad} de los requisitos del
+proyecto~\cite{nasa_good_requirement}.
+
+
+\newcommand{\requisitoNoFuncional}[7]{%
+    \fichaRequisito{#1}{#2}{#3}{Alcance}{#4}{#5}{#6}{#7}{}%
+}
+
+\setsecnumdepth{subsection}
+\settocdepth{subsection}
+\subsection{Requisitos funcionales}
+
+A partir de los objetivos generales, se han extraído una serie de \textbf{requisitos
+funcionales} específicos que establecen cuál debe ser el comportamiento del
+sistema.
+
+Para estructurarlos, se han definido cinco requisitos principales, de los que parte el resto:
+
+
+\requisitoPadre
+{RF-1}
+{Gestión de cuentas}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{\refRequisito{RF-1.1}, \refRequisito{RF-1.2}, \refRequisito{RF-1.3},
+\refRequisito{RF-1.4}, \refRequisito{RF-1.5}, \refRequisito{RF-1.6},
+\refRequisito{RF-1.7}, \refRequisito{RF-1.8} y \refRequisito{RF-1.9}}
+{El sistema debe permitir gestionar el ciclo de vida completo de una cuenta.}
+{Alta}
+{\refRequisito{RF-2}, \refRequisito{RF-3} y \refRequisito{RF-4}}
+{Completar el ciclo de una cuenta, desde su registro hasta su eliminación, y
+comprobar durante el proceso las operaciones de acceso, verificación,
+recuperación, edición y consulta de información asociada.}
+
+\requisitoPadre
+{RF-2}
+{Gestión de juegos}
+{\refObjetivo{OG-01} y \refObjetivo{OG-04}}
+{\refRequisito{RF-2.1}, \refRequisito{RF-2.2}, \refRequisito{RF-2.3},
+\refRequisito{RF-2.4}, \refRequisito{RF-2.5} y \refRequisito{RF-2.6}}
+{El sistema debe permitir localizar y registrar juegos de mesa, consultar su información
+y organizar la actividad del usuario asociada a ellos.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-3} y \refRequisito{RF-4}}
+{Buscar y registrar un juego, seguirlo y dejar de seguirlo, consultar su ficha y
+la biblioteca, y crear, actualizar y retirar una valoración.}
+
+\requisitoPadre
+{RF-3}
+{Procesamiento de manuales}
+{\refObjetivo{OG-02} y \refObjetivo{OG-04}}
+{\refRequisito{RF-3.1}, \refRequisito{RF-3.2}, \refRequisito{RF-3.3},
+\refRequisito{RF-3.4}, \refRequisito{RF-3.5}, \refRequisito{RF-3.6},
+\refRequisito{RF-3.7}, \refRequisito{RF-3.8}, \refRequisito{RF-3.9} y
+\refRequisito{RF-3.10}}
+{El sistema debe permitir añadir, procesar, consultar y gestionar manuales
+asociados a juegos de mesa.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-2} y \refRequisito{RF-4}}
+{Subir manuales de juegos de mesa y comprobar que las subidas inválidas o duplicadas se
+rechazan. Después, procesarlos, consultar su estado y contenido, corregir y
+reprocesar sus páginas y eliminarlos.}
+
+\requisitoPadre
+{RF-4}
+{Consulta de reglas}
+{\refObjetivo{OG-03} y \refObjetivo{OG-04}}
+{\refRequisito{RF-4.1}, \refRequisito{RF-4.2}, \refRequisito{RF-4.3},
+\refRequisito{RF-4.4}, \refRequisito{RF-4.5}, \refRequisito{RF-4.6},
+\refRequisito{RF-4.7} y \refRequisito{RF-4.8}}
+{El sistema debe permitir obtener explicaciones y mantener conversaciones
+sobre las reglas de un juego de mesa utilizando el contenido de los manuales
+disponibles.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-2} y \refRequisito{RF-3}}
+{Generar la explicación de un juego y mantener una conversación sobre sus
+reglas con un modelo \ac{LLM}.}
+
+
+\requisitoPadre
+{RF-5}
+{Gestión de preferencias}
+{\refObjetivo{OG-01}}
+{\refRequisito{RF-5.1} y \refRequisito{RF-5.2}}
+{El sistema debe permitir adaptar el idioma y la apariencia de la interfaz a las
+preferencias del usuario.}
+{Baja}
+{Sin relación directa}
+{Cambiar el idioma y la apariencia de la interfaz, recargar la aplicación
+y comprobar que se conservan las preferencias seleccionadas.}
+
+
+\subsubsection{RF-1. Gestión de cuentas}
+
+La gestión de una cuenta cubre todo su ciclo, desde el registro hasta la
+eliminación, e incluye el acceso, la verificación, la recuperación y la edición
+de sus datos entre otros detalles.
+
+\requisitoFuncional
+{RF-1.1}
+{Registrar una cuenta nueva}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir crear una cuenta mediante un nombre de usuario, un
+correo electrónico y una contraseña. Tras completar el registro, la sesión debe
+quedar iniciada.}
+{Alta}
+{\refRequisito{RF-1.2} y \refRequisito{RF-1.4}}
+{Completar un registro con datos válidos y comprobar que se crea la cuenta y se
+inicia la sesión.}
+
+\requisitoFuncional
+{RF-1.2}
+{Iniciar sesión}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir iniciar sesión utilizando el correo
+electrónico, o bien, el nombre de usuario junto con la contraseña.}
+{Alta}
+{\refRequisito{RF-1.1}, \refRequisito{RF-1.3}, \refRequisito{RF-1.5},
+\refRequisito{RF-1.6}, \refRequisito{RF-1.7} y \refRequisito{RF-1.8}}
+{Acceder a una misma cuenta mediante ambos identificadores y rechazar unas
+credenciales que no sean válidas.}
+
+\requisitoFuncional
+{RF-1.3}
+{Cerrar sesión}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir cerrar la sesión y, una vez cerrada, no debe
+poder utilizarse de nuevo sin autenticarse.}
+{Alta}
+{\refRequisito{RF-1.2}}
+{Cerrar una sesión activa y comprobar que no puede volver a utilizarse para
+acceder a una ruta protegida.}
+
+\requisitoFuncional
+{RF-1.4}
+{Verificar el correo electrónico}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir verificar el correo mediante un enlace de un solo uso
+y solicitar un nuevo enlace cuando sea necesario. La falta de verificación no
+debe impedir el acceso al resto de la aplicación.}
+{Alta}
+{\refRequisito{RF-1.1} y \refRequisito{RF-1.6}}
+{Verificar una cuenta, rechazar la reutilización del enlace y comprobar que una
+cuenta pendiente de verificación puede seguir utilizando la aplicación.}
+
+\requisitoFuncional
+{RF-1.5}
+{Restablecer la contraseña}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir restablecer la contraseña mediante un enlace de un
+solo uso enviado por correo electrónico. Al completar el proceso, debe revocar
+las sesiones que continuasen activas.}
+{Alta}
+{\refRequisito{RF-1.2} y \refRequisito{RF-1.6}}
+{Restablecer la contraseña, comprobar que el enlace no puede reutilizarse y que
+las sesiones anteriores dejan de ser válidas.}
+
+\requisitoFuncional
+{RF-1.6}
+{Editar el perfil}
+{\refObjetivo{OG-04}}
+{RF-1}
+{El sistema debe permitir actualizar de forma independiente el nombre de
+usuario, el correo electrónico y la imagen de perfil. Un cambio de correo debe
+dejar pendiente su verificación y generar un nuevo enlace.}
+{Media}
+{\refRequisito{RF-1.2}, \refRequisito{RF-1.4} y \refRequisito{RF-1.5}}
+{Modificar por separado cada dato del perfil y comprobar el estado de
+verificación después de cambiar el correo electrónico.}
+
+\requisitoFuncional
+{RF-1.7}
+{Cambiar la contraseña}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir cambiar la contraseña después de comprobar la actual
+y validar la nueva. La sesión utilizada para realizar el cambio debe ser la única
+que sigue activa tras el cambio.}
+{Alta}
+{\refRequisito{RF-1.2}}
+{Cambiar la contraseña desde una sesión con otras sesiones abiertas y comprobar
+que solo permanece activa la cuenta desde la que se ha hecho el cambio.}
+
+\requisitoFuncional
+{RF-1.8}
+{Eliminar una cuenta}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-1}
+{El sistema debe permitir eliminar una cuenta tras realizar una confirmación
+explícita. Una vez eliminada, se deben revocar sus sesiones y hacer inaccesibles
+la cuenta, los manuales, las conversaciones y las valoraciones asociadas. }
+{Alta}
+{\refRequisito{RF-1.2}, \refRequisito{RF-2.6}, \refRequisito{RF-3.9} y
+\refRequisito{RF-4.2}}
+{Eliminar una cuenta con información asociada y comprobar que deja de ser
+accesible, que sus sesiones se cierran y que se hace la limpieza de sus
+recursos.}
+
+\requisitoFuncional
+{RF-1.9}
+{Consultar las estadísticas de actividad}
+{\refObjetivo{OG-04}}
+{RF-1}
+{El sistema debe mostrar al usuario el número de juegos en los que ha tenido
+actividad, los manuales que ha subido y las conversaciones que ha creado.}
+{Media}
+{\refRequisito{RF-2.6}, \refRequisito{RF-3.1}, \refRequisito{RF-3.9} y
+\refRequisito{RF-4.2}}
+{Generar actividad de todo tipo y comprobar que los valores mostrados
+coinciden con la información almacenada.}
+
+\subsubsection{RF-2. Gestión de juegos}
+
+Los juegos pueden buscarse en el catálogo o añadirse manualmente. Una vez
+registrados, pueden seguirse, valorarse y consultarse desde la biblioteca
+personal.
+
+\requisitoFuncional
+{RF-2.1}
+{Buscar juegos}
+{\refObjetivo{OG-01}}
+{RF-2}
+{El sistema debe permitir buscar juegos por nombre.}
+{Alta}
+{\refRequisito{RF-2.2} y \refRequisito{RF-3.1}}
+{Buscar primero un juego que ya haya tenido actividad y otro que no para
+comprobar que ambos se muestran.}
+
+\requisitoFuncional
+{RF-2.2}
+{Añadir un juego manualmente}
+{\refObjetivo{OG-04}}
+{RF-2}
+{El sistema debe permitir añadir mediante su nombre un juego que no aparezca
+entre los resultados de búsqueda.}
+{Media}
+{\refRequisito{RF-2.1} y \refRequisito{RF-3.1}}
+{Buscar un juego que no esté disponible, añadirlo manualmente y comprobar que
+puede seleccionarse para subir un manual.}
+
+\requisitoFuncional
+{RF-2.3}
+{Permitir seguir juegos}
+{\refObjetivo{OG-04}}
+{RF-2}
+{El sistema debe registrar los juegos seguidos de un usuario
+\subrequisito{RF-2.3.1}{Seguir o dejar de seguir un juego}{El usuario debe poder seguir y
+dejar de seguir un juego.}
+\subrequisito{RF-2.3.2}{Seguir juegos automáticamente}{La primera actividad sobre un
+juego debe seguirlo automáticamente cuando no exista una decisión explícita
+anterior.}}
+{Media}
+{\refRequisito{RF-2.4}, \refRequisito{RF-2.5}, \refRequisito{RF-2.6},
+\refRequisito{RF-3.1} y \refRequisito{RF-4.3}}
+{Seguir y dejar de seguir un juego de forma explícita. Después, generar una
+primera actividad con y sin una decisión anterior y comprobar el resultado.}
+
+\requisitoFuncional
+{RF-2.4}
+{Consultar la biblioteca personal}
+{\refObjetivo{OG-04}}
+{RF-2}
+{El sistema debe recoger la actividad del usuario relacionada con juegos y
+manuales.
+\subrequisito{RF-2.4.1}{Juegos seguidos}{Debe listar los juegos a los que
+sigue el usuario.}
+\subrequisito{RF-2.4.2}{Manuales propios}{Debe listar los manuales del usuario subidos por el usuario y permitir filtrarlos dentro de la biblioteca.}}
+{Media}
+{\refRequisito{RF-2.3}, \refRequisito{RF-3.1} y \refRequisito{RF-3.9}}
+{Seguir varios juegos y subir varios manuales. Después, comprobar el orden de
+los juegos y el filtrado de los manuales.}
+
+\requisitoFuncional
+{RF-2.5}
+{Consultar el perfil de un juego}
+{\refObjetivo{OG-01}}
+{RF-2}
+{El sistema debe mostrar los datos del juego, los manuales accesibles, la
+valoración propia y el número de conversaciones del usuario, e indicar si sigue el juego.}
+{Alta}
+{\refRequisito{RF-2.3}, \refRequisito{RF-2.6}, \refRequisito{RF-3.1},
+\refRequisito{RF-3.4}, \refRequisito{RF-3.9} y \refRequisito{RF-4.2}}
+{Consultar un juego con información de cada tipo y comprobar que la ficha
+solo incluye los manuales accesibles para la cuenta autenticada.}
+
+\requisitoFuncional
+{RF-2.6}
+{Valorar un juego}
+{\refObjetivo{OG-04}}
+{RF-2}
+{El sistema debe permitir registrar y actualizar una puntuación de entre
+uno y cinco a un juego, acompañarla de una nota opcional y permitir
+borrar valoraciones previas.}
+{Media}
+{\refRequisito{RF-1.8}, \refRequisito{RF-1.9}, \refRequisito{RF-2.3} y
+\refRequisito{RF-2.5}}
+{Crear, modificar y borrar una valoración.}
+
+\subsubsection{RF-3. Procesamiento de manuales}
+
+Los manuales se validan al subirlos y se procesan antes de poder ser
+consultados.
+También pueden corregirse manualmente errores, reprocesarse y eliminarse.
+
+\requisitoFuncional
+{RF-3.1}
+{Subir un manual}
+{\refObjetivo{OG-02}}
+{RF-3}
+{El sistema debe permitir subir un manual asociado a un juego mediante
+imágenes o un documento en formato \acs{PDF}\acused{PDF}, y elegir si será
+privado o compartido con la comunidad. Si se comparte, debe permitir elegir
+si se muestra el nombre del usuario, de acuerdo con \refRequisito{RF-3.10}.
+Antes de enviar varias imágenes, el usuario debe poder revisarlas, ordenarlas y retirar las que no sean útiles.}
+{Media}
+{\refRequisito{RF-1.9}, \refRequisito{RF-2.1}, \refRequisito{RF-2.2},
+\refRequisito{RF-2.3}, \refRequisito{RF-2.4}, \refRequisito{RF-2.5},
+\refRequisito{RF-3.2}, \refRequisito{RF-3.3}, \refRequisito{RF-3.4},
+\refRequisito{RF-3.6.1}, \refRequisito{RF-3.8}, \refRequisito{RF-3.9} y
+\refRequisito{RF-3.10}}
+{Subir un manual de cada tipo y comprobar que se
+conserva el orden de las páginas, la visibilidad y la opción elegida para
+mostrar el nombre.}
+
+\requisitoFuncional
+{RF-3.2}
+{Validar la subida de un manual}
+{\refObjetivo{OG-02}}
+{RF-3}
+{El sistema debe comprobar en el servidor que los formatos admitidos, el tamaño de
+cada archivo y del conjunto de la petición, y el número máximo de páginas
+están dentro de los valores esperados.}
+{Media}
+{\refRequisito{RF-3.1} y \refRequisito{RF-3.4}}
+{Subir manuales con valores correctos y otros que superen cada límite,
+comprobando que estos últimas se rechazan antes de iniciar el procesamiento.}
+
+\requisitoFuncional
+{RF-3.3}
+{Detectar manuales duplicados}
+{\refObjetivo{OG-02} y \refObjetivo{OG-04}}
+{RF-3}
+{El sistema debe rechazar un manual que ya está activo y lo ha subido
+el mismo usuario.}
+{Media}
+{\refRequisito{RF-3.1} y \refRequisito{RF-3.9}}
+{Subir un manual dos veces como el mismo usuario y juego y comprobar que  el segundo se rechaza.}
+
+
+
+\requisitoFuncional
+{RF-3.4}
+{Procesar un manual}
+{\refObjetivo{OG-02}}
+{RF-3}
+{El sistema debe procesar y extraer el contenido de cada manual en segundo
+plano para dejarlo preparado para las consultas al \ac{LLM}.
+\subrequisito{RF-3.4.1}{Preprocesar las imágenes}{Cuando sea necesario reconocer
+texto mediante \ac{OCR}, debe aplicar a las imágenes las técnicas de preprocesado adecuadas según el motor utilizado.}
+\subrequisito{RF-3.4.2}{Extraer el texto}{Debe utilizar el texto del documento
+cuando sea aprovechable. En caso contrario, debe extraerlo de las imágenes
+preprocesadas mediante \ac{OCR}.}
+\subrequisito{RF-3.4.3}{Posprocesar el texto}{Tras la extracción de texto,
+debe aplicar las distintas técnicas de postprocesado para mejorar el
+material.}
+\subrequisito{RF-3.4.4}{Indexar el contenido}{Debe dividir el texto resultante en
+fragmentos e indexarlos en una base de datos vectorial~\cite{microsoft_vector_database}
+para recuperarlos durante las consultas.}
+\subrequisito{RF-3.4.5}{Reutilizar páginas ya procesadas}{Debe reutilizar el resultado de una
+página idéntica ya procesada, sin repetir su extracción ni su posprocesado.}}
+{Media}
+{\refRequisito{RF-2.5}, \refRequisito{RF-3.1}, \refRequisito{RF-3.2},
+\refRequisito{RF-3.5}, \refRequisito{RF-3.6}, \refRequisito{RF-3.7},
+\refRequisito{RF-3.8}, \refRequisito{RF-3.9}, \refRequisito{RF-4.1} y
+\refRequisito{RF-4.3}}
+{Procesar un documento con texto, una imagen que requiera reconocimiento y una
+página repetida. Después, comprobar el texto obtenido y su indexación.}
+
+
+\requisitoFuncional
+{RF-3.5}
+{Consultar el estado del procesamiento}
+{\refObjetivo{OG-02}}
+{RF-3}
+{El sistema debe permitir al usuario propietario consultar el estado guardado del
+manual y de cada una de sus páginas.}
+{Media}
+{\refRequisito{RF-3.4}}
+{Iniciar un procesamiento y comprobar sus diferentes transiciones de estado
+tanto para el manual como para sus páginas.}
+
+\requisitoFuncional
+{RF-3.6}
+{Consultar un manual}
+{\refObjetivo{OG-02} y \refObjetivo{OG-04}}
+{RF-3}
+{El sistema debe permitir consultar por páginas el contenido de un manual
+propio o compartido que esté activo. En los manuales ajenos, la consulta
+debe limitarse a la lectura.
+\subrequisito{RF-3.6.1}{Navegar por las páginas}{Debe mostrar el texto extraído
+o editado y, cuando esté disponible, la imagen subida o generada de cada página.}
+\subrequisito{RF-3.6.2}{Buscar en el manual}{Debe buscar texto dentro del manual y
+permitir desplazarse entre las coincidencias.}
+\subrequisito{RF-3.6.3}{Permitir obtener información sobre el procesamiento}{Debe mostrar al propietario la información
+disponible sobre el origen y la confianza del texto, así como la reutilización
+de páginas.}}
+{Alta}
+{\refRequisito{RF-3.1}, \refRequisito{RF-3.4}, \refRequisito{RF-3.7},
+\refRequisito{RF-3.9} y \refRequisito{RF-4.6}}
+{Consultar un manual con varias páginas, buscar un fragmento de texto presente y comprobar
+la navegación, el texto, la imagen disponible y la información técnica de cada
+página.}
+
+\requisitoFuncional
+{RF-3.7}
+{Corregir el texto de una página manualmente}
+{\refObjetivo{OG-02}}
+{RF-3}
+{El sistema debe permitir corregir el texto de una página cuando el manual sea
+propio, privado y no se esté procesando. Tras guardar el cambio, debe encolar
+la actualización del contenido indexado.}
+{Alta}
+{\refRequisito{RF-3.4.4}, \refRequisito{RF-3.6.1}, \refRequisito{RF-4.1} y
+\refRequisito{RF-4.3}}
+{Editar una página que cumpla las condiciones y comprobar que se reindexa correctamente.}
+
+\requisitoFuncional
+{RF-3.8}
+{Reprocesar un manual}
+{\refObjetivo{OG-02}}
+{RF-3}
+{El sistema debe permitir repetir el procesamiento a partir de las fuentes que
+ya se encuentran almacenadas.
+\subrequisito{RF-3.8.1}{Reprocesar el manual completo}{Debe volver a procesar
+todas sus páginas.}
+\subrequisito{RF-3.8.2}{Reprocesar una página}{Debe procesar únicamente la página seleccionada.}}
+{Media}
+{\refRequisito{RF-3.1}, \refRequisito{RF-3.4}, \refRequisito{RF-3.9},
+\refRequisito{RF-4.1} y \refRequisito{RF-4.3}}
+{Reprocesar primero una página y después el manual completo, comprobando las
+páginas afectadas subirlas de nuevo.}
+
+\requisitoFuncional
+{RF-3.9}
+{Eliminar un manual}
+{\refObjetivo{OG-04}}
+{RF-3}
+{El sistema debe permitir aplicar un borrado lógico a un manual propio y retirar
+sus páginas del acceso del usuario. Después debe encolar la limpieza de los
+ficheros y del contenido indexado asociado.}
+{Alta}
+{\refRequisito{RF-1.8}, \refRequisito{RF-1.9}, \refRequisito{RF-2.4},
+\refRequisito{RF-2.5}, \refRequisito{RF-3.1}, \refRequisito{RF-3.3},
+\refRequisito{RF-3.4.4}, \refRequisito{RF-3.6}, \refRequisito{RF-3.8},
+\refRequisito{RF-4.1}, \refRequisito{RF-4.3}, \refRequisito{RF-4.6} y
+\refRequisito{RF-4.8}}
+{Eliminar un manual procesado y comprobar que deja de ser accesible y que se
+solicita la limpieza de sus recursos derivados.}
+
+\requisitoFuncional
+{RF-3.10}
+{Mostrar u ocultar el nombre al compartir un manual}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{RF-3}
+{El sistema debe permitir al propietario elegir si su nombre aparece junto
+a un manual compartido y en las fuentes de las respuestas que lo utilizan.
+La opción por defecto debe ocultarlo y debe poder cambiarse después de la
+subida, también para las fuentes de respuestas anteriores. Esta elección
+no debe modificar la visibilidad del manual ni sus permisos.}
+{Media}
+{\refRequisito{RF-3.1}, \refRequisito{RF-3.6} y \refRequisito{RF-4.6}}
+{Subir un manual compartido sin mostrar el nombre y comprobar su presentación
+desde otra cuenta. Activar y desactivar la opción, verificando el cambio
+en el manual y en una respuesta anterior. Rechazar el cambio desde una
+cuenta ajena y mantener oculto el nombre en los manuales privados.}
+
+\subsubsection{RF-4. Consulta de reglas}
+
+Las explicaciones y respuestas del modelo \ac{LLM} se generan a partir de los manuales disponibles.
+Las conversaciones conservan el historial y las fuentes utilizadas.
+
+\requisitoFuncional
+{RF-4.1}
+{Consultar la explicación de un juego}
+{\refObjetivo{OG-03}}
+{RF-4}
+{El sistema debe generar en segundo plano una explicación general a partir de
+los manuales accesibles y conservarla mientras sus fuentes no cambien.}
+{Alta}
+{\refRequisito{RF-3.4.4}, \refRequisito{RF-3.7}, \refRequisito{RF-3.8} y
+\refRequisito{RF-3.9}}
+{Solicitar una explicación inexistente, comprobar su generación y reutilizarla
+en una consulta posterior. Después, modificar las fuentes y comprobar que se
+genera una nueva versión.}
+
+\requisitoFuncional
+{RF-4.2}
+{Gestionar conversaciones}
+{\refObjetivo{OG-03} y \refObjetivo{OG-04}}
+{RF-4}
+{El sistema debe permitir crear conversaciones persistentes con el modelo
+\ac{LLM} asociadas a cada juego.
+\subrequisito{RF-4.2.1}{Crear y listar}{Debe permitir crear una conversación y
+listar las conversaciones propias del juego.}
+\subrequisito{RF-4.2.2}{Consultar el historial}{Debe conservar y mostrar los
+mensajes de una conversación.}
+\subrequisito{RF-4.2.3}{Renombrar}{Debe permitir modificar el título de una
+conversación propia.}
+\subrequisito{RF-4.2.4}{Eliminar}{Debe permitir eliminar una conversación
+propia.}}
+{Alta}
+{\refRequisito{RF-1.8}, \refRequisito{RF-1.9}, \refRequisito{RF-2.5},
+\refRequisito{RF-4.3}, \refRequisito{RF-4.4}, \refRequisito{RF-4.7} y
+\refRequisito{RF-4.8}}
+{Crear una conversación, mandar mensajes, consultar su historial,
+renombrarla y eliminarla.}
+
+\requisitoFuncional
+{RF-4.3}
+{Generar una respuesta}
+{\refObjetivo{OG-03}}
+{RF-4}
+{El sistema debe generar en segundo plano las respuestas a los mensajes de una
+conversación y mostrar si se encuentran pendientes, completadas o fallidas.}
+{Alta}
+{\refRequisito{RF-2.3}, \refRequisito{RF-3.4.4}, \refRequisito{RF-3.7},
+\refRequisito{RF-3.8}, \refRequisito{RF-3.9}, \refRequisito{RF-4.2},
+\refRequisito{RF-4.4}, \refRequisito{RF-4.5}, \refRequisito{RF-4.6},
+\refRequisito{RF-4.7} y \refRequisito{RF-4.8}}
+{Enviar una pregunta y comprobar que termina con una respuesta o con un error
+explícito, sin permanecer indefinidamente en estado pendiente.}
+
+\requisitoFuncional
+{RF-4.4}
+{Nombrar una conversación}
+{\refObjetivo{OG-03}}
+{RF-4}
+{El sistema debe asignar automáticamente un título a partir del primer mensaje
+de una conversación.}
+{Alta}
+{\refRequisito{RF-4.2.3} y \refRequisito{RF-4.3}}
+{Crear una conversación, enviar su primer mensaje y comprobar que el título
+inicial se sustituye por uno generado a partir de dicho mensaje.}
+
+\requisitoFuncional
+{RF-4.5}
+{Seleccionar el idioma de la respuesta}
+{\refObjetivo{OG-03}}
+{RF-4}
+{El sistema debe responder a los mensajes de una conversación en español o en
+inglés según el idioma detectado en el turno.}
+{Alta}
+{\refRequisito{RF-4.3}}
+{Enviar preguntas equivalentes en ambos idiomas y comprobar el idioma de las
+respuestas generadas.}
+
+\requisitoFuncional
+{RF-4.6}
+{Consultar las fuentes de una respuesta}
+{\refObjetivo{OG-03}}
+{RF-4}
+{El sistema debe indicar las páginas y el manual en el que se han basado
+las respuestas dadas a una pregunta. Cuando el manual continúe disponible
+y el usuario tenga permiso para leerlo, debe permitir abrir directamente
+la página citada. El nombre de quien lo subió debe mostrarse según la
+elección recogida en \refRequisito{RF-3.10}.}
+{Alta}
+{\refRequisito{RF-3.6.1}, \refRequisito{RF-3.9}, \refRequisito{RF-3.10} y \refRequisito{RF-4.3}}
+{Generar una respuesta con fuentes procedentes de varias páginas y manuales, y
+comprobar que cada referencia se muestra una sola vez y abre la página correcta
+cuando se dispone de acceso.}
+
+\requisitoFuncional
+{RF-4.7}
+{Reutilizar contexto de una conversación}
+{\refObjetivo{OG-03}}
+{RF-4}
+{El sistema debe proveer del contexto de la conversación al \ac{LLM} tras
+recibir un nuevo mensaje.}
+{Alta}
+{\refRequisito{RF-4.2.2} y \refRequisito{RF-4.3}}
+{Realizar una pregunta en una conversación previamente iniciada que omita parte del contexto y comprobar
+que se interpreta utilizando los mensajes anteriores.}
+
+\requisitoFuncional
+{RF-4.8}
+{Conservar conversaciones sin fuentes disponibles}
+{\refObjetivo{OG-03} y \refObjetivo{OG-04}}
+{RF-4}
+{El sistema debe mantener accesible el historial de una conversación aunque las fuentes que se hayan usado se retiren. En ese caso, no
+debe admitir nuevos mensajes.}
+{Alta}
+{\refRequisito{RF-3.9}, \refRequisito{RF-4.2.2} y \refRequisito{RF-4.3}}
+{Eliminar los manuales vinculados a una conversación existente y comprobar que
+su historial continúa visible en modo de solo lectura.}
+
+\subsubsection{RF-5. Gestión de preferencias}
+
+Las preferencias de \textit{Manualito} permiten elegir entre español e
+inglés y cambiar la apariencia de la interfaz.
+
+
+\requisitoFuncional
+{RF-5.1}
+{Seleccionar el idioma de la interfaz}
+{\refObjetivo{OG-01}}
+{RF-5}
+{El sistema debe ofrecer la interfaz en español e inglés y permitir cambiar el
+idioma desde todas las partes de la aplicación. La selección debe
+conservarse en el dispositivo.}
+{Media}
+{Sin relación directa}
+{Cambiar el idioma antes y después de iniciar sesión, recargar la aplicación y
+comprobar que la interfaz mantiene la selección.}
+
+\requisitoFuncional
+{RF-5.2}
+{Configurar la apariencia}
+{\refObjetivo{OG-01}}
+{RF-5}
+{El sistema debe permitir elegir entre un tema claro, oscuro o automático y
+permitir personalizar la apariencia de la aplicación. La configuración debe conservarse en el
+dispositivo.}
+{Media}
+{Sin relación directa}
+{Cambiar el tema y el acento, recargar la aplicación y comprobar que ambos
+valores se mantienen.}
+
+
+\subsection{Requisitos no funcionales}
+\setsecnumdepth{section}
+\settocdepth{section}
+
+Se recogen diez \textbf{requisitos no funcionales} generales. Para cada uno
+se indica su alcance y las funciones relacionadas. Pese a no tener un campo
+«Verificación», ya que en la mayoría de ellos no hay una metodología objetiva
+para comprobar que están implementados de una forma correcta, todos ellos deben ser tenidos en cuenta durante la fase de \ac{QA}.
+
+\requisitoNoFuncional
+{RNF-1}
+{Usabilidad y accesibilidad}
+{\refObjetivo{OG-01}}
+{Interfaz de usuario}
+{La interfaz debe adaptarse a móvil y escritorio y cumplir el nivel AA de las
+\ac{WCAG} 2.2~\cite{w3c_wcag_22}, incluyendo el uso con teclado, el foco visible
+y la identificación de controles.
+Los mensajes de error deben explicar el problema y cómo continuar.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3}, \refRequisito{RF-4} y
+\refRequisito{RF-5}}
+
+
+\requisitoNoFuncional
+{RNF-2}
+{Compatibilidad e internacionalización}
+{\refObjetivo{OG-01}}
+{Interfaz web}
+{Las funciones deben conservar su comportamiento en los navegadores
+admitidos. Los textos y mensajes de la interfaz deben estar disponibles de forma
+coherente en español e inglés.}
+{Media}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3}, \refRequisito{RF-4} y
+\refRequisito{RF-5}}
+
+\requisitoNoFuncional
+{RNF-3}
+{Rendimiento y consumo de recursos}
+{\refObjetivo{OG-01}, \refObjetivo{OG-02} y \refObjetivo{OG-03}}
+{Toda la aplicación}
+{Los tiempos de respuesta y el consumo de recursos deben mantenerse dentro
+de los límites definidos para la carga prevista. Las operaciones más costosas
+no deben bloquear el uso de otras funciones.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3},
+\refRequisito{RF-4} y \refRequisito{RF-5}}
+
+\requisitoNoFuncional
+{RNF-4}
+{Fiabilidad y recuperación}
+{\refObjetivo{OG-02}, \refObjetivo{OG-03} y \refObjetivo{OG-04}}
+{Datos persistentes y tareas}
+{Los fallos de una tarea deben quedar registrados sin interrumpir trabajos
+independientes ni detener toda la aplicación. Las tareas deben ser idempotentes,
+de modo que puedan reintentarse sin generar duplicados ni aplicar varias
+veces los mismos cambios.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3} y \refRequisito{RF-4}}
+
+\requisitoNoFuncional
+{RNF-5}
+{Seguridad}
+{\refObjetivo{OG-05}}
+{Toda la aplicación}
+{La aplicación debe proteger las cuentas y los datos frente a accesos y
+modificaciones sin permiso. Los datos deben estar protegidos tanto al
+guardarlos como al enviarlos. Esto incluye la protección de las sesiones de
+usuario~\cite{owasp_session_management} y la prevención de ataques de
+\ac{CSRF} en las peticiones que modifican datos~\cite{owasp_csrf}.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3} y \refRequisito{RF-4}}
+
+\requisitoNoFuncional
+{RNF-6}
+{Privacidad y tratamiento de datos}
+{\refObjetivo{OG-04} y \refObjetivo{OG-05}}
+{Cuentas, manuales y conversaciones}
+{El uso de los datos personales debe limitarse al mínimo necesario para el
+uso del sistema.}
+{Alta}
+{\refRequisito{RF-1}, \refRequisito{RF-3} y \refRequisito{RF-4}}
+
+
+\requisitoNoFuncional
+{RNF-7}
+{Calidad del procesamiento y las respuestas}
+{\refObjetivo{OG-02} y \refObjetivo{OG-03}}
+{Texto y respuestas generados}
+{El texto extraído y corregido debe conservar las reglas del manual.
+Por otro lado, se deben aplicar las medidas necesarias para evitar,
+en la medida de lo posible, las alucinaciones del modelo \ac{LLM}~\cite{openai_hallucinations}.}
+{Alta}
+{\refRequisito{RF-3.4}, \refRequisito{RF-4.1}, \refRequisito{RF-4.3},
+\refRequisito{RF-4.5} y \refRequisito{RF-4.6}}
+
+
+\requisitoNoFuncional
+{RNF-8}
+{Mantenibilidad y pruebas}
+{\refObjetivo{OG-01}}
+{Código y proceso de integración}
+{El código debe separar responsabilidades y disponer de pruebas de los
+comportamientos principales y sus errores. Las comprobaciones del código y las
+dependencias deben formar parte de la integración. La configuración y el
+mantenimiento deben estar documentados.}
+{Media}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3}, \refRequisito{RF-4} y
+\refRequisito{RF-5}}
+
+\requisitoNoFuncional
+{RNF-9}
+{Portabilidad y reproducibilidad}
+{\refObjetivo{OG-01}}
+{Despliegue y ejecución de la aplicación}
+{La aplicación debe poder desplegarse y ejecutarse en los entornos admitidos
+mediante un procedimiento documentado.}
+{Baja}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3}, \refRequisito{RF-4} y
+\refRequisito{RF-5}}
+
+\requisitoNoFuncional
+{RNF-10}
+{Observabilidad}
+{\refObjetivo{OG-01}, \refObjetivo{OG-02} y \refObjetivo{OG-03}}
+{Supervisión y diagnóstico}
+{La aplicación debe proporcionar información sobre el estado de sus servicios
+y la ejecución de las tareas para facilitar la detección y el diagnóstico de
+fallos. Los registros de error deben indicar cuándo se produjo el fallo, en qué
+componente y durante qué operación o tarea.}
+{Media}
+{\refRequisito{RF-1}, \refRequisito{RF-2}, \refRequisito{RF-3},
+\refRequisito{RF-4}, \refRequisito{RNF-5} y \refRequisito{RNF-6}}

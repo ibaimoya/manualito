@@ -1,0 +1,128 @@
+\capitulo{6}{Trabajos relacionados}
+
+Las herramientas de apoyo a los juegos de mesa pueden facilitar tanto el
+aprendizaje inicial como la consulta durante la partida. Para ello recurren
+a tutoriales, reglamentos enlazados o asistentes capaces de responder
+preguntas, que ofrecen distintas formas de acceder a la información.
+
+\section{Investigación relacionada}
+\label{relacionados:investigacion}
+
+Karim, Kang y Girouard estudian cómo facilitar el aprendizaje de juegos de
+mesa a personas ciegas o con baja visión mediante un asistente de voz. A
+partir de un primer estudio con catorce participantes, desarrollan
+\textit{Board Game Assistant}, una aplicación de Alexa para
+\textit{Ticket to Ride} que incorpora explicaciones breves, resúmenes y
+opciones para adaptar la ayuda a las necesidades del jugador. Posteriormente,
+nueve participantes valoran sus características mediante demostraciones
+grabadas y materiales de referencia~\cite{karim2023rulebook}.
+
+Entre sus conclusiones destaca la conveniencia de presentar las reglas
+cuando hacen falta, permitir pausas y ofrecer información adicional a
+petición del jugador, de modo que la explicación se adapte a su ritmo.
+También señalan que la música y los recordatorios pueden distraer, por lo
+que conviene poder ajustarlos. El estudio se limita a un juego y no evalúa
+el uso directo del asistente durante partidas completas~\cite{karim2023rulebook}.
+
+Su relación con \textit{Manualito} está en combinar una explicación inicial
+con consultas puntuales, adaptando la cantidad de información a lo que el
+jugador necesita en cada momento.
+
+\section{Aplicaciones relacionadas}
+\label{relacionados:aplicaciones}
+
+\subsection{Dized}
+\label{relacionados:dized}
+
+\textit{Dized} acompaña a los jugadores mediante tutoriales que combinan
+animaciones, voz y texto para presentar las reglas de forma progresiva
+mientras juegan. Además, ofrece reglamentos digitales con buscador,
+menús organizados y preguntas frecuentes, que pueden incorporar
+ampliaciones y correcciones~\cite{dized_funciones}.
+
+Sus herramientas permiten preparar contenidos específicos para cada juego,
+ya sea desde la editorial o con ayuda de otros
+creadores~\cite{dized_funciones}. Esta preparación
+facilita una enseñanza guiada, mientras que \textit{Manualito} genera
+explicaciones a partir de los manuales incorporados por los usuarios, que
+pueden ampliarlas mediante preguntas.
+
+\subsection{Rulepop}
+\label{relacionados:rulepop}
+
+\textit{Rulepop} transforma el reglamento de cada juego en una web que
+combina resúmenes, referencias de iconos y reglas completas enlazadas entre
+sí. Así, el jugador puede partir de una explicación breve y acceder al
+detalle correspondiente, o seguir un enlace hacia otra regla relacionada.
+Cada sitio puede instalarse como aplicación y consultarse sin
+conexión~\cite{rulepop_funciones}.
+
+La preparación incluye reorganizar el contenido, revisar errores e
+incorporar las observaciones de la editorial~\cite{rulepop_funciones}.
+Su propuesta muestra cómo
+facilitar la consulta mediante la estructura del reglamento y la navegación
+entre sus entradas, mientras que \textit{Manualito} permite expresar una
+duda con palabras propias y obtener una respuesta acompañada de las
+páginas utilizadas.
+
+\subsection{RulesBot.ai}
+\label{relacionados:rulesbot}
+
+\textit{RulesBot.ai} ofrece un asistente al que plantear preguntas sobre
+juegos de mesa y describe sus respuestas como explicaciones acompañadas
+de citas~\cite{rulesbot_presentacion}. Su catálogo da acceso a un chat
+asociado a cada juego, por lo que la consulta comienza seleccionando el
+título correspondiente~\cite{rulesbot_catalogo}.
+
+Comparte con \textit{Manualito} la consulta conversacional por juego,
+aunque la documentación pública no aclara si permite subir manuales,
+corregir su texto o conservar conversaciones. Por ello, estas funciones
+quedan sin verificar y no se consideran ausentes.
+
+\section{Comparación con \textit{Manualito}}
+\label{relacionados:comparacion}
+
+La tabla~\ref{tabla:relacionados-comparacion} resume las características
+descritas en la documentación pública de las aplicaciones, consultada el
+11 de septiembre de 2026, y las implementadas en \textit{Manualito}.
+La comparación se centra en las posibilidades de uso, ya que valorar la
+rapidez o la precisión de las respuestas requeriría una evaluación común.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tblr}{
+        width=\textwidth,
+        colspec={X[1.2,l] X[1,l] X[1,l] X[1.1,l] X[1.3,l]},
+        cells={valign=t},
+        row{1}={font=\bfseries},
+        column{1}={font=\bfseries},
+        colsep=4pt,
+        rowsep=4pt
+    }
+        \toprule
+        Aspecto & Dized & Rulepop & RulesBot.ai & Manualito \\
+        \midrule
+        Ayuda inicial & Tutoriales progresivos & Resúmenes enlazados & Explicaciones mediante chat & Explicación general del juego \\
+        Consulta de dudas & Buscador, menús y preguntas frecuentes & Navegación entre reglas & Preguntas mediante chat & Preguntas y conversación posterior \\
+        Contenido & Preparado para cada juego & Preparado con la editorial & Juegos del catálogo & Manuales aportados por usuarios \\
+        Acceso a las fuentes & Reglas digitales & Entradas enlazadas & Citas anunciadas & Referencias a las páginas originales \\
+        Organización & Catálogo de juegos & Un sitio por juego & Chat por juego & Juegos, manuales y conversaciones \\
+        \bottomrule
+    \end{tblr}
+    \caption{Comparación de las aplicaciones relacionadas con \textit{Manualito}.
+    Elaboración propia a partir de la documentación de
+    Dized~\cite{dized_funciones}, Rulepop~\cite{rulepop_funciones} y
+    RulesBot.ai~\cite{rulesbot_presentacion,rulesbot_catalogo}.}
+    \label{tabla:relacionados-comparacion}
+\end{table}
+\FloatBarrier
+
+\textit{Manualito} reúne la explicación inicial, la consulta conversacional
+y la gestión de los manuales en un mismo espacio. El usuario puede añadir
+documentos en \acs{PDF} o imágenes, revisar el texto obtenido y corregirlo,
+mientras que los juegos y las conversaciones quedan guardados para volver
+a ellos en otra partida. Esto permite incorporar un manual sin tener que
+elaborar un tutorial específico, aunque primero hay que cargarlo y esperar
+a que termine su procesamiento. Además, la explicación generada no ofrece
+el acompañamiento paso a paso de un tutorial preparado como los de Dized.

@@ -1,0 +1,302 @@
+diff --git a/components/MobileMenuToggle.astro b/components/MobileMenuToggle.astro
+index 0686d1354d38928f651c37b868e13d24b651259d..d92c5bf3230a977a2d2a98411c4e1fbff24f003a 100644
+--- a/components/MobileMenuToggle.astro
++++ b/components/MobileMenuToggle.astro
+@@ -17,20 +17,26 @@ import Icon from '../user-components/Icon.astro';
+ <script>
+ 	class StarlightMenuButton extends HTMLElement {
+ 		btn = this.querySelector('button')!;
++		private lifecycle = new AbortController();
+ 
+-		constructor() {
+-			super();
++		connectedCallback() {
++			this.lifecycle = new AbortController();
++			const { signal } = this.lifecycle;
+ 			// Toggle `aria-expanded` state when a user clicks the button.
+-			this.btn.addEventListener('click', () => this.toggleExpanded());
++			this.btn.addEventListener('click', () => this.toggleExpanded(), { signal });
+ 
+ 			// Close the menu when a user presses the escape key.
+ 			const parentNav = this.closest('nav');
+ 			if (parentNav) {
+-				parentNav.addEventListener('keyup', (e) => this.closeOnEscape(e));
++				parentNav.addEventListener('keyup', (e) => this.closeOnEscape(e), { signal });
+ 			}
+ 
+ 			// Reset menu state when the viewport toggles between mobile and desktop sizes.
+-			matchMedia('(min-width: 50em)').addEventListener('change', () => this.setExpanded(false));
++			matchMedia('(min-width: 50em)').addEventListener('change', () => this.setExpanded(false), { signal });
++		}
++
++		disconnectedCallback() {
++			this.lifecycle.abort();
+ 		}
+ 
+ 		setExpanded(expanded: boolean) {
+@@ -54,7 +60,9 @@ import Icon from '../user-components/Icon.astro';
+ 		}
+ 	}
+ 
+-	customElements.define('starlight-menu-button', StarlightMenuButton);
++	if (!customElements.get('starlight-menu-button')) {
++		customElements.define('starlight-menu-button', StarlightMenuButton);
++	}
+ </script>
+ 
+ <style>
+diff --git a/components/MobileTableOfContents.astro b/components/MobileTableOfContents.astro
+index f9f5d590f9502e1f3b137ca3db14bedcde886788..a4ec4d77b24fdfad99a905d11c67e9f6ba15658d 100644
+--- a/components/MobileTableOfContents.astro
++++ b/components/MobileTableOfContents.astro
+@@ -118,8 +118,9 @@ const { toc } = Astro.locals.starlightRoute;
+ 			if (display) display.textContent = link.textContent;
+ 		}
+ 
+-		constructor() {
+-			super();
++		override connectedCallback() {
++			super.connectedCallback();
++			const { signal } = this.lifecycle;
+ 			const details = this.querySelector('details');
+ 			if (!details) return;
+ 			const closeToC = () => {
+@@ -127,12 +128,12 @@ const { toc } = Astro.locals.starlightRoute;
+ 			};
+ 			// Close the table of contents whenever a link is clicked.
+ 			details.querySelectorAll('a').forEach((a) => {
+-				a.addEventListener('click', closeToC);
++				a.addEventListener('click', closeToC, { signal });
+ 			});
+ 			// Close the table of contents when a user clicks outside of it.
+ 			window.addEventListener('click', (e) => {
+ 				if (!details.contains(e.target as Node)) closeToC();
+-			});
++			}, { signal });
+ 			// Or when they press the escape key.
+ 			window.addEventListener('keydown', (e) => {
+ 				if (e.key === 'Escape' && details.open) {
+@@ -143,9 +144,11 @@ const { toc } = Astro.locals.starlightRoute;
+ 						if (summary) summary.focus();
+ 					}
+ 				}
+-			});
++			}, { signal });
+ 		}
+ 	}
+ 
+-	customElements.define('mobile-starlight-toc', MobileStarlightTOC);
++	if (!customElements.get('mobile-starlight-toc')) {
++		customElements.define('mobile-starlight-toc', MobileStarlightTOC);
++	}
+ </script>
+diff --git a/components/SidebarPersister.astro b/components/SidebarPersister.astro
+index ee1c838a4a18debe63dd9ff5182957ea2195506f..db0be9873be25d5dac672025207c187992ae5f8c 100644
+--- a/components/SidebarPersister.astro
++++ b/components/SidebarPersister.astro
+@@ -41,11 +41,15 @@ declare global {
+ 				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+ 				if (!target || !state || target.dataset.hash !== state.hash) return;
+ 				window._starlightScrollRestore = state.scroll;
++				if (customElements.get('sl-sidebar-restore')) return;
+ 				customElements.define(
+ 					'sl-sidebar-restore',
+ 					class SidebarRestore extends HTMLElement {
+ 						connectedCallback() {
+ 							try {
++								const target = this.closest('sl-sidebar-state-persist');
++								const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
++								if (!target || !state || target.dataset.hash !== state.hash) return;
+ 								const idx = parseInt(this.dataset.index || '');
+ 								const details = this.closest('details');
+ 								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+diff --git a/components-internals/SidebarPersistState.ts b/components-internals/SidebarPersistState.ts
+index 4c45bbdf77177eabd0dff6f025e4d6cbbd002f01..d39c7d9f069829372c96230838a50f642e1cde49 100644
+--- a/components-internals/SidebarPersistState.ts
++++ b/components-internals/SidebarPersistState.ts
+@@ -1,71 +1,55 @@
+-// Collect required elements from the DOM.
+-const scroller = document.getElementById('starlight__sidebar');
+-const target = scroller?.querySelector<HTMLElement>('sl-sidebar-state-persist');
+-
+-/** Starlight uses this key to store sidebar state in `sessionStorage`. */
+ const storageKey = 'sl-sidebar-state';
+ 
+-/** The shape used to persist sidebar state across a user’s session. */
+ interface SidebarState {
+ 	hash: string;
+ 	open: Array<boolean | null>;
+ 	scroll: number;
+ }
+ 
+-/**
+- * Get the current sidebar state.
+- *
+- * The `open` state is loaded from session storage when the sidebar hashes match, while `scroll`
+- * and `hash` are read from the current page.
+- */
+-const getState = (): SidebarState => {
+-	let open: SidebarState['open'] = [];
+-	const hash = target?.dataset.hash || '';
+-	try {
+-		const rawStoredState = sessionStorage.getItem(storageKey);
+-		const storedState = JSON.parse(rawStoredState || '{}') as SidebarState;
+-		if (Array.isArray(storedState.open) && storedState.hash === hash) open = storedState.open;
+-	} catch {}
+-	return {
+-		hash,
+-		open,
+-		scroll: scroller?.scrollTop || 0,
+-	};
+-};
+-
+-/** Store the passed sidebar state in session storage. */
+-const storeState = (state: SidebarState): void => {
+-	try {
+-		sessionStorage.setItem(storageKey, JSON.stringify(state));
+-	} catch {}
+-};
+-
+-/** Updates sidebar state in session storage without modifying `open` state. */
+-const updateState = (): void => storeState(getState());
+-
+-/** Updates sidebar state in session storage to include a new value for a specific `<details>` element. */
+-const setToggleState = (open: boolean, detailsIndex: number): void => {
+-	const state = getState();
+-	state.open[detailsIndex] = open;
+-	storeState(state);
+-};
+-
+-// Store the current `open` state whenever a user interacts with one of the `<details>` groups.
+-target?.addEventListener('click', (event) => {
+-	if (!(event.target instanceof Element)) return;
+-	// Query for the nearest `<summary>` and then its parent `<details>`.
+-	// This excludes clicks outside of the `<summary>`, which don’t trigger toggles.
+-	const toggledDetails = event.target.closest('summary')?.closest('details');
+-	if (!toggledDetails) return;
+-	const restoreElement = toggledDetails.querySelector<HTMLElement>('sl-sidebar-restore');
+-	const index = parseInt(restoreElement?.dataset.index || '');
+-	if (isNaN(index)) return;
+-	setToggleState(!toggledDetails.open, index);
+-});
++class SidebarStatePersister extends HTMLElement {
++	private lifecycle = new AbortController();
++
++	connectedCallback() {
++		this.lifecycle = new AbortController();
++		const { signal } = this.lifecycle;
++		this.addEventListener('click', (event) => {
++			if (!(event.target instanceof Element)) return;
++			const details = event.target.closest('summary')?.closest('details');
++			if (!details) return;
++			const restore = details.querySelector<HTMLElement>('sl-sidebar-restore');
++			const index = Number.parseInt(restore?.dataset.index || '');
++			if (Number.isNaN(index)) return;
++			const state = this.getState();
++			state.open[index] = !details.open;
++			this.storeState(state);
++		}, { signal });
++		document.addEventListener('visibilitychange', () => {
++			if (document.visibilityState === 'hidden') this.storeState(this.getState());
++		}, { signal });
++	}
++
++	disconnectedCallback() {
++		this.storeState(this.getState());
++		this.lifecycle.abort();
++	}
++
++	private getState(): SidebarState {
++		const hash = this.dataset.hash || '';
++		let open: SidebarState['open'] = [];
++		try {
++			const storedState = JSON.parse(sessionStorage.getItem(storageKey) || '{}') as SidebarState;
++			if (Array.isArray(storedState.open) && storedState.hash === hash) open = storedState.open;
++		} catch {}
++		return { hash, open, scroll: this.closest('#starlight__sidebar')?.scrollTop || 0 };
++	}
++
++	private storeState(state: SidebarState) {
++		try {
++			sessionStorage.setItem(storageKey, JSON.stringify(state));
++		} catch {}
++	}
++}
+ 
+-// Store sidebar state before navigating. These will also store it on tab blur etc.,
+-// but avoid using the `beforeunload` event, which can cause issues with back/forward cache
+-// on some browsers.
+-addEventListener('visibilitychange', () => {
+-	if (document.visibilityState === 'hidden') updateState();
+-});
++if (!customElements.get('sl-sidebar-state-persist')) {
++	customElements.define('sl-sidebar-state-persist', SidebarStatePersister);
++}
+diff --git a/components-internals/TableOfContents/starlight-toc.ts b/components-internals/TableOfContents/starlight-toc.ts
+index 415c5cf93a20c401c7e72830db85125bfb081fbd..3636029a112a7e4776d121c0df54c16e3a415b07 100644
+--- a/components-internals/TableOfContents/starlight-toc.ts
++++ b/components-internals/TableOfContents/starlight-toc.ts
+@@ -1,6 +1,9 @@
+ import { PAGE_TITLE_ID } from '../../constants';
+ 
+ export class StarlightTOC extends HTMLElement {
++	protected lifecycle = new AbortController();
++	private stopObserving = () => {};
++	private cancelIdle = () => {};
+ 	private _current = this.querySelector<HTMLAnchorElement>('a[aria-current="true"]');
+ 	private minH = parseInt(this.dataset.minH || '2', 10);
+ 	private maxH = parseInt(this.dataset.maxH || '3', 10);
+@@ -20,14 +23,28 @@ export class StarlightTOC extends HTMLElement {
+ 		this._current = link;
+ 	}
+ 
+-	private onIdle = (cb: IdleRequestCallback) =>
+-		(window.requestIdleCallback || ((cb) => setTimeout(cb, 1)))(cb);
++	private onIdle = (cb: IdleRequestCallback) => {
++		this.cancelIdle();
++		if (window.requestIdleCallback) {
++			const id = window.requestIdleCallback(cb);
++			this.cancelIdle = () => window.cancelIdleCallback(id);
++		} else {
++			const id = setTimeout(cb, 1);
++			this.cancelIdle = () => clearTimeout(id);
++		}
++	};
+ 
+-	constructor() {
+-		super();
++	connectedCallback() {
++		this.lifecycle = new AbortController();
+ 		this.onIdle(() => this.init());
+ 	}
+ 
++	disconnectedCallback() {
++		this.lifecycle.abort();
++		this.cancelIdle();
++		this.stopObserving();
++	}
++
+ 	private init = (): void => {
+ 		/** All the links in the table of contents. */
+ 		const links = [...this.querySelectorAll('a')];
+@@ -108,7 +125,11 @@ export class StarlightTOC extends HTMLElement {
+ 			}
+ 			clearTimeout(timeout);
+ 			timeout = setTimeout(() => this.onIdle(observe), 200);
+-		});
++		}, { signal: this.lifecycle.signal });
++		this.stopObserving = () => {
++			observer?.disconnect();
++			clearTimeout(timeout);
++		};
+ 	};
+ 
+ 	private getRootMargin(): `-${number}px 0% ${number}px` {
+@@ -124,4 +145,6 @@ export class StarlightTOC extends HTMLElement {
+ 	}
+ }
+ 
+-customElements.define('starlight-toc', StarlightTOC);
++if (!customElements.get('starlight-toc')) {
++	customElements.define('starlight-toc', StarlightTOC);
++}

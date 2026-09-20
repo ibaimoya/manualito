@@ -1,0 +1,63 @@
+---
+import type { ImageMetadata } from 'astro';
+import type { SvgComponent } from 'astro/types';
+
+interface Props {
+  id: string;
+  alt: string;
+  src: SvgComponent & ImageMetadata;
+}
+
+const { id, alt, src: Diagrama } = Astro.props;
+---
+
+<figure {id}>
+  <Diagrama class="diagrama" />
+  <a class="figura-ampliable" href={Diagrama.src}
+    data-pswp-width={Diagrama.width} data-pswp-height={Diagrama.height}
+    aria-label={`Ampliar ${alt}`}>Ampliar</a>
+  <figcaption><slot /></figcaption>
+</figure>
+
+<style>
+  figure {
+    --fig-text: var(--sl-color-white);
+    --fig-muted: var(--sl-color-gray-2);
+    --fig-orange: var(--sl-color-text-accent);
+    --fig-blue: #76b6d8;
+    --fig-on-accent: #1f1611;
+    margin-block: 2rem;
+  }
+
+  :global([data-theme='light']) figure {
+    --fig-blue: #2c6e91;
+    --fig-on-accent: #fff8f0;
+  }
+
+  .diagrama {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .diagrama :global(text) { user-select: text; cursor: text; }
+
+  .figura-ampliable {
+    display: block;
+    width: fit-content;
+    margin-inline-start: auto;
+    padding: 0.375rem 0.5rem;
+    font-size: var(--sl-text-sm);
+  }
+
+  figcaption {
+    margin-block-start: 0.625rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  figcaption :global(p) { margin: 0; }
+</style>

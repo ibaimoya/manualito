@@ -1,0 +1,30 @@
+---
+import StarlightFooter from '@astrojs/starlight/components/Footer.astro';
+---
+
+<StarlightFooter />
+<p class="creditos">
+  Ibai Moya Aroz
+  <a href="https://github.com/ibaimoya/manualito/blob/master/LICENSE">Licencia MIT</a>
+</p>
+
+<style>
+  .creditos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1.25rem;
+    margin-block: 1.5rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+  }
+
+  .creditos a {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+
+  .creditos a:hover {
+    color: var(--sl-color-white);
+  }
+</style>

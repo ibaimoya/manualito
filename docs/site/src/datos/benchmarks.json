@@ -1,0 +1,157 @@
+{
+  "revision": "53987baab44997afda1fdf073b79e53adddafa77",
+  "sources": {
+    "ocr/engines/results_real.json": "b329522cb3479bbbf7a9bb371c4ecf7ec4cdee40df6fce9fef2e6b9a7cd27210",
+    "rag/retrieval/results.json": "b34d1868dd4dfb2a9bac6e94049b8b6da7b94bc9d56ea0c7e11d7d8b56586eab",
+    "llm/comparison/results.json": "c1cb0431d68d7b3495280880eff5a26e141160ad114332cdb091ebe394195463",
+    "llm/low-resource/results.json": "e0a100c90033ae00e041ab54fa48b1b1d1eb3acb5d23a24854f0baea7ec1fc83"
+  },
+  "ocr": [
+    {
+      "motor": "PaddleOCR CPU",
+      "error_pct": 10.916666666666666,
+      "seconds": 116.55106666666667
+    },
+    {
+      "motor": "PaddleOCR GPU",
+      "error_pct": 10.916666666666666,
+      "seconds": 11.402333333333333
+    },
+    {
+      "motor": "Tesseract",
+      "error_pct": 20.546666666666667,
+      "seconds": 6.915633333333333
+    },
+    {
+      "motor": "EasyOCR",
+      "error_pct": 21.186666666666667,
+      "seconds": 27.471300000000003
+    }
+  ],
+  "retrieval": [
+    {
+      "date": "2026-08-09",
+      "revision": null,
+      "found": 19,
+      "total": 24
+    },
+    {
+      "date": "2026-08-11",
+      "revision": "476e8a9e7b8ffaece4245d3ac668283381d3fad2",
+      "found": 19,
+      "total": 24
+    },
+    {
+      "date": "2026-08-14",
+      "revision": "882a2e31232d3143e1a85b77bd117a3158b328fb",
+      "found": 19,
+      "total": 24
+    },
+    {
+      "date": "2026-08-16",
+      "revision": "4a74a9de7763dfc2147740bd376ffdd4d0a90730",
+      "found": 20,
+      "total": 24
+    },
+    {
+      "date": "2026-08-18",
+      "revision": "f52c6820efd01e72c75da12502ff19f7e8c683b0",
+      "found": 22,
+      "total": 24
+    }
+  ],
+  "large": [
+    {
+      "model": "llama3.1:8b",
+      "memory_gb": 5.09,
+      "fidelity": 0.9166666666666666
+    },
+    {
+      "model": "qwen3:14b",
+      "memory_gb": 9.44,
+      "fidelity": 0.875
+    },
+    {
+      "model": "phi4:14b",
+      "memory_gb": 9.46,
+      "fidelity": 0.9166666666666666
+    },
+    {
+      "model": "qwen3.5:9b",
+      "memory_gb": 8.06,
+      "fidelity": 0.875
+    },
+    {
+      "model": "gemma4:e4b",
+      "memory_gb": 9.84,
+      "fidelity": 0.9722222222222222
+    },
+    {
+      "model": "gemma4:26b",
+      "memory_gb": 9.92,
+      "fidelity": 0.9166666666666666
+    },
+    {
+      "model": "deepseek-r1:14b",
+      "memory_gb": 9.05,
+      "fidelity": 0.9166666666666666
+    },
+    {
+      "model": "ministral-3:14b",
+      "memory_gb": 9.92,
+      "fidelity": 0.9583333333333334
+    }
+  ],
+  "small": [
+    {
+      "model": "granite3.3:2b",
+      "memory_gb": 1.958,
+      "fidelity": 0.944
+    },
+    {
+      "model": "llama3.2:3b",
+      "memory_gb": 2.561,
+      "fidelity": 0.889
+    },
+    {
+      "model": "phi4-mini:3.8b",
+      "memory_gb": 3.063,
+      "fidelity": 0.861
+    },
+    {
+      "model": "qwen3:0.6b",
+      "memory_gb": 0.981,
+      "fidelity": 0.792
+    },
+    {
+      "model": "qwen3:1.7b",
+      "memory_gb": 1.782,
+      "fidelity": 0.75
+    },
+    {
+      "model": "llama3.2:1b",
+      "memory_gb": 1.622,
+      "fidelity": 0.708
+    },
+    {
+      "model": "qwen3:4b",
+      "memory_gb": 3.291,
+      "fidelity": 0.694
+    },
+    {
+      "model": "gemma3:1b",
+      "memory_gb": 1.2,
+      "fidelity": 0.625
+    },
+    {
+      "model": "deepseek-r1:1.5b",
+      "memory_gb": 1.315,
+      "fidelity": 0.625
+    },
+    {
+      "model": "gemma3:4b",
+      "memory_gb": 4.05,
+      "fidelity": 0.833
+    }
+  ]
+}

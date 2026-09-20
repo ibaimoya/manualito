@@ -1,6 +1,9 @@
 import fuenteAnexos from './bibliografia-anexos.bib?raw';
+import fuenteMemoria from './bibliografia-memoria.bib?raw';
 
-/* Copia de bibliografiaAnexos.bib del TFG, mantener ambas en paralelo. */
+/* Referencias del TFG ordenadas por su primera cita en cada documento. */
+
+export type Seccion = 'memoria' | 'anexos';
 
 export interface Referencia {
   numero: number;
@@ -9,14 +12,41 @@ export interface Referencia {
   titulo: string;
   detalle: string;
   url?: string;
+  campos: Readonly<Record<string, string>>;
 }
 
 const CAMPOS_PUBLICACION = ['howpublished', 'publisher', 'journal', 'organization'];
+const CAMPOS_METADATA = [
+  ['date', 'Fecha'],
+  ['note', 'Nota'],
+  ['urldate', 'Consulta'],
+  ['journaltitle', 'Revista'],
+  ['booktitle', 'En'],
+  ['institution', 'Institución'],
+  ['type', 'Tipo'],
+  ['number', 'Número'],
+  ['volume', 'Volumen'],
+  ['pages', 'Páginas'],
+  ['pagetotal', 'Páginas totales'],
+  ['edition', 'Edición'],
+  ['location', 'Lugar'],
+  ['month', 'Mes'],
+  ['eid', 'Identificador'],
+  ['eprint', 'ePrint'],
+  ['eprintclass', 'Clase ePrint'],
+  ['eprinttype', 'Tipo ePrint'],
+  ['version', 'Versión'],
+  ['doi', 'DOI'],
+  ['isbn', 'ISBN'],
+  ['editor', 'Editor'],
+] as const;
 
 function limpiarValor(bruto: string): string {
   return bruto
     .replaceAll('\\url', '')
     .replaceAll(/[{}]/g, '')
+    .replaceAll(/\\"([A-Za-z])/g, '$1\u0308')
+    .normalize('NFC')
     .replaceAll('---', '-')
     .replaceAll(/\s+/g, ' ')
     .trim()
@@ -68,19 +98,26 @@ function parsearBib(fuente: string): Referencia[] {
       i = leido.fin;
     }
 
-    const publicacion = CAMPOS_PUBLICACION.map((c) => campos[c]).find(Boolean) ?? '';
+    const publicaciones = CAMPOS_PUBLICACION.map((campo) => limpiarValor(campos[campo] ?? ''))
+      .filter(Boolean)
+      .filter((valor) => !valor.includes('http'));
     // La URL ya se muestra aparte, un campo de publicación que la repita sobra.
-    const trozos = [limpiarValor(publicacion), limpiarValor(campos.year ?? '')].filter(
-      (trozo) => Boolean(trozo) && !trozo.includes('http'),
-    );
-    referencias.push({
+    const fecha = limpiarValor(campos.year ?? '');
+    const trozos = [...publicaciones, fecha].filter(Boolean);
+    const metadatos = CAMPOS_METADATA.map(([campo, etiqueta]) => {
+      const valor = limpiarValor(campos[campo] ?? '');
+      return valor ? `${etiqueta}: ${valor}` : '';
+    }).filter(Boolean);
+    const referencia: Referencia = {
       numero: referencias.length + 1,
       clave,
       autores: limpiarValor(campos.author ?? '').replaceAll(' and ', ' y '),
       titulo: limpiarValor(campos.title ?? ''),
-      detalle: trozos.join(', '),
+      detalle: [...trozos, ...metadatos].join(', '),
       url: campos.url?.trim() || undefined,
-    });
+      campos: { ...campos },
+    };
+    referencias.push(referencia);
   }
   return referencias;
 }
@@ -97,4 +134,10 @@ export function textoPlano(referencia: Referencia): string {
     .join(' ');
 }
 
+export const BIBLIOGRAFIA_MEMORIA: Referencia[] = parsearBib(fuenteMemoria);
 export const BIBLIOGRAFIA_ANEXOS: Referencia[] = parsearBib(fuenteAnexos);
+
+export const BIBLIOGRAFIAS: Record<Seccion, Referencia[]> = {
+  memoria: BIBLIOGRAFIA_MEMORIA,
+  anexos: BIBLIOGRAFIA_ANEXOS,
+};

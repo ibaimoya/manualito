@@ -1,0 +1,1272 @@
+\clearpage
+\section{Casos de uso}
+
+Los casos de uso describen las situaciones en las que un usuario interactúa
+con \textit{Manualito} y la respuesta que debe ofrecer el sistema. Cada uno
+concreta el objetivo de la interacción, sus condiciones y el resultado esperado,
+y muestra la relación con los requisitos que desarrolla.
+
+\subsection{Actores y representación}
+
+En la aplicación intervienen tres actores:
+\begin{itemize}
+    \item \textbf{Usuario}. Utiliza las funciones de la aplicación. La necesidad
+    de tener una cuenta o una sesión iniciada se indica en cada caso.
+    \item \textbf{Servicio de correo}. Envía los enlaces para verificar la
+    cuenta y restablecer la contraseña.
+    \item \textbf{Catálogo externo de juegos}. Proporciona información para
+    completar las búsquedas de juegos.
+\end{itemize}
+
+La figura~\ref{fig:cu:general} recoge los casos agrupados por función.
+El diagrama general de la figura~\ref{fig:cu:global} muestra las relaciones
+entre ellos con el \textbf{lenguaje unificado de modelado}
+(\acs{UML}, del inglés \textit{Unified Modeling Language})\acused{UML}~\cite{omg_uml_251}.
+
+Las conexiones con los actores se dibujan con líneas continuas. Sus flechas
+indican el sentido de la solicitud: del usuario al caso de uso, o del caso
+al servicio externo. Esta convención facilita la lectura del diagrama.
+
+\newcommand{\refCasoUso}[1]{\hyperref[tab:cu:#1]{#1}}
+\newlist{pasosCU}{enumerate}{1}
+\setlist[pasosCU]{label=\arabic*.,leftmargin=1.6em,labelsep=0.5em,nosep,itemsep=2pt}
+\newlist{alternativasCU}{itemize}{1}
+\setlist[alternativasCU]{label=\textbullet,leftmargin=1.6em,labelsep=0.5em,nosep,itemsep=2pt}
+\newfixedcaption{\captionFiguraCU}{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\linewidth,height=0.88\textheight,keepaspectratio]{anexos/especificacion-de-requisitos/uml-general.pdf}
+    \caption{Resumen de los casos de uso de \textit{Manualito}.}
+    \label{fig:cu:general}
+\end{figure}
+\clearpage
+
+\includepdf[
+    pages=1,
+    scale=0.94,
+    offset=0 8,
+    pagecommand={\thispagestyle{empty}\AddToShipoutPictureFG*{\AtPageLowerLeft{
+        \put(0,20){\makebox[\paperwidth]{\parbox{0.9\paperwidth}{
+            \captionFiguraCU{Diagrama general de casos de uso de \textit{Manualito}.}
+            \label{fig:cu:global}
+        }}}
+    }}}
+]{img/anexos/especificacion-de-requisitos/uml-global.pdf}
+
+\subsection{Descripción de los casos de uso}
+
+Cada uno de los casos de uso indica el autor, los actores, el objetivo, el inicio del caso,
+las precondiciones, las acciones y el resultado esperado. Las alternativas
+describen las decisiones y los errores que modifican la secuencia principal.
+
+Esta organización permite comprobar el comportamiento y seguir su relación
+con los requisitos, de acuerdo con la adaptación de
+\acs{ISO}/\acs{IEC}/\acs{IEEE} 29148:2018 utilizada en el
+proyecto~\cite{iso_29148_2018}.
+
+\begingroup
+\footnotesize
+\setlength{\parskip}{0pt}
+\SetTblrInner[longtblr]{measure=vbox,stretch=-1}
+\SetTblrTemplate{conthead,contfoot,middlehead,lasthead}{empty}
+
+\subsubsection{Cuenta y acceso}
+
+% CU-S1
+\begin{longtblr}[
+    caption={\textbf{CU-S1}. Gestionar la cuenta.},
+    label={tab:cu:CU-S1}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-S1 & Gestionar la cuenta \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.3}, \refRequisito{RF-1.4}, \refRequisito{RF-1.6}, \refRequisito{RF-1.7}, \refRequisito{RF-1.8}, \refRequisito{RF-1.9}, \refRequisito{RF-5.1}, \refRequisito{RF-5.2} \\
+        Actores & Usuario. \\
+        Descripción & El usuario consulta los datos y las opciones de su cuenta y decide si necesita realizar alguna operación. \\
+        Inicio & El usuario abre el perfil, la sección de seguridad o los ajustes de su cuenta. \\
+        Precondiciones & El usuario ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra la información y las operaciones disponibles en la sección elegida.
+            \item El usuario consulta los datos y decide si quiere realizar alguna de las operaciones disponibles.
+            \item Si realiza una operación, el sistema muestra su resultado. El usuario puede continuar la gestión o terminarla.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario ha consultado la información de su cuenta y los cambios aceptados quedan aplicados. Si cierra sesión o elimina la cuenta, la gestión termina mostrando el acceso público. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede consultar la información y salir sin modificarla.
+            \item Si cancela una operación o el sistema la rechaza, puede continuar la gestión sin dar por aplicado el cambio.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-01
+\begin{longtblr}[
+    caption={\textbf{CU-01}. Registrar una cuenta.},
+    label={tab:cu:CU-01}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-01 & Registrar una cuenta \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.1} \\
+        Actores & Usuario. \\
+        Descripción & El usuario crea una cuenta para acceder a las funciones de \textit{Manualito} que requieren identificación. \\
+        Inicio & El usuario selecciona la opción de crear una cuenta. \\
+        Precondiciones & El usuario no ha iniciado sesión y dispone de un correo electrónico al que puede acceder. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario introduce su nombre de usuario, correo electrónico y contraseña, y confirma esta última.
+            \item Acepta la política de privacidad y solicita crear la cuenta.
+            \item El sistema valida los datos, crea la cuenta e inicia la sesión.
+            \item Mediante \refCasoUso{CU-31}, el sistema encarga el envío del enlace de verificación. El registro termina y el usuario puede acceder a la aplicación.
+        \end{pasosCU} \\
+        Postcondiciones & La cuenta queda creada y la sesión iniciada, con la verificación pendiente. El usuario puede verificarla después mediante \refCasoUso{CU-04}. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si los datos no son válidos, el nombre o el correo ya están registrados, o falta la aceptación de la política, no se completa el registro.
+            \item Si falla la entrega del correo, la cuenta sigue pendiente de verificación. El usuario puede solicitar otro envío mediante \refCasoUso{CU-31}.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-02
+\begin{longtblr}[
+    caption={\textbf{CU-02}. Iniciar sesión.},
+    label={tab:cu:CU-02}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-02 & Iniciar sesión \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.2} \\
+        Actores & Usuario. \\
+        Descripción & El usuario accede a su cuenta mediante sus credenciales. \\
+        Inicio & El usuario abre el formulario de acceso a su cuenta. \\
+        Precondiciones & El usuario tiene una cuenta activa y no ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario introduce su correo electrónico o nombre de usuario y su contraseña.
+            \item Solicita iniciar sesión y el sistema comprueba las credenciales.
+            \item Si son válidas, el sistema inicia la sesión y permite acceder a las funciones de la cuenta.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario queda identificado y puede utilizar las funciones que requieren una sesión iniciada. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si las credenciales no son válidas, el sistema rechaza el acceso y el usuario puede corregirlas o abandonar el intento.
+            \item La falta de verificación de la cuenta no impide iniciar sesión.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-03
+\begin{longtblr}[
+    caption={\textbf{CU-03}. Cerrar sesión.},
+    label={tab:cu:CU-03}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-03 & Cerrar sesión \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.3} \\
+        Actores & Usuario. \\
+        Descripción & El usuario cierra la sesión que está utilizando. \\
+        Inicio & El usuario solicita cerrar la sesión desde el perfil o los ajustes. \\
+        Precondiciones & El usuario ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema revoca la sesión.
+            \item El sistema muestra el acceso público.
+        \end{pasosCU} \\
+        Postcondiciones & La sesión cerrada deja de permitir el acceso a las funciones protegidas. Para volver a utilizarlas, el usuario debe iniciar sesión. \\
+        Alternativas & Si la sesión ya ha caducado, el usuario permanece en el acceso público. \\
+\end{longtblr}
+
+\clearpage
+
+% CU-04
+\begin{longtblr}[
+    caption={\textbf{CU-04}. Verificar la cuenta.},
+    label={tab:cu:CU-04}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-04 & Verificar la cuenta \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.4} \\
+        Actores & Usuario. \\
+        Descripción & El usuario confirma que tiene acceso al correo electrónico asociado a su cuenta. \\
+        Inicio & El usuario abre el enlace de verificación recibido por correo. \\
+        Precondiciones & La cuenta está activa y el usuario ha recibido un enlace de verificación. No necesita haber iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema comprueba que el enlace permite verificar la cuenta.
+            \item Marca la cuenta como verificada e invalida el enlace utilizado.
+            \item El sistema muestra el resultado de la verificación.
+        \end{pasosCU} \\
+        Postcondiciones & La cuenta queda verificada y el enlace no permite una nueva verificación. \\
+        Alternativas & \begin{alternativasCU}
+            \item El sistema rechaza los enlaces que no reconoce. Si la cuenta sigue pendiente de verificación, también rechaza los enlaces caducados o utilizados.
+            \item Si la cuenta ya está verificada y el sistema reconoce el enlace, conserva ese estado.
+            \item Si necesita otro enlace, el usuario puede solicitarlo mediante \refCasoUso{CU-31}.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-05
+\begin{longtblr}[
+    caption={\textbf{CU-05}. Restablecer la contraseña.},
+    label={tab:cu:CU-05}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-05 & Restablecer la contraseña \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.5} \\
+        Actores & Usuario, Servicio de correo. \\
+        Descripción & El usuario recupera el acceso a su cuenta cuando no recuerda la contraseña. \\
+        Inicio & El usuario selecciona la opción de restablecer una contraseña olvidada. \\
+        Precondiciones & La cuenta está activa y el usuario tiene acceso a su correo electrónico. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario solicita restablecer la contraseña e indica el correo electrónico de su cuenta.
+            \item El sistema genera un enlace de un solo uso y encarga su envío al servicio de correo.
+            \item El usuario abre el enlace recibido e introduce y confirma una nueva contraseña.
+            \item El sistema valida el enlace y la contraseña, guarda el cambio, invalida el enlace y revoca las sesiones anteriores.
+            \item El sistema confirma el cambio y permite volver al formulario de acceso.
+        \end{pasosCU} \\
+        Postcondiciones & La contraseña queda actualizada y el correo queda verificado si todavía no lo estaba. El enlace utilizado y las sesiones anteriores dejan de ser válidos. \\
+        Alternativas & \begin{alternativasCU}
+            \item La respuesta a la solicitud no revela si el correo electrónico está registrado.
+            \item Si el enlace no es válido, ha caducado o ya se ha utilizado, el sistema rechaza el restablecimiento.
+            \item Si la nueva contraseña no cumple las condiciones o su confirmación no coincide, el usuario debe corregirla antes de continuar.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+
+\clearpage
+
+% CU-06
+\begin{longtblr}[
+    caption={\textbf{CU-06}. Editar el perfil.},
+    label={tab:cu:CU-06}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-06 & Editar el perfil \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.6} \\
+        Actores & Usuario. \\
+        Descripción & El usuario actualiza los datos con los que se identifica en su cuenta. \\
+        Inicio & El usuario abre la edición del perfil desde su cuenta. \\
+        Precondiciones & El usuario ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario modifica el nombre de usuario, el correo electrónico o la imagen de perfil.
+            \item Solicita guardar los cambios y el sistema comprueba los datos modificados.
+            \item El sistema guarda los cambios aceptados y muestra el perfil actualizado.
+        \end{pasosCU} \\
+        Postcondiciones & El perfil muestra los cambios guardados. Si se ha modificado el correo electrónico, la cuenta queda pendiente de verificarlo. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede cancelar la edición sin guardar los cambios.
+            \item Si algún dato no es válido o el nombre o el correo ya están registrados, el sistema rechaza el cambio y permite corregirlo.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-07
+\begin{longtblr}[
+    caption={\textbf{CU-07}. Cambiar la contraseña.},
+    label={tab:cu:CU-07}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-07 & Cambiar la contraseña \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.7} \\
+        Actores & Usuario. \\
+        Descripción & El usuario sustituye la contraseña de su cuenta y conserva la sesión desde la que realiza el cambio. \\
+        Inicio & El usuario accede a la sección de seguridad para cambiar la contraseña. \\
+        Precondiciones & El usuario ha iniciado sesión y conoce su contraseña actual. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario introduce la contraseña actual y la nueva, que debe confirmar.
+            \item Solicita el cambio y el sistema comprueba la contraseña actual y valida la nueva.
+            \item El sistema guarda la nueva contraseña, revoca las demás sesiones y confirma el cambio.
+        \end{pasosCU} \\
+        Postcondiciones & La contraseña queda actualizada y solo permanece activa la sesión desde la que se ha realizado el cambio. \\
+        Alternativas & Si la contraseña actual es incorrecta, la nueva no cumple las condiciones o su confirmación no coincide, el sistema impide el cambio. \\
+\end{longtblr}
+
+\clearpage
+
+% CU-08
+\begin{longtblr}[
+    caption={\textbf{CU-08}. Eliminar la cuenta.},
+    label={tab:cu:CU-08}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-08 & Eliminar la cuenta \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.8} \\
+        Actores & Usuario. \\
+        Descripción & El usuario elimina su cuenta y retira el acceso a la información asociada a ella. \\
+        Inicio & El usuario solicita eliminar su cuenta desde los ajustes o la sección de seguridad. \\
+        Precondiciones & El usuario ha iniciado sesión en la cuenta que desea eliminar. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario revisa la información que dejará de estar disponible e introduce su nombre de usuario para confirmar el borrado.
+            \item El sistema comprueba la confirmación, revoca las sesiones y hace inaccesibles la cuenta y sus recursos.
+            \item El sistema inicia la limpieza de los recursos asociados y muestra el acceso público.
+        \end{pasosCU} \\
+        Postcondiciones & La cuenta, los manuales, las conversaciones y las valoraciones asociadas dejan de ser accesibles, y sus sesiones dejan de ser válidas. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede cancelar antes de confirmar el borrado y continuar utilizando la cuenta.
+            \item Si el nombre introducido no coincide con el de la cuenta, el sistema impide la eliminación.
+            \item Si la solicitud falla, el sistema informa del error sin confirmar que la cuenta se haya eliminado.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-09
+\begin{longtblr}[
+    caption={\textbf{CU-09}. Consultar la actividad personal.},
+    label={tab:cu:CU-09}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-09 & Consultar la actividad personal \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.9} \\
+        Actores & Usuario. \\
+        Descripción & El usuario consulta un resumen de la actividad que ha realizado con su cuenta. \\
+        Inicio & El usuario abre su perfil para consultar la actividad personal. \\
+        Precondiciones & El usuario ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema obtiene los recuentos de actividad de la cuenta.
+            \item El sistema muestra, junto a los datos del perfil, el número de juegos con actividad, manuales subidos y conversaciones creadas.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario ha consultado los recuentos de su actividad personal. \\
+        Alternativas & Si no hay actividad de alguno de estos tipos, su recuento es cero. \\
+\end{longtblr}
+
+\clearpage
+
+% CU-31
+\begin{longtblr}[
+    caption={\textbf{CU-31}. Enviar el enlace de verificación.},
+    label={tab:cu:CU-31}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-31 & Enviar el enlace de verificación \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-1.4} \\
+        Actores & Usuario, Servicio de correo. \\
+        Descripción & El sistema proporciona un enlace para que el usuario pueda verificar su cuenta. \\
+        Inicio & Se crea una cuenta, se cambia su correo o el usuario solicita otro enlace de verificación. \\
+        Precondiciones & La cuenta está activa y su correo está pendiente de verificación. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema obtiene el correo de destino y comprueba que procede emitir un enlace.
+            \item Genera un enlace de verificación vigente e invalida los anteriores cuando los haya.
+            \item Encarga el envío al servicio de correo y continúa la operación que lo solicitó o responde a la petición de reenvío.
+        \end{pasosCU} \\
+        Postcondiciones & Se emite un enlace y se encarga su envío. La cuenta sigue pendiente de verificación hasta que el usuario utilice un enlace válido en \refCasoUso{CU-04}. \\
+        Alternativas & \begin{alternativasCU}
+            \item La respuesta a una solicitud pública no revela si existe una cuenta con ese correo.
+            \item Si la cuenta ya está verificada, no está activa o no ha transcurrido la espera entre solicitudes, no se emite otro enlace.
+            \item Si falla la entrega, la cuenta conserva la verificación pendiente.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+\subsubsection{Juegos y biblioteca}
+
+% CU-10
+\begin{longtblr}[
+    caption={\textbf{CU-10}. Buscar juegos.},
+    label={tab:cu:CU-10}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-10 & Buscar juegos \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-2.1} \\
+        Actores & Usuario, Catálogo externo de juegos. \\
+        Descripción & Permite localizar un juego por su nombre para conocerlo o asociarle un manual. \\
+        Inicio & El usuario abre la búsqueda durante la exploración o al añadir un manual. \\
+        Precondiciones & El usuario ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario introduce el nombre del juego que busca.
+            \item El sistema busca coincidencias y muestra los resultados.
+            \item El usuario puede seleccionar un resultado para consultar el juego durante la exploración o para continuar añadiendo un manual.
+        \end{pasosCU} \\
+        Postcondiciones & El sistema muestra los resultados de la búsqueda o indica que no hay coincidencias. Si selecciona un juego durante una subida, ese juego queda elegido para asociarle el manual. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si no hay coincidencias, el sistema lo indica y el usuario puede cambiar la búsqueda o terminarla.
+            \item Durante la subida de un manual, una búsqueda sin coincidencias también permite añadir el juego manualmente.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-11
+\begin{longtblr}[
+    caption={\textbf{CU-11}. Añadir un juego manualmente.},
+    label={tab:cu:CU-11}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-11 & Añadir un juego manualmente \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-2.2} \\
+        Actores & Usuario. \\
+        Descripción & Permite registrar un juego que no aparece en la búsqueda para poder asociarle el manual que se está añadiendo. \\
+        Inicio & El usuario elige añadir el juego tras una búsqueda sin coincidencias. \\
+        Precondiciones & El usuario ha iniciado sesión y la búsqueda de \refCasoUso{CU-10} no ha devuelto coincidencias durante \refCasoUso{CU-16}. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario confirma el nombre del juego que quiere añadir.
+            \item El sistema valida el nombre, registra el juego y lo selecciona para continuar la subida.
+        \end{pasosCU} \\
+        Postcondiciones & El juego queda registrado y seleccionado para asociarle el manual. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si el nombre no es válido, el usuario debe corregirlo antes de añadir el juego.
+            \item El usuario puede cancelar la creación y volver a buscar un juego existente.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-12
+\begin{longtblr}[
+    caption={\textbf{CU-12}. Seguir o dejar de seguir un juego.},
+    label={tab:cu:CU-12}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-12 & Seguir o dejar de seguir un juego \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-2.3}, \refRequisito{RF-2.3.1} \\
+        Actores & Usuario. \\
+        Descripción & Permite decidir si un juego debe aparecer entre los juegos seguidos de la biblioteca personal. \\
+        Inicio & El usuario decide seguir el juego que está consultando o dejar de seguirlo. \\
+        Precondiciones & El usuario ha iniciado sesión y el juego existe. \\
+        Acciones & \begin{pasosCU}
+            \item Durante la consulta del perfil, el usuario elige seguir el juego o dejar de seguirlo.
+            \item El sistema guarda la decisión, actualiza la biblioteca personal e indica si el usuario sigue el juego.
+        \end{pasosCU} \\
+        Postcondiciones & La decisión queda guardada y el perfil indica si el usuario sigue el juego. \\
+        Alternativas & Si el usuario decide dejar de seguir el juego, una actividad posterior no vuelve a seguirlo automáticamente. \\
+\end{longtblr}
+
+\clearpage
+
+% CU-13
+\begin{longtblr}[
+    caption={\textbf{CU-13}. Consultar la biblioteca personal.},
+    label={tab:cu:CU-13}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-13 & Consultar la biblioteca personal \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-2.4}, \refRequisito{RF-2.4.1}, \refRequisito{RF-2.4.2} \\
+        Actores & Usuario. \\
+        Descripción & Permite localizar los juegos seguidos y los manuales propios y consultar la información de cada uno. \\
+        Inicio & El usuario accede a la biblioteca personal. \\
+        Precondiciones & El usuario ha iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario elige consultar los juegos o los manuales.
+            \item El sistema muestra los juegos seguidos o los manuales propios.
+            \item El usuario puede filtrar los manuales y el sistema muestra las coincidencias.
+            \item El usuario puede seleccionar una entrada para consultar los detalles del juego, el contenido del manual o su estado de procesamiento.
+        \end{pasosCU} \\
+        Postcondiciones & La biblioteca muestra los juegos seguidos o los manuales propios según la selección y los filtros aplicados. Si el usuario elimina un manual, la lista deja de mostrarlo. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si la lista está vacía o el filtro no devuelve resultados, el sistema lo indica.
+            \item El usuario puede eliminar un manual propio durante la consulta. Tras confirmar la eliminación, la biblioteca muestra los manuales restantes o indica que no hay ninguno.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-14
+\begin{longtblr}[
+    caption={\textbf{CU-14}. Consultar el perfil de un juego.},
+    label={tab:cu:CU-14}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-14 & Consultar el perfil de un juego \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-2.5} \\
+        Actores & Usuario. \\
+        Descripción & Permite conocer un juego, revisar la actividad personal asociada y ampliar la consulta mediante sus manuales y conversaciones. \\
+        Inicio & El usuario selecciona un juego para consultar su perfil. \\
+        Precondiciones & El usuario ha iniciado sesión y el juego existe. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra los datos del juego, los manuales accesibles, la valoración propia y el número de conversaciones del usuario, e indica si sigue el juego.
+            \item El usuario consulta esta información y puede profundizar en las reglas, los manuales o las conversaciones antes de terminar.
+        \end{pasosCU} \\
+        Postcondiciones & El perfil refleja la información accesible y los cambios realizados durante la consulta. \\
+        Alternativas & \begin{alternativasCU}
+            \item Sin manuales utilizables no se generan explicaciones ni respuestas nuevas, pero el perfil sigue siendo consultable.
+            \item Los manuales compartidos pueden aportar contenido para consultas y abrirse en el visor en modo de solo lectura.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-15
+\begin{longtblr}[
+    caption={\textbf{CU-15}. Gestionar la valoración de un juego.},
+    label={tab:cu:CU-15}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-15 & Gestionar la valoración de un juego \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-2.6}, \refRequisito{RF-2.3.2} \\
+        Actores & Usuario. \\
+        Descripción & Permite conservar una valoración personal del juego mediante una puntuación y una nota opcional. \\
+        Inicio & El usuario abre la opción de valoración del perfil del juego. \\
+        Precondiciones & El usuario ha iniciado sesión y el juego existe. \\
+        Acciones & \begin{pasosCU}
+            \item Desde el perfil del juego, el usuario selecciona una puntuación de uno a cinco y puede añadir una nota.
+            \item El usuario solicita guardar la valoración y el sistema la registra o actualiza.
+            \item El perfil muestra la valoración guardada.
+        \end{pasosCU} \\
+        Postcondiciones & La valoración queda creada, modificada o eliminada y el perfil refleja el resultado. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si ya existe una valoración, el usuario puede modificarla o confirmar su eliminación.
+            \item El usuario puede cancelar sin guardar los cambios.
+            \item Si la valoración es la primera actividad sobre el juego, el sistema lo sigue automáticamente cuando no existe una decisión explícita anterior.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+\subsubsection{Manuales}
+
+% CU-16
+\begin{longtblr}[
+    caption={\textbf{CU-16}. Añadir un manual.},
+    label={tab:cu:CU-16}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-16 & Añadir un manual \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.1}, \refRequisito{RF-3.2}, \refRequisito{RF-3.3}, \refRequisito{RF-3.10}, \refRequisito{RF-2.3.2} \\
+        Actores & Usuario. \\
+        Descripción & Permite asociar un manual a un juego y preparar su contenido para utilizarlo en las consultas. \\
+        Inicio & El usuario solicita añadir un manual, desde el perfil de un juego o desde la opción de subida. \\
+        Precondiciones & El usuario ha iniciado sesión y dispone del manual en un documento \acs{PDF} o en imágenes. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario acepta el juego preseleccionado o selecciona uno.
+            \item El usuario añade el documento o las imágenes y elige si el manual será privado o compartido. Si añade varias imágenes, puede revisarlas, ordenarlas y retirar las que no sean útiles.
+            \item Si comparte el manual, elige si quiere mostrar su nombre. Por defecto aparece como \guillemotleft{}Anónimo\guillemotright{}.
+            \item El usuario confirma la subida. El sistema valida los formatos, los tamaños y el número de páginas, y comprueba si el manual está duplicado.
+            \item El sistema guarda la fuente aceptada y ejecuta \refCasoUso{CU-30} en segundo plano.
+        \end{pasosCU} \\
+        Postcondiciones & El manual aceptado queda asociado al juego con la visibilidad y la opción de mostrar el nombre elegidas, y el juego empieza a seguirse automáticamente cuando corresponde. Su contenido queda preparado para consultas si el procesamiento obtiene un resultado utilizable. En caso contrario, se registra el fallo o la ausencia de texto útil. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede cancelar antes de enviar el manual.
+            \item El sistema rechaza los archivos que incumplen los límites y los manuales duplicados antes de procesarlos.
+            \item El usuario puede seguir utilizando la aplicación mientras se procesa el manual.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+
+\clearpage
+
+% CU-17
+\begin{longtblr}[
+    caption={\textbf{CU-17}. Consultar el estado de un manual.},
+    label={tab:cu:CU-17}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-17 & Consultar el estado de un manual \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.5} \\
+        Actores & Usuario. \\
+        Descripción & Permite conocer el avance del procesamiento de un manual y el resultado de cada página. \\
+        Inicio & El usuario elige consultar el estado de uno de sus manuales. \\
+        Precondiciones & El usuario ha iniciado sesión y el manual le pertenece. No es necesario que su procesamiento haya terminado. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra el estado guardado del manual y de sus páginas.
+            \item El usuario revisa qué páginas siguen pendientes o en procesamiento y cuáles se han completado o han fallado.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario conoce el estado guardado del manual y de sus páginas. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede abandonar la consulta y revisar el estado más tarde.
+            \item Los fallos y la ausencia de texto útil se muestran como estados distintos del contenido preparado para consultas.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-18
+\begin{longtblr}[
+    caption={\textbf{CU-18}. Consultar un manual.},
+    label={tab:cu:CU-18}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-18 & Consultar un manual \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.6}, \refRequisito{RF-3.6.1}, \refRequisito{RF-3.6.2}, \refRequisito{RF-3.6.3}, \refRequisito{RF-3.10} \\
+        Actores & Usuario. \\
+        Descripción & Permite leer un manual propio o compartido y contrastar el texto de cada página con su imagen. La información de procesamiento solo se muestra al propietario. \\
+        Inicio & El usuario selecciona un manual disponible o una referencia a una de sus páginas. \\
+        Precondiciones & El usuario ha iniciado sesión. El manual no está eliminado y le pertenece o está compartido. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema abre el manual en la página indicada. Si no se ha indicado ninguna o esa página no existe, abre la primera página disponible.
+            \item El sistema muestra el texto extraído o corregido y la imagen disponible. Si el manual es propio, también muestra los datos de origen, confianza y reutilización de la página.
+            \item El usuario puede navegar entre las páginas o buscar texto y desplazarse entre las coincidencias.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario consulta las páginas elegidas. Si el manual pertenece a otra cuenta, no puede editarlo, reprocesarlo, eliminarlo ni cambiar sus opciones. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si la búsqueda no devuelve coincidencias o falta información de procesamiento, el sistema lo indica.
+            \item Si el manual está compartido, el propietario puede cambiar la opción de mostrar su nombre y confirmar la elección. El sistema la guarda y la aplica al manual y a las fuentes de las respuestas.
+            \item Si cancela la confirmación o falla el guardado, se conserva la opción anterior.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-19
+\begin{longtblr}[
+    caption={\textbf{CU-19}. Corregir el texto de una página.},
+    label={tab:cu:CU-19}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-19 & Corregir el texto de una página \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.7} \\
+        Actores & Usuario. \\
+        Descripción & Permite corregir errores o completar el texto de una página para utilizar la versión revisada en las consultas. \\
+        Inicio & El usuario solicita editar el texto de la página que está consultando. \\
+        Precondiciones & El usuario ha iniciado sesión, la página existe y el manual es propio, privado y no se está procesando. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario modifica el texto de la página que está consultando y confirma el cambio.
+            \item El sistema guarda la corrección y solicita actualizar el contenido indexado de esa página.
+            \item El visor muestra el texto corregido para continuar la lectura.
+        \end{pasosCU} \\
+        Postcondiciones & El texto corregido queda guardado y se solicita su actualización para las consultas. El texto de las demás páginas se conserva. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede cancelar sin guardar o añadir texto a una página que todavía no lo tenga.
+            \item El sistema rechaza la edición de un manual ajeno, compartido o que se esté procesando.
+            \item Si falla la solicitud de actualización del contenido indexado después de guardar, el texto corregido se conserva y el sistema informa del error.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+
+\clearpage
+
+% CU-20
+\begin{longtblr}[
+    caption={\textbf{CU-20}. Reprocesar un manual.},
+    label={tab:cu:CU-20}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-20 & Reprocesar un manual \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.8}, \refRequisito{RF-3.8.1}, \refRequisito{RF-3.8.2} \\
+        Actores & Usuario. \\
+        Descripción & Permite obtener de nuevo el contenido de un manual completo o de una página a partir de las fuentes guardadas. \\
+        Inicio & El usuario solicita repetir el procesamiento desde el visor del manual. \\
+        Precondiciones & El usuario ha iniciado sesión, el manual le pertenece, conserva sus fuentes y su estado permite repetir el procesamiento. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario elige reprocesar el manual completo o una página y confirma la operación.
+            \item El sistema ejecuta \refCasoUso{CU-30} en segundo plano sobre las páginas seleccionadas.
+            \item El sistema guarda el nuevo resultado o el fallo y actualiza el estado del manual y de las páginas afectadas.
+        \end{pasosCU} \\
+        Postcondiciones & El nuevo resultado o el fallo queda registrado. Si se reprocesa una sola página, se conserva el resto del manual. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede cancelar antes de confirmar la operación.
+            \item Si el estado del manual impide reprocesarlo, el sistema rechaza la solicitud.
+            \item El reprocesamiento puede sustituir las correcciones manuales y puede terminar con un error. No requiere que el procesamiento anterior haya fallado.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-21
+\begin{longtblr}[
+    caption={\textbf{CU-21}. Eliminar un manual.},
+    label={tab:cu:CU-21}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-21 & Eliminar un manual \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.9} \\
+        Actores & Usuario. \\
+        Descripción & Permite retirar un manual propio y su contenido del acceso del usuario. \\
+        Inicio & El usuario solicita eliminar un manual desde la biblioteca o desde su visor. \\
+        Precondiciones & El usuario ha iniciado sesión. El manual le pertenece y no está eliminado. No es necesario que su procesamiento haya terminado. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario confirma la eliminación del manual.
+            \item El sistema retira el acceso al manual y sus páginas y solicita la limpieza de sus archivos y del contenido indexado.
+            \item Si la eliminación se inició en la biblioteca, el sistema actualiza la lista. Si se inició en el visor, termina la consulta del manual y muestra la biblioteca.
+        \end{pasosCU} \\
+        Postcondiciones & El manual y sus páginas dejan de ser accesibles y se solicita la limpieza de sus recursos. El historial de conversaciones se conserva. \\
+        Alternativas & \begin{alternativasCU}
+            \item El usuario puede cancelar sin eliminar el manual.
+            \item Si se elimina la última fuente utilizable de un juego, las conversaciones existentes se conservan y quedan en modo de solo lectura.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-30
+\begin{longtblr}[
+    caption={\textbf{CU-30}. Procesar el contenido del manual.},
+    label={tab:cu:CU-30}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-30 & Procesar el contenido del manual \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-3.4}, \refRequisito{RF-3.4.1}, \refRequisito{RF-3.4.2}, \refRequisito{RF-3.4.3}, \refRequisito{RF-3.4.4}, \refRequisito{RF-3.4.5} \\
+        Actores & Usuario. \\
+        Descripción & Prepara el texto del manual para que pueda recuperarse al generar explicaciones y responder preguntas sobre el juego. \\
+        Inicio & El sistema inicia el procesamiento previsto en \refCasoUso{CU-16} o en \refCasoUso{CU-20}. \\
+        Precondiciones & Las fuentes están guardadas y las páginas que deben procesarse están identificadas. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema utiliza el texto del documento cuando es aprovechable. En caso contrario, preprocesa las imágenes y extrae su texto mediante \ac{OCR}.
+            \item El sistema aplica el posprocesado y guarda el texto resultante.
+            \item El sistema divide el texto en fragmentos y los indexa para recuperarlos durante las consultas.
+            \item El sistema actualiza el estado del manual y de sus páginas según el resultado del procesamiento.
+        \end{pasosCU} \\
+        Postcondiciones & El contenido utilizable queda preparado para las consultas. Cuando el procesamiento falla o no obtiene texto útil, el estado del manual y de sus páginas refleja esa situación. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si encuentra una página idéntica ya procesada, el sistema reutiliza su resultado sin repetir la extracción ni el posprocesado.
+            \item Si falla una etapa o no se obtiene texto útil, el sistema registra el estado correspondiente.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+\subsubsection{Consulta de reglas}
+
+% CU-22
+\begin{longtblr}[
+    caption={\textbf{CU-22}. Consultar la explicación de un juego.},
+    label={tab:cu:CU-22}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-22 & Consultar la explicación de un juego \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-4.1} \\
+        Actores & Usuario. \\
+        Descripción & Permite conocer la preparación, el desarrollo y las condiciones de victoria de un juego a partir de sus manuales. \\
+        Inicio & El usuario abre el perfil de un juego con manuales utilizables. \\
+        Precondiciones & El usuario ha iniciado sesión y el juego dispone de manuales que puede utilizar para las consultas. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema solicita automáticamente la explicación del juego.
+            \item El sistema recupera la explicación conservada si sus fuentes no han cambiado. Si no dispone de una explicación vigente, la genera en segundo plano.
+            \item El usuario consulta los apartados de la explicación a medida que están disponibles.
+        \end{pasosCU} \\
+        Postcondiciones & La explicación generada puede leerse desde el perfil del juego y se conserva para consultas posteriores mientras no cambien sus fuentes. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si no hay manuales utilizables, se informa de que faltan fuentes y no se genera la explicación.
+            \item Si la generación falla antes de obtener contenido, el sistema informa del error. Si ya hay apartados disponibles, conserva su contenido. El resto del perfil sigue disponible.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-23
+\begin{longtblr}[
+    caption={\textbf{CU-23}. Consultar una duda sobre las reglas.},
+    label={tab:cu:CU-23}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-23 & Consultar una duda sobre las reglas \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-4.2.1}, \refRequisito{RF-4.3}, \refRequisito{RF-4.4}, \refRequisito{RF-4.5}, \refRequisito{RF-4.6}, \refRequisito{RF-4.7}, \refRequisito{RF-4.8}, \refRequisito{RF-2.3.2} \\
+        Actores & Usuario. \\
+        Descripción & Permite aclarar una duda sobre las reglas de un juego y contrastar la respuesta con los manuales utilizados. \\
+        Inicio & El usuario envía una pregunta sobre las reglas del juego. \\
+        Precondiciones & El usuario ha iniciado sesión y el juego dispone de fuentes utilizables. Si continúa una conversación, esta pertenece a su cuenta. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema utiliza la conversación seleccionada o crea una nueva asociada al juego.
+            \item El sistema guarda la pregunta y muestra la respuesta como pendiente. Si es el primer mensaje, asigna un título a la conversación a partir de su contenido.
+            \item El sistema genera la respuesta en segundo plano a partir de los manuales utilizables. Si hay mensajes anteriores, los tiene en cuenta para interpretar la pregunta.
+            \item El sistema muestra la respuesta en español o inglés según el idioma detectado en el turno, junto con las referencias utilizadas.
+            \item El usuario lee la respuesta y puede contrastarla consultando una página citada mediante \refCasoUso{CU-29}.
+        \end{pasosCU} \\
+        Postcondiciones & La pregunta y la respuesta generada quedan guardadas en la conversación. Si la generación falla, se conserva ese estado. Si esta es la primera actividad con el juego y el usuario no ha elegido antes seguirlo o dejar de seguirlo, el juego empieza a seguirse automáticamente. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si no hay información suficiente para responder, el sistema lo indica.
+            \item Si no quedan fuentes utilizables, no se admiten nuevos mensajes y el historial existente sigue disponible.
+            \item Si falla el envío, el sistema muestra el error y recupera la pregunta para permitir otro intento.
+            \item Si falla la generación, la pregunta queda guardada y la respuesta aparece como fallida.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-24
+\begin{longtblr}[
+    caption={\textbf{CU-24}. Consultar las conversaciones y su historial.},
+    label={tab:cu:CU-24}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-24 & Consultar las conversaciones y su historial \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-4.2.1}, \refRequisito{RF-4.2.2}, \refRequisito{RF-4.6}, \refRequisito{RF-4.8} \\
+        Actores & Usuario. \\
+        Descripción & Permite recuperar las conversaciones propias de un juego para revisar sus mensajes y continuar las consultas anteriores. \\
+        Inicio & El usuario accede a las conversaciones del juego. \\
+        Precondiciones & El usuario ha iniciado sesión y el juego existe en la aplicación. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra la lista de conversaciones propias del juego.
+            \item El usuario puede filtrar las conversaciones por su título para localizar la que desea consultar.
+            \item Si abre una conversación, el sistema muestra sus mensajes, el estado de las respuestas y las referencias utilizadas. El usuario puede leer los mensajes y consultar sus referencias.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario consulta sus conversaciones y los mensajes que desea revisar. Las operaciones opcionales pueden actualizar la lista o añadir una pregunta y su respuesta. Los mensajes anteriores se conservan, salvo que se elimine la conversación. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si no hay conversaciones o el filtro no encuentra coincidencias, el sistema lo indica.
+            \item Si se han retirado las fuentes utilizables, el historial se conserva y puede leerse, pero no se admiten nuevos mensajes.
+            \item Si falla la carga de la lista o del historial, el sistema informa del error.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-25
+\begin{longtblr}[
+    caption={\textbf{CU-25}. Renombrar una conversación.},
+    label={tab:cu:CU-25}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-25 & Renombrar una conversación \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-4.2.3} \\
+        Actores & Usuario. \\
+        Descripción & Permite identificar una conversación propia mediante un título elegido por el usuario. \\
+        Inicio & El usuario elige la opción de renombrar una conversación. \\
+        Precondiciones & El usuario ha iniciado sesión y la conversación pertenece a su cuenta. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra el título actual para que pueda modificarse.
+            \item El usuario introduce el nuevo título y confirma el cambio.
+            \item El sistema valida el título, lo guarda y actualiza la lista de conversaciones.
+        \end{pasosCU} \\
+        Postcondiciones & Tras guardar el cambio, la conversación aparece con el nuevo título y conserva sus mensajes. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si el usuario cancela, se conserva el título anterior.
+            \item Si el título está vacío o supera la longitud admitida, el sistema no permite guardarlo.
+            \item Si no puede guardarse el cambio, el sistema informa del error.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-26
+\begin{longtblr}[
+    caption={\textbf{CU-26}. Eliminar una conversación.},
+    label={tab:cu:CU-26}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-26 & Eliminar una conversación \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-4.2.4} \\
+        Actores & Usuario. \\
+        Descripción & Permite retirar una conversación propia y sus mensajes cuando el usuario ya no desea conservarlos. \\
+        Inicio & El usuario solicita eliminar una de sus conversaciones. \\
+        Precondiciones & El usuario ha iniciado sesión y la conversación pertenece a su cuenta. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema pide confirmación antes de eliminar la conversación.
+            \item El usuario confirma la eliminación.
+            \item El sistema elimina la conversación y actualiza la lista.
+        \end{pasosCU} \\
+        Postcondiciones & Tras completar la eliminación, la conversación y sus mensajes dejan de ser accesibles. Las demás conversaciones se conservan. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si el usuario cancela, se conservan la conversación y sus mensajes.
+            \item Si la eliminación falla, el sistema informa del error y permite volver a intentarlo.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-29
+\begin{longtblr}[
+    caption={\textbf{CU-29}. Consultar una página citada.},
+    label={tab:cu:CU-29}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-29 & Consultar una página citada \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-4.6}, \refRequisito{RF-3.6.1}, \refRequisito{RF-3.10} \\
+        Actores & Usuario. \\
+        Descripción & Permite comprobar una respuesta mediante la consulta de la página que se cita como fuente. \\
+        Inicio & El usuario selecciona una referencia de una respuesta. \\
+        Precondiciones & El usuario ha iniciado sesión y está leyendo una respuesta mediante \refCasoUso{CU-23} o \refCasoUso{CU-24}. La respuesta contiene una referencia a un manual propio disponible o a uno compartido que está activo. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema abre el manual en la página indicada. Si es propio, permite su consulta mediante \refCasoUso{CU-18}; si es compartido y pertenece a otra cuenta, abre el visor en modo de solo lectura.
+            \item El usuario consulta el texto y la imagen disponibles de la página para contrastar la respuesta.
+        \end{pasosCU} \\
+        Postcondiciones & El visor muestra la página citada, con el texto y la imagen disponibles. Si esa página ya no existe, muestra la primera página del manual. \\
+        Alternativas & \begin{alternativasCU}
+            \item Las referencias a manuales retirados o sin permiso de lectura se muestran como información, pero no permiten abrir su contenido.
+            \item Si la página indicada ya no existe en el manual, el visor abre la primera página disponible.
+            \item Si el manual deja de estar disponible antes de abrirlo, el sistema informa de que no puede consultarse.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+\subsubsection{Preferencias}
+
+% CU-27
+\begin{longtblr}[
+    caption={\textbf{CU-27}. Seleccionar el idioma de la interfaz.},
+    label={tab:cu:CU-27}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-27 & Seleccionar el idioma de la interfaz \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-5.1} \\
+        Actores & Usuario. \\
+        Descripción & El usuario adapta los textos de la interfaz al idioma en el que desea utilizar la aplicación. \\
+        Inicio & El usuario decide cambiar el idioma de la interfaz. \\
+        Precondiciones & El usuario puede acceder a la aplicación, con o sin una sesión iniciada. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario selecciona español o inglés mediante el control de idioma.
+            \item El sistema cambia los textos de la interfaz y guarda la selección en el dispositivo.
+        \end{pasosCU} \\
+        Postcondiciones & La interfaz utiliza el idioma elegido y conserva la selección al recargar la aplicación. \\
+        Alternativas & \begin{alternativasCU}
+            \item Durante la presentación inicial, el usuario permanece en el mismo paso después de cambiar el idioma.
+            \item El idioma de las respuestas se determina a partir de la pregunta, según \refRequisito{RF-4.5}.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\clearpage
+
+% CU-28
+\begin{longtblr}[
+    caption={\textbf{CU-28}. Configurar la apariencia.},
+    label={tab:cu:CU-28}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-28 & Configurar la apariencia \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RF-5.2} \\
+        Actores & Usuario. \\
+        Descripción & El usuario adapta el tema y el acento de color de la interfaz a sus preferencias. \\
+        Inicio & El usuario abre los ajustes para cambiar la apariencia. \\
+        Precondiciones & El usuario ha iniciado sesión y puede acceder a los ajustes de apariencia. \\
+        Acciones & \begin{pasosCU}
+            \item El usuario elige un tema claro, oscuro o automático, y puede cambiar el acento de color.
+            \item El sistema aplica la configuración y la guarda en el dispositivo.
+        \end{pasosCU} \\
+        Postcondiciones & La interfaz muestra la apariencia elegida y conserva la configuración al recargar la aplicación. \\
+        Alternativas & Si el usuario elige el tema automático, la interfaz sigue la preferencia del dispositivo. \\
+\end{longtblr}
+
+\clearpage
+
+\subsubsection{Casos complementarios}
+
+% CU-A1
+\begin{longtblr}[
+    caption={\textbf{CU-A1}. Consultar la ayuda y la presentación inicial.},
+    label={tab:cu:CU-A1}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-A1 & Consultar la ayuda y la presentación inicial \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RNF-1}. \\
+        Actores & Usuario. \\
+        Descripción & El usuario consulta explicaciones sobre el funcionamiento y el uso de \textit{Manualito}. \\
+        Inicio & El usuario accede a la presentación inicial o abre la sección de ayuda. \\
+        Precondiciones & La presentación inicial es pública y se muestra si no se ha completado en el dispositivo. Para consultar la ayuda, el usuario debe haber iniciado sesión. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra las explicaciones disponibles en la presentación o en la ayuda.
+            \item Si está en la presentación, el usuario recorre los pasos hasta la elección final de acceso o registro.
+            \item Si está en la ayuda, consulta las explicaciones de uso y puede abrir las respuestas a las preguntas frecuentes.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario ha consultado información sobre el uso de la aplicación. \\
+        Alternativas & El usuario puede abandonar la presentación antes de completar sus pasos. \\
+\end{longtblr}
+
+\clearpage
+
+% CU-A2
+\begin{longtblr}[
+    caption={\textbf{CU-A2}. Consultar la política de privacidad.},
+    label={tab:cu:CU-A2}
+]{
+    width=\linewidth,
+    colspec={Q[l,wd=0.24\linewidth] X[l]},
+    rows={valign=t},
+    row{1}={bg=gray!18,font=\bfseries},
+    column{1}={font=\bfseries},
+    hline{1,Z}={0.8pt}, hline{2}={0.5pt},
+    hborder{2-9,Y}={pagebreak=no},
+    rowhead=1, leftsep=4pt, rightsep=4pt, rowsep=2.8pt
+}
+        CU-A2 & Consultar la política de privacidad \\
+        Autor & Ibai Moya Aroz \\
+        Requisitos asociados & \refRequisito{RNF-6}. \\
+        Actores & Usuario. \\
+        Descripción & El usuario consulta la información publicada sobre el tratamiento de sus datos. \\
+        Inicio & El usuario abre la política desde el registro, la presentación, los ajustes o su enlace directo. \\
+        Precondiciones & No se requiere una sesión iniciada. \\
+        Acciones & \begin{pasosCU}
+            \item El sistema muestra la información publicada sobre el tratamiento de los datos.
+            \item El usuario consulta el contenido de la política.
+        \end{pasosCU} \\
+        Postcondiciones & El usuario ha consultado la política de privacidad. \\
+        Alternativas & \begin{alternativasCU}
+            \item Si la abre desde el registro o la presentación, puede cerrar la consulta y continuar en el punto en el que se encontraba.
+            \item La consulta de la política no sustituye la aceptación que se solicita durante el registro.
+        \end{alternativasCU} \\
+\end{longtblr}
+
+\endgroup

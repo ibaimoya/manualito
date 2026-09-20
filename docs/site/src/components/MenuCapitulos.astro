@@ -1,0 +1,28 @@
+---
+import Sidebar from '@astrojs/starlight/components/Sidebar.astro';
+import '../styles/menu-capitulos.css';
+---
+
+<manualito-menu-capitulos class="menu-capitulos">
+  <Sidebar />
+</manualito-menu-capitulos>
+
+<script>
+  import { iniciarMenuCapitulos } from '../scripts/menu-capitulos';
+
+  class MenuCapitulos extends HTMLElement {
+    private limpiar?: () => void;
+
+    connectedCallback() {
+      this.limpiar = iniciarMenuCapitulos(this);
+    }
+
+    disconnectedCallback() {
+      this.limpiar?.();
+    }
+  }
+
+  if (!customElements.get('manualito-menu-capitulos')) {
+    customElements.define('manualito-menu-capitulos', MenuCapitulos);
+  }
+</script>

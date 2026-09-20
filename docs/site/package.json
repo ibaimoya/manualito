@@ -20,12 +20,19 @@
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@fontsource-variable/manrope": "5.3.0",
+    "@mdx-js/mdx": "3.1.1",
     "astro": "7.2.0",
+    "katex": "0.18.7",
     "motion": "13.0.0",
+    "photoswipe": "5.4.4",
+    "rehype-katex": "7.0.1",
+    "rehype-raw": "7.0.0",
+    "remark-math": "6.0.0",
     "sharp": "0.35.3"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
+    "astro-vtbot": "^3.1.0",
     "starlight-links-validator": "0.25.2",
     "typescript": "6.0.3",
     "wrangler": "4.119.0"

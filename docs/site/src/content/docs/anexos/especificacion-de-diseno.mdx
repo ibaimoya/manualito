@@ -1,0 +1,359 @@
+---
+title: Especificación de diseño
+description: El diseño del software organiza la información y distribuye las responsabilidades entre los componentes.
+sidebar:
+  order: 3
+---
+
+import Figura from '../../../components/Figura.astro';
+import datosContenido from '../../../assets/anexos/especificacion-de-diseno/datos-contenido.svg';
+import datosConversaciones from '../../../assets/anexos/especificacion-de-diseno/datos-conversaciones.svg';
+import datosPreferenciasJuego from '../../../assets/anexos/especificacion-de-diseno/datos-preferencias-juego.svg';
+import datosSeguridad from '../../../assets/anexos/especificacion-de-diseno/datos-seguridad.svg';
+import arquitecturaAcceso from '../../../assets/anexos/especificacion-de-diseno/arquitectura-acceso.svg';
+import arquitecturaProcesamiento from '../../../assets/anexos/especificacion-de-diseno/arquitectura-procesamiento.svg';
+import subidaManual from '../../../assets/anexos/especificacion-de-diseno/subida-manual.svg';
+import procesamientoPagina from '../../../assets/anexos/especificacion-de-diseno/procesamiento-pagina.svg';
+import reconocimientoTexto from '../../../assets/anexos/especificacion-de-diseno/reconocimiento-texto.svg';
+import cierreIndexacion from '../../../assets/anexos/especificacion-de-diseno/cierre-indexacion.svg';
+import recuperacionContexto from '../../../assets/anexos/especificacion-de-diseno/recuperacion-contexto.svg';
+import turnoChat from '../../../assets/anexos/especificacion-de-diseno/turno-chat.svg';
+import navegacion from '../../../assets/anexos/especificacion-de-diseno/navegacion.svg';
+
+## Introducción
+
+Mientras los requisitos de *Manualito* establecen qué debe hacer la aplicación y las condiciones que debe cumplir, el diseño del *software* parte de esa definición para organizar la información y distribuir las responsabilidades entre los componentes que la utilizan. A partir de esa estructura, se define cómo colaboran los componentes en las funciones principales y cómo accede el usuario a ellas a través de las distintas pantallas.
+
+## Diseño de datos
+
+### Distribución de la información
+
+*Manualito* utiliza PostgreSQL para guardar la información de las cuentas de usuario, los juegos, los manuales y las conversaciones [[11](https://www.postgresql.org/about/)].
+
+Los documentos originales y las imágenes de las páginas se guardan como archivos en el servidor. En PostgreSQL se guardan el texto extraído de cada página y los fragmentos utilizados en las consultas.
+
+Una vez procesado o reprocesado un manual, sus fragmentos se leen de PostgreSQL y se envían a ChromaDB, donde se guarda una copia del texto junto con sus identificadores y sus *embeddings*. Estas representaciones numéricas permiten buscar fragmentos relacionados con una pregunta, mientras que la copia del texto se utiliza también en la búsqueda por palabras.
+
+Si se corrige una página, el cambio se guarda primero en PostgreSQL y después se encola una tarea para actualizar sus fragmentos en ChromaDB. Del mismo modo, cuando se elimina un manual se solicita la retirada de sus fragmentos del índice. Como las escrituras en PostgreSQL y las actualizaciones de ChromaDB se realizan por separado, una tarea programada cada hora comprueba los identificadores de los fragmentos presentes en ambas bases y solicita las retiradas o reindexaciones necesarias.
+
+Durante una consulta, el servicio de búsqueda devuelve los identificadores de los fragmentos encontrados para que la aplicación obtenga su texto de PostgreSQL y compruebe los permisos del usuario antes de generar la respuesta. De este modo, PostgreSQL se mantiene como fuente de referencia y permite reconstruir el índice sin volver a extraer el texto de los manuales.
+
+### Catálogo, manuales y archivos
+
+El catálogo reúne los juegos obtenidos de *BoardGameGeek* [[88](https://boardgamegeek.com/)] y los añadidos manualmente. Todos tienen un identificador propio en `games`, por lo que la asociación con sus manuales y con la actividad de los usuarios no depende de que existan en el catálogo externo.
+
+Cada manual se asocia con un juego y con el usuario que lo ha subido. La tabla `manuals` conserva también su visibilidad, su estado de procesamiento y el campo booleano `anonymous`, que indica si debe ocultarse el nombre del usuario. Este campo no admite valores nulos y su valor por defecto es `true`, también para los manuales existentes al aplicar la migración. La relación con la cuenta se conserva mediante `owner_user_id`, independientemente de que el nombre se muestre o no.
+
+Para detectar subidas repetidas, se utiliza una huella o *hash* calculada a partir del contenido de la fuente [[89](https://www.usenix.org/conference/fast-02/venti-new-approach-archival-data-storage)]. La comparación se limita a los manuales del mismo usuario y juego que no se han eliminado. Esta restricción permite que usuarios distintos dispongan de sus propias copias de un mismo manual.
+
+El resultado del procesamiento se guarda por páginas en `manual_pages`. Cada página conserva su posición, el texto extraído y, cuando está disponible, una referencia a su imagen. El estado de procesamiento y la calidad del texto se registran por separado, ya que una página puede procesarse sin errores y, aún así, producir texto de baja confianza. Si se reutiliza el resultado de otra página, también se guarda cuál fue la página de origen.
+
+Los fragmentos para la búsqueda se guardan en `manual_chunks` con su orden y su procedencia dentro del manual. Los documentos e imágenes se registran en `assets`, que guarda su ubicación, tamaño y huella de contenido. Los manuales subidos en PDF mantienen una referencia a su documento original en esta tabla.
+
+<Figura id="fig-anexo-c-datos-contenido" src={datosContenido} alt="Modelo de datos del catálogo, los manuales y sus archivos.">
+  Figura C.1: Modelo de datos del catálogo, los manuales y sus archivos.
+</Figura>
+
+### Conversaciones y actividad personal
+
+Un usuario puede mantener varias conversaciones sobre un mismo juego. La tabla `conversations` identifica estos hilos y `messages` conserva sus mensajes. Las respuestas mantienen una referencia a la pregunta que las originó, tanto durante su generación como después de completarse.
+
+Las fuentes citadas se guardan dentro de cada respuesta con los datos del manual y la página utilizados en ese momento. Esto permite conservar las referencias del historial aunque el manual deje de estar disponible, como establece RF-4.8. El acceso a una página citada se comprueba de nuevo cuando el usuario intenta abrirla.
+
+<Figura id="fig-anexo-c-datos-conversaciones" src={datosConversaciones} alt="Modelo de datos de las conversaciones y sus mensajes.">
+  Figura C.2: Modelo de datos de las conversaciones y sus mensajes.
+</Figura>
+
+Las valoraciones se guardan en `ratings`, con una por usuario y juego. La decisión de seguir o dejar de seguir un juego se guarda en `game_follows`. Cuando el usuario deja de seguirlo, esta elección se conserva para que una actividad posterior, como subir un manual o enviar un mensaje, no vuelva a añadirlo automáticamente a sus juegos seguidos.
+
+Las explicaciones de los juegos también se guardan por usuario en `game_explanations`, porque pueden basarse en sus manuales privados. Junto con el contenido generado, se conserva una huella del conjunto de manuales disponibles que permite comprobar si la explicación puede reutilizarse.
+
+<Figura id="fig-anexo-c-datos-preferencias-juego" src={datosPreferenciasJuego} alt="Modelo de datos de las valoraciones, los juegos seguidos y las explicaciones.">
+  Figura C.3: Modelo de datos de las valoraciones, los juegos seguidos y las explicaciones.
+</Figura>
+
+### Cuentas, sesiones y auditoría
+
+Los datos necesarios para las operaciones de cuenta y acceso de RF-1 se distribuyen entre el perfil del usuario, sus sesiones y los *tokens* de verificación y restablecimiento de contraseña. La tabla `users` conserva los datos de la cuenta y el *hash* de la contraseña. El nombre de usuario y el correo no pueden repetirse entre cuentas que no se hayan dado de baja.
+
+Las sesiones se registran en `auth_sessions` con sus fechas de caducidad y revocación, de esta forma, se puede retirar el acceso aunque el navegador conserve la *cookie*. Tanto para las sesiones como para la verificación de la cuenta y el restablecimiento de contraseña se guarda la huella del *token*, en lugar del valor que permitiría utilizarlo.
+
+Por último, `audit_log` registra las operaciones de seguridad y su resultado. La referencia al usuario es opcional para poder recoger también intentos de acceso que no correspondan a una cuenta identificada.
+
+<Figura id="fig-anexo-c-datos-seguridad" src={datosSeguridad} alt="Modelo de datos de cuentas, sesiones, enlaces de un solo uso y auditoría.">
+  Figura C.4: Modelo de datos de cuentas, sesiones, enlaces de un solo uso y auditoría.
+</Figura>
+
+## Diseño arquitectónico
+
+### Acceso y límites entre servicios
+
+La interfaz de *Manualito* está desarrollada con React [[90](https://react.dev/)] y se ejecuta en el navegador. El contenedor `frontend` utiliza Caddy como servidor web y ***proxy* inverso** [[91](https://caddyserver.com/docs/quick-starts/reverse-proxy)]. Entrega los archivos compilados de la interfaz y reenvía las peticiones bajo `/api/` al servicio `api`, implementado con FastAPI [[92](https://fastapi.tiangolo.com/)]. Este servicio ofrece la **interfaz de programación de aplicaciones** (API, del inglés *Application Programming Interface*), que centraliza el acceso a las funciones y a los datos del usuario.
+
+PostgreSQL, Redis, Chroma y los servicios de procesamiento comparten con la API la red de Docker `backend-net` y no publican puertos en el equipo donde se ejecutan. La comunicación entre la API y Caddy utiliza otra red, `gateway-net`. En la configuración base, la aplicación y las herramientas de supervisión y correo de desarrollo solo son accesibles desde ese equipo. El acceso a la aplicación desde Internet es opcional y se habilita mediante *Cloudflare Tunnel* [[17](https://developers.cloudflare.com/tunnel/)], cuyo conector `cloudflared` se comunica con Caddy a través de `edge-net`.
+
+<Figura id="fig-anexo-c-arquitectura-acceso" src={arquitecturaAcceso} alt="Vista general del acceso, los datos y los servicios de la aplicación. Catálogo externo: BoardGameGeek .">
+  Figura C.5: Vista general del acceso, los datos y los servicios de la aplicación. Catálogo externo: *BoardGameGeek* [[88](https://boardgamegeek.com/)].
+</Figura>
+
+### Organización de las responsabilidades
+
+La API coordina la gestión de cuentas, autenticación, juegos, valoraciones, manuales y conversaciones, por otra parte, las rutas reciben y validan las peticiones y los servicios coordinan las operaciones e interacciones. En juegos, manuales y conversaciones se adapta el patrón repositorio cap. 2 [[93](https://www.cosmicpython.com/book/chapter_02_repository.html)], agrupando las consultas y escrituras en la base de datos en módulos que utilizan los servicios. Los *workers* de Celery reutilizan los servicios para ejecutar operaciones en segundo plano.
+
+Los componentes de procesamiento se encargan de diferentes tareas:
+
+<ul><li>El servicio de <em>Optical Character Recognition</em> (OCR) recibe una imagen y devuelve <strong>líneas con texto</strong> y la <strong>confianza</strong> que calcula por cada una. Una interfaz común basada en los patrones <em>Strategy</em> y <em>Factory</em> permite seleccionar Tesseract o una de las variantes de PaddleOCR sin cambiar el contrato utilizado por el procesador de manuales [[3](/anexos/bibliografia/#ref-3)].</li><li>El servicio de <em>Retrieval-Augmented Generation</em> (RAG) calcula <strong>representaciones vectoriales</strong> para los diferentes fragmentos, mantiene Chroma y recupera candidatos usando tanto <strong>búsqueda léxica</strong> y como <strong>búsqueda semántica</strong>. La división en fragmentos y la asignación de sus identificadores se realizan antes, en el procesamiento de manuales.</li><li>El servicio del <em>Large Language Model</em> (LLM) prepara las <strong>instrucciones de generación de respuestas</strong>, la <strong>reformulación de la pregunta</strong> con el contexto previo y <strong>corrección del texto</strong> obtenido de la extracción del modelo OCR. Ollama ejecuta el modelo seleccionado y devuelve el texto generado [[94](https://docs.ollama.com/api/generate)].</li></ul>
+
+Los servicios de OCR, RAG y LLM no forman una cadena fija de llamadas entre sí, sino que, el proceso que coordina una operación decide qué servicios necesita. Por ejemplo, una página con texto aprovechable puede saltarse el reconocimiento, y la corrección de texto mediante un LLM solo se solicita cuando está habilitada, por defecto, solamente cuando se selecciona el modelo `gemma4:e4b`.
+
+Esta separación mantiene las dependencias de cada motor en su propio servicio, aunque, hay que tener en cuenta que exige gestionar los posibles errores de comunicación entre componentes.
+
+El catálogo de juegos de *BoardGameGeek* [[88](https://boardgamegeek.com/)] enriquece los resultados cuando el local no encuentra juegos. Estos juegos se guardan en PostgreSQL para apoyar con autocompletado en próximas búsquedas.
+
+El correo de verificación y recuperación se envía desde un *worker* de Celery. En desarrollo, Mailpit recoge los mensajes sin entregarlos al destinatario [[95](https://mailpit.axllent.org/)], mientras que el despliegue público utiliza Resend con una conexión cifrada [[96](https://resend.com/docs/send-with-smtp)]. La selección se guarda durante la preparación del entorno y cambia el destino del mismo cliente de correo, sin modificar la cola ni las operaciones de cuenta.
+
+<Figura id="fig-anexo-c-arquitectura-procesamiento" src={arquitecturaProcesamiento} alt="Responsabilidades y comunicaciones de los componentes de procesamiento.">
+  Figura C.6: Responsabilidades y comunicaciones de los componentes de procesamiento.
+</Figura>
+
+### Trabajo en segundo plano
+
+El procesamiento de manuales y la generación de respuestas utilizan Celery, que se encarga de gestionar estas tareas pesadas mediante colas [[16](https://docs.celeryq.dev/en/stable/getting-started/introduction.html)]. Redis actúa como intermediario de mensajes y almacén operativo de Celery.
+
+Se utilizan tres *workers* de Celery y cinco colas de trabajo:
+
+<ul><li><code>celery-worker-manuals</code> consume <code>manuals</code> y <code>rag</code>, con una concurrencia máxima de dos tareas. Procesa las páginas de los manuales, incorpora sus fragmentos al índice y actualiza su estado al terminar, además, mantiene el índice sincronizado.</li><li><code>celery-worker-gpu</code> consume <code>gpu</code>, con una tarea simultánea como máximo. Crea respuestas, títulos de conversaciones y explicaciones generales de juegos apoyandose en Ollama.</li><li><code>celery-worker-mail</code> consume <code>mail</code> y <code>maintenance</code>, con una concurrencia de cuatro tareas como máximo. La idea tras esta cola adicional, es separar el envío de correos y las tareas de mantenimiento de las tareas de generación, puesto que, son menos pesadas y más casuales.</li></ul>
+
+Se utiliza Celery Beat para programar las comprobaciones periódicas [[97](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html)] y, por otro lado, Flower permite consultar la ejecución de las tareas durante el desarrollo [[98](https://flower.readthedocs.io/en/latest/)]. Una tarea de mantenimiento puede detectar que hace falta una reparación y enviarla a la cola correspondiente. Por ejemplo, una de estas comprobaciones compara el índice de búsqueda con los datos almacenados y, si detecta que faltan fragmentos de un manual, envía a la cola `rag` una tarea para volver a indexarlo.
+
+### Despliegue y seguridad
+
+Se usa Docker Compose para definir y coordinar los servicios, las redes y los volúmenes de datos [[99](https://docs.docker.com/compose/)]. La configuración base se complementa con variantes para PaddleOCR sobre el procesador o sobre una *Graphics Processing Unit* (GPU), y con una configuración adicional que permite a Ollama utilizar una GPU NVIDIA.
+
+La selección del motor de reconocimiento y la aceleración del modelo son decisiones separadas que se eligen durante la ejecución del *script* de preparación de la configuración. Por otra parte, los contenedores de inicialización preparan los permisos de los volúmenes, aplican las migraciones de Alembic y descargan los modelos necesarios.
+
+El proveedor de correo se elige por separado. La variante de Resend configura la API y el *worker* de correo, monta su clave desde un archivo de secretos y desactiva Mailpit. Activar el túnel de Cloudflare no cambia esta elección, por lo que el acceso público y el envío de mensajes pueden configurarse de forma independiente.
+
+Durante la preparación y el arranque se generan las credenciales locales que falten para PostgreSQL, Redis y Flower, sin reemplazar las que ya existan. Los archivos permanecen fuera del repositorio y se montan como secretos en los servicios que los necesitan. Las claves de Resend y del túnel se aportan por separado, puesto que dependen de proveedores externos.
+
+PostgreSQL, Chroma, Redis, los archivos y los modelos utilizan volúmenes persistentes y, Redis habilita un registro de operaciones para conservar sus datos al reiniciarse. Esta persistencia permite separar los datos de la vida de un contenedor, pero no llega a sustituir a una copia de seguridad.
+
+De acuerdo con RNF-5, las contraseñas se almacenan mediante Argon2id [[100](https://www.rfc-editor.org/info/rfc9106/)], con un límite en el número de cálculos simultáneos. Para mantener la sesión iniciada, el navegador guarda en una *cookie* un identificador que no contiene datos del usuario y que el servidor asocia a su sesión, denominado ***token* opaco**. En cada petición que requiera autenticación, el servidor utiliza ese identificador para comprobar si la sesión ha caducado o ha sido revocada, y verifica el estado de la cuenta. La *cookie* utiliza `HttpOnly` para impedir su lectura desde JavaScript y `SameSite=Lax` para limitar el envío en peticiones procedentes de otros sitios [[12](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)].
+
+Todo esto implica que las operaciones autenticadas que modifican datos exigen **protección frente a ataques de *Cross-Site Request Forgery* (CSRF)**, por lo que el cliente envía un *token* específico para protegerse de este tipo de ataques, en una cabecera y el servidor lo comprueba contra la sesión [[13](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)]. A estas medidas se les añade por encima la configuración de Caddy, que establece el acceso cifrado, restringe la carga de recursos mediante cabeceras de seguridad y oculta *cookies* y *tokens* en sus registros de acceso.
+
+Además, el servicio de la API limita la frecuencia de las peticiones a las rutas sensibles.
+
+Por otro lado, en el despliegue, los contenedores de cada servicio propio de *Manualito*, se declaran con su sistema de archivos en **modo de solo lectura** y **sin capacidades adicionales**, salvo las excepciones de inicialización, de modo que las escrituras necesarias se concentran en volúmenes y directorios temporales que se apagan al cumplir su función.
+
+La lectura de las páginas y sus imágenes admite tanto manuales propios como compartidos que estén activos. En los ajenos, el visor funciona en modo de solo lectura y no muestra los controles de edición, reprocesado ni los datos técnicos del reconocimiento. Cambiar la opción de mostrar el nombre exige ser propietario del manual y no altera estos permisos.
+
+## Diseño procedimental
+
+### Estados del manual y de sus páginas
+
+En *Manualito*, los manuales durante su ciclo de vida pueden mostrar distintos estados. Al subirse un manual, su estado inicial es `indexing`, mientras que sus páginas pasan de `pending` a `processing` y terminan como `completed` o `failed`.
+
+Al terminar el procesamiento de las páginas, se determina el estado del manual a partir de sus resultados y de los fragmentos almacenados. El manual queda como `failed` si no hay fragmentos, o `pending_review` si los hay, pero alguna página ha fallado o tiene baja confianza. En los demás casos pasa a `active`, siempre que la indexación haya terminado. Cuando se retira mediante borrado lógico, se marca como `hidden`.
+
+Estos estados permiten conservar **resultados parciales** y distinguirlos de los manuales completamente procesados, además de intervenir en los permisos de consulta.
+
+<div class="tabla-documento" role="region" aria-label="Estados de procesamiento y retirada de manuales y páginas." tabindex="0">
+<table id="tabla-estados-manual">
+<caption>Tabla C.1. Estados de procesamiento y retirada de manuales y páginas.</caption>
+<tr><th scope="col">Recurso</th><th scope="col">Estado</th><th scope="col">Significado</th></tr>
+<tr><td>Página</td><td><code>pending</code></td><td>Espera a ser asignada a una tarea Celery.</td></tr>
+<tr><td>Página</td><td><code>processing</code></td><td>Una tarea Celery ha empezado a procesarla.</td></tr>
+<tr><td>Página</td><td><code>completed</code></td><td>Tiene un resultado disponible.</td></tr>
+<tr><td>Página</td><td><code>failed</code></td><td>El procesamiento ha fallado.</td></tr>
+<tr><td>Manual</td><td><code>indexing</code></td><td>Está pendiente de acabar de procesarse o de pasar la comprobación final.</td></tr>
+<tr><td>Manual</td><td><code>active</code></td><td>Se han confirmado que su texto se ha procesado e indexado.</td></tr>
+<tr><td>Manual</td><td><code>pending_review</code></td><td>Hay texto indexado y alguna página fallida o de baja confianza.</td></tr>
+<tr><td>Manual</td><td><code>failed</code></td><td>No hay fragmentos de texto o ha fallado su indexación.</td></tr>
+<tr><td>Manual</td><td><code>hidden</code></td><td>Está retirado mediante borrado lógico.</td></tr>
+</table>
+</div>
+
+### Subida y aceptación de un manual
+
+Al subir un manual se reciben el juego asociado, la visibilidad (privada o compartida), la opción de mostrar el nombre del usuario y su fuente (imágenes o un documento PDF). El servidor conserva `anonymous=true` para los manuales privados, aunque la petición indique lo contrario. Antes de procesarlo, el servidor comprueba el formato real de los archivos, sus tamaños y el número de páginas, de acuerdo con RF-3.1 y RF-3.2.
+
+Los archivos se guardan en un lote pendiente y, tras validarlos y moverlos a su ubicación definitiva, se registran el manual, sus páginas y los datos de almacenamiento. La huella de la fuente se utiliza para rechazar duplicados del mismo usuario y juego sin tener que llegar a repetir el reconocimiento y procesado.
+
+Una vez confirmada la operación, se marca el lote como asociado al manual y se solicita el procesamiento a Celery. El servidor espera el resultado del envío a la cola antes de devolver `202 Accepted` con el identificador y el estado inicial del manual, lo que confirma la aceptación del trabajo.
+
+Como guardar los archivos, confirmar la transacción y enviar el trabajo a la cola son operaciones separadas, una interrupción puede dejar recursos pendientes de revisión. Para detectarlos, los lotes indican si ya están asociados al manual y una tarea busca manuales confirmados que aún no han empezado a procesarse.
+
+<Figura id="fig-anexo-c-subida-manual" src={subidaManual} alt="Persistencia y encolado de una subida aceptada.">
+  Figura C.7: Persistencia y encolado de una subida aceptada.
+</Figura>
+
+### Extracción del texto de una página
+
+Para extraer el texto de una página, se crea una tarea inicial que registra las páginas pendientes y crea una nueva subtarea para cada una de ellas. Cada subtarea, antes de empezar, reserva su página cambiando su estado a `processing`, para que otra tarea no acceda a dicha página al mismo tiempo.
+
+En una página PDF se intenta extraer primero el texto que contiene. Si se comprueba que es aprovechable (en base a unos umbrales definidos), se guarda con origen `pdf_text` y se intenta conservar una imagen por página para poder consultarla desde el *frontend*, aunque un fallo al generar una imagen no impide guardar su texto extraído, son procesos independientes. Además, como esta vía no utiliza OCR, al texto obtenido no se le asigna una confianza de reconocimiento.
+
+Si el texto de una página del PDF no es aprovechable, se utiliza la imagen que ya se ha generado de dicha página o, en su defecto, se crea una. Tanto esta imagen como las subidas se comparan por huella con páginas procesadas del mismo juego para comprobar si puede reutilizarse un resultado propio o de un manual compartido activo. Solo se reutilizan resultados de páginas cuyo procesamiento haya terminado, con texto de calidad aceptable (`ok`) o sin texto (`empty`).
+
+Si hay una coincidencia, se copian las líneas y los textos de los fragmentos con los identificadores de la nueva página y se registra su procedencia; si no, se solicita el reconocimiento. Esta reutilización se aplica tanto a las imágenes subidas como a las páginas de un PDF que necesitan reconocimiento de texto, mientras que las páginas con texto aprovechable se procesan mediante extracción directa.
+
+El texto obtenido se normaliza y se divide en fragmentos que comparten parte de su contenido con los contiguos de cara a evitar la pérdida de contexto. Cada uno conserva su página de origen y una huella para localizar sus fuentes.
+
+<Figura id="fig-anexo-c-procesamiento-pagina" src={procesamientoPagina} alt="Validación del archivo y obtención del texto de cada página.">
+  Figura C.8: Validación del archivo y obtención del texto de cada página.
+</Figura>
+
+### Reconocimiento y corrección del texto
+
+El servicio OCR recibe la imagen en bloques de datos, comprueba su tamaño y limita cuántos reconocimientos pueden ejecutarse a la vez. La preparación y el **preprocesado** de la imagen depende del motor seleccionado, tal y como se ha medido en las pruebas de rendimiento (Estudio de preprocesado de imágenes para OCR de Manualito. Cuaderno, resultados y conclusiones disponibles en [https://github.com/ibaimoya/manualito/tree/development/docs/benchmarks/ocr/preprocessing](https://github.com/ibaimoya/manualito/tree/development/docs/benchmarks/ocr/preprocessing).), ya que Tesseract la amplía y la convierte a escala de grises, mientras que PaddleOCR aplica una ecualización local para ajustar el contraste por zonas, limitando su amplificación.
+
+Una vez preparada la imagen, se extrae el texto línea a línea con una **puntuación de confianza** por cada una de ellas que calcula internamente cada motor.
+
+Después del reconocimiento se normalizan los caracteres y los espacios y se eliminan las líneas identificadas como ruido según su contenido y confianza. Estas reglas distinguen los *tokens* cortos que pueden ser relevantes, como números o rangos, del ruido derivado del reconocimiento. Para terminar, se aplican las correcciones menores como, por ejemplo, juntar las palabras cortadas por guiones, lo que, ayuda en gran medida a la precisión de la **búsqueda léxica**.
+
+Si hay un modelo LLM configurado para ello, que normalmente se da automáticamente cuando se selecciona el perfil de alto rendimiento durante la configuración, se le envían las líneas cuyo valor de confianza esté dentro del intervalo definido para aplicar una posible corrección, junto con las líneas vecinas, de cara a ampliar el contexto. El modelo genera **tres propuestas** y **solo se aceptan los cambios que aparecen en al menos dos**, siempre que no eliminen el segmento ni alteren su secuencia de dígitos.
+
+Junto al resultado se guardan el origen de las correcciones y la confianza disponible. La confianza media, ponderada según la longitud de las líneas, permite detectar páginas que necesitan revisión, aunque solo refleja el reconocimiento del texto y no la exactitud de las reglas extraídas, debido a que se saca directamente de la proporcionada por los motores de OCR.
+
+<Figura id="fig-anexo-c-reconocimiento-texto" src={reconocimientoTexto} alt="Preprocesado por motor, reconocimiento y corrección del texto extraído.">
+  Figura C.9: Preprocesado por motor, reconocimiento y corrección del texto extraído.
+</Figura>
+
+### Finalización e indexación del manual
+
+Cuando termina de procesar una página, la tarea solicita comprobar si quedan otras pendientes o en ejecución del mismo manual. Para evitar que varias tareas realicen esta comprobación al mismo tiempo, se utiliza un bloqueo por manual.
+
+Una vez procesado completamente un manual, se cargan todos los fragmentos o *chunks* y, con ellos, el servicio RAG calcula los vectores correspondientes y los guarda en ChromaDB con los identificadores establecidos para los fragmentos, además de retirar las entradas anteriores del manual que ya no forman parte del conjunto actual. Una vez terminado este proceso, PostgreSQL registra los fragmentos indexados, el modelo empleado, la fecha de indexación y el estado del manual en ese momento.
+
+Si no hay fragmentos de texto, el manual se marca como fallido sin llegar a indexarlo,. También se registra el fallo si falla la comunicación o no puede interpretarse el resultado de la indexación. Como PostgreSQL y Chroma pueden quedar desfasados, se incluyen las comprobaciones descritas al final del apartado para detectar y corregir esas diferencias.
+
+<Figura id="fig-anexo-c-cierre-indexacion" src={cierreIndexacion} alt="Cierre del procesamiento e indexación completa del manual.">
+  Figura C.10: Cierre del procesamiento e indexación completa del manual.
+</Figura>
+
+### Recuperación de contexto y generación de respuestas
+
+Para obtener el contexto con el que el LLM genera las respuestas, se parte del juego, del usuario y de los manuales que este puede consultar. Los identificadores de esos manuales se obtienen de PostgreSQL antes de buscar y se envían al servicio RAG, que combina dos tipos de búsqueda:
+
+<ul><li><strong>Búsqueda léxica.</strong> Utiliza BM25 (del inglés <em>Best Match 25</em>) para encontrar coincidencias de nombres y términos concretos en el texto apdo. 11.4.3 [[101](https://nlp.stanford.edu/IR-book/html/htmledition/okapi-bm25-a-non-binary-model-1.html)].</li><li><strong>Búsqueda semántica.</strong> Compara los vectores de la pregunta y de los fragmentos para encontrar contenido relacionado por su significado, aunque no utilice las mismas palabras.</li></ul>
+
+Si hay términos que coinciden para la búsqueda léxica, las dos listas se combinan mediante **fusión por rango recíproco** (RRF, del inglés *Reciprocal Rank Fusion*) [[102](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)], que utiliza la posición de cada resultado sin sumar puntuaciones de escalas diferentes. Si no hay términos léxicos, se mantiene la búsqueda semántica. La huella del contenido, sirve para evitar que aparezcan resultados duplicados y el servicio devuelve los identificadores de los candidatos ordenados por relevancia.
+
+Antes de preparar el contexto, la aplicación recupera de PostgreSQL el texto de los fragmentos encontrados y comprueba que el usuario sigue teniendo permiso para consultarlos, ya que el índice puede conservar referencias a manuales eliminados o que han dejado de compartirse. Con los fragmentos autorizados, elimina las repeticiones y prepara tanto el contexto que recibirá el modelo como las fuentes, agrupadas por manual y página.
+
+<Figura id="fig-anexo-c-recuperacion-contexto" src={recuperacionContexto} alt="Selección de candidatos mediante búsqueda densa o híbrida en el servicio de recuperación.">
+  Figura C.11: Selección de candidatos mediante búsqueda densa o híbrida en el servicio de recuperación.
+</Figura>
+
+El servicio LLM recibe la pregunta original, el historial y los fragmentos seleccionados por todo este sistema. A esta información se le añaden instrucciones sobre cómo debe comportarse, qué restricciones de seguridad debe respetar y en qué idioma debe responder en el *prompt* que se envía al modelo.
+
+El contexto y el historial tienen límites de longitud para restringir el tamaño de la entrada. Con ella, Ollama genera la respuesta, que se valida antes de guardarse.
+
+**Las instrucciones del modelo dan prioridad máxima al manual** para explicar las reglas y aplicarlas a la situación que plantea el usuario. El modelo solamente recurre a conocimiento general en situaciones triviales o para completar algún detalle y, en ese caso, lo indica en la propia respuesta. Además, en una de las respuestas se referencia a las páginas en las que se ha basado la respuesta.
+
+### Turno de conversación
+
+Al recibir un mensaje se comprueban la propiedad de la conversación, el estado del juego y los manuales disponibles para consultar, en caso de no haber fuentes disponibles, se conserva el historial, pero no se admiten nuevas preguntas.
+
+La aplicación elige el idioma para responder siguiendo este orden de prioridad:
+
+<ol><li>Intenta reconocer el idioma del <strong>mensaje actual</strong> mediante palabras y caracteres característicos.</li><li>Si no lo consigue, revisa los <strong>mensajes anteriores del usuario</strong>, empezando por el más reciente.</li><li>Si tampoco puede determinarlo, utiliza la <strong>preferencia de idioma enviada en la petición</strong>, indicada en <code>Accept-Language</code>.</li><li>Si no dispone de ninguna de estas señales, utiliza <strong>español</strong> como idioma por defecto.</li></ol>
+
+Antes de enviar a la cola la tarea que generará la respuesta, la aplicación guarda en PostgreSQL el mensaje del usuario junto con un registro vacío para la respuesta del asistente, marcado como `pending`. Así, la pregunta queda asociada a su futura respuesta y se puede consultar su estado mientras se genera en segundo plano.
+
+Si la conversación todavía no tiene título, se utiliza la primera línea del mensaje, aunque recortada si supera la longitud máxima, para poder identificarla sin esperar al modelo. Otra tarea **solicita al servicio LLM un título más descriptivo**, que sustituye al inicial solo si el usuario no lo ha cambiado mientras tanto.
+
+El *worker* de Celery obtiene un bloqueo por conversación para evitar que varias tareas la procesen al mismo tiempo y recupera el turno pendiente. Si hay historial, intenta reformular la pregunta incorporando la información necesaria de los mensajes anteriores, de modo que pueda utilizarse por sí sola en la búsqueda. Esta reformulación solo se emplea para recuperar los fragmentos y, si falla o devuelve un texto vacío, se utiliza la pregunta original. Para generar la respuesta se mantienen la pregunta original, el historial y los fragmentos que el usuario puede consultar, siguiendo el procedimiento descrito anteriormente.
+
+Cuando termina la generación, el registro que estaba pendiente se completa con el texto de la respuesta y sus fuentes, y pasa al estado `completed`. Si se detecta un fallo que impide obtener la respuesta, como la falta de contexto o la indisponibilidad de un servicio, se marca como `failed` y se guarda el código de error correspondiente.
+
+Mientras la respuesta está pendiente, la interfaz consulta periódicamente los mensajes de la conversación para actualizar su estado. Esto permite mostrar que la respuesta se está generando y sustituir ese indicador por el texto o por un aviso de error cuando termina, sin mantener abierta la petición original durante todo el proceso.
+
+<Figura id="fig-anexo-c-turno-chat" src={turnoChat} alt="Persistencia, encolado y resolución de un turno de conversación.">
+  Figura C.12: Persistencia, encolado y resolución de un turno de conversación.
+</Figura>
+
+### Explicación general de un juego
+
+La explicación general de un juego, permite consultar las reglas principales de un juego sin tener que formular una pregunta. Para elaborarla se utiliza el mismo proceso de búsqueda y generación descrito anteriormente, con cuatro preguntas predefinidas sobre **el resumen del juego**, **cómo prepararlo para jugar**, **el funcionamiento de los turnos** y **las condiciones de victoria**. Se generan de forma secuencial y si una de las explicaciones está lista, se muestra mientras el resto se generan.
+
+Antes de generar una explicación, la aplicación comprueba si ya dispone de una que pueda reutilizar, de acuerdo con RF-4.1. Para saber si sigue basada en las mismas fuentes, calcula una huella con los identificadores y las fechas de indexación de los manuales que el usuario puede consultar. Si esa huella coincide con la de una explicación completa, devuelve el contenido guardado, mientras que un cambio en las fuentes hace que se descarten los apartados anteriores y se solicite una nueva generación.
+
+La explicación se guarda por usuario y juego, y se utiliza un bloqueo para evitar que varias tareas la generen al mismo tiempo. Si el usuario vuelve a consultarla mientras se está preparando, recibe el estado y los apartados disponibles. Solo cuando la generación lleva demasiado tiempo sin actualizarse se permite solicitar otra tarea, que conserva los apartados ya guardados si las fuentes siguen siendo las mismas.
+
+Si la generación se marca como fallida, ese estado también queda guardado mientras no cambien las fuentes, por lo que volver a abrir la explicación no basta para iniciar otro intento.
+
+### Edición, reprocesado y recuperación
+
+El propietario puede cambiar si su nombre aparece junto a un manual compartido sin volver a procesar sus páginas. El nombre solo se devuelve si el manual permite mostrarlo y la cuenta sigue activa. Además, las fuentes guardadas en las respuestas no conservan una copia del nombre, sino que lo consultan al recuperar la conversación. Así, al volver a leer una respuesta anterior se respeta la elección actual del propietario.
+
+La edición de una página de un manual, permite corregir el texto de una página sin volver a extraer el texto de su imagen, siempre que el manual pertenezca al usuario, sea privado y no se esté procesando. Al guardar, la aplicación obtiene un bloqueo por manual para evitar cambios simultáneos y sustituye las líneas y los fragmentos de esa página por el contenido corregido. También registra la operación y marca el origen del texto como `user_edit`, para distinguir una corrección del usuario de la extracción automática. Una vez confirmado el cambio en PostgreSQL, se envía a la cola la tarea que actualizará el índice de búsqueda.
+
+El reprocesado vuelve a obtener el texto a partir de los archivos guardados, por lo que puede repetirse sobre una página o sobre el manual completo sin subirlos de nuevo. Primero se comprueba que el manual pertenece al usuario y que su estado permite la operación, y se marca como `indexing` para impedir que otra petición inicie un segundo reprocesado a la vez. Después se identifican los fragmentos anteriores de las páginas afectadas para retirarlos de Chroma y se vuelven a enviar esas páginas a procesar, siguiendo los mismos pasos de extracción y comprobación del resultado.
+
+Al eliminar un manual, se registra la fecha de borrado tanto en el manual como en sus archivos y se cambia su estado a `hidden`. Esto hace que deje de estar disponible, aunque sus páginas y fragmentos sigan registrados en PostgreSQL. Tras confirmar esos cambios, se intenta borrar los archivos del almacenamiento y se envía a la cola la retirada de los fragmentos del índice.
+
+Por otra parte, la eliminación de una cuenta sigue el mismo criterio con sus recursos y, además, revoca las sesiones para impedir que sigan utilizándose.
+
+Como estas operaciones afectan a PostgreSQL, a los archivos y al índice, una interrupción puede dejar alguno de ellos pendiente de actualizar. Las tareas periódicas de Celery Beat, buscan esas situaciones y gestionan la reparación correspondiente:
+
+<ul><li>Cada cinco minutos se comprueba si hay páginas que llevan demasiado tiempo en procesamiento sin actualizarse. Se marcan como fallidas para que no mantengan al manual indefinidamente en ese estado y se solicita comprobar si ya ha terminado el procesamiento de sus demás páginas. También se buscan manuales guardados en la base de datos cuyo procesamiento no llegó a iniciarse, para enviarlos de nuevo a la cola.</li><li>Cada hora se comparan los identificadores de los fragmentos presentes en Chroma con los que deberían estar según PostgreSQL. Si quedan entradas de manuales eliminados, se solicita su retirada, y si los fragmentos de un manual no coinciden, se pide reconstruir su índice.</li><li>También cada hora se revisan los lotes de archivos que siguen pendientes una vez vencido su plazo de conservación. Si PostgreSQL contiene referencias a ellos, se confirma su uso y se conservan; en caso contrario, se eliminan para no mantener archivos de subidas abandonadas.</li></ul>
+
+Estas comprobaciones permiten atender los fallos entre unos pasos y otros, pero dependen de su ejecución periódica y de las tareas que solicitan. Por ello, los cambios en la base de datos, los archivos y el índice pueden completarse en momentos distintos.
+
+## Diseño de interfaces
+
+### Organización y navegación
+
+En *Manualito*, la ficha de cada juego reúne su explicación, los manuales disponibles para el usuario y las conversaciones asociadas.
+
+El inicio de sesión, el registro y la recuperación de contraseña tienen pantallas propias. Cuando se intenta abrir una página protegida sin haber iniciado sesión, la aplicación lleva al usuario a la pantalla de **«Inicio de Sesión»** y recuerda el destino para abrirlo después de identificarse.
+
+En la introducción, se muestra una presentación dirigida a quienes todavía no han usado *Manualito*, y, «Política de privacidad», la verificación de la cuenta y el restablecimiento de contraseña pueden abrirse directamente sin identificarse.
+
+La navegación principal se divide en cuatro secciones:
+
+<ul><li><strong>«Inicio»</strong>: Da la bienvenida al usuario, permite añadir un manual y retomar las acciones recientes.</li><li><strong>«Biblioteca»</strong>: Organiza los juegos que sigue el usuario y sus manuales en dos pestañas.</li><li><strong>«Explorar»</strong>: Permite buscar nuevos juegos.</li><li><strong>«Ajustes»</strong>: Reúne las preferencias del usuario y las opciones de cuenta.</li></ul>
+
+En escritorio, estas secciones aparecen en una barra lateral plegable que también da acceso a «Perfil» y a «Ayuda»; en móvil se sitúan en una barra inferior para tenerlas al alcance durante la navegación.
+
+Al añadir un manual, consultar su procesamiento o abrir un juego, un manual o una conversación, la barra inferior se oculta para dejar más espacio al contenido. Estas pantallas muestran un título y un botón de regreso, mientras que en escritorio conservan la barra lateral y, cuando corresponde, añaden enlaces a «Biblioteca» o al juego para volver sin perder la referencia de lo que se estaba consultando.
+
+<div class="tabla-documento" role="region" aria-label="Accesos desde las pantallas principales." tabindex="0">
+<table id="tabla-diseno-accesos">
+<caption>Tabla C.2. Accesos desde las pantallas principales.</caption>
+<tr><th scope="col"><strong>Origen</strong></th><th scope="col"><strong>Accesos</strong></th></tr>
+<tr><td>Acceso y registro</td><td>Tras registrarse se abre «Inicio». Al iniciar sesión se vuelve a la página interna solicitada anteriormente, si existe, o a «Inicio» en caso contrario.</td></tr>
+<tr><td>«Inicio»</td><td>Permite añadir un manual y abrir «Biblioteca». Al seleccionar un manual reciente, se muestra su procesamiento si sigue en curso o la ficha del juego si ha terminado.</td></tr>
+<tr><td>«Biblioteca»</td><td>Los juegos abren sus fichas. Los manuales abren el visor, salvo que todavía se estén procesando, en cuyo caso se muestra su progreso.</td></tr>
+<tr><td>«Explorar»</td><td>Al seleccionar un resultado de la búsqueda se abre la ficha del juego.</td></tr>
+<tr><td>«Ajustes»</td><td>Permite acceder a «Perfil», a las diferentes configuraciones y consultar «Política de privacidad».</td></tr>
+</table>
+</div>
+
+<Figura id="fig-anexo-c-navegacion" src={navegacion} alt="Navegación entre la ficha del juego, los manuales y las conversaciones.">
+  Figura C.13: Navegación entre la ficha del juego, los manuales y las conversaciones.
+</Figura>
+
+### Consulta y revisión de manuales
+
+Para añadir un manual se seleccionan el juego y los archivos en una misma pantalla. Si se utilizan imágenes, pueden reordenarse o retirarse antes de enviarlas para comprobar que las páginas estén en el orden deseado. La opción de compartir el manual está activada por defecto, pero el nombre del usuario permanece oculto salvo que decida mostrarlo. Ambas opciones se presentan por separado. El botón de procesamiento se habilita cuando se han elegido el juego y las imágenes o el archivo PDF. En móvil, el botón permanece al pie de la pantalla para poder iniciar el envío sin volver al principio de la lista.
+
+Durante el procesamiento se muestra el progreso por páginas, también visible en las tarjetas de la biblioteca. Cuando termina, se abre la ficha del juego, aunque el manual puede quedar pendiente de revisión si se han detectado problemas en el texto. La explicación muestra primero el resumen y permite desplegar los apartados de preparación, turnos y victoria a medida que están disponibles, mientras los que todavía se están generando permanecen deshabilitados.
+
+El visor permite consultar el texto junto con las páginas del manual y localizar una regla mediante una búsqueda, en la que, las coincidencias pueden recorrerse una a una e, incluso en caso de necesitarlo, la imagen de la página puede ampliarse para contrastar lo reconocido con el original.
+
+La opción de editar solo está disponible en los manuales propios y privados que no se estén procesando. Antes de guardar una corrección, volver a procesar el manual o eliminarlo, se pide confirmación para evitar que un clic involuntario modifique o retire su contenido.
+
+El chat mantiene el nombre del juego y de la conversación en la cabecera, los mensajes en el centro y el campo de escritura debajo. Para empezar, ofrece preguntas sobre las reglas y, después de enviar una consulta, muestra un indicador de espera hasta recibir la respuesta, cuyo texto aparece de forma progresiva. Las fuentes acompañan a la respuesta y permiten abrir las páginas citadas cuando pertenecen a manuales propios que siguen disponibles.
+
+Las conversaciones pueden retomarse desde la ficha del juego o desde su listado. Si el juego deja de tener manuales disponibles, se conserva el acceso al historial para poder leer lo ya consultado, aunque se deshabilita el envío de nuevas preguntas al no haber fuentes con las que fundamentar las respuestas.
+
+### Preferencias y estados de interacción
+
+«Ajustes» permite elegir el idioma de la interfaz, español o inglés, así como un tema claro, oscuro o adaptado al sistema y un color principal ámbar o azul. Estas preferencias se guardan en el navegador para mantenerlas al volver a abrir la aplicación, además, desde esta pantalla también se accede a «Perfil», donde pueden modificarse el nombre y el avatar o abrirse las opciones de «Cuenta».
+
+Cuando todavía no hay contenido en algún apartado, ya sea porque todavía no hay suficientes manuales o suficientes juegos seguidos, la interfaz ofrece una acción con la que continuar, como explorar juegos o añadir un manual desde una biblioteca vacía. Si lo que falla es la carga, permite repetir la consulta, mientras que los formularios señalan los campos que deben corregirse y muestran los errores de la operación. En el chat, una pregunta cuyo envío ha fallado se recupera en el campo de escritura, siempre que el usuario no haya empezado a escribir otra, para que pueda volver a enviarla sin redactarla de nuevo.
+
+Los controles de navegación tienen etiquetas que indican su función y señalan la sección activa para que el usuario pueda orientarse. También se ofrece un enlace para saltar al contenido principal al navegar con el teclado, evitando recorrer todos los enlaces del menú.

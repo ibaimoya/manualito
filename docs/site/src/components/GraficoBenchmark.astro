@@ -1,0 +1,71 @@
+---
+import { numero, type Panel } from '../datos/benchmarks';
+
+interface Props { panel: Panel; }
+const { panel } = Astro.props;
+---
+
+<div class="graficos">
+  {panel.metricas.map((metrica, indice) => (
+    <section aria-label={`${panel.titulo}. ${metrica.titulo}`}>
+      <header>
+        <h4>{metrica.titulo}</h4>
+        <span>{metrica.unidad === '/24' ? 'Sobre 24 preguntas' : metrica.unidad || 'De 0 a 1'}</span>
+      </header>
+      <ol class="series">
+        {panel.filas.map((fila) => (
+          <li class:list={{ destacado: fila.destacado }}>
+            <div class="etiqueta">
+              <span>{fila.nombre}</span>
+              <data value={fila.valores[indice]} title={String(fila.valores[indice]).replace('.', ',')}>
+                {numero(fila.valores[indice], metrica.decimales)}
+              </data>
+            </div>
+            <div class="pista" aria-hidden="true">
+              <span class="barra" style={`width: ${fila.valores[indice] / metrica.maximo * 100}%`}></span>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div class="eje" aria-hidden="true">
+        {[0, 0.25, 0.5, 0.75, 1].map((paso) => <span>{numero(metrica.maximo * paso, 2)}</span>)}
+      </div>
+    </section>
+  ))}
+</div>
+
+<style>
+  .graficos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    gap: 2.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .graficos > section { min-width: 0; margin: 0; }
+  header { margin-bottom: 1.5rem; }
+  h4 { margin: 0; font-size: 1rem; font-weight: 600; }
+  header > span { color: var(--sl-color-gray-3); font-size: 0.8125rem; }
+  .series { list-style: none; margin: 0; padding: 0; }
+  .series li { margin: 0 0 1rem; padding: 0; }
+  .etiqueta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+  data { color: var(--sl-color-white); white-space: nowrap; }
+  .pista {
+    height: 1.375rem;
+    margin: 0;
+    border-inline-start: 1px solid var(--sl-color-gray-3);
+    background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(25% - 1px), var(--sl-color-hairline-light) calc(25% - 1px), var(--sl-color-hairline-light) 25%);
+  }
+  .barra { display: block; height: 100%; background: var(--sl-color-gray-3); border-radius: 0 2px 2px 0; }
+  .destacado .barra { background: var(--sl-color-text-accent); }
+  .destacado .etiqueta { color: var(--sl-color-text-accent); font-weight: 600; }
+  .destacado data { color: inherit; }
+  .eje { display: flex; justify-content: space-between; margin: 0; color: var(--sl-color-gray-3); font-size: 0.75rem; }
+</style>

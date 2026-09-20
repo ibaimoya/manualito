@@ -1,0 +1,144 @@
+site-search dialog {
+  width: calc(100% - 2rem);
+  max-width: 44rem;
+  height: max-content;
+  min-height: 12rem;
+  max-height: calc(100dvh - min(10vh, 5rem) - 1rem);
+  margin: min(10vh, 5rem) auto auto;
+  border-color: var(--sl-color-hairline-light);
+  border-radius: var(--m-r-lg);
+  background: var(--sl-color-bg);
+}
+
+site-search .dialog-frame {
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+site-search button[data-close-modal] { height: 3.25rem; }
+
+#starlight__search {
+  --pagefind-ui-scale: 1;
+  --pagefind-ui-background: var(--sl-color-bg);
+  --pagefind-ui-border-radius: 0.75rem;
+  --pagefind-ui-text: var(--sl-color-gray-2);
+  --sl-search-result-spacing: 1rem;
+}
+
+#starlight__search .pagefind-ui__search-input {
+  height: 3.25rem;
+  padding-inline: 3rem;
+  font-size: 1rem;
+  background: var(--sl-color-bg-sidebar);
+}
+
+#starlight__search .pagefind-ui__search-input::placeholder {
+  color: var(--sl-color-gray-3);
+  opacity: 1;
+}
+
+#starlight__search .pagefind-ui__search-input:focus {
+  outline: 2px solid var(--sl-color-text-accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+#starlight__search .pagefind-ui__form::before { top: 1.0625rem; left: 1rem; }
+#starlight__search .pagefind-ui__search-clear { top: 0.125rem; width: 3rem; height: 3rem; }
+#starlight__search .pagefind-ui__results-area { margin-top: 0.5rem; }
+
+#starlight__search .pagefind-ui__drawer {
+  max-height: min(34rem, calc(100dvh - 15rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#starlight__search .pagefind-ui__message {
+  height: auto;
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--sl-color-gray-3);
+}
+
+#starlight__search .pagefind-ui__result {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--sl-color-hairline-light);
+}
+
+#starlight__search .pagefind-ui__result:last-of-type { padding-bottom: 0; border: 0; }
+#starlight__search .pagefind-ui__result-inner { min-width: 0; gap: 0.25rem; }
+
+#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title,
+#starlight__search .pagefind-ui__result-nested {
+  padding: 0.625rem 0.75rem 0.625rem 2.5rem;
+  border-radius: 0.625rem;
+  background: transparent;
+  outline: none;
+}
+
+#starlight__search .pagefind-ui__result-title { font-size: 1rem; line-height: 1.45; }
+#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title { font-family: var(--m-font-display); }
+#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title a { font-weight: 750; }
+
+#starlight__search .pagefind-ui__result-nested .pagefind-ui__result-link {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--sl-color-gray-1);
+}
+
+#starlight__search .pagefind-ui__result-nested::before,
+#starlight__search .pagefind-ui__result-link::before { content: none; }
+
+#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title::before {
+  width: 1.125rem;
+  inset-inline-start: 0.75rem;
+  background-color: var(--sl-color-text-accent);
+}
+
+#starlight__search .pagefind-ui__result-excerpt {
+  min-width: 0;
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--sl-color-gray-2);
+}
+
+#starlight__search mark {
+  color: var(--sl-color-white);
+  background: color-mix(in srgb, var(--sl-color-accent) 12%, transparent);
+  border-radius: 0.125rem;
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  #starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title:hover,
+  #starlight__search .pagefind-ui__result-nested:hover {
+    background: color-mix(in srgb, var(--sl-color-gray-1) 5%, transparent);
+  }
+}
+
+#starlight__search .pagefind-ui__result-inner > .pagefind-ui__result-title:has(> a:focus-visible),
+#starlight__search .pagefind-ui__result-nested:has(a:focus-visible) {
+  outline: 2px solid var(--sl-color-text-accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--sl-color-accent) 7%, transparent);
+}
+
+#starlight__search .pagefind-ui__result-link:focus-visible { outline: none; }
+#starlight__search .pagefind-ui__button { margin-top: 1.25rem; height: 2.75rem; font-size: 0.875rem; }
+#starlight__search .pagefind-ui__button:focus-visible { outline: 2px solid var(--sl-color-text-accent); outline-offset: 2px; }
+
+@media (max-width: 49.999rem) {
+  site-search dialog {
+    width: calc(100% - 1rem);
+    max-height: calc(100dvh - 1rem);
+    margin: 0.5rem auto;
+    border-radius: var(--m-r-md);
+  }
+  site-search .dialog-frame { padding: 0.75rem; }
+  #starlight__search { --sl-search-cancel-space: 5.25rem; }
+  #starlight__search .pagefind-ui__drawer { max-height: calc(100dvh - 8rem); }
+}

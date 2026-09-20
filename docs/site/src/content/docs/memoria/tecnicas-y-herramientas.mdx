@@ -1,0 +1,150 @@
+---
+title: Técnicas y herramientas
+description: Metodologías, herramientas, calidad y despliegue empleados en Manualito.
+sidebar:
+  order: 4
+---
+
+import Figura from '../../../components/Figura.astro';
+import repositorio from '../../../assets/memoria/tecnicas-y-herramientas/repositorio.svg';
+import strategyFactory from '../../../assets/memoria/tecnicas-y-herramientas/strategy-factory.svg';
+import flujoInformacion from '../../../assets/memoria/tecnicas-y-herramientas/flujo-informacion.svg';
+import despliegue from '../../../assets/memoria/tecnicas-y-herramientas/despliegue.svg';
+
+El desarrollo de *Manualito* ha combinado la construcción de la aplicación web con la comparación de alternativas para procesar los manuales y generar respuestas. Para coordinar ambas partes, se ha trabajado por iteraciones, con herramientas que permiten programar, experimentar y comprobar los cambios antes de incorporarlos a la aplicación.
+
+## Metodologías y organización
+
+<div id="herramientas:organizacion"></div>
+
+### Desarrollo iterativo y pruebas
+
+El desarrollo ágil permite incorporar cambios a medida que se conoce mejor el problema, mediante entregas frecuentes y revisiones del trabajo realizado [[34](https://agilemanifesto.org/iso/es/principles.html)]. En *Manualito* se siguió este enfoque con iteraciones y un tablero Kanban, donde las tareas pasaban de pendientes a en curso y terminadas. Así se podía revisar el avance y ajustar las prioridades de la siguiente iteración, mientras que las estimaciones y el tiempo dedicado quedaban registrados para su seguimiento en el Anexo A.
+
+Con TDD, las pruebas guían el desarrollo, de modo que primero se expresa el comportamiento esperado mediante una prueba que todavía falla y después se implementa lo necesario y se mejora la estructura del código conservando ese comportamiento [[35](https://agilealliance.org/glossary/tdd/)]. Este enfoque se aplicó en el desarrollo de los módulos de procesamiento, como se recoge en el apartado [5.2](/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/#aspectos:metodologia).
+
+La elección de motores y modelos se apoyó, además, en *benchmarks*, es decir, pruebas preparadas para comparar alternativas bajo unas condiciones definidas. Según el componente, se observaban los errores de reconocimiento, la recuperación del texto pertinente o la respuesta generada, junto con el tiempo y la memoria necesarios. De este modo, una mejora en calidad se podía valorar también por su coste de ejecución.
+
+### Control de versiones y seguimiento
+
+El proyecto utiliza Git para conservar el historial del código y comenzó alojándose en la instancia de GitLab propuesta por HP SCDS. Cuando se planteó cambiar el alojamiento, se valoró migrar directamente a GitHub o esperar a Origin, la plataforma de alojamiento de código de Cursor [[36](https://cursor.com/changelog/origin-code-hosting)].
+
+Se eligió GitHub para continuar con una plataforma consolidada, ya que, aunque Origin se publicara en ese momento, su adopción habría supuesto depender de un servicio recién estrenado. GitLab se mantuvo para conservar la trazabilidad del trabajo realizado con HP SCDS.
+
+Las *issues* y los hitos permiten relacionar cada cambio con una necesidad y una iteración, y las solicitudes de integración sirven para revisarlo antes de incorporarlo a una rama compartida. El seguimiento puede consultarse en las [iteraciones del repositorio](https://github.com/ibaimoya/manualito/milestones?state=closed).
+
+La estrategia utilizada distingue ramas de tarea y ramas por entorno, por lo que un cambio puede desarrollarse por separado y pasar después por `development`, `staging` y `master`. Para mantener un criterio común al registrar y publicar esos cambios se utilizan *Conventional Commits*, SemVer y *Keep a Changelog*, que regulan los mensajes, la numeración de versiones y las notas de cambios, respectivamente [[37](https://www.conventionalcommits.org/en/v1.0.0/)] [[38](https://semver.org/)] [[39](https://keepachangelog.com/en/1.1.0/)]. La aplicación concreta de estas convenciones y la migración entre plataformas se desarrollan en el apartado [5.3](/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/#aspectos:organizacion).
+
+## Desarrollo de la aplicación
+
+### Lenguajes y entorno de trabajo
+
+Python, FastAPI y React formaban parte de los requisitos tecnológicos establecidos por HP SCDS. Python se utiliza en los servicios del servidor y en los experimentos, mientras que TypeScript permite comprobar los tipos de los datos de la interfaz durante el desarrollo, con el modo estricto activado para detectar más errores antes de ejecutar la aplicación [[40](https://www.typescriptlang.org/tsconfig/strict.html)]. PyCharm se eligió por reunir la edición, la depuración y la gestión de entornos Python en una misma herramienta [[41](https://www.jetbrains.com/help/pycharm/quick-start-guide.html)].
+
+Las dependencias de Python se gestionan con uv y las de la interfaz con pnpm, junto con Node.js para ejecutar sus herramientas. Los archivos de bloqueo conservan las versiones resueltas, de modo que las instalaciones puedan reproducirse sin elegir de nuevo las dependencias en cada equipo. En la elección de pnpm pesó, además, el control sobre los scripts que pueden ejecutar las dependencias al instalarse, ya que el proyecto autoriza expresamente cuáles pueden hacerlo [[42](https://pnpm.io/settings/build#allowbuilds)]. Las versiones y las instrucciones de preparación se recogen en el Anexo D.
+
+### Interfaz web
+
+React permite construir la interfaz mediante componentes que reúnen su apariencia y comportamiento [[43](https://react.dev/learn)]. En *Manualito* se utiliza para las pantallas del catálogo, la biblioteca, los manuales y las conversaciones. Para preparar y construir esa interfaz se eligió Vite, porque las pantallas se ejecutan en el navegador y las operaciones del servidor ya se resuelven con FastAPI. Esta separación permitió optar por Vite frente a un entorno más amplio como Next.js [[44](https://vite.dev/guide/)] [[45](https://nextjs.org/docs)].
+
+Las bibliotecas de apoyo se agrupan en la tabla [4.1](#tabla:herramientas-interfaz) según la función que cumplen en la aplicación.
+
+<div id="tabla:herramientas-interfaz"></div>
+
+<div class="tabla-documento" role="region" aria-label="Tabla 4.1. Bibliotecas principales de la interfaz." tabindex="0"> <table> <caption>Tabla 4.1. Bibliotecas principales de la interfaz.</caption> <thead><tr><th scope="col"><strong>Herramientas</strong></th><th scope="col"><strong>Uso en el proyecto</strong></th></tr></thead> <tbody><tr><th scope="row">Tailwind CSS y Radix UI</th><td>Estilos y controles con componentes del patrón de shadcn/ui, elegido para poder modificar su código y adaptar su apariencia <a href="https://ui.shadcn.com/docs">[46]</a>.</td></tr><tr><th scope="row">TanStack Router y Query</th><td>Navegación con comprobación de tipos en rutas y parámetros, y gestión de los datos del servidor. Se eligieron por esa comprobación y por su integración conjunta <a href="https://tanstack.com/router/latest/docs/overview">[47]</a>.</td></tr><tr><th scope="row">i18next y react-i18next</th><td>Traducción de los textos de la interfaz.</td></tr><tr><th scope="row">Motion y Sonner</th><td>Animaciones y notificaciones sobre el resultado de las acciones.</td></tr><tr><th scope="row">NumberFlow y Embla Carousel</th><td>Transiciones de cifras y carruseles de contenido.</td></tr><tr><th scope="row">react-markdown y remark-gfm</th><td>Presentación de las respuestas con listas, enlaces y tablas.</td></tr></tbody> </table> </div>
+
+### Servidor, datos y tareas en segundo plano
+
+FastAPI permite definir las operaciones que ofrece cada servicio y validar los datos que recibe con Pydantic, además de generar documentación interactiva a partir de esas definiciones [[48](https://fastapi.tiangolo.com/features/)]. En el proyecto se emplea tanto en el servidor principal como en los servicios de reconocimiento, recuperación y generación, manteniendo separadas sus responsabilidades.
+
+PostgreSQL conserva las cuentas, los juegos, los manuales y las conversaciones. El acceso se realiza con SQLAlchemy, que relaciona los modelos de Python con las tablas y permite trabajar con sus datos, mientras que Alembic registra los cambios del esquema en migraciones que se aplican de forma ordenada [[49](https://docs.sqlalchemy.org/en/20/orm/quickstart.html)] [[50](https://alembic.sqlalchemy.org/en/latest/)]. El catálogo de juegos incorpora también información obtenida de BoardGameGeek, que se guarda para reutilizarla en las consultas posteriores.
+
+El procesamiento de un manual o la generación de una respuesta pueden necesitar más tiempo que una operación habitual sobre esos datos, por lo que, se incorporó Celery para ejecutar estos trabajos fuera del proceso que atiende las peticiones y poder gestionar sus reintentos. Frente a mantener el procesamiento de manuales dentro de las tareas en segundo plano de FastAPI, esta separación permite dedicar procesos específicos al trabajo pesado [[51](https://fastapi.tiangolo.com/tutorial/background-tasks/)] [[52](https://docs.celeryq.dev/en/stable/getting-started/introduction.html)].
+
+Redis actúa como intermediario de mensajes, mientras que el servidor registra la solicitud y la interfaz consulta su avance sin mantener abierta la petición inicial.
+
+### Patrones de diseño
+
+Para mostrar los juegos seguidos por un usuario hay que recuperar sus datos y preparar la respuesta que recibirá la interfaz. El patrón repositorio separa estas responsabilidades al concentrar las consultas y escrituras en un componente específico [[53](https://www.cosmicpython.com/book/chapter_02_repository.html)] (cap. 2). En *Manualito* se adapta mediante módulos de funciones para juegos, manuales y conversaciones. Como muestra la figura [4.1](#fig:patron-repositorio), el repositorio ejecuta las consultas con SQLAlchemy y devuelve los datos al servicio, que prepara la respuesta para la interfaz.
+
+ <Figura id="fig:patron-repositorio" src={repositorio} alt="Patrón repositorio aplicado a la consulta de juegos seguidos"> Figura 4.1. Patrón repositorio aplicado a la consulta de juegos seguidos </Figura>
+
+En el reconocimiento de texto, *Strategy* permite utilizar distintos motores mediante una interfaz común. Tesseract y las variantes de PaddleOCR reciben una imagen y devuelven líneas de texto con su confianza, aunque cada motor realice el reconocimiento de forma distinta. La elección se deja a una factoría sencilla (*Factory*), que crea el motor indicado en la configuración [[54](https://www.pmi.org/disciplined-agile/the-design-patterns-repository/the-strategy-pattern)].
+
+La figura [4.2](#fig:patrones-strategy-factory) ilustra ambos mecanismos con PaddleOCR para CPU como ejemplo. El motor de PaddleOCR se crea cuando se necesita por primera vez y se reutiliza dentro del mismo proceso, de modo que su modelo no se vuelve a cargar para cada página.
+
+ <Figura id="fig:patrones-strategy-factory" src={strategyFactory} alt="Patrones Strategy y Factory en el reconocimiento de texto"> Figura 4.2. Patrones *Strategy* y *Factory* en el reconocimiento de texto </Figura>
+
+Para incorporar otro motor hay que implementar la interfaz común y registrar su creación en la factoría, mientras que el código que solicita la extracción puede conservar la misma llamada. El Anexo C detalla la distribución de estas responsabilidades en el software.
+
+## Procesamiento de manuales y modelos
+
+### Extracción y reconocimiento
+
+Para obtener el contenido de los documentos se utiliza PDFium a través de pypdfium2, que permite acceder al texto de un PDF y representar sus páginas como imágenes [[55](https://pypdfium2.readthedocs.io/en/stable/python_api.html)]. Cuando hace falta reconocer el texto de una imagen, el servicio dispone de Tesseract y PaddleOCR. Tesseract se integra mediante pytesseract, mientras que PaddleOCR utiliza PaddlePaddle y ofrece variantes para el procesador y para la tarjeta gráfica [[56](https://tesseract-ocr.github.io/tessdoc/)] [[57](https://arxiv.org/abs/2507.05595)].
+
+Durante la investigación se compararon estos motores con EasyOCR [[58](https://github.com/JaidedAI/EasyOCR)], que no se incorporó al servicio. Tesseract se mantiene como opción predeterminada por compatibilidad, mientras que PaddleOCR permite priorizar la calidad del reconocimiento cuando los recursos lo permiten. Sus resultados y el reparto de memoria gráfica con el modelo de lenguaje se explican en el apartado [5.4](/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/#aspectos:investigacion).
+
+OpenCV se emplea para preparar las imágenes mediante operaciones de reescalado, contraste, filtrado y conversión de color [[59](https://docs.opencv.org/4.13.0/d7/dbd/group__imgproc.html)], con Pillow y NumPy como bibliotecas de apoyo. Los *benchmarks* compararon estas transformaciones con la imagen sin modificar, ya que aplicar más tratamientos no implica reconocer mejor. La configuración puede variar según el motor, como ocurre con el reescalado y la conversión a grises de Tesseract frente al ajuste de contraste utilizado con PaddleOCR.
+
+### Recuperación del contenido
+
+Sentence Transformers permite cargar el modelo de embeddings desde Hugging Face y convertir las preguntas y los *chunks* en vectores. Se utiliza `intfloat/multilingual-e5-small`, cuya preparación distingue las consultas de los pasajes mediante los prefijos `query:` y `passage:`, conforme a las indicaciones de su ficha técnica [[60](https://huggingface.co/intfloat/multilingual-e5-small/raw/main/README.md)].
+
+La elección se apoyó en una comparación entre las variantes *small* y *base* de E5, MiniLM multilingüe y una variante MiniLM orientada al inglés. Se valoraron la recuperación del pasaje esperado y el tiempo necesario para generar los vectores. El apartado [5.4](/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/#aspectos:investigacion) recoge los resultados y las limitaciones del conjunto sintético utilizado.
+
+ChromaDB conserva los vectores y permite buscarlos por similitud aplicando filtros sobre sus metadatos [[61](https://docs.trychroma.com/docs/overview/introduction)]. En *Manualito* se ejecuta como un servicio independiente y limita la búsqueda a los manuales autorizados. La parte léxica utiliza Snowball para reducir las palabras a sus raíces [[62](https://snowballstem.org/algorithms/spanish/stemmer.html)], junto con una implementación propia de BM25; después, otra implementación propia combina los resultados mediante RRF.
+
+También se compararon cortes de tamaño fijo y recursivos, con distintos tamaños y solapamientos, para observar cómo afectaban a la recuperación. La aplicación utiliza una división recursiva con un tamaño de 1024 caracteres y un solapamiento de 128. Los resultados de esta comparación se distinguen de las pruebas posteriores sobre el servicio real, ya que utilizan conjuntos y condiciones diferentes.
+
+### Ejecución y selección de modelos de lenguaje
+
+Ollama permite ejecutar los modelos localmente y solicitar respuestas indicando el modelo y las opciones de generación [[63](https://docs.ollama.com/api/generate)]. De esta forma, la aplicación puede cambiar de modelo mediante la configuración, conservando la misma comunicación con el servicio de lenguaje.
+
+Durante las pruebas se compararon modelos de las familias Llama, Qwen, Phi, Gemma, DeepSeek, Ministral y Granite, además de probar distintas cuantizaciones en las primeras pruebas. Se valoraron la fidelidad al contexto, el idioma, la respuesta ante preguntas sin información suficiente y el comportamiento cuando aparecían contradicciones o excepciones, junto con el tiempo de generación y la memoria gráfica ocupada.
+
+Para revisar las respuestas se utilizó el enfoque *LLM-as-a-judge*, en el que otros modelos actúan como evaluadores siguiendo unos criterios escritos [[64](https://arxiv.org/abs/2306.05685)]. Las iteraciones posteriores emplearon tres jueces y combinaron sus veredictos por mayoría, registrando también sus desacuerdos. Esta evaluación facilita la comparación, aunque el acuerdo entre modelos no sustituye la comprobación humana de una respuesta.
+
+La aplicación ofrece un perfil ligero con `granite3.3:2b`, para equipos con menos memoria gráfica, y un perfil alto con `gemma4:e4b`. Las comparaciones ayudaron a elegirlos y se complementaron con simulaciones de uso real, sin tratar las puntuaciones de los jueces como una decisión automática. En este último perfil, Gemma también se emplea para la corrección del texto reconocido en el posprocesado del *pipeline* de *Optical Character Recognition* (OCR).
+
+La figura [4.3](#fig:herramientas-flujo-informacion) muestra el recorrido desde la subida del manual hasta la conversación, con un bucle que resume el tratamiento de las páginas aunque puedan procesarse en paralelo. Al iniciar la conversación, el título se genera en segundo plano a partir del primer mensaje.
+
+ <Figura id="fig:herramientas-flujo-informacion" src={flujoInformacion} alt="Diagrama de actividades del procesamiento de un manual y la consulta de sus reglas"> Figura 4.3. Diagrama de actividades del procesamiento de un manual y la consulta de sus reglas </Figura>
+
+### Notebooks de Jupyter
+
+Los *notebooks* de Jupyter reúnen el método, las tablas y las gráficas de los *benchmarks*. Los archivos de resultados conservan las mediciones, de modo que pueden consultarse sin volver a ejecutar los modelos. Para representar las comparaciones se utilizó Matplotlib, mientras que la evaluación de recuperación emplea ranx [[65](https://amenra.github.io/ranx/)] para comprobar la presencia y la posición del fragmento esperado.
+
+El índice de `docs/benchmarks/` enlaza los ocho estudios principales y dos comparaciones anteriores [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)]. Por defecto, los notebooks leen los resultados guardados. Repetir las mediciones requiere activar la ejecución y preparar las dependencias o los servicios indicados en cada estudio. La interpretación y las decisiones que apoyaron se recogen en el apartado [5.4](/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/#aspectos:investigacion).
+
+## Calidad y pruebas
+
+Las comprobaciones se ejecutan localmente y mediante GitHub Actions y GitLab CI/CD, por lo que los cambios pueden revisarse con los mismos criterios antes de incorporarlos al proyecto. Las herramientas se agrupan por su finalidad en la tabla [4.2](#tabla:herramientas-calidad), mientras que el apartado [5.7](/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/#aspectos:automatizacion) recoge cuándo se ejecuta cada comprobación.
+
+<div id="tabla:herramientas-calidad"></div>
+
+<div class="tabla-documento" role="region" aria-label="Tabla 4.2. Herramientas de revisión y pruebas. Elaboración propia a partir de las dependencias y los flujos del proyecto [4] [66]." tabindex="0"> <table> <caption>Tabla 4.2. Herramientas de revisión y pruebas. Elaboración propia a partir de las dependencias y los flujos del proyecto <a href="https://github.com/ibaimoya/manualito">[4]</a> <a href="https://github.com/ibaimoya/manualito/tree/ce24436777ffbcf20e96cf88c8f9cfecd9388f0d/.github/workflows">[66]</a>.</caption> <thead><tr><th scope="col"><strong>Herramientas</strong></th><th scope="col"><strong>Uso en el proyecto</strong></th></tr></thead> <tbody><tr><th scope="row">Ruff y mypy</th><td>Revisión estática y comprobación de tipos en Python.</td></tr><tr><th scope="row">ESLint, TypeScript y Prettier</th><td>Revisión del código, comprobación de tipos y formato de la interfaz.</td></tr><tr><th scope="row">pytest y pytest-cov</th><td>Pruebas del servidor y obtención de cobertura.</td></tr><tr><th scope="row">Vitest y cobertura V8</th><td>Pruebas de la interfaz y obtención de cobertura.</td></tr><tr><th scope="row">Testing Library, MSW, jsdom y jest-axe</th><td>Interacción con componentes, simulación de respuestas externas y comprobaciones de accesibilidad en las pruebas.</td></tr><tr><th scope="row">Playwright</th><td>Comprobación de recorridos de uso desde el navegador mediante agentes.</td></tr><tr><th scope="row">pre-commit</th><td>Comprobaciones locales de los archivos y de las convenciones de los commits.</td></tr><tr><th scope="row">Dependabot y pnpm audit</th><td>Actualización de las dependencias configuradas y consulta de avisos de vulnerabilidades.</td></tr></tbody> </table> </div>
+
+SonarQube Cloud reúne el análisis de calidad y los informes de cobertura, de modo que se puedan localizar problemas, duplicaciones y partes del código que requieren revisión [[67](https://docs.sonarsource.com/sonarqube-cloud)].
+
+## Despliegue
+
+Docker permite gestionar cada servicio con sus dependencias dentro de un contenedor, mientras que Docker Compose define cómo se ejecutan juntos, con sus redes y volúmenes de datos [[68](https://docs.docker.com/compose/)]. En Windows se utiliza Docker Desktop, y los perfiles del proyecto permiten adaptar los motores de reconocimiento y lenguaje a los recursos disponibles.
+
+Caddy se eligió frente a a Nginx por la sencillez de su configuración y la gestión automática de certificados, que permite emitirlos y renovarlos sin incorporar una herramienta adicional [[69](https://caddyserver.com/docs/automatic-https)]. Sirve la interfaz y dirige las peticiones al servidor [[70](https://caddyserver.com/docs/quick-starts/reverse-proxy)].
+
+Cloudflare Tunnel se eligió para ofrecer acceso exterior desde el equipo donde se ejecuta la aplicación sin abrir puertos de entrada en el router. Su conector cloudflared establece la conexión hacia Cloudflare, por lo que tampoco es necesario disponer de una dirección pública fija para ese equipo [[71](https://developers.cloudflare.com/tunnel/)].
+
+Terraform conserva como código la configuración de los recursos de Cloudflare, de modo que los cambios de infraestructura puedan revisarse y aplicarse mediante un procedimiento definido [[72](https://developer.hashicorp.com/terraform/intro)]. Por su parte, Cloudflare Workers aloja los recursos estáticos y Workers Builds automatiza la construcción y publicación de la documentación [[73](https://developers.cloudflare.com/workers/static-assets/)] [[74](https://developers.cloudflare.com/workers/ci-cd/builds/)], con Wrangler como herramienta de configuración y despliegue.
+
+Para comprobar el funcionamiento del entorno se utilizan Flower, que permite consultar los procesos de Celery y sus tareas, y Mailpit, que recoge los correos de desarrollo sin enviarlos a sus destinatarios. En el despliegue público se utiliza Resend para entregar los mensajes de verificación de cuenta y recuperación de contraseña [[75](https://resend.com/docs/send-with-smtp)]. El proveedor se elige durante la preparación del entorno, mientras que el envío sigue realizándose mediante una tarea de Celery. Las instrucciones de configuración, arranque y diagnóstico se detallan en el Anexo D.
+
+La figura [4.4](#fig:herramientas-despliegue) muestra el despliegue con el acceso público activado y agrupa los servicios por función, separando los alojados en Cloudflare de los que se ejecutan en el equipo servidor. La documentación no depende de que ese equipo esté encendido, mientras que la aplicación sí.
+
+ <Figura id="fig:herramientas-despliegue" src={despliegue} alt="Despliegue de la aplicación y su documentación"> Figura 4.4. Despliegue de la aplicación y su documentación </Figura>
+
+## Documentación y apoyo al desarrollo
+
+La documentación web se prepara con Astro y Starlight a partir de archivos Markdown y MDX, de forma que las guías puedan mantenerse junto al código y publicarse como un sitio navegable [[76](https://docs.astro.build/en/getting-started/)] [[77](https://starlight.astro.build/getting-started/)]. La memoria y los anexos se redactan en LaTeX mediante Overleaf, utilizando su control de versiones.
+
+En lo referente al diseño de interfaces, se probó Claude Design [[78](https://www.anthropic.com/news/claude-design-anthropic-labs)] como apoyo, aunque, se descartó por tener un coste demasiado elevado.

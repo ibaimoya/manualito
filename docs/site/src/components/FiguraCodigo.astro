@@ -1,0 +1,37 @@
+---
+import { Code } from '@astrojs/starlight/components';
+
+interface Props {
+  id: string;
+  code: string;
+  lang: string;
+  title: string;
+}
+
+const { id, code, lang, title } = Astro.props;
+---
+
+<figure {id} aria-labelledby={`${id}-caption`}>
+  <Code {code} {lang} {title} frame="terminal" />
+  <figcaption id={`${id}-caption`}><slot /></figcaption>
+</figure>
+
+<style>
+  figure {
+    min-width: 0;
+    margin-block: 2rem;
+  }
+
+  figcaption {
+    margin-block-start: 0.625rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  figcaption :global(p) {
+    margin: 0;
+  }
+</style>

@@ -1,0 +1,212 @@
+---
+title: Aspectos relevantes del desarrollo del proyecto
+description: Decisiones técnicas, seguridad, pruebas, automatización y publicación del proyecto.
+sidebar:
+  order: 5
+---
+
+import Figura from '../../../components/Figura.astro';
+import FiguraVector from '../../../components/FiguraVector.astro';
+import flujoRamas from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/flujo-ramas.svg';
+import Benchmark from '../../../components/Benchmark.astro';
+import flujoCicd from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/flujo-cicd.svg';
+import metricasSonarqube from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/metricas-sonarqube.png';
+
+Desde la propuesta inicial hasta la publicación de *Manualito*, el trabajo combinó la investigación técnica con el desarrollo de la aplicación. La organización del proyecto, las decisiones de implementación y las pruebas realizadas permiten entender cómo se llegó al resultado final.
+
+## Inicio del proyecto
+
+<div id="aspectos:inicio"></div>
+
+*Manualito* nace de una propuesta de HP SCDS dentro de su Observatorio Tecnológico, una iniciativa que conecta a la empresa con las universidades mediante propuestas de trabajos de fin de grado [[79](https://hpscds.com/innovacion/observatorio-tecnologico/)].
+
+Tras una primera valoración de la propuesta, en la reunión inicial se explicó la idea con más detalle y se debatió la orientación del proyecto. Las primeras semanas se dedicaron a investigar las tecnologías necesarias y a realizar pruebas técnicas para comprobar la viabilidad del proyecto.
+
+## Metodología de trabajo
+
+<div id="aspectos:metodologia"></div>
+
+El trabajo se organizó mediante una metodología ágil adaptada al desarrollo individual, con iteraciones de aproximadamente dos semanas. En las reuniones de seguimiento se revisaban los avances y las dificultades encontradas para ajustar las prioridades y acordar los objetivos y nuevos requisitos de la siguiente iteración.
+
+Las tareas se registraron en un tablero Kanban, donde se distinguía el trabajo pendiente, en curso y terminado. Las tareas pueden consultarse en el [repositorio del proyecto](https://github.com/ibaimoya/manualito/milestones?state=closed), mientras que el Anexo A recoge las estimaciones, el tiempo dedicado y las desviaciones de cada iteración.
+
+Durante el desarrollo se aplicó un enfoque de desarrollo guiado por pruebas (TDD, del inglés *Test-Driven Development*). La inteligencia artificial ayudó a elaborar las pruebas y el código a partir de instrucciones concretas, y sus propuestas se revisaron antes de incorporarlas al proyecto, como se detalla en el apartado [5.9](#aspectos:uso-ia).
+
+## Organización del desarrollo
+
+<div id="aspectos:organizacion"></div>
+
+Las *issues* se clasifican mediante etiquetas de tipo (`type::...`), prioridad (`priority::...`) y tema (`topic:...`), para distinguir qué se solicita, su urgencia y las áreas afectadas. Cada una debe tener un solo tipo, una sola prioridad y uno o varios temas. Las plantillas asignan el tipo y el estado `status:needs-triage`, que indica que la clasificación está pendiente de revisión. Este estado se retira una vez completadas las etiquetas, mientras que los demás estados `status:...` son temporales y solo puede haber uno activo a la vez [[80](https://github.com/ibaimoya/manualito/blob/master/CONTRIBUTING.md)].
+
+Con motivo de mantener cierta trazabilidad, en *Manualito*, cada tarea debe estar vinculada a una *issue* y se desarrolla en una rama creada a partir de `development`, de modo que sus cambios se preparan por separado antes de incorporarlos a la aplicación. Para añadir funcionalidades se utiliza el formato `feat/<número>-<descripción>`, donde el número corresponde al identificador de la *issue* y la descripción se escribe en minúsculas, con guiones entre palabras.
+
+En la figura [5.1](#fig:aspectos-ramas) se representa el ciclo de vida de un cambio en este proyecto, tal y como se muestra, la rama de tarea se fusiona con la rama `development` cuando está terminada y probada. Desde allí, el conjunto de cambios que se quiere probar pasa a la rama`staging`, desde donde se prueba la aplicación en otro equipo diferente al de desarrollo. Si la revisión es satisfactoria, se integra en la rama `master`, que conserva la última versión estable. Esta estrategia de ramas por entorno, o *branch per environment*, permite seguir incorporando mejoras en `development` mientras se comprueba en `staging` la versión que se prepara para publicar [[81](https://docs.gitlab.com/user/project/repository/branches/strategies/#branch-per-environment)]. Las *pull requests* deben enumerar los cambios y mostar los resultados de las pruebas en su descripción. Las comprobaciones automáticas y los procesos de publicación asociados a cada evento y rama se detallan en el apartado [5.7](#aspectos:automatizacion).
+
+ <FiguraVector id="fig:aspectos-ramas" src={flujoRamas} alt="Recorrido del ciclo de vida de una tarea entre las ramas de Manualito"> Figura 5.1. Recorrido del ciclo de vida de una tarea entre las ramas de *Manualito* </FiguraVector>
+
+Antes de crear un *commit*, la configuración de *pre-commit* ejecuta comprobaciones sobre los archivos implicados. Las comprobaciones configuradas son las siguientes [[82](https://pre-commit.com/)]:
+
+- **Formato de los archivos.** Elimina los espacios sobrantes al final de las líneas, conservando los dos espacios que indican un salto de línea en Markdown, y ajusta los archivos no vacíos para que terminen con un único salto de línea. Estas correcciones excluyen `uv.lock` y `frontend/pnpm-lock.yaml` [[83](https://github.com/pre-commit/pre-commit-hooks/tree/v6.0.0)].
+- **Conflictos pendientes.** Detecta marcas de conflictos sin resolver, incluso cuando no hay una fusión en curso.
+- **Rama de trabajo.** Impide los *commits* directos en `development`, `staging` y `master`, y los realizados sin una rama activa. Comprueba que el nombre de la rama combine el tipo de cambio, el número de la tarea y una descripción breve en minúsculas, con guiones entre palabras. Por ejemplo, `feat/42-mejorar-buscador` representaría una nueva funcionalidad (`feat`) vinculada a la tarea 42 para mejorar el buscador.
+- **Formato del mensaje.** Comprueba el cumplimiento del formato de *Conventional Commits* [[37](https://www.conventionalcommits.org/en/v1.0.0/)]. Las reglas del proyecto limitan los tipos admitidos y exigen minúsculas en el tipo y en el ámbito opcional, con guiones si este contiene varias palabras. La descripción debe comenzar en minúscula, tener al menos 10 caracteres y no contener emojis, espacios en sus extremos ni un punto final. El título completo, incluida la referencia a la tarea, no puede superar los 72 caracteres. También reduce los espacios consecutivos del título a uno solo.
+- **Referencias a tareas.** Comprueba que el título del *commit* incluya el número de la tarea de su rama. Lo añade si no hay referencias y rechaza el mensaje si solo aparecen otras tareas. Las referencias adicionales se agrupan al final del mensaje en una línea `Refs:`, separada del texto por una línea en blanco. Rechaza números no válidos, referencias repetidas o menciones como `#42` fuera de esos lugares, aunque permite enlaces completos en el resto del mensaje.
+- **Cambios incompatibles.** Cuando el mensaje declara uno, exige tanto el signo `!` en el título como un único pie `BREAKING CHANGE:` acompañado de una explicación.
+
+Se excluyen de esta comprobación los mensajes de `merge` y `revert`, así como los que comienzan por `fixup!`, `squash!` o `amend!`. Si estas correcciones modifican archivos, indica al desarrollador que hay revisarlos y volver a añadirlos al *commit* antes de completarlo.
+
+La elección entre las plataformas de alojamiento se recoge en el apartado [4.1](/memoria/tecnicas-y-herramientas/#herramientas:organizacion). Respecto a la ubicación del repositorio, el proyecto se alojó inicialmente en la instancia privada de GitLab de HP SCDS, sin embargo, al comienzo del octavo *sprint*, se decidió migrar el proyecto a GitHub cuando los *runners* de *Continuous Integration* (CI) alojados en dicha infraestructura empezaron a fallar, lo que dificultaba mantener y mejorar la integración continua y el despliegue continuo. La adaptación del flujo de trabajo y la réplica de las tareas de GitLab se recogen en la [*issue* #63](https://github.com/ibaimoya/manualito/issues/63). Pese a esto, GitLab conservó una copia del código y su configuración de integración continua, además del seguimiento del proyecto. Las *issues* se replicaron en ambas plataformas para mantener su trazabilidad.
+
+## Investigación y decisiones técnicas
+
+<div id="aspectos:investigacion"></div>
+
+La elección de motores y modelos no dependía únicamente de la calidad de sus resultados, ya que también debían ejecutarse con los recursos del equipo disponible. Para valorar ese equilibrio se prepararon comparaciones del reconocimiento, la recuperación y la generación de respuestas. Sus resultados sirvieron de apoyo a las decisiones, junto con las comprobaciones realizadas durante el uso de la aplicación.
+
+Los ocho estudios principales se encuentran en `docs/benchmarks/`, junto con dos comparaciones anteriores de preprocesado y modelos de lenguaje [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)]. Los *notebooks* incluyen el método y las mediciones guardadas, mientras que las decisiones y los resultados más relevantes se explican aquí.
+
+### Reconocimiento y corrección del texto
+
+Se compararon Tesseract, PaddleOCR y EasyOCR con imágenes sintéticas y tres documentos reales. En estos últimos, PaddleOCR obtuvo una tasa media de error de caracteres del 10,92 %, frente al 20,55 % de Tesseract. La variante con GPU mantuvo el error de la variante con CPU, pero redujo el tiempo medio de 116,6 a 11,4 segundos por imagen. Tesseract fue más rápido, con 6,9 segundos, aunque a costa de cometer más errores. La figura [5.2](#fig:benchmark-ocr) resume esta comparación, en la que el error se calcula sobre fragmentos transcritos y cada imagen recibe el mismo peso [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)].
+
+ <Benchmark id="fig:benchmark-ocr" tipo="ocr"> Figura 5.2. Error de caracteres y tiempo de los motores de OCR </Benchmark>
+
+Se priorizó PaddleOCR con GPU cuando había memoria gráfica suficiente, por su combinación de calidad y tiempo. Sin embargo, reservar parte de esa memoria al reconocimiento puede dejar menos espacio para un modelo de lenguaje grande y, si el modelo no cabe por completo, parte de su ejecución puede trasladarse al procesador y a la memoria del sistema, lo que se conoce como *offloading* a CPU y, en conseciencia, reducir la velocidad [[17](https://docs.ollama.com/context-length)] [[84](https://docs.ollama.com/faq#how-can-i-tell-if-my-model-was-loaded-onto-the-gpu)]. Por ello se conservaron alternativas de OCR que permiten reservar la tarjeta gráfica al LLM. La muestra real era pequeña y Tesseract obtuvo menos error en las imágenes sintéticas, por lo que no se consideró que un motor fuera superior en todos los documentos.
+
+El preprocesado se evaluó por motor y frente a la imagen sin modificar. Sobre diez imágenes, se eligieron la ampliación de 2,5 veces y la conversión a grises para Tesseract, y el ajuste de contraste local para PaddleOCR. No bastaba con reducir el error medio, también se exigía mejorar al menos la mitad de las imágenes. Estas opciones se incorporaron al servicio, sin asumir que aplicar más transformaciones mejoraría cualquier documento.
+
+La corrección posterior con ayuda del LLM, se planteó como una ayuda conservadora. Su prioridad era no alterar reglas que ya estuvieran bien y no añadir información falsa, antes que corregir el mayor número posible de líneas. Por ello, el modelo solo interviene en una franja de confianza del reconocimiento y sus propuestas pasan por un consenso. Este consenso consiste en solicitar al mismo modelo tres propuestas de corrección para cada línea cuya puntuación de confianza esté dentro del rango establecido y solo aceptar aquellos cambios que coinciden en al menos dos de las propuestas. En el conjunto real se corrigieron completamente 2 de las 24 líneas con errores evaluadas, sin modificar las 12 líneas correctas. El error de caracteres bajó del 18,49 % al 18,04 % sobre las mismas líneas.
+
+El corrector aislado resolvió 31 de 34 líneas sintéticas que tenían errores, pero esa cifra no representa el resultado del flujo completo, que trabaja con otros casos y aplica los filtros anteriores. Se aceptó una mejora reducida como complemento del reconocimiento, teniendo en cuenta que, la fuente de verdad sigue siendo el manual, porque una propuesta del modelo puede parecer razonable y, aun así, introducir información que no estaba en el documento.
+
+### Fragmentación y recuperación
+
+La comparación de *embeddings* utilizó 36 pasajes sintéticos y 24 consultas. E5-small recuperó un pasaje válido entre los tres primeros en 23 consultas, igual que E5-base y MiniLM multilingüe, pero lo situó primero con mayor frecuencia. Además, necesitó 1,92 milisegundos por documento frente a los 7,24 de E5-base. Esto apoyó su elección para la ejecución local, aunque solo se conservan los resultados agregados y el conjunto no permite asegurar el mismo rendimiento con cualquier manual.
+
+En la fragmentación se compararon siete configuraciones sobre tres manuales sintéticos y diez consultas, entre las que destacó la división recursiva de 1024 caracteres con un solapamiento de 128 utilizada en la aplicación. Esta configuración recuperó el fragmento esperado entre los tres primeros resultados en las diez consultas, con un tiempo medio de 8,51 milisegundos por consulta.
+
+La continuidad del texto se evaluó mediante una medida basada únicamente en el signo de puntuación al final de cada fragmento, por lo que el porcentaje obtenido no permite distinguir de forma fiable entre una frase interrumpida y un corte válido.
+
+La recuperación se comprobó también en el servicio real, con 24 preguntas sobre Catán y Monopoly que incluían fallos detectados durante el desarrollo. La figura [5.3](#fig:benchmark-recuperacion) recoge las mediciones sucesivas [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)], cuyas fechas identifican las ejecuciones guardadas y no pruebas independientes de cada cambio. El fragmento esperado pasó de aparecer entre los cinco primeros en 19 preguntas a hacerlo en 22, y en la última medición se encontró entre los diez primeros en las 24. Esto permite observar la evolución del buscador en el conjunto evaluado, pero encontrar el texto adecuado no demuestra todavía que la respuesta generada a partir de él sea correcta.
+
+ <Benchmark id="fig:benchmark-recuperacion" tipo="recuperacion"> Figura 5.3. Evolución de la recuperación </Benchmark>
+
+### Modelos de lenguaje y recursos disponibles
+
+Las comparaciones de modelos se utilizaron como orientación, no como una selección automática. Se valoraron respuestas a preguntas directas y a casos con información insuficiente, contradicciones o excepciones, junto con la velocidad y la memoria gráfica ocupada. Las pruebas se complementaron con simulaciones de uso real de la aplicación para valorar el comportamiento de los modelos fuera de los casos preparados.
+
+La comparación evaluó ocho modelos con 24 casos y tres repeticiones en una NVIDIA GeForce RTX 4070 SUPER de 12 GB. Gemma 4 E4B obtuvo una puntuación de fidelidad de 0,972 sobre 1 en los casos adversariales, según los jueces automáticos y, con un consumo de 9,84 GB de memoria gráfica.
+
+Por otr parte en el estudio de diez modelos pequeños, Granite 3.3 2B obtuvo 0,944 y consumiendo alrededor de 1,96 GB. Cada punto de la figura [5.4](#fig:benchmark-modelos) representa un modelo según su puntuación media de fidelidad en los casos adversariales y la memoria gráfica registrada [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)]. Los resultados apoyaron la elección de Gemma y Granite para los perfiles alto y ligero, respectivamente, aunque proceden de estudios con distintos conjuntos de jueces y no deben leerse como una clasificación conjunta.
+
+ <Benchmark id="fig:benchmark-modelos" tipo="modelos"> Figura 5.4. Fidelidad media y memoria gráfica usada de los modelos </Benchmark>
+
+Aparecieron desacuerdos entre los jueces, lo que limitó el peso de estas puntuaciones en la decisión final. Por ello, se realizaron una serie de simulaciones de uso que aportaron una comprobación complementaria. Del mismo modo, el límite de 4 GB del estudio ligero se contrastó con la memoria ocupada en una tarjeta de mayor capacidad, no mediante una prueba física en una tarjeta de 4 GB. La elección de un perfil depende, por tanto, de los recursos que queden disponibles para el conjunto de la aplicación.
+
+## Seguridad
+
+<div id="aspectos:seguridad"></div>
+
+Para proteger las cuentas, evitar el acceso a datos ajenos y limitar el uso abusivo del servicio, se incorporaron las siguientes medidas de seguridad:
+
+- **Credenciales.** Las contraseñas se guardan mediante Argon2id y se comprueba su longitud [[85](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)]. Si la cuenta no existe, se utiliza un *hash dummy* para comprobar igualmente la contraseña y reducir las diferencias de tiempo que podrían revelar si existe. El inicio de sesión devuelve el mismo error ante una cuenta inexistente o una contraseña incorrecta, mientras que la recuperación y el reenvío de verificación utilizan mensajes que no confirman si el correo está registrado [[86](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)].
+- **Sesiones y recuperación.** Las sesiones utilizan identificadores aleatorios cuyos *hashes* se guardan en la base de datos. La *cookie* de sesión incorpora `HttpOnly`, `Secure` y `SameSite=Lax` para impedir su lectura desde JavaScript, exigir conexiones cifradas y limitar su envío desde otros sitios web. En cada petición que requiere autenticación, El servidor comprueba que la sesión no haya caducado y que la cuenta siga activa [[87](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)]. Por otro lado, los enlaces de verificación y recuperación caducan y son de un solo uso. Además, cambiar la contraseña exige indicar la anterior y revoca las otras sesiones, mientras que restablecerla las revoca todas.
+- **Peticiones y permisos.** Los ataques de *Cross-Site Request Forgery* (CSRF) intentan provocar acciones desde otra web aprovechando una sesión abierta. Para protegerse, las operaciones autenticadas que modifican datos exigen un *token* que el servidor comprueba contra el asociado a la sesión [[88](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)]. También se comprueban la propiedad y visibilidad de los recursos y los permisos de administración, para impedir el acceso a datos u operaciones no autorizados.
+- **Límites y archivos.** Se limita la frecuencia de las peticiones a rutas sensibles y el número de cálculos de contraseñas simultáneos para dificultar los intentos repetidos de acceso y la saturación del servicio. Frente a *Regular Expression Denial of Service* (ReDoS), donde ciertos textos pueden hacer que una expresión regular tarde excesivamente, hasta en el peor caso llegar a poder tirar la aplicación, se han sustituido patrones problemáticos de la validación del correo y del procesamiento del texto por operaciones cuyo tiempo crece de forma proporcional al tamaño de la entrada [[89](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html)]. En las subidas se comprueban el formato real, el tamaño, el número de páginas y las dimensiones de las imágenes. También se rechazan rutas que salgan del directorio de almacenamiento y enlaces simbólicos [[90](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)].
+- **Contenido en el navegador.** Los ataques de *Cross-Site Scripting* (XSS) buscan ejecutar código ajeno en la página [[91](https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/XSS)]. Para reducir este riesgo, las páginas de los PDF se muestran como imágenes, que se sirven con su tipo de contenido y la cabecera `X-Content-Type-Options` con el valor `nosniff` para que el navegador respete ese tipo [[92](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Content-Type-Options)]. Las respuestas se muestran con `react-markdown`, que muestra las etiquetas como texto y bloquea los enlaces que utilizan protocolos no permitidos, como `javascript:` [[93](https://github.com/remarkjs/react-markdown#security)].
+- **Inyección de instrucciones (*prompt injection*).** Un mensaje o un manual puede contener instrucciones que intenten desviar al modelo de su tarea [[94](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/mitigate-jailbreaks)]. Para reducir este riesgo, el *prompt* de respuesta distingue las instrucciones internas del historial, los fragmentos del manual y la pregunta. Al modelo se le indica que utilice esos bloques como datos, no como nuevas instrucciones, y que rechace las peticiones de revelar o modificar sus reglas internas. Sin embargo, estas indicaciones no garantizan que todos los intentos de manipulación se rechacen. Esto es una limitación conocida, debido a que implantar guardarraíles es demasiado laborioso para el poco riesgo que tiene este tipo de ataque en este entorno. Es por ello que, se trata de minimizar las consecuencias de este tipo de ataque mediante un filtrado el previo del contexto que se le da según los permisos del usuario que consulta.
+- **Bastionado de imágenes y contenedores.** Las imágenes de los servicios propios se configuran para ejecutarse con un usuario sin privilegios de administrador. Para estos servicios, Docker Compose retira las capacidades de Linux, se borran gestores de paquetes y herramientas innecesarias, y se activa `no-new-privileges`, que impide obtener privilegios adicionales al ejecutar otros programas [[95](https://docs.docker.com/reference/cli/docker/container/run/)]. El sistema de archivos se monta en modo de solo lectura, salvo los volúmenes y directorios temporales necesarios [[96](https://docs.docker.com/reference/compose-file/services/)]. Los contenedores de inicialización conservan los permisos que necesitan para preparar esos volúmenes. Con ello se busca limitar el alcance de un posible ataque.
+- **Despliegue y registros.** Caddy cifra el acceso y aplica `Content-Security-Policy` para restringir los recursos que puede cargar el navegador [[97](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html)]. Las bases de datos y los servicios de procesamiento no se exponen directamente a Internet, solamente a la red interna que existe por detrás de Caddy. Las credenciales de infraestructura se suministran como secretos. Los *logs* filtran campos sensibles para evitar exponerlos y Caddy oculta las *cookies* y credenciales de acceso en sus registros.
+
+El Anexo C amplía el diseño de seguridad y la configuración del despliegue.
+
+## Pruebas
+
+<div id="aspectos:pruebas"></div>
+
+Los *benchmarks* del apartado [5.4](#aspectos:investigacion) comparan alternativas de procesamiento. Las pruebas del software comprueban, en cambio, que sus componentes se comporten como se espera, también al introducir cambios.
+
+El proyecto incluye**pruebas unitarias** y de **integración**, ejecutadas con pytest en el servidor y Vitest en la interfaz. Las unitarias comprueban operaciones concretas, como el orden de los resultados al combinar búsquedas, mientras que las de integración verifican que varios componentes funcionen correctamente juntos. Por ejemplo, al crear un manual se comprueba que sus datos puedan consultarse en PostgreSQL y que sus imágenes estén disponibles en el almacenamiento.
+
+Los informes de cobertura permiten identificar qué partes del código se ejecutan durante las pruebas y orientar la revisión de las que quedan fuera. Esta medida se interpreta junto con los casos comprobados, porque recorrer una línea no garantiza haber evaluado todos sus comportamientos. La generación de estos informes y su análisis con SonarQube se explican en el apartado [5.7](#aspectos:automatizacion).
+
+Para comprobar las funcionalidades desde la interfaz, también se realizaron **pruebas de aceptación** mediante **agentes de inteligencia artificial** que utilizaron Playwright para interactuar con el navegador [[98](https://playwright.dev/docs/library)]. Los agentes dirigían las acciones sobre la aplicación y comprobaban su respuesta, con el propósito de contrastar el comportamiento observado con los requisitos del proyecto.
+
+El Anexo D recoge la organización y las instrucciones de ejecución de las pruebas automatizadas, mientras que la participación de la inteligencia artificial se amplía en el apartado [5.9](#aspectos:uso-ia).
+
+## Integración continua y despliegue continuo
+
+<div id="aspectos:automatizacion"></div>
+
+La integración continua actúa como malla de seguridad al repetir ciertas comprobaciones al enviar cambios y al abrir *pull requests* en GitHub o *merge requests* en GitLab [[99](https://docs.github.com/en/actions/get-started/continuous-integration)] [[100](https://docs.gitlab.com/ci/pipelines/)]. En *Manualito*, estas comprobaciones están replicadas en GitHub Actions y GitLab, aunque el repositorio de referencia se encuentra en GitHub como ya se ha mencionado anteriormente. Cada repositorio conserva su configuración, que agrupa el trabajo en los siguientes bloques [[66](https://github.com/ibaimoya/manualito/tree/ce24436777ffbcf20e96cf88c8f9cfecd9388f0d/.github/workflows)] [[101](https://gitlab.com/HP-SCDS/Observatorio/2025-2026/manualito/ubu-manualito/-/tree/c58f2ec2359e56dd122834806bf4592d2b7e9f8d/.gitlab/ci)]:
+
+- **Servidor.** Ruff revisa el código, mypy comprueba los tipos y pytest ejecuta las pruebas y obtiene la cobertura, con PostgreSQL disponible para las pruebas que necesitan una base de datos.
+- **Migraciones.** Alembic aplica los cambios sobre una base de datos y comprueba que los modelos no requieran una migración pendiente.
+- **Interfaz.** Se revisan el código con ESLint y los tipos con TypeScript, se ejecutan las pruebas con Vitest y se genera la versión de producción.
+- **Despliegue.** Se valida la configuración de Caddy, Docker Compose y Terraform antes de utilizarla para arrancar los servicios.
+
+La figura [5.5](#fig:aspectos-cicd) muestra los trabajos que pueden ejecutarse en paralelo y cuáles deben completarse correctamente antes del análisis de SonarQube.
+
+ <Figura id="fig:aspectos-cicd" src={flujoCicd} alt="Flujo de integración continua en GitHub Actions"> Figura 5.5. Flujo de integración continua en GitHub Actions </Figura>
+
+También se auditan las dependencias de producción de la interfaz y se muestran sus avisos de vulnerabilidades altas o críticas. SonarQube Cloud reúne los informes de cobertura y analiza problemas de calidad, duplicación y complejidad. Su análisis espera el resultado del control de calidad y falla si no se supera.
+
+La tabla [5.1](#tabla:aspectos-ci-ramas) resume las comprobaciones por evento en ambas plataformas. En GitHub, las *pull requests* activan el flujo cuando se dirigen a `development`, `staging` o `master`, mientras que GitLab lo aplica a las *merge requests* y evita duplicar la ejecución de rama cuando ya existe una solicitud abierta.
+
+<div id="tabla:aspectos-ci-ramas"></div>
+
+<div class="tabla-documento" role="region" aria-label="Tabla 5.1. Comprobaciones configuradas por evento y rama en GitHub y GitLab. Elaboración propia a partir de los flujos de ambos repositorios." tabindex="0"> <table> <caption>Tabla 5.1. Comprobaciones configuradas por evento y rama en GitHub y GitLab. Elaboración propia a partir de los flujos de ambos repositorios.</caption> <thead><tr><th scope="col"><strong>Evento y rama</strong></th><th scope="col"><strong>Comprobaciones</strong></th></tr></thead> <tbody><tr><th scope="row"><em>Commit</em> a una rama de tarea</th><td>Controles locales al crear el <em>commit</em>. La CI se activa con su solicitud de integración.</td></tr><tr><th scope="row"><em>Pull request</em> o <em>Merge request</em></th><td>Comprobaciones comunes y SonarQube Cloud.</td></tr><tr><th scope="row"><em>Commit</em> a <code>development</code> o <code>staging</code></th><td>Comprobaciones comunes.</td></tr><tr><th scope="row"><em>Commit</em> a <code>master</code></th><td>Comprobaciones comunes y SonarQube Cloud.</td></tr></tbody> </table> </div>
+
+El flujo también puede iniciarse manualmente sobre una rama elegida, con SonarQube si se selecciona `master`. La prueba en otro equipo al pasar a `staging` complementa estos controles automáticos. El Anexo D recoge las instrucciones para ejecutar las comprobaciones.
+
+En la revisión consultada de SonarQube, el control de calidad aparece como superado. La captura de esta revisión se muestra en la figura [5.6](#fig:aspectos-sonarqube).
+
+ <Figura id="fig:aspectos-sonarqube" src={metricasSonarqube} alt="Métricas globales de calidad en SonarQube"> Figura 5.6. Métricas globales de calidad en SonarQube </Figura>
+
+No se registran incidencias abiertas de seguridad ni de fiabilidad, y ambas categorías obtienen una calificación A. La mantenibilidad también obtiene una A, aunque conserva 43 incidencias abiertas. La cobertura alcanza el 88,4 % sobre 8,4 mil líneas, mientras que la duplicación se sitúa en el 0,1 % sobre 35 mil líneas. No hay incidencias aceptadas y la sección de *Security Hotspots* no registra elementos.
+
+Estas cifras describen el estado global del código en esa revisión y complementan las comprobaciones ejecutadas en la integración continua. La calificación no implica que no quede trabajo de mantenimiento, ya que las 43 incidencias abiertas corresponden precisamente a aspectos que pueden seguir revisándose aunque el control de calidad se haya superado.
+
+Para consultar qué cambia entre versiones, se mantiene manualmente el archivo `CHANGELOG.md`, organizado por versión y tipo de cambio según *Keep a Changelog* [[39](https://keepachangelog.com/en/1.1.0/)]. La numeración de las versiones sigue la especificación SemVer, que distingue entre cambios incompatibles, nuevas funcionalidades que mantienen la compatibilidad y correcciones de errores que también la conservan [[38](https://semver.org/)].
+
+En GitHub, la publicación de una *release* utiliza un flujo separado, activado por un *tag* de versión como `v1.0.0` o de forma manual. Antes de publicarla, comprueba que su *commit* pertenezca a la rama principal, que las versiones declaradas coincidan y que exista su apartado en `CHANGELOG.md`. Después prepara los archivos del código fuente y sus sumas de verificación. Este flujo no vuelve a ejecutar las pruebas ni depende del resultado de la CI. En GitLab, la publicación se activa con una etiqueta de versión y depende de varias comprobaciones previas, entre ellas las pruebas del servidor y de la interfaz.
+
+Para la documentación se utiliza despliegue continuo, CD, mediante Cloudflare Workers Builds, que conecta los cambios del repositorio con la construcción y publicación del sitio [[74](https://developers.cloudflare.com/workers/ci-cd/builds/)]. Su flujo de GitHub Actions comprueba los archivos de Astro y construye el sitio cuando cambian sus fuentes o su configuración, y también admite ejecución manual. La aplicación se arranca a demanda mediante Docker Compose, como se explica en el apartado [5.8](#aspectos:publicacion).
+
+## Publicación de la aplicación
+
+<div id="aspectos:publicacion"></div>
+
+La publicación se organiza en tres sitios con funciones distintas:
+
+- [*manualito.dev*](https://manualito.dev/) presenta el proyecto y sirve como punto de entrada.
+- [*app.manualito.dev*](https://app.manualito.dev/) corresponde a la aplicación, cuyo despliegue se activa a demanda.
+- [*docs.manualito.dev*](https://docs.manualito.dev/) expone las guías de uso y la documentación técnica, preparadas con Astro y Starlight [[76](https://docs.astro.build/en/getting-started/)] [[77](https://starlight.astro.build/getting-started/)].
+
+Esta separación permite consultar los sitios estáticos, es decir, la presentación y la documentación sin depender de que estén activos los servicios de procesamiento. La aplicación, en cambio, necesita mantener disponibles los modelos, las bases de datos y los procesos de trabajo, por lo que se ejecuta mediante Docker Compose en un equipo con los recursos necesarios a modo de servidor.
+
+El acceso exterior pasa por Cloudflare Tunnel, que establece una conexión saliente desde ese equipo, y por Caddy, que sirve la interfaz y dirige las peticiones al servidor [[71](https://developers.cloudflare.com/tunnel/)]. La configuración de infraestructura se conserva en Terraform y los datos se guardan en volúmenes persistentes para mantenerlos al recrear los contenedores. El Anexo D recoge la preparación del entorno y las instrucciones de ejecución.
+
+## Declaración del uso de inteligencia artificial generativa
+
+<div id="aspectos:uso-ia"></div>
+
+Desarrollar un proyecto del tamaño de *Manualito* ofrecía una oportunidad para aprender sobre desarrollo agéntico [[8](https://www.ibm.com/think/topics/agentic-coding)], como se planteó en los objetivos personales del apartado [2.3](/memoria/objetivos-del-proyecto/#objetivos:personales). Además, aplicar esta metodología en momentos puntuales, permite dedicar menos tiempo a tareas sencillas y repetitivas para poder profundizar en las tecnologías utilizadas y concentrar el esfuerzo de diseño y desarrollo en las partes que aportaban más valor a la aplicación.
+
+Es por ello que, durante el desarrollo del proyecto se utilizaron Codex, de OpenAI, y Claude Code, de Anthropic [[102](https://code.claude.com/docs/en/overview)], con los modelos recogidos en la tabla [5.2](#tabla:aspectos-modelos-ia). Su ayuda se centró en escribir código repetitivo y ayudar a buscar soluciones a problemas que dificultaban avanzar, siempre a partir de instrucciones concretas y sin delegar las decisiones sobre la arquitectura o el diseño del sistema.
+
+Estas herramientas también ayudaron a elaborar y ejecutar pruebas una vez indicados los respectivos casos de prueba, incluida la interacción con el navegador mediante Playwright descrita en el apartado [5.6](#aspectos:pruebas) con la finalidad de obtener mejores resultados de las pruebas de aceptación. Para valorar las soluciones propuestas se recurrió a la documentación técnica y a la comprobación del comportamiento de la aplicación, junto con las pruebas y las revisiones automáticas recogidas en el apartado [5.7](#aspectos:automatizacion).
+
+Durante la investigación también se recurrió a estas herramientas para localizar artículos científicos y sintetizar la información relevante, con el fin de facilitar la comparación de alternativas y la toma de decisiones. Los resúmenes y las referencias propuestas se contrastaron con las publicaciones originales. Además, estas herramientas ayudaron a escribir los datos sintéticos y parte del código de los *benchmarks* a partir de las indicaciones sobre qué se quería medir y cómo hacerlo. En la evaluación de recuperación se generaron 20 de las 24 preguntas con un modelo, a las que se añadieron cuatro casos procedentes de fallos detectados. En las comparaciones de lenguaje, otros modelos actuaron como jueces mediante criterios escritos y se conservaron sus desacuerdos [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)].
+
+La interpretación de los resultados no se delegó enteramente en la clasificación obtenida, sino que, se valoraron los resultados según las necesidades del proyecto, como reservar memoria gráfica para la conversación o limitar la corrección del texto para no introducir reglas falsas. Las simulaciones de uso real complementaron la selección de los modelos, como se explica en el apartado [5.4](#aspectos:investigacion).
+
+En la memoria se ha recurrido a estas herramientas para mejorar la presentación de los diagramas, ajustando su distribución, tipografía y apariencia para facilitar la lectura sin cambiar el contenido técnico que se quería representar. Todo ello a partir de instrucciones específicas.
+
+Para precisar las versiones utilizadas, la tabla [5.2](#tabla:aspectos-modelos-ia) recoge las fechas de lanzamiento de los modelos considerados, incluidos los que ya estaban disponibles al comenzar el proyecto. La fecha corresponde al primer lanzamiento anunciado, aunque el acceso inicial fuera limitado.
+
+<div id="tabla:aspectos-modelos-ia"></div>
+
+<div class="tabla-documento" role="region" aria-label="Tabla 5.2. Modelos utilizados en algún momento del ciclo de desarrollo de Manualito. Elaboración propia a partir de los anuncios y la documentación de los laboratorios." tabindex="0"> <table> <caption>Tabla 5.2. Modelos utilizados en algún momento del ciclo de desarrollo de <em>Manualito</em>. Elaboración propia a partir de los anuncios y la documentación de los laboratorios.</caption> <thead><tr><th scope="col"><strong>Modelo</strong></th><th scope="col"><strong>Fecha de lanzamiento</strong></th><th scope="col"><strong>Laboratorio</strong></th></tr></thead> <tbody><tr><th scope="row">Claude Sonnet 4.5</th><td><span class="numero">29/09/2025</span></td><td>Anthropic <a href="https://www.anthropic.com/news/claude-sonnet-4-5">[103]</a></td></tr><tr><th scope="row">Claude Haiku 4.5</th><td><span class="numero">15/10/2025</span></td><td>Anthropic <a href="https://www.anthropic.com/news/claude-haiku-4-5">[104]</a></td></tr><tr><th scope="row">Claude Sonnet 4.6</th><td><span class="numero">17/02/2026</span></td><td>Anthropic <a href="https://www.anthropic.com/news/claude-sonnet-4-6">[105]</a></td></tr><tr><th scope="row">GPT-5.4</th><td><span class="numero">05/03/2026</span></td><td>OpenAI <a href="https://openai.com/index/introducing-gpt-5-4/">[106]</a></td></tr><tr><th scope="row">GPT-5.5</th><td><span class="numero">23/04/2026</span></td><td>OpenAI <a href="https://openai.com/index/introducing-gpt-5-5/">[107]</a></td></tr><tr><th scope="row">GPT-5.6 Luna <a href="https://developers.openai.com/api/docs/models/gpt-5.6-luna">[108]</a></th><td>26/06/2026 <a href="https://openai.com/index/previewing-gpt-5-6-sol/">[109]</a></td><td>OpenAI</td></tr><tr><th scope="row">Claude Sonnet 5</th><td><span class="numero">30/06/2026</span></td><td>Anthropic <a href="https://www.anthropic.com/news/claude-sonnet-5">[110]</a></td></tr></tbody> </table> </div>
+
+Para documentar esta ayuda se han tomado como referencia las orientaciones de la Comisión Europea, que recomiendan identificar las herramientas utilizadas, explicar su aportación y revisar sus resultados, manteniendo la responsabilidad sobre el trabajo presentado [[111](https://research-and-innovation.ec.europa.eu/document/download/2b6cf7e5-36ac-41cb-aab5-0d32050143dc_en)].

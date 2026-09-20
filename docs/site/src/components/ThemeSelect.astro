@@ -164,6 +164,7 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
       this.options.forEach((option) => option.addEventListener('click', this.handleOptionClick));
       document.addEventListener('pointerdown', this.handleOutsidePointerDown);
       document.addEventListener('focusin', this.handleDocumentFocus);
+      document.addEventListener('astro:before-preparation', this.handleNavigation);
 
       onThemeChange(loadTheme());
     }
@@ -177,6 +178,9 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
       );
       document.removeEventListener('pointerdown', this.handleOutsidePointerDown);
       document.removeEventListener('focusin', this.handleDocumentFocus);
+      document.removeEventListener('astro:before-preparation', this.handleNavigation);
+      delete this.dataset.initialized;
+      clearTimeout(this.cierreTimer);
     }
 
     private openMenu(focus: 'first' | 'last' | 'selected' | null = null): void {
@@ -294,6 +298,8 @@ const autoLabel = Astro.locals.t('themeSelect.auto');
       this.closeMenu(true);
       transitionTheme(parseTheme(option.dataset.themeValue), event.detail > 0);
     };
+
+    private handleNavigation = (): void => this.closeMenu();
 
     private handleOutsidePointerDown = (event: PointerEvent): void => {
       if (event.target instanceof Node && !this.contains(event.target)) this.closeMenu();

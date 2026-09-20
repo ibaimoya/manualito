@@ -1,3 +1,14 @@
+.documento-academico .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.5em;
+}
+
+.documento-academico .katex-display:focus-visible {
+  outline: 2px solid var(--sl-color-text-accent);
+  outline-offset: 4px;
+}
+
 /* Fuentes y colores tomados de frontend/src/styles/tokens.css. */
 :root {
   --m-primary-500: #f6953b;
@@ -100,16 +111,6 @@
   backdrop-filter: blur(8px);
 }
 
-:root[data-theme='light'] #starlight__sidebar a[aria-current='page'] {
-  background-color: var(--m-primary-50);
-  color: var(--m-primary-700);
-}
-
-:root[data-theme='light'] #starlight__sidebar a:not([aria-current='page']):is(:hover, :focus-visible) {
-  background-color: var(--m-surface-2);
-  color: var(--m-text);
-}
-
 :root[data-theme='light']
   .sl-markdown-content
   a:not(.sl-link-button):not(:where(.not-content *)) {
@@ -174,6 +175,37 @@
   border-radius: var(--m-r-lg);
 }
 
+.pagination-links a:active svg {
+  opacity: 0.65;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pagination-links a {
+    --arrow-step: 4px;
+  }
+
+  .pagination-links a[rel='prev'] {
+    --arrow-step: -4px;
+  }
+
+  .pagination-links svg {
+    transition:
+      translate 160ms var(--m-ease-salida),
+      opacity 120ms var(--m-ease-salida);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .pagination-links a:hover svg {
+      translate: var(--arrow-step) 0;
+    }
+  }
+
+  .pagination-links a:active svg {
+    translate: calc(var(--arrow-step) * 1.5) 0;
+    transition-duration: 80ms;
+  }
+}
+
 :where(h1, h2, h3, h4, h5, h6) {
   font-family: var(--m-font-display);
   letter-spacing: -0.02em;
@@ -231,59 +263,16 @@
   #starlight__sidebar details[open]::details-content {
     height: auto;
     opacity: 1;
-    transition-duration: 300ms, 260ms, 300ms;
+    transition-duration: 220ms, 180ms, 220ms;
   }
 
   #starlight__sidebar summary .caret {
     transition: transform 240ms var(--m-ease-salida);
   }
 
-  #starlight__sidebar details > ul > li {
-    opacity: 0;
-    translate: 0 -0.25rem;
-  }
-
-  /* La transición vive en el estado abierto, así el cierre recoge todo de golpe. */
-  #starlight__sidebar details[open] > ul > li {
-    opacity: 1;
-    translate: 0 0;
-    transition:
-      opacity 160ms var(--m-ease-salida),
-      translate 160ms var(--m-ease-salida);
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(2) {
-    transition-delay: 60ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(3) {
-    transition-delay: 120ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(4) {
-    transition-delay: 180ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(5) {
-    transition-delay: 240ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(6) {
-    transition-delay: 300ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(7) {
-    transition-delay: 360ms;
-  }
-
-  #starlight__sidebar details[open] > ul > li:nth-child(n + 8) {
-    transition-delay: 420ms;
-  }
-
   /* Hasta que la página pinta estable nada transiciona, evita el estirón en plena carga. */
   :root:not([data-transiciones-listas]) #starlight__sidebar details::details-content,
-  :root:not([data-transiciones-listas]) #starlight__sidebar summary .caret,
-  :root:not([data-transiciones-listas]) #starlight__sidebar details > ul > li {
+  :root:not([data-transiciones-listas]) #starlight__sidebar summary .caret {
     transition: none;
   }
 }
@@ -389,18 +378,17 @@
 }
 
 @media (max-width: 23rem) {
-  :root:not([data-has-sidebar]) .right-group starlight-theme-select,
   :root:not([data-has-sidebar]) .right-group .social-icons::after {
     display: none;
   }
 }
 
 @media (max-width: 22.999rem) {
-  :root[data-has-sidebar] .site-title {
+  .site-title {
     gap: 0;
   }
 
-  :root[data-has-sidebar] .site-title > span {
+  .site-title > span {
     position: absolute;
     overflow: hidden;
     inline-size: 1px;

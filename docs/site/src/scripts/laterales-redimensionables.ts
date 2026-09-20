@@ -19,6 +19,8 @@ export const iniciarRedimensionadoresLaterales = () => {
   const raiz = document.documentElement;
   const tirador = document.querySelector<HTMLElement>('[data-redimensionador-lateral]');
   if (!tirador) return;
+  const eventos = new AbortController();
+  const { signal } = eventos;
 
   const escritorio = matchMedia(CONSULTA_ESCRITORIO);
   const menosMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
@@ -162,25 +164,25 @@ export const iniciarRedimensionadoresLaterales = () => {
     tirador.setPointerCapture(evento.pointerId);
     tirador.setAttribute('data-arrastrando', '');
     raiz.setAttribute('data-redimensionando', '');
-  });
+  }, { signal });
 
   tirador.addEventListener('pointermove', (evento) => {
     if (evento.pointerId === arrastre?.puntero) mover(evento.clientX);
-  });
+  }, { signal });
 
   tirador.addEventListener('pointerup', (evento) => {
     if (evento.pointerId !== arrastre?.puntero) return;
     mover(evento.clientX);
     terminar();
-  });
+  }, { signal });
 
   tirador.addEventListener('pointercancel', (evento) => {
     if (evento.pointerId === arrastre?.puntero) terminar(true);
-  });
+  }, { signal });
   tirador.addEventListener('lostpointercapture', (evento) => {
     if (evento.pointerId === arrastre?.puntero) terminar(true);
-  });
-  tirador.addEventListener('dblclick', restablecer);
+  }, { signal });
+  tirador.addEventListener('dblclick', restablecer, { signal });
   tirador.addEventListener('keydown', (evento) => {
     const paso = evento.shiftKey ? 32 : 8;
     const cambios: Partial<Record<string, number>> = {
@@ -206,19 +208,28 @@ export const iniciarRedimensionadoresLaterales = () => {
       aplicarAncho(cambios[evento.key] ?? ancho);
       guardar();
     }
-  });
+  }, { signal });
 
-  resize(actualizarEntorno);
-  escritorio.addEventListener('change', actualizarEntorno);
-  menosMovimiento.addEventListener('change', () => exceso.jump(0));
+  const dejarDeMedir = resize(actualizarEntorno);
+  escritorio.addEventListener('change', actualizarEntorno, { signal });
+  menosMovimiento.addEventListener('change', () => exceso.jump(0), { signal });
   // Con la pestaña oculta el muelle se congela y la franja elástica quedaría pintada.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && !arrastre) {
       rebote?.stop();
       exceso.jump(0);
     }
-  });
-  addEventListener('blur', () => terminar(true));
-  addEventListener('pageshow', actualizarEntorno);
+  }, { signal });
+  addEventListener('blur', () => terminar(true), { signal });
+  addEventListener('pageshow', actualizarEntorno, { signal });
   actualizarEntorno();
+
+  return () => {
+    terminar(true);
+    eventos.abort();
+    dejarDeMedir();
+    rebote?.stop();
+    exceso.jump(0);
+    exceso.destroy();
+  };
 };

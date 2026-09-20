@@ -1,0 +1,86 @@
+<svg font-family="Arial, sans-serif" xmlns="http://www.w3.org/2000/svg" width="760" height="472" viewBox="0 40 760 472" role="img" aria-labelledby="ramas-title ramas-desc">
+<title id="ramas-title">De una tarea a la versión estable de Manualito</title>
+<desc id="ramas-desc">Ejemplo ilustrativo de ramas por entorno. Una tarea parte de development, se desarrolla por separado y vuelve a integrarse allí. La versión pasa a staging para probarse en otro equipo y después a master. Los puntos representan commits y las conexiones entre líneas representan la creación de una rama o la integración de cambios. El espaciado indica orden, no duración. La figura no representa despliegues automáticos.</desc>
+<defs>
+</defs>
+<path d="M216 112H736" fill="none" stroke="#c7b9aa" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M216 232H736" fill="none" stroke="#c7b9aa" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M216 352H736" fill="none" stroke="#c7b9aa" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M216 472H736" fill="none" stroke="#c7b9aa" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M216 232H220Q232 232 232 220V124Q232 112 244 112H384" fill="none" stroke="var(--fig-orange, #a8431f)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M227.5 175L232 169L236.5 175" fill="none" stroke="var(--fig-orange, #a8431f)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M384 112H408Q420 112 420 124V220Q420 232 432 232H456" fill="none" stroke="var(--fig-orange, #a8431f)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M415.5 169L420 175L424.5 169" fill="none" stroke="var(--fig-orange, #a8431f)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M456 232H496Q508 232 508 244V340Q508 352 520 352H556" fill="none" stroke="var(--fig-blue, #2c6e91)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M503.5 289L508 295L512.5 289" fill="none" stroke="var(--fig-blue, #2c6e91)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M556 352H644Q656 352 656 364V460Q656 472 668 472H704" fill="none" stroke="var(--fig-blue, #2c6e91)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M651.5 409L656 415L660.5 409" fill="none" stroke="var(--fig-blue, #2c6e91)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="216" cy="232" r="4.4" fill="#5c4a3e" stroke="#ffffff" stroke-width="1.6"/>
+<circle cx="294" cy="112" r="4.4" fill="var(--fig-orange, #a8431f)" stroke="#ffffff" stroke-width="1.6"/>
+<circle cx="358" cy="112" r="4.4" fill="var(--fig-orange, #a8431f)" stroke="#ffffff" stroke-width="1.6"/>
+<circle cx="456" cy="232" r="4.4" fill="var(--fig-orange, #a8431f)" stroke="#ffffff" stroke-width="1.6"/>
+<circle cx="556" cy="352" r="4.4" fill="var(--fig-blue, #2c6e91)" stroke="#ffffff" stroke-width="1.6"/>
+<circle cx="704" cy="472" r="4.4" fill="var(--fig-blue, #2c6e91)" stroke="#ffffff" stroke-width="1.6"/>
+<text x="16" y="104" font-size="20" font-weight="600" fill="var(--fig-text, #1f1611)">Rama de tarea</text>
+<text x="16" y="132" font-size="17" font-weight="400" fill="var(--fig-muted, #5c4a3e)" data-max-width="184">Un cambio aislado</text>
+<text x="326" y="80" font-size="18" font-weight="400" fill="var(--fig-text, #1f1611)" data-max-width="180" text-anchor="middle">Trabajar en la tarea</text>
+<text x="440" y="160" font-size="18" font-weight="400" fill="var(--fig-text, #1f1611)" data-max-width="288">Revisar e integrar</text>
+<text x="440" y="184" font-size="18" font-weight="400" fill="var(--fig-text, #1f1611)">la tarea</text>
+<text x="16" y="224" font-size="20" font-weight="600" fill="var(--fig-text, #1f1611)">development</text>
+<text x="16" y="252" font-size="17" font-weight="400" fill="var(--fig-muted, #5c4a3e)">Integración</text>
+<text x="16" y="344" font-size="20" font-weight="600" fill="var(--fig-text, #1f1611)">staging</text>
+<text x="16" y="372" font-size="17" font-weight="400" fill="var(--fig-muted, #5c4a3e)">Validación</text>
+<g transform="translate(598 298) scale(.78) translate(-578 -296)" aria-hidden="true">
+<rect x="540" y="258" width="76" height="55" rx="3" fill="#f4eee6" stroke="#5c4a3e" stroke-width="1.5"/>
+<circle cx="578" cy="261" r=".8" fill="#5c4a3e"/>
+<rect x="545" y="265" width="66" height="42" rx="1" fill="#ffffff" stroke="#c7b9aa" stroke-width=".8"/>
+<path d="M545 271H611V266H545Z" fill="#ede4d8"/>
+<circle cx="549" cy="268" r=".7" fill="#5c4a3e"/>
+<circle cx="552" cy="268" r=".7" fill="#5c4a3e"/>
+<circle cx="555" cy="268" r=".7" fill="#5c4a3e"/>
+<path d="M561 268H606" fill="none" stroke="#c7b9aa" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M546 272H560V306H546Z" fill="#f8f3ec"/>
+<path d="M549 278H556 M549 283H554 M549 288H556" fill="none" stroke="#c7b9aa" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M565 278H584 M565 284H578 M565 290H581 M565 297H577" fill="none" stroke="#5c4a3e" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="596" cy="291" r="8.5" fill="#edf4f6" stroke="var(--fig-blue, #2c6e91)" stroke-width="1.1"/>
+<path d="M592 291L595 294L601 287" fill="none" stroke="var(--fig-blue, #2c6e91)" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M540 313H616L624 331V332Q624 334 621 334H535Q532 334 532 332V331Z" fill="#ede4d8" stroke="#5c4a3e" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="M533 331H623" fill="none" stroke="#c7b9aa" stroke-width="0.85" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="544" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="550.2" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="556.4" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="562.6" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="568.8" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="575" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="581.2" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="587.4" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="593.6" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="599.8" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="606" y="316" width="5.2" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="543" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="549.38" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="555.76" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="562.14" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="568.52" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="574.9" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="581.28" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="587.66" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="594.04" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="600.42" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="606.8" y="319" width="5.38" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="542" y="322" width="5.56" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="548.56" y="322" width="5.56" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="555.12" y="322" width="5.56" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="561.68" y="322" width="31.8" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="594.48" y="322" width="5.56" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="601.04" y="322" width="5.56" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<rect x="607.6" y="322" width="5.56" height="1.9" rx=".35" fill="#5c4a3e" opacity=".52"/>
+<path d="M568 326H588L589 329.5H567Z" fill="#f8f3ec" stroke="#5c4a3e" stroke-width=".8" stroke-linejoin="round"/>
+</g>
+<text x="650" y="292" font-size="17" font-weight="400" fill="var(--fig-text, #1f1611)" data-max-width="94">Pruebas en</text>
+<text x="650" y="316" font-size="17" font-weight="400" fill="var(--fig-text, #1f1611)" data-max-width="94">otro equipo</text>
+<text x="16" y="464" font-size="20" font-weight="600" fill="var(--fig-text, #1f1611)">master</text>
+<text x="16" y="492" font-size="17" font-weight="400" fill="var(--fig-muted, #5c4a3e)">Versión estable</text>
+<text x="456" y="408" font-size="18" font-weight="400" fill="var(--fig-text, #1f1611)" data-max-width="184">Promocionar la</text>
+<text x="456" y="432" font-size="18" font-weight="400" fill="var(--fig-text, #1f1611)" data-max-width="184">versión revisada</text>
+</svg>

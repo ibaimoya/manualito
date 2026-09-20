@@ -1,0 +1,41 @@
+---
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { panelesBenchmark, type TipoBenchmark } from '../datos/benchmarks';
+import datosOriginales from '../datos/benchmarks.json?url';
+import GraficoBenchmark from './GraficoBenchmark.astro';
+import GraficoModelos from './GraficoModelos.astro';
+
+interface Props { id: string; tipo: TipoBenchmark; }
+const { id, tipo } = Astro.props;
+const paneles = panelesBenchmark(tipo);
+---
+
+<figure {id} class="benchmark">
+  <div class="graficas">
+    {tipo === 'modelos' ? (
+      <Tabs>
+        {paneles.map((panel) => <TabItem label={panel.titulo}><GraficoModelos {panel} /></TabItem>)}
+      </Tabs>
+    ) : paneles.map((panel) => (
+      <div>
+        <h3>{panel.titulo}</h3>
+        <GraficoBenchmark {panel} />
+      </div>
+    ))}
+    <a class="datos-originales" href={datosOriginales} download="benchmarks.json">Descargar datos originales</a>
+  </div>
+  <figcaption><slot /></figcaption>
+</figure>
+
+<style>
+  figure { margin-block: 2.5rem; }
+  .graficas {
+    padding: clamp(1rem, 3vw, 1.75rem);
+    background: color-mix(in srgb, var(--sl-color-bg-sidebar) 50%, var(--sl-color-bg));
+    border-radius: var(--m-r-md);
+  }
+  h3 { margin: 0 0 1.5rem; font-size: 1.125rem; font-weight: 600; }
+  .datos-originales { display: inline-block; margin-top: 1.5rem; font-size: 0.75rem; }
+  figcaption { margin-top: 0.75rem; color: var(--sl-color-gray-3); font-size: var(--sl-text-sm); line-height: 1.5; text-align: center; text-wrap: balance; }
+  figcaption :global(p) { margin: 0; }
+</style>

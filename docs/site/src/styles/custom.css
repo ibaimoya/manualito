@@ -378,18 +378,17 @@
 }
 
 @media (max-width: 23rem) {
-  :root:not([data-has-sidebar]) .right-group starlight-theme-select,
   :root:not([data-has-sidebar]) .right-group .social-icons::after {
     display: none;
   }
 }
 
 @media (max-width: 22.999rem) {
-  :root[data-has-sidebar] .site-title {
+  .site-title {
     gap: 0;
   }
 
-  :root[data-has-sidebar] .site-title > span {
+  .site-title > span {
     position: absolute;
     overflow: hidden;
     inline-size: 1px;

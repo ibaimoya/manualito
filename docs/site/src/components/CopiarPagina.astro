@@ -671,6 +671,17 @@ const trazoCorrecto = '<path d="M20 6 9 17l-5-5"></path>';
     transition-duration: 0ms;
   }
 
+  @media (max-width: 49.999rem) {
+    .menu {
+      position: fixed;
+      inset-block-start: calc(var(--sl-nav-height) + 0.5rem);
+      inset-inline: 1rem;
+      min-inline-size: 0;
+      max-inline-size: 18.5rem;
+      margin-inline-start: auto;
+    }
+  }
+
   .opcion {
     display: grid;
     grid-template-columns: 1.25rem minmax(0, 1fr) auto;

@@ -916,7 +916,7 @@ const rutas = [
     window.addEventListener(
       'wheel',
       (ev) => {
-        if (arrastrando) return;
+        if (arrastrando || document.querySelector('dialog[open]')) return;
         const factorDelta =
           ev.deltaMode === WheelEvent.DOM_DELTA_LINE
             ? Number.parseFloat(getComputedStyle(raiz).fontSize) || 16

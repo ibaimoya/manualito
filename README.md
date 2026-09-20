@@ -34,6 +34,10 @@ TFG en entorno empresarial.
 > [!NOTE]
 > La aplicación también está disponible online en [manualito.dev](https://manualito.dev/).
 
+La memoria, los anexos y sus PDF se pueden consultar en
+[docs.manualito.dev](https://docs.manualito.dev/), la opción recomendada de lectura,
+y en la [wiki del repositorio](https://github.com/ibaimoya/manualito/wiki).
+
 ---
 
 ## Tabla de contenidos

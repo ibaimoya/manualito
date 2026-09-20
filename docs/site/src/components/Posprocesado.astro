@@ -1,0 +1,54 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+
+interface Props { id: string; }
+const { id } = Astro.props;
+---
+
+<figure {id}>
+  <div class="ejemplos">
+    <h4>Unión de palabras partidas</h4>
+    <div class="ejemplo">
+      <span class="original">propie-<br />dades</span>
+      <Icon name="right-arrow" size="1.25rem" />
+      <strong>propiedades</strong>
+    </div>
+    <div class="ejemplo">
+      <span class="original">3.000 pe-<br />setas,</span>
+      <Icon name="right-arrow" size="1.25rem" />
+      <strong>3.000 pesetas,</strong>
+    </div>
+    <h4>Filtrado de ruido</h4>
+    <div class="ejemplo">
+      <span class="original">Am.<small>Confianza 0,12</small></span>
+      <Icon name="right-arrow" size="1.25rem" />
+      <span>Línea descartada</span>
+    </div>
+  </div>
+  <figcaption>Figura 3.4. Ejemplos de posprocesado del texto de Monopoly</figcaption>
+</figure>
+
+<style>
+  figure { margin-block: 2rem; }
+  .ejemplos {
+    padding: clamp(1rem, 3vw, 2rem);
+    background: var(--sl-color-bg-sidebar);
+    border-radius: var(--m-r-md);
+  }
+  h4 { margin: 0; font-size: 0.9375rem; font-weight: 600; }
+  .ejemplo {
+    display: grid;
+    margin: 0;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.35fr);
+    align-items: center;
+    gap: clamp(0.75rem, 3vw, 2rem);
+    padding-block: 1.25rem;
+    text-align: start;
+    font-size: clamp(0.9375rem, 2vw, 1.125rem);
+  }
+  .ejemplo + h4 { padding-top: 1.25rem; border-top: 1px solid var(--sl-color-hairline-light); }
+  .original { font-family: var(--sl-font-mono); }
+  strong { color: var(--sl-color-text-accent); font-weight: 600; }
+  small { display: block; margin-top: 0.5rem; font: 0.75rem var(--sl-font); color: var(--sl-color-gray-2); }
+  figcaption { margin-top: 0.625rem; color: var(--sl-color-gray-3); font-size: var(--sl-text-sm); text-align: center; text-wrap: balance; }
+</style>

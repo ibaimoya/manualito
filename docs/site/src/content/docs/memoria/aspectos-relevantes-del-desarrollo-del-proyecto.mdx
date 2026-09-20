@@ -6,10 +6,9 @@ sidebar:
 ---
 
 import Figura from '../../../components/Figura.astro';
+import FiguraVector from '../../../components/FiguraVector.astro';
 import flujoRamas from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/flujo-ramas.svg';
-import ocr from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/benchmarks/ocr.svg';
-import recuperacion from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/benchmarks/recuperacion.svg';
-import modelos from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/benchmarks/modelos.svg';
+import Benchmark from '../../../components/Benchmark.astro';
 import flujoCicd from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/flujo-cicd.svg';
 import metricasSonarqube from '../../../assets/memoria/aspectos-relevantes-del-desarrollo-del-proyecto/metricas-sonarqube.png';
 
@@ -43,7 +42,7 @@ Con motivo de mantener cierta trazabilidad, en *Manualito*, cada tarea debe esta
 
 En la figura [5.1](#fig:aspectos-ramas) se representa el ciclo de vida de un cambio en este proyecto, tal y como se muestra, la rama de tarea se fusiona con la rama `development` cuando está terminada y probada. Desde allí, el conjunto de cambios que se quiere probar pasa a la rama`staging`, desde donde se prueba la aplicación en otro equipo diferente al de desarrollo. Si la revisión es satisfactoria, se integra en la rama `master`, que conserva la última versión estable. Esta estrategia de ramas por entorno, o *branch per environment*, permite seguir incorporando mejoras en `development` mientras se comprueba en `staging` la versión que se prepara para publicar [[81](https://docs.gitlab.com/user/project/repository/branches/strategies/#branch-per-environment)]. Las *pull requests* deben enumerar los cambios y mostar los resultados de las pruebas en su descripción. Las comprobaciones automáticas y los procesos de publicación asociados a cada evento y rama se detallan en el apartado [5.7](#aspectos:automatizacion).
 
- <Figura id="fig:aspectos-ramas" src={flujoRamas} alt="Recorrido del ciclo de vida de una tarea entre las ramas de Manualito"> Figura 5.1. Recorrido del ciclo de vida de una tarea entre las ramas de *Manualito* </Figura>
+ <FiguraVector id="fig:aspectos-ramas" src={flujoRamas} alt="Recorrido del ciclo de vida de una tarea entre las ramas de Manualito"> Figura 5.1. Recorrido del ciclo de vida de una tarea entre las ramas de *Manualito* </FiguraVector>
 
 Antes de crear un *commit*, la configuración de *pre-commit* ejecuta comprobaciones sobre los archivos implicados. Las comprobaciones configuradas son las siguientes [[82](https://pre-commit.com/)]:
 
@@ -70,7 +69,7 @@ Los ocho estudios principales se encuentran en `docs/benchmarks/`, junto con dos
 
 Se compararon Tesseract, PaddleOCR y EasyOCR con imágenes sintéticas y tres documentos reales. En estos últimos, PaddleOCR obtuvo una tasa media de error de caracteres del 10,92 %, frente al 20,55 % de Tesseract. La variante con GPU mantuvo el error de la variante con CPU, pero redujo el tiempo medio de 116,6 a 11,4 segundos por imagen. Tesseract fue más rápido, con 6,9 segundos, aunque a costa de cometer más errores. La figura [5.2](#fig:benchmark-ocr) resume esta comparación, en la que el error se calcula sobre fragmentos transcritos y cada imagen recibe el mismo peso [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)].
 
- <Figura id="fig:benchmark-ocr" src={ocr} alt="Error de caracteres y tiempo de los motores de OCR"> Figura 5.2. Error de caracteres y tiempo de los motores de OCR </Figura>
+ <Benchmark id="fig:benchmark-ocr" tipo="ocr"> Figura 5.2. Error de caracteres y tiempo de los motores de OCR </Benchmark>
 
 Se priorizó PaddleOCR con GPU cuando había memoria gráfica suficiente, por su combinación de calidad y tiempo. Sin embargo, reservar parte de esa memoria al reconocimiento puede dejar menos espacio para un modelo de lenguaje grande y, si el modelo no cabe por completo, parte de su ejecución puede trasladarse al procesador y a la memoria del sistema, lo que se conoce como *offloading* a CPU y, en conseciencia, reducir la velocidad [[17](https://docs.ollama.com/context-length)] [[84](https://docs.ollama.com/faq#how-can-i-tell-if-my-model-was-loaded-onto-the-gpu)]. Por ello se conservaron alternativas de OCR que permiten reservar la tarjeta gráfica al LLM. La muestra real era pequeña y Tesseract obtuvo menos error en las imágenes sintéticas, por lo que no se consideró que un motor fuera superior en todos los documentos.
 
@@ -90,7 +89,7 @@ La continuidad del texto se evaluó mediante una medida basada únicamente en el
 
 La recuperación se comprobó también en el servicio real, con 24 preguntas sobre Catán y Monopoly que incluían fallos detectados durante el desarrollo. La figura [5.3](#fig:benchmark-recuperacion) recoge las mediciones sucesivas [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)], cuyas fechas identifican las ejecuciones guardadas y no pruebas independientes de cada cambio. El fragmento esperado pasó de aparecer entre los cinco primeros en 19 preguntas a hacerlo en 22, y en la última medición se encontró entre los diez primeros en las 24. Esto permite observar la evolución del buscador en el conjunto evaluado, pero encontrar el texto adecuado no demuestra todavía que la respuesta generada a partir de él sea correcta.
 
- <Figura id="fig:benchmark-recuperacion" src={recuperacion} alt="Evolución de la recuperación"> Figura 5.3. Evolución de la recuperación </Figura>
+ <Benchmark id="fig:benchmark-recuperacion" tipo="recuperacion"> Figura 5.3. Evolución de la recuperación </Benchmark>
 
 ### Modelos de lenguaje y recursos disponibles
 
@@ -100,7 +99,7 @@ La comparación evaluó ocho modelos con 24 casos y tres repeticiones en una NVI
 
 Por otr parte en el estudio de diez modelos pequeños, Granite 3.3 2B obtuvo 0,944 y consumiendo alrededor de 1,96 GB. Cada punto de la figura [5.4](#fig:benchmark-modelos) representa un modelo según su puntuación media de fidelidad en los casos adversariales y la memoria gráfica registrada [[7](https://github.com/ibaimoya/manualito/tree/53987baab44997afda1fdf073b79e53adddafa77/docs/benchmarks)]. Los resultados apoyaron la elección de Gemma y Granite para los perfiles alto y ligero, respectivamente, aunque proceden de estudios con distintos conjuntos de jueces y no deben leerse como una clasificación conjunta.
 
- <Figura id="fig:benchmark-modelos" src={modelos} alt="Fidelidad media y memoria gráfica usada de los modelos"> Figura 5.4. Fidelidad media y memoria gráfica usada de los modelos </Figura>
+ <Benchmark id="fig:benchmark-modelos" tipo="modelos"> Figura 5.4. Fidelidad media y memoria gráfica usada de los modelos </Benchmark>
 
 Aparecieron desacuerdos entre los jueces, lo que limitó el peso de estas puntuaciones en la decisión final. Por ello, se realizaron una serie de simulaciones de uso que aportaron una comprobación complementaria. Del mismo modo, el límite de 4 GB del estudio ligero se contrastó con la memoria ocupada en una tarjeta de mayor capacidad, no mediante una prueba física en una tarjeta de 4 GB. La elección de un perfil depende, por tanto, de los recursos que queden disponibles para el conjunto de la aplicación.
 

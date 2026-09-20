@@ -5,20 +5,8 @@ sidebar:
   order: 4
 ---
 
-import Figura from '../../../components/Figura.astro';
-import fig00Directorios from '../../../assets/anexos/documentacion-tecnica/00-directorios.svg';
-import fig01Valoracion from '../../../assets/anexos/documentacion-tecnica/01-valoracion.svg';
-import fig02Migracion from '../../../assets/anexos/documentacion-tecnica/02-migracion.svg';
-import fig03Clonar from '../../../assets/anexos/documentacion-tecnica/03-clonar.svg';
-import fig04ArranqueWindows from '../../../assets/anexos/documentacion-tecnica/04-arranque-windows.svg';
-import fig05ArranqueLinux from '../../../assets/anexos/documentacion-tecnica/05-arranque-linux.svg';
-import fig07PrepararPruebas from '../../../assets/anexos/documentacion-tecnica/07-preparar-pruebas.svg';
-import fig08ConstruirInterfaz from '../../../assets/anexos/documentacion-tecnica/08-construir-interfaz.svg';
-import fig09Registros from '../../../assets/anexos/documentacion-tecnica/09-registros.svg';
-import fig10PruebasServidor from '../../../assets/anexos/documentacion-tecnica/10-pruebas-servidor.svg';
-import fig11Fusion from '../../../assets/anexos/documentacion-tecnica/11-fusion.svg';
-import fig12Esquema from '../../../assets/anexos/documentacion-tecnica/12-esquema.svg';
-import fig13Cobertura from '../../../assets/anexos/documentacion-tecnica/13-cobertura.svg';
+import FiguraCodigo from '../../../components/FiguraCodigo.astro';
+import { figurasCodigo } from '../../../datos/figuras-codigo';
 
 ## Introducción
 
@@ -34,9 +22,9 @@ Acto seguido, se va a explicar la función los principales directorios y subdire
 
 La figura d-00-directorios muestra esta estructura y la tabla [D.1](#tabla-d-directorios) explica para qué sirve cada directorio.
 
-<Figura id="fig-documentacion-tecnica-00-directorios" src={fig00Directorios} alt="Resumen de la estructura del repositorio de Manualito.">
+<FiguraCodigo id="fig-documentacion-tecnica-00-directorios" {...figurasCodigo['00-directorios']}>
   Figura D.1: Resumen de la estructura del repositorio de *Manualito*.
-</Figura>
+</FiguraCodigo>
 
 <div class="tabla-documento" role="region" aria-label="Organización del repositorio de Manualito." tabindex="0">
 <table id="tabla-d-directorios">
@@ -115,9 +103,9 @@ El servidor principal utiliza FastAPI. Las dependencias de cada ruta obtienen la
 
 La valoración de un juego permite ver este patrón en una operación concreta. En `backend/api/ratings/router.py`, la firma del manejador reúne los datos y comprobaciones que necesita.
 
-<Figura id="fig-documentacion-tecnica-01-valoracion" src={fig01Valoracion} alt="Firma del manejador de valoración de juegos.">
+<FiguraCodigo id="fig-documentacion-tecnica-01-valoracion" {...figurasCodigo['01-valoracion']}>
   Figura D.2: Firma del manejador de valoración de juegos.
-</Figura>
+</FiguraCodigo>
 
 El fragmento reproduce la firma, sin los decoradores ni el cuerpo. `CurrentAuth` proporciona la identidad autenticada, `ValidGameId` comprueba el juego y `RateGameRequest` valida la valoración. `CsrfProtection` incorpora la protección frente a peticiones falsificadas entre sitios, CSRF. La escritura utiliza el identificador del usuario autenticado, no un identificador de propietario enviado por el navegador.
 
@@ -133,9 +121,9 @@ Para modificar un dato persistido hay que revisar el modelo, las consultas que l
 
 Los siguientes comandos se ejecutan desde la raíz, con el entorno Python preparado y `DATABASE_URL` apuntando a una base de desarrollo. El texto de la revisión se sustituye por una descripción del cambio realizado.
 
-<Figura id="fig-documentacion-tecnica-02-migracion" src={fig02Migracion} alt="Generación de una revisión del esquema en PowerShell.">
+<FiguraCodigo id="fig-documentacion-tecnica-02-migracion" {...figurasCodigo['02-migracion']}>
   Figura D.3: Generación de una revisión del esquema en PowerShell.
-</Figura>
+</FiguraCodigo>
 
 El acento grave permite continuar el comando en la línea siguiente en PowerShell. Antes de aplicar la revisión se comprueba el archivo generado en `backend/database/alembic/versions/`. Después se ejecuta `upgrade head` y se comprueba el esquema con `check`, como se muestra en el apartado Pruebas con base de datos.
 
@@ -218,9 +206,9 @@ El consumo de memoria y el tiempo de respuesta dependen del perfil de modelos, d
 
 El código se obtiene de la rama `development` del repositorio de *Manualito*, utilizada como referencia en este manual. Los comandos siguientes crean una copia local y muestran la revisión de partida. Antes de comparar cambios debe comprobarse la revisión obtenida, ya que las ramas del proyecto pueden avanzar en paralelo.
 
-<Figura id="fig-documentacion-tecnica-03-clonar" src={fig03Clonar} alt="Obtención del código y consulta de la revisión del proyecto.">
+<FiguraCodigo id="fig-documentacion-tecnica-03-clonar" {...figurasCodigo['03-clonar']}>
   Figura D.4: Obtención del código y consulta de la revisión del proyecto.
-</Figura>
+</FiguraCodigo>
 
 Antes de arrancar se revisan los archivos de configuración. `.env` fija las versiones de las imágenes y parámetros compartidos. Los archivos de `config/` agrupan la configuración de cada servicio. La selección de aceleración, modelos y proveedor de correo se guarda en `deploy/local/selected.env` al ejecutar `setup`.
 
@@ -250,13 +238,13 @@ Si ya existe el volumen de PostgreSQL y faltan sus archivos de usuario o contras
 
 El procedimiento normal utiliza los *scripts* de la raíz. Estos componen las variantes de Docker Compose que corresponden al equipo. Ejecutar únicamente el archivo base puede omitir la selección local de reconocimiento o aceleración.
 
-<Figura id="fig-documentacion-tecnica-04-arranque-windows" src={fig04ArranqueWindows} alt="Preparación y arranque local en Windows.">
+<FiguraCodigo id="fig-documentacion-tecnica-04-arranque-windows" {...figurasCodigo['04-arranque-windows']}>
   Figura D.5: Preparación y arranque local en Windows.
-</Figura>
+</FiguraCodigo>
 
-<Figura id="fig-documentacion-tecnica-05-arranque-linux" src={fig05ArranqueLinux} alt="Preparación y arranque local en Linux.">
+<FiguraCodigo id="fig-documentacion-tecnica-05-arranque-linux" {...figurasCodigo['05-arranque-linux']}>
   Figura D.6: Preparación y arranque local en Linux.
-</Figura>
+</FiguraCodigo>
 
 `setup` comprueba Docker y la aceleración, solicita la selección y prepara las imágenes. Si *Manualito* ya está funcionando, puede pedir que se detenga para medir la memoria gráfica disponible. `start` utiliza la selección guardada y arranca los servicios. Si no existe una selección, inicia antes la preparación.
 
@@ -299,17 +287,17 @@ La parada se realiza con `.\stop.bat` en Windows o `bash stop.sh` en Linux. Los 
 
 Para trabajar sobre el servidor fuera de Docker se instala el grupo de dependencias necesario con uv. El grupo `test` permite ejecutar las pruebas del servidor sin preparar todos los motores de procesamiento. La opción `--locked` comprueba que la definición del proyecto coincide con el archivo de bloqueo y evita modificarlo durante la instalación.[^d6]
 
-<Figura id="fig-documentacion-tecnica-07-preparar-pruebas" src={fig07PrepararPruebas} alt="Instalación de las dependencias de prueba del servidor.">
+<FiguraCodigo id="fig-documentacion-tecnica-07-preparar-pruebas" {...figurasCodigo['07-preparar-pruebas']}>
   Figura D.7: Instalación de las dependencias de prueba del servidor.
-</Figura>
+</FiguraCodigo>
 
 Los comandos posteriores utilizan `uv run --no-sync` sobre ese entorno ya preparado. Si se necesitan otras herramientas, se consultan los grupos definidos en `pyproject.toml`. Los servicios de reconocimiento y generación se construyen con sus propios archivos `Dockerfile` y variantes de despliegue.
 
 La interfaz utiliza pnpm. Los comandos siguientes parten de la raíz y acceden a `frontend/`. La instalación respeta el archivo de bloqueo y la construcción ejecuta la comprobación de TypeScript antes de generar los archivos finales.[^d7]
 
-<Figura id="fig-documentacion-tecnica-08-construir-interfaz" src={fig08ConstruirInterfaz} alt="Comprobación y construcción de la interfaz.">
+<FiguraCodigo id="fig-documentacion-tecnica-08-construir-interfaz" {...figurasCodigo['08-construir-interfaz']}>
   Figura D.8: Comprobación y construcción de la interfaz.
-</Figura>
+</FiguraCodigo>
 
 El resultado se guarda en `frontend/dist/`. El `Dockerfile` de la interfaz utiliza una etapa con Node.js para construirlo y otra con Caddy para servirlo. Si cambia el código incluido en una imagen, debe repetirse la preparación con `setup` antes del siguiente arranque.
 
@@ -319,9 +307,9 @@ El resultado se guarda en `frontend/dist/`. El `Dockerfile` de la interfaz utili
 
 El diagnóstico comienza por el estado de los servicios y por los registros del componente implicado. Los comandos siguientes son de consulta y se ejecutan desde la raíz del proyecto.
 
-<Figura id="fig-documentacion-tecnica-09-registros" src={fig09Registros} alt="Consulta del estado de los servicios y sus registros.">
+<FiguraCodigo id="fig-documentacion-tecnica-09-registros" {...figurasCodigo['09-registros']}>
   Figura D.9: Consulta del estado de los servicios y sus registros.
-</Figura>
+</FiguraCodigo>
 
 <div class="tabla-documento" role="region" aria-label="Relación entre síntomas y primeras comprobaciones." tabindex="0">
 <table id="tabla-d-diagnostico">
@@ -374,15 +362,15 @@ Las pruebas de componentes no sustituyen el recorrido completo con un navegador 
 
 Después de preparar el grupo `test`, la *suite* se ejecuta desde la raíz. Las comprobaciones auxiliares de los *hooks* se incluyen mediante su ruta.
 
-<Figura id="fig-documentacion-tecnica-10-pruebas-servidor" src={fig10PruebasServidor} alt="Ejecución de las pruebas del servidor y de los hooks.">
+<FiguraCodigo id="fig-documentacion-tecnica-10-pruebas-servidor" {...figurasCodigo['10-pruebas-servidor']}>
   Figura D.10: Ejecución de las pruebas del servidor y de los *hooks*.
-</Figura>
+</FiguraCodigo>
 
 Para revisar un cambio concreto puede ejecutarse primero el archivo afectado. Por ejemplo, la combinación de clasificaciones dispone de pruebas en `backend/tests/rag/test_fusion.py`.
 
-<Figura id="fig-documentacion-tecnica-11-fusion" src={fig11Fusion} alt="Prueba de la combinación de candidatos.">
+<FiguraCodigo id="fig-documentacion-tecnica-11-fusion" {...figurasCodigo['11-fusion']}>
   Figura D.11: Prueba de la combinación de candidatos.
-</Figura>
+</FiguraCodigo>
 
 La salida debe revisarse completa, incluyendo pruebas omitidas. Los casos que requieren PostgreSQL se omiten si no se proporciona `DATABASE_URL`. Por tanto, una ejecución sin esa variable no cubre la integración con la base de datos.
 
@@ -392,9 +380,9 @@ Las pruebas de persistencia deben utilizar una base de datos dedicada, con el es
 
 Con la conexión de pruebas configurada y las dependencias preparadas, los comandos son los siguientes. Todos se ejecutan desde la raíz.
 
-<Figura id="fig-documentacion-tecnica-12-esquema" src={fig12Esquema} alt="Preparación y verificación del esquema de pruebas.">
+<FiguraCodigo id="fig-documentacion-tecnica-12-esquema" {...figurasCodigo['12-esquema']}>
   Figura D.12: Preparación y verificación del esquema de pruebas.
-</Figura>
+</FiguraCodigo>
 
 `upgrade head` aplica las revisiones pendientes. `check` comprueba si los modelos requieren cambios que todavía no se han recogido mediante la comparación automática. La *suite* de conversaciones verifica, entre otros casos, la respuesta completada, los fallos de los servicios internos y el rechazo de fragmentos privados ajenos.
 
@@ -402,9 +390,9 @@ Con la conexión de pruebas configurada y las dependencias preparadas, los coman
 
 Las pruebas se encuentran en `frontend/tests/`. Desde `frontend/`, se ejecutan con los *scripts* definidos en `package.json`. La generación del árbol de rutas debe preceder a la ejecución con cobertura, como ocurre en la integración continua.
 
-<Figura id="fig-documentacion-tecnica-13-cobertura" src={fig13Cobertura} alt="Ejecución de las pruebas de la interfaz con cobertura.">
+<FiguraCodigo id="fig-documentacion-tecnica-13-cobertura" {...figurasCodigo['13-cobertura']}>
   Figura D.13: Ejecución de las pruebas de la interfaz con cobertura.
-</Figura>
+</FiguraCodigo>
 
 La ejecución con cobertura genera los informes bajo `frontend/coverage/`. Estos informes permiten localizar código que no ha sido recorrido por las pruebas. Su porcentaje debe interpretarse junto con los casos comprobados, ya que recorrer una línea no demuestra que se hayan evaluado todos sus resultados relevantes.
 

@@ -6,10 +6,11 @@ sidebar:
 ---
 
 import Figura from '../../../components/Figura.astro';
+import FiguraVector from '../../../components/FiguraVector.astro';
+import Posprocesado from '../../../components/Posprocesado.astro';
 import originalDetalle from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/original-detalle.png';
 import comparacionPreprocesado from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/comparacion-preprocesado.png';
 import ordenColumnas from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/orden-columnas.png';
-import posprocesadoTabla from '../../../assets/memoria/conceptos-teoricos/ejemplo-ocr/posprocesado-tabla.png';
 import procesoRag from '../../../assets/memoria/conceptos-teoricos/proceso-rag.svg';
 import solapamiento from '../../../assets/memoria/conceptos-teoricos/solapamiento.svg';
 import fusionRrf from '../../../assets/memoria/conceptos-teoricos/fusion-rrf.svg';
@@ -54,7 +55,7 @@ Una vez reconocido el texto, se puede revisar su formato para corregir espacios 
 
 La figura [3.4](#fig:ocr-posprocesado) muestra ejemplos obtenidos en una ejecución local al procesar la fotografía de Monopoly con Tesseract 5.4.0 y aplicar las reglas de Manualito. Los fragmentos conservan los saltos de línea reconocidos y permiten ver cómo las palabras partidas por un guion se unen cuando la palabra resultante pertenece al vocabulario utilizado, mientras que algunas líneas breves con baja confianza se filtran porque pueden ser ruido. En esta prueba se han aplicado únicamente la limpieza y las reglas, sin corrección mediante un modelo de lenguaje.
 
- <Figura id="fig:ocr-posprocesado" src={posprocesadoTabla} alt="Ejemplos de posprocesado del texto de Monopoly"> Figura 3.4. Ejemplos de posprocesado del texto de Monopoly </Figura>
+<Posprocesado id="fig:ocr-posprocesado" />
 
 Además del texto, un motor de OCR puede proporcionar una puntuación de confianza asociada al reconocimiento [[13](https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html)]. Este valor no indica que las reglas se hayan interpretado bien, ya que una transcripción legible también puede contener errores que cambien su significado. En esta misma prueba, una línea con confianza superior a 0,90 contiene «10 Y» en lugar de «10 %». Las reglas aplicadas no corrigen ese error, por lo que sigue siendo necesario poder revisar el texto junto a la imagen original.
 
@@ -192,6 +193,6 @@ $$
 
 donde $\mathcal{R}_d$ reúne las listas en las que aparece el fragmento y $\operatorname{pos}_r(d)$ es su posición, empezando en $1$. La constante positiva $c$ suaviza la diferencia entre las primeras posiciones. Un fragmento recibe una aportación por cada lista en la que aparece, de modo que se favorecen los resultados bien situados en varias búsquedas [[33](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)], como se muestra en la figura [3.7](#fig:teoria-rrf).
 
- <Figura id="fig:teoria-rrf" src={fusionRrf} alt="Ejemplo de fusión de dos listas mediante RRF"> Figura 3.7. Ejemplo de fusión de dos listas mediante RRF </Figura>
+ <FiguraVector id="fig:teoria-rrf" src={fusionRrf} alt="Ejemplo de fusión de dos listas mediante RRF"> Figura 3.7. Ejemplo de fusión de dos listas mediante RRF </FiguraVector>
 
 La figura [3.7](#fig:teoria-rrf) muestra un cálculo ilustrativo con $c=60$, utilizando los pasajes del manual del ajedrez. Aunque $A$ encabeza la búsqueda léxica, $B$, sobre el primer movimiento del peón, termina primero al ocupar la segunda posición en esa lista y la primera en la semántica. Las clasificaciones son inventadas para explicar el cálculo y no representan una evaluación del proyecto.

@@ -47,6 +47,10 @@ const imagen = await getImage({ src, format: src.format === 'png' ? 'png' : unde
     border-radius: 0.5rem;
   }
 
+  figure :global(img[src$='.svg']) {
+    background: #fff8f0;
+  }
+
   figcaption {
     margin-block-start: 0.625rem;
     color: var(--sl-color-gray-3);

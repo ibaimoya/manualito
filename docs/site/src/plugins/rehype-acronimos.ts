@@ -5,6 +5,7 @@ import { ACRONIMOS } from '../datos/acronimos';
 interface Nodo {
   type: string;
   tagName?: string;
+  name?: string;
   value?: string;
   properties?: Record<string, unknown>;
   children?: Nodo[];
@@ -23,14 +24,11 @@ function recorrer(nodo: Nodo, vistas: Set<string>): void {
   if (!nodo.children) return;
   const nuevos: Nodo[] = [];
   for (const hijo of nodo.children) {
-    if (hijo.type === 'element' && hijo.tagName) {
-      if (/^h[1-6]$/.test(hijo.tagName)) {
-        vistas.clear();
-      } else if (!ETIQUETAS_EXCLUIDAS.has(hijo.tagName)) {
-        recorrer(hijo, vistas);
-      }
-      nuevos.push(hijo);
-      continue;
+    const etiqueta = etiquetaNodo(hijo);
+    if (/^h[1-6]$/.test(etiqueta)) {
+      vistas.clear();
+    } else if (!ETIQUETAS_EXCLUIDAS.has(etiqueta)) {
+      recorrer(hijo, vistas);
     }
     if (hijo.type === 'text' && hijo.value) {
       const partes = marcarSiglas(hijo.value, vistas);
@@ -42,6 +40,14 @@ function recorrer(nodo: Nodo, vistas: Set<string>): void {
     nuevos.push(hijo);
   }
   nodo.children = nuevos;
+}
+
+function etiquetaNodo(nodo: Nodo): string {
+  if (nodo.tagName) return nodo.tagName;
+  if (nodo.type === 'mdxJsxFlowElement' || nodo.type === 'mdxJsxTextElement') {
+    return nodo.name?.toLowerCase() ?? '';
+  }
+  return '';
 }
 
 function marcarSiglas(valor: string, vistas: Set<string>): Nodo[] | null {

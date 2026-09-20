@@ -1,0 +1,91 @@
+\capitulo{2}{Objetivos del proyecto}
+
+A continuación, se detallan todos los objetivos que se persiguen con
+el desarrollo de \textit{Manualito}.
+
+\section{Objetivos generales}
+\label{objetivos:generales}
+
+El proyecto persigue los siguientes objetivos generales, que se desarrollan
+en la especificación de requisitos del Anexo B:
+
+\begin{itemize}
+    \item Desarrollar una aplicación web que facilite el
+    aprendizaje y la consulta de las instrucciones y reglas de juegos de mesa.
+
+    \item Procesar manuales en distintos formatos para extraer
+    su contenido y utilizarlo dentro de la aplicación.
+
+    \item Generar explicaciones y responder preguntas sobre
+    un juego a partir de la información contenida en sus manuales.
+
+    \item Almacenar de forma organizada la información de los
+    juegos, los manuales y las conversaciones de cada usuario para permitir
+    su consulta posterior.
+
+    \item Proteger las cuentas y la información de los
+    usuarios frente a accesos y modificaciones sin permiso.
+\end{itemize}
+
+\section{Objetivos técnicos}
+\label{objetivos:especificos}
+
+Se plantean los siguientes objetivos técnicos:
+
+\begin{itemize}
+    \item Integrar técnicas de \acs{OCR} para extraer y preparar el texto
+    de los manuales.
+
+    \item Diseñar un sistema \acs{RAG} que combine búsqueda léxica y
+    semántica para fundamentar las respuestas del modelo.
+
+    \item Integrar modelos de lenguaje ejecutados localmente mediante
+    Ollama.
+
+    \item Desarrollar la interfaz con React y TypeScript y el servidor
+    con FastAPI.
+
+    \item Aplicar una arquitectura modular y patrones de diseño que
+    faciliten el mantenimiento.
+
+    \item Utilizar PostgreSQL para la persistencia y ChromaDB para la
+    búsqueda vectorial.
+
+    \item Gestionar las tareas de procesamiento en segundo plano
+    mediante Celery y Redis.
+
+    \item Preparar un despliegue reproducible mediante Docker Compose
+    y gestionar la infraestructura con Terraform.
+
+    \item Utilizar Git con GitHub y GitLab para el control de versiones.
+
+    \item Automatizar las pruebas y el análisis de calidad mediante
+    integración continua, y publicar la parte estática mediante
+    despliegue continuo.
+
+    \item Evaluar las distintas tecnologías del
+    sistema mediante pruebas de rendimiento.
+\end{itemize}
+
+\section{Objetivos personales}
+\label{objetivos:personales}
+
+Además de mencionar los objetivos generales y técnicos, se
+presentan los objetivos a nivel personal que me han llevado a
+desarrollar este proyecto:
+
+\begin{itemize}
+    \item Adquirir conocimientos de tecnologías y arquitecturas
+    del campo de la inteligencia artificial.
+
+    \item Comprender el ciclo de desarrollo y despliegue de una
+    aplicación web.
+
+    \item Mejorar la capacidad para planificar y organizar un
+    proyecto de desarrollo.
+
+    \item Profundizar en el diseño y desarrollo de interfaces de usuario.
+
+    \item Explorar el desarrollo agéntico~\cite{ibm_agentic_coding}
+    como apoyo en tareas concretas del proyecto.
+\end{itemize}

@@ -1,0 +1,694 @@
+\apendice{Documentación de usuario}
+
+\begingroup
+\setlength{\emergencystretch}{2em}
+\setlist[enumerate,1]{label=\arabic*.,leftmargin=*,topsep=4pt,itemsep=3pt,parsep=0pt}
+\newcommand{\capturaE}[3][1]{%
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=#1\linewidth]{anexos/documentacion-de-usuario/#2.png}
+        \caption{#3}\label{fig:e-#2}
+    \end{figure}
+}
+
+\section{Introducción}
+\label{sec:e-introduccion}
+
+Para consultar las reglas de un juego en \textit{Manualito}, se puede utilizar
+un manual propio o uno que otro usuario haya compartido. A partir de ese
+contenido, la aplicación prepara una explicación del juego y permite
+preguntar sobre las situaciones que surjan durante la partida, mientras
+conserva las conversaciones para retomarlas más adelante.
+
+Los manuales propios y compartidos pueden abrirse en un visor que reúne sus
+páginas y el texto obtenido de ellas. De esta manera, el usuario puede
+contrastar una respuesta con el documento original o revisar una página
+cuyo texto no se haya reconocido correctamente.
+
+\section{Requisitos de uso}
+\label{sec:e-requisitos}
+
+El procesamiento de los manuales se realiza en el servidor, por lo que
+para acceder a la aplicación basta con utilizar el navegador de un
+ordenador, una tableta o un teléfono. Para ello se necesita:
+
+\begin{itemize}
+    \item Disponer de conexión a Internet para acceder a la cuenta, subir
+    archivos y consultar las respuestas.
+    \item Utilizar un navegador actualizado que permita ejecutar la
+    aplicación y conservar la sesión mediante cookies.
+    \item Tener acceso al correo electrónico con el que se registra la
+    cuenta, ya que se utiliza para verificarla y recuperar la contraseña.
+    \item Si se va a añadir un manual, disponer de un archivo \acs{PDF} o de
+    imágenes de sus páginas. La cámara es opcional, porque también pueden
+    seleccionarse archivos guardados en el dispositivo.
+\end{itemize}
+
+Los usuarios deben disponer de los derechos necesarios sobre los manuales
+que suban y compartan, sin perjuicio de las obligaciones legales de quien
+gestione el servicio.
+
+\section{Acceso a la aplicación}
+\label{sec:e-acceso}
+
+\textit{Manualito} se abre desde \url{https://manualito.dev/}, sin instalar
+programas adicionales para utilizarlo en el navegador. Al acceder por
+primera vez, la presentación inicial introduce el uso de los manuales y de
+las consultas, desde donde se puede continuar al registro o al inicio de
+sesión.
+
+\subsection{Crear una cuenta y verificar el correo}
+\label{sec:e-registro}
+
+El registro permite crear la cuenta con la que se guardarán la biblioteca y
+las conversaciones. Para completarlo:
+
+\begin{enumerate}
+    \item Abrir la opción de crear una cuenta desde la pantalla de acceso.
+    \item Introducir el correo electrónico y elegir un nombre de usuario.
+    \item Escribir una contraseña de al menos doce caracteres y repetirla
+    en el campo de confirmación.
+    \item Consultar la política de privacidad y marcar su aceptación.
+    \item Pulsar \guillemotleft{}Crear cuenta\guillemotright{}.
+\end{enumerate}
+
+La figura~\ref{fig:e-registro} muestra el formulario de registro.
+
+\capturaE{registro}{Formulario de creación de cuenta}
+
+Si alguno de los datos no es válido, el formulario indica qué debe
+corregirse. Cuando el correo o el nombre de usuario ya están en uso, se
+puede introducir otro dato o volver al inicio de sesión para acceder a la
+cuenta existente.
+
+Una vez aceptado el registro, se abre la aplicación con la sesión iniciada,
+aunque el correo todavía queda pendiente de verificación. Para verificarlo,
+hay que abrir el mensaje recibido y seguir su enlace hasta que
+\textit{Manualito} confirme el resultado. Si el mensaje no llega, conviene
+revisar la carpeta de correo no deseado y solicitar otro desde el aviso de
+verificación o desde el perfil, respetando el tiempo de espera que indique
+la aplicación.
+
+La figura~\ref{fig:e-correo-verificacion} muestra el correo recibido, cuyo
+enlace caduca en 24 horas, y la figura~\ref{fig:e-correo-verificado} la
+confirmación que aparece al seguirlo.
+
+\capturaE{correo-verificacion}{Correo de verificación de la cuenta}
+
+\capturaE{correo-verificado}{Confirmación de correo verificado}
+
+\subsection{Iniciar y cerrar sesión}
+\label{sec:e-sesion}
+
+Para volver a la cuenta, se introduce el correo electrónico o el nombre de
+usuario junto con la contraseña y se pulsa
+\guillemotleft{}Entrar\guillemotright{}. Si se había intentado abrir una
+página que requería identificación, la aplicación permite continuar hacia
+ese destino después de iniciar sesión.
+
+La figura~\ref{fig:e-inicio-sesion} muestra la pantalla de inicio de sesión.
+
+\capturaE{inicio-sesion}{Pantalla de inicio de sesión}
+
+Al terminar en un dispositivo compartido, se puede cerrar la sesión desde
+\guillemotleft{}Ajustes\guillemotright{}, mediante la opción de salir de la
+cuenta. Esto cierra el acceso en ese dispositivo, mientras que la biblioteca
+y las conversaciones se conservan para la siguiente sesión.
+
+\subsection{Recuperar la contraseña}
+\label{sec:e-recuperar-contrasena}
+
+Cuando no se recuerda la contraseña, se puede recuperar el acceso mediante
+el correo asociado a la cuenta:
+
+\begin{enumerate}
+    \item Pulsar \guillemotleft{}¿Has olvidado tu contraseña?\guillemotright{}
+    en la pantalla de acceso.
+    \item Introducir el correo de la cuenta y solicitar el enlace.
+    \item Abrir el mensaje recibido y seguir el enlace de recuperación.
+    \item Escribir y repetir la nueva contraseña, respetando la longitud
+    mínima indicada en el formulario.
+    \item Guardar el cambio y volver a iniciar sesión con la nueva
+    contraseña.
+\end{enumerate}
+
+La solicitud muestra el mismo aviso exista o no una cuenta con el correo
+introducido, de modo que ese mensaje por sí solo no confirma el envío. Si
+el enlace ha caducado o ya se ha utilizado, debe solicitarse otro. Al
+guardar la nueva contraseña se cierran las sesiones anteriores, por lo que
+también será necesario identificarse de nuevo en los demás dispositivos.
+
+La figura~\ref{fig:e-recuperar-contrasena} muestra el formulario de
+solicitud y la figura~\ref{fig:e-correo-recuperacion} el correo recibido,
+cuyo enlace caduca en 30 minutos.
+
+\capturaE{recuperar-contrasena}{Solicitud de recuperación de la contraseña}
+
+\capturaE{correo-recuperacion}{Correo de recuperación de la contraseña}
+
+La figura~\ref{fig:e-nueva-contrasena} muestra el formulario de nueva
+contraseña que se abre desde ese enlace.
+
+\capturaE{nueva-contrasena}{Formulario de nueva contraseña}
+
+\section{Manual del usuario}
+\label{sec:e-manual}
+
+\subsection{Orientarse en la aplicación}
+\label{sec:e-navegacion}
+
+La navegación principal da acceso a cuatro secciones. En escritorio se
+encuentran en la barra lateral, mientras que en móvil aparecen en la parte
+inferior de la pantalla:
+
+\begin{itemize}
+    \item \textbf{Inicio.} Permite añadir un manual y retomar la actividad
+    reciente.
+    \item \textbf{Biblioteca.} Separa los juegos que sigue el usuario y sus
+    manuales en dos pestañas.
+    \item \textbf{Explorar.} Permite buscar juegos por su nombre y abrir su
+    ficha.
+    \item \textbf{Ajustes.} Reúne las preferencias de apariencia e idioma y
+    el acceso al perfil y a las opciones de cuenta.
+\end{itemize}
+
+La barra lateral incluye además el botón \guillemotleft{}Nuevo manual\guillemotright{} y el
+acceso a \guillemotleft{}Ayuda\guillemotright{}, como muestra la figura~\ref{fig:e-inicio}.
+
+\capturaE{inicio}{Pantalla de inicio en escritorio}
+
+La ficha del juego reúne su explicación, los manuales disponibles y las
+conversaciones asociadas, de modo que sirve como punto de partida para
+consultar sus reglas. En las pantallas dedicadas a una tarea, como la subida
+de archivos o el visor, el botón de regreso permite volver sin tener que
+reiniciar el recorrido desde la pantalla de inicio.
+
+\subsection{Buscar juegos y organizar la biblioteca}
+\label{sec:e-juegos}
+
+\subsubsection{Buscar un juego}
+
+Para localizar un juego, se abre \guillemotleft{}Explorar\guillemotright{} y
+se escribe su nombre en el buscador. Al seleccionar uno de los resultados,
+se abre su ficha, donde puede consultarse la información disponible y
+comprobar si ya hay manuales con los que realizar preguntas.
+
+La figura~\ref{fig:e-explorar} muestra una búsqueda con el número de
+manuales compartidos de cada resultado y la atribución a BoardGameGeek.
+
+\capturaE{explorar}{Búsqueda de un juego en Explorar}
+
+Si no aparecen coincidencias, conviene revisar el nombre o probar con una
+parte de él. Cuando la búsqueda se realiza durante la subida de un manual,
+la aplicación también permite añadir el juego manualmente si no encuentra
+resultados, como se explica en
+\guillemotleft{}\nameref{sec:e-anadir-manual}\guillemotright{}.
+
+\subsubsection{Seguir un juego}
+
+El seguimiento permite reunir en la biblioteca los juegos que interesa
+tener a mano. Para añadir uno:
+
+\begin{enumerate}
+    \item Abrir su ficha desde la búsqueda.
+    \item Pulsar \guillemotleft{}Seguir\guillemotright{} y comprobar que la
+    opción cambia a \guillemotleft{}Siguiendo\guillemotright{}.
+    \item Volver a \guillemotleft{}Biblioteca\guillemotright{} y abrir la
+    pestaña \guillemotleft{}Juegos\guillemotright{} para encontrarlo.
+\end{enumerate}
+
+La figura~\ref{fig:e-biblioteca-juegos} muestra esa pestaña con el buscador
+de la biblioteca.
+
+\capturaE{biblioteca-juegos}{Pestaña de juegos de la biblioteca}
+
+La misma opción permite dejar de seguirlo más adelante. Al hacerlo, el
+juego deja de aparecer entre los seguidos, pero no se eliminan sus manuales
+ni las conversaciones guardadas. Algunas acciones, como añadir un manual o
+valorar un juego, también pueden iniciar el seguimiento automáticamente
+cuando no existe una decisión previa de dejar de seguirlo.
+
+\subsubsection{Valorar un juego}
+
+La ficha permite conservar una valoración personal de una a cinco
+estrellas, junto con una nota opcional. Para guardarla, se selecciona la
+puntuación, se añade el comentario si se desea y se confirma en el
+formulario. Si el juego ya tiene una valoración del usuario, al abrirla se
+puede actualizar o quitar, sin afectar a los manuales ni a las
+conversaciones del juego.
+
+\subsection{Añadir un manual y consultar su procesamiento}
+\label{sec:e-anadir-manual}
+
+Un manual puede añadirse desde \guillemotleft{}Inicio\guillemotright{},
+desde la biblioteca o desde la ficha de un juego. En este último caso, el
+juego llega seleccionado al formulario, aunque puede cambiarse antes de
+enviar los archivos.
+
+\subsubsection{Seleccionar el juego y los archivos}
+
+Antes de iniciar el procesamiento, hay que asociar el documento al juego
+correcto y revisar sus páginas:
+
+\begin{enumerate}
+    \item Buscar y seleccionar el juego, o comprobar el que ya aparece
+    elegido. Si no hay coincidencias, utilizar la opción de añadirlo
+    manualmente con el nombre introducido.
+    \item Elegir un archivo \acs{PDF}, imágenes de la galería o la cámara
+    del dispositivo. Se utiliza un único \acs{PDF} o un conjunto de
+    imágenes por manual.
+    \item Si se han añadido imágenes, comprobar su orden en la lista y
+    utilizar los controles para subir, bajar o quitar cada página. Para
+    cambiar de un \acs{PDF} a imágenes, primero hay que retirar el documento
+    seleccionado.
+    \item Revisar la opción
+    \guillemotleft{}Compartir con la comunidad\guillemotright{} antes de
+    enviar el manual.
+    \item Pulsar \guillemotleft{}Procesar\guillemotright{}, que indica el número de
+    páginas que se van a enviar, y esperar a que termine la subida y se
+    abra el seguimiento del procesamiento.
+\end{enumerate}
+
+La figura~\ref{fig:e-nuevo-manual} muestra el formulario con el juego
+elegido y dos imágenes añadidas.
+
+\capturaE{nuevo-manual}{Formulario de nuevo manual}
+
+La selección de imágenes admite los formatos \texttt{.jpg},
+\texttt{.jpeg}, \texttt{.png} y \texttt{.webp}. El máximo es de 30 páginas
+por manual, con un límite de 30 MB por imagen y de 95 MB para el conjunto,
+mientras que el archivo \acs{PDF} puede ocupar hasta 95 MB. Si un archivo
+supera estos límites o no tiene un formato admitido, la aplicación indica
+el motivo para que se pueda sustituir antes de continuar.
+
+Al utilizar la cámara, el dispositivo puede solicitar permiso para
+abrirla. Conviene fotografiar las páginas completas, con el texto enfocado
+y sin reflejos que dificulten la lectura, porque las zonas que no se
+distingan bien pueden requerir revisión después del procesamiento.
+
+\subsubsection{Elegir la visibilidad}
+\label{sec:e-visibilidad}
+
+Si se mantiene activada
+\guillemotleft{}Compartir con la comunidad\guillemotright{}, el contenido
+del manual podrá utilizarse para responder a otros usuarios que consulten
+ese juego. Si se desactiva, el manual será privado y solo se utilizará en
+las consultas de su propietario.
+
+La opción de compartir aparece activada, por lo que debe revisarse antes
+de pulsar \guillemotleft{}Procesar\guillemotright{}. Los manuales compartidos
+que estén disponibles también pueden abrirse desde otra cuenta en modo
+de solo lectura, sin permitir su edición, reprocesado ni eliminación.
+
+Compartir el contenido no implica mostrar el nombre de usuario. Por
+defecto, el manual aparece como \guillemotleft{}Anónimo\guillemotright{},
+aunque se puede elegir compartirlo con el nombre de la cuenta. Esta
+elección también se refleja en las fuentes de las respuestas y puede
+cambiarse después de la subida. No elimina datos que aparezcan escritos
+en las páginas del manual.
+
+La figura~\ref{fig:e-nuevo-manual-compartir} muestra las opciones de
+compartir con \guillemotleft{}Compartir con mi nombre\guillemotright{} activado.
+
+\capturaE{nuevo-manual-compartir}{Opciones de compartir desplegadas}
+
+\subsubsection{Consultar el progreso y el resultado}
+
+Una vez aceptada la subida, el procesamiento continúa en segundo plano y
+se muestra su avance por páginas. A partir de ese momento se puede seguir
+utilizando la aplicación y volver más tarde a la pestaña
+\guillemotleft{}Manuales\guillemotright{} de la biblioteca para consultar
+el estado.
+
+La figura~\ref{fig:e-procesamiento} muestra esta pantalla de espera.
+
+\capturaE{procesamiento}{Pantalla de procesamiento de un manual}
+
+Si se permanece en la pantalla de progreso, al terminar se abre la ficha
+del juego. En la biblioteca, el manual puede aparecer como listo para
+consultar, pendiente de revisión o con un error de procesamiento. Un aviso
+de revisión indica que conviene comprobar el texto de las páginas
+señaladas, aunque otras partes del manual se hayan leído correctamente.
+
+Si el resultado no contiene texto útil, se puede volver a procesar el
+manual o añadir una copia más legible. Cuando el problema es un archivo
+rechazado durante la subida, primero debe corregirse la causa indicada,
+como su formato o tamaño, antes de enviarlo otra vez.
+
+Si se indica que el manual ya existe, conviene localizarlo en la biblioteca
+antes de intentar subirlo de nuevo.
+
+\subsection{Consultar y gestionar manuales}
+\label{sec:e-visor}
+
+Los manuales compartidos por otras personas se abren desde la ficha del juego
+o desde las fuentes de una respuesta. Se pueden leer sus páginas, consultar
+sus imágenes y buscar en el texto, pero no editarlos, reprocesarlos ni
+eliminarlos. Las opciones de gestión y la información técnica del
+procesamiento solo aparecen en los manuales propios.
+
+\subsubsection{Abrir el visor y buscar una regla}
+
+Los manuales propios se abren desde la pestaña
+\guillemotleft{}Manuales\guillemotright{} de la biblioteca o desde su
+tarjeta en la ficha del juego. Para consultar una página concreta:
+
+\begin{enumerate}
+    \item Abrir el manual y seleccionar la página en el listado del visor.
+    \item Leer el texto obtenido y, cuando esté disponible, compararlo con
+    la imagen de la página. La imagen puede ampliarse para revisar los
+    detalles.
+    \item Para localizar una palabra o una expresión, escribirla en el
+    buscador del manual.
+    \item Recorrer las coincidencias mediante sus controles o elegir otra
+    página para continuar la lectura.
+\end{enumerate}
+
+La figura~\ref{fig:e-biblioteca-manuales} muestra la pestaña de manuales
+y la figura~\ref{fig:e-visor} el visor en la pestaña \guillemotleft{}Comparar\guillemotright{},
+con el listado de páginas, la imagen original, el texto obtenido y el
+buscador.
+
+\capturaE{biblioteca-manuales}{Pestaña de manuales de la biblioteca}
+
+\capturaE{visor}{Visor de un manual en modo comparación}
+
+La búsqueda utiliza el texto que se ha obtenido de las páginas, por lo que
+una palabra mal reconocida puede no aparecer entre los resultados. En ese
+caso, se puede localizar la página manualmente y contrastarla con su imagen.
+Del mismo modo, si una imagen todavía no está disponible, el visor lo
+indica sin sustituirla por otra página.
+
+\subsubsection{Interpretar los avisos de una página}
+
+Cada página muestra su estado para distinguir el contenido disponible de
+lo que sigue pendiente. Los avisos más relevantes durante la lectura son:
+
+\begin{itemize}
+    \item \textbf{Procesando.} Todavía no ha terminado la lectura de la
+    página, por lo que hay que esperar antes de revisar el resultado.
+    \item \textbf{Texto disponible.} Se ha obtenido texto que puede
+    consultarse y compararse con el original.
+    \item \textbf{Poco clara.} El reconocimiento ofrece poca confianza en
+    el texto obtenido, de modo que conviene revisar palabras, cifras y
+    condiciones que puedan cambiar el sentido de una regla.
+    \item \textbf{Sin texto o error de lectura.} No hay texto disponible
+    para consultar o no se ha podido completar su extracción. La imagen
+    original, si está disponible, permite comprobar si hace falta subir
+    una copia más legible.
+    \item \textbf{Duplicada.} Se ha identificado una página repetida, por
+    lo que conviene revisar el contenido antes de añadir otra copia.
+    \item \textbf{Editada a mano.} El texto mostrado procede de una
+    corrección realizada por el usuario.
+\end{itemize}
+
+Cuando existen datos de confianza por línea, el visor permite activar su
+representación para localizar las zonas que merecen más atención. Esa
+información se refiere al reconocimiento del texto, por lo que no sustituye
+la comprobación de la regla en el documento original.
+
+Al activarla, una línea de baja confianza puede mostrar además el texto
+anterior a la corrección aplicada, como se ve en la figura~\ref{fig:e-visor}.
+
+\subsubsection{Mostrar u ocultar el nombre en un manual compartido}
+
+En las opciones de un manual propio compartido se indica si aparece como
+\guillemotleft{}Anónimo\guillemotright{} o con el nombre de la cuenta.
+Al cambiar esta opción se abre una confirmación que explica dónde se
+mostrará el nombre. Para aplicarla, se elige
+\guillemotleft{}Compartir con mi nombre\guillemotright{} o
+\guillemotleft{}Usar Anónimo\guillemotright{}, según corresponda. La
+cabecera del visor muestra el estado vigente, como
+\guillemotleft{}Compartido con mi nombre\guillemotright{} en la
+figura~\ref{fig:e-visor}.
+
+El cambio se aplica al manual y a sus referencias cuando vuelvan a
+consultarse las respuestas, incluidas las conversaciones anteriores.
+El contenido sigue compartido y los permisos no cambian. Si se cancela
+la confirmación, se mantiene la opción anterior; los manuales privados
+no muestran el nombre a otras cuentas.
+
+\subsubsection{Corregir el texto de una página}
+\label{sec:e-editar-texto}
+
+La edición está disponible en los manuales propios y privados que no se
+estén procesando. Permite corregir lo que se ha leído sin modificar la
+imagen original:
+
+\begin{enumerate}
+    \item Abrir la página que se desea corregir y elegir
+    \guillemotleft{}Editar texto\guillemotright{}.
+    \item Modificar el contenido, utilizando la imagen del manual para
+    comprobar que se conserva el sentido de las reglas.
+    \item Solicitar el guardado y confirmar el cambio en el diálogo.
+    \item Comprobar que el visor muestra el texto corregido y marca la
+    página como editada a mano.
+\end{enumerate}
+
+También se puede cancelar la edición para conservar el texto anterior.
+Después de guardar se solicita que la corrección se incorpore a las
+consultas, aunque la aplicación puede avisar de que el texto se ha guardado
+y su actualización para las respuestas sigue pendiente. Ese aviso debe
+distinguirse de un fallo de guardado, ya que la corrección permanece en el
+visor.
+
+\subsubsection{Volver a procesar un manual}
+\label{sec:e-reprocesar}
+
+Si se quiere repetir la lectura de los archivos, se abre el menú
+\guillemotleft{}Acciones\guillemotright{} del visor, se elige
+\guillemotleft{}Reprocesar todo\guillemotright{} y se confirma la operación.
+El manual vuelve al estado de procesamiento, cuyo avance puede consultarse
+desde la biblioteca. Si el problema afecta a una página con un aviso de
+lectura, la opción \guillemotleft{}Releer esta página\guillemotright{}
+permite repetir únicamente ese paso.
+
+Antes de confirmar, hay que tener en cuenta que se vuelve a obtener el
+texto a partir de los archivos guardados, por lo que las correcciones
+manuales de las páginas procesadas pueden sustituirse. Además, repetir la
+lectura no mejora la fotografía original: si el texto está cortado o
+desenfocado, conviene añadir una versión más legible.
+
+\subsubsection{Eliminar un manual}
+
+Para retirar un manual propio, se utiliza la opción de borrado de su
+tarjeta en la biblioteca o la del visor y se confirma el diálogo. Antes de
+aceptar, conviene comprobar el juego y el manual indicados, porque la
+operación elimina el acceso a sus páginas y al texto obtenido.
+
+Si el manual estaba compartido, también deja de estar disponible como
+fuente para otros usuarios. Las preguntas posteriores dependerán de los
+manuales que sigan disponibles para el juego, mientras que las
+conversaciones ya guardadas podrán conservar referencias a páginas que no
+se pueden abrir.
+
+
+\subsection{Consultar explicaciones y mantener conversaciones}
+\label{sec:e-consultas}
+
+\subsubsection{Leer la explicación de un juego}
+
+La ficha del juego muestra una explicación a partir de los manuales
+disponibles para el usuario. Incluye un resumen y apartados sobre la
+preparación, los turnos y las condiciones de victoria, que pueden abrirse
+según lo que se necesite consultar.
+
+Si la explicación todavía se está preparando, sus apartados se habilitan
+a medida que están disponibles. Cuando aparece un error, la opción de
+reintentar permite solicitarla de nuevo. Si no hay manuales con los que
+trabajar, primero debe añadirse uno o estar disponible un manual compartido
+del juego.
+
+La figura~\ref{fig:e-ficha-juego} muestra la ficha con el resumen, la
+preparación ya disponible y los apartados de turnos y victoria en
+preparación, junto con las conversaciones y los manuales del juego.
+
+\capturaE{ficha-juego}{Ficha del juego con la explicación y las conversaciones}
+
+\subsubsection{Preguntar sobre las reglas}
+
+Las conversaciones permiten plantear una situación concreta y continuar
+con preguntas relacionadas, sin tener que repetir todo el contexto. Para
+iniciar una:
+
+\begin{enumerate}
+    \item Abrir la ficha del juego y utilizar el campo de preguntas, o
+    elegir la opción de nueva conversación.
+    \item Escribir la duda o seleccionar una de las preguntas sugeridas.
+    Conviene indicar la situación que se quiere resolver, especialmente
+    cuando intervienen varias reglas o excepciones.
+    \item Enviar la pregunta y esperar a que aparezca la respuesta.
+    \item Si hace falta aclarar algo, continuar en esa conversación para
+    que las preguntas anteriores sirvan de contexto.
+\end{enumerate}
+
+Por ejemplo, después de preguntar cómo se cuentan los puntos, se puede
+añadir una duda sobre qué ocurre en caso de empate. Para tratar otro asunto
+por separado, la opción \guillemotleft{}Nueva conversación\guillemotright{}
+permite empezar un historial distinto dentro del mismo juego.
+
+La aplicación muestra un aviso mientras prepara la respuesta, por lo que
+no es necesario enviar de nuevo la misma pregunta durante la espera. Si
+se produce un error de generación, se indica en la conversación para que
+pueda intentarse otra vez más adelante.
+
+La figura~\ref{fig:e-conversacion} muestra una conversación con una
+respuesta ya recibida, acompañada de sus fuentes, y una segunda pregunta
+en espera.
+
+\capturaE{conversacion}{Conversación con una respuesta y sus fuentes}
+
+Para elegir el idioma de la respuesta, la aplicación utiliza primero la
+pregunta y, si no basta para identificarlo, los mensajes anteriores del
+usuario. De esta manera, una pregunta de seguimiento corta puede continuar
+en el idioma de la conversación. Cambiar el idioma de la interfaz no
+traduce los mensajes que ya se han guardado.
+
+Cada respuesta incluye una opción para copiar su texto, que muestra una
+confirmación cuando se ha copiado al portapapeles.
+
+\subsubsection{Consultar las fuentes de una respuesta}
+\label{sec:e-fuentes}
+
+Las respuestas pueden ir acompañadas de referencias a los manuales y a las
+páginas utilizadas para preparar el contexto. Junto al manual aparece el
+nombre de quien lo subió o \guillemotleft{}Anónimo\guillemotright{}, según
+la opción elegida por su propietario. Para comprobar una fuente:
+
+\begin{enumerate}
+    \item Localizar las fuentes que acompañan a la respuesta.
+    \item Seleccionar una referencia a una página de un manual propio
+    disponible o de uno compartido que pueda consultarse.
+    \item Comparar la respuesta con el texto y la imagen mostrados en el
+    visor, y volver después a la conversación.
+\end{enumerate}
+
+Cuando la fuente pertenece a un manual de la comunidad que está activo,
+sus páginas se abren en modo de solo lectura. Si el manual se ha eliminado
+o ya no se dispone de permiso para consultarlo, la referencia puede seguir
+apareciendo en el historial, pero no permite abrir su contenido.
+
+Las fuentes permiten revisar el contenido que se ha utilizado para
+responder. Ante una explicación ambigua o una posible excepción, conviene
+contrastar la regla con el manual original y precisar la pregunta si hace
+falta más contexto.
+
+\subsubsection{Retomar, renombrar y eliminar conversaciones}
+
+La ficha de cada juego permite abrir sus conversaciones guardadas y acceder
+al listado completo, donde se pueden buscar por el título. Al seleccionar
+una, se recuperan sus mensajes para continuar desde el punto en el que se
+dejó.
+
+Para reconocerla más fácilmente después, se abre su menú de opciones, se
+elige \guillemotleft{}Renombrar\guillemotright{} y se guarda un nuevo
+título. El mismo menú permite borrarla, previa confirmación, lo que elimina
+la conversación y sus mensajes sin borrar los manuales del juego.
+
+Si ya no quedan fuentes disponibles con las que responder, el historial
+puede seguir consultándose, aunque el envío de nuevas preguntas queda
+deshabilitado. Para volver a preguntar será necesario disponer de un manual
+utilizable del juego.
+
+La figura~\ref{fig:e-conversaciones} muestra el listado completo de
+conversaciones de un juego.
+
+\capturaE{conversaciones}{Listado de conversaciones de un juego}
+
+
+\subsection{Gestionar la cuenta}
+\label{sec:e-cuenta}
+
+La figura~\ref{fig:e-ajustes} muestra la pantalla de \guillemotleft{}Ajustes\guillemotright{}, con
+el bloque de cuenta, la apariencia y el idioma, y las opciones de privacidad
+y datos.
+
+\capturaE{ajustes}{Pantalla de ajustes}
+
+\subsubsection{Consultar y editar el perfil}
+
+El perfil muestra los datos de la cuenta, el estado de verificación del
+correo y un resumen de la actividad en juegos, manuales y conversaciones.
+Se puede abrir desde el acceso personal de la navegación o desde el bloque
+de cuenta de \guillemotleft{}Ajustes\guillemotright{}.
+
+La figura~\ref{fig:e-perfil} muestra esta pantalla.
+
+\capturaE{perfil}{Pantalla de perfil}
+
+Para modificarlo, se pulsa \guillemotleft{}Editar perfil\guillemotright{},
+se cambian los datos necesarios y se guardan los cambios. Además del nombre
+de usuario y el correo, se pueden elegir la figura y el color del avatar.
+Si se modifica el correo electrónico, hay que verificar la nueva dirección
+mediante el enlace recibido en ella.
+
+La figura~\ref{fig:e-editar-perfil} muestra el diálogo de edición.
+
+\capturaE[.55]{editar-perfil}{Diálogo de edición del perfil}
+
+\subsubsection{Cambiar la contraseña}
+
+La página \guillemotleft{}Cuenta\guillemotright{} muestra primero la fecha y la hora del
+último acceso, con un aviso para cambiar la contraseña si no se reconoce
+ese inicio de sesión, como se ve en la figura~\ref{fig:e-cuenta}.
+
+\capturaE{cuenta}{Pantalla de cuenta}
+
+Cuando se conoce la contraseña actual, puede cambiarse desde la opción de
+cuenta del perfil:
+
+\begin{enumerate}
+    \item Abrir \guillemotleft{}Cuenta\guillemotright{} y localizar el
+    formulario de cambio de contraseña.
+    \item Introducir la contraseña actual, escribir la nueva y repetirla
+    en el campo de confirmación.
+    \item Solicitar el cambio y comprobar el aviso de confirmación.
+\end{enumerate}
+
+La sesión desde la que se realiza el cambio permanece abierta, mientras
+que las de los demás dispositivos se cierran. Si no se recuerda la
+contraseña actual, se utiliza el procedimiento de
+\guillemotleft{}\nameref{sec:e-recuperar-contrasena}\guillemotright{}.
+
+\subsubsection{Cambiar el idioma y la apariencia}
+
+Desde \guillemotleft{}Ajustes\guillemotright{} se puede elegir español o
+inglés para la interfaz y un tema claro, oscuro o adaptado al sistema.
+También se permite cambiar el color principal entre ámbar y azul. La
+selección se aplica al realizarla y se conserva en el navegador, por lo que
+puede ser distinta en otro dispositivo.
+
+\subsubsection{Eliminar la cuenta}
+
+La opción \guillemotleft{}Borrar cuenta\guillemotright{} está disponible
+en los ajustes de privacidad y, como \guillemotleft{}Eliminar cuenta\guillemotright{},
+en la página de cuenta mostrada en la figura~\ref{fig:e-cuenta}. Para
+utilizarla:
+
+\begin{enumerate}
+    \item Abrir la opción y revisar el aviso sobre la información que
+    dejará de estar disponible.
+    \item Escribir el nombre de usuario indicado para confirmar que se
+    desea eliminar esa cuenta.
+    \item Confirmar el borrado definitivo.
+\end{enumerate}
+
+Después se cierra la sesión y dejan de estar disponibles la cuenta y sus
+datos asociados, incluidos los manuales y las conversaciones. Los manuales
+que se hubieran compartido también dejan de utilizarse para las consultas
+de otros usuarios, por lo que esta operación debe distinguirse de cerrar
+sesión o retirar un único manual.
+
+\subsubsection{Consultar la ayuda y la política de privacidad}
+
+La sección \guillemotleft{}Ayuda\guillemotright{} reúne una explicación
+del recorrido de uso, preguntas frecuentes y un medio de contacto para
+comunicar dudas o incidencias. Por su parte, la política de privacidad se
+puede consultar desde los ajustes y durante el registro, antes de aceptar
+sus condiciones. El menú lateral de \guillemotleft{}Ayuda\guillemotright{} permite además
+abrir \guillemotleft{}Explicar esta pantalla\guillemotright{} y las preguntas frecuentes,
+como muestra la figura~\ref{fig:e-ayuda}.
+
+\capturaE{ayuda}{Pantalla de ayuda}
+
+\endgroup

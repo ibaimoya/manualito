@@ -1,0 +1,909 @@
+\apendice{Plan de Proyecto \textit{Software}}
+
+
+\section{Introducción}
+
+La fase de planificación es una de las más críticas de cualquier proyecto
+\textit{software}. En ella se estima el trabajo, el tiempo y el coste que puede
+suponer su realización, para lo cual es necesario analizar con detalle cada
+una de las partes que lo componen. Además de permitir estimar los recursos
+necesarios, este análisis facilita y agiliza la toma de decisiones en las
+etapas futuras del desarrollo.
+
+Normalmente, la planificación de un proyecto se separa en dos partes:
+
+\begin{itemize}
+    \item A la parte que organiza el trabajo a lo largo del tiempo se le
+    denomina \textbf{planificación temporal}.
+    \item A la parte que evalúa si el proyecto es realista y factible
+    se le denomina \textbf{estudio de viabilidad}.
+\end{itemize}
+
+En la planificación temporal se elabora un programa de tiempos en el que se
+estima la duración de cada tarea del proyecto. Además, se fijan una \textbf{fecha
+de inicio}, una \textbf{fecha de finalización estimada}, que se suele fijar
+algo antes de la fecha límite para congelar el desarrollo de nuevas
+funcionalidades y poner como objetivo probar el producto y detectar errores y,
+por último, la \textbf{fecha límite}, que coincide con la fecha pactada con el
+cliente para entregar el producto finalizado de acuerdo con los requisitos
+indicados por este.
+
+A la hora de estimar tiempos es importante no solo basarse en experiencias
+previas con tareas similares, sino también tener en cuenta que ciertas
+tareas pueden estar en una situación de bloqueo hasta que otras terminen.
+
+Por otra parte, el estudio de viabilidad determina si completar el proyecto,
+tanto a nivel legal, como dentro de los plazos establecidos con ciertos límites económicos es algo
+realista, por lo tanto, se divide en dos apartados:
+
+\begin{itemize}
+    \item La parte que estima los costes que conlleva desarrollar el
+    proyecto y sus posibles beneficios se conoce como \textbf{viabilidad
+    económica}.
+    \item La parte que analiza los apartados legales que pudiesen reportar
+    conflictos, como por ejemplo las licencias de las diferentes herramientas
+    que se van a usar, se conoce como \textbf{viabilidad legal}.
+
+
+\end{itemize}
+
+\section{Planificación temporal}
+La entrega está prevista para el \fechaEntrega. El registro de trabajo
+comienza el 26 de febrero de 2026, por lo que la estimación económica toma
+como referencia los \num{204} días naturales comprendidos entre ambas
+fechas, incluidas las dos. Las fechas y horas de los \textit{Sprints}
+recogen el seguimiento realizado, mientras que la fecha de entrega fija el
+límite previsto para completar el desarrollo y la documentación.
+
+Para la planificación temporal se ha seguido una \textbf{metodología ágil}
+adaptada a las características y necesidades del proyecto. El desarrollo
+se ha dividido en iteraciones, denominadas \textit{Sprints}. Cada una de
+ellas se estructuraba en torno a una reunión de equipo en la que se exponían
+\textbf{los puntos tratados} durante dicha iteración, \textbf{los problemas}
+que habían surgido a raíz del desarrollo de las tareas y, por último,
+\textbf{los objetivos previstos} de cara al cierre de la siguiente iteración.
+
+La duración de cada \textit{Sprint} ha sido de \textbf{2 semanas}, salvo en
+algunas iteraciones concretas, en las que surgieron imprevistos.
+
+Para organizar las tareas propuestas en cada \textit{Sprint} se ha usado un
+\textbf{\textit{tablero Kanban}} en el que se iba marcando cuando se estaba
+trabajando en una tarea o cuando se podía dar por finalizada.
+
+En los siguientes apartados se detalla cada uno de los \textit{Sprints} por
+separado.
+
+\subsection{\textit{Sprint} 0: Planteamiento inicial e investigación}
+\textbf{Duración:} del 26 de febrero al 12 de marzo de 2026.
+Este \textit{Sprint} dio comienzo oficialmente al proyecto, aunque es cierto
+que se realizó un estudio de viabilidad mínimo previo a este proyecto. En la
+reunión inicial se explicó la idea más a fondo y se debatió qué dirección se
+quería que tomase el proyecto desde el principio. Por tanto, este \textit{Sprint}
+se centró en investigar y recopilar información útil para asentar una buena base
+y en empezar a montar el principio del \textit{pipeline}, comenzando por el
+\textbf{reconocimiento óptico de caracteres} (\acs{OCR}, del inglés \textit{Optical Character
+Recognition})\acused{OCR}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-00}.
+
+\imagen{sprint-00}{Tablero del \textit{Sprint} 0.}
+
+Se emplearon 13 horas y media de las 17 estimadas, y se completaron todas las
+tareas previstas.
+
+\subsection{\textit{Sprint} 1: Arquitectura base, CI y módulo OCR}
+\textbf{Duración:} del 12 de marzo al 26 de marzo de 2026.
+Con una idea más asentada acerca de la dirección del proyecto, este \textit{Sprint}
+se centró en configurar el repositorio y su \textbf{integración continua} (CI, del
+inglés \textit{Continuous Integration})\acused{CI}. Además, se creó una base de
+arquitectura sobre la que empezar a desarrollar las funcionalidades.
+Por otro lado, se investigaron y probaron diferentes opciones de \ac{OCR}, de
+\textbf{generación aumentada por recuperación}
+(\acs{RAG}, del inglés \textit{Retrieval-Augmented Generation})\acused{RAG}
+y de \textbf{grandes modelos de lenguaje}
+(\acs{LLM}, del inglés \textit{Large Language Model})\acused{LLM}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-01}.
+
+\imagen{sprint-01}{Tablero del \textit{Sprint} 1.}
+
+Se emplearon 24 horas de las 24 estimadas, y se completaron todas las
+tareas previstas.
+
+\subsection{\textit{Sprint} 2: Migración a microservicios, RAG y LLM}
+\textbf{Duración:} del 26 de marzo al 16 de abril de 2026.
+Este \textit{Sprint} se centró en pulir la estructura base del proyecto
+y migrar la arquitectura monolítica a una arquitectura de
+microservicios, en la que se planteó mover cada elemento lo
+suficientemente grande, como por ejemplo, el \ac{LLM} o el \ac{OCR},
+a su propio módulo en el que poder modificarse o instalar dependencias
+sin afectar al resto del sistema~\cite{fowler_microservices}.
+Adicionalmente, se hizo uso de esta nueva arquitectura para montar la
+primera versión del \textit{pipeline}, conectando el \ac{RAG} con el \ac{LLM}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-02}.
+
+\imagen{sprint-02}{Tablero del \textit{Sprint} 2.}
+
+Se emplearon 28 horas frente a las 20 estimadas, y se completaron todas las
+tareas previstas.
+
+\subsection{\textit{Sprint} 3: Estabilización y optimización del motor de IA}
+\textbf{Duración:} del 16 de abril al 23 de abril de 2026.
+
+Este \textit{Sprint} se centró en mejorar la estabilidad y optimizar el motor de
+\ac{IA} de la aplicación, formado por el \ac{RAG} y el \ac{LLM}. Para ello, se
+establecieron una serie de requisitos y se siguió un enfoque de desarrollo guiado
+por pruebas (\acs{TDD}, del inglés \textit{Test-Driven Development})\acused{TDD}~\cite{agile_alliance_tdd},
+con el objetivo de validar el comportamiento esperado de dichos módulos.
+
+Por otro lado, se hizo un análisis del estado del arte de \textbf{modelos de
+síntesis de voz} (\acs{TTS}, del inglés \textit{Text-To-Speech})\acused{TTS} y un
+estudio de viabilidad mínimo, sobre todo de cara a las limitaciones a nivel de
+\textit{hardware} disponible.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-03}.
+
+\imagen{sprint-03}{Tablero del \textit{Sprint} 3.}
+
+Se emplearon 15 horas frente a las 12 estimadas, y se completaron todas las
+tareas previstas.
+
+\subsection{\textit{Sprint} 4: Creación de un \textit{frontend} básico funcional}
+\textbf{Duración:} del 23 de abril al 12 de mayo de 2026.
+
+Este \textit{Sprint} se centró en refactorizar el \textit{backend}, aplicando
+patrones de diseño y buenas prácticas. Por ejemplo, se emplearon patrones como \textbf{\textit{Strategy}} y \textbf{\textit{Factory}}~\cite{patterns}. El
+primero sirve para encapsular los distintos motores de \ac{OCR} tras una interfaz
+común e intercambiarlos sin afectar al resto del sistema, y el segundo para
+instanciar el motor adecuado según la configuración.
+
+Por otro lado, se implementaron en el flujo de \ac{CI} herramientas como
+\textbf{\textit{Ruff}}~\cite{ruff} para mejorar la calidad del código.
+
+Sobre esa base, se conectó una interfaz sencilla en \acs{HTML} (del inglés
+\textit{HyperText Markup Language})\acused{HTML} con la que disponer de una demo y probar el \textit{pipeline} de \textbf{extremo a
+extremo} (\acs{E2E}, del inglés \textit{End-to-End})\acused{E2E}.
+
+La primera interfaz web de demostración se muestra en la figura~\ref{fig:sprint-04-demo-frontend}.
+
+\imagen{sprint-04-demo-frontend}{Interfaz web de demostración desarrollada para probar el \textit{pipeline} de extremo a extremo.}
+
+En la reunión se debatió acerca del estudio de viabilidad del módulo de \ac{TTS}
+y, finalmente, se decidió dejarlo fuera debido a las limitaciones de
+\textit{hardware} y a la complejidad y la pérdida de calidad en
+la experiencia de usuario que supondría un sistema de carga y descarga de modelos
+para gestionar los recursos.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-04}.
+
+\imagen{sprint-04}{Tablero del \textit{Sprint} 4.}
+
+Se emplearon 20 horas y 40 minutos frente a las 20 estimadas, y se
+completaron todas las tareas previstas.
+
+\subsection{\textit{Sprint} 5: Refinamiento del \textit{backend} y diseño del \textit{frontend}}
+\textbf{Duración:} del 12 de mayo al 26 de mayo de 2026.
+
+Este \textit{Sprint} se centró principalmente en desarrollar la primera versión de
+una \textbf{aplicación web progresiva} (\acs{PWA}, del inglés
+\textit{Progressive Web App})\acused{PWA} y sentar las bases para mejorarla en
+futuras iteraciones~\cite{mdn_pwa}.
+
+Adicionalmente, como resultado de haber realizado la demo, se observó que, pese a
+que el motor \textit{\textbf{PaddleOCR}}~\cite{paddleocr_tech_report} que se estaba
+utilizando era muy fiable en cuanto a los resultados, era considerablemente lento. Además,
+su variante adaptada para la \textbf{\textit{Unidad de Procesamiento Gráfico}}
+(\acs{GPU}, del inglés \textit{Graphics Processing Unit})\acused{GPU}, con la que se reducía el
+problema de rendimiento, es muy dependiente de las versiones de \acs{CUDA} (del inglés
+\textit{Compute Unified Device Architecture})\acused{CUDA}, \textit{PaddlePaddle} y de los
+\textit{drivers} de la \ac{GPU}~\cite{paddlepaddle_install}. Por motivos de compatibilidad,
+se decidió añadir el motor \ac{OCR} \textbf{\textit{Tesseract}}~\cite{tesseract_ocr} como
+opción por defecto y haciendo uso de los patrones de diseño aplicados que permiten tener
+varias opciones configurables~\cite{patterns}, tras haber sido el mejor motor en promedio
+en las medidas tomadas en los \textit{benchmarks} realizados.
+
+
+Por último, se implementó \textit{SonarQube}~\cite{sonarqube_ci} como un paso más de
+\ac{CI} con el objetivo de
+reducir \textit{code smells}~\cite{sonarqube_metrics} y malas prácticas en el código.
+Utilizando esta nueva herramienta, en este mismo \textit{Sprint} se aprovechó para
+corregir la \textbf{deuda técnica}~\cite{sonarqube_metrics} detectada por
+\textit{SonarQube}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-05}.
+\imagen{sprint-05}{Tablero del \textit{Sprint} 5.}
+
+Se emplearon 81 horas y 7 minutos frente a las 58 estimadas, y se
+completaron todas las tareas previstas.
+
+\subsection{\textit{Sprint} 6: Finalización del MVP}
+\textbf{Duración:} del 26 de mayo al 13 de junio de 2026.
+
+Este \textit{Sprint} se centró en montar \textbf{\textit{una base de datos relacional en
+PostgreSQL}}~\cite{postgresql_about}, sobre la que almacenar manuales, \textit{assets},
+conversaciones, etc.
+
+La parte más importante de este paso se encontraba en crear un \textbf{sistema de usuarios},
+haciendo especial énfasis en su \textbf{seguridad} teniendo en cuenta apartados
+como \textbf{la gestión de sesiones}~\cite{owasp_session_management}, o la \textbf{protección
+contra falsificación de peticiones entre sitios web} (\acs{CSRF}, del inglés \textit{Cross-Site
+Request Forgery})\acused{CSRF}~\cite{owasp_csrf} entre otros.
+Estas medidas se detallan en el apartado
+\guillemotleft{}\nameref{sec:diseno-seguridad}\guillemotright{} del anexo de diseño.
+
+Al mismo tiempo, se puso como objetivo mejorar el \textit{frontend} y la experiencia de
+usuario mediante iteraciones hasta llegar a tener un \textbf{producto mínimo viable}
+(\acs{MVP}, del inglés \textit{Minimum Viable Product})\acused{MVP}~\cite{agile_alliance_mvp}, incluyendo
+apartados como el rendimiento, la flexibilidad y la robustez, tal como se puede ver en el
+desglose de tareas al ampliar la cantidad de \textit{assets} y formatos soportados o al reducir
+el tamaño y tiempo de construcción de las imágenes \textit{Docker}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-06}.
+
+\imagen{sprint-06}{Tablero del \textit{Sprint} 6.}
+
+Se emplearon 151 horas y 40 minutos frente a las 77 estimadas, y se
+completaron todas las tareas previstas.
+
+\subsection{\textit{Sprint} 7: Preparación del despliegue}
+\textbf{Duración:} del 15 de junio al 30 de junio de 2026.
+
+Este \textit{Sprint} se centró sobre todo en dejar todo preparado para el despliegue
+de la aplicación. Para ello, se llevó a cabo una fase de
+\textbf{aseguramiento de la calidad} (\acs{QA}, del inglés
+\textit{Quality Assurance})\acused{QA}~\cite{iso_quality_assurance}.
+
+Durante dicha fase, se detectaron principalmente tres problemas:
+
+\begin{itemize}
+    \item El procesamiento de tareas pesadas estaba bloqueando el
+    \textbf{bucle de eventos principal de la aplicación}.
+    \item La calidad de los resultados del \ac{OCR} era, en ocasiones,
+    \textbf{insuficiente} para enriquecer las respuestas del \ac{LLM}
+    \item La aplicación requería de un \textit{hardware} muy específico.
+\end{itemize}
+
+Una vez identificados, se crearon tareas para investigar posibles soluciones,
+implementarlas y comprobar que corregían los problemas detectados.
+
+La ejecución tareas pesadas se movieron a una \textbf{cola de Celery}, utilizando Redis como \textit{broker} de mensajes~\cite{celery_introduction}.
+
+Para mejorar los resultados del \ac{OCR}, se creó un \textit{pipeline} que
+aplica un \textbf{preprocesado de imagen} específico para cada motor.
+
+Por último, se añadió un arranque adaptativo que detecta la disponibilidad de
+una GPU NVIDIA y la VRAM libre para recomendar perfiles compatibles del \ac{LLM}
+y del \ac{OCR}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-07}.
+
+\imagen{sprint-07}{Tablero del \textit{Sprint} 7.}
+
+Se emplearon 82 horas frente a las 82 estimadas, y se completaron todas
+las tareas previstas.
+
+\subsection{\textit{Sprint} 8: Despliegue de la aplicación}
+\textbf{Duración:} del 1 de julio al 20 de julio de 2026.
+
+Este \textit{Sprint} se centró en crear la infraestructura necesaria para
+realizar el primer despliegue de \textit{Manualito}, tanto del sitio web de
+presentación (desplegado en \href{https://manualito.dev/}{\textit{manualito.dev}})
+como de la aplicación a través de \textit{Cloudflare
+Tunnel}~\cite{cloudflare_tunnel}
+(desplegado a demanda en \href{https://app.manualito.dev/}{\textit{app.manualito.dev}}).
+
+Como consecuencia de preparar el proyecto para su publicación, se estableció un
+flujo de trabajo basado en \textbf{ramas por entorno}~\cite{gitlab_branch_per_environment}
+para organizar el desarrollo, las pruebas y el despliegue de los cambios.
+
+Además, los \textit{runners} de GitLab alojados en la infraestructura de HP SCDS
+comenzaron a fallar, lo que impedía mantener el flujo de \ac{CI} e implementar un
+procedimiento fiable de \textbf{despliegue continuo} (\acs{CD}, del inglés
+\textit{Continuous Deployment})\acused{CD}. Por este motivo, el repositorio
+principal se migró a GitHub~\cite{manualito_github}. Por su parte, GitLab se
+mantuvo para conservar la trazabilidad del proyecto, por lo que las
+\textit{issues} se replicaron en ambas plataformas~\cite{manualito_gitlab}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-08}.
+
+\imagen{sprint-08}{Tablero del \textit{Sprint} 8.}
+
+Se emplearon 68 horas y 35 minutos frente a las 75 estimadas, y se
+completaron todas las tareas previstas.
+
+\subsection{\textit{Sprint} 9: Despliegue de la documentación}
+\textbf{Duración:} del 20 de julio al 6 de agosto de 2026.
+
+Este \textit{Sprint} se centró en crear un sitio web en el que publicar la
+documentación de \textit{Manualito}. Para ello, se utilizó \textit{Starlight},
+un tema de documentación basado en \textit{Astro}~\cite{starlight_documentation}, para exponer las guías de uso y la documentación técnica del proyecto.
+
+El sitio se desplegó mediante
+\textit{Cloudflare Workers Static Assets}~\cite{cloudflare_workers_static_assets}
+y se publicó en \href{https://docs.manualito.dev/}{\textit{docs.manualito.dev}}.
+
+Por otro lado, se internacionalizó la interfaz de \textit{Manualito} para que
+pudiera utilizarse \textbf{tanto en español como en inglés}.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-09}.
+
+\imagen{sprint-09}{Tablero del \textit{Sprint} 9.}
+
+Se emplearon 50 horas y 30 minutos frente a las 53 estimadas, y se
+completaron todas las tareas previstas.
+
+\subsection{\textit{Sprint} 10: Mejora del \acs{RAG}}
+\textbf{Duración:} del 6 de agosto al 23 de agosto de 2026.
+
+Este \textit{Sprint} se centró en mejorar el \ac{RAG} de \textit{Manualito}.
+Para ello, se combinaron las \textbf{búsquedas semánticas y textuales}, y se
+incorporó el nombre del juego a la consulta para interpretar preguntas que
+no lo mencionaban explícitamente.
+
+Además, se aplicó el filtro de \textbf{manuales autorizados} antes de
+recuperar los fragmentos, para que los documentos que el usuario no podía
+consultar no ocupasen posiciones entre los resultados.
+
+Por último, se añadió una tarea periódica para mantener el índice de
+búsqueda sincronizado con PostgreSQL, eliminando las entradas de manuales
+borrados y repitiendo las indexaciones incompletas.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-10}.
+
+\imagen{sprint-10}{Tablero del \textit{Sprint} 10.}
+
+Se emplearon 47 horas frente a las 115 estimadas, y se completaron todas las tareas previstas.
+
+\subsection{\textit{Sprint} 11: Redacción de la documentación}
+\textbf{Duración:} del 23 de agosto al 17 de septiembre de 2026.
+
+Este \textit{Sprint} se centró en recopilar y completar la documentación
+redactada durante el desarrollo para preparar la \textbf{memoria y los anexos
+del trabajo de fin de grado}. También se publicaron los estudios de rendimiento
+del proyecto y se corrigieron pequeños errores e incoherencias detectados al
+revisar la interfaz y el envío de correos.
+
+El desglose en tareas junto con los campos asociados a cada una se
+recoge en la figura~\ref{fig:sprint-11}.
+
+\imagen{sprint-11}{Tablero del \textit{Sprint} 11.}
+
+El tiempo dedicado a la memoria y los anexos se repartió entre numerosas sesiones
+breves, por lo que no se conserva una medición suficientemente precisa de las
+horas empleadas. Para evitar establecer una cifra reconstruida sin evidencia,
+no se incluye una estimación del esfuerzo de este \textit{Sprint}.
+
+\section{Estudio de viabilidad}
+
+Una vez planificado el trabajo en el tiempo, queda comprobar que el proyecto
+se puede realizar. Para ello se analizan los dos apartados que mencionados
+anteriormente: la \textbf{viabilidad económica}, que estima los costes de
+desarrollo y los contrasta con los beneficios esperables, y la \textbf{viabilidad
+legal}, que revisa las licencias de las herramientas empleadas y el cumplimiento
+normativo aplicable.
+
+\subsection{Viabilidad económica}
+El presupuesto estima cuánto costaría desarrollar \textit{Manualito} en un
+entorno empresarial, aunque el proyecto se haya realizado en un contexto
+académico. Para valorar el trabajo se mantiene la hipótesis de un
+desarrollador a jornada completa durante el periodo previsto, del 26 de
+febrero al \fechaEntrega.
+
+El personal, las amortizaciones y la conexión a internet se prorratean mediante el factor
+\(\num{204}/\num{365}\), correspondiente a los días del periodo y del año
+2026. Las cuotas mensuales se convierten primero a su equivalente anual.
+Así se incluyen los meses parciales sin redondear la duración a meses
+completos. Los importes se redondean a céntimos antes de sumar las filas de
+cada tabla.
+
+\subsubsection{Costes}
+La estimación reúne el coste de personal, la parte del equipo y las licencias
+imputada al proyecto, y los gastos de electricidad, conexión y entrega.
+
+\noindent\textbf{Costes de personal}\par
+Se considera un único desarrollador de perfil \textit{junior} a jornada
+completa. Como referencia mínima se toma el \textbf{Salario Mínimo
+Interprofesional} de 2026, fijado en \num{17094.00}\,€ anuales~\cite{smi2026}.
+Esta cantidad sirve como base del presupuesto, sin equipararla al salario de
+mercado de ese perfil.
+
+Sobre esa base se estima una cotización empresarial del
+\qty{30.65}{\percent}, suponiendo una contratación indefinida. El porcentaje
+reúne las contingencias comunes (\qty{23.60}{\percent}), el desempleo
+(\qty{5.50}{\percent}), el Mecanismo de Equidad Intergeneracional
+(\qty{0.75}{\percent}), el Fondo de Garantía Salarial
+(\qty{0.20}{\percent}) y la formación profesional
+(\qty{0.60}{\percent})~\cite{orden_cotizacion_2026}.
+
+Se trata de una aproximación presupuestaria. Una contratación real exigiría
+comprobar la base mínima del grupo profesional y añadir la cotización por
+accidentes de trabajo y enfermedades profesionales, cuya tarifa depende de
+la actividad. Tampoco se contemplan horas extraordinarias ni complementos
+salariales.
+
+La tabla~\ref{tabla:costes-personal} recoge la referencia anual y el importe
+imputado a los \num{204} días del proyecto.
+\tablaSmallSinColores
+  {Costes de personal.}
+  {l S[table-format=5.2, detect-weight]}
+  {costes-personal}
+  {\textbf{Concepto} & {\textbf{Coste (€)}} \\}
+  {
+    Salario bruto anual                       & \num{17094.00} \\
+    Cotización empresarial anual              & \num{5239.31} \\
+    Coste empresarial anual estimado           & \num{22333.31} \\
+    \midrule
+    Salario bruto del periodo                 & \num{9553.91} \\
+    Cotización empresarial del periodo        & \num{2928.27} \\
+    \midrule
+    \bfseries Total (204 días)                & \bfseries \num{12482.18} \\
+  }
+
+\noindent\textbf{Costes de componentes \textit{hardware}}\par
+
+ El siguiente paso es revisar todos los gastos derivados de componentes \textit{hardware}
+ que se necesitan para desarrollar y probar un producto \textit{software} de este tipo. En
+ este caso es especialmente relevante, ya que a la hora de tratar con modelos \ac{IA}
+ como los \ac{LLM} se necesitan ciertas capacidades de computación que idealmente se
+ obtienen de una \ac{GPU} que cuente con la suficiente potencia.
+
+A continuación se desglosan los componentes y costes asociados que podría tener un equipo
+con la potencia necesaria~\ref{tabla:costes-hardware}.
+
+\tablaSmallSinColores
+  {Costes de componentes \textit{hardware}.}
+  {l r r}
+  {costes-hardware}
+  {\textbf{Componente} & \textbf{Precio (€)} & \textbf{Amortizado (€)} \\}
+  {
+    Procesador AMD Ryzen 5 7600             & \num{174.90}  & \num{24.44}  \\
+    \ac{GPU} NVIDIA RTX 4070 Super          & \num{639.90}  & \num{89.41}  \\
+    Memoria RAM 32\,GB DDR5                 & \num{184.98}  & \num{25.85}  \\
+    Placa base AM5 (B850)                   & \num{129.90}  & \num{18.15}  \\
+    SSD NVMe PCIe 4.0 1\,TB                 & \num{154.95}  & \num{21.65}  \\
+    Fuente 750\,W 80+ Gold                  & \num{112.99}  & \num{15.79}  \\
+    Disipador por aire AM5                  & \num{21.95}   & \num{3.07}   \\
+    Caja ATX                                & \num{79.90}   & \num{11.16}   \\
+    \midrule
+    \bfseries Total                         & \bfseries\num{1499.47} & \bfseries\num{209.52} \\
+  }
+
+Los precios se han consultado en PcComponentes a fecha de 20 de junio de 2026 ~\cite{pccomp_ryzen_7600,
+pccomp_rtx_4070_super,pccomp_ram_kingston_32gb,pccomp_msi_b850,
+pccomp_kingston_nv3,pccomp_msi_a750gl,pccomp_hyper_212,pccomp_corsair_3000d}.
+
+Para estimar la parte del equipo consumida durante el proyecto se adopta
+una amortización lineal con una vida útil de cuatro años (\num{48} meses),
+valor residual nulo e imputación íntegra durante el periodo considerado.
+Esta vida útil equivale al coeficiente anual del \qty{25}{\percent}
+recogido para los equipos informáticos en la tabla del impuesto sobre
+sociedades~\cite{ley_impuesto_sociedades}, que se utiliza como referencia.
+El coste de cada componente se calcula como:
+\[
+  \text{Coste amortizado} = \text{Precio} \times
+  \frac{\num{204}}{\num{365} \times \num{4}}
+\]
+
+\noindent\textbf{Costes de licencias \textit{software}}\par
+
+Otro punto importante es revisar los gastos en licencias de programas, si bien la
+gran mayoría de \textit{software} utilizado es de código abierto (\acs{OSS}, del
+inglés \textit{Open Source Software})\acused{OSS}, el desarrollo y las pruebas
+se han realizado sobre \textit{Windows}, lo que requiere una licencia de
+\textit{Windows 11 Pro}~\cite{ms_windows11_pro}.
+
+Los precios de las licencias de \textit{software} se desglosan en la siguiente
+tabla~\ref{tabla:costes-software}.
+
+\tablaSmallSinColores
+  {Costes de las licencias \textit{software}.}
+  {l S[table-format=3.2] S[table-format=2.2]}
+  {costes-software}
+  {\textbf{\textit{Software}} & {\textbf{Precio (€)}} & {\textbf{Amortizado (€)}} \\}
+  {
+    Windows 11 Pro                         & \num{259.00} & \num{48.25} \\
+    \midrule
+    \bfseries Total                        & \bfseries \num{259.00} & \bfseries \num{48.25} \\
+  }
+
+Para la licencia se adopta una vida útil de tres años (\num{36} meses),
+con amortización lineal y valor residual nulo. Es una hipótesis del
+presupuesto, por lo que el importe imputado se obtiene mediante
+\(\num{259.00} \times \num{204}/(\num{365} \times \num{3})\), que resulta
+en \num{48.25}\,€.
+
+\noindent\textbf{Otros costes}\par
+El consumo eléctrico se aproxima a partir del esfuerzo registrado. Los
+\textit{Sprints} 0 a 9 suman \num{535} horas y \num{2} minutos entre el
+26 de febrero y el 6 de agosto, un periodo de \num{162} días naturales.
+Para estimar el consumo hasta la entrega se mantiene ese ritmo medio
+durante los \num{204} días previstos:
+\[
+  \text{Horas estimadas} =
+  \left(\num{535} + \frac{\num{2}}{\num{60}}\right)
+  \times \frac{\num{204}}{\num{162}}
+  \simeq \num{673.75}
+\]
+
+Suponiendo que el equipo se utiliza durante esas horas, con una potencia
+media de \qty{250}{\watt} y un precio de \num{0.15}\,€/kWh~\cite{ocu_precio_luz},
+el coste estimado es de \num{25.27}\,€. De ese importe, \num{20.06}\,€
+corresponden al esfuerzo ya registrado y \num{5.21}\,€ a la prolongación del
+mismo ritmo hasta la entrega. Esta aproximación no equivale a una medición
+del consumo ni añade horas al registro de los \textit{Sprints}.
+
+Para la conexión a internet se conserva una cuota de
+\num{30}\,€ mensuales~\cite{jazztel_fibra} y se imputa al proyecto un
+\qty{30}{\percent} del uso, al compartirla con actividades personales.
+Aplicando el mismo periodo que al resto del presupuesto, el cálculo es
+\(\num{30} \times \num{12} \times \num{204}/\num{365}
+\times \num{0.30} = \num{60.36}\)\,€.
+
+La impresión y encuadernación se estiman en \num{50}\,€ como gasto puntual.
+Para el registro del dominio \textit{manualito.dev} se reserva una anualidad
+de \num{12}\,€.
+
+
+Todo esto se desglosa en la tabla~\ref{tabla:otros-costes}.
+
+\tablaSmallSinColores
+  {Otros costes.}
+  {l S[table-format=3.2]}
+  {otros-costes}
+  {\textbf{Concepto} & {\textbf{Coste (€)}} \\}
+  {
+    Consumo eléctrico                        & \num{25.27} \\
+    Conexión a internet                      & \num{60.36} \\
+    Impresión y encuadernación de la memoria & \num{50.00} \\
+    Dominio web                              & \num{12.00} \\
+    \midrule
+    \bfseries Total                          & \bfseries \num{147.63} \\
+  }
+
+\noindent\textbf{Costes operativos}\par
+Además de los costes de desarrollo, mantener la aplicación disponible de
+forma continuada tendría asociados costes operativos mensuales.
+Estos costes dependerían principalmente del uso real: número de usuarios
+activos, mensajes procesados, modelo \ac{LLM}, almacenamiento de manuales y \textit{assets} e infraestructura de despliegue.
+
+Durante el proyecto se ha utilizado el plan gratuito de Resend, sin coste
+alguno. El envío está sujeto a los límites diarios y mensuales de ese
+plan~\cite{resend_precios}.
+
+Por este motivo, no se fija una cifra cerrada para dichos costes en esta fase del
+proyecto. Al depender directamente del uso real de la aplicación, deberían
+estimarse mediante pruebas de carga y métricas de uso antes de ofrecer el
+servicio de forma continuada.
+
+Hay que tener en cuenta que estos costes condicionarían tanto los límites de uso
+de cada plan como el precio final de las suscripciones.
+
+\noindent\textbf{Coste efectivo del proyecto}\par
+Una vez estimados los costes de personal, \textit{hardware}, \textit{software} y
+otros gastos asociados, se obtiene el coste imputado al desarrollo del proyecto.
+En este cálculo no se incluye el coste completo de adquisición del equipo, sino
+únicamente la parte amortizada correspondiente a los \num{204} días previstos,
+ya que dicho equipo podría seguir utilizándose una vez finalizado el proyecto.
+
+El total de coste imputado al proyecto se desglosa en la
+tabla~\ref{tabla:coste-imputado-proyecto}.
+
+\tablaSmallSinColores
+  {Coste imputado al proyecto.}
+  {l r}
+  {coste-imputado-proyecto}
+  {\textbf{Concepto} & \textbf{Coste (€)} \\}
+  {
+    Costes de personal        & \num{12482.18} \\
+    Costes de \textit{hardware}        & \num{209.52}  \\
+    Costes de \textit{software}        & \num{48.25}    \\
+    Otros costes              & \num{147.63}  \\
+    \midrule
+    \bfseries Total           & \bfseries\num{12887.58} \\
+  }
+
+Con este dato, ya podemos estimar los beneficios que podemos obtener con el producto.
+
+\subsubsection{Beneficios}
+
+Esta aplicación \textbf{no está pensada para ser comercializada}, principalmente porque su
+código fuente ha sido publicado y, adicionalmente, se han detallado los mecanismos de seguridad
+que se usan en ella. Por este motivo, sería imprudente, no solo comercializar la aplicación
+a corto plazo, sino incluso desplegarla fuera del contexto académico con el objetivo de
+utilizar datos reales de usuarios.
+
+Dicho esto y una vez se han comprendido los riesgos, sí que se podría llegar a comercializar
+la aplicación en una segunda fase, tras haber cambiado y mejorado los sistemas actuales de
+seguridad para corregir vulnerabilidades y tras haber pasado las auditorías de seguridad
+necesarias.
+
+En este caso, se distribuiría bajo un modelo de \textbf{\textit{software} como servicio}
+(\acs{SaaS}, del inglés \textit{Software as a Service})\acused{SaaS}~\cite{nist_cloud_computing} en el que se ofrecerían planes tanto para acceder a mejores modelos \ac{LLM}, como para aumentar
+los límites de mensajes diarios por cuenta. En cualquier caso, los datos y \textit{assets} se
+guardarían en la nube.
+
+Si se llegase a comercializar se plantearían tres tipos de suscripciones mensuales detallados
+en la tabla~\ref{tabla:suscripciones}.
+
+\tablaSmallSinColores
+  {Planes de suscripción.}
+  {l c c c}
+  {suscripciones}
+  { & \textbf{Aprendiz} & \textbf{Estratega} & \textbf{Gran Maestro} \\}
+  {
+    Precio mensual       & Gratis        & \num{4.99}\,€ & \num{9.99}\,€  \\
+    Juegos patrocinados  & Sí            & No            & No             \\
+    Modelo \ac{LLM}      & granite3.3:2b & gemma4:e4b    & gemma4:e4b     \\
+    Mensajes diarios     & \num{20}      & \num{200}     & Ilimitados     \\
+    Manuales             & \num{5}       & \num{50}      & Ilimitados     \\
+    Almacenamiento       & \num{100}\,MB & \num{2}\,GB   & \num{20}\,GB   \\
+    Soporte              & Comunidad     & Correo        & Prioritario    \\
+  }
+
+
+
+
+\subsection{Viabilidad legal}
+\label{sec:viabilidad-legal}
+\begingroup
+\DefTblrTemplate{conthead-text}{legal}{(continuación)}
+\DefTblrTemplate{contfoot-text}{legal}{Continúa en la página siguiente}
+\SetTblrTemplate{conthead-text,contfoot-text}{legal}
+
+\textit{Manualito} combina código propio con bibliotecas, modelos y recursos
+visuales de terceros, cuyo uso y distribución están sujetos a las condiciones
+de sus respectivas licencias.
+
+\subsubsection{\textit{Software}}
+
+El código de \textit{Manualito} se publica bajo la \textbf{licencia \acs{MIT}},
+recogida en el archivo \texttt{LICENSE} del repositorio
+\cite{manualito_licencia}. Esta licencia permite utilizar, estudiar, modificar
+y distribuir el programa, incluso con fines comerciales, siempre que se
+conserven el aviso de autoría y el texto de la licencia en las copias o partes
+sustanciales del código. De este modo, otras personas pueden adaptar la
+aplicación a sus necesidades sin tener que solicitar un permiso individual
+para cada uso~\cite{licencia_mit}.
+
+La elección de \acs{MIT} se aplica al código propio y no sustituye las licencias de
+las dependencias. Para conocer qué condiciones acompañan a la aplicación se
+han revisado las versiones declaradas en el proyecto y sus fuentes oficiales.
+La tabla~\ref{tabla:licencias-componentes} recoge los componentes principales,
+con su función y la licencia de cada componente. En las
+bibliotecas que incorporan otros componentes, la licencia principal se
+completa con los avisos de esos materiales.
+
+\begin{longtblr}[
+  caption = {Licencias de los componentes principales.},
+  label = {tabla:licencias-componentes},
+]{
+  width = \linewidth,
+  colspec = {X[2.8,l] X[1.5,l] X[3.0,l] X[2.7,l]},
+  rowhead = 1,
+  cells = {font=\small},
+  row{1} = {font=\small\bfseries},
+  rowsep = 3pt,
+}
+\toprule
+Componente & Versión & Uso & Licencia \\
+\midrule
+FastAPI & 0.141.1 & Atención de peticiones. & \acs{MIT}~\cite{licencia_fastapi} \\
+React & 19.2.8 & Interfaz del navegador. & \acs{MIT}~\cite{licencia_react} \\
+SQLAlchemy & 2.0.51 & Acceso a los datos. & \acs{MIT}~\cite{licencia_sqlalchemy} \\
+Psycopg & 3.3.4 & Comunicación con PostgreSQL. & \acs{LGPL} 3.0~\cite{licencia_psycopg} \\
+PostgreSQL & 18.4 & Persistencia de datos. & PostgreSQL~\cite{licencia_postgresql} \\
+Redis & 8.10.0 & Colas y coordinación de tareas. & \acs{AGPL} 3.0, \acs{RSAL} 2 o \acs{SSPL} 1, a elección~\cite{licencia_redis} \\
+Celery & 5.6.3 & Tareas en segundo plano. & \acs{BSD}, tres cláusulas~\cite{licencia_celery} \\
+Chroma & 1.5.9 & Índice de vectores. & Apache 2.0~\cite{licencia_chroma} \\
+Sentence Transformers & 5.7.0 & Representación vectorial del texto. & Apache 2.0~\cite{licencia_sentence_transformers} \\
+Ollama & 0.32.6 & Ejecución de los modelos de lenguaje. & \acs{MIT}~\cite{licencia_ollama} \\
+PaddleOCR & 3.7.0 & Reconocimiento de texto. & Apache 2.0~\cite{licencia_paddleocr} \\
+PaddlePaddle & 3.3.1 & Modelos de PaddleOCR. & Apache 2.0 para la biblioteca~\cite{licencia_paddlepaddle} \\
+Tesseract & No fijada & Reconocimiento alternativo de texto. & Apache 2.0~\cite{licencia_tesseract} \\
+pypdfium2 & 5.12.1 & Lectura de documentos \ac{PDF}. & Apache 2.0 o \acs{BSD}, tres cláusulas, para su código~\cite{licencia_pypdfium2} \\
+Pillow & 12.3.0 & Lectura de imágenes. & MIT-CMU~\cite{licencia_pillow} \\
+OpenCV, paquete Python & 4.10.0.84 & Preparación de imágenes. & Apache 2.0 para OpenCV y \acs{MIT} para su empaquetado~\cite{licencia_opencv} \\
+Caddy & 2.11.4 & Servidor de la interfaz y \textit{proxy} inverso. & Apache 2.0~\cite{licencia_caddy} \\
+Mailpit & 1.30.6 & Servidor de correo local. & \acs{MIT}~\cite{licencia_mailpit} \\
+Flower & 2.0.1 & Supervisión de tareas. & \acs{BSD}, tres cláusulas~\cite{licencia_flower} \\
+\bottomrule
+\end{longtblr}
+
+La versión de Tesseract depende del paquete instalado al construir la imagen,
+por lo que debe concretarse junto con la versión final que se entregue.
+En la fila de OpenCV se indica la versión del paquete
+\texttt{opencv-contrib-python} que utiliza la aplicación.
+
+Las licencias \acs{MIT} y Apache, junto con las variantes
+\textbf{\acs{BSD}} (del inglés \textit{Berkeley Software Distribution})\acused{BSD},
+permiten reutilizar y distribuir las bibliotecas conservando sus avisos.
+Apache 2.0 exige también señalar los
+archivos modificados y mantener las atribuciones de un archivo
+\texttt{NOTICE} cuando forme parte de la distribución original
+\cite{licencia_mit,licencia_apache,licencia_bsd}. Por tanto, publicar el código
+de \textit{Manualito} bajo \acs{MIT} es compatible con mantener esos componentes
+bajo sus propias condiciones.
+
+Algunas bibliotecas añaden requisitos cuando se entregan dentro de la
+aplicación. Por ejemplo, Psycopg utiliza la
+\textbf{licencia pública general reducida}
+(\acs{LGPL}, del inglés \textit{GNU Lesser General Public License})\acused{LGPL},
+que permite combinar la biblioteca con código de otra
+licencia, pero exige conservar sus avisos y cumplir las condiciones de acceso
+al código y sustitución de la biblioteca que correspondan al modo de
+distribución~\cite{licencia_psycopg}. Esta distinción importa si se entrega una
+imagen Docker con las dependencias ya instaladas, porque no contiene solo el
+código propio. OpenCV y PDFium también incorporan materiales con avisos
+adicionales, que deben acompañar a los componentes que se distribuyan
+\cite{licencia_opencv,licencia_pypdfium2}.
+
+Redis 8 permite escoger entre \textit{GNU Affero General Public License}
+(\acs{AGPL})\acused{AGPL}, \textit{Redis Source Available License}
+(\acs{RSAL})\acused{RSAL} y \textit{Server Side Public License}
+(\acs{SSPL})\acused{SSPL}. En \textit{Manualito} se utiliza
+como un servicio independiente, de modo que su presencia no obliga por sí
+sola a cambiar la licencia del código propio. No obstante, la opción elegida
+debe respetarse al distribuir Redis o modificarlo, y el uso de una versión
+modificada a través de la red puede añadir obligaciones de acceso a su código
+\cite{licencia_redis}.
+
+\noindent\textbf{Modelos}\par
+
+Los modelos que ejecuta la aplicación tienen condiciones distintas de las
+bibliotecas que los cargan. Por ello, la licencia \acs{MIT} de Ollama no determina
+la de los modelos de lenguaje, del mismo modo que la licencia de Sentence
+Transformers no sustituye la del modelo utilizado para representar el texto.
+La tabla~\ref{tabla:licencias-modelos} recoge los modelos configurados para
+estas funciones.
+
+\begin{longtblr}[
+  caption = {Licencias de los modelos configurados en la aplicación.},
+  label = {tabla:licencias-modelos},
+]{
+  width = \linewidth,
+  colspec = {X[3.2,l] X[4.0,l] X[2.8,l]},
+  rowhead = 1,
+  cells = {font=\small},
+  row{1} = {font=\small\bfseries},
+  hborder{2-Y} = {pagebreak=no},
+  rowsep = 3pt,
+}
+\toprule
+Modelo & Uso & Licencia \\
+\midrule
+Granite 3.3 2B & Generación de respuestas en el perfil de menor consumo. & Apache 2.0~\cite{licencia_granite} \\
+Gemma 4 E4B & Generación de respuestas y corrección de texto en el perfil de mayor capacidad. & Apache 2.0~\cite{licencia_gemma} \\
+Multilingual E5 Small & Representación del texto para la búsqueda semántica. & \acs{MIT}~\cite{licencia_e5} \\
+\bottomrule
+\end{longtblr}
+
+\noindent\textbf{Herramientas de desarrollo}\par
+
+Las herramientas utilizadas para construir, probar o desplegar el proyecto
+tampoco tienen por qué compartir una licencia. TypeScript utiliza Apache 2.0,
+mientras que Vite se distribuye bajo \acs{MIT}. El código de Docker Compose utiliza
+Apache 2.0, aunque Docker Desktop y los servicios alojados tienen sus propias
+condiciones de uso~\cite{licencia_typescript,licencia_vite,licencia_compose,
+docker_condiciones}. Terraform 1.15.8 emplea la
+\textit{Business Source License} (\acs{BSL})\acused{BSL},
+con un permiso adicional que limita determinados usos
+competitivos, mientras que el proveedor de Cloudflare 5.23.0 se publica bajo
+Apache 2.0~\cite{licencia_terraform,licencia_cloudflare_provider}. Estas
+condiciones afectan a las herramientas, sin convertirse automáticamente en
+la licencia del código que se desarrolla con ellas.
+
+La variante de procesamiento con una \ac{GPU} de NVIDIA incorpora, además,
+componentes sujetos a los acuerdos de \acs{CUDA} y \acs{cuDNN} (del inglés
+\textit{CUDA Deep Neural Network})\acused{cuDNN}. Estos acuerdos permiten
+utilizar las bibliotecas y redistribuir determinadas partes bajo sus
+condiciones, por lo que deben revisarse los componentes incluidos cuando se
+prepare una imagen que las contenga~\cite{nvidia_cuda_licencia,
+nvidia_cudnn_licencia}.
+
+\noindent\textbf{Servicios externos}\par
+
+La búsqueda de juegos utiliza el catálogo de \textit{BoardGameGeek} y muestra
+la atribución \guillemotleft{}Powered by BoardGameGeek\guillemotright{} cuando se consulta. Para aplicaciones
+no comerciales, el proveedor permite normalmente el acceso gratuito,
+sujeto al registro y la autorización de uso de su interfaz de programación de aplicaciones
+(\acs{API}, del inglés \textit{Application Programming Interface})\acused{API}
+y a la inclusión
+del logo de atribución enlazado~\cite{boardgamegeek_api_condiciones}.
+
+Para entregar los correos de verificación y recuperación de cuentas en el
+despliegue público se utiliza Resend. A diferencia de Mailpit, que recoge
+los mensajes en el entorno local, este proveedor recibe la dirección del
+destinatario y el contenido del correo, que incluye el nombre de usuario
+y el enlace temporal para completar la operación. No recibe los manuales
+ni las conversaciones mediante este envío. Su uso se rige por las
+condiciones del servicio, no por la licencia del código de
+\textit{Manualito}~\cite{resend_condiciones}.
+
+\noindent\textbf{Tratamiento de datos personales}\par
+
+El envío de estos mensajes incorpora a Resend como encargado del
+tratamiento. Su acuerdo de tratamiento de datos establece las condiciones
+del servicio y las cláusulas contractuales tipo para las transferencias
+internacionales~\cite{resend_tratamiento}. Según la información del proveedor,
+los mensajes y registros se almacenan en Estados Unidos, aunque se elija
+una región europea para enviarlos. Los planes Free, Pro y Scale conservan
+los correos y registros durante 30 días, mientras que Enterprise permite
+acordar otros plazos~\cite{resend_privacidad}.
+
+
+Al compartir un manual, el usuario puede decidir si muestra su nombre o
+aparece como \guillemotleft{}Anónimo\guillemotright{}, que es la opción por
+defecto. Esta elección oculta el nombre en el manual y en las fuentes de
+las respuestas, pero mantiene la cuenta asociada para comprobar la
+propiedad y los permisos. Tampoco elimina datos que puedan estar escritos
+en las páginas. Por ello, no constituye una anonimización completa de
+los datos personales~\cite{aepd_datos_anonimizados} ni modifica los derechos
+necesarios para subir y compartir el documento.
+
+\subsubsection{Documentación}
+
+La memoria y sus anexos se han redactado en \LaTeX{} y se distribuyen
+bajo la licencia \acs{MIT}, al igual que el código y la documentación
+del repositorio de \textit{Manualito}. Esta licencia permite consultar,
+modificar y compartir la documentación siempre que se conserven el aviso
+de autoría y el texto de la licencia~\cite{manualito_licencia,licencia_mit}.
+
+\subsubsection{Imágenes y otros recursos}
+
+Las tipografías de la interfaz, entre ellas Inter, Manrope y JetBrains Mono,
+se distribuyen bajo la \textit{Open Font License} (\acs{OFL})\acused{OFL}.
+Esta licencia permite incluirlas
+en la aplicación conservando sus avisos y no se aplica al contenido escrito
+con ellas. Los iconos de Lucide utilizan la licencia \acs{ISC} y conservan
+también avisos \acs{MIT} de los iconos procedentes de Feather, de modo que sus
+atribuciones deben mantenerse junto a los recursos que se distribuyan
+\cite{licencia_ofl,licencia_lucide}.
+
+Los recursos propios se publican bajo la licencia \acs{MIT}, pero los logotipos
+y otros elementos de terceros conservan sus propias condiciones de uso,
+aunque aparezcan en los diagramas o las capturas de la memoria.
+
+Los usuarios deben disponer de los derechos necesarios sobre los manuales que
+suban y compartan, sin perjuicio de las obligaciones legales de quien gestione
+el servicio.
+
+\subsubsection{Resumen}
+
+La tabla~\ref{tabla:licencias-entrega} reúne las condiciones de los materiales
+propios que acompañan a la entrega, a los que se añaden las licencias de
+terceros descritas anteriormente.
+
+\begin{longtblr}[
+  caption = {Condiciones de distribución de los materiales del proyecto.},
+  label = {tabla:licencias-entrega},
+]{
+  width = \linewidth,
+  colspec = {X[3,l] X[3,l] X[4,l]},
+  rowhead = 1,
+  cells = {font=\small},
+  row{1} = {font=\small\bfseries},
+  hborder{2-Y} = {pagebreak=no},
+  rowsep = 3pt,
+}
+\toprule
+Material & Licencia o régimen & Condición principal \\
+\midrule
+Código propio & \acs{MIT} & Conservar el aviso de autoría y la licencia. \\
+Documentación del programa & \acs{MIT} & Conservar el aviso de autoría y la licencia. \\
+Memoria, diagramas y capturas propios & \acs{MIT} & Conservar el aviso de autoría y la licencia, respetando los elementos de terceros incluidos. \\
+\bottomrule
+\end{longtblr}
+
+\endgroup

@@ -1,0 +1,66 @@
+\apendice{Anexo de sostenibilización curricular}
+
+\section{Introducción}
+
+La sostenibilidad se ha convertido en un criterio de gran importancia tanto en la
+formación universitaria como en el mundo profesional. Más allá del conocimiento
+técnico, se espera que quien desarrolla un proyecto sepa valorar su impacto
+social, económico y ambiental y tomar decisiones coherentes con un desarrollo
+sostenible.
+
+Con ese objetivo, la \ac{CRUE} elaboró un conjunto de directrices para fomentar la sostenibilidad~\cite{crue_sostenibilidad},
+en las que se recogen las competencias que un alumno debería adquirir. En este anexo se presenta una
+reflexión personal sobre cómo se han trabajado y aplicado dichas competencias durante el desarrollo
+de \textit{Manualito}.
+
+La reflexión se organiza en torno a las cuatro competencias en sostenibilidad que plantea
+dicho marco:
+\begin{itemize}
+    \item La \textbf{contextualización crítica}, que sitúa el proyecto en su
+    contexto social, económico y ambiental.
+    \item El \textbf{uso sostenible de los recursos} y la prevención de impactos
+    negativos sobre el medio.
+    \item La \textbf{participación en procesos comunitarios} orientada a favorecer la
+    sostenibilidad.
+    \item La \textbf{aplicación de principios éticos} coherentes con la
+    sostenibilidad.
+\end{itemize}
+
+\section{Contextualización crítica}
+El objetivo de \textit{Manualito} es facilitar el aprendizaje de las reglas de los juegos
+de mesa, una tarea que normalmente resulta tediosa. Para lograrlo, hace uso de ciertos
+modelos de \ac{IA}, y trabajar con ellos me llevó a considerar su coste más allá de lo técnico,
+ya que el uso de este tipo de modelos, sobre todo llevados a gran escala y alta concurrencia,
+deriva en un consumo energético considerable que conviene tener en cuenta como
+desarrollador.
+
+
+\section{Uso sostenible de los recursos}
+Una gran parte de las decisiones que he tomado contribuyen a reducir el consumo
+de recursos, en la medida en que un producto \textit{software} puede hacerlo.
+
+En este caso, el apartado que más recursos gasta es el modelo \ac{LLM}, debido a
+que requiere procesar cantidades masivas de datos simultáneamente. Por ello,
+para el desarrollo y puesta en marcha de \textit{Manualito} he optado por
+utilizar modelos locales en lugar de los modelos frontera que están en la nube. Esto
+reduce considerablemente la cantidad de computación necesaria para peticiones simples
+como las que maneja \textit{Manualito} y, en consecuencia, se emplean muchos menos recursos.
+
+\section{Participación en procesos comunitarios}
+\textit{Manualito} se apoya casi por completo en componentes \ac{OSS}, como el motor
+de \ac{OCR}, el modelo \ac{LLM} o la base de datos vectorial, entre otros.
+
+Para seguir alineado con esta idea, el código del proyecto se ha publicado de forma
+abierta~\cite{manualito_github}, de modo que pueda consultarse o reutilizarse.
+
+\section{Aplicación de principios éticos}
+El desarrollo planteó dos consideraciones éticas. La primera son los derechos de
+autor. \textit{Manualito} procesa manuales que en general son obras protegidas, lo que obliga
+a delimitar la frontera entre una herramienta de consulta personal y un uso que
+vulnere la propiedad intelectual ajena. De hecho, es una de las razones principales por las
+que no contemplo su comercialización en el estado actual.
+
+Otra de ellas es la seguridad de los usuarios. Al manejar la aplicación cuentas y datos personales,
+aun tratándose de un proyecto académico, existe una responsabilidad mínima de protegerlos, por lo que, en la medida de lo posible, he hecho especial hincapié en la gestión de sesiones
+y la defensa frente a ataques habituales, y he optado por no desplegar la aplicación con
+datos reales sin reforzar previamente ese apartado.

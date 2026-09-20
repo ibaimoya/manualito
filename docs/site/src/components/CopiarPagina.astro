@@ -587,6 +587,8 @@ const trazoCorrecto = '<path d="M20 6 9 17l-5-5"></path>';
   }
 
   .gatillo :global(.gatillo__caret) {
+    position: relative;
+    inset-inline-start: -0.15625rem;
     inline-size: 0.75rem;
     block-size: 0.75rem;
     transition: rotate 180ms var(--m-ease-salida);
@@ -597,6 +599,8 @@ const trazoCorrecto = '<path d="M20 6 9 17l-5-5"></path>';
   }
 
   .iconos {
+    position: relative;
+    inset-inline-start: 0.28125rem;
     display: grid;
     place-items: center;
     inline-size: 1rem;
@@ -665,6 +669,17 @@ const trazoCorrecto = '<path d="M20 6 9 17l-5-5"></path>';
 
   .menu[data-instant] {
     transition-duration: 0ms;
+  }
+
+  @media (max-width: 49.999rem) {
+    .menu {
+      position: fixed;
+      inset-block-start: calc(var(--sl-nav-height) + 0.5rem);
+      inset-inline: 1rem;
+      min-inline-size: 0;
+      max-inline-size: 18.5rem;
+      margin-inline-start: auto;
+    }
   }
 
   .opcion {

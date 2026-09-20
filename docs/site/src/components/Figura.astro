@@ -1,6 +1,6 @@
 ---
 import type { ImageMetadata } from 'astro';
-import { Image } from 'astro:assets';
+import { getImage } from 'astro:assets';
 
 interface Props {
   alt: string;
@@ -9,10 +9,19 @@ interface Props {
 }
 
 const { alt, id, src } = Astro.props;
+const imagen = await getImage({ src, format: src.format === 'png' ? 'png' : undefined });
 ---
 
 <figure {id}>
-  <Image {src} {alt} />
+  <a
+    class="figura-ampliable"
+    href={imagen.src}
+    data-pswp-width={src.width}
+    data-pswp-height={src.height}
+    aria-label={`Ampliar ${alt}`}
+  >
+    <img src={imagen.src} {...imagen.attributes} {alt} />
+  </a>
   <figcaption><slot /></figcaption>
 </figure>
 
@@ -21,10 +30,25 @@ const { alt, id, src } = Astro.props;
     margin-block: 2rem;
   }
 
+  .figura-ampliable {
+    display: block;
+    cursor: zoom-in;
+    border-radius: 0.5rem;
+  }
+
+  .figura-ampliable:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 4px;
+  }
+
   figure :global(img) {
     margin-inline: auto;
     border: 1px solid var(--sl-color-hairline-light);
     border-radius: 0.5rem;
+  }
+
+  figure :global(img[src$='.svg']) {
+    background: #fff8f0;
   }
 
   figcaption {

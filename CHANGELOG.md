@@ -14,6 +14,7 @@ Próxima versión: `1.0.1`.
 - Incorporado el contenido completo de la memoria y los anexos, con sus
   figuras, capturas, acrónimos y bibliografía.
 - Añadidos los PDF descargables y las fuentes LaTeX del trabajo.
+- Publicadas la memoria y los anexos en la wiki del repositorio.
 - Añadida la ampliación de figuras y la consulta de los benchmarks mediante
   gráficos y datos descargables.
 

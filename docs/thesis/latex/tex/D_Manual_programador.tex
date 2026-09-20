@@ -1,0 +1,545 @@
+\apendice{Documentación técnica de programación}
+
+% Recursos locales del anexo. Utilizan los paquetes de la plantilla.
+\definecolor{Dazul}{HTML}{29495E}
+% Figuras vectoriales. Código y paleta registrados en img/anexos/documentacion-tecnica-de-programacion/.
+\newcommand{\Dcodigo}[3][1]{%
+  \begin{figure}[!htbp]
+    \centering
+    \abnormalparskip{0pt}
+    \setlength{\abovecaptionskip}{3pt}
+    \includegraphics[draft=false,width=#1\linewidth,trim=11.25bp 11.25bp 11.25bp 11.25bp,clip]{anexos/documentacion-tecnica-de-programacion/#2.pdf}
+    \caption{#3}\label{fig:d-#2}
+  \end{figure}
+  \FloatBarrier
+}
+
+\begingroup
+\setlength{\emergencystretch}{2em}
+
+\FloatBarrier
+\section{Introducción}
+\label{sec:d-introduccion}
+A nivel de sistema, \textit{Manualito} se compone de \textbf{cuatro partes principales}:
+\begin{itemize}
+    \item El \textit{backend}, escrito en \textit{Python} contiene toda la lógica necesaria a nivel de servidor.
+    \item El \textit{frontend}, escrito en \textit{TypeScript} con
+    \textit{React}, presenta la interfaz y permite al usuario interactuar
+    con la aplicación.
+    \item La configuración y los \textit{scripts} auxiliares permiten
+    desplegar la aplicación y automatizar tareas de desarrollo.
+    \item La documentación del proyecto y los \textit{benchmarks} usados
+    para respaldar las decisiones.
+\end{itemize}
+
+Siguiendo las recomendaciones de Google, la documentación describe qué hace cada parte del proyecto y cómo preparar
+el entorno, ejecutar la aplicación y probar los cambios. Las instrucciones
+se indican por pasos e explican dónde realizar cada acción~\cite{google_documentation_procedures}.
+
+\FloatBarrier
+\section{Estructura de directorios}
+\label{sec:d-estructura}
+
+Para organizar los directorios se ha tomado como referencia la guía
+\textit{FastAPI Best Practices}~\cite{zhanymkanov_fastapi_best_practices}.
+Su propuesta de organizar el código por áreas funcionales se ha adaptado a
+las distintas partes de \textit{Manualito}.
+
+Acto seguido, se va a explicar la función los principales directorios y
+subdirectorios, teniendo en cuenta que, se excluyen aquellos dedicados a
+configuración, gestión de entornos virtuales y generados en tiempo de compilación
+o ejecución.
+
+La figura~\ref{fig:d-directorios} muestra esta estructura y la
+tabla~\ref{tab:d-directorios} explica para qué sirve cada directorio.
+
+% Estructura principal del repositorio de Manualito.
+% El árbol representado se registra en img/anexos/documentacion-tecnica-de-programacion/code-figures.json.
+\Dcodigo[0.96]{directorios}{Resumen de la estructura del repositorio de \textit{Manualito}.}
+
+\begin{table}[!htbp]
+\centering\small
+\abnormalparskip{0pt}
+\setlength{\abovecaptionskip}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.4\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.6\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Ruta} & \textbf{Responsabilidad} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+\path{backend/api/} & Recibe las peticiones del \textit{frontend}, comprueba los permisos de acceso y coordina los servicios y las tareas en segundo plano. \\
+\path{backend/database/} & Modelos de persistencia y evolución del esquema mediante Alembic. \\
+\path{backend/ocr/} & Extracción de texto de imágenes mediante el motor seleccionado. \\
+\path{backend/rag/} & Indexación de fragmentos y recuperación del contexto de los manuales. \\
+\path{backend/llm/} & Preparación de instrucciones y comunicación con el modelo de lenguaje. \\
+\path{backend/common/} & Funciones compartidas, como el tratamiento del texto y la configuración de registros. \\
+\path{backend/tests/} & Pruebas del servidor y de los servicios de procesamiento. \\
+\path{frontend/src/} & Interfaz de usuario, navegación y acceso al servidor. \\
+\path{frontend/public/} & Recursos estáticos, como el icono de la aplicación. \\
+\path{frontend/tests/} & Pruebas de la interfaz y utilidades de preparación. \\
+\path{config/} & Configuración de los servicios y parámetros de ejecución. \\
+\path{deploy/} & Arranque local, perfiles, variantes de contenedores e infraestructura del acceso público. \\
+\path{docs/benchmarks/} & Estudios de reconocimiento, recuperación y modelos de lenguaje. \\
+\path{docs/site/} & Sitio de documentación construido con Astro Starlight. \\
+\path{scripts/} & Utilidades de desarrollo y comprobaciones auxiliares. \\
+\path{.github/} & Flujos de \acs{CI}/\acs{CD} y acciones compartidas. \\
+\path{.pre-commit-config.yaml} & Configura la revisión de los \textit{commits}. \\
+\path{CHANGELOG.md} & Historial de cambios por versión. \\
+\path{CONTRIBUTING.md} & Normas para contribuir al proyecto. \\
+\path{README.md} & Descripción del proyecto y guía de arranque. \\
+\bottomrule
+\end{tabular}
+\caption{Organización del repositorio de \textit{Manualito}.}
+\label{tab:d-directorios}
+\end{table}
+\FloatBarrier
+
+En la raíz, \path{compose.yaml} define los servicios y sus dependencias. \path{pyproject.toml} y \path{uv.lock} describen el entorno Python. Los \textit{scripts} \texttt{setup}, \texttt{start} y \texttt{stop} proporcionan el acceso al despliegue local desde Windows y Linux.
+
+\subsection{Organización del servidor}
+
+Dentro de \path{backend/api/}, el código se organiza por funcionalidades, como
+la gestión de cuentas (\path{account/}), juegos (\path{games/}) y manuales
+(\path{manuals/}). Las tareas compartidas tienen sus propios directorios, como
+\path{mail/} para el envío de correos y \path{worker/} para la ejecución en
+segundo plano.
+
+Los nombres de los archivos indican su función. \path{router.py} declara las rutas y sus dependencias, \path{schemas.py} los datos de entrada y salida, \path{service.py} coordina las operaciones y \path{repository.py} contiene el acceso a la persistencia. La separación se adapta al tamaño de cada área. Una operación sencilla, como una valoración, puede llamar al repositorio desde su ruta sin necesitar un servicio intermedio.
+
+\path{backend/api/main.py} reúne las rutas de la aplicación y configura su ciclo de vida. Las tareas que continúan después de responder al navegador se encuentran en \path{backend/api/worker/tasks/}. Su configuración común está en \path{backend/api/worker/celery.py}.
+
+\subsection{Organización de la interfaz}
+
+El código de la interfaz se concentra en \path{frontend/src/}. Dentro de este directorio, \path{features/} agrupa el código específico de autenticación, conversaciones, manuales o subida de archivos. \path{routes/} contiene las rutas de navegación y \path{app/} los proveedores compartidos por toda la aplicación.
+
+Las operaciones de comunicación reutilizables se concentran en \path{shared/api/}. En particular, \path{http.ts} gestiona las peticiones, los tiempos de espera y la transformación de errores. Las traducciones se encuentran en \path{locales/}. Los componentes y utilidades compartidos permiten evitar que cada pantalla resuelva por separado el mismo comportamiento.
+
+El archivo \path{routeTree.gen.ts} se genera a partir de las rutas. Los cambios de navegación se realizan en sus archivos de origen y se comprueban regenerando el árbol, ya que una modificación directa del archivo generado se perdería.
+
+En \path{frontend/}, \path{package.json} define las dependencias y los comandos de desarrollo, y \path{pnpm-lock.yaml} fija las versiones resueltas.
+
+\path{vite.config.ts} configura el servidor de desarrollo y la construcción de la interfaz. \path{vitest.config.ts} establece el entorno de pruebas, los archivos que se ejecutan y la cobertura.
+
+\subsection{Localización de cambios habituales}
+
+La tabla~\ref{tab:d-tareas} relaciona tareas de mantenimiento con sus puntos de entrada. Cada ruta es relativa a la raíz del repositorio.
+
+\begin{table}[htbp]
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.4\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.6\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Tarea} & \textbf{Archivos que conviene revisar} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+Cambiar la validación de una operación & \path{backend/api/}, en los esquemas, dependencias y rutas del área afectada. \\
+Modificar los datos persistidos & \path{backend/database/models/} y \path{backend/database/alembic/versions/}. \\
+Cambiar el procesamiento de un manual & \path{backend/api/manuals/service.py}, \path{backend/api/worker/tasks/manuals.py} y \path{backend/ocr/}. \\
+Modificar la búsqueda de contexto & \path{backend/rag/service.py}, \path{backend/rag/fusion.py} y \path{backend/api/manuals/retrieval/}. \\
+Cambiar las instrucciones del modelo & \path{backend/llm/prompt_builder.py} y \path{backend/llm/service.py}. \\
+Modificar el visor & \path{frontend/src/features/manual/} y las rutas que lo presentan. \\
+Ampliar las pruebas de la interfaz & \path{frontend/tests/} y \path{frontend/vitest.config.ts}. \\
+Ajustar modelos o aceleración & \path{deploy/profiles/llm/} y \path{deploy/compose/}. \\
+Cambiar el acceso desde el navegador & \path{frontend/Caddyfile}, \path{frontend/vite.config.ts} y \path{frontend/src/shared/api/}. \\
+\bottomrule
+\end{tabular}
+\caption{Puntos de entrada para continuar el desarrollo.}
+\label{tab:d-tareas}
+\end{table}
+
+\FloatBarrier
+\section{Manual del programador}
+\label{sec:d-programador}
+
+\subsection{Operaciones y control de acceso}
+
+El servidor principal utiliza FastAPI. Las dependencias de cada ruta obtienen la sesión de base de datos, identifican al usuario y aplican las comprobaciones necesarias antes de ejecutar la operación. El registro de rutas en \path{main.py} mantiene separados los módulos funcionales, siguiendo la organización documentada por FastAPI.\footnote{FastAPI. \emph{Bigger Applications}. \url{https://fastapi.tiangolo.com/tutorial/bigger-applications/}.}
+
+La valoración de un juego permite ver este patrón en una operación concreta. En \path{backend/api/ratings/router.py}, la firma del manejador reúne los datos y comprobaciones que necesita.
+
+\Dcodigo{valoracion}{Firma del manejador de valoración de juegos.}
+
+El fragmento reproduce la firma, sin los decoradores ni el cuerpo. \texttt{CurrentAuth} proporciona la identidad autenticada, \texttt{ValidGameId} comprueba el juego y \texttt{RateGameRequest} valida la valoración. \texttt{CsrfProtection} incorpora la protección frente a peticiones falsificadas entre sitios, \acs{CSRF}\acused{CSRF}. La escritura utiliza el identificador del usuario autenticado, no un identificador de propietario enviado por el navegador.
+
+Al añadir una operación deben definirse su entrada, su resultado y quién puede utilizarla. Después se incorpora la lógica al módulo correspondiente y se comprueban tanto el caso válido como la ausencia de sesión, los datos inválidos y el acceso a recursos ajenos. Si la operación cambia datos, debe conservar la protección aplicada a las demás escrituras.
+
+La propiedad de un recurso también debe comprobarse al consultarlo. Que el navegador oculte un botón no limita las peticiones que se pueden enviar al servidor. Por ello, los filtros de acceso forman parte de las consultas y de las dependencias del servidor.
+
+\subsection{Persistencia y evolución del esquema}
+
+PostgreSQL conserva los datos de usuarios, juegos, manuales y conversaciones. Los modelos se definen con SQLAlchemy en \path{backend/database/models/}. Alembic registra los cambios del esquema en revisiones ordenadas, que se aplican antes de arrancar los servicios que necesitan la base de datos.
+
+Para modificar un dato persistido hay que revisar el modelo, las consultas que lo utilizan y los esquemas que lo exponen. La generación automática de una revisión de Alembic prepara una propuesta de cambio. Su documentación exige revisar el resultado, porque no detecta todas las transformaciones posibles.\footnote{Alembic. \emph{Auto Generating Migrations}. \url{https://alembic.sqlalchemy.org/en/latest/autogenerate.html}.}
+
+Los siguientes comandos se ejecutan desde la raíz, con el entorno Python preparado y \texttt{DATABASE\_URL} apuntando a una base de desarrollo. El texto de la revisión se sustituye por una descripción del cambio realizado.
+
+\Dcodigo{migracion}{Generación de una revisión del esquema en PowerShell.}
+
+El acento grave permite continuar el comando en la línea siguiente en PowerShell. Antes de aplicar la revisión se comprueba el archivo generado en \path{backend/database/alembic/versions/}. Después se ejecuta \texttt{upgrade head} y se comprueba el esquema con \texttt{check}, como se muestra en el apartado~\ref{sec:d-pruebas-datos}.
+
+El índice vectorial tiene una responsabilidad distinta. ChromaDB permite recuperar fragmentos por similitud, mientras que el texto y sus relaciones permanecen en PostgreSQL. El servicio de recuperación devuelve identificadores. El servidor vuelve a cargar los fragmentos autorizados desde la base de datos antes de construir el contexto de la respuesta. Este recorrido se encuentra en \path{backend/api/manuals/retrieval/service.py} y evita que el índice sea quien decida qué texto puede consultar un usuario.
+
+\subsection{Procesamiento de manuales}
+
+La subida de un manual inicia un trabajo que puede durar más que una petición del navegador. La ruta registra el manual y sus archivos, y encarga el procesamiento a Celery. La interfaz consulta su estado mientras las tareas avanzan.
+
+El recorrido principal se divide en cinco pasos.
+
+\begin{enumerate}
+  \item La entrada se valida y se asocia al juego y al usuario correspondiente.
+  \item Se preparan las páginas del documento. En los archivos \ac{PDF}, el procesamiento puede aprovechar el texto incorporado cuando cumple los criterios del servicio. Las imágenes y las páginas que necesitan reconocimiento pasan por \ac{OCR}.
+  \item El servicio de reconocimiento utiliza el motor configurado. El resultado se trata mediante las funciones compartidas y el flujo de corrección del texto.
+  \item El servidor prepara y persiste los fragmentos canónicos. El servicio de recuperación recibe esos fragmentos para calcular sus representaciones e incorporarlas al índice.
+  \item La finalización actualiza el estado del manual cuando las tareas de sus páginas han terminado.
+\end{enumerate}
+
+La coordinación está en \path{backend/api/manuals/service.py}. Las tareas de \path{backend/api/worker/tasks/manuals.py} distribuyen las páginas y programan su finalización. Esta separación permite localizar si un fallo corresponde a la entrada, al reconocimiento, a la persistencia o a la indexación.
+
+La configuración de Celery declara cinco colas. \texttt{manuals} agrupa el procesamiento de páginas, \texttt{rag} la actualización del índice, \texttt{gpu} la generación de respuestas y títulos, \texttt{mail} el correo y \texttt{maintenance} las comprobaciones periódicas. El nombre de una cola identifica un grupo de trabajo. El uso efectivo de aceleración depende del perfil de despliegue.
+
+Al modificar este flujo hay que considerar la repetición de tareas. Algunas operaciones reintentan fallos de conexión y existen trabajos periódicos de recuperación. Un cambio debe comprobar qué ocurre si una página ya está procesada, si la finalización llega de nuevo o si el manual se elimina mientras una tarea está pendiente. La comprobación debe incluir el estado persistido y el contenido del índice.
+
+\subsection{Recuperación de contexto y generación de respuestas}
+
+Las conversaciones utilizan \ac{RAG} para recuperar texto de los manuales antes de solicitar una respuesta al \ac{LLM}. En \path{backend/api/conversations/service.py}, el envío guarda el mensaje del usuario y una respuesta pendiente. Un \textit{worker} de Celery completa después esa respuesta o registra el fallo. El procesamiento utiliza un bloqueo por conversación para coordinar los turnos pendientes.
+
+La búsqueda combina la similitud de las representaciones del texto con una clasificación léxica cuando la consulta contiene términos utilizables. \path{backend/rag/service.py} reúne los candidatos y \path{backend/rag/fusion.py} combina sus posiciones mediante \emph{Reciprocal Rank Fusion}. El método procede de Cormack, Clarke y Büttcher.\footnote{G. V. Cormack, C. L. A. Clarke y S. Büttcher (2009). \emph{Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods}. \url{https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf}.} Su aplicación en \textit{Manualito} suma la contribución de cada clasificación en la que aparece un candidato.
+
+\begin{equation}
+  s(d)=\sum_{r\, :\, d\in r}\frac{1}{60+\operatorname{pos}_{r}(d)}
+  \label{eq:d-fusion}
+\end{equation}
+
+En la ecuación~\ref{eq:d-fusion}, $d$ es un candidato y $\operatorname{pos}_{r}(d)$ su posición en la clasificación $r$, comenzando en uno. El código utiliza la constante 60 y elimina repeticiones por contenido. La referencia explica el algoritmo, pero sus resultados experimentales no constituyen una medida de calidad de \textit{Manualito}.
+
+El servidor recupera después el texto autorizado y prepara las fuentes de la respuesta. \path{backend/llm/prompt_builder.py} construye las instrucciones y \path{backend/llm/service.py} coordina las operaciones del modelo. El nombre del juego, la pregunta, el contexto, el historial y el idioma forman parte de la petición de generación.
+
+Un cambio en este recorrido debe evaluarse por etapas. Si falta una regla en la respuesta, primero se comprueba el texto extraído, después los fragmentos recuperados y, por último, la generación. Cambiar directamente las instrucciones del modelo puede ocultar que el problema se encuentra en una página mal reconocida o en un contexto incompleto.
+
+\subsection{Desarrollo de la interfaz}
+
+Las pantallas utilizan React y TypeScript. Los proveedores de \path{frontend/src/app/Providers.tsx} reúnen el tema, el idioma y el cliente de TanStack Query. Este último gestiona los datos obtenidos del servidor, su actualización y los errores que afectan a la sesión.
+
+Para modificar una funcionalidad se revisa primero su carpeta en \path{features/} y la ruta que la presenta. Las llamadas deben utilizar las utilidades de \path{shared/api/} para conservar el mismo tratamiento de credenciales, protección de escrituras y errores. Los mensajes visibles se incorporan a los archivos de traducción utilizados por la pantalla.
+
+Una operación que cambia datos también debe actualizar las consultas afectadas. Por ejemplo, al modificar un manual hay que revisar tanto su vista de detalle como los listados que muestran su estado. Las pruebas de la interfaz deben comprobar el resultado visible y los estados de espera y error, además de la petición enviada.
+
+La aplicación incluye soporte \ac{PWA}. La configuración de Vite conserva recursos estáticos para la interfaz, pero aplica una estrategia de acceso a la red a las peticiones bajo \path{/api/}. Esta decisión evita reutilizar respuestas almacenadas para estados que cambian durante el procesamiento. Los cambios en la caché deben revisarse en \path{frontend/vite.config.ts}.
+
+\subsection{Secuencia para incorporar un cambio}
+
+El desarrollo de una funcionalidad puede seguir la siguiente secuencia, adaptada al área afectada.
+
+\begin{enumerate}
+  \item Identificar la operación y el resultado que debe observar el usuario. Localizar sus rutas, datos y pruebas mediante la tabla~\ref{tab:d-tareas}.
+  \item Definir las validaciones y permisos. Si cambian datos persistidos, preparar y revisar la modificación del esquema.
+  \item Implementar la operación en el módulo correspondiente. Los trabajos prolongados deben encajar en las tareas existentes y dejar un estado consultable.
+  \item Incorporar la interacción en la interfaz, con sus traducciones y estados de carga, éxito y error.
+  \item Ejecutar las comprobaciones del área modificada y recorrer la operación con los servicios necesarios. Conservar el resultado junto con la revisión del código.
+\end{enumerate}
+
+La documentación técnica se actualiza cuando cambia alguno de los recorridos descritos. \path{docs/site/} contiene la versión web, que dispone de su propia construcción y verificación.
+
+\FloatBarrier
+\section{Compilación, instalación y ejecución del proyecto}
+\label{sec:d-instalacion}
+
+\subsection{Requisitos y versiones}
+
+La ejecución completa utiliza Docker y Docker Compose. En Windows, el procedimiento del repositorio está preparado para Docker Desktop con su entorno Linux. Las instrucciones de instalación y los requisitos del sistema deben consultarse en la documentación oficial de Docker.\footnote{Docker. \emph{Install Docker Desktop on Windows}. \url{https://docs.docker.com/desktop/setup/install/windows-install/}.} En Linux se necesita una instalación de Docker con acceso al motor y al complemento Compose.
+
+Para desarrollar fuera de los contenedores se necesitan además Python con uv y Node.js con pnpm. La tabla~\ref{tab:d-versiones} recoge las versiones declaradas en la revisión consultada. Al trabajar con otra revisión deben utilizarse las que indiquen sus archivos.
+
+\begin{table}[htbp]
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.25\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.25\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.5\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Herramienta} & \textbf{Versión} & \textbf{Referencia en el repositorio} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+Python & 3.13.14 & \path{.env} y \path{pyproject.toml} \\
+uv & 0.12.2 & \path{.env} \\
+Node.js & 26.7.0 & \path{.env} \\
+pnpm & 11.20.0 & \path{frontend/package.json} \\
+PostgreSQL & 18.4 & \path{.env} \\
+\bottomrule
+\end{tabular}
+\caption{Versiones de referencia para preparar el entorno.}
+\label{tab:d-versiones}
+\end{table}
+
+El consumo de memoria y el tiempo de respuesta dependen del perfil de modelos, del motor de reconocimiento y del documento procesado. La selección automática comprueba la aceleración disponible y propone una configuración. Esto no sustituye una medida de recursos mínimos para un conjunto de pruebas definido.
+
+
+\subsection{Obtención del código y configuración}
+
+El código se obtiene de la rama \texttt{development} del repositorio de \textit{Manualito}, utilizada como referencia en este manual. Los comandos siguientes crean una copia local y muestran la revisión de partida. Antes de comparar cambios debe comprobarse la revisión obtenida, ya que las ramas del proyecto pueden avanzar en paralelo.
+
+\Dcodigo{clonar}{Obtención del código y consulta de la revisión del proyecto.}
+
+Antes de arrancar se revisan los archivos de configuración. \path{.env} fija las versiones de las imágenes y parámetros compartidos. Los archivos de \path{config/} agrupan la configuración de cada servicio. La selección de aceleración, modelos y proveedor de correo se guarda en \path{deploy/local/selected.env} al ejecutar \texttt{setup}.
+
+\begin{table}[htbp]
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.4\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.6\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Archivo o directorio} & \textbf{Contenido y uso} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+\path{config/backend.env} & Límites, conexiones internas y comportamiento del servidor. \\
+\path{config/database.env} & Parámetros de la base de datos. \\
+\path{config/celery.env} & Configuración de las tareas y de su comunicación mediante Redis. \\
+\path{config/ocr.env} & Parámetros del reconocimiento de texto. \\
+\path{config/frontend.env} & Variables de la interfaz utilizadas por su configuración de construcción. \\
+\path{deploy/profiles/llm/} & Modelos y tamaños de contexto de los perfiles disponibles. \\
+\path{deploy/compose/mail/resend.yaml} & Variante para entregar los correos con Resend en lugar de capturarlos con Mailpit. \\
+\path{deploy/local/} & Selección y registros propios de la máquina. \\
+\path{secrets/} & Credenciales locales creadas durante la preparación y claves de proveedores externos aportadas para el despliegue. No se incluyen en Git. \\
+\bottomrule
+\end{tabular}
+\caption{Configuración que interviene en la ejecución.}
+\label{tab:d-configuracion}
+\end{table}
+
+Las variables que llegan al código del navegador son públicas. No deben contener credenciales de servicios internos. Los nombres y valores aceptados se consultan en los archivos de configuración y en sus lectores, ya que una copia de esos valores en el manual podría quedar desactualizada.
+
+\texttt{setup} y \texttt{start} crean los secretos locales que falten en
+\path{secrets/}, sin sustituir los existentes. En una instalación nueva
+preparan el usuario de PostgreSQL, su contraseña, la contraseña de Redis y
+las credenciales de Flower. Las contraseñas se generan de forma aleatoria,
+no se muestran durante el proceso y no requieren copiar valores de ejemplo.
+La carpeta se protege con permisos de acceso del sistema operativo.
+
+Si ya existe el volumen de PostgreSQL y faltan sus archivos de usuario o
+contraseña, el arranque se detiene para que se restauren los originales.
+Crear otros valores no recuperaría el acceso a esa base de datos. La clave
+de Resend y el \textit{token} del túnel no se generan, ya que deben obtenerse
+de sus proveedores y añadirse cuando se utilicen esos servicios.
+
+\subsection{Preparación y arranque local}
+
+El procedimiento normal utiliza los \textit{scripts} de la raíz. Estos componen las variantes de Docker Compose que corresponden al equipo. Ejecutar únicamente el archivo base puede omitir la selección local de reconocimiento o aceleración.
+
+\Dcodigo{arranque-windows}{Preparación y arranque local en Windows.}
+
+\Dcodigo{arranque-linux}{Preparación y arranque local en Linux.}
+
+\texttt{setup} comprueba Docker y la aceleración, solicita la selección y prepara las imágenes. Si \textit{Manualito} ya está funcionando, puede pedir que se detenga para medir la memoria gráfica disponible. \texttt{start} utiliza la selección guardada y arranca los servicios. Si no existe una selección, inicia antes la preparación.
+
+Los perfiles de lenguaje se encuentran en \path{deploy/profiles/llm/low.env} y \path{high.env}. En la revisión consultada utilizan \texttt{granite3.3:2b} y \texttt{gemma4:e4b}, respectivamente. El reconocimiento permite seleccionar Tesseract o las variantes de PaddleOCR que resulten viables en el equipo. Los perfiles expresan opciones de ejecución, no resultados medidos de precisión.
+
+Después del modelo y del motor de reconocimiento, \texttt{setup} solicita
+el proveedor de correo. Pulsar Intro conserva Mailpit, mientras que la
+opción 2 selecciona Resend. La elección se guarda en
+\texttt{MANUALITO\_MAIL\_PROVIDER}; el modo de configuración recomendada
+utiliza Mailpit y activar el túnel de Cloudflare no cambia el proveedor.
+
+Durante el arranque se aplican las migraciones y se preparan las dependencias requeridas por cada servicio. Docker Compose distingue entre un contenedor iniciado, una comprobación de salud superada y un trabajo de inicialización terminado.\footnote{Docker. \emph{Control startup and shutdown order in Compose}. \url{https://docs.docker.com/compose/how-tos/startup-order/}.} La primera ejecución también puede necesitar la descarga de modelos.
+
+La aplicación se abre en \url{https://localhost}. Caddy sirve la interfaz y dirige las peticiones del servidor bajo el mismo origen. La documentación interactiva de las operaciones está en \url{https://localhost/docs}. El puerto interno 8000 del servidor no se publica directamente en el equipo.
+
+\subsubsection{Envío de correo con Resend}
+
+Para entregar los mensajes a una cuenta real se necesita un dominio
+verificado en Resend y una clave de envío~\cite{resend_smtp}. La clave se
+guarda en \path{secrets/resend_api_key.txt}, excluido de Git y de la
+construcción de las imágenes. El archivo se monta como secreto en la
+\ac{API} y en \texttt{celery-worker-mail}, sin incluir su contenido en los
+archivos de configuración que se publican.
+
+La variante \path{deploy/compose/mail/resend.yaml} configura
+\texttt{smtp.resend.com} por el puerto 465, con cifrado desde el inicio de
+la conexión. El remitente es \texttt{accounts@manualito.dev}, las respuestas
+se dirigen a \texttt{support@manualito.dev} y los enlaces de cuenta utilizan
+\url{https://app.manualito.dev}. En otro despliegue deben ajustarse estos
+valores al dominio y a la dirección pública correspondientes.
+
+Tras preparar el secreto, se ejecuta \texttt{setup}, se elige Resend y se
+arranca con \texttt{start}. La preparación reconstruye la interfaz para
+ocultar el enlace al buzón de Mailpit y el arranque desactiva su contenedor.
+Para comprobar la entrega se solicita un correo de verificación o
+recuperación con una cuenta de prueba y se revisan su recepción y el destino
+del enlace. Las respuestas al remitente siguen una configuración separada
+de recepción mediante Cloudflare Email Routing, descrita en
+\path{deploy/MAIL.md}.
+
+\subsection{Comprobación y parada}
+
+La comprobación inicial debe recorrer la aplicación y sus servicios auxiliares. La tabla~\ref{tab:d-arranque} distingue qué permite observar cada acceso.
+
+\begin{table}[htbp]
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.4\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.6\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Acceso} & \textbf{Comprobación} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+\url{https://localhost} & Carga de la interfaz y comunicación de una operación con el servidor. \\
+\url{https://localhost/docs} & Disponibilidad de la descripción interactiva de las rutas. \\
+\url{http://localhost:5555} & Consulta de \textit{workers} y tareas mediante Flower. \\
+\url{http://localhost:8025} & Recepción de correos de desarrollo, solo si está seleccionado Mailpit. \\
+\bottomrule
+\end{tabular}
+\caption{Puntos de comprobación del despliegue local.}
+\label{tab:d-arranque}
+\end{table}
+
+Que la interfaz cargue no comprueba el reconocimiento ni la generación. Para verificar ese recorrido se sube un manual de prueba, se espera a su procesamiento y se formula una pregunta que pueda responderse con su contenido. Se revisan el estado final, el texto de la respuesta y las páginas indicadas como fuentes.
+
+La parada se realiza con \texttt{.\textbackslash stop.bat} en Windows o \texttt{bash stop.sh} en Linux. Los \textit{scripts} detienen y eliminan los contenedores con la selección correspondiente. La operación conserva los volúmenes de datos, por lo que el siguiente arranque puede reutilizarlos.
+
+\subsection{Entorno de desarrollo y construcción}
+
+Para trabajar sobre el servidor fuera de Docker se instala el grupo de dependencias necesario con uv. El grupo \texttt{test} permite ejecutar las pruebas del servidor sin preparar todos los motores de procesamiento. La opción \texttt{--locked} comprueba que la definición del proyecto coincide con el archivo de bloqueo y evita modificarlo durante la instalación.\footnote{uv. \emph{Locking and syncing}. \url{https://docs.astral.sh/uv/concepts/projects/sync/}.}
+
+\Dcodigo{preparar-pruebas}{Instalación de las dependencias de prueba del servidor.}
+
+Los comandos posteriores utilizan \texttt{uv run --no-sync} sobre ese entorno ya preparado. Si se necesitan otras herramientas, se consultan los grupos definidos en \path{pyproject.toml}. Los servicios de reconocimiento y generación se construyen con sus propios archivos \texttt{Dockerfile} y variantes de despliegue.
+
+La interfaz utiliza pnpm. Los comandos siguientes parten de la raíz y acceden a \path{frontend/}. La instalación respeta el archivo de bloqueo y la construcción ejecuta la comprobación de TypeScript antes de generar los archivos finales.\footnote{pnpm. \emph{pnpm install}. \url{https://pnpm.io/cli/install}.}
+
+\Dcodigo{construir-interfaz}{Comprobación y construcción de la interfaz.}
+
+El resultado se guarda en \path{frontend/dist/}. El \texttt{Dockerfile} de la interfaz utiliza una etapa con Node.js para construirlo y otra con Caddy para servirlo. Si cambia el código incluido en una imagen, debe repetirse la preparación con \texttt{setup} antes del siguiente arranque.
+
+\texttt{pnpm dev} inicia Vite para trabajar sobre la interfaz. Su configuración declara un destino del servidor mediante \texttt{VITE\_API\_TARGET}. La ejecución integrada con sesiones debe conservar el acceso y las \textit{cookies} del despliegue local. El destino predeterminado de Vite no equivale al acceso publicado por Docker Compose.
+
+
+\subsection{Diagnóstico de incidencias}
+
+El diagnóstico comienza por el estado de los servicios y por los registros del componente implicado. Los comandos siguientes son de consulta y se ejecutan desde la raíz del proyecto.
+
+\Dcodigo{registros}{Consulta del estado de los servicios y sus registros.}
+
+\begin{table}[htbp]
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.4\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.6\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Síntoma} & \textbf{Primera comprobación} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+La aplicación no abre & Estado de Caddy y ocupación de los puertos locales. Al acceder a \texttt{localhost}, el navegador puede mostrar un aviso por el certificado local. \\
+El arranque se detiene por los secretos & Archivos vacíos, permisos y presencia de las credenciales originales si ya existe el volumen de PostgreSQL. Las claves externas deben estar disponibles cuando se selecciona su servicio. \\
+El manual permanece pendiente & Estado de sus páginas, \textit{workers} de Celery y errores del servicio de reconocimiento. \\
+La respuesta no termina & Estado del mensaje pendiente, \textit{worker} de generación y disponibilidad del modelo. \\
+La respuesta no encuentra una regla & Texto de la página, fragmentos indexados y contexto autorizado recuperado. \\
+El correo no aparece & Proveedor seleccionado y tarea de envío. Con Mailpit, revisar el buzón local; con Resend, la configuración del dominio, la clave, el estado de entrega y la carpeta de correo no deseado del destinatario. \\
+Una escritura falla con la sesión abierta & Respuesta del servidor, \textit{cookies} y protección de la petición en el cliente compartido. \\
+\bottomrule
+\end{tabular}
+\caption{Relación entre síntomas y primeras comprobaciones.}
+\label{tab:d-diagnostico}
+\end{table}
+
+Los registros de preparación se guardan en \path{deploy/local/logs/}. Para reproducir una incidencia conviene conservar el \textit{commit}, el perfil, la operación realizada y el error relevante. Los registros que se compartan deben excluir credenciales y contenido privado que no sea necesario para entender el fallo.
+
+\subsection{Acceso público y documentación}
+
+El despliegue local puede complementarse con \textit{Cloudflare Tunnel}. Su infraestructura se define en \path{deploy/terraform/}, mientras que Docker Compose mantiene la ejecución de los servicios. Terraform prepara los recursos de Cloudflare y los \textit{scripts} locales preparan \textit{Manualito}. El túnel requiere su configuración y su secreto específicos, y se activa de forma explícita.
+
+La documentación web se construye por separado en \path{docs/site/}. Su flujo de GitHub comprueba el contenido con \texttt{pnpm verify}, mientras que la publicación está configurada mediante Cloudflare Workers Builds. Una modificación de la memoria no actualiza por sí sola los documentos del sitio.
+
+\FloatBarrier
+\section{Pruebas del sistema}
+\label{sec:d-pruebas}
+
+\subsection{Organización y alcance}
+
+El repositorio utiliza pytest para el servidor y Vitest para la interfaz. Las pruebas comprueban reglas de validación, tratamiento de errores, recuperación de texto, persistencia y comportamiento de componentes. Su alcance depende de las dependencias que se ejecutan en cada caso.
+
+Por separado, \path{docs/benchmarks/} reúne las comparaciones de reconocimiento,
+recuperación y modelos de lenguaje. Su índice enlaza los notebooks, las
+conclusiones y las instrucciones para repetir las mediciones. Estos estudios
+comparan alternativas de procesamiento y no sustituyen las pruebas del software.
+
+En el servidor, parte de las pruebas utiliza dobles de los clientes internos para controlar las respuestas sin arrancar el reconocimiento ni los modelos. Otros casos necesitan PostgreSQL real. Por ejemplo, \path{backend/tests/api/test_conversations_reply_real.py} comprueba la persistencia del turno de conversación, pero simula las respuestas de los servicios de recuperación y generación. Esto permite verificar los estados de la conversación sin convertir el resultado del modelo en una condición de la prueba.
+
+\begin{table}[htbp]
+\centering\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr 0.4\linewidth-2\tabcolsep\relax} >{\raggedright\arraybackslash}p{\dimexpr 0.6\linewidth-2\tabcolsep\relax}}
+\specialrule{\heavyrulewidth}{0pt}{0pt}
+\rowcolor{Dazul!8}
+\textbf{Área} & \textbf{Evidencia buscada} \\
+\specialrule{\lightrulewidth}{0pt}{\belowrulesep}
+Reglas y transformaciones & Resultado ante entradas válidas, límites y entradas rechazadas. \\
+Rutas del servidor & Validación, permisos, respuesta y tratamiento de fallos internos. \\
+Recuperación de contexto & Orden de candidatos, eliminación de duplicados y respeto del conjunto autorizado. \\
+Persistencia de conversaciones & Transición de un mensaje pendiente a completado o fallido sobre PostgreSQL. \\
+Componentes de la interfaz & Interacción y representación de estados con los datos preparados por la prueba. \\
+Recorrido completo & Funcionamiento conjunto del navegador, tareas, almacenamiento y modelos con un manual conocido. \\
+\bottomrule
+\end{tabular}
+\caption{Áreas de prueba y evidencia que aportan.}
+\label{tab:d-pruebas}
+\end{table}
+
+Las pruebas de componentes no sustituyen el recorrido completo con un navegador y los servicios reales. Del mismo modo, superar una prueba de recuperación con datos preparados no demuestra la precisión de las respuestas sobre un conjunto de manuales.
+
+\subsection{Ejecución de las pruebas del servidor}
+
+Después de preparar el grupo \texttt{test}, la \textit{suite} se ejecuta desde la raíz. Las comprobaciones auxiliares de los \textit{hooks} se incluyen mediante su ruta.
+
+\Dcodigo{pruebas-servidor}{Ejecución de las pruebas del servidor y de los \textit{hooks}.}
+
+Para revisar un cambio concreto puede ejecutarse primero el archivo afectado. Por ejemplo, la combinación de clasificaciones dispone de pruebas en \path{backend/tests/rag/test_fusion.py}.
+
+\Dcodigo{fusion}{Prueba de la combinación de candidatos.}
+
+La salida debe revisarse completa, incluyendo pruebas omitidas. Los casos que requieren PostgreSQL se omiten si no se proporciona \texttt{DATABASE\_URL}. Por tanto, una ejecución sin esa variable no cubre la integración con la base de datos.
+
+\subsection{Pruebas con base de datos}
+\label{sec:d-pruebas-datos}
+
+Las pruebas de persistencia deben utilizar una base de datos dedicada, con el esquema de la revisión evaluada. En la integración continua se crea un servicio PostgreSQL, se establece \texttt{DATABASE\_URL} y se aplican las migraciones antes de pytest. La reproducción local debe mantener ese aislamiento respecto a los datos de uso de la aplicación.
+
+Con la conexión de pruebas configurada y las dependencias preparadas, los comandos son los siguientes. Todos se ejecutan desde la raíz.
+
+\Dcodigo{esquema}{Preparación y verificación del esquema de pruebas.}
+
+\texttt{upgrade head} aplica las revisiones pendientes. \texttt{check} comprueba si los modelos requieren cambios que todavía no se han recogido mediante la comparación automática. La \textit{suite} de conversaciones verifica, entre otros casos, la respuesta completada, los fallos de los servicios internos y el rechazo de fragmentos privados ajenos.
+
+\subsection{Pruebas de la interfaz}
+
+Las pruebas se encuentran en \path{frontend/tests/}. Desde \path{frontend/}, se ejecutan con los \textit{scripts} definidos en \path{package.json}. La generación del árbol de rutas debe preceder a la ejecución con cobertura, como ocurre en la integración continua.
+
+\Dcodigo{cobertura}{Ejecución de las pruebas de la interfaz con cobertura.}
+
+La ejecución con cobertura genera los informes bajo \path{frontend/coverage/}. Estos informes permiten localizar código que no ha sido recorrido por las pruebas. Su porcentaje debe interpretarse junto con los casos comprobados, ya que recorrer una línea no demuestra que se hayan evaluado todos sus resultados relevantes.
+
+Al modificar una pantalla conviene comprobar la operación válida, los datos vacíos, la espera y el error. Si el cambio afecta a permisos o privacidad, se añade una comprobación en el servidor, donde se aplica la restricción.
+
+\subsection{Comprobaciones de integración continua}
+
+\path{.github/workflows/ci.yml} reúne comprobaciones del servidor, la interfaz y la configuración de despliegue. Ejecuta Ruff y mypy para Python, valida las migraciones, lanza pytest y verifica la interfaz mediante ESLint, TypeScript, Vitest y su construcción. También comprueba las configuraciones de Caddy, Docker Compose y Terraform.
+
+Los resultados de cobertura se conservan como artefactos. El análisis de SonarQube espera el resultado de su control de calidad en las ejecuciones donde está habilitado. La auditoría de dependencias de la interfaz tiene configurada la continuación ante fallo, por lo que no debe interpretarse como un bloqueo obligatorio de la integración.
+
+Los registros de cada ejecución permiten consultar la revisión analizada y
+el resultado de las comprobaciones. Los informes de cobertura y el análisis
+de calidad complementan estos registros para localizar fallos y revisar
+las partes que necesitan más pruebas. Los comandos de este apartado
+permiten repetir las comprobaciones en el entorno de desarrollo.
+
+\subsection{Comprobación del recorrido completo}
+
+La validación integrada utiliza un manual cuyo contenido pueda revisarse y una cuenta de prueba. Se comprueba la subida, el estado de sus páginas, el texto extraído, una pregunta con respuesta conocida y la apertura de sus fuentes. Después se repite la consulta con una cuenta que no tenga acceso a un manual privado para comprobar el límite de visibilidad.
+
+Con un manual compartido se comprueba también la opción de mostrar el
+nombre desde una segunda cuenta. Debe aparecer como
+\guillemotleft{}Anónimo\guillemotright{} por defecto y reflejar los cambios
+del propietario tanto en la ficha como en las fuentes de respuestas
+anteriores. La segunda cuenta puede leer el manual, pero no cambiar esta
+opción ni acceder a sus controles de gestión.
+
+Si se modifica el texto de una página, la comprobación debe incluir una pregunta sobre esa página y otra sobre una página que no se haya editado. Así se observa tanto la actualización solicitada como la conservación del resto del manual. Para los fallos de procesamiento se revisa que el usuario vea un estado final comprensible y que los registros permitan localizar su causa.
+
+La calidad del reconocimiento y de las respuestas necesita una evaluación propia. Debe fijar los documentos, las preguntas esperadas, el perfil de ejecución y el criterio de aceptación antes de comparar resultados. Esa evaluación permitirá separar los errores de extracción, recuperación y generación.
+
+
+\FloatBarrier
+\endgroup

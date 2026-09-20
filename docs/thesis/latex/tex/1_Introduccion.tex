@@ -1,0 +1,96 @@
+\capitulo{1}{Introducción}
+
+En ocasiones, ya sea en familia, con amigos o en solitario, tenemos ganas de
+probar un juego de mesa nuevo. Sin embargo, nos echamos atrás al ver la
+cantidad de reglas e instrucciones que hay que leer y entender antes de
+empezar a jugar.
+
+Además, haber leído el manual no significa que hayamos comprendido todas las
+reglas. Durante una partida pueden aparecer dudas sobre una acción, una
+excepción o una situación que no habíamos previsto. Para resolverlas, hay que
+volver al reglamento y buscar la explicación que corresponde a ese
+caso en concreto.
+
+Para ayudar en estas situaciones, se ha desarrollado \textit{Manualito},
+una aplicación web que permite obtener de forma ágil una explicación
+general de un juego de mesa y plantear dudas sobre sus reglas a un
+asistente de inteligencia artificial que se encarga de consultar los
+manuales para resolverlas.
+
+En su estudio sobre el uso de herramientas digitales en juegos de mesa,
+Rogerson y sus colaboradores destacan la importancia de integrarlas en la
+experiencia de juego sin que se conviertan en una distracción
+~\cite{rogerson2021gimmick}. En esta línea,
+\textit{Manualito} se plantea como una herramienta de apoyo a la que
+acudir cuando surge una duda sobre las reglas durante la partida.
+
+Para utilizar la aplicación, el usuario puede añadir los manuales en archivos
+\acs{PDF} o imágenes y asociarlos al juego correspondiente. A partir de
+ellos se extrae el texto, utilizando reconocimiento óptico de caracteres,
+denominado \acs{OCR}, cuando es necesario.\acused{OCR} El texto obtenido se
+puede revisar junto a las páginas originales y corregir si contiene errores.
+Los manuales y las conversaciones se guardan para poder volver a consultarlos
+en otra partida.
+
+Las respuestas se generan con un modelo de lenguaje al que se proporciona
+información de los manuales. Para encontrar los pasajes relacionados con una
+pregunta se utiliza generación aumentada por recuperación, conocida como
+\acs{RAG} por \emph{Retrieval-Augmented Generation}~\cite{lewis2020rag}.\acused{RAG}
+La búsqueda se limita a los manuales del juego a los que el usuario tiene
+acceso. Los fragmentos encontrados se envían al modelo como contexto y la
+respuesta se muestra junto a referencias a las páginas recuperadas, para que
+el usuario pueda consultar su contenido.
+
+Toda esta estructura busca reducir el riesgo de alucinaciones, es decir,
+de que el asistente invente reglas o detalles al
+responder~\cite{kalai2025hallucinate}. Para ello, el modelo recibe
+información de los manuales relacionada con la pregunta del usuario.
+La posibilidad de corregir el texto extraído y consultar las páginas
+originales permite, además, detectar errores y comprobar las
+explicaciones en su contexto.
+
+Aunque \textit{Manualito} se centra en explicar juegos de mesa, el mismo enfoque
+podría adaptarse a otros ámbitos en los que sea necesario consultar manuales
+o seguir procedimientos. Un ejemplo sería la consulta de protocolos de
+actuación ante un incidente de ciberseguridad, donde puede ser necesario
+combinar instrucciones de análisis, recuperación de sistemas y protección
+de datos. Los juegos de mesa sirven así como caso de estudio, mientras que
+su aplicación en otros contextos requeriría adaptar el sistema y evaluar
+sus respuestas.
+
+\section{Materiales del proyecto}
+\label{intro:materiales}
+
+La aplicación, el código fuente, la documentación y los materiales de
+evaluación del proyecto se encuentran en los siguientes recursos:
+
+\begin{itemize}
+    \item \textbf{Sitio web del proyecto.}
+    Presenta \textit{Manualito} y sirve como punto de entrada en
+    \url{https://manualito.dev/}.
+
+    \item \textbf{Aplicación web.}
+    La versión desplegada puede consultarse en
+    \url{https://app.manualito.dev/}.
+
+    \item \textbf{Repositorio de GitHub.}
+    Incluye la aplicación y los archivos necesarios para preparar y ejecutar
+    el entorno en \url{https://github.com/ibaimoya/manualito}
+    ~\cite{manualito_repositorio}.
+
+    \item \textbf{Repositorio de GitLab.}
+    Conserva la copia de desarrollo del proyecto. Puede consultarse en
+    \href{https://gitlab.com/HP-SCDS/Observatorio/2025-2026/manualito/ubu-manualito}
+    {\url{gitlab.com/HP-SCDS/Observatorio/2025-2026/manualito/ubu-manualito}}
+    ~\cite{manualito_gitlab}.
+
+    \item \textbf{Documentación web.}
+    Reúne las guías de uso y la documentación técnica del proyecto.
+    Puede consultarse en \url{https://docs.manualito.dev/}
+    ~\cite{manualito_documentacion}.
+
+    \item \textbf{Benchmarks.}
+    Los \textit{notebooks} y resultados de las pruebas se pueden consultar en el
+    directorio \href{https://github.com/ibaimoya/manualito/tree/master/docs/benchmarks}
+    {\texttt{docs/benchmarks}} del repositorio de GitHub~\cite{manualito_benchmarks}.
+\end{itemize}

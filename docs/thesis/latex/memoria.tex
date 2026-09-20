@@ -1,0 +1,561 @@
+\documentclass[a4paper,12pt,oneside,openleft]{memoir}
+
+% Castellano
+\usepackage[english,spanish,es-tabla,es-noshorthands]{babel}
+\selectlanguage{spanish}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} % Scalable font
+\usepackage{microtype}
+\usepackage{placeins}
+
+\RequirePackage{booktabs}
+\RequirePackage[table]{xcolor}
+\RequirePackage{xtab}
+\RequirePackage{multirow}
+\usepackage{tabularray}
+\UseTblrLibrary{booktabs}
+
+% Formatear números
+\usepackage{siunitx}
+\sisetup{
+  output-decimal-marker = {,},   % coma para decimales
+  group-separator       = {.},   % punto para los miles
+  group-minimum-digits  = 4      % agrupa desde 4 cifras: 1.000
+}
+
+% Manejar acrónimos
+\usepackage{acronym}
+
+% Links
+\PassOptionsToPackage{hyphens}{url}\usepackage[colorlinks]{hyperref}
+\hypersetup{
+	allcolors = {black}
+}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\setcounter{biburlnumpenalty}{9000}
+\setcounter{biburlucpenalty}{9000}
+\setcounter{biburllcpenalty}{9000}
+\addbibresource{bibliografia.bib}
+
+% Ecuaciones
+\usepackage{amsmath}
+
+% Rutas de fichero / paquete
+\newcommand{\ruta}[1]{{\sffamily #1}}
+
+% Párrafos
+\nonzeroparskip
+
+% Huérfanas y viudas
+\widowpenalty100000
+\clubpenalty100000
+
+% Imágenes
+
+% Comando para insertar una imagen en un lugar concreto.
+% Los parámetros son:
+% 1 --> Ruta absoluta/relativa de la figura
+% 2 --> Texto a pie de figura
+% 3 --> Tamaño en tanto por uno relativo al ancho de página
+\usepackage{graphicx}
+\newcommand{\imagen}[3]{
+	\begin{figure}[!h]
+		\centering
+		\includegraphics[width=#3\textwidth]{#1}
+		\caption{#2}\label{fig:#1}
+	\end{figure}
+	\FloatBarrier
+}
+
+% Comando para insertar una imagen sin posición.
+% Los parámetros son:
+% 1 --> Ruta absoluta/relativa de la figura
+% 2 --> Texto a pie de figura
+% 3 --> Tamaño en tanto por uno relativo al ancho de página
+\newcommand{\imagenflotante}[3]{
+	\begin{figure}
+		\centering
+		\includegraphics[width=#3\textwidth]{#1}
+		\caption{#2}\label{fig:#1}
+	\end{figure}
+}
+
+% El comando \figura nos permite insertar figuras comodamente, y utilizando
+% siempre el mismo formato. Los parametros son:
+% 1 --> Porcentaje del ancho de página que ocupará la figura (de 0 a 1)
+% 2 --> Fichero de la imagen
+% 3 --> Texto a pie de imagen
+% 4 --> Etiqueta (label) para referencias
+% 5 --> Opciones que queramos pasarle al \includegraphics
+% 6 --> Opciones de posicionamiento a pasarle a \begin{figure}
+\newcommand{\figuraConPosicion}[6]{%
+  \setlength{\anchoFloat}{#1\textwidth}%
+  \addtolength{\anchoFloat}{-4\fboxsep}%
+  \setlength{\anchoFigura}{\anchoFloat}%
+  \begin{figure}[#6]
+    \begin{center}%
+      \Ovalbox{%
+        \begin{minipage}{\anchoFloat}%
+          \begin{center}%
+            \includegraphics[width=\anchoFigura,#5]{#2}%
+            \caption{#3}%
+            \label{#4}%
+          \end{center}%
+        \end{minipage}
+      }%
+    \end{center}%
+  \end{figure}%
+}
+
+%
+% Comando para incluir imágenes en formato apaisado (sin marco).
+\newcommand{\figuraApaisadaSinMarco}[5]{%
+  \begin{figure}%
+    \begin{center}%
+    \includegraphics[angle=90,height=#1\textheight,#5]{#2}%
+    \caption{#3}%
+    \label{#4}%
+    \end{center}%
+  \end{figure}%
+}
+% Para las tablas
+\newcommand{\otoprule}{\midrule [\heavyrulewidth]}
+%
+% Nuevo comando para tablas pequeñas (menos de una página).
+\newcommand{\tablaSmall}[5]{%
+ \begin{table}
+  \begin{center}
+   \rowcolors {2}{gray!35}{}
+   \begin{tabular}{#2}
+    \toprule
+    #4
+    \otoprule
+    #5
+    \bottomrule
+   \end{tabular}
+   \caption{#1}
+   \label{tabla:#3}
+  \end{center}
+ \end{table}
+}
+
+%
+% Nuevo comando para tablas pequeñas (menos de una página).
+\newcommand{\tablaSmallSinColores}[5]{%
+ \begin{table}[H]
+  \begin{center}
+   \begin{tabular}{#2}
+    \toprule
+    #4
+    \otoprule
+    #5
+    \bottomrule
+   \end{tabular}
+   \caption{#1}
+   \label{tabla:#3}
+  \end{center}
+ \end{table}
+}
+
+\newcommand{\tablaApaisadaSmall}[5]{%
+\begin{landscape}
+  \begin{table}
+   \begin{center}
+    \rowcolors {2}{gray!35}{}
+    \begin{tabular}{#2}
+     \toprule
+     #4
+     \otoprule
+     #5
+     \bottomrule
+    \end{tabular}
+    \caption{#1}
+    \label{tabla:#3}
+   \end{center}
+  \end{table}
+\end{landscape}
+}
+
+%
+% Nuevo comando para tablas grandes con cabecera y filas alternas coloreadas en gris.
+\newcommand{\tabla}[6]{%
+  \begin{center}
+    \tablefirsthead{
+      \toprule
+      #5
+      \otoprule
+    }
+    \tablehead{
+      \multicolumn{#3}{l}{\small\sl continúa desde la página anterior}\\
+      \toprule
+      #5
+      \otoprule
+    }
+    \tabletail{
+      \hline
+      \multicolumn{#3}{r}{\small\sl continúa en la página siguiente}\\
+    }
+    \tablelasttail{
+      \hline
+    }
+    \bottomcaption{#1}
+    \rowcolors {2}{gray!35}{}
+    \begin{xtabular}{#2}
+      #6
+      \bottomrule
+    \end{xtabular}
+    \label{tabla:#4}
+  \end{center}
+}
+
+%
+% Nuevo comando para tablas grandes con cabecera.
+\newcommand{\tablaSinColores}[6]{%
+  \begin{center}
+    \tablefirsthead{
+      \toprule
+      #5
+      \otoprule
+    }
+    \tablehead{
+      \multicolumn{#3}{l}{\small\sl continúa desde la página anterior}\\
+      \toprule
+      #5
+      \otoprule
+    }
+    \tabletail{
+      \hline
+      \multicolumn{#3}{r}{\small\sl continúa en la página siguiente}\\
+    }
+    \tablelasttail{
+      \hline
+    }
+    \bottomcaption{#1}
+    \begin{xtabular}{#2}
+      #6
+      \bottomrule
+    \end{xtabular}
+    \label{tabla:#4}
+  \end{center}
+}
+
+%
+% Nuevo comando para tablas grandes sin cabecera.
+\newcommand{\tablaSinCabecera}[5]{%
+  \begin{center}
+    \tablefirsthead{
+      \toprule
+    }
+    \tablehead{
+      \multicolumn{#3}{l}{\small\sl continúa desde la página anterior}\\
+      \hline
+    }
+    \tabletail{
+      \hline
+      \multicolumn{#3}{r}{\small\sl continúa en la página siguiente}\\
+    }
+    \tablelasttail{
+      \hline
+    }
+    \bottomcaption{#1}
+  \begin{xtabular}{#2}
+    #5
+   \bottomrule
+  \end{xtabular}
+  \label{tabla:#4}
+  \end{center}
+}
+
+
+
+\definecolor{cgoLight}{HTML}{EEEEEE}
+\definecolor{cgoExtralight}{HTML}{FFFFFF}
+
+%
+% Nuevo comando para tablas grandes sin cabecera.
+\newcommand{\tablaSinCabeceraConBandas}[5]{%
+  \begin{center}
+    \tablefirsthead{
+      \toprule
+    }
+    \tablehead{
+      \multicolumn{#3}{l}{\small\sl continúa desde la página anterior}\\
+      \hline
+    }
+    \tabletail{
+      \hline
+      \multicolumn{#3}{r}{\small\sl continúa en la página siguiente}\\
+    }
+    \tablelasttail{
+      \hline
+    }
+    \bottomcaption{#1}
+    \rowcolors[]{1}{cgoExtralight}{cgoLight}
+
+  \begin{xtabular}{#2}
+    #5
+   \bottomrule
+  \end{xtabular}
+  \label{tabla:#4}
+  \end{center}
+}
+
+
+
+\graphicspath{ {./img/} }
+
+% Capítulos
+\chapterstyle{bianchi}
+\newcommand{\capitulo}[2]{
+	\setcounter{chapter}{#1}
+	\setcounter{section}{0}
+	\setcounter{figure}{0}
+	\setcounter{table}{0}
+	\chapter*{\thechapter.\enskip #2}
+	\addcontentsline{toc}{chapter}{\thechapter.\enskip #2}
+	\markboth{#2}{#2}
+}
+
+% Apéndices
+\renewcommand{\appendixname}{Apéndice}
+\renewcommand*\cftappendixname{\appendixname}
+
+\newcommand{\apendice}[1]{
+	%\renewcommand{\thechapter}{A}
+	\chapter{#1}
+}
+
+\renewcommand*\cftappendixname{\appendixname\ }
+
+% Formato de portada
+\makeatletter
+\newcommand{\tutor}[1]{\def\@tutor{#1}}
+\newcommand{\course}[1]{\def\@course{#1}}
+\definecolor{cpardoBox}{HTML}{E6E6FF}
+\def\maketitle{
+  \null
+  \thispagestyle{empty}
+  % Cabecera ----------------
+\noindent\includegraphics[width=\textwidth]{institucional/cabecera}\vspace{1cm}%
+  \vfill
+  % Título proyecto y escudo informática ----------------
+  \colorbox{cpardoBox}{%
+    \begin{minipage}{.8\textwidth}
+      \vspace{.5cm}\Large
+      \begin{center}
+      \textbf{TFG del Grado en Ingeniería Informática}\vspace{.6cm}\\
+      \textbf{\LARGE\@title{}}
+      \end{center}
+      \vspace{.2cm}
+    \end{minipage}
+
+  }%
+  \hfill\begin{minipage}{.20\textwidth}
+    \includegraphics[width=\textwidth]{institucional/escudo-informatica}
+  \end{minipage}
+  \vfill
+  % Datos de alumno, curso y tutores ------------------
+  \begin{center}%
+  {%
+    \noindent\LARGE
+    Presentado por \@author{}\\
+    en Universidad de Burgos\\
+    \@date{}\\
+    Tutor: \@tutor{}\\[.6em]
+    Cotutores empresariales:\\[.2em]
+    \tutoresEmpresariales\\
+  }%
+  \end{center}%
+  \null
+  \cleardoublepage
+  }
+\makeatother
+
+% Se definen los datos generales del documento.
+\newcommand{\titulo}{Manualito}
+\newcommand{\subtitulo}{Aplicación web de apoyo al aprendizaje de juegos de mesa}
+\newcommand{\nombre}{Ibai Moya Aroz}
+\newcommand{\dni}{DNI CENSORED}
+\newcommand{\nombreTutor}{Bruno Baruque Zanón}
+\newcommand{\tutoresEmpresariales}{Pablo García Ullán,\\Luis Peralta\\y Ánder Bermúdez González}
+\newcommand{\departamentoTutor}{Departamento de Ingeniería Informática}
+\newcommand{\areaTutor}{Área de Lenguajes y Sistemas Informáticos}
+\newcommand{\fechaEntrega}{17 de septiembre de 2026}
+\newcommand{\nombreGrado}{Grado en Ingeniería Informática}
+\newcommand{\ciudad}{Burgos}
+\newcommand{\nombreUniversidad}{Universidad de \ciudad}
+
+
+% Datos de portada.
+\title{{\Huge \titulo}\\[0.5cm]\subtitulo}
+\author{\nombre}
+\tutor{\nombreTutor}
+\date{\fechaEntrega}
+
+
+\begin{document}
+
+\maketitle
+
+
+\newpage\null\thispagestyle{empty}\newpage
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\thispagestyle{empty}
+
+
+\noindent\includegraphics[width=\textwidth]{institucional/cabecera}\vspace{1cm}
+
+\noindent D. \nombreTutor, profesor del \departamentoTutor, \areaTutor.
+
+\noindent Expone:
+
+\noindent Que el alumno D. \nombre, con \dni, ha realizado el Trabajo final de Grado en Ingeniería Informática titulado \textit{\titulo: \subtitulo}.
+
+\noindent Y que dicho trabajo ha sido realizado por el alumno bajo la dirección del que suscribe, en virtud de lo cual se autoriza su presentación y defensa.
+
+\begin{center} %\large
+En \ciudad, {\large \fechaEntrega}
+\end{center}
+
+\vfill\vfill\vfill
+
+\begin{center}
+Vº. Bº. del Tutor:\\[2cm]
+D. Bruno Baruque Zanón
+\end{center}
+
+
+\newpage\null\thispagestyle{empty}\newpage
+
+
+
+
+\frontmatter
+
+% Abstract en castellano
+\renewcommand*\abstractname{Resumen}
+\begin{abstract}
+Aprender un juego de mesa puede requerir una lectura extensa de su manual,
+a su vez, resolver una duda durante la partida obliga a localizar la
+regla correspondiente. Para facilitar ambas tareas, se ha desarrollado
+\textit{Manualito}, una aplicación web que permite obtener de forma ágil una
+explicación general del juego y plantear preguntas a un asistente de
+inteligencia artificial.
+
+La aplicación extrae el texto de manuales en archivos \acs{PDF} o imágenes,
+utilizando reconocimiento óptico de caracteres cuando es necesario, y
+permite revisarlo junto a las páginas originales. A partir de ese contenido,
+combina la búsqueda por palabras y por significado para seleccionar la
+información que reciben los modelos de lenguaje ejecutados localmente.
+Este enfoque de generación aumentada por recuperación busca reducir el
+riesgo de que el asistente invente reglas, mientras que las referencias a
+las páginas consultadas permiten comprobar sus respuestas.
+
+Durante el desarrollo se compararon alternativas de reconocimiento de
+texto, recuperación y modelos de lenguaje para ajustar el sistema a los
+recursos disponibles. El resultado reúne estas funciones con la gestión de
+juegos, manuales y conversaciones, de modo que el usuario puede conservar
+la información y retomarla en futuras partidas.
+\end{abstract}
+
+\renewcommand*\abstractname{Descriptores}
+\begin{abstract}
+Juegos de mesa, aplicación web, reconocimiento óptico de caracteres, modelos
+de lenguaje, generación aumentada por recuperación, inteligencia artificial,
+procesamiento del lenguaje natural, recuperación de información, búsqueda
+híbrida, consulta de reglas.
+\end{abstract}
+
+\clearpage
+
+% Abstract en inglés
+\begin{otherlanguage}{english}
+\renewcommand*\abstractname{Abstract}
+\begin{abstract}
+Learning a board game can require extensive reading of its rulebook,
+in addition, resolving a question during play means finding the relevant rule.
+To support both tasks, \textit{Manualito} was developed as a web application
+that lets users quickly obtain an overview of a game and ask an artificial
+intelligence assistant questions about it.
+
+The application extracts text from rulebooks supplied as \acs{PDF} files or
+images, using optical character recognition when necessary, and allows
+users to review it alongside the original pages. It then combines keyword
+and semantic search to select the information provided to locally run
+language models. This retrieval-augmented generation approach aims to
+reduce the risk of the assistant inventing rules, while references to the
+source pages allow users to check its answers.
+
+During development, alternatives for text recognition, retrieval and
+language models were compared to adapt the system to the available
+resources. The resulting application combines these functions with the
+management of games, rulebooks and conversations, allowing users to save
+the information and return to it in future game sessions.
+\end{abstract}
+
+\renewcommand*\abstractname{Keywords}
+\begin{abstract}
+Board games, web application, optical character recognition, language models,
+retrieval-augmented generation, artificial intelligence, natural language
+processing, information retrieval, hybrid search, rule consultation.
+\end{abstract}
+\end{otherlanguage}
+
+\clearpage
+
+% Indices
+\tableofcontents
+
+\clearpage
+
+\listoffigures
+
+\clearpage
+
+\listoftables
+
+\clearpage
+\chapter*{Lista de acrónimos}
+\addcontentsline{toc}{chapter}{Lista de acrónimos}
+\begin{acronym}[WWWWW] % plantilla de la sigla más ancha, para alinear
+    \acro{BM25}{\textit{Best Match 25}}
+    \acro{CD}{\textit{Continuous Deployment}}
+    \acro{CI}{\textit{Continuous Integration}}
+    \acro{CPU}{\textit{Central Processing Unit}}
+    \acro{CSRF}{\textit{Cross-Site Request Forgery}}
+    \acro{GPU}{\textit{Graphics Processing Unit}}
+    \acro{HNSW}{\textit{Hierarchical Navigable Small World}}
+    \acro{LLM}{\textit{Large Language Model}}
+    \acro{ML}{\textit{Machine Learning}}
+    \acro{OCR}{\textit{Optical Character Recognition}}
+    \acro{PDF}{\textit{Portable Document Format}}
+    \acro{RAG}{\textit{Retrieval-Augmented Generation}}
+    \acro{ReDoS}{\textit{Regular Expression Denial of Service}}
+    \acro{RRF}{\textit{Reciprocal Rank Fusion}}
+    \acro{TDD}{\textit{Test-Driven Development}}
+    \acro{TTS}{\textit{Text-To-Speech}}
+    \acro{XSS}{\textit{Cross-Site Scripting}}
+\end{acronym}
+
+\clearpage
+
+\mainmatter
+\include{./tex/1_Introduccion}
+\include{./tex/2_Objetivos_del_proyecto}
+\include{./tex/3_Conceptos_teoricos}
+\include{./tex/4_Tecnicas_y_herramientas}
+\include{./tex/5_Aspectos_relevantes_del_desarrollo_del_proyecto}
+\include{./tex/6_Trabajos_relacionados}
+\include{./tex/7_Conclusiones_Lineas_de_trabajo_futuras}
+
+
+\begingroup
+\emergencystretch=3em
+\printbibliography
+\endgroup
+
+\end{document}

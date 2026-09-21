@@ -45,6 +45,12 @@
   width: 0.75rem;
   border: 0;
   outline: 0;
+  /* Conserva visible la barra lateral y pinta el fondo de la página a su derecha. */
+  background: linear-gradient(
+    to right,
+    transparent 50%,
+    var(--sl-color-bg) 50%
+  );
   cursor: col-resize;
   touch-action: none;
 }
